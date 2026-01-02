@@ -17,7 +17,8 @@ import {
   MapPin,
   TestTube,
   Store,
-  User
+  User,
+  Plus
 } from 'lucide-react';
 
 export default function InvestorDashboard() {
@@ -26,6 +27,7 @@ export default function InvestorDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeInvestments, setActiveInvestments] = useState([]);
   const [showInvestments, setShowInvestments] = useState(false);
+  const [showPlans, setShowPlans] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -243,14 +245,24 @@ export default function InvestorDashboard() {
 
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
             <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
-                  <DollarSign className="w-6 h-6 text-green-400" />
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
+                    <DollarSign className="w-6 h-6 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Lucro Estimado Total</p>
+                    <p className="text-2xl font-bold text-green-400">R$ {totalProfit.toLocaleString('pt-BR')}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-gray-400 text-sm">Lucro Estimado</p>
-                  <p className="text-2xl font-bold text-green-400">+ R$ {totalProfit.toLocaleString('pt-BR')}</p>
-                </div>
+                <Button
+                  onClick={() => setShowPlans(!showPlans)}
+                  className="bg-green-600 hover:bg-green-700"
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Contratar Novo Plano
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -391,6 +403,7 @@ export default function InvestorDashboard() {
         )}
 
         {/* Planos Disponíveis */}
+        {showPlans && (
         <div className="mb-8">
           <h2 className="text-3xl font-bold mb-2">
             {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
@@ -503,6 +516,7 @@ export default function InvestorDashboard() {
             })}
           </div>
         </div>
+        )}
 
         {/* Informações */}
         <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
