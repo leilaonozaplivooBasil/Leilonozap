@@ -81,6 +81,13 @@ export default function InvestorDashboard() {
     loadUser();
   }, [navigate]);
 
+  const commonFeatures = [
+    "Gestão 100% profissional",
+    "Produtos pré-selecionados",
+    "Retorno garantido em 60 dias",
+    "Suporte dedicado"
+  ];
+
   const portfolios = [
     {
       id: 1,
@@ -91,12 +98,7 @@ export default function InvestorDashboard() {
       products: ["Eletrodomésticos"],
       risk: "Baixo",
       description: "Ideal para quem está começando. Produtos de alta liquidez e demanda garantida.",
-      features: [
-        "Gestão 100% profissional",
-        "Produtos pré-selecionados",
-        "Retorno garantido em 60 dias",
-        "Suporte dedicado"
-      ]
+      features: commonFeatures
     },
     {
       id: 2,
@@ -107,12 +109,7 @@ export default function InvestorDashboard() {
       products: ["Eletrodomésticos", "Eletrônicos", "Apple"],
       risk: "Baixo",
       description: "Para investidores que buscam maior retorno com segurança.",
-      features: [
-        "Diversificação de produtos",
-        "Prioridade na escolha",
-        "Retorno acelerado",
-        "Relatórios semanais"
-      ]
+      features: commonFeatures
     },
     {
       id: 3,
@@ -123,12 +120,7 @@ export default function InvestorDashboard() {
       products: ["Todas as categorias"],
       risk: "Baixo",
       description: "Máximo retorno com acesso a todas as oportunidades.",
-      features: [
-        "Acesso exclusivo a novos lotes",
-        "Escolha personalizada",
-        "Retorno maximizado",
-        "Gestor dedicado"
-      ]
+      features: commonFeatures
     }
   ];
 
