@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -162,7 +161,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
         </Dialog>
       )}
 
-      <style jsx>{`
+      <style>{`
         @keyframes float-comparai {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-10px); }

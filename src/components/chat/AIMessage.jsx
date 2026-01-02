@@ -140,7 +140,7 @@ export default function AIMessage({ message, winner, auction }) {
         </div>
       </div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes pulse-slow {
           0%, 100% { transform: scale(1); opacity: 1; }
           50% { transform: scale(1.05); opacity: 0.95; }

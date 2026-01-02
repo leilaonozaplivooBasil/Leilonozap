@@ -296,7 +296,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        <style jsx global>{`
+        <style>{`
           @keyframes fadeInScale {
             0% {
               opacity: 0;
@@ -844,7 +844,7 @@ export default function Layout({ children, currentPageName }) {
         )}
       </div>
       
-      <style jsx global>{`
+      <style>{`
         @keyframes fadeInScale {
           0% {
             opacity: 0;

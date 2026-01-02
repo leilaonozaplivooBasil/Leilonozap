@@ -109,7 +109,7 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }

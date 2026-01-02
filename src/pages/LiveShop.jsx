@@ -419,7 +419,7 @@ export default function LiveShop() {
               </Card>
             )}
             
-            <style jsx>{`
+            <style>{`
               @keyframes hammer {
                 0%, 100% { transform: rotate(0deg); }
                 25% { transform: rotate(-15deg); }

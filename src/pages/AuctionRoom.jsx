@@ -1693,7 +1693,7 @@ export default function AuctionRoom() {
 
       <ComparaiButton auction={auction} />
 
-      <style jsx>{`
+      <style>{`
         .auction-page-container { display: flex; flex-direction: column; height: 100vh; background-color: #111827; overflow: hidden; }
         
         @media (max-width: 1023px) { 

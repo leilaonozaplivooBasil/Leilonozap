@@ -1272,7 +1272,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           }}
         />
       )}
-      <style jsx>{`
+      <style>{`
         @keyframes entrance-guardian {
           from {
             transform: translateY(200px) translateX(-50px) rotate(-15deg) scale(0.5);
@@ -1712,7 +1712,7 @@ export default function LicensingPage() {
         />
       )}
       
-      <style jsx global>{`
+      <style>{`
         @keyframes logoGrowSpin {
           0% {
             transform: scale(0.8) rotate(0deg);

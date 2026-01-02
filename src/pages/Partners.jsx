@@ -451,7 +451,7 @@ export default function PartnersPage() {
         />
       )}
 
-      <style jsx global>{`
+      <style>{`
         @keyframes logoGrowSpin {
           0% {
             transform: scale(0.8) rotate(0deg);

@@ -151,7 +151,7 @@ export default function VictoryCard({ winner, auction }) {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes victory-entrance {
           0% {
             opacity: 0;

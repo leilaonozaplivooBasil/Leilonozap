@@ -108,7 +108,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
         Incremento mínimo: + R$ {increment.toFixed(2)}
       </p>
       
-      <style jsx global>{`
+      <style>{`
         @keyframes pulse-glow {
           0%, 100% {
             box-shadow: 0 0 8px rgba(249, 115, 22, 0.4), 0 0 12px rgba(249, 115, 22, 0.2);

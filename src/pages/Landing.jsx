@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useCallback } from "react";
 // import { User } from "@/entities/User"; // Removed as per instructions (no login flow)
 import { createPageUrl } from "@/utils";
@@ -259,7 +258,7 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <style jsx global>{`
+      <style>{`
         /* --- GERAL & BACKGROUND --- */
         .landing-container {
           min-height: 100vh;

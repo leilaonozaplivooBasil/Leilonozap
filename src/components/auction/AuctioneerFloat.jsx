@@ -160,7 +160,7 @@ export default function AuctioneerFloat({ phase, message, onComplete }) {
         </motion.div>
       )}
       
-      <style jsx>{`
+      <style>{`
         /* 📱 MOBILE - Posiciona ACIMA do Comparai */
         .auctioneer-position {
           bottom: 200px;

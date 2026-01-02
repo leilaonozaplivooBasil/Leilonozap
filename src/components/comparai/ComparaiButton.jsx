@@ -29,7 +29,7 @@ export default function ComparaiButton({ auction }) {
         />
       )}
 
-      <style jsx>{`
+      <style>{`
         /* 📱 MOBILE - Posiciona mais acima para não sobrepor o lance mínimo */
         .comparai-button-position {
           position: fixed;

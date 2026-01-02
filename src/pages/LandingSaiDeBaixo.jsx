@@ -259,7 +259,7 @@ export default function LandingSaiDeBaixo() {
         </div>
       </div>
 
-      <style jsx global>{`
+      <style>{`
         /* --- GERAL & BACKGROUND --- */
         .landing-container-sdb {
           min-height: 100vh;

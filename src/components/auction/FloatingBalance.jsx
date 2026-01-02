@@ -34,7 +34,7 @@ export default function FloatingBalance({ balance }) {
           <span className="amulet-balance">V$ {balance.toFixed(2)}</span>
         </div>
       </div>
-      <style jsx>{`
+      <style>{`
         .floating-balance-amulet {
           position: fixed;
           z-index: 1000;
