@@ -189,8 +189,8 @@ export default function InvestorDashboard() {
 
         {/* Carteiras de Investimento */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-6 text-center">
-            Escolha Sua <span className="text-green-400">Carta de Parceria</span>
+          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">
+            Escolha Seu <span className="text-green-400">Plano de Parceria</span>
           </h2>
           
           <div className="grid md:grid-cols-3 gap-6">
