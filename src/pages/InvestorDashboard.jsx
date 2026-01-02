@@ -139,7 +139,8 @@ export default function InvestorDashboard() {
       description: "Produtos adquiridos com seu investimento",
       color: "text-blue-400",
       bgColor: "bg-blue-500/20",
-      borderColor: "border-blue-500/30"
+      borderColor: "border-blue-500/30",
+      daysToComplete: 5
     },
     {
       id: 2,
@@ -148,7 +149,8 @@ export default function InvestorDashboard() {
       description: "Produtos chegaram ao centro de distribuição",
       color: "text-purple-400",
       bgColor: "bg-purple-500/20",
-      borderColor: "border-purple-500/30"
+      borderColor: "border-purple-500/30",
+      daysToComplete: 15
     },
     {
       id: 3,
@@ -157,7 +159,8 @@ export default function InvestorDashboard() {
       description: "Controle de qualidade concluído",
       color: "text-orange-400",
       bgColor: "bg-orange-500/20",
-      borderColor: "border-orange-500/30"
+      borderColor: "border-orange-500/30",
+      daysToComplete: 20
     },
     {
       id: 4,
@@ -166,7 +169,8 @@ export default function InvestorDashboard() {
       description: "Produtos à venda nos nossos canais",
       color: "text-cyan-400",
       bgColor: "bg-cyan-500/20",
-      borderColor: "border-cyan-500/30"
+      borderColor: "border-cyan-500/30",
+      daysToComplete: 30
     },
     {
       id: 5,
@@ -175,9 +179,32 @@ export default function InvestorDashboard() {
       description: "Seu retorno está garantido!",
       color: "text-green-400",
       bgColor: "bg-green-500/20",
-      borderColor: "border-green-500/30"
+      borderColor: "border-green-500/30",
+      daysToComplete: 60
     }
   ];
+
+  const calculateDaysPassed = (startDate) => {
+    const start = new Date(startDate);
+    const today = new Date();
+    const diffTime = Math.abs(today - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  const getCurrentStep = (daysPassed) => {
+    if (daysPassed < 5) return 0;
+    if (daysPassed < 15) return 1;
+    if (daysPassed < 20) return 2;
+    if (daysPassed < 30) return 3;
+    return 4;
+  };
+
+  const getLiquidFillPercentage = (daysPassed) => {
+    const maxDays = 60;
+    const percentage = Math.min((daysPassed / maxDays) * 100, 100);
+    return percentage;
+  };
 
   const calculateProjection = (investment, returnRate) => {
     const profit = investment * (returnRate / 100);
@@ -350,71 +377,102 @@ export default function InvestorDashboard() {
             </h2>
             
             <div className="space-y-6">
-              {activeInvestments.map((investment) => (
-                <Card key={investment.id} className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="text-xl text-white mb-1">{investment.plan}</CardTitle>
-                        <p className="text-sm text-gray-400">
-                          Iniciado em {new Date(investment.startDate).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-white">R$ {investment.amount.toLocaleString('pt-BR')}</p>
-                        <p className="text-sm text-green-400 font-semibold">+ R$ {investment.estimatedProfit.toLocaleString('pt-BR')} lucro</p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-6">
-                    {/* Timeline de Etapas */}
-                    <div>
-                      <h4 className="font-semibold text-white mb-4">Etapas do Processo</h4>
-                      <div className="relative">
-                        {/* Linha conectora */}
-                        <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gray-700" />
-                        
-                        <div className="space-y-4">
-                          {investmentSteps.map((step, idx) => {
-                            const isCompleted = idx < investment.currentStep;
-                            const isCurrent = idx === investment.currentStep;
-                            const Icon = step.icon;
-                            
-                            return (
-                              <div key={step.id} className="relative flex items-start gap-4">
-                                {/* Ícone */}
-                                <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all ${
-                                  isCompleted 
-                                    ? 'bg-green-500/20 border-green-500' 
-                                    : isCurrent
-                                    ? `${step.bgColor} ${step.borderColor}`
-                                    : 'bg-gray-800 border-gray-700'
-                                }`}>
-                                  {isCompleted ? (
-                                    <CheckCircle className="w-6 h-6 text-green-400" />
-                                  ) : (
-                                    <Icon className={`w-6 h-6 ${isCurrent ? step.color : 'text-gray-600'}`} />
-                                  )}
-                                </div>
-                                
-                                {/* Conteúdo */}
-                                <div className={`flex-1 pb-4 ${isCurrent ? 'animate-pulse' : ''}`}>
-                                  <h5 className={`font-semibold mb-1 ${
-                                    isCompleted ? 'text-green-400' : isCurrent ? step.color : 'text-gray-500'
-                                  }`}>
-                                    {step.title}
-                                    {isCompleted && ' ✓'}
-                                    {isCurrent && ' (Em andamento)'}
-                                  </h5>
-                                  <p className="text-sm text-gray-400">{step.description}</p>
-                                </div>
-                              </div>
-                            );
-                          })}
+              {activeInvestments.map((investment) => {
+                const daysPassed = calculateDaysPassed(investment.startDate);
+                const currentStepIndex = getCurrentStep(daysPassed);
+                const liquidFillPercentage = getLiquidFillPercentage(daysPassed);
+
+                return (
+                  <Card key={investment.id} className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="text-xl text-white mb-1">{investment.plan}</CardTitle>
+                          <p className="text-sm text-gray-400">
+                            Iniciado em {new Date(investment.startDate).toLocaleDateString('pt-BR')} • {daysPassed} dias
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-white">R$ {investment.amount.toLocaleString('pt-BR')}</p>
+                          <p className="text-sm text-green-400 font-semibold">+ R$ {investment.estimatedProfit.toLocaleString('pt-BR')} lucro</p>
                         </div>
                       </div>
-                    </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-6">
+                      {/* Timeline de Etapas */}
+                      <div>
+                        <h4 className="font-semibold text-white mb-4">Etapas do Processo</h4>
+                        <div className="relative">
+                          {/* Linha conectora */}
+                          <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gray-700" />
+
+                          <div className="space-y-4">
+                            {investmentSteps.map((step, idx) => {
+                              const isCompleted = idx < currentStepIndex;
+                              const isCurrent = idx === currentStepIndex;
+                              const Icon = step.icon;
+
+                              return (
+                                <div key={step.id} className="relative flex items-start gap-4">
+                                  {/* Ícone */}
+                                  <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all overflow-hidden ${
+                                    isCompleted 
+                                      ? 'bg-green-500/20 border-green-500' 
+                                      : isCurrent
+                                      ? `${step.bgColor} ${step.borderColor}`
+                                      : 'bg-gray-800 border-gray-700'
+                                  }`}>
+                                    {/* Efeito de preenchimento líquido para última etapa */}
+                                    {step.id === 5 && (
+                                      <div 
+                                        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-500/40 to-green-500/20 transition-all duration-1000"
+                                        style={{ height: `${liquidFillPercentage}%` }}
+                                      >
+                                        <div className="absolute top-0 left-0 right-0 h-1 bg-green-400/60 animate-pulse" />
+                                      </div>
+                                    )}
+
+                                    {isCompleted ? (
+                                      <CheckCircle className="w-6 h-6 text-green-400 relative z-10" />
+                                    ) : (
+                                      <Icon className={`w-6 h-6 ${isCurrent ? step.color : 'text-gray-600'} relative z-10`} />
+                                    )}
+                                  </div>
+
+                                  {/* Conteúdo */}
+                                  <div className={`flex-1 pb-4 ${isCurrent ? 'animate-pulse' : ''}`}>
+                                    <h5 className={`font-semibold mb-1 ${
+                                      isCompleted ? 'text-green-400' : isCurrent ? step.color : 'text-gray-500'
+                                    }`}>
+                                      {step.title}
+                                      {isCompleted && ' ✓'}
+                                      {isCurrent && ` (${daysPassed}/${step.daysToComplete} dias)`}
+                                    </h5>
+                                    <p className="text-sm text-gray-400">{step.description}</p>
+
+                                    {/* Barra de progresso para última etapa */}
+                                    {step.id === 5 && currentStepIndex >= 4 && (
+                                      <div className="mt-2">
+                                        <div className="flex justify-between text-xs text-gray-500 mb-1">
+                                          <span>Preenchimento</span>
+                                          <span>{liquidFillPercentage.toFixed(0)}%</span>
+                                        </div>
+                                        <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                                          <div 
+                                            className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000"
+                                            style={{ width: `${liquidFillPercentage}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
 
                     {/* Data de Retorno */}
                     <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30 flex items-center justify-between">
