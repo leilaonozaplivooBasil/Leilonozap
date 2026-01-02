@@ -381,7 +381,7 @@ export default function InvestorDashboard() {
                 const daysPassed = calculateDaysPassed(investment.startDate);
                 const currentStepIndex = getCurrentStep(daysPassed);
                 const liquidFillPercentage = getLiquidFillPercentage(daysPassed);
-
+                
                 return (
                   <Card key={investment.id} className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
                     <CardHeader>
