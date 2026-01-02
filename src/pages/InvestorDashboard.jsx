@@ -216,14 +216,7 @@ export default function InvestorDashboard() {
                 </h1>
                 <p className="text-gray-400">Parceiro Investidor</p>
               </div>
-              <div className="flex items-center gap-6">
-                <div className="text-right">
-                  <div className="flex items-center gap-2 text-green-400 mb-1">
-                    <TrendingUp className="w-5 h-5" />
-                    <span className="text-2xl font-bold">R$ {totalProfit.toLocaleString('pt-BR')}</span>
-                  </div>
-                  <p className="text-sm text-gray-400">Lucro Estimado Total</p>
-                </div>
+              <div className="flex flex-col items-end gap-3">
                 <Button
                   onClick={() => setShowPlans(!showPlans)}
                   className="bg-green-600 hover:bg-green-700"
@@ -231,6 +224,13 @@ export default function InvestorDashboard() {
                   <Plus className="w-4 h-4 mr-2" />
                   Contratar Novo Plano
                 </Button>
+                <div className="text-right">
+                  <div className="flex items-center gap-2 text-green-400 mb-1">
+                    <TrendingUp className="w-5 h-5" />
+                    <span className="text-2xl font-bold">R$ {totalProfit.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <p className="text-sm text-gray-400">Lucro Estimado Total</p>
+                </div>
               </div>
             </div>
           </CardContent>
