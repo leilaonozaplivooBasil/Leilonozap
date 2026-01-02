@@ -2,34 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const valoraNotes = [
-  { value: 1, url: "", name: "Micro-ondas", icon: "📻" },
-  { value: 2, url: "", name: "Liquidificador", icon: "🌪️" },
-  { value: 5, url: "", name: "Cafeteira", icon: "☕" },
-  { value: 20, url: "", name: "Aspirador", icon: "🧹" },
-  { value: 100, url: "", name: "Geladeira", icon: "❄️" },
-  { value: 200, url: "", name: "Fogão", icon: "🔥" },
-  { value: 500, url: "", name: "Máquina de Lavar", icon: "🌊" },
-  { value: 1000, url: "", name: "Ar-Condicionado", icon: "❄️" }
+  { value: 1, url: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=400&fit=crop", name: "Micro-ondas", icon: "📻" },
+  { value: 2, url: "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=600&h=400&fit=crop", name: "Liquidificador", icon: "🌪️" },
+  { value: 5, url: "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=600&h=400&fit=crop", name: "Cafeteira", icon: "☕" },
+  { value: 20, url: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=600&h=400&fit=crop", name: "Aspirador", icon: "🧹" },
+  { value: 100, url: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&h=400&fit=crop", name: "Geladeira", icon: "❄️" },
+  { value: 200, url: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=600&h=400&fit=crop", name: "Fogão", icon: "🔥" },
+  { value: 500, url: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=600&h=400&fit=crop", name: "Máquina de Lavar", icon: "🌊" },
+  { value: 1000, url: "https://images.unsplash.com/photo-1631545806609-c22c80d77c7c?w=600&h=400&fit=crop", name: "Ar-Condicionado", icon: "❄️" }
 ];
 
-const generatePlaceholder = (note) => {
-  return `data:image/svg+xml,${encodeURIComponent(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="400" height="250" viewBox="0 0 400 250">
-      <defs>
-        <linearGradient id="grad-${note.value}" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:#16a34a;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#15803d;stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      <rect width="400" height="250" fill="url(#grad-${note.value})" rx="15"/>
-      <text x="200" y="80" font-family="Arial, sans-serif" font-size="72" text-anchor="middle">${note.icon}</text>
-      <text x="200" y="130" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#ffffff" text-anchor="middle">V$ ${note.value}</text>
-      <text x="200" y="165" font-family="Arial, sans-serif" font-size="24" fill="#dcfce7" text-anchor="middle">${note.name}</text>
-      <circle cx="50" cy="50" r="20" fill="#ffffff" opacity="0.1"/>
-      <circle cx="350" cy="200" r="30" fill="#ffffff" opacity="0.1"/>
-    </svg>
-  `)}`;
-};
+
 
 export default function ValoraNotesGallery() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -56,10 +39,6 @@ export default function ValoraNotesGallery() {
   }, [isPaused]);
 
   const currentNote = valoraNotes[currentIndex];
-  
-  const getImageSrc = () => {
-    return generatePlaceholder(currentNote);
-  };
 
   return (
     <div className="relative w-full max-w-lg mx-auto py-12">
@@ -88,18 +67,27 @@ export default function ValoraNotesGallery() {
               }}
             >
               <img 
-                src={getImageSrc()}
+                src={currentNote.url}
                 alt={`Nota ${currentNote.name}`} 
-                className="w-full h-full object-cover rounded-xl"
-                style={{ opacity: imagesLoaded[currentIndex] ? 1 : 0.7 }}
+                className="w-full h-full object-cover"
+                onLoad={() => setImagesLoaded(prev => ({ ...prev, [currentIndex]: true }))}
+                onError={() => setImagesFailed(prev => ({ ...prev, [currentIndex]: true }))}
               />
               
-              {!imagesLoaded[currentIndex] && !imagesFailed[currentIndex] && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800/90">
-                  <div className="animate-spin w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full mb-3"></div>
-                  <p className="text-white text-sm">Carregando V$ {currentNote.value}...</p>
-                </div>
-              )}
+              {/* Overlay com gradiente escuro na base */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              
+              {/* Badge V$ flutuante */}
+              <div className="absolute top-4 right-4 bg-green-600 px-4 py-2 rounded-full shadow-lg border-2 border-white/30">
+                <span className="text-white font-bold text-lg">V$ {currentNote.value}</span>
+              </div>
+              
+              {/* Nome do produto na base */}
+              <div className="absolute bottom-6 left-6 right-6">
+                <h3 className="text-white font-bold text-2xl mb-1 drop-shadow-lg">{currentNote.name}</h3>
+                <p className="text-green-300 text-sm font-semibold">Arremate com Valora Pay</p>
+              </div>
+
 
               <button
                 onClick={() => {
