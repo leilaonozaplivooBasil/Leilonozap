@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const valoraNotes = [
-  { value: 1, url: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=400&fit=crop", name: "Micro-ondas", icon: "📻" },
-  { value: 2, url: "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=600&h=400&fit=crop", name: "Liquidificador", icon: "🌪️" },
-  { value: 5, url: "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=600&h=400&fit=crop", name: "Cafeteira", icon: "☕" },
-  { value: 20, url: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=600&h=400&fit=crop", name: "Aspirador", icon: "🧹" },
-  { value: 100, url: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&h=400&fit=crop", name: "Geladeira", icon: "❄️" },
-  { value: 200, url: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=600&h=400&fit=crop", name: "Fogão", icon: "🔥" },
-  { value: 500, url: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=600&h=400&fit=crop", name: "Máquina de Lavar", icon: "🌊" },
-  { value: 1000, url: "https://images.unsplash.com/photo-1631545806609-c22c80d77c7c?w=600&h=400&fit=crop", name: "Ar-Condicionado", icon: "❄️" }
+  { value: 1, url: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=400&fit=crop&bg=transparent", name: "Micro-ondas", icon: "📻" },
+  { value: 2, url: "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=600&h=400&fit=crop&bg=transparent", name: "Liquidificador", icon: "🌪️" },
+  { value: 5, url: "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=600&h=400&fit=crop&bg=transparent", name: "Cafeteira", icon: "☕" },
+  { value: 20, url: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=600&h=400&fit=crop&bg=transparent", name: "Aspirador", icon: "🧹" },
+  { value: 100, url: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&h=400&fit=crop&bg=transparent", name: "Geladeira", icon: "❄️" },
+  { value: 200, url: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=600&h=400&fit=crop&bg=transparent", name: "Fogão", icon: "🔥" },
+  { value: 500, url: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=600&h=400&fit=crop&bg=transparent", name: "Máquina de Lavar", icon: "🌊" },
+  { value: 1000, url: "https://images.unsplash.com/photo-1631545806609-c22c80d77c7c?w=600&h=400&fit=crop&bg=transparent", name: "Ar-Condicionado", icon: "❄️" }
 ];
 
 
@@ -60,7 +60,7 @@ export default function ValoraNotesGallery() {
             onMouseLeave={() => { setIsHovered(false); setIsPaused(false); }}
           >
             <div 
-              className="w-96 h-56 rounded-2xl shadow-2xl border-4 relative transition-all cursor-pointer overflow-hidden"
+              className="w-96 h-56 rounded-2xl shadow-2xl border-4 relative transition-all cursor-pointer overflow-hidden bg-white"
               style={{ 
                 boxShadow: isHovered ? '0 40px 120px rgba(0,0,0,0.8), 0 0 60px #1DB24A' : '0 30px 80px rgba(0,0,0,0.6)',
                 borderColor: isHovered ? '#1DB24A' : 'rgba(255,255,255,0.3)'
@@ -69,24 +69,10 @@ export default function ValoraNotesGallery() {
               <img 
                 src={currentNote.url}
                 alt={`Nota ${currentNote.name}`} 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain p-4"
                 onLoad={() => setImagesLoaded(prev => ({ ...prev, [currentIndex]: true }))}
                 onError={() => setImagesFailed(prev => ({ ...prev, [currentIndex]: true }))}
               />
-              
-              {/* Overlay com gradiente escuro na base */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-              
-              {/* Badge V$ flutuante */}
-              <div className="absolute top-4 right-4 bg-green-600 px-4 py-2 rounded-full shadow-lg border-2 border-white/30">
-                <span className="text-white font-bold text-lg">V$ {currentNote.value}</span>
-              </div>
-              
-              {/* Nome do produto na base */}
-              <div className="absolute bottom-6 left-6 right-6">
-                <h3 className="text-white font-bold text-2xl mb-1 drop-shadow-lg">{currentNote.name}</h3>
-                <p className="text-green-300 text-sm font-semibold">Arremate com Valora Pay</p>
-              </div>
 
 
               <button
