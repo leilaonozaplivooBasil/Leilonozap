@@ -484,15 +484,15 @@ export default function InvestorDashboard() {
                     key={portfolio.id}
                     className="bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:scale-[1.02]"
                   >
-                    <CardHeader className="p-3 pb-2">
-                      <div className="flex items-center justify-between mb-1">
+                    <CardHeader className="p-3 pb-2 text-center">
+                      <div className="flex items-center justify-center gap-2 mb-1">
                         <CardTitle className="text-lg text-white">{portfolio.name}</CardTitle>
                         <Badge className="bg-green-600 text-xs">{portfolio.risk}</Badge>
                       </div>
                       <p className="text-gray-400 text-xs">{portfolio.description}</p>
                     </CardHeader>
                     
-                    <CardContent className="space-y-2 p-3 pt-0">
+                    <CardContent className="space-y-2 p-3 pt-0 text-center">
                       {/* Valores */}
                       <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
                         <div className="flex items-center justify-between">
