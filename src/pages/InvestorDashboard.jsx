@@ -463,11 +463,11 @@ export default function InvestorDashboard() {
         <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
           <DialogContent className="max-w-6xl max-h-[95vh] bg-gray-900 border-gray-700 text-white p-4">
             <DialogHeader className="mb-3 text-center">
-              <DialogTitle className="text-2xl font-bold">
+              <DialogTitle className="text-2xl font-bold text-center">
                 {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
                 <span className="text-green-400">Novo Plano</span>
               </DialogTitle>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-400 text-sm text-center">
                 {activeInvestments.length > 0 
                   ? 'Faça novos investimentos e aumente seus lucros' 
                   : 'Selecione o plano ideal para começar a investir'
