@@ -216,12 +216,21 @@ export default function InvestorDashboard() {
                 </h1>
                 <p className="text-gray-400">Parceiro Investidor</p>
               </div>
-              <div className="text-right">
-                <div className="flex items-center gap-2 text-green-400 mb-1">
-                  <TrendingUp className="w-5 h-5" />
-                  <span className="text-2xl font-bold">R$ {totalProfit.toLocaleString('pt-BR')}</span>
+              <div className="flex items-center gap-6">
+                <div className="text-right">
+                  <div className="flex items-center gap-2 text-green-400 mb-1">
+                    <TrendingUp className="w-5 h-5" />
+                    <span className="text-2xl font-bold">R$ {totalProfit.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <p className="text-sm text-gray-400">Lucro Estimado Total</p>
                 </div>
-                <p className="text-sm text-gray-400">Lucro Estimado Total</p>
+                <Button
+                  onClick={() => setShowPlans(!showPlans)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Contratar Novo Plano
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -245,24 +254,14 @@ export default function InvestorDashboard() {
 
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
             <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
-                    <DollarSign className="w-6 h-6 text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-gray-400 text-sm">Lucro Estimado Total</p>
-                    <p className="text-2xl font-bold text-green-400">R$ {totalProfit.toLocaleString('pt-BR')}</p>
-                  </div>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
+                  <DollarSign className="w-6 h-6 text-green-400" />
                 </div>
-                <Button
-                  onClick={() => setShowPlans(!showPlans)}
-                  className="bg-green-600 hover:bg-green-700"
-                  size="sm"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Contratar Novo Plano
-                </Button>
+                <div>
+                  <p className="text-gray-400 text-sm">Lucro Estimado</p>
+                  <p className="text-2xl font-bold text-green-400">+ R$ {totalProfit.toLocaleString('pt-BR')}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
