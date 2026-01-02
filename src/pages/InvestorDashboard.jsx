@@ -4,6 +4,7 @@ import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { motion } from 'framer-motion';
 import { 
   DollarSign, 
   Package, 
@@ -204,33 +205,96 @@ export default function InvestorDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Perfil do Parceiro */}
-        <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 mb-8">
-          <CardContent className="p-6">
+        <Card className="bg-gradient-to-br from-gray-800 via-gray-800 to-green-900/20 backdrop-blur-sm border-2 border-green-500/30 mb-8 shadow-2xl shadow-green-500/10 hover:shadow-green-500/20 transition-all duration-500">
+          <CardContent className="p-8">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-3xl font-bold">
-                {currentUser?.full_name?.charAt(0) || 'P'}
-              </div>
-              <div className="flex-1">
-                <h1 className="text-3xl font-bold mb-1">
-                  {currentUser?.full_name || 'Investidor'} 
-                </h1>
-                <p className="text-gray-400">Parceiro Investidor</p>
-              </div>
-              <div className="flex flex-col items-end gap-3">
-                <Button
-                  onClick={() => setShowPlans(!showPlans)}
-                  className="bg-green-600 hover:bg-green-700"
+              <motion.div 
+                className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-4xl font-bold shadow-lg shadow-green-500/50 relative"
+                animate={{ 
+                  boxShadow: [
+                    '0 10px 40px rgba(34, 197, 94, 0.5)',
+                    '0 10px 60px rgba(34, 197, 94, 0.7)',
+                    '0 10px 40px rgba(34, 197, 94, 0.5)'
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <motion.span
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Contratar Novo Plano
-                </Button>
-                <div className="text-right">
+                  {currentUser?.full_name?.charAt(0) || 'P'}
+                </motion.span>
+                <div className="absolute inset-0 rounded-full bg-green-400/20 blur-xl animate-pulse"></div>
+              </motion.div>
+              <div className="flex-1">
+                <motion.h1 
+                  className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-green-400 bg-clip-text text-transparent"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  {currentUser?.full_name || 'Investidor'} 
+                </motion.h1>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2, duration: 0.5 }}
+                  className="flex items-center gap-2"
+                >
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <p className="text-green-400 font-semibold">Parceiro Investidor</p>
+                </motion.div>
+              </div>
+              <div className="flex flex-col items-end gap-4">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    onClick={() => setShowPlans(!showPlans)}
+                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 text-lg px-6 py-6 font-bold relative overflow-hidden group"
+                  >
+                    <motion.div
+                      className="absolute inset-0 bg-white/20"
+                      initial={{ x: '-100%' }}
+                      whileHover={{ x: '100%' }}
+                      transition={{ duration: 0.5 }}
+                    />
+                    <Plus className="w-5 h-5 mr-2 relative z-10" />
+                    <span className="relative z-10">Contratar Novo Plano</span>
+                  </Button>
+                </motion.div>
+                <motion.div 
+                  className="text-right bg-green-500/10 rounded-lg px-4 py-2 border border-green-500/30"
+                  animate={{ 
+                    borderColor: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.6)', 'rgba(34, 197, 94, 0.3)']
+                  }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
                   <div className="flex items-center gap-2 text-green-400 mb-1">
-                    <TrendingUp className="w-5 h-5" />
-                    <span className="text-2xl font-bold">R$ {totalProfit.toLocaleString('pt-BR')}</span>
+                    <motion.div
+                      animate={{ rotate: [0, 360] }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                    >
+                      <TrendingUp className="w-6 h-6" />
+                    </motion.div>
+                    <motion.span 
+                      className="text-3xl font-bold"
+                      animate={{ 
+                        textShadow: [
+                          '0 0 10px rgba(34, 197, 94, 0.5)',
+                          '0 0 20px rgba(34, 197, 94, 0.8)',
+                          '0 0 10px rgba(34, 197, 94, 0.5)'
+                        ]
+                      }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      R$ {totalProfit.toLocaleString('pt-BR')}
+                    </motion.span>
                   </div>
-                  <p className="text-sm text-gray-400">Lucro Estimado Total</p>
-                </div>
+                  <p className="text-sm text-gray-300 font-semibold">Lucro Estimado Total</p>
+                </motion.div>
               </div>
             </div>
           </CardContent>
