@@ -25,6 +25,7 @@ export default function InvestorDashboard() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeInvestments, setActiveInvestments] = useState([]);
+  const [showInvestments, setShowInvestments] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -254,7 +255,10 @@ export default function InvestorDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
+          <Card 
+            className="bg-gray-800/80 backdrop-blur-sm border-gray-700 cursor-pointer hover:border-purple-500/50 transition-all"
+            onClick={() => setShowInvestments(!showInvestments)}
+          >
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/30">
@@ -270,7 +274,7 @@ export default function InvestorDashboard() {
         </div>
 
         {/* Investimentos Ativos */}
-        {activeInvestments.length > 0 && (
+        {activeInvestments.length > 0 && showInvestments && (
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-6">
               Meus <span className="text-green-400">Investimentos Ativos</span>
