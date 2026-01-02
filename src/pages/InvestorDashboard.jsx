@@ -273,12 +273,7 @@ export default function InvestorDashboard() {
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   <div className="flex items-center gap-2 text-green-400 mb-1">
-                    <motion.div
-                      animate={{ rotate: [0, 360] }}
-                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                    >
-                      <TrendingUp className="w-6 h-6" />
-                    </motion.div>
+                    <TrendingUp className="w-6 h-6" />
                     <motion.span 
                       className="text-3xl font-bold"
                       animate={{ 
