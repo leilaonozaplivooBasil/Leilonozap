@@ -482,17 +482,17 @@ export default function InvestorDashboard() {
                 return (
                   <Card 
                     key={portfolio.id}
-                    className="bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:scale-[1.02]"
+                    className="bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:scale-[1.02] flex flex-col h-full"
                   >
                     <CardHeader className="p-3 pb-2 text-center">
                       <div className="flex items-center justify-center gap-2 mb-1">
                         <CardTitle className="text-lg text-white">{portfolio.name}</CardTitle>
                         <Badge className="bg-green-600 text-xs">{portfolio.risk}</Badge>
                       </div>
-                      <p className="text-gray-400 text-xs">{portfolio.description}</p>
+                      <p className="text-gray-400 text-xs min-h-[32px]">{portfolio.description}</p>
                     </CardHeader>
                     
-                    <CardContent className="space-y-2 p-3 pt-0 text-center">
+                    <CardContent className="space-y-2 p-3 pt-0 text-center flex-1 flex flex-col">
                       {/* Valores */}
                       <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
                         <div className="flex items-center justify-between">
@@ -534,9 +534,9 @@ export default function InvestorDashboard() {
                       </div>
 
                       {/* Produtos */}
-                      <div>
+                      <div className="min-h-[50px]">
                         <p className="text-xs text-gray-400 mb-1">Categorias:</p>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-1 justify-center">
                           {portfolio.products.map((product, idx) => (
                             <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-xs px-1.5 py-0">
                               {product}
@@ -546,11 +546,11 @@ export default function InvestorDashboard() {
                       </div>
 
                       {/* Features */}
-                      <div>
+                      <div className="flex-1 flex flex-col justify-center">
                         <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
                         <ul className="space-y-0.5">
                           {portfolio.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-center gap-1 text-xs text-gray-300">
+                            <li key={idx} className="flex items-center justify-center gap-1 text-xs text-gray-300">
                               <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
                               {feature}
                             </li>
@@ -560,7 +560,7 @@ export default function InvestorDashboard() {
 
                       {/* Botão */}
                       <Button 
-                        className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 mt-2"
+                        className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 mt-auto"
                         onClick={() => {
                           window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
                           setShowPlansModal(false);
