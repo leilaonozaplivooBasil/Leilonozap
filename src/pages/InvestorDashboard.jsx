@@ -232,10 +232,10 @@ export default function InvestorDashboard() {
         
         {/* Perfil do Parceiro */}
         <Card className="bg-gradient-to-br from-gray-800 via-gray-800 to-green-900/20 backdrop-blur-sm border-2 border-green-500/30 mb-8 shadow-2xl shadow-green-500/10 hover:shadow-green-500/20 transition-all duration-500">
-          <CardContent className="p-8">
-            <div className="flex items-center gap-6">
+          <CardContent className="p-4 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
               <motion.div 
-                className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-4xl font-bold shadow-lg shadow-green-500/50 relative"
+                className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg shadow-green-500/50 relative"
                 animate={{ 
                   boxShadow: [
                     '0 10px 40px rgba(34, 197, 94, 0.5)',
@@ -252,10 +252,10 @@ export default function InvestorDashboard() {
                   {currentUser?.full_name?.charAt(0) || 'P'}
                 </motion.span>
                 <div className="absolute inset-0 rounded-full bg-green-400/20 blur-xl animate-pulse"></div>
-              </motion.div>
-              <div className="flex-1">
+                </motion.div>
+                <div className="flex-1 text-center sm:text-left">
                 <motion.h1 
-                  className="text-4xl font-bold mb-2 bg-gradient-to-r from-white to-green-400 bg-clip-text text-transparent"
+                  className="text-2xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-green-400 bg-clip-text text-transparent"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
@@ -269,17 +269,18 @@ export default function InvestorDashboard() {
                   className="flex items-center gap-2"
                 >
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <p className="text-green-400 font-semibold">Parceiro Investidor</p>
-                </motion.div>
-              </div>
-              <div className="flex flex-col items-end gap-4">
-                <motion.div
+                  <p className="text-green-400 font-semibold text-sm sm:text-base">Parceiro Investidor</p>
+                  </motion.div>
+                  </div>
+                  <div className="flex flex-col items-center sm:items-end gap-4 w-full sm:w-auto">
+                  <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                >
+                  className="w-full sm:w-auto"
+                  >
                   <Button
                     onClick={() => setShowPlansModal(true)}
-                    className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 text-lg px-6 py-6 font-bold relative overflow-hidden group"
+                    className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 text-base sm:text-lg px-4 sm:px-6 py-4 sm:py-6 font-bold relative overflow-hidden group"
                   >
                     <motion.div
                       className="absolute inset-0 bg-white/20"
@@ -287,21 +288,21 @@ export default function InvestorDashboard() {
                       whileHover={{ x: '100%' }}
                       transition={{ duration: 0.5 }}
                     />
-                    <Plus className="w-5 h-5 mr-2 relative z-10" />
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2 relative z-10" />
                     <span className="relative z-10">Contratar Novo Plano</span>
-                  </Button>
-                </motion.div>
-                <motion.div 
-                  className="text-right bg-green-500/10 rounded-lg px-4 py-2 border border-green-500/30"
+                    </Button>
+                    </motion.div>
+                    <motion.div 
+                    className="text-center sm:text-right bg-green-500/10 rounded-lg px-4 py-2 border border-green-500/30 w-full sm:w-auto"
                   animate={{ 
                     borderColor: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.6)', 'rgba(34, 197, 94, 0.3)']
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <div className="flex items-center gap-2 text-green-400 mb-1">
-                    <TrendingUp className="w-6 h-6" />
+                  <div className="flex items-center justify-center sm:justify-end gap-2 text-green-400 mb-1">
+                    <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
                     <motion.span 
-                      className="text-3xl font-bold"
+                      className="text-2xl sm:text-3xl font-bold"
                       animate={{ 
                         textShadow: [
                           '0 0 10px rgba(34, 197, 94, 0.5)',
@@ -322,30 +323,30 @@ export default function InvestorDashboard() {
         </Card>
 
         {/* Resumo da Carteira */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30">
-                  <Wallet className="w-6 h-6 text-blue-400" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30">
+                  <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Total Investido</p>
-                  <p className="text-2xl font-bold text-white">R$ {totalInvested.toLocaleString('pt-BR')}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm">Total Investido</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">R$ {totalInvested.toLocaleString('pt-BR')}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
-                  <DollarSign className="w-6 h-6 text-green-400" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-lg flex items-center justify-center border border-green-500/30">
+                  <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Lucro Estimado</p>
-                  <p className="text-2xl font-bold text-green-400">+ R$ {totalProfit.toLocaleString('pt-BR')}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm">Lucro Estimado</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-400">+ R$ {totalProfit.toLocaleString('pt-BR')}</p>
                 </div>
               </div>
             </CardContent>
@@ -355,14 +356,14 @@ export default function InvestorDashboard() {
             className="bg-gray-800/80 backdrop-blur-sm border-gray-700 cursor-pointer hover:border-purple-500/50 transition-all"
             onClick={() => setShowInvestments(!showInvestments)}
           >
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/30">
-                  <Package className="w-6 h-6 text-purple-400" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/30">
+                  <Package className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-sm">Investimentos Ativos</p>
-                  <p className="text-2xl font-bold text-white">{activeInvestments.length}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm">Investimentos Ativos</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">{activeInvestments.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -372,7 +373,7 @@ export default function InvestorDashboard() {
         {/* Investimentos Ativos */}
         {activeInvestments.length > 0 && showInvestments && (
           <div className="mb-8">
-            <h2 className="text-3xl font-bold mb-6">
+            <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">
               Meus <span className="text-green-400">Investimentos Ativos</span>
             </h2>
             
@@ -384,39 +385,39 @@ export default function InvestorDashboard() {
                 
                 return (
                   <Card key={investment.id} className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
+                    <CardHeader className="p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
                         <div>
-                          <CardTitle className="text-xl text-white mb-1">{investment.plan}</CardTitle>
-                          <p className="text-sm text-gray-400">
+                          <CardTitle className="text-lg sm:text-xl text-white mb-1">{investment.plan}</CardTitle>
+                          <p className="text-xs sm:text-sm text-gray-400">
                             Iniciado em {new Date(investment.startDate).toLocaleDateString('pt-BR')} • {daysPassed} dias
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-white">R$ {investment.amount.toLocaleString('pt-BR')}</p>
-                          <p className="text-sm text-green-400 font-semibold">+ R$ {investment.estimatedProfit.toLocaleString('pt-BR')} lucro</p>
+                        <div className="text-left sm:text-right w-full sm:w-auto">
+                          <p className="text-xl sm:text-2xl font-bold text-white">R$ {investment.amount.toLocaleString('pt-BR')}</p>
+                          <p className="text-xs sm:text-sm text-green-400 font-semibold">+ R$ {investment.estimatedProfit.toLocaleString('pt-BR')} lucro</p>
                         </div>
                       </div>
                     </CardHeader>
 
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
                       {/* Timeline de Etapas */}
                       <div>
-                        <h4 className="font-semibold text-white mb-4">Etapas do Processo</h4>
+                        <h4 className="font-semibold text-white mb-3 sm:mb-4 text-sm sm:text-base">Etapas do Processo</h4>
                         <div className="relative">
                           {/* Linha conectora */}
-                          <div className="absolute left-6 top-6 bottom-6 w-0.5 bg-gray-700" />
+                          <div className="absolute left-5 sm:left-6 top-6 bottom-6 w-0.5 bg-gray-700" />
 
-                          <div className="space-y-4">
+                          <div className="space-y-3 sm:space-y-4">
                             {investmentSteps.map((step, idx) => {
                               const isCompleted = idx < currentStepIndex;
                               const isCurrent = idx === currentStepIndex;
                               const Icon = step.icon;
 
                               return (
-                                <div key={step.id} className="relative flex items-start gap-4">
+                                <div key={step.id} className="relative flex items-start gap-3 sm:gap-4">
                                   {/* Ícone */}
-                                  <div className={`relative z-10 w-12 h-12 rounded-full flex items-center justify-center border-2 transition-all overflow-hidden ${
+                                  <div className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all overflow-hidden ${
                                     isCompleted 
                                       ? 'bg-green-500/20 border-green-500' 
                                       : isCurrent
@@ -434,22 +435,22 @@ export default function InvestorDashboard() {
                                     )}
 
                                     {isCompleted ? (
-                                      <CheckCircle className="w-6 h-6 text-green-400 relative z-10" />
+                                      <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 relative z-10" />
                                     ) : (
-                                      <Icon className={`w-6 h-6 ${isCurrent ? step.color : 'text-gray-600'} relative z-10`} />
+                                      <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isCurrent ? step.color : 'text-gray-600'} relative z-10`} />
                                     )}
-                                  </div>
+                                    </div>
 
-                                  {/* Conteúdo */}
-                                  <div className={`flex-1 pb-4 ${isCurrent ? 'animate-pulse' : ''}`}>
-                                    <h5 className={`font-semibold mb-1 ${
+                                    {/* Conteúdo */}
+                                    <div className={`flex-1 pb-3 sm:pb-4 ${isCurrent ? 'animate-pulse' : ''}`}>
+                                    <h5 className={`font-semibold mb-1 text-sm sm:text-base ${
                                       isCompleted ? 'text-green-400' : isCurrent ? step.color : 'text-gray-500'
                                     }`}>
                                       {step.title}
                                       {isCompleted && ' ✓'}
                                       {isCurrent && ' - Em andamento'}
-                                    </h5>
-                                    <p className="text-sm text-gray-400">{step.description}</p>
+                                      </h5>
+                                      <p className="text-xs sm:text-sm text-gray-400">{step.description}</p>
 
                                     {/* Barra de progresso para última etapa */}
                                     {step.id === 5 && currentStepIndex >= 4 && (
@@ -475,18 +476,18 @@ export default function InvestorDashboard() {
                       </div>
 
                       {/* Data de Retorno */}
-                      <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Clock className="w-5 h-5 text-green-400" />
+                      <div className="bg-green-600/10 rounded-lg p-3 sm:p-4 border border-green-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                           <div>
-                            <p className="text-sm text-gray-400">Retorno Previsto</p>
-                            <p className="font-bold text-white">
+                            <p className="text-xs sm:text-sm text-gray-400">Retorno Previsto</p>
+                            <p className="font-bold text-white text-sm sm:text-base">
                               {new Date(investment.estimatedReturn).toLocaleDateString('pt-BR')}
                             </p>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-green-400">
+                        <div className="text-left sm:text-right w-full sm:w-auto">
+                          <p className="text-xl sm:text-2xl font-bold text-green-400">
                             R$ {(investment.amount + investment.estimatedProfit).toLocaleString('pt-BR')}
                           </p>
                           <p className="text-xs text-gray-400">valor total</p>
