@@ -492,10 +492,10 @@ export default function InvestorDashboard() {
                           <p className="text-xs text-gray-400">valor total</p>
                         </div>
                       </div>
-                      </CardContent>
-                      </Card>
-                      );
-                      })}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         )}
