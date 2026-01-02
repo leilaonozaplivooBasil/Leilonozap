@@ -447,7 +447,6 @@ export default function InvestorDashboard() {
                                     }`}>
                                       {step.title}
                                       {isCompleted && ' ✓'}
-                                      {isCurrent && ` (${daysPassed}/${step.daysToComplete} dias)`}
                                     </h5>
                                     <p className="text-sm text-gray-400">{step.description}</p>
 
