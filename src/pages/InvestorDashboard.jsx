@@ -368,24 +368,6 @@ export default function InvestorDashboard() {
                   </CardHeader>
                   
                   <CardContent className="space-y-6">
-                    {/* Produtos */}
-                    <div className="bg-gray-900/50 rounded-lg p-4">
-                      <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
-                        <Package className="w-4 h-4" />
-                        Produtos do Investimento
-                      </h4>
-                      <div className="space-y-2">
-                        {investment.products.map((product, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-sm">
-                            <span className="text-gray-300">{product.name}</span>
-                            <Badge variant="outline" className="border-gray-600 text-gray-400">
-                              {product.quantity}x
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
                     {/* Timeline de Etapas */}
                     <div>
                       <h4 className="font-semibold text-white mb-4">Etapas do Processo</h4>
