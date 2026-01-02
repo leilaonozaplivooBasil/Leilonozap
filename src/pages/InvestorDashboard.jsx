@@ -19,8 +19,15 @@ import {
   TestTube,
   Store,
   User,
-  Plus
+  Plus,
+  X
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 export default function InvestorDashboard() {
   const navigate = useNavigate();
@@ -28,7 +35,7 @@ export default function InvestorDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeInvestments, setActiveInvestments] = useState([]);
   const [showInvestments, setShowInvestments] = useState(false);
-  const [showPlans, setShowPlans] = useState(false);
+  const [showPlansModal, setShowPlansModal] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -244,7 +251,7 @@ export default function InvestorDashboard() {
                   whileTap={{ scale: 0.95 }}
                 >
                   <Button
-                    onClick={() => setShowPlans(!showPlans)}
+                    onClick={() => setShowPlansModal(true)}
                     className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 text-lg px-6 py-6 font-bold relative overflow-hidden group"
                   >
                     <motion.div
@@ -452,121 +459,123 @@ export default function InvestorDashboard() {
           </div>
         )}
 
-        {/* Planos Disponíveis */}
-        {showPlans && (
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">
-            {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
-            <span className="text-green-400">Novo Plano</span>
-          </h2>
-          <p className="text-gray-400 mb-6">
-            {activeInvestments.length > 0 
-              ? 'Faça novos investimentos e aumente seus lucros' 
-              : 'Selecione o plano ideal para começar a investir'
-            }
-          </p>
-          
-          <div className="grid md:grid-cols-3 gap-6">
-            {portfolios.map((portfolio) => {
-              const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
-              
-              return (
-                <Card 
-                  key={portfolio.id}
-                  className="bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:scale-105"
-                >
-                  <CardHeader>
-                    <div className="flex items-center justify-between mb-2">
-                      <CardTitle className="text-xl text-white">{portfolio.name}</CardTitle>
-                      <Badge className="bg-green-600">{portfolio.risk}</Badge>
-                    </div>
-                    <p className="text-gray-400 text-sm">{portfolio.description}</p>
-                  </CardHeader>
-                  
-                  <CardContent className="space-y-4">
-                    {/* Valores */}
-                    <div className="bg-gray-900/50 rounded-lg p-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Investimento Mínimo</span>
-                        <span className="text-white font-bold">
-                          R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
-                        </span>
+        {/* Modal de Planos */}
+        <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700 text-white">
+            <DialogHeader>
+              <DialogTitle className="text-3xl font-bold">
+                {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
+                <span className="text-green-400">Novo Plano</span>
+              </DialogTitle>
+              <p className="text-gray-400 mt-2">
+                {activeInvestments.length > 0 
+                  ? 'Faça novos investimentos e aumente seus lucros' 
+                  : 'Selecione o plano ideal para começar a investir'
+                }
+              </p>
+            </DialogHeader>
+            
+            <div className="grid md:grid-cols-3 gap-6 mt-6">
+              {portfolios.map((portfolio) => {
+                const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
+                
+                return (
+                  <Card 
+                    key={portfolio.id}
+                    className="bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:scale-105"
+                  >
+                    <CardHeader>
+                      <div className="flex items-center justify-between mb-2">
+                        <CardTitle className="text-xl text-white">{portfolio.name}</CardTitle>
+                        <Badge className="bg-green-600">{portfolio.risk}</Badge>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Retorno</span>
-                        <span className="text-green-400 font-bold">{portfolio.expectedReturn}%</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400">Prazo</span>
-                        <span className="text-white font-bold">{portfolio.duration} dias</span>
-                      </div>
-                    </div>
-
-                    {/* Projeção */}
-                    <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Calculator className="w-4 h-4 text-green-400" />
-                        <span className="text-sm text-green-400 font-semibold">Projeção</span>
-                      </div>
-                      <div className="space-y-1 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Lucro:</span>
-                          <span className="text-green-400 font-bold">
-                            + R$ {projection.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Total:</span>
+                      <p className="text-gray-400 text-sm">{portfolio.description}</p>
+                    </CardHeader>
+                    
+                    <CardContent className="space-y-4">
+                      {/* Valores */}
+                      <div className="bg-gray-900/50 rounded-lg p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Investimento Mínimo</span>
                           <span className="text-white font-bold">
-                            R$ {projection.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
                           </span>
                         </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Retorno</span>
+                          <span className="text-green-400 font-bold">{portfolio.expectedReturn}%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400">Prazo</span>
+                          <span className="text-white font-bold">{portfolio.duration} dias</span>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Produtos */}
-                    <div>
-                      <p className="text-sm text-gray-400 mb-2">Categorias:</p>
-                      <div className="flex flex-wrap gap-2">
-                        {portfolio.products.map((product, idx) => (
-                          <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300">
-                            {product}
-                          </Badge>
-                        ))}
+                      {/* Projeção */}
+                      <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calculator className="w-4 h-4 text-green-400" />
+                          <span className="text-sm text-green-400 font-semibold">Projeção</span>
+                        </div>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Lucro:</span>
+                            <span className="text-green-400 font-bold">
+                              + R$ {projection.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Total:</span>
+                            <span className="text-white font-bold">
+                              R$ {projection.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* Features */}
-                    <div>
-                      <p className="text-sm text-gray-400 mb-2">Benefícios:</p>
-                      <ul className="space-y-1">
-                        {portfolio.features.map((feature, idx) => (
-                          <li key={idx} className="flex items-center gap-2 text-sm text-gray-300">
-                            <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                      {/* Produtos */}
+                      <div>
+                        <p className="text-sm text-gray-400 mb-2">Categorias:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {portfolio.products.map((product, idx) => (
+                            <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300">
+                              {product}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
 
-                    {/* Botão */}
-                    <Button 
-                      className="w-full bg-green-600 hover:bg-green-700"
-                      onClick={() => {
-                        // Aqui você pode adicionar lógica de contato ou formulário
-                        window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
-                      }}
-                    >
-                      Investir Agora
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        </div>
-        )}
+                      {/* Features */}
+                      <div>
+                        <p className="text-sm text-gray-400 mb-2">Benefícios:</p>
+                        <ul className="space-y-1">
+                          {portfolio.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-center gap-2 text-sm text-gray-300">
+                              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+
+                      {/* Botão */}
+                      <Button 
+                        className="w-full bg-green-600 hover:bg-green-700"
+                        onClick={() => {
+                          window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
+                          setShowPlansModal(false);
+                        }}
+                      >
+                        Investir Agora
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Informações */}
         <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
