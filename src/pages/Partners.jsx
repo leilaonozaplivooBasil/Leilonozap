@@ -17,7 +17,6 @@ import {
 import LoginModal from '../components/common/LoginModal';
 import ValoraNotesGallery from '../components/licensing/ValoraNotesGallery';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
-import ProductCarousel from '../components/licensing/ProductCarousel';
 
 const AppUser = base44.entities.AppUser;
 
@@ -235,7 +234,7 @@ const LandingContent = ({ onLoginClick }) => {
       </div>
 
       {/* EXEMPLO DE PRODUTOS - CARROSSEL */}
-      <ProductCarousel />
+      {/* Carrossel será adicionado aqui */}
 
       <div className="mt-12 sm:mt-20 px-4">
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Parceiro</h2>
