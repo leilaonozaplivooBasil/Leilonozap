@@ -466,7 +466,7 @@ export default function PlanCheckout() {
               </Button>
 
               <p className="text-xs text-gray-500 text-center mt-4">
-                Ao confirmar, você concorda com nossos termos e condições
+                Ao confirmar, voce concorda com nossos termos e condicoes
               </p>
               </>
               )}
