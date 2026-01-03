@@ -8,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import ImageCropEditor from '../components/admin/ImageCropEditor';
 
 export default function BannerManagement() {
   const [banners, setBanners] = useState([]);
@@ -563,6 +564,8 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
   const [formData, setFormData] = useState(product);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [showCropEditor, setShowCropEditor] = useState(false);
+  const [pendingImageFile, setPendingImageFile] = useState(null);
   const fileInputRef = React.useRef(null);
 
   const handleFileChange = async (e) => {
@@ -588,12 +591,19 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
       return;
     }
 
-    setIsUploading(true);
-    const imageUrl = await onUploadImage(file);
-    if (imageUrl) {
-      setFormData({ ...formData, image_url: imageUrl });
-    }
-    setIsUploading(false);
+    // Verifica dimensões da imagem
+    const img = new Image();
+    img.onload = () => {
+      // Se não for 1200x600, abre o editor
+      if (img.width !== 1200 || img.height !== 600) {
+        setPendingImageFile(file);
+        setShowCropEditor(true);
+      } else {
+        // Dimensões perfeitas, faz upload direto
+        uploadImageFile(file);
+      }
+    };
+    img.src = URL.createObjectURL(file);
   };
 
   const handleDragOver = (e) => {
