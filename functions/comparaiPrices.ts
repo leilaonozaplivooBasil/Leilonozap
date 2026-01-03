@@ -318,23 +318,8 @@ Deno.serve(async (req) => {
                 
                 const html = await response.text();
                 
-                const jsonLdResult = extractFromJSONLD(html);
-                if (jsonLdResult) {
-                    supplierPrice = jsonLdResult.price;
-                    extractionMethod = jsonLdResult.method;
-                }
-                
-                if (!supplierPrice) {
-                    const metaResult = extractFromMetaTags(html);
-                    if (metaResult) {
-                        supplierPrice = metaResult.price;
-                        extractionMethod = metaResult.method;
-                    }
-                }
-                
                 // 🆕 PRIORIDADE 1: IA PRIMEIRO (mais precisa)
-                if (!supplierPrice) {
-                    console.log(`   🤖 Tentando IA (prioridade)...`);
+                console.log(`   🤖 Tentando IA (prioridade máxima)...`);
                     
                     const htmlSnippet = html.substring(0, 50000);
                     
@@ -374,16 +359,33 @@ Retorne JSON:
                         }
                     });
                     
-                    if (llmResult?.found && llmResult.price && llmResult.price >= 10 && llmResult.price <= maxAllowedPrice * 2) {
-                        supplierPrice = llmResult.price;
-                        extractionMethod = 'ai-extraction';
-                        console.log(`   ✅ IA extraiu: R$ ${supplierPrice.toFixed(2)} (confiança: ${llmResult.confidence})`);
-                    } else {
-                        console.log(`   ⚠️ IA não encontrou preço válido, tentando métodos tradicionais...`);
+                if (llmResult?.found && llmResult.price && llmResult.price >= 10 && llmResult.price <= maxAllowedPrice * 2) {
+                    supplierPrice = llmResult.price;
+                    extractionMethod = 'ai-extraction';
+                    console.log(`   ✅ IA extraiu: R$ ${supplierPrice.toFixed(2)} (confiança: ${llmResult.confidence})`);
+                } else {
+                    console.log(`   ⚠️ IA não encontrou preço válido, tentando métodos tradicionais...`);
+                }
+                
+                // PRIORIDADE 2: JSON-LD (fallback)
+                if (!supplierPrice) {
+                    const jsonLdResult = extractFromJSONLD(html);
+                    if (jsonLdResult) {
+                        supplierPrice = jsonLdResult.price;
+                        extractionMethod = jsonLdResult.method;
                     }
                 }
                 
-                // PRIORIDADE 2: Métodos tradicionais (fallback)
+                // PRIORIDADE 3: Meta Tags (fallback)
+                if (!supplierPrice) {
+                    const metaResult = extractFromMetaTags(html);
+                    if (metaResult) {
+                        supplierPrice = metaResult.price;
+                        extractionMethod = metaResult.method;
+                    }
+                }
+                
+                // PRIORIDADE 4: Extração visual (último recurso)
                 if (!supplierPrice) {
                     const visualResult = extractPriceWithContext(html, validCurrentPrice, category);
                     if (visualResult) {
