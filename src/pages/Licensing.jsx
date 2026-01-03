@@ -1612,7 +1612,7 @@ export default function LicensingPage() {
               ) : (
                 <>
                   <h1 className="text-3xl md:text-4xl font-bold mb-6 text-white">
-                    Parabéns! Você é {userLevel === 'licenciado_catalogo' ? 'Influenciador Master' : 'um líder'} 🎉
+                    Parabéns! Você é {userLevel === 'licenciado_catalogo' ? 'Influenciador Master' : 'um Influenciador'} 🎉
                   </h1>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
                     Você já evoluiu no sistema! Continue crescendo seu sistema de alavancagem e maximizando seus ganhos.
