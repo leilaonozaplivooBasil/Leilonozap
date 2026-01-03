@@ -94,13 +94,13 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
     const benefits = [
         { 
             icon: DollarSign, 
-            text: "Ganhos Recorrentes",
-            description: "Receba comissões toda vez que seus indicados arrematarem produtos. Quanto mais eles compram, mais você ganha!"
+            text: "Ganhos em Dinheiro Real",
+            description: "Receba comissões em dinheiro (R$) toda vez que seus indicados arrematarem produtos. Quanto mais eles compram, mais você ganha!"
         },
         { 
             icon: Zap, 
-            text: "Créditos Valora Pay",
-            description: "Acumule V$ (Valora Pay) para usar em leilões e arrematar produtos incríveis. Sua moeda exclusiva dentro da plataforma!"
+            text: "Comissões Recorrentes",
+            description: "Ganhe 3% em cada arremate dos seus indicados. Renda passiva e recorrente para você!"
         },
         { 
             icon: BarChart, 
@@ -109,8 +109,8 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
         },
         { 
             icon: ShieldCheck, 
-            text: "Plano de Carreira",
-            description: "Cresça de Licenciado Aplicativo até Diretor. Quanto mais você evolui, maiores são as recompensas!"
+            text: "Sistema de Alavancagem",
+            description: "Construa sua rede de indicados e multiplique seus ganhos. Quanto mais você cresce, maiores são as recompensas!"
         },
     ];
 
@@ -132,7 +132,7 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
                             <span>Entrar na Minha Conta</span>
                         </button>
                         <p className="text-gray-500 text-xs">
-                            Acesse seu painel de licenciado
+                            Acesse seu painel de influenciador
                         </p>
                     </div>
                 </div>
@@ -166,27 +166,27 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
                                 <Smartphone className="w-6 h-6 text-green-400" />
                             </div>
                             <div>
-                                <div className="text-green-400 font-bold">Sistema de Indicação</div>
-                                <div className="text-sm text-gray-400 font-normal">Aplicativo Leilão NoZap</div>
+                                <div className="text-green-400 font-bold">Influencie</div>
+                                <div className="text-sm text-gray-400 font-normal">Programa de Influenciadores</div>
                             </div>
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <p className="text-gray-200 text-base leading-relaxed">
-                            Indique novos clientes para o <strong className="text-white">aplicativo Leilão NoZap</strong> e receba <strong className="text-green-400">3% em Valora Pay (V$)</strong> sobre CADA arremate que eles fizerem. Ganhos passivos e recorrentes.
+                            Torne-se um <strong className="text-white">Influenciador Leilão NoZap</strong> e receba <strong className="text-green-400">3% em dinheiro real (R$)</strong> sobre CADA arremate que seus indicados fizerem. Ganhos passivos e recorrentes direto na sua conta!
                         </p>
                         
                         <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 space-y-2">
                             <p className="text-green-400 font-semibold flex items-center gap-2">
                                 <Star className="w-4 h-4" />
-                                Benefícios do Sistema de Indicação:
+                                Benefícios de ser um Influenciador:
                             </p>
                             <ul className="space-y-1 text-sm text-gray-300">
                                 <li>✅ Link de indicação exclusivo</li>
-                                <li>✅ 3% em V$ de cada arremate dos indicados</li>
-                                <li>✅ Ganhos recorrentes e passivos</li>
+                                <li>✅ 3% em R$ de cada arremate dos indicados</li>
+                                <li>✅ Pagamento em dinheiro real</li>
                                 <li>✅ Dashboard com estatísticas em tempo real</li>
-                                <li>✅ Plano de carreira para crescimento</li>
+                                <li>✅ Sistema de alavancagem para crescimento</li>
                             </ul>
                         </div>
 
@@ -197,7 +197,7 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
                                 onClick={handleRegisterClick}
                             >
                                 <Smartphone className="w-5 h-5 mr-2" />
-                                Quero meu link de indicação agora!
+                                Quero ser um Influenciador agora!
                             </Button>
                         </div>
                     </CardContent>
@@ -205,7 +205,7 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
             </div>
 
             <div className="mt-20">
-                <h2 className="text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Licenciado</h2>
+                <h2 className="text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Influenciador</h2>
                 <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
                     {benefits.map((item, index) => (
                         <div 
@@ -793,10 +793,10 @@ const DashboardContent = ({ user, isAdmin }) => {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Painel do Licenciado</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">Painel do Influenciador</h1>
           <p className="text-gray-400">
             Seja bem-vindo, <strong className="text-white">{shortName}</strong>! 
-            Meu <strong className="text-green-400">{rolesText}</strong> da Leilão NoZap 👋
+            <strong className="text-green-400">Influenciador</strong> da Leilão NoZap 👋
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -1010,8 +1010,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <span className="text-white font-bold">3</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-1">Você Ganha 3%</h4>
-                  <p className="text-sm text-gray-400">A cada arremate deles, você recebe 3% em Valora Pay!</p>
+                  <h4 className="font-semibold text-white mb-1">Você Ganha 3% em R$</h4>
+                  <p className="text-sm text-gray-400">A cada arremate deles, você recebe 3% em dinheiro real!</p>
                 </div>
               </div>
             </CardContent>
@@ -1581,44 +1581,44 @@ export default function LicensingPage() {
             >
               <div className="inline-flex items-center gap-3 mb-6 bg-green-500/10 px-6 py-3 rounded-full border border-green-500/30">
                 <TrendingUp className="w-6 h-6 text-green-400" />
-                <span className="text-green-400 font-semibold">Sistema de Alavancagem Profissional</span>
+                <span className="text-green-400 font-semibold">Programa de Influenciadores</span>
               </div>
               
               {/* TÍTULO DINÂMICO */}
               {userLevel === 'guest' || userLevel === 'usuario' ? (
                 <>
                   <h1 className="text-3xl md:text-4xl font-bold mb-6 text-white">
-                    Torne-se um Licenciado Aplicativo
+                    Torne-se um Influenciador
                   </h1>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Indique clientes para o app e ganhe <strong className="text-green-400">3% em Valora Pay (V$)</strong> em cada arremate deles!
+                    Indique amigos e ganhe <strong className="text-green-400">3% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
                   </p>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Depois evolua para <strong className="text-purple-400">Licenciado Catálogo</strong> e ganhe <strong className="text-yellow-400">13% a 20% em DINHEIRO REAL (R$)</strong>!
+                    Construa sua rede e <strong className="text-yellow-400">multiplique seus ganhos</strong> com o sistema de alavancagem!
                   </p>
                 </>
               ) : userLevel === 'licenciado_aplicativo' ? (
                 <>
                   <h1 className="text-3xl md:text-4xl font-bold mb-6 text-white">
-                    Você já é um licenciado aplicativo.
+                    Você já é um Influenciador!
                   </h1>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className="text-green-400">Você ganha 3% em Valora Pay!</strong>
+                    Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className="text-green-400">Você ganha 3% em dinheiro real!</strong>
                   </p>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Evolua para <strong className="text-purple-400">Licenciado Catálogo</strong>: ganhe <strong className="text-yellow-400">13% a 20% em DINHEIRO REAL (R$)</strong> vendendo produtos premium!
+                    Continue crescendo sua rede e <strong className="text-yellow-400">aumente seus ganhos</strong> com o sistema de alavancagem!
                   </p>
                 </>
               ) : (
                 <>
                   <h1 className="text-3xl md:text-4xl font-bold mb-6 text-white">
-                    Parabéns! Você é {userLevel === 'licenciado_catalogo' ? 'Licenciado Catálogo' : 'um líder'} 🎉
+                    Parabéns! Você é {userLevel === 'licenciado_catalogo' ? 'Influenciador Master' : 'um líder'} 🎉
                   </h1>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
                     Você já evoluiu no sistema! Continue crescendo seu sistema de alavancagem e maximizando seus ganhos.
                   </p>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Ganhe <strong className="text-yellow-400">13% a 20% em DINHEIRO REAL (R$)</strong> + comissões do seu sistema de alavancagem!
+                    Ganhe <strong className="text-yellow-400">comissões em dinheiro real (R$)</strong> + bônus do seu sistema de alavancagem!
                   </p>
                 </>
               )}
@@ -1688,7 +1688,7 @@ export default function LicensingPage() {
               Construa Seu Sistema de Alavancagem
             </h2>
             <p className="text-gray-400 text-center mb-12">
-              Veja como nossos licenciados estão crescendo
+              Veja como nossos influenciadores estão crescendo
             </p>
           </div>
         </div>
