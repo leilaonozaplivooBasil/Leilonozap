@@ -536,14 +536,12 @@ export default function CreateAuction() {
 
     setIsProcessing(true);
     setManualStep(4);
-    const uploadedImages = [];
-    let downloadFailCount = 0;
 
     console.log(`📸 Processando ${validUrls.length} imagens...`);
 
     // Usa as URLs originais diretamente (mais confiável)
     console.log(`📥 Usando ${validUrls.length} URLs originais diretamente`);
-    uploadedImages = [...validUrls];
+    const uploadedImages = [...validUrls];
     
     validUrls.forEach((url, idx) => {
       console.log(`✅ Imagem ${idx + 1}: ${url.substring(0, 80)}...`);
@@ -558,11 +556,7 @@ export default function CreateAuction() {
       return;
     }
 
-    if (downloadFailCount > 0) {
-      toast.success(`✅ ${uploadedImages.length} imagens OK! (${downloadFailCount} usando links originais)`);
-    } else {
-      toast.success(`✅ Todas as ${uploadedImages.length} imagens processadas!`);
-    }
+    toast.success(`✅ Todas as ${uploadedImages.length} imagens processadas!`);
 
     setDownloadedImages(uploadedImages);
     setCoverIndex(0);
