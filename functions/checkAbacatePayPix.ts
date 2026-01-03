@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     });
 
     const result = await response.json();
-    console.log('📥 Resposta AbacatePay:', result);
+    console.log('Resposta AbacatePay:', result);
 
     if (!response.ok || result.error) {
       return Response.json({ 
