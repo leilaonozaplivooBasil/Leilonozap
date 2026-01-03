@@ -622,142 +622,125 @@ export default function InvestorDashboard() {
                 })}
                 </div>
 
-                {/* Mobile: Carousel */}
-                <div className="md:hidden relative -mx-4">
-                  <div className="overflow-hidden px-3" ref={emblaRef}>
-                    <div className="flex gap-3">
-                      {portfolios.map((portfolio) => {
-                        const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
+                {/* Mobile: Tabs System */}
+                <div className="md:hidden">
+                  {/* Tabs Navigation */}
+                  <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                    {portfolios.map((portfolio, idx) => (
+                      <button
+                        key={portfolio.id}
+                        onClick={() => setSelectedPlanIndex(idx)}
+                        className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+                          selectedPlanIndex === idx
+                            ? 'bg-green-600 text-white'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        }`}
+                      >
+                        {portfolio.name}
+                      </button>
+                    ))}
+                  </div>
 
-                        return (
-                          <div key={portfolio.id} className="flex-[0_0_90%] min-w-0">
-                        <Card 
-                          className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col h-[calc(100vh-200px)]"
-                        >
-                          <CardHeader className="p-3 pb-1.5 text-center">
-                            <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                              <CardTitle className="text-base text-white leading-tight">{portfolio.name}</CardTitle>
-                              <Badge className="bg-green-600 text-[9px] px-1.5 py-0.5">{portfolio.risk}</Badge>
-                            </div>
-                            <p className="text-gray-400 text-[11px] leading-tight">{portfolio.description}</p>
-                          </CardHeader>
+                  {/* Selected Plan Card */}
+                  <div className="flex justify-center">
+                    {portfolios.map((portfolio, idx) => {
+                      if (idx !== selectedPlanIndex) return null;
+                      const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
-                          <CardContent className="space-y-1.5 p-3 pt-0 text-center flex-1 flex flex-col overflow-y-auto">
-                            {/* Valores */}
-                            <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
-                              <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Investimento Mínimo</span>
-                                <span className="text-white font-bold">
-                                  R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
-                                </span>
+                      return (
+                        <div key={portfolio.id} className="w-[70%]">
+                          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col">
+                            <CardHeader className="p-3 pb-1.5 text-center">
+                              <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                                <CardTitle className="text-base text-white leading-tight">{portfolio.name}</CardTitle>
+                                <Badge className="bg-green-600 text-[9px] px-1.5 py-0.5">{portfolio.risk}</Badge>
                               </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Retorno</span>
-                                <span className="text-green-400 font-bold">{portfolio.expectedReturn}%</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Prazo</span>
-                                <span className="text-white font-bold">{portfolio.duration} dias</span>
-                              </div>
-                            </div>
+                              <p className="text-gray-400 text-[11px] leading-tight">{portfolio.description}</p>
+                            </CardHeader>
 
-                            {/* Projeção */}
-                            <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
-                              <div className="flex items-center gap-1 mb-1">
-                                <Calculator className="w-3 h-3 text-green-400" />
-                                <span className="text-xs text-green-400 font-semibold">Projeção</span>
-                              </div>
-                              <div className="space-y-0.5 text-xs">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Lucro:</span>
-                                  <span className="text-green-400 font-bold">
-                                    + R$ {projection.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Total:</span>
+                            <CardContent className="space-y-1.5 p-3 pt-0 text-center flex-1 flex flex-col">
+                              {/* Valores */}
+                              <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">Investimento Mínimo</span>
                                   <span className="text-white font-bold">
-                                    R$ {projection.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
                                   </span>
                                 </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">Retorno</span>
+                                  <span className="text-green-400 font-bold">{portfolio.expectedReturn}%</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">Prazo</span>
+                                  <span className="text-white font-bold">{portfolio.duration} dias</span>
+                                </div>
                               </div>
-                            </div>
 
-                            {/* Produtos */}
-                            <div className="min-h-[50px]">
-                              <p className="text-xs text-gray-400 mb-1">Categorias:</p>
-                              <div className="flex flex-wrap gap-1 justify-center">
-                                {portfolio.products.map((product, idx) => (
-                                  <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-xs px-1.5 py-0">
-                                    {product}
-                                  </Badge>
-                                ))}
+                              {/* Projeção */}
+                              <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
+                                <div className="flex items-center gap-1 mb-1">
+                                  <Calculator className="w-3 h-3 text-green-400" />
+                                  <span className="text-xs text-green-400 font-semibold">Projeção</span>
+                                </div>
+                                <div className="space-y-0.5 text-xs">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-400">Lucro:</span>
+                                    <span className="text-green-400 font-bold">
+                                      + R$ {projection.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-400">Total:</span>
+                                    <span className="text-white font-bold">
+                                      R$ {projection.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
 
-                            {/* Features */}
-                            <div className="flex-1 flex flex-col justify-center">
-                              <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
-                              <ul className="space-y-0.5">
-                                {portfolio.features.map((feature, idx) => (
-                                  <li key={idx} className="flex items-center justify-center gap-1 text-xs text-gray-300">
-                                    <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
-                                    {feature}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
+                              {/* Produtos */}
+                              <div>
+                                <p className="text-xs text-gray-400 mb-1">Categorias:</p>
+                                <div className="flex flex-wrap gap-1 justify-center">
+                                  {portfolio.products.map((product, idx) => (
+                                    <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-xs px-1.5 py-0">
+                                      {product}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
 
-                            {/* Botão */}
-                            <Button 
-                              className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 mt-auto"
-                              onClick={() => {
-                                window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
-                                setShowPlansModal(false);
-                              }}
-                            >
-                              Investir Agora
-                              <ArrowRight className="w-3 h-3 ml-1" />
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      </div>
-                    );
-                  })}
-                </div>
-                </div>
+                              {/* Features */}
+                              <div className="flex-1 flex flex-col justify-center">
+                                <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
+                                <ul className="space-y-0.5">
+                                  {portfolio.features.map((feature, idx) => (
+                                    <li key={idx} className="flex items-center justify-center gap-1 text-xs text-gray-300">
+                                      <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                                      {feature}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
 
-                {/* Carousel Navigation Buttons */}
-                <div className="flex justify-center gap-3 mt-4">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => emblaApi?.scrollPrev()}
-                    className="bg-gray-800 border-gray-700 hover:bg-gray-700 w-10 h-10"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => emblaApi?.scrollNext()}
-                    className="bg-gray-800 border-gray-700 hover:bg-gray-700 w-10 h-10"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                {/* Indicator Dots */}
-                <div className="flex justify-center gap-1.5 mt-3">
-                  {portfolios.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => emblaApi?.scrollTo(idx)}
-                      className="w-2 h-2 rounded-full bg-gray-600 hover:bg-green-400 transition-colors"
-                      aria-label={`Go to slide ${idx + 1}`}
-                    />
-                  ))}
-                </div>
+                              {/* Botão */}
+                              <Button 
+                                className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 mt-2"
+                                onClick={() => {
+                                  window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
+                                  setShowPlansModal(false);
+                                }}
+                              >
+                                Investir Agora
+                                <ArrowRight className="w-3 h-3 ml-1" />
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
                 </DialogContent>
                 </Dialog>
