@@ -8,6 +8,26 @@ import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
 
 export default function ComparaiModal({ auction, onClose }) {
+  // 🔥 VALIDAÇÃO CRÍTICA: Verifica se auction existe
+  if (!auction || !auction.id) {
+    console.error('❌ ComparaiModal: auction inválido!', auction);
+    return (
+      <Dialog open={true} onOpenChange={onClose}>
+        <DialogContent className="max-w-2xl bg-gray-900 text-white border-red-500/30">
+          <DialogHeader>
+            <DialogTitle>Erro</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h3 className="text-xl font-bold mb-2 text-yellow-400">Leilão Inválido</h3>
+            <p className="text-gray-300 mb-6">Não foi possível carregar os dados do leilão.</p>
+            <Button onClick={onClose} className="bg-gray-700 hover:bg-gray-600">Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
   const [comparisonData, setComparisonData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -15,6 +35,8 @@ export default function ComparaiModal({ auction, onClose }) {
   const [cacheAge, setCacheAge] = useState(null);
   
   const [localAuction, setLocalAuction] = useState(auction);
+  
+  console.log('✅ ComparaiModal inicializado com:', { auctionId: auction.id, title: auction.title });
   
   const [showLogoEditor, setShowLogoEditor] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
