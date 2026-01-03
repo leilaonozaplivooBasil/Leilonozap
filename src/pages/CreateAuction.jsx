@@ -837,11 +837,24 @@ export default function CreateAuction() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     
-                    {/* ETAPA 0: INSERIR URL, NOME OU GTIN */}
+                    {/* ETAPA 0: TABS PARA ESCOLHER MÉTODO */}
                     {manualStep === 0 && (
-                      <div className="space-y-4">
-                        {/* 🆕 BUSCA POR NOME DO PRODUTO */}
-                        <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
+                      <Tabs defaultValue="nome" className="w-full">
+                        <TabsList className="grid w-full grid-cols-3 bg-gray-700/50">
+                          <TabsTrigger value="nome" className="data-[state=active]:bg-purple-600">
+                            🌐 Por Nome
+                          </TabsTrigger>
+                          <TabsTrigger value="gtin" className="data-[state=active]:bg-green-600">
+                            📷 Código Barras
+                          </TabsTrigger>
+                          <TabsTrigger value="url" className="data-[state=active]:bg-blue-600">
+                            🔗 Por URL
+                          </TabsTrigger>
+                        </TabsList>
+
+                        {/* ABA: BUSCA POR NOME */}
+                        <TabsContent value="nome" className="mt-4">
+                          <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
                           <Label htmlFor="productName" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
                             <Zap className="w-4 h-4" />
                             🌐 Buscar Produto na Internet (Apenas o Nome)
@@ -885,20 +898,11 @@ export default function CreateAuction() {
                               <span><strong>IA busca na internet:</strong> Digite apenas o nome do produto e a IA encontra dados e fotos automaticamente!</span>
                             </p>
                           </div>
-                        </div>
+                        </TabsContent>
 
-                        {/* DIVISOR */}
-                        <div className="relative">
-                          <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-600"></div>
-                          </div>
-                          <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-gray-800 px-2 text-gray-400">ou</span>
-                          </div>
-                        </div>
-
-                        {/* BUSCA POR GTIN */}
-                        <div className="bg-green-900/20 border-2 border-green-500/50 rounded-xl p-4">
+                        {/* ABA: BUSCA POR GTIN */}
+                        <TabsContent value="gtin" className="mt-4">
+                          <div className="bg-green-900/20 border-2 border-green-500/50 rounded-xl p-4">
                           <Label htmlFor="gtinCode" className="text-sm font-bold text-green-300 flex items-center gap-2 mb-2">
                             <ImageIcon className="w-4 h-4" />
                             🔍 Buscar por Código de Barras (GTIN/EAN)
@@ -952,20 +956,11 @@ export default function CreateAuction() {
                               Ou digite manualmente: EAN-13, UPC, GTIN, etc.
                             </p>
                           </div>
-                        </div>
+                        </TabsContent>
 
-                        {/* DIVISOR */}
-                        <div className="relative">
-                          <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-600"></div>
-                          </div>
-                          <div className="relative flex justify-center text-xs uppercase">
-                            <span className="bg-gray-800 px-2 text-gray-400">ou</span>
-                          </div>
-                        </div>
-
-                        {/* BUSCA POR URL */}
-                        <div>
+                        {/* ABA: BUSCA POR URL */}
+                        <TabsContent value="url" className="mt-4">
+                          <div>
                           <Label htmlFor="productUrl" className="text-sm font-medium text-gray-400">
                             🔗 Cole o link do produto:
                           </Label>
@@ -1007,8 +1002,8 @@ export default function CreateAuction() {
                               </>
                             )}
                           </Button>
-                        </div>
-                      </div>
+                        </TabsContent>
+                      </Tabs>
                     )}
 
                     {/* ETAPA 1: PROCESSANDO DADOS */}
