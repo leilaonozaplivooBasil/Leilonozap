@@ -1106,19 +1106,37 @@ export default function CreateAuction() {
                         <div className="flex gap-2 mt-4">
                           <Button
                             type="button"
-                            onClick={handleClearAllImages}
-                            disabled={isProcessing || imageUrls.every(url => !url.trim())}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleClearAllImages();
+                            }}
+                            disabled={isProcessing || !imageUrls.some(url => url.trim())}
                             className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                           >
                             <Trash2 className="w-4 h-4 mr-2" /> Limpar Todas as Imagens
                           </Button>
                           <Button 
-                            onClick={visualizeImages} 
-                            disabled={isProcessing || imageUrls.every(url => !url.trim().startsWith('http'))} 
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              visualizeImages();
+                            }}
+                            disabled={isProcessing || !imageUrls.some(url => url.trim().startsWith('http'))} 
                             className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white"
                           >
-                            <ImageIcon className="w-4 h-4 mr-2" />
-                            👁️ Processar e Visualizar Imagens
+                            {isProcessing ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Processando...
+                              </>
+                            ) : (
+                              <>
+                                <ImageIcon className="w-4 h-4 mr-2" />
+                                👁️ Processar e Visualizar Imagens
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
