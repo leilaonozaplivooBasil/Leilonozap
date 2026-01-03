@@ -121,13 +121,7 @@ export default function PlanCheckout() {
     }
   };
 
-  const copyPixCode = () => {
-    if (pixData?.copy_paste) {
-      navigator.clipboard.writeText(pixData.copy_paste);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
+
 
   if (!plan || !currentUser) {
     return null;
@@ -217,33 +211,26 @@ export default function PlanCheckout() {
               {pixData ? (
                 // Exibe QR Code PIX
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg p-6 flex justify-center items-center min-h-[300px]">
-                    {pixData.qr_code ? (
-                      <img 
-                        src={pixData.qr_code} 
-                        alt="QR Code PIX" 
-                        className="w-full h-auto max-w-[280px] object-contain"
-                        onError={(e) => {
-                          console.error('❌ Erro ao carregar imagem QR Code');
-                          console.error('URL da imagem:', pixData.qr_code?.substring(0, 100));
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<p class="text-red-600 text-sm">Erro ao carregar QR Code. Use o código copia e cola abaixo.</p>';
-                        }}
-                        onLoad={() => console.log('✅ QR Code carregado com sucesso')}
-                      />
-                    ) : (
-                      <p className="text-red-600 text-sm">QR Code não disponível</p>
-                    )}
+                  <div className="bg-white rounded-lg p-6 flex justify-center items-center">
+                    <img 
+                      src={pixData.qr_code_base64} 
+                      alt="QR Code PIX" 
+                      className="w-64 h-64 mx-auto rounded-lg"
+                    />
                   </div>
 
                   <div>
                     <p className="text-sm text-gray-400 mb-2">Código PIX Copia e Cola:</p>
                     <div className="bg-gray-900 rounded-lg p-3 relative">
                       <div className="max-h-32 overflow-y-auto pr-20 text-xs text-gray-300 break-all font-mono">
-                        {pixData.copy_paste}
+                        {pixData.pix_code}
                       </div>
                       <Button
-                        onClick={copyPixCode}
+                        onClick={() => {
+                          navigator.clipboard.writeText(pixData.pix_code);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
                         size="sm"
                         className="absolute top-2 right-2 bg-green-600 hover:bg-green-700 text-xs"
                       >
@@ -260,6 +247,12 @@ export default function PlanCheckout() {
                         )}
                       </Button>
                     </div>
+                  </div>
+
+                  <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30">
+                    <p className="text-lg font-bold text-center text-green-400">
+                      R$ {pixData.amount.toFixed(2)}
+                    </p>
                   </div>
 
                   <div className="bg-blue-600/10 rounded-lg p-4 border border-blue-500/30 text-sm text-gray-300">
@@ -421,27 +414,14 @@ export default function PlanCheckout() {
                           });
 
                           if (response.data && response.data.success) {
-                            console.log('📥 Dados recebidos do backend:', {
-                              has_qr_code: !!response.data.qr_code_base64,
-                              qr_code_length: response.data.qr_code_base64?.length,
-                              has_pix_code: !!response.data.pix_code,
-                              pix_code_preview: response.data.pix_code?.substring(0, 50)
-                            });
-
-                            const qrCodeBase64 = response.data.qr_code_base64;
-                            if (!qrCodeBase64) {
-                              console.error('❌ QR Code base64 não recebido do backend');
-                              throw new Error('QR Code não foi gerado pelo sistema de pagamento');
-                            }
-
                             setPixData({
-                              qr_code: `data:image/png;base64,${qrCodeBase64}`,
-                              copy_paste: response.data.pix_code,
-                              transaction_id: response.data.billing_id,
+                              qr_code_base64: response.data.qr_code_base64,
+                              pix_code: response.data.pix_code,
+                              billing_id: response.data.billing_id,
+                              amount: plan.minInvestment,
                               auction_id: tempAuction.id
                             });
                             setShowCpfForm(false);
-                            console.log('✅ PixData configurado com sucesso');
                           } else {
                             throw new Error(response.data?.error || 'Erro ao gerar PIX');
                           }
