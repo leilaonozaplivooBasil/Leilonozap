@@ -474,9 +474,30 @@ export default function InvestorDashboard() {
                                   </div>
                                 </div>
                               );
-                            })}
-                          </div>
-                        </div>
+                              })}
+
+                              {/* Next Button */}
+                              <button
+                              onClick={() => setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
+                              className="flex-shrink-0 w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-full flex items-center justify-center transition-colors"
+                              >
+                              <ChevronRight className="w-5 h-5 text-white" />
+                              </button>
+                              </div>
+
+                              {/* Indicators */}
+                              <div className="flex justify-center gap-2 mt-4">
+                              {portfolios.map((_, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => setSelectedPlanIndex(idx)}
+                                className={`w-2 h-2 rounded-full transition-all ${
+                                  idx === selectedPlanIndex ? 'bg-green-500 w-6' : 'bg-gray-600'
+                                }`}
+                              />
+                              ))}
+                              </div>
+                              </div>
                       </div>
 
                       {/* Data de Retorno */}
