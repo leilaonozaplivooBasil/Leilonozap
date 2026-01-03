@@ -791,7 +791,7 @@ export default function CreateAuction() {
 
                 <Card className="bg-gray-800 border border-gray-700">
                   <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <CardTitle className="text-lg flex items-center gap-2 text-blue-400">
                         <LinkIcon className="w-5 h-5" /> Importador Automático
                       </CardTitle>
@@ -800,23 +800,31 @@ export default function CreateAuction() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             if (!confirm("🔄 Limpar todos os dados do produto atual e começar novo leilão?")) return;
                             
                             // Reset completo
-                            setFormData(prev => ({
-                              ...prev,
+                            setFormData({
                               title: "",
                               description: "",
                               image_urls: ["", "", "", "", ""],
                               starting_price: "",
                               increment: "10.00",
                               buy_now_price: "",
+                              duration: "86400",
+                              category: partnerStore === 'sai_de_baixo' ? "masculino" : "outros",
                               source_url: "",
+                              product_source: "return_resale",
                               supplier_url: "",
                               supplier_logo_url: "",
-                              product_id: ""
-                            }));
+                              comparai_mode: "google_shopping",
+                              partner_store: partnerStore,
+                              store_id: "",
+                              product_id: "",
+                              allowed_regions: []
+                            });
                             setProductUrl("");
                             setGtinCode("");
                             setProductName("");
@@ -832,10 +840,10 @@ export default function CreateAuction() {
                             
                             toast.success("✅ Formulário limpo! Comece um novo produto.");
                           }}
-                          className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                          className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white shrink-0"
                         >
                           <RefreshCw className="w-4 h-4 mr-2" />
-                          🔄 Limpar e Começar Novo
+                          Limpar e Começar Novo
                         </Button>
                       )}
                     </div>
