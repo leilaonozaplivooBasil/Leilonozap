@@ -333,10 +333,10 @@ export default function PlanCheckout() {
                         setIsProcessing(true);
 
                         try {
-                          // Cria o leilão temporário e gera o PIX
+                          // Cria o leilao temporario e gera o PIX
                           const tempAuction = await base44.entities.Auction.create({
-                            title: `Plano de Investimento: ${plan.name}`,
-                            description: `Compra do plano ${plan.name} - Investimento de R$ ${plan.minInvestment.toLocaleString('pt-BR')}`,
+                            title: 'Plano de Investimento: ' + plan.name,
+                            description: 'Compra do plano ' + plan.name + ' - Investimento de R$ ' + plan.minInvestment.toLocaleString('pt-BR'),
                             starting_price: plan.minInvestment,
                             current_price: plan.minInvestment,
                             increment: 0,
