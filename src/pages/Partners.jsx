@@ -17,6 +17,7 @@ import {
 import LoginModal from '../components/common/LoginModal';
 import ValoraNotesGallery from '../components/licensing/ValoraNotesGallery';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
+import ProductCarousel from '../components/licensing/ProductCarousel';
 
 const AppUser = base44.entities.AppUser;
 
@@ -233,50 +234,8 @@ const LandingContent = ({ onLoginClick }) => {
         </Card>
       </div>
 
-      {/* EXEMPLO DE PRODUTOS */}
-      <div className="mb-12 sm:mb-16 max-w-6xl mx-auto px-4">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-8 sm:mb-12">
-          Exemplo de <span className="text-green-400">Produtos</span>
-        </h2>
-
-        <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-4 sm:p-6">
-              <Package className="w-10 h-10 sm:w-12 sm:h-12 text-green-400 mb-3 sm:mb-4" />
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Eletrônicos</h3>
-              <div className="space-y-1 sm:space-y-2 text-sm sm:text-base text-gray-300">
-                <p><strong className="text-white">Compra:</strong> R$ 1.200,00</p>
-                <p><strong className="text-white">Venda:</strong> R$ 1.800,00</p>
-                <p className="text-green-400 font-bold">Seu lucro: R$ 54,00 (3%)</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-4 sm:p-6">
-              <Package className="w-10 h-10 sm:w-12 sm:h-12 text-green-400 mb-3 sm:mb-4" />
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Eletrodomésticos</h3>
-              <div className="space-y-1 sm:space-y-2 text-sm sm:text-base text-gray-300">
-                <p><strong className="text-white">Compra:</strong> R$ 800,00</p>
-                <p><strong className="text-white">Venda:</strong> R$ 1.400,00</p>
-                <p className="text-green-400 font-bold">Seu lucro: R$ 42,00 (3%)</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-4 sm:p-6">
-              <Package className="w-10 h-10 sm:w-12 sm:h-12 text-green-400 mb-3 sm:mb-4" />
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Móveis</h3>
-              <div className="space-y-1 sm:space-y-2 text-sm sm:text-base text-gray-300">
-                <p><strong className="text-white">Compra:</strong> R$ 2.000,00</p>
-                <p><strong className="text-white">Venda:</strong> R$ 3.200,00</p>
-                <p className="text-green-400 font-bold">Seu lucro: R$ 96,00 (3%)</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      {/* EXEMPLO DE PRODUTOS - CARROSSEL */}
+      <ProductCarousel />
 
       <div className="mt-12 sm:mt-20 px-4">
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Parceiro</h2>
