@@ -461,7 +461,7 @@ export default function PlanCheckout() {
                     Processando...
                   </>
                 ) : (
-                  `Pagar R$ ${plan.minInvestment.toLocaleString('pt-BR')}`
+                  'Pagar R$ ' + plan.minInvestment.toLocaleString('pt-BR')
                 )}
               </Button>
 
