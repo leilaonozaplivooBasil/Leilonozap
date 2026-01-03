@@ -797,9 +797,54 @@ export default function CreateAuction() {
 
                 <Card className="bg-gray-800 border border-gray-700">
                   <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2 text-blue-400">
-                      <LinkIcon className="w-5 h-5" /> Importador Automático
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg flex items-center gap-2 text-blue-400">
+                        <LinkIcon className="w-5 h-5" /> Importador Automático
+                      </CardTitle>
+                      {(formData.title || formData.description || formData.image_urls.some(url => url)) && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (!confirm("🔄 Limpar todos os dados do produto atual e começar novo leilão?")) return;
+                            
+                            // Reset completo
+                            setFormData(prev => ({
+                              ...prev,
+                              title: "",
+                              description: "",
+                              image_urls: ["", "", "", "", ""],
+                              starting_price: "",
+                              increment: "10.00",
+                              buy_now_price: "",
+                              source_url: "",
+                              supplier_url: "",
+                              supplier_logo_url: "",
+                              product_id: ""
+                            }));
+                            setProductUrl("");
+                            setGtinCode("");
+                            setProductName("");
+                            setManualStep(0);
+                            setExtractedData({ title: "", description: "" });
+                            setImageUrls(["", "", "", "", "", ""]);
+                            setDownloadedImages([]);
+                            setCoverIndex(0);
+                            setSelectedMarketplace(null);
+                            setManualUploadImages([]);
+                            setManualCoverIndex(0);
+                            setSupplierLogoPreview("");
+                            
+                            toast.success("✅ Formulário limpo! Comece um novo produto.");
+                          }}
+                          className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                        >
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          🔄 Limpar e Começar Novo
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     
