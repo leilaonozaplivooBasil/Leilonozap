@@ -10,11 +10,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 });
     }
 
-    // Valida CPF (deve ter 11 dígitos)
+    // Valida e limpa CPF (deve ter 11 dígitos)
     const cleanCpf = user_cpf.replace(/\D/g, '');
     if (cleanCpf.length !== 11) {
       return Response.json({ error: `CPF inválido. Deve ter 11 dígitos. Recebido: ${cleanCpf.length} dígitos` }, { status: 400 });
     }
+
+    // Limpa e formata telefone com código do país +55
+    const cleanPhone = user_phone.replace(/\D/g, '');
+    const formattedPhone = cleanPhone.startsWith('55') ? `+${cleanPhone}` : `+55${cleanPhone}`;
 
     // Busca dados do leilão
     const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id });
@@ -37,7 +41,7 @@ Deno.serve(async (req) => {
       description: `Arremate: ${auction.title}`,
       customer: {
         name: user_name,
-        cellphone: user_phone,
+        cellphone: formattedPhone,
         email: user_email,
         taxId: cleanCpf
       },
