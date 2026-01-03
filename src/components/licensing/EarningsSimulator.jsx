@@ -137,9 +137,7 @@ export default function EarningsSimulator() {
             transition={{ duration: 0.5, type: "spring" }}
             className="relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-teal-500/20 blur-2xl"></div>
-            
-            <div className="relative bg-gradient-to-br from-gray-900 via-green-900/30 to-emerald-900/30 rounded-2xl p-6 border-3 border-green-500/50 shadow-xl overflow-hidden">
+            <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-6 border-2 border-green-500/50 shadow-xl overflow-hidden">
               {/* Efeito de brilho animado */}
               <div className="absolute top-0 left-0 w-full h-full">
                 <div className="absolute top-0 left-0 w-24 h-24 bg-green-500/30 rounded-full blur-2xl animate-pulse"></div>
