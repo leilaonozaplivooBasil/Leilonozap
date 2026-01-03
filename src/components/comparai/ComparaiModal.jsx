@@ -38,8 +38,9 @@ export default function ComparaiModal({ auction, onClose }) {
     setError(null);
 
     try {
-      const { comparaiPrices } = await import("@/functions/comparaiPrices");
-      const response = await comparaiPrices({
+      const { base44 } = await import('@/api/base44Client');
+      
+      const response = await base44.functions.invoke('comparaiPrices', {
         auctionId: localAuction.id,
         forceRefresh: false,
         forceGoogleShopping: forceGoogleShopping
@@ -47,15 +48,12 @@ export default function ComparaiModal({ auction, onClose }) {
 
       console.log('📊 Resposta Comparai:', response);
       
-      // A resposta vem diretamente do backend, não wrapped em .data
-      const responseData = response.data || response;
-      
-      if (responseData.success) {
-        setComparisonData(responseData.comparison);
-        setIsCached(responseData.cached || false);
-        setCacheAge(responseData.cacheAge || null);
+      if (response.success) {
+        setComparisonData(response.comparison);
+        setIsCached(response.cached || false);
+        setCacheAge(response.cacheAge || null);
       } else {
-        const errorMsg = responseData.error || responseData.userMessage || responseData.details || 'Erro ao buscar comparação';
+        const errorMsg = response.error || response.userMessage || response.details || 'Erro ao buscar comparação';
         console.error('❌ Erro Comparai:', errorMsg);
         throw new Error(errorMsg);
       }
