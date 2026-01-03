@@ -565,7 +565,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             text-shadow: 0 0 20px #1DB24A, 0 2px 8px rgba(0,0,0,0.8);
             letter-spacing: 1px;
           ">
-            V$ ${(user.valora_pay_balance || 0).toFixed(2)}
+            R$ ${(user.valora_pay_balance || 0).toFixed(2)}
           </span>
         </div>
       `;

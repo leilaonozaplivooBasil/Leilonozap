@@ -31,7 +31,7 @@ export default function FloatingBalance({ balance }) {
               <DollarSign className="w-5 h-5" />
             </div>
           )}
-          <span className="amulet-balance">V$ {balance.toFixed(2)}</span>
+          <span className="amulet-balance">R$ {balance.toFixed(2)}</span>
         </div>
       </div>
       <style>{`
