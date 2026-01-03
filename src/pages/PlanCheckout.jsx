@@ -188,7 +188,7 @@ export default function PlanCheckout() {
                       alt="QR Code PIX" 
                       className="w-64 h-64 mx-auto mb-4 rounded-lg"
                       onError={(e) => {
-                        console.error('❌ Erro ao carregar imagem do QR Code');
+                        console.error('Erro ao carregar imagem do QR Code');
                         console.error('URL da imagem:', pixData.qr_code_base64?.substring(0, 100));
                       }}
                     />
