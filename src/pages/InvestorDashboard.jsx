@@ -799,7 +799,7 @@ export default function InvestorDashboard() {
               </div>
 
               <div>
-                <h4 className="font-bold text-white mb-2">🔒 Investimento Seguro</h4>
+                <h4 className="font-bold text-white mb-2">🔒 Compra Segura</h4>
                 <p className="text-gray-400 text-sm">
                   Produtos de alta liquidez e contratos formalizados garantem sua segurança.
                 </p>
