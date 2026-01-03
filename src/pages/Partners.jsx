@@ -288,10 +288,10 @@ const LandingContent = ({ onLoginClick }) => {
               onMouseEnter={() => setHoveredBenefit(index)}
               onMouseLeave={() => setHoveredBenefit(null)}
             >
-              <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-800 border-2 border-green-500/30 mb-4 transform group-hover:scale-110 group-hover:border-green-400 transition-all shadow-lg cursor-pointer">
-                <item.icon className="h-10 w-10 text-green-400" />
+              <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-xl bg-gray-800 border-2 border-green-500/30 mb-3 sm:mb-4 transform group-hover:scale-110 group-hover:border-green-400 transition-all shadow-lg cursor-pointer">
+                <item.icon className="h-8 w-8 sm:h-10 sm:w-10 text-green-400" />
               </div>
-              <p className="font-semibold text-white text-base">{item.text}</p>
+              <p className="font-semibold text-white text-sm sm:text-base leading-tight">{item.text}</p>
             </div>
           ))}
         </div>
