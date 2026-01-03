@@ -61,7 +61,7 @@ export default function EarningsSimulator() {
                 <span className="text-white text-base font-bold">pessoas</span>
               </div>
 
-              <div className="text-center text-xs text-white font-bold">
+              <div className="text-center text-xs text-gray-400">
                 Digite o número de pessoas indicadas
               </div>
             </div>
@@ -107,7 +107,7 @@ export default function EarningsSimulator() {
                 />
               </div>
 
-              <div className="text-center text-xs text-white font-bold">
+              <div className="text-center text-xs text-gray-400">
                 Digite o valor médio por arremate
               </div>
             </div>

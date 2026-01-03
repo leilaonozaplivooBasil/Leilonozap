@@ -381,14 +381,20 @@ const DashboardContent = ({ user, isAdmin }) => {
       if (indicatedCount > 0 && Array.isArray(indicatedUsers)) {
         const indicatedUserIds = indicatedUsers.map(u => u.id).filter(Boolean);
         if (indicatedUserIds.length > 0) {
-          const wonAuctions = await fetchWithRetry(
-            () => Auction.filter({
-              status: { $in: ["ended", "sold"] },
-              winner_id: { $in: indicatedUserIds },
-              is_investment_plan: { $ne: true }
-            })
-          );
-          networkBidsCount = Array.isArray(wonAuctions) ? wonAuctions.length : 0;
+          try {
+            const wonAuctions = await fetchWithRetry(
+              () => Auction.filter({
+                status: { $in: ["ended", "sold"] },
+                winner_id: { $in: indicatedUserIds },
+                is_investment_plan: { $ne: true },
+                is_test_auction: { $ne: true }
+              })
+            );
+            networkBidsCount = Array.isArray(wonAuctions) ? wonAuctions.length : 0;
+          } catch (error) {
+            console.warn("Erro ao buscar arremates da rede:", error);
+            networkBidsCount = user.network_bids_count || 0;
+          }
         }
       }
 
@@ -668,7 +674,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const handleGrantCommission = async () => {
     if (!selectedLicenseeId || !commissionAmount || parseFloat(commissionAmount) <= 0) {
-      toast.error("Seleccione um licenciado e valor válido.");
+      toast.error("Selecione um licenciado e valor válido.");
       return;
     }
 
@@ -678,15 +684,21 @@ const DashboardContent = ({ user, isAdmin }) => {
       if (!licensee) throw new Error("Licenciado não encontrado.");
 
       const amount = parseFloat(commissionAmount);
+
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error("Valor inválido");
+      }
+
       await AppUser.update(selectedLicenseeId, {
         commission_balance: (licensee.commission_balance || 0) + amount,
         valora_pay_balance: (licensee.valora_pay_balance || 0) + amount
       });
 
       toast.success(`R$ ${amount.toFixed(2)} creditados!`);
-      await loadAllUsers();
       setSelectedLicenseeId('');
       setCommissionAmount('');
+      await delay(2000);
+      await loadAllUsers();
     } catch (error) {
       toast.error("Erro ao conceder comissão: " + error.message);
     } finally {
@@ -705,14 +717,27 @@ const DashboardContent = ({ user, isAdmin }) => {
 
     setIsLinking(true);
     try {
+      let updated = 0;
       for (const userId of selectedUsersToLink) {
-        await AppUser.update(userId, { referred_by_id: selectedLicenseeForLink });
+        try {
+          await AppUser.update(userId, { referred_by_id: selectedLicenseeForLink });
+          updated++;
+          await delay(500);
+        } catch (error) {
+          console.error(`Erro ao vincular ${userId}:`, error);
+        }
       }
-      toast.info("Recalculando estatísticas...");
-      await handleForceSync();
-      setSelectedLicenseeForLink('');
-      setSelectedUsersToLink([]);
-      toast.success(`${selectedUsersToLink.length} usuário(s) vinculado(s)!`);
+
+      if (updated > 0) {
+        toast.info("Recalculando estatísticas...");
+        await delay(2000);
+        await handleForceSync();
+        setSelectedLicenseeForLink('');
+        setSelectedUsersToLink([]);
+        toast.success(`${updated} usuário(s) vinculado(s)!`);
+      } else {
+        toast.error("Nenhum usuário foi vinculado");
+      }
     } catch (error) {
       toast.error("Erro ao vincular: " + error.message);
     } finally {

@@ -80,7 +80,8 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                     const wonAuctions = await Auction.filter({ 
                         status: { $in: ["ended", "sold"] },
                         winner_id: { $in: indicatedUserIds },
-                        is_investment_plan: { $ne: true }
+                        is_investment_plan: { $ne: true },
+                        is_test_auction: { $ne: true }
                     }, "-updated_date", 100);
 
                     if (!Array.isArray(wonAuctions)) {
