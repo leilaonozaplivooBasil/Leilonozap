@@ -645,22 +645,14 @@ export default function InvestorDashboard() {
 
                 {/* Mobile: Carousel System */}
                 <div className="md:hidden px-2">
-                  {/* Selected Plan Card with Navigation */}
-                  <div className="relative flex items-center justify-center gap-2">
-                    {/* Previous Button */}
-                    <button
-                      onClick={() => setSelectedPlanIndex((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1))}
-                      className="flex-shrink-0 w-10 h-10 bg-gray-800 hover:bg-gray-700 rounded-full flex items-center justify-center transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5 text-white" />
-                    </button>
-
+                  {/* Selected Plan Card */}
+                  <div className="flex justify-center mb-4">
                     {portfolios.map((portfolio, idx) => {
                       if (idx !== selectedPlanIndex) return null;
                       const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
                       return (
-                        <div key={portfolio.id} className="flex-1 max-w-md">
+                        <div key={portfolio.id} className="w-[80%]">
                           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col">
                             <CardHeader className="p-3 pb-1.5 text-center">
                               <div className="flex items-center justify-center gap-1.5 mb-0.5">
