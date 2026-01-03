@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
     const result = JSON.parse(responseText);
 
     if (!result.data || result.error) {
-      console.error('❌ Erro na resposta AbacatePay:', result);
+      console.error('Erro na resposta AbacatePay:', result);
       return Response.json({ 
         error: result.error || 'Erro ao criar QR Code',
         details: result 
