@@ -43,7 +43,7 @@ export default function PlanCheckout() {
       return;
     }
 
-    // 🆕 Se for PIX, sempre mostra formulário de CPF/telefone
+    // Se for PIX, sempre mostra formulario de CPF/telefone
     if (paymentMethod === 'pix') {
       setShowCpfForm(true);
       return;
