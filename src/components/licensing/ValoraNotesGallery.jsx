@@ -69,7 +69,7 @@ export default function ValoraNotesGallery() {
               <img 
                 src={currentNote.url}
                 alt={`Nota V$ ${currentNote.value}`} 
-                className="w-full h-full object-contain p-4"
+                className="w-full h-full object-cover"
                 onLoad={() => setImagesLoaded(prev => ({ ...prev, [currentIndex]: true }))}
                 onError={() => setImagesFailed(prev => ({ ...prev, [currentIndex]: true }))}
               />
