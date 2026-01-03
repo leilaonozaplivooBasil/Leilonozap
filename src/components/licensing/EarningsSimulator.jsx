@@ -62,7 +62,7 @@ export default function EarningsSimulator() {
               </div>
 
               <div className="text-center text-xs text-white font-bold">
-                Digite o valor médio por arremate
+                Digite o valor de pessoas indicadas
               </div>
             </div>
           </div>
