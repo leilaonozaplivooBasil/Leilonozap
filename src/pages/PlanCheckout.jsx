@@ -44,8 +44,7 @@ export default function PlanCheckout() {
     setIsProcessing(true);
 
     try {
-      // Cria registro temporário de "leilão" para o plano
-      console.log('🔄 Criando leilão temporário para o plano...');
+      // 🎯 CRIA REGISTRO TEMPORÁRIO DE "LEILÃO" PARA O PLANO (igual aos leilões reais)
       const tempAuction = await base44.entities.Auction.create({
         title: `Plano de Investimento: ${plan.name}`,
         description: `Compra do plano ${plan.name} - Investimento de R$ ${plan.minInvestment.toLocaleString('pt-BR')}`,
@@ -54,39 +53,34 @@ export default function PlanCheckout() {
         increment: 0,
         buy_now_price: plan.minInvestment,
         end_time: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'processing',
+        status: 'ended', // 🆕 Já marca como "ended" para não aparecer em leilões ativos
+        order_status: 'awaiting_payment', // 🆕 Status de pedido
         category: 'outros',
         winner_id: currentUser.id,
         winner_name: currentUser.full_name,
         product_source: 'factory_new',
-        is_test_auction: false
+        is_test_auction: false,
+        image_urls: plan.imageKey ? [
+          'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400'
+        ] : []
       });
-      console.log('✅ Leilão temporário criado:', tempAuction.id);
 
       if (paymentMethod === 'pix') {
-        // Usa sistema existente de PIX
-        console.log('💳 Gerando PIX com AbacatePay...');
-        
-        const pixPayload = {
+        // 🎯 USA EXATAMENTE O MESMO SISTEMA DOS LEILÕES
+        const response = await base44.functions.invoke('createAbacatePayPix', {
           auction_id: tempAuction.id,
           user_name: currentUser.full_name,
           user_email: currentUser.email,
           user_phone: currentUser.phone || '11999999999',
           user_cpf: currentUser.cpf || '00000000000'
-        };
-        
-        console.log('📤 Payload PIX:', pixPayload);
-
-        const response = await base44.functions.invoke('createAbacatePayPix', pixPayload);
-
-        console.log('📥 Resposta PIX:', response);
+        });
 
         if (response.data && response.data.success) {
-          console.log('✅ PIX gerado com sucesso');
           setPixData({
             qr_code: `data:image/png;base64,${response.data.qr_code_base64}`,
             copy_paste: response.data.pix_code,
-            transaction_id: response.data.billing_id
+            transaction_id: response.data.billing_id,
+            auction_id: tempAuction.id // 🆕 Guarda o ID para rastreamento
           });
           setIsProcessing(false);
         } else {
@@ -94,7 +88,7 @@ export default function PlanCheckout() {
         }
 
       } else if (paymentMethod === 'card') {
-        // Usa sistema existente de Stripe
+        // 🎯 USA EXATAMENTE O MESMO SISTEMA DOS LEILÕES
         const response = await base44.functions.invoke('stripeCheckout', {
           auction_id: tempAuction.id
         });
@@ -255,13 +249,23 @@ export default function PlanCheckout() {
                     </p>
                   </div>
 
-                  <Button
-                    onClick={() => navigate(createPageUrl("InvestorDashboard"))}
-                    variant="outline"
-                    className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
-                  >
-                    Voltar ao Dashboard
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => navigate(createPageUrl("InvestorDashboard"))}
+                      variant="outline"
+                      className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                    >
+                      Dashboard
+                    </Button>
+                    {pixData.auction_id && (
+                      <Button
+                        onClick={() => navigate(`${createPageUrl("OrderTracking")}?auction_id=${pixData.auction_id}`)}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        Acompanhar Pedido
+                      </Button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 // Seleção de método de pagamento
