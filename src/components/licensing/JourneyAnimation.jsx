@@ -164,11 +164,12 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
                             <div key={phase.id} className="relative flex flex-col items-center">
                                 {/* Círculo */}
                                 <motion.div 
-                                    className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-500 ${
+                                    className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-500 relative ${
                                         index <= currentPhase 
                                             ? 'bg-green-500 shadow-lg shadow-green-500/50' 
                                             : 'bg-gray-700'
                                     }`}
+                                    style={{ zIndex: 20 }}
                                     animate={{
                                         scale: index === currentPhase ? [1, 1.2, 1] : 1,
                                     }}
