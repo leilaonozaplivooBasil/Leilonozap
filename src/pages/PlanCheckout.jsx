@@ -404,13 +404,8 @@ export default function PlanCheckout() {
                             user_cpf: cleanCpf
                           });
 
-                          console.log('🔍 Resposta completa:', response);
-                          console.log('🔍 response.data:', response.data);
-
                           if (response.data && response.data.success) {
-                            console.log('✅ QR Code recebido:', response.data.qr_code_base64?.substring(0, 100));
-                            console.log('✅ PIX Code recebido:', response.data.pix_code?.substring(0, 50));
-                            
+                            // ✅ A API retorna qr_code_base64 que já contém o prefixo data:image/png;base64,
                             setPixData({
                               qr_code_base64: response.data.qr_code_base64,
                               pix_code: response.data.pix_code,
@@ -420,7 +415,6 @@ export default function PlanCheckout() {
                             });
                             setShowCpfForm(false);
                           } else {
-                            console.error('❌ Erro na resposta:', response.data);
                             throw new Error(response.data?.error || 'Erro ao gerar PIX');
                           }
                         } catch (error) {
