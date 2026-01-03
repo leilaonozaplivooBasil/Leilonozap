@@ -162,14 +162,14 @@ const LandingContent = ({ onLoginClick }) => {
           </Card>
 
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-start gap-3 sm:gap-4">
                 <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold">4</span>
+                  <span className="text-white font-bold text-sm">4</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Receba seus Lucros</h3>
-                  <p className="text-gray-300">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Receba seus Lucros</h3>
+                  <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
                     Em 60 dias, receba seu investimento de volta + 3% de lucro garantido sobre as vendas realizadas.
                   </p>
                 </div>
