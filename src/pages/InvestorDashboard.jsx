@@ -539,9 +539,9 @@ export default function InvestorDashboard() {
                       <p className="text-gray-400 text-xs min-h-[32px]">{portfolio.description}</p>
                     </CardHeader>
                     
-                    <CardContent className="space-y-3 p-4 pt-0 text-center flex-1 flex flex-col">
+                    <CardContent className="space-y-2 p-3 pt-0 text-center flex-1 flex flex-col">
                       {/* Valores */}
-                      <div className="bg-gray-900/50 rounded-lg p-3 space-y-2 text-sm">
+                      <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-400">Investimento Mínimo</span>
                           <span className="text-white font-bold">
@@ -559,12 +559,12 @@ export default function InvestorDashboard() {
                       </div>
 
                       {/* Projeção */}
-                      <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Calculator className="w-4 h-4 text-green-400" />
-                          <span className="text-sm text-green-400 font-semibold">Projeção</span>
+                      <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
+                        <div className="flex items-center gap-1 mb-1">
+                          <Calculator className="w-3 h-3 text-green-400" />
+                          <span className="text-xs text-green-400 font-semibold">Projeção</span>
                         </div>
-                        <div className="space-y-1.5 text-sm">
+                        <div className="space-y-1 text-xs">
                           <div className="flex justify-between">
                             <span className="text-gray-400">Lucro:</span>
                             <span className="text-green-400 font-bold">
@@ -581,11 +581,11 @@ export default function InvestorDashboard() {
                       </div>
 
                       {/* Produtos */}
-                      <div className="min-h-[60px]">
-                        <p className="text-sm text-gray-400 mb-2">Categorias:</p>
-                        <div className="flex flex-wrap gap-1.5 justify-center">
+                      <div>
+                        <p className="text-xs text-gray-400 mb-1">Categorias:</p>
+                        <div className="flex flex-wrap gap-1 justify-center">
                           {portfolio.products.map((product, idx) => (
-                            <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-xs px-2 py-0.5">
+                            <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-[10px] px-1.5 py-0.5">
                               {product}
                             </Badge>
                           ))}
@@ -594,11 +594,11 @@ export default function InvestorDashboard() {
 
                       {/* Features */}
                       <div className="flex-1 flex flex-col justify-center">
-                        <p className="text-sm text-gray-400 mb-2">Benefícios:</p>
-                        <ul className="space-y-1.5">
+                        <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
+                        <ul className="space-y-0.5">
                           {portfolio.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-center justify-center gap-2 text-sm text-gray-300">
-                              <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                            <li key={idx} className="flex items-center justify-center gap-1 text-xs text-gray-300">
+                              <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
                               {feature}
                             </li>
                           ))}
@@ -607,14 +607,14 @@ export default function InvestorDashboard() {
 
                       {/* Botão */}
                       <Button 
-                        className="w-full bg-green-600 hover:bg-green-700 text-base py-3 mt-auto font-semibold"
+                        className="w-full bg-green-600 hover:bg-green-700 text-sm py-2.5 mt-auto font-semibold"
                         onClick={() => {
                           window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
                           setShowPlansModal(false);
                         }}
                       >
                         Investir Agora
-                        <ArrowRight className="w-4 h-4 ml-2" />
+                        <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                       </Button>
                     </CardContent>
                   </Card>
@@ -624,22 +624,22 @@ export default function InvestorDashboard() {
 
                 {/* Mobile: Carousel */}
                 <div className="md:hidden relative -mx-4">
-                  <div className="overflow-hidden px-4" ref={emblaRef}>
-                    <div className="flex gap-4">
+                  <div className="overflow-hidden px-3" ref={emblaRef}>
+                    <div className="flex gap-3">
                       {portfolios.map((portfolio) => {
                         const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
                         return (
-                          <div key={portfolio.id} className="flex-[0_0_90%] min-w-0">
+                          <div key={portfolio.id} className="flex-[0_0_95%] min-w-0">
                         <Card 
-                          className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col h-full"
+                          className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col"
                         >
-                          <CardHeader className="p-4 pb-3 text-center">
-                            <div className="flex items-center justify-center gap-2 mb-2">
-                              <CardTitle className="text-xl text-white">{portfolio.name}</CardTitle>
-                              <Badge className="bg-green-600 text-xs px-2 py-0.5">{portfolio.risk}</Badge>
+                          <CardHeader className="p-3 pb-2 text-center">
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                              <CardTitle className="text-lg text-white">{portfolio.name}</CardTitle>
+                              <Badge className="bg-green-600 text-[10px] px-1.5 py-0.5">{portfolio.risk}</Badge>
                             </div>
-                            <p className="text-gray-400 text-sm leading-snug">{portfolio.description}</p>
+                            <p className="text-gray-400 text-xs leading-tight">{portfolio.description}</p>
                           </CardHeader>
 
                           <CardContent className="space-y-2 p-3 pt-0 text-center flex-1 flex flex-col">
@@ -728,32 +728,32 @@ export default function InvestorDashboard() {
                 </div>
 
                 {/* Carousel Navigation Buttons */}
-                <div className="flex justify-center gap-3 mt-6">
+                <div className="flex justify-center gap-3 mt-4">
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => emblaApi?.scrollPrev()}
-                    className="bg-gray-800 border-gray-700 hover:bg-gray-700 w-12 h-12"
+                    className="bg-gray-800 border-gray-700 hover:bg-gray-700 w-10 h-10"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => emblaApi?.scrollNext()}
-                    className="bg-gray-800 border-gray-700 hover:bg-gray-700 w-12 h-12"
+                    className="bg-gray-800 border-gray-700 hover:bg-gray-700 w-10 h-10"
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
 
                 {/* Indicator Dots */}
-                <div className="flex justify-center gap-2 mt-4">
+                <div className="flex justify-center gap-1.5 mt-3">
                   {portfolios.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => emblaApi?.scrollTo(idx)}
-                      className="w-2.5 h-2.5 rounded-full bg-gray-600 hover:bg-green-400 transition-colors"
+                      className="w-2 h-2 rounded-full bg-gray-600 hover:bg-green-400 transition-colors"
                       aria-label={`Go to slide ${idx + 1}`}
                     />
                   ))}
