@@ -637,6 +637,35 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
 
+  const handleResetAllBalances = async () => {
+    const confirmReset = window.confirm(
+      "⚠️ ATENÇÃO: ESTA AÇÃO IRÁ ZERAR TODOS OS SALDOS E COMISSÕES!\n\n" +
+      "✅ Mantém: vínculos de indicação e contagem de clientes\n" +
+      "❌ Zera: commission_balance, valora_pay_balance, network_bids_count\n\n" +
+      "Deseja continuar?"
+    );
+    if (!confirmReset) return;
+
+    setIsResetting(true);
+    toast.info("Zerando saldos...");
+    try {
+      const { data } = await base44.functions.invoke('resetAllBalances');
+      if (data.success) {
+        toast.success(`✅ ${data.updated} usuários atualizados!`);
+        await delay(3000);
+        await fetchRealMetrics();
+        await delay(3000);
+        await loadAllUsers();
+      } else {
+        toast.error("Falha ao zerar saldos: " + data.error);
+      }
+    } catch (err) {
+      toast.error("Erro ao zerar saldos: " + err.message);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const handleGrantCommission = async () => {
     if (!selectedLicenseeId || !commissionAmount || parseFloat(commissionAmount) <= 0) {
       toast.error("Seleccione um licenciado e valor válido.");
@@ -813,7 +842,17 @@ const DashboardContent = ({ user, isAdmin }) => {
                 size="sm"
               >
                 {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                Reset
+                Reset Teste
+              </Button>
+              <Button
+                onClick={handleResetAllBalances}
+                disabled={isResetting}
+                variant="outline"
+                className="border-orange-500 text-orange-400"
+                size="sm"
+              >
+                {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                Zerar Saldos
               </Button>
             </>
           )}
