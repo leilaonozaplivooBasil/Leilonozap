@@ -23,7 +23,10 @@ Deno.serve(async (req) => {
             });
         }
 
-        const geoResponse = await fetch(`https://ipinfo.io/${clientIp}/json?token=${apiKey}`);
+        const geoResponse = await fetch(`https://ipinfo.io/${clientIp}/json?token=${apiKey}`, {
+            signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        
         if (!geoResponse.ok) {
             console.warn(`⚠️ Erro ao consultar IPinfo (${geoResponse.status}), liberando acesso`);
             return Response.json({
@@ -34,6 +37,15 @@ Deno.serve(async (req) => {
         }
 
         const geoData = await geoResponse.json();
+        
+        if (!geoData || typeof geoData !== 'object') {
+            console.warn('⚠️ Resposta inválida da API, liberando acesso');
+            return Response.json({
+                isAllowed: true,
+                reason: 'Resposta inválida, acesso liberado por padrão',
+                location: { ip: clientIp, region: 'N/A', country: 'N/A' }
+            });
+        }
 
         console.log('📦 Dados da API IPinfo:', JSON.stringify(geoData));
 
