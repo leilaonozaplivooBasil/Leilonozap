@@ -468,8 +468,7 @@ export default function CreateAuction() {
         const fileName = `imported_${index + 1}.${imageBlob.type.split('/')[1] || 'jpg'}`;
         const file = new File([imageBlob], fileName, { type: imageBlob.type });
 
-        const { UploadFile } = await import("@/integrations/Core");
-        const uploadResult = await UploadFile({ file });
+        const uploadResult = await base44.integrations.Core.UploadFile({ file });
         
         if (!uploadResult?.file_url) {
           throw new Error("Falha no upload final");
@@ -554,8 +553,7 @@ export default function CreateAuction() {
     
     setIsUploading(true);
     try {
-      const { UploadFile } = await import("@/integrations/Core");
-      const result = await UploadFile({ file });
+      const result = await base44.integrations.Core.UploadFile({ file });
       
       if (result?.file_url) {
         setFormData(prev => ({ ...prev, supplier_logo_url: result.file_url }));
