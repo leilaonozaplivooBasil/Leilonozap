@@ -50,6 +50,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
+import SystemChecklist from './pages/SystemChecklist';
 import __Layout from './Layout.jsx';
 
 
@@ -106,6 +107,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
+    "SystemChecklist": SystemChecklist,
 }
 
 export const pagesConfig = {
