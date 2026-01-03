@@ -2,6 +2,7 @@ import AdminUsers from './pages/AdminUsers';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
+import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionSaiDeBaixo from './pages/CreateAuctionSaiDeBaixo';
@@ -48,7 +49,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
-import BannerManagement from './pages/BannerManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -57,6 +57,7 @@ export const PAGES = {
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
     "AuctionRoom": AuctionRoom,
+    "BannerManagement": BannerManagement,
     "CRM": CRM,
     "CreateAuction": CreateAuction,
     "CreateAuctionSaiDeBaixo": CreateAuctionSaiDeBaixo,
@@ -103,7 +104,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
-    "BannerManagement": BannerManagement,
 }
 
 export const pagesConfig = {

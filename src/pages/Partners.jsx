@@ -190,21 +190,28 @@ const LandingContent = ({ onLoginClick }) => {
               <div className="flex items-start gap-3 sm:gap-4">
                 <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5 sm:mt-1" />
                 <p className="text-gray-300 text-sm sm:text-lg leading-relaxed">
-                  <strong className="text-white">Investimento Mínimo:</strong> R$ 5.000,00
+                  <strong className="text-white">Compre na plataforma:</strong> Valor mínimo R$5.000,00
                 </p>
               </div>
 
               <div className="flex items-start gap-3 sm:gap-4">
                 <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5 sm:mt-1" />
                 <p className="text-gray-300 text-sm sm:text-lg leading-relaxed">
-                  <strong className="text-white">Prazo:</strong> 60 dias
+                  <strong className="text-white">Primeiros 30 dias:</strong> compramos e organizamos o estoque
                 </p>
               </div>
 
               <div className="flex items-start gap-3 sm:gap-4">
                 <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5 sm:mt-1" />
                 <p className="text-gray-300 text-sm sm:text-lg leading-relaxed">
-                  <strong className="text-white">Retorno:</strong> Investimento + 3% de lucro sobre as vendas
+                  <strong className="text-white">Próximos 30 dias:</strong> nossa equipe vende seu produto em nosso catálogo
+                </p>
+              </div>
+
+              <div className="flex items-start gap-3 sm:gap-4">
+                <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5 sm:mt-1" />
+                <p className="text-gray-300 text-sm sm:text-lg leading-relaxed">
+                  <strong className="text-white">Retorno:</strong> Valor de compra + 3% de lucro sobre as vendas
                 </p>
               </div>
 
