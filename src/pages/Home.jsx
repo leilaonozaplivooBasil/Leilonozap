@@ -143,7 +143,7 @@ export default function Home() {
       let nozapOnly = auctions.filter((auction) => 
         auction && 
         auction.partner_store !== 'sai_de_baixo' && 
-        auction.is_investment_plan !== true
+        !auction.is_investment_plan
       );
       
       // 🆕 FILTRO POR REGIÃO: Remove leilões que não são permitidos na região do usuário

@@ -43,12 +43,18 @@ export default function RecommendedSection({ currentUser, isAdmin, partnerStore 
       const response = await getRecommendations();
       
       if (response && response.recommendations) {
-        setRecommendations(response.recommendations);
+        // Filtra planos de investimento
+        const filteredRecs = response.recommendations.filter(a => !a.is_investment_plan);
+        
+        setRecommendations(filteredRecs);
         setStats(response.stats);
         setLastLoadTime(now);
         
         // Salva no cache
-        sessionStorage.setItem(cacheKey, JSON.stringify(response));
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          recommendations: filteredRecs,
+          stats: response.stats
+        }));
         sessionStorage.setItem(`${cacheKey}_time`, now.toString());
       }
     } catch (error) {

@@ -180,6 +180,9 @@ export default function AuctionControl() {
   };
 
   const filteredAuctions = auctions.filter(auction => {
+    // Exclui planos de investimento
+    if (auction.is_investment_plan) return false;
+    
     if (filterStatus === "all") return true;
     if (filterStatus === "active") return auction.status === "active";
     if (filterStatus === "ended") return auction.status !== "active";
