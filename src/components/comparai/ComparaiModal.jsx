@@ -38,25 +38,37 @@ export default function ComparaiModal({ auction, onClose }) {
     setError(null);
 
     try {
+      console.log('🚀 Iniciando comparação...', { auctionId: localAuction.id, forceGoogleShopping });
+      
       const { comparaiPrices } = await import("@/functions/comparaiPrices");
+      console.log('✅ Função importada');
+      
       const response = await comparaiPrices({
         auctionId: localAuction.id,
         forceRefresh: false,
         forceGoogleShopping: forceGoogleShopping
       });
 
-      console.log('📊 Resposta Comparai:', response);
+      console.log('📊 Resposta completa:', JSON.stringify(response, null, 2));
+      console.log('📊 Tipo da resposta:', typeof response);
+      console.log('📊 Keys da resposta:', Object.keys(response || {}));
       
-      if (response.success) {
+      if (response?.success) {
         setComparisonData(response.comparison);
         setIsCached(response.cached || false);
         setCacheAge(response.cacheAge || null);
       } else {
-        throw new Error(response.error || 'Erro ao buscar comparação');
+        console.error('❌ Success=false:', response);
+        throw new Error(response?.error || 'Erro ao buscar comparação');
       }
     } catch (err) {
-      console.error('❌ Erro:', err);
-      setError(err.message || 'Não foi possível comparar preços');
+      console.error('❌ Erro completo:', err);
+      console.error('❌ Erro stack:', err.stack);
+      console.error('❌ Erro response:', err.response);
+      console.error('❌ Erro response data:', err.response?.data);
+      
+      const errorMsg = err.response?.data?.error || err.message || 'Não foi possível comparar preços';
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }
