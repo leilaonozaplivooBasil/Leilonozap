@@ -79,26 +79,10 @@ export default function PlanCheckout() {
       });
 
       if (paymentMethod === 'pix') {
-        // 🎯 USA EXATAMENTE O MESMO SISTEMA DOS LEILÕES
-        const response = await base44.functions.invoke('createAbacatePayPix', {
-          auction_id: tempAuction.id,
-          user_name: currentUser.full_name,
-          user_email: currentUser.email,
-          user_phone: phone.replace(/\D/g, ''),
-          user_cpf: cpf.replace(/\D/g, '')
-        });
-
-        if (response.data && response.data.success) {
-          setPixData({
-            qr_code: `data:image/png;base64,${response.data.qr_code_base64}`,
-            copy_paste: response.data.pix_code,
-            transaction_id: response.data.billing_id,
-            auction_id: tempAuction.id // 🆕 Guarda o ID para rastreamento
-          });
-          setIsProcessing(false);
-        } else {
-          throw new Error(response.data?.error || 'Erro ao gerar PIX');
-        }
+        // Este código nunca será executado porque PIX redireciona para o formulário
+        // mantido apenas por segurança
+        throw new Error('Fluxo inválido - use o formulário de CPF/telefone');
+      }
 
       } else if (paymentMethod === 'card') {
         // 🎯 USA EXATAMENTE O MESMO SISTEMA DOS LEILÕES
