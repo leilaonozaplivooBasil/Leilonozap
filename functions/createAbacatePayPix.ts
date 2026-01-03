@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
       notes: `CPF: ${user_cpf}, Tel: ${user_phone}`
     });
 
-    console.log('✅ QR Code PIX criado com sucesso:', pixData.id);
+    console.log('QR Code PIX criado com sucesso:', pixData.id);
 
     return Response.json({
       success: true,
