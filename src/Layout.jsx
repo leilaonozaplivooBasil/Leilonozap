@@ -350,9 +350,7 @@ export default function Layout({ children, currentPageName }) {
     { title: "Lucre Conosco", pageName: "Partners" },
   ];
 
-  const noZapLoggedItems = [
-    { title: "Influencie", pageName: "InfluencersNoZap" },
-  ];
+  const noZapLoggedItems = [];
 
   const saiDeBaixoMenuItems = [
     { title: "Leilões", pageName: "SaiDeBaixo" },
