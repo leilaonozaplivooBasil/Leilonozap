@@ -8,6 +8,7 @@ import { Wallet, CreditCard, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import WalletBalance from "../components/wallet/WalletBalance";
 import { Input } from "@/components/ui/input";
+import { createDepositIntent } from "@/functions/createDepositIntent";
 
 export default function WalletDeposit() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -48,18 +49,15 @@ export default function WalletDeposit() {
     try {
       toast.info("Redirecionando para pagamento seguro...");
       
-      const response = await base44.functions.invoke('createStripeCheckout', {
-        amount: pkg.amount,
-        description: pkg.label,
-        metadata: {
-          type: 'wallet_deposit',
-          user_id: currentUser.id,
-          package_id: pkg.id
-        }
+      const response = await createDepositIntent({
+        deposit_package_id: pkg.id
       });
 
-      if (response?.data?.url) {
-        window.location.href = response.data.url;
+      if (response?.payment_data?.checkout_url) {
+        window.location.href = response.payment_data.checkout_url;
+      } else if (response?.payment_data?.pix_key) {
+        toast.success("PIX gerado! (implementar modal)");
+        setIsProcessing(false);
       } else {
         toast.error("Erro ao criar sessão de pagamento");
         setIsProcessing(false);
@@ -82,21 +80,9 @@ export default function WalletDeposit() {
     try {
       toast.info("Redirecionando para pagamento seguro...");
       
-      const response = await base44.functions.invoke('createStripeCheckout', {
-        amount: amount,
-        description: `Depósito de R$ ${amount.toFixed(2)}`,
-        metadata: {
-          type: 'wallet_deposit',
-          user_id: currentUser.id
-        }
-      });
-
-      if (response?.data?.url) {
-        window.location.href = response.data.url;
-      } else {
-        toast.error("Erro ao criar sessão de pagamento");
-        setIsProcessing(false);
-      }
+      // Para valor customizado, precisa criar um pacote temporário ou usar função diferente
+      toast.info("Funcionalidade de valor customizado em desenvolvimento");
+      setIsProcessing(false);
     } catch (error) {
       console.error("Erro ao processar pagamento:", error);
       toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);

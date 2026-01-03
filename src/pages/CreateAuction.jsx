@@ -204,7 +204,7 @@ export default function CreateAuction() {
     setIsProcessingTest(true);
     try {
       // The backend function `createTestAuction` expects duration in minutes now.
-      const { data } = await createTestAuction({ duration: testDuration }); 
+      const data = await createTestAuction({ duration: testDuration }); 
       
       toast.success("✅ Leilão de teste criado!");
       loadTestAuctions();
@@ -254,8 +254,8 @@ export default function CreateAuction() {
     if (!confirm("⚠️ Deletar TODOS os leilões de teste?")) return;
     setIsProcessingTest(true);
     try {
-      const { data } = await deleteTestAuctions();
-      toast.success(`🗑️ ${data.deletedAuctions?.length || 0} leilões deletados!`);
+      const data = await deleteTestAuctions();
+      toast.success(`🗑️ ${data?.deletedAuctions?.length || 0} leilões deletados!`);
       loadTestAuctions();
       setSelectedTestAuction("");
     } catch (error) {
@@ -399,10 +399,10 @@ export default function CreateAuction() {
     
     try {
       // NOVO FLUXO: Chama a função unificada
-      const { data: responseData, error } = await extractDataFromUrl({ productUrl });
+      const responseData = await extractDataFromUrl({ productUrl });
 
-      if (error || !responseData) {
-          throw new Error(error?.message || "A função de extração falhou.");
+      if (!responseData) {
+          throw new Error("A função de extração falhou.");
       }
       
       const { title, description, imageUrls: extractedImageUrls } = responseData;
@@ -451,18 +451,18 @@ export default function CreateAuction() {
         const downloadResponse = await downloadImage({ imageUrl: url });
         
         // VERIFICA SE TEM FALLBACK (imagem falhou mas não quebrou)
-        if (downloadResponse.data?.fallbackUrl && !downloadResponse.data?.success) {
+        if (downloadResponse?.fallbackUrl && !downloadResponse?.success) {
           console.warn(`⚠️ Falha ao baixar, usando URL original como fallback: ${url}`);
           // Usa a URL original diretamente (não baixa)
           uploadedImages.push(url);
           continue;
         }
         
-        if (downloadResponse.status !== 200 || !downloadResponse.data?.dataUrl) {
-          throw new Error(downloadResponse.data?.error || 'Falha ao baixar imagem');
+        if (!downloadResponse?.dataUrl) {
+          throw new Error(downloadResponse?.error || 'Falha ao baixar imagem');
         }
         
-        const fetchRes = await fetch(downloadResponse.data.dataUrl);
+        const fetchRes = await fetch(downloadResponse.dataUrl);
         const imageBlob = await fetchRes.blob();
         
         const fileName = `imported_${index + 1}.${imageBlob.type.split('/')[1] || 'jpg'}`;
