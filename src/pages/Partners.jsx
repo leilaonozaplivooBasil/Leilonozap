@@ -234,12 +234,12 @@ const LandingContent = ({ onLoginClick }) => {
       </div>
 
       {/* EXEMPLO DE PRODUTOS */}
-      <div className="mb-16 max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-center text-white mb-12">
+      <div className="mb-12 sm:mb-16 max-w-6xl mx-auto px-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-8 sm:mb-12">
           Exemplo de <span className="text-green-400">Produtos</span>
         </h2>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
             <CardContent className="p-6">
               <Package className="w-12 h-12 text-green-400 mb-4" />
