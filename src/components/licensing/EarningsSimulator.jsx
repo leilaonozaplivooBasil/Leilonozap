@@ -68,16 +68,16 @@ export default function EarningsSimulator() {
                 />
               </div>
               
-              <div className="flex items-center justify-center">
-                <motion.div 
-                  key={people}
-                  initial={{ scale: 1.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-4xl font-black text-blue-400"
-                >
-                  {people}
-                </motion.div>
-                <span className="text-gray-400 text-base ml-2">pessoas</span>
+              <div className="flex items-center justify-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="100000"
+                  value={people}
+                  onChange={(e) => setPeople(Math.min(100000, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-32 text-4xl font-black text-blue-400 bg-transparent text-center border-b-2 border-blue-500/30 focus:border-blue-400 focus:outline-none"
+                />
+                <span className="text-gray-400 text-base">pessoas</span>
               </div>
               
               <div className="text-center text-xs text-gray-500">
