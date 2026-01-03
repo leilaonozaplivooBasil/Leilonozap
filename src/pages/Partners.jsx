@@ -42,7 +42,7 @@ const LandingContent = ({ onLoginClick }) => {
     },
     { 
       icon: ShieldCheck, 
-      text: "Investimento Seguro",
+      text: "Compra Segura",
       description: "Gestão 100% profissional do seu capital. Transparência total e contratos formalizados!"
     },
   ];
