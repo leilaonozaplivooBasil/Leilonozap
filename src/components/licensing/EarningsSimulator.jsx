@@ -39,20 +39,15 @@ export default function EarningsSimulator() {
 
       <div className="grid md:grid-cols-2 gap-4 mb-4">
         {/* Card 1: Quantidade de Pessoas */}
-        <motion.div
-          initial={{ opacity: 0, x: -50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="relative"
-        >
-          <div className="bg-gradient-to-br from-green-900/40 to-green-800/20 rounded-xl p-4 border-2 border-green-500/30 hover:border-green-400/60 transition-all duration-300 shadow-xl hover:shadow-green-500/20">
+        <div className="relative">
+          <div className="bg-gradient-to-br from-green-900/40 to-green-800/20 rounded-xl p-4 border-2 border-green-500/30">
             <div className="flex items-center gap-2 mb-3">
               <div className="p-2 bg-green-500/20 rounded-lg border border-green-500/30">
                 <Users className="w-5 h-5 text-green-400" />
               </div>
               <h3 className="text-lg font-bold text-white">Indicados Ativos</h3>
             </div>
-            
+
             <div className="space-y-3">
               <div className="flex items-center justify-center gap-2">
                 <input
@@ -61,94 +56,69 @@ export default function EarningsSimulator() {
                   max="100000"
                   value={people}
                   onChange={(e) => setPeople(Math.min(100000, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className="w-32 text-4xl font-black text-green-400 bg-transparent text-center border-b-2 border-green-500/30 focus:border-green-400 focus:outline-none"
+                  className="w-32 text-4xl font-black text-white bg-transparent text-center border-b-2 border-green-500/30 focus:border-green-400 focus:outline-none"
                 />
-                <span className="text-gray-400 text-base">pessoas</span>
+                <span className="text-white text-base font-bold">pessoas</span>
               </div>
-              
-              <div className="text-center text-xs text-gray-500">
-                Digite o valor (1-100.000)
+
+              <div className="text-center text-xs text-white font-bold">
+                Digite o valor médio por arremate
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
         {/* Card 2: Ticket Médio */}
-        <motion.div
-          initial={{ opacity: 0, x: 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="relative"
-        >
-          <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/30 rounded-xl p-4 border-2 border-gray-600/40 hover:border-gray-500/60 transition-all duration-300 shadow-xl hover:shadow-gray-500/20 h-full flex flex-col">
+        <div className="relative">
+          <div className="bg-gradient-to-br from-gray-800/60 to-gray-700/30 rounded-xl p-4 border-2 border-gray-600/40 h-full flex flex-col">
             <div className="flex items-center gap-2 mb-3">
               <div className="p-2 bg-gray-600/30 rounded-lg border border-gray-500/30">
                 <DollarSign className="w-5 h-5 text-gray-300" />
               </div>
               <h3 className="text-lg font-bold text-white">Ticket Médio</h3>
             </div>
-            
+
             <div className="flex-1 flex flex-col justify-center space-y-3">
               <div className="grid grid-cols-3 gap-1.5">
                 {tickets.map((ticket) => (
-                  <motion.button
+                  <button
                     key={ticket}
                     onClick={() => setSelectedTicket(ticket)}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all duration-300 ${
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold ${
                       selectedTicket === ticket
-                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/50 border-2 border-green-400'
-                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border-2 border-gray-700'
+                        ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white border-2 border-green-400'
+                        : 'bg-gray-800 text-gray-400 border-2 border-gray-700'
                     }`}
                   >
                     R$ {ticket}
-                  </motion.button>
+                  </button>
                 ))}
               </div>
-              
+
               <div className="flex items-center justify-center">
-                <motion.div 
-                  key={selectedTicket}
-                  initial={{ scale: 1.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-4xl font-black text-gray-200"
-                >
+                <div className="text-4xl font-black text-white">
                   R$ {selectedTicket}
-                </motion.div>
+                </div>
               </div>
-              
-              <div className="text-center text-xs text-gray-500">
+
+              <div className="text-center text-xs text-white font-bold">
                 Valor médio por arremate
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       {/* Card de Resultado - DESTAQUE MÁXIMO */}
-      <AnimatePresence mode="wait">
-        {showResult && (
-          <motion.div
-            key={`${people}-${selectedTicket}`}
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            transition={{ duration: 0.5, type: "spring" }}
-            className="relative"
-          >
+      {showResult && (
+          <div className="relative">
             <div className="relative bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-6 border-2 border-green-500/50 overflow-hidden">
 
 
               <div className="relative z-10">
                 {/* Título com ícone */}
                 <div className="flex items-center justify-center gap-2 mb-4">
-                  <motion.div
-                    animate={{ rotate: [0, 360] }}
-                    transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                  >
-                    <Zap className="w-6 h-6 text-yellow-400" />
-                  </motion.div>
+                  <Zap className="w-6 h-6 text-yellow-400" />
                   <h3 className="text-xl md:text-2xl font-black text-white">
                     Seus Ganhos Mensais
                   </h3>
@@ -156,87 +126,54 @@ export default function EarningsSimulator() {
 
                 {/* Cálculo Visual */}
                 <div className="flex flex-wrap items-center justify-center gap-2 mb-4 text-sm md:text-base font-bold">
-                  <motion.div 
-                    className="flex items-center gap-1.5 bg-green-500/20 px-3 py-2 rounded-lg border border-green-500/30"
-                    whileHover={{ scale: 1.05 }}
-                  >
+                  <div className="flex items-center gap-1.5 bg-green-500/20 px-3 py-2 rounded-lg border border-green-500/30">
                     <Users className="w-4 h-4 text-green-400" />
                     <span className="text-green-400">{people} pessoas</span>
-                  </motion.div>
+                  </div>
 
                   <span className="text-gray-500 text-sm">×</span>
 
-                  <motion.div 
-                    className="flex items-center gap-1.5 bg-gray-600/30 px-3 py-2 rounded-lg border border-gray-500/30"
-                    whileHover={{ scale: 1.05 }}
-                  >
+                  <div className="flex items-center gap-1.5 bg-gray-600/30 px-3 py-2 rounded-lg border border-gray-500/30">
                     <DollarSign className="w-4 h-4 text-gray-300" />
                     <span className="text-gray-300">R$ {selectedTicket}</span>
-                  </motion.div>
-                  
+                  </div>
+
                   <span className="text-gray-500 text-sm">×</span>
-                  
-                  <motion.div 
-                    className="bg-yellow-500/20 px-3 py-2 rounded-lg border border-yellow-500/30"
-                    whileHover={{ scale: 1.05 }}
-                  >
+
+                  <div className="bg-yellow-500/20 px-3 py-2 rounded-lg border border-yellow-500/30">
                     <span className="text-yellow-400">3%</span>
-                  </motion.div>
-                  
-                  <motion.div
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
-                  >
-                    <ArrowRight className="w-5 h-5 text-green-400" />
-                  </motion.div>
+                  </div>
+
+                  <ArrowRight className="w-5 h-5 text-green-400" />
                 </div>
 
                 {/* Valor GIGANTE de destaque */}
                 <div className="text-center mb-4">
-                  <div className="text-xs text-gray-400 mb-1">Você recebe por mês:</div>
-                  <motion.div
-                    key={yourEarnings}
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                    className="text-4xl md:text-5xl font-black bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent"
-                    style={{
-                      textShadow: '0 0 60px rgba(52, 211, 153, 0.5)'
-                    }}
-                  >
+                  <div className="text-xs text-white font-bold mb-1">Você recebe por mês:</div>
+                  <div className="text-4xl md:text-5xl font-black bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
                     R$ {yourEarnings.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </motion.div>
+                  </div>
                 </div>
 
                 {/* Info adicional */}
                 <div className="grid md:grid-cols-2 gap-3 mb-4">
                   <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
-                    <div className="text-green-400 text-xs mb-0.5">Faturamento Total da Rede</div>
+                    <div className="text-white text-xs font-bold mb-0.5">Faturamento Total da Rede</div>
                     <div className="text-white text-lg font-bold">
                       R$ {totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
                   <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
-                    <div className="text-emerald-400 text-xs mb-0.5">Ganho Anual Estimado</div>
+                    <div className="text-white text-xs font-bold mb-0.5">Ganho Anual Estimado</div>
                     <div className="text-white text-lg font-bold">
-                      R$ {(yourEarnings * 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      R$ {(yourEarnings * 12).toLocaleString('pt-BR', { minimumFractionDigals: 2 })}
                     </div>
                   </div>
                 </div>
 
                 {/* Call to Action */}
                 <div className="text-center">
-                  <motion.div
-                    animate={{ 
-                      boxShadow: [
-                        '0 0 15px rgba(52, 211, 153, 0.3)',
-                        '0 0 30px rgba(52, 211, 153, 0.6)',
-                        '0 0 15px rgba(52, 211, 153, 0.3)'
-                      ]
-                    }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="inline-block"
-                  >
+                  <div className="inline-block">
                     <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-6 py-3 rounded-xl">
                       <div className="flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-white" />
@@ -245,16 +182,15 @@ export default function EarningsSimulator() {
                         </span>
                       </div>
                     </div>
-                  </motion.div>
-                  <p className="text-gray-400 text-xs mt-3">
+                  </div>
+                  <p className="text-white text-xs font-bold mt-3">
                     * Valores calculados com base em 3% de comissão por arremate
                   </p>
                 </div>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+            )}
 
       <style>{`
         .slider-thumb::-webkit-slider-thumb {
