@@ -176,7 +176,7 @@ export default function ProductCarousel() {
         </div>
 
         {/* Indicators */}
-        <div className="flex justify-center gap-2 mt-8">
+        <div className="flex justify-center gap-4 mt-12">
           {products.map((_, index) => (
             <button
               key={index}
