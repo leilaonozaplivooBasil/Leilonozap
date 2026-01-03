@@ -393,11 +393,8 @@ export default function PartnersPage() {
         <div className="py-20 px-6 bg-gray-800/50">
           <div className="max-w-6xl mx-auto">
             <h2 className="text-4xl font-bold text-center mb-4">
-              Invista e Lucre com Segurança
+              Compre e Lucre Conosco de Forma Inteligente e Segura!
             </h2>
-            <p className="text-gray-400 text-center mb-12">
-              Veja como nossos parceiros estão lucrando
-            </p>
           </div>
         </div>
       </div>
