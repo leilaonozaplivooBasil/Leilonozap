@@ -466,6 +466,8 @@ export default function BannerManagement() {
 function ProductForm({ product, onSave, onCancel, onUploadImage }) {
   const [formData, setFormData] = useState(product);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef(null);
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -477,6 +479,37 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
       setFormData({ ...formData, image_url: imageUrl });
     }
     setIsUploading(false);
+  };
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (!file || !file.type.startsWith('image/')) {
+      toast.error('Por favor, envie apenas imagens');
+      return;
+    }
+
+    setIsUploading(true);
+    const imageUrl = await onUploadImage(file);
+    if (imageUrl) {
+      setFormData({ ...formData, image_url: imageUrl });
+    }
+    setIsUploading(false);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
   };
 
   const handleSubmit = (e) => {
@@ -500,26 +533,51 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label className="text-gray-300">Imagem do Produto *</Label>
-              {formData.image_url && (
-                <img
-                  src={formData.image_url}
-                  alt="Preview"
-                  className="w-full h-48 object-cover rounded-lg mb-2"
-                />
-              )}
-              <div className="flex gap-2">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  disabled={isUploading}
-                  className="bg-gray-700 text-white border-gray-600"
-                />
-                <Button type="button" disabled={isUploading} variant="outline">
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isUploading ? 'Enviando...' : 'Upload'}
-                </Button>
+              
+              {/* Área de Drop */}
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-all cursor-pointer ${
+                  isDragging 
+                    ? 'border-green-500 bg-green-500/10' 
+                    : 'border-gray-600 hover:border-gray-500 bg-gray-700/30'
+                } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {formData.image_url ? (
+                  <div className="relative">
+                    <img
+                      src={formData.image_url}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                      <p className="text-white font-semibold">Clique ou arraste para trocar</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8">
+                    <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-gray-300 font-semibold mb-2">
+                      {isUploading ? 'Enviando imagem...' : 'Clique ou arraste uma imagem'}
+                    </p>
+                    <p className="text-gray-500 text-sm">
+                      PNG, JPG ou GIF (máx. 10MB)
+                    </p>
+                  </div>
+                )}
               </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                disabled={isUploading}
+                className="hidden"
+              />
             </div>
 
             <div>
