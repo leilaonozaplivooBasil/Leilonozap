@@ -440,8 +440,8 @@ export default function PlanCheckout() {
                     <CreditCard className="w-6 h-6" />
                   </div>
                   <div className="text-left flex-1">
-                    <p className="font-bold text-white">Cartão de Crédito</p>
-                    <p className="text-sm text-gray-400">Parcelamento disponível</p>
+                    <p className="font-bold text-white">Cartao de Credito</p>
+                    <p className="text-sm text-gray-400">Parcelamento disponivel</p>
                   </div>
                   {paymentMethod === 'card' && (
                     <Check className="w-6 h-6 text-green-400" />
