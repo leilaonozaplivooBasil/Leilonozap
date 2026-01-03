@@ -355,10 +355,8 @@ export default function Layout({ children, currentPageName }) {
   const saiDeBaixoMenuItems = [
     { title: "Leilões", pageName: "SaiDeBaixo" },
   ];
-  
-  const saiDeBaixoLoggedItems = [
-    { title: "Influencie", pageName: "Influencers" },
-  ];
+
+  const saiDeBaixoLoggedItems = [];
 
   const loggedMenuItems = [
     { title: "Meus Arremates", pageName: "MyWinnings" },

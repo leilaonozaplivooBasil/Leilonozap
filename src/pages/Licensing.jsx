@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from "sonner";
 import { forceSyncStats } from "@/functions/forceSyncStats";
 import { resetTestData } from "@/functions/resetTestData";
+import { resetAllBalances } from "@/functions/resetAllBalances";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -655,15 +656,15 @@ const DashboardContent = ({ user, isAdmin }) => {
     setIsResetting(true);
     toast.info("Zerando saldos...");
     try {
-      const { data } = await base44.functions.invoke('resetAllBalances');
-      if (data.success) {
-        toast.success(`✅ ${data.updated} usuários atualizados!`);
+      const response = await resetAllBalances();
+      if (response?.data?.success) {
+        toast.success(`✅ ${response.data.updated} usuários atualizados!`);
         await delay(3000);
         await fetchRealMetrics();
         await delay(3000);
         await loadAllUsers();
       } else {
-        toast.error("Falha ao zerar saldos: " + data.error);
+        toast.error("Falha ao zerar saldos");
       }
     } catch (err) {
       toast.error("Erro ao zerar saldos: " + err.message);

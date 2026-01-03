@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     try {
@@ -22,8 +22,8 @@ Deno.serve(async (req) => {
             throw new Error("Falha ao buscar usuários do sistema");
         }
 
-        // Filtrar apenas os licenciados
-        const licensees = allUsers.filter(u => u.role === 'licensee');
+        // Filtrar licenciados E admins com código de indicação
+        const licensees = allUsers.filter(u => u.role === 'licensee' || (u.role === 'admin' && u.referral_code));
         console.log(`📊 Encontrados ${licensees.length} licenciados para zerar.`);
 
         let updatedLicensees = 0;
@@ -33,7 +33,8 @@ Deno.serve(async (req) => {
                     indicated_clients_count: 0,
                     network_bids_count: 0,
                     commission_balance: 0,
-                    valora_pay_balance: 0
+                    valora_pay_balance: 0,
+                    test_valora_balance: 0
                 });
                 updatedLicensees++;
                 console.log(`✅ Zerado: ${licensee.full_name || licensee.email}`);
