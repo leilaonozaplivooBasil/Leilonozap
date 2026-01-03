@@ -197,12 +197,12 @@ export default function Home() {
   const loadUserFavorites = useCallback(async (userId, retryCount = 0) => {
     if (!userId) return;
     
-    // Cache de 5 minutos para favoritos
+    // Cache de 20 segundos para favoritos
     const cacheKey = `favorites_${userId}_nozap`;
     const cached = sessionStorage.getItem(cacheKey);
     const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
-    
-    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 300000) {
+
+    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 20000) {
       const cachedData = JSON.parse(cached);
       setUserFavorites(cachedData.ids);
       setFavoriteAuctions(cachedData.auctions);
@@ -336,12 +336,12 @@ export default function Home() {
 
       if (cachedData && cacheTime && !isRetry) {
         const age = Date.now() - parseInt(cacheTime);
-        if (age < 120000) {
+        if (age < 20000) {
           console.log("⚡ Cache instantâneo!");
           setAuctions(JSON.parse(cachedData));
           setIsLoading(false);
 
-          if (age > 30000) {
+          if (age > 10000) {
             setTimeout(() => {
               Auction.list("-created_date", 50).then((data) => {
                 if (Array.isArray(data)) {
@@ -497,7 +497,7 @@ export default function Home() {
           setAuctions(data);
         }
       }).catch(() => {});
-    }, 300000);
+    }, 30000);
 
     return () => clearInterval(refreshInterval);
   }, []);
