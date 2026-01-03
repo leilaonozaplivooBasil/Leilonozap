@@ -61,63 +61,120 @@ export default function ComparaiModal({ auction, onClose }) {
     setError(null);
 
     try {
-      console.log('🚀 [COMPARAI] Iniciando comparação...', { 
-        auctionId: localAuction.id, 
-        forceGoogleShopping,
-        auctionTitle: localAuction.title,
-        comparaiMode: localAuction.comparai_mode 
-      });
-      
-      const response = await comparaiPrices({
+      console.log('🚀 [COMPARAI] ========== INICIANDO ==========');
+      console.log('🚀 [COMPARAI] AuctionID:', localAuction.id);
+      console.log('🚀 [COMPARAI] Title:', localAuction.title);
+      console.log('🚀 [COMPARAI] Mode:', localAuction.comparai_mode);
+      console.log('🚀 [COMPARAI] Force Google Shopping:', forceGoogleShopping);
+      console.log('🚀 [COMPARAI] Payload:', {
         auctionId: localAuction.id,
         forceRefresh: false,
         forceGoogleShopping: forceGoogleShopping
       });
-
-      console.log('📊 [COMPARAI] RESPOSTA BRUTA:', response);
-      console.log('📊 [COMPARAI] Tipo da resposta:', typeof response);
-      console.log('📊 [COMPARAI] Chaves:', Object.keys(response || {}));
       
-      // 🔥 TENTATIVA 1: Resposta direta (Platform V2)
-      if (response?.success) {
-        console.log('✅ [COMPARAI] V2 - Success encontrado direto!');
+      let response;
+      let hadError = false;
+      
+      try {
+        console.log('📞 [COMPARAI] Chamando comparaiPrices...');
+        response = await comparaiPrices({
+          auctionId: localAuction.id,
+          forceRefresh: false,
+          forceGoogleShopping: forceGoogleShopping
+        });
+        console.log('✅ [COMPARAI] Chamada retornou sem exception');
+      } catch (callError) {
+        console.error('💥 [COMPARAI] EXCEPTION na chamada:', callError);
+        console.error('💥 [COMPARAI] Exception message:', callError.message);
+        console.error('💥 [COMPARAI] Exception name:', callError.name);
+        console.error('💥 [COMPARAI] Exception stack:', callError.stack);
+        hadError = true;
+        throw callError;
+      }
+
+      console.log('📊 [COMPARAI] ========== RESPOSTA ==========');
+      console.log('📊 [COMPARAI] Response completa:', response);
+      console.log('📊 [COMPARAI] Tipo:', typeof response);
+      console.log('📊 [COMPARAI] É null?', response === null);
+      console.log('📊 [COMPARAI] É undefined?', response === undefined);
+      console.log('📊 [COMPARAI] Chaves disponíveis:', response ? Object.keys(response) : 'N/A');
+      console.log('📊 [COMPARAI] response.success:', response?.success);
+      console.log('📊 [COMPARAI] response.data:', response?.data);
+      console.log('📊 [COMPARAI] response.comparison:', response?.comparison);
+      console.log('📊 [COMPARAI] response.error:', response?.error);
+      
+      // 🔥 VALIDAÇÃO 1: Resposta existe?
+      if (!response) {
+        console.error('❌ [COMPARAI] Resposta é null/undefined!');
+        throw new Error('Resposta vazia do servidor');
+      }
+      
+      // 🔥 VALIDAÇÃO 2: Formato Platform V2 direto
+      if (response.success === true) {
+        console.log('✅ [COMPARAI] SUCCESS=TRUE encontrado direto!');
+        console.log('✅ [COMPARAI] Comparison data:', response.comparison);
+        
+        if (!response.comparison) {
+          console.error('❌ [COMPARAI] Success=true mas comparison está vazio!');
+          throw new Error('Dados de comparação não encontrados');
+        }
+        
         setComparisonData(response.comparison);
         setIsCached(response.cached || false);
         setCacheAge(response.cacheAge || null);
+        console.log('✅ [COMPARAI] Estado atualizado com sucesso!');
         return;
       }
       
-      // 🔥 TENTATIVA 2: Resposta com .data wrapper
-      if (response?.data?.success) {
-        console.log('✅ [COMPARAI] V1 - Success encontrado em .data!');
+      // 🔥 VALIDAÇÃO 3: Success = false (erro esperado)
+      if (response.success === false) {
+        console.error('❌ [COMPARAI] Success=false. Error:', response.error);
+        throw new Error(response.error || 'Comparação falhou');
+      }
+      
+      // 🔥 VALIDAÇÃO 4: Formato .data wrapper
+      if (response.data?.success === true) {
+        console.log('✅ [COMPARAI] Success encontrado em .data!');
         setComparisonData(response.data.comparison);
         setIsCached(response.data.cached || false);
         setCacheAge(response.data.cacheAge || null);
         return;
       }
       
-      // 🔥 TENTATIVA 3: Axios wrapper
-      if (response?.response?.data?.success) {
-        console.log('✅ [COMPARAI] Axios - Success encontrado em .response.data!');
-        setComparisonData(response.response.data.comparison);
-        setIsCached(response.response.data.cached || false);
-        setCacheAge(response.response.data.cacheAge || null);
-        return;
-      }
+      // Se chegou aqui, formato desconhecido
+      console.error('❌ [COMPARAI] FORMATO DESCONHECIDO:', {
+        hasSuccess: 'success' in response,
+        successValue: response.success,
+        hasData: 'data' in response,
+        hasError: 'error' in response,
+        allKeys: Object.keys(response)
+      });
       
-      // Se chegou aqui, nenhum formato funcionou
-      console.error('❌ [COMPARAI] Nenhum formato de resposta válido:', response);
-      throw new Error(response?.error || response?.data?.error || 'Formato de resposta inválido');
+      throw new Error('Formato de resposta não reconhecido');
       
     } catch (err) {
+      console.error('❌ [COMPARAI] ========== ERRO CAPTURADO ==========');
       console.error('❌ [COMPARAI] Erro completo:', err);
-      console.error('❌ [COMPARAI] Erro message:', err.message);
-      console.error('❌ [COMPARAI] Erro stack:', err.stack);
-      console.error('❌ [COMPARAI] Erro response:', err.response);
+      console.error('❌ [COMPARAI] Erro.name:', err.name);
+      console.error('❌ [COMPARAI] Erro.message:', err.message);
+      console.error('❌ [COMPARAI] Erro.stack:', err.stack);
+      console.error('❌ [COMPARAI] Erro.response:', err.response);
+      console.error('❌ [COMPARAI] Erro.response.data:', err.response?.data);
       
-      const errorMessage = err.message || err.error || err.response?.data?.error || 'Não foi possível comparar preços';
+      let errorMessage = 'Não foi possível comparar preços';
+      
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.message) {
+        errorMessage = err.message;
+      } else if (err.error) {
+        errorMessage = err.error;
+      }
+      
+      console.error('❌ [COMPARAI] Mensagem final de erro:', errorMessage);
       setError(errorMessage);
     } finally {
+      console.log('🏁 [COMPARAI] Finalizando... isLoading=false');
       setIsLoading(false);
     }
   };
