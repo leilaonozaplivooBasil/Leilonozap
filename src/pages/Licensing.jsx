@@ -452,37 +452,30 @@ const DashboardContent = ({ user, isAdmin }) => {
   useEffect(() => {
     const loadData = async () => {
       console.log("📊 Iniciando carregamento de dados...");
-      
+
       // 1️⃣ Busca métricas
       await fetchRealMetrics();
-      
+
       // 2️⃣ Aguarda 3s e busca clientes
       await delay(3000);
       await fetchMyClients();
-      
+
       // 3️⃣ Aguarda mais 3s e busca todos usuários (se admin)
       if (isAdmin) {
         await delay(3000);
         await loadAllUsers();
       }
-      
+
       console.log("✅ Carregamento completo!");
     };
 
-    // Delay inicial de 1s antes de começar
+    // Carrega apenas uma vez quando o componente monta
     const initialTimeout = setTimeout(loadData, 1000);
-
-    // ⏰ INTERVALO: 10 minutos
-    const interval = setInterval(() => {
-      console.log("🔄 Atualizando dados (intervalo de 10min)...");
-      loadData();
-    }, 600000); // 10 minutos
 
     return () => {
       clearTimeout(initialTimeout);
-      clearInterval(interval);
     };
-  }, [fetchRealMetrics, fetchMyClients, loadAllUsers, isAdmin]);
+  }, []); // Remove dependências para carregar apenas uma vez
 
   const getNoteStack = (balance) => {
     const sortedNotes = [...valoraNotesDashboard].sort((a, b) => a.value - b.value);
