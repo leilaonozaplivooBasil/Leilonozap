@@ -221,6 +221,25 @@ export default function InvestorDashboard() {
   const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
   const totalProfit = activeInvestments.reduce((sum, inv) => sum + inv.estimatedProfit, 0);
 
+  const handleTouchStart = (e) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchStart - touchEnd > 75) {
+      // Swipe left
+      setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1));
+    }
+    if (touchStart - touchEnd < -75) {
+      // Swipe right
+      setSelectedPlanIndex((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1));
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
