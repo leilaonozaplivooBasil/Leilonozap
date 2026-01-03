@@ -249,7 +249,7 @@ export default function PlanCheckout() {
                   </div>
                 </div>
               ) : showCpfForm ? (
-                // 🆕 FORMULÁRIO DE CPF E TELEFONE
+                // FORMULARIO DE CPF E TELEFONE
                 <div className="space-y-4">
                   <div className="bg-blue-600/10 rounded-lg p-4 border border-blue-500/30 mb-4">
                     <p className="text-blue-400 text-sm">
