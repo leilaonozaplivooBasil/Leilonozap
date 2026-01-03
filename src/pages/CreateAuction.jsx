@@ -1223,7 +1223,9 @@ export default function CreateAuction() {
                                   onError={(e) => {
                                     console.error(`❌ Erro ao carregar imagem ${index + 1}:`, img);
                                     e.target.style.display = 'none';
-                                    e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs text-center p-2">❌ Erro ao carregar</div>`;
+                                    if (e.target.parentElement) {
+                                      e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs text-center p-2">❌ Erro ao carregar</div>`;
+                                    }
                                   }}
                                 />
                               </div>
@@ -1442,7 +1444,9 @@ export default function CreateAuction() {
                                       loading="eager"
                                       onError={(e) => {
                                         e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = '<div class="text-xs text-red-400">❌ Erro</div>';
+                                        if (e.target.parentElement) {
+                                          e.target.parentElement.innerHTML = '<div class="text-xs text-red-400">❌ Erro</div>';
+                                        }
                                       }}
                                     />
                                   </div>
