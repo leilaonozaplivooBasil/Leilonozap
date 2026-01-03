@@ -133,7 +133,7 @@ export default function ProductCarousel() {
               className="absolute w-full max-w-3xl"
             >
               <div className="bg-gray-800 rounded-2xl shadow-2xl border-2 border-gray-700 overflow-hidden transform-gpu">
-                <div className="relative h-64 overflow-hidden bg-gray-900">
+                <div className="relative h-80 overflow-hidden bg-gray-900">
                   <img 
                     src={currentProduct.image} 
                     alt={currentProduct.name}
@@ -144,15 +144,15 @@ export default function ProductCarousel() {
                   </div>
                 </div>
                 
-                <div className="p-8">
-                  <h3 className="text-3xl font-bold text-white mb-4">{currentProduct.name}</h3>
+                <div className="p-4">
+                  <h3 className="text-2xl font-bold text-white mb-3">{currentProduct.name}</h3>
                   
-                  <div className="grid grid-cols-2 gap-6 mb-6">
-                    <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
                       <p className="text-gray-400 text-sm mb-1">Investimento</p>
                       <p className="text-2xl font-bold text-white">{currentProduct.investment}</p>
                     </div>
-                    <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30">
+                    <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
                       <p className="text-gray-400 text-sm mb-1">Lucro Estimado (3%)</p>
                       <p className="text-2xl font-bold text-green-400">{currentProduct.expectedReturn}</p>
                     </div>
