@@ -600,31 +600,6 @@ export default function InvestorDashboard() {
                             </div>
                           </div>
 
-                          {/* Produtos */}
-                          <div>
-                            <p className="text-xs text-gray-400 mb-1">Categorias:</p>
-                            <div className="flex flex-wrap gap-1.5 justify-center">
-                              {portfolio.products.map((product, idx) => (
-                                <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-[10px] px-1.5 py-0">
-                                  {product}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Features */}
-                          <div>
-                            <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
-                            <ul className="space-y-1">
-                              {portfolio.features.map((feature, idx) => (
-                                <li key={idx} className="flex items-center justify-center gap-1.5 text-xs text-gray-300">
-                                  <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-                                  <span>{feature}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-
                           {/* Botão */}
                           <Button 
                             className="w-full bg-green-600 hover:bg-green-700 text-sm py-2.5 mt-2 font-semibold"
