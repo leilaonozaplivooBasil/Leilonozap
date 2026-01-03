@@ -38,28 +38,31 @@ export default function ComparaiModal({ auction, onClose }) {
     setError(null);
 
     try {
-      const { base44 } = await import('@/api/base44Client');
-      
-      const response = await base44.functions.invoke('comparaiPrices', {
+      const { comparaiPrices } = await import("@/functions/comparaiPrices");
+      const result = await comparaiPrices({
         auctionId: localAuction.id,
         forceRefresh: false,
         forceGoogleShopping: forceGoogleShopping
       });
 
-      console.log('📊 Resposta Comparai:', response);
+      console.log('📊 Resposta Comparai completa:', result);
       
-      if (response.success) {
-        setComparisonData(response.comparison);
-        setIsCached(response.cached || false);
-        setCacheAge(response.cacheAge || null);
+      // Platform V2: resposta vem em result.data
+      const data = result.data;
+      console.log('📊 Data extraído:', data);
+      
+      if (data && data.success) {
+        setComparisonData(data.comparison);
+        setIsCached(data.cached || false);
+        setCacheAge(data.cacheAge || null);
       } else {
-        const errorMsg = response.error || response.userMessage || response.details || 'Erro ao buscar comparação';
+        const errorMsg = data?.error || 'Erro ao buscar comparação';
         console.error('❌ Erro Comparai:', errorMsg);
         throw new Error(errorMsg);
       }
     } catch (err) {
       console.error('❌ Erro no handleCompare:', err);
-      const errorMessage = err.response?.data?.error || err.response?.data?.details || err.message || 'Não foi possível comparar preços';
+      const errorMessage = err.message || 'Não foi possível comparar preços';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
