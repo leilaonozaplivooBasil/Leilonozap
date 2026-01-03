@@ -61,7 +61,12 @@ export default function ComparaiModal({ auction, onClose }) {
     setError(null);
 
     try {
-      console.log('🚀 Iniciando comparação...', { auctionId: localAuction.id, forceGoogleShopping });
+      console.log('🚀 [COMPARAI] Iniciando comparação...', { 
+        auctionId: localAuction.id, 
+        forceGoogleShopping,
+        auctionTitle: localAuction.title,
+        comparaiMode: localAuction.comparai_mode 
+      });
       
       const response = await comparaiPrices({
         auctionId: localAuction.id,
@@ -69,18 +74,26 @@ export default function ComparaiModal({ auction, onClose }) {
         forceGoogleShopping: forceGoogleShopping
       });
 
-      console.log('📊 Resposta recebida:', response);
+      console.log('📊 [COMPARAI] Resposta recebida:', JSON.stringify(response, null, 2));
+      console.log('📊 [COMPARAI] Tipo:', typeof response);
+      console.log('📊 [COMPARAI] Success:', response?.success);
       
       if (response?.success) {
+        console.log('✅ [COMPARAI] Comparação bem-sucedida!');
         setComparisonData(response.comparison);
         setIsCached(response.cached || false);
         setCacheAge(response.cacheAge || null);
       } else {
+        console.error('❌ [COMPARAI] Success=false:', response);
         throw new Error(response?.error || 'Erro ao buscar comparação');
       }
     } catch (err) {
-      console.error('❌ Erro na comparação:', err);
-      setError(err.message || 'Não foi possível comparar preços');
+      console.error('❌ [COMPARAI] Erro completo:', err);
+      console.error('❌ [COMPARAI] Erro message:', err.message);
+      console.error('❌ [COMPARAI] Erro stack:', err.stack);
+      
+      const errorMessage = err.message || err.error || 'Não foi possível comparar preços';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
