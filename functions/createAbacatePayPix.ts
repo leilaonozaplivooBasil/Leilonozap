@@ -50,7 +50,11 @@ Deno.serve(async (req) => {
       }
     };
 
-    console.log('📤 Enviando para AbacatePay:', JSON.stringify(abacatePayload, null, 2));
+    console.log('📤 DADOS ENVIADOS PARA ABACATEPAY:');
+    console.log('- Valor (centavos):', abacatePayload.amount);
+    console.log('- Telefone formatado:', formattedPhone);
+    console.log('- CPF limpo:', cleanCpf);
+    console.log('- Payload completo:', JSON.stringify(abacatePayload, null, 2));
 
     const response = await fetch('https://api.abacatepay.com/v1/pixQrCode/create', {
       method: 'POST',
@@ -62,7 +66,8 @@ Deno.serve(async (req) => {
     });
 
     const responseText = await response.text();
-    console.log('📥 Resposta AbacatePay:', responseText);
+    console.log('📥 STATUS DA RESPOSTA:', response.status);
+    console.log('📥 RESPOSTA COMPLETA AbacatePay:', responseText);
 
     if (!response.ok) {
       console.error('❌ Erro AbacatePay:', response.status, responseText);
