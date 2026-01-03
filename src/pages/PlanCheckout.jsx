@@ -30,8 +30,9 @@ export default function PlanCheckout() {
     if (savedUserJSON) {
       const user = JSON.parse(savedUserJSON);
       setCurrentUser(user);
-      setCpf(user.cpf || '');
-      setPhone(user.phone || '');
+      // Não preenche automaticamente - sempre pede CPF e telefone
+      setCpf('');
+      setPhone('');
     } else {
       navigate(createPageUrl("Partners"));
     }
@@ -47,20 +48,10 @@ export default function PlanCheckout() {
       return;
     }
 
-    // 🆕 Se for PIX, valida CPF e telefone primeiro
+    // 🆕 Se for PIX, sempre mostra formulário de CPF/telefone
     if (paymentMethod === 'pix') {
-      const cleanCpf = cpf.replace(/\D/g, '');
-      const cleanPhone = phone.replace(/\D/g, '');
-      
-      if (!cleanCpf || cleanCpf.length !== 11) {
-        setShowCpfForm(true);
-        return;
-      }
-      
-      if (!cleanPhone || cleanPhone.length < 10) {
-        setShowCpfForm(true);
-        return;
-      }
+      setShowCpfForm(true);
+      return;
     }
 
     setIsProcessing(true);
