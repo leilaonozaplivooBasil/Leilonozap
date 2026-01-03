@@ -621,27 +621,10 @@ export default function InvestorDashboard() {
                 })}
                 </div>
 
-                {/* Mobile: Tabs System */}
+                {/* Mobile: Carousel System */}
                 <div className="md:hidden px-2">
-                  {/* Tabs Navigation */}
-                  <div className="flex flex-col gap-2 mb-4 -mx-2 px-2">
-                    {portfolios.map((portfolio, idx) => (
-                      <button
-                        key={portfolio.id}
-                        onClick={() => setSelectedPlanIndex(idx)}
-                        className={`px-3 py-2 rounded-lg font-semibold text-xs whitespace-nowrap transition-all ${
-                          selectedPlanIndex === idx
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                        }`}
-                      >
-                        {portfolio.name}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Selected Plan Card */}
-                  <div className="flex justify-center">
+                  {/* Selected Plan Card with Navigation */}
+                  <div className="relative flex items-center justify-center gap-2">
                     {portfolios.map((portfolio, idx) => {
                       if (idx !== selectedPlanIndex) return null;
                       const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
