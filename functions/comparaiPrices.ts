@@ -320,31 +320,32 @@ Deno.serve(async (req) => {
                 
                 // 🆕 PRIORIDADE 1: IA PRIMEIRO (mais precisa)
                 console.log(`   🤖 Tentando IA (prioridade máxima)...`);
-                    
+
+                try {
                     const htmlSnippet = html.substring(0, 50000);
-                    
+
                     const llmPrompt = `Você é um extrator de preços especializado. Analise o HTML e extraia o preço de venda atual do produto.
 
-PRODUTO: "${productTitle}"
-CATEGORIA: ${category}
+                PRODUTO: "${productTitle}"
+                CATEGORIA: ${category}
 
-HTML DA PÁGINA:
-${htmlSnippet}
+                HTML DA PÁGINA:
+                ${htmlSnippet}
 
-INSTRUÇÕES CRÍTICAS:
-- Busque o preço de venda À VISTA (não parcelado)
-- IGNORE preços riscados/antigos
-- IGNORE preços de frete
-- IGNORE ofertas "compre 2 leve 3"
-- O preço deve estar entre R$ 10,00 e R$ ${maxAllowedPrice.toFixed(2)}
-- Se encontrar múltiplos preços, escolha o maior (preço sem desconto)
+                INSTRUÇÕES CRÍTICAS:
+                - Busque o preço de venda À VISTA (não parcelado)
+                - IGNORE preços riscados/antigos
+                - IGNORE preços de frete
+                - IGNORE ofertas "compre 2 leve 3"
+                - O preço deve estar entre R$ 10,00 e R$ ${maxAllowedPrice.toFixed(2)}
+                - Se encontrar múltiplos preços, escolha o maior (preço sem desconto)
 
-Retorne JSON:
-{
-  "price": 999.99,
-  "confidence": "high",
-  "found": true
-}`;
+                Retorne JSON:
+                {
+                "price": 999.99,
+                "confidence": "high",
+                "found": true
+                }`;
 
                     const llmResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
                         prompt: llmPrompt,
@@ -358,13 +359,16 @@ Retorne JSON:
                             }
                         }
                     });
-                    
-                if (llmResult?.found && llmResult.price && llmResult.price >= 10 && llmResult.price <= maxAllowedPrice * 2) {
-                    supplierPrice = llmResult.price;
-                    extractionMethod = 'ai-extraction';
-                    console.log(`   ✅ IA extraiu: R$ ${supplierPrice.toFixed(2)} (confiança: ${llmResult.confidence})`);
-                } else {
-                    console.log(`   ⚠️ IA não encontrou preço válido, tentando métodos tradicionais...`);
+
+                    if (llmResult?.found && llmResult.price && llmResult.price >= 10 && llmResult.price <= maxAllowedPrice * 2) {
+                        supplierPrice = llmResult.price;
+                        extractionMethod = 'ai-extraction';
+                        console.log(`   ✅ IA extraiu: R$ ${supplierPrice.toFixed(2)} (confiança: ${llmResult.confidence})`);
+                    } else {
+                        console.log(`   ⚠️ IA não encontrou preço válido, tentando métodos tradicionais...`);
+                    }
+                } catch (aiError) {
+                    console.log(`   ⚠️ Erro na IA, usando fallback: ${aiError.message}`);
                 }
                 
                 // PRIORIDADE 2: JSON-LD (fallback)
@@ -488,13 +492,23 @@ Retorne JSON:
     } catch (error) {
         console.error('❌ ERRO FATAL:', error);
         console.error('Stack trace:', error.stack);
-        
+        console.error('Error name:', error.name);
+        console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+
+        // Se for erro da IA ou rate limit, retorna mensagem específica
+        if (error.message?.includes('rate') || error.message?.includes('limit')) {
+            return Response.json({
+                success: false,
+                error: "Sistema temporariamente sobrecarregado. Tente novamente em 30 segundos.",
+                errorCode: 'RATE_LIMIT'
+            }, { status: 200 });
+        }
+
         return Response.json({
             success: false,
-            error: "Erro ao comparar preços. Tente novamente em alguns instantes.",
+            error: "Não foi possível comparar preços no momento. Tente novamente.",
             errorCode: 'FATAL_ERROR',
-            details: error.message,
-            stack: error.stack
+            details: error.message
         }, { status: 200 });
     }
 });
