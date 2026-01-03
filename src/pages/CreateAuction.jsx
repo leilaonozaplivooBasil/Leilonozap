@@ -541,75 +541,12 @@ export default function CreateAuction() {
 
     console.log(`📸 Processando ${validUrls.length} imagens...`);
 
-    // Tenta baixar e fazer upload, mas se falhar usa a URL original
-    for (const [index, url] of validUrls.entries()) {
-      try {
-        console.log(`[${index + 1}/${validUrls.length}] URL original: ${url}`);
-        
-        // Primeiro valida se a URL está acessível
-        try {
-          const testFetch = await fetch(url, { method: 'HEAD' });
-          if (!testFetch.ok) {
-            console.warn(`⚠️ URL inacessível, pulando: ${url}`);
-            uploadedImages.push(url);
-            downloadFailCount++;
-            continue;
-          }
-        } catch (testError) {
-          console.warn(`⚠️ URL falhou no teste, mas tentando usar mesmo assim: ${url}`);
-        }
-        
-        const downloadResponse = await downloadImage({ imageUrl: url });
-        
-        // Se download falhou, usa URL original direto
-        if (!downloadResponse?.data?.success || !downloadResponse?.data?.dataUrl) {
-          console.warn(`⚠️ Download falhou, usando URL original: ${url}`);
-          uploadedImages.push(url);
-          downloadFailCount++;
-          continue;
-        }
-        
-        // Download OK - converte e faz upload
-        const fetchRes = await fetch(downloadResponse.data.dataUrl);
-        const imageBlob = await fetchRes.blob();
-        
-        // Detecta extensão correta baseado no tipo MIME
-        let extension = 'jpg';
-        const mimeType = imageBlob.type || 'image/jpeg';
-        
-        if (mimeType.includes('png')) extension = 'png';
-        else if (mimeType.includes('webp')) extension = 'webp';
-        else if (mimeType.includes('gif')) extension = 'gif';
-        else if (mimeType.includes('svg')) extension = 'svg';
-        else if (mimeType.includes('avif')) extension = 'avif';
-        else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) extension = 'jpg';
-        
-        const fileName = `imported_${Date.now()}_${index + 1}.${extension}`;
-        const file = new File([imageBlob], fileName, { type: mimeType });
-
-        const uploadResult = await base44.integrations.Core.UploadFile({ file });
-        
-        if (uploadResult?.file_url) {
-          uploadedImages.push(uploadResult.file_url);
-          console.log(`✅ [${index + 1}/${validUrls.length}] Upload OK: ${uploadResult.file_url}`);
-        } else {
-          console.warn(`⚠️ Upload falhou, usando URL original: ${url}`);
-          uploadedImages.push(url);
-          downloadFailCount++;
-        }
-        
-      } catch (error) {
-        console.error(`❌ [${index + 1}/${validUrls.length}] Erro (${error.message}), usando URL original: ${url}`);
-        uploadedImages.push(url);
-        downloadFailCount++;
-      }
-    }
+    // Usa as URLs originais diretamente (mais confiável)
+    console.log(`📥 Usando ${validUrls.length} URLs originais diretamente`);
+    uploadedImages = [...validUrls];
     
-    console.log(`📊 Resultado: ${uploadedImages.length} imagens processadas (${downloadFailCount} usaram URL original)`);
-    
-    // Log das URLs finais
-    uploadedImages.forEach((img, idx) => {
-      console.log(`Imagem ${idx + 1}: ${img.substring(0, 100)}...`);
+    validUrls.forEach((url, idx) => {
+      console.log(`✅ Imagem ${idx + 1}: ${url.substring(0, 80)}...`);
     });
 
     setIsProcessing(false);
