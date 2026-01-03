@@ -121,7 +121,7 @@ const LandingContent = ({ onLoginClick }) => {
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Escolha seus Produtos</h3>
                   <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                    Navegue pelo nosso catálogo e escolha os produtos que deseja investir. Veja o valor de compra e o potencial de venda.
+                    Navegue pelo nosso catálogo e escolha os produtos. Veja o valor de compra e o lucro obtido na operação via Leilão NoZap.
                   </p>
                 </div>
               </div>
