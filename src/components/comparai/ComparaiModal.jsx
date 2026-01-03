@@ -47,12 +47,15 @@ export default function ComparaiModal({ auction, onClose }) {
 
       console.log('📊 Resposta Comparai:', response);
       
-      if (response.data && response.data.success) {
-        setComparisonData(response.data.comparison);
-        setIsCached(response.data.cached || false);
-        setCacheAge(response.data.cacheAge || null);
+      // A resposta vem diretamente do backend, não wrapped em .data
+      const responseData = response.data || response;
+      
+      if (responseData.success) {
+        setComparisonData(responseData.comparison);
+        setIsCached(responseData.cached || false);
+        setCacheAge(responseData.cacheAge || null);
       } else {
-        const errorMsg = response.data?.error || response.data?.userMessage || response.data?.details || 'Erro ao buscar comparação';
+        const errorMsg = responseData.error || responseData.userMessage || responseData.details || 'Erro ao buscar comparação';
         console.error('❌ Erro Comparai:', errorMsg);
         throw new Error(errorMsg);
       }
