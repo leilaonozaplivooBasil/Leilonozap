@@ -22,7 +22,8 @@ import {
   User,
   Plus,
   X,
-
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import {
   Dialog,
