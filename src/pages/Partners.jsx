@@ -253,10 +253,10 @@ const LandingContent = ({ onLoginClick }) => {
           </Card>
 
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-6">
-              <Package className="w-12 h-12 text-green-400 mb-4" />
-              <h3 className="text-xl font-bold text-white mb-2">Eletrodomésticos</h3>
-              <div className="space-y-2 text-gray-300">
+            <CardContent className="p-4 sm:p-6">
+              <Package className="w-10 h-10 sm:w-12 sm:h-12 text-green-400 mb-3 sm:mb-4" />
+              <h3 className="text-lg sm:text-xl font-bold text-white mb-2">Eletrodomésticos</h3>
+              <div className="space-y-1 sm:space-y-2 text-sm sm:text-base text-gray-300">
                 <p><strong className="text-white">Compra:</strong> R$ 800,00</p>
                 <p><strong className="text-white">Venda:</strong> R$ 1.400,00</p>
                 <p className="text-green-400 font-bold">Seu lucro: R$ 42,00 (3%)</p>
