@@ -66,8 +66,8 @@ Deno.serve(async (req) => {
     });
 
     const responseText = await response.text();
-    console.log('📥 STATUS DA RESPOSTA:', response.status);
-    console.log('📥 RESPOSTA COMPLETA AbacatePay:', responseText);
+    console.log('STATUS DA RESPOSTA:', response.status);
+    console.log('RESPOSTA COMPLETA AbacatePay:', responseText);
 
     if (!response.ok) {
       console.error('❌ Erro AbacatePay:', response.status, responseText);
