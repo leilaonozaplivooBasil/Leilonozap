@@ -446,9 +446,9 @@ export default function Home() {
       try {
         const cachedBanners = sessionStorage.getItem('banners_cache');
         const cacheTime = sessionStorage.getItem('banners_cache_time');
-        
-        // Cache de 30 minutos para banners
-        if (cachedBanners && cacheTime && Date.now() - parseInt(cacheTime) < 1800000) {
+
+        // Cache de 2 minutos para banners (atualização rápida)
+        if (cachedBanners && cacheTime && Date.now() - parseInt(cacheTime) < 120000) {
           setBanners(JSON.parse(cachedBanners));
           console.log('⚡ Banners do cache');
         } else {
