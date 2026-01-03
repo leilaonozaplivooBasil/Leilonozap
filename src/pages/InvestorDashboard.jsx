@@ -576,77 +576,62 @@ export default function InvestorDashboard() {
                     const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
                     return (
-                      <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 w-full max-w-md">
-                        <CardHeader className="p-3 pb-2 text-center">
-                          <div className="flex items-center justify-center gap-2 mb-1">
-                            <CardTitle className="text-lg text-white">{portfolio.name}</CardTitle>
-                            <Badge className="bg-green-600 text-[10px] px-1.5 py-0.5">{portfolio.risk}</Badge>
-                          </div>
-                          <p className="text-gray-400 text-xs leading-tight">{portfolio.description}</p>
-                        </CardHeader>
-
-                        <CardContent className="space-y-2 p-3 pt-0 text-center">
-                          {/* Imagem do Produto */}
-                          {productImages[portfolio.imageKey] && (
-                            <div className="w-full h-32 bg-gray-900/50 rounded-lg overflow-hidden border border-gray-700">
-                              <img 
-                                src={productImages[portfolio.imageKey]} 
-                                alt={portfolio.name}
-                                className="w-full h-full object-contain p-2"
-                              />
+                      <Card className="bg-gray-800 backdrop-blur-sm border-2 border-gray-700 w-full max-w-md overflow-hidden">
+                        {/* Imagem do Produto */}
+                        <div className="relative h-64 overflow-hidden bg-gray-900">
+                          {productImages[portfolio.imageKey] ? (
+                            <img 
+                              src={productImages[portfolio.imageKey]} 
+                              alt={portfolio.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                              <Package className="w-16 h-16 text-gray-600" />
                             </div>
                           )}
+                          <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-full font-bold shadow-lg">
+                            {portfolio.risk}
+                          </div>
+                        </div>
 
-                          {/* Valores */}
-                          <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-400">Compra Mínima</span>
-                              <span className="text-white font-bold">
+                        <CardContent className="p-4">
+                          {/* Título e Descrição */}
+                          <h3 className="text-2xl font-bold text-white mb-2">{portfolio.name}</h3>
+                          <p className="text-gray-400 text-sm mb-4">{portfolio.description}</p>
+                          
+                          {/* Cards de Valores */}
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
+                              <p className="text-gray-400 text-sm mb-1">Compra Mínima</p>
+                              <p className="text-2xl font-bold text-white">
                                 R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
-                              </span>
+                              </p>
                             </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-400">Retorno</span>
-                              <span className="text-green-400 font-bold">{portfolio.expectedReturn}%</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-400">Prazo</span>
-                              <span className="text-white font-bold">{portfolio.duration} dias</span>
+                            <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
+                              <p className="text-gray-400 text-sm mb-1">Lucro Estimado ({portfolio.expectedReturn}%)</p>
+                              <p className="text-2xl font-bold text-green-400">
+                                R$ {projection.profit.toLocaleString('pt-BR')}
+                              </p>
                             </div>
                           </div>
 
-                          {/* Projeção */}
-                          <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
-                            <div className="flex items-center gap-1.5 mb-1">
-                              <Calculator className="w-3.5 h-3.5 text-green-400" />
-                              <span className="text-xs text-green-400 font-semibold">Projeção</span>
-                            </div>
-                            <div className="space-y-0.5 text-xs">
-                              <div className="flex justify-between">
-                                <span className="text-gray-400">Lucro:</span>
-                                <span className="text-green-400 font-bold">
-                                  + R$ {projection.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span className="text-gray-400">Total:</span>
-                                <span className="text-white font-bold">
-                                  R$ {projection.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                              </div>
-                            </div>
+                          {/* Informações Inferiores */}
+                          <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
+                            <span>⏱️ Retorno em {portfolio.duration} dias</span>
+                            <span>📦 Gestão 100% nossa</span>
                           </div>
 
                           {/* Botão */}
                           <Button 
-                            className="w-full bg-green-600 hover:bg-green-700 text-sm py-2.5 mt-2 font-semibold"
+                            className="w-full bg-green-600 hover:bg-green-700 text-base py-3 font-semibold"
                             onClick={() => {
                               window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
                               setShowPlansModal(false);
                             }}
                           >
                             Comprar Agora
-                            <ArrowRight className="w-4 h-4 ml-1.5" />
+                            <ArrowRight className="w-5 h-5 ml-2" />
                           </Button>
                         </CardContent>
                       </Card>
