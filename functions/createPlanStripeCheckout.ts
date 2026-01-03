@@ -5,7 +5,16 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     
-    const { amount, plan_id, plan_name, customer_email, customer_name } = await req.json();
+    // Verifica autenticação
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+    
+    const body = await req.json();
+    const { amount, plan_id, plan_name, customer_email, customer_name } = body;
+    
+    console.log('📥 Recebendo requisição Stripe:', JSON.stringify(body, null, 2));
     
     if (!amount || !plan_name || !customer_email) {
       return Response.json({ error: 'Campos obrigatórios faltando' }, { status: 400 });

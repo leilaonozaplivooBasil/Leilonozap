@@ -3,8 +3,17 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    
+    // Verifica autenticação
+    const user = await base44.auth.me();
+    if (!user) {
+      return Response.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+    
     const body = await req.json();
     const { amount, plan_id, plan_name, user_name, user_email, user_phone, user_cpf } = body;
+    
+    console.log('📥 Recebendo requisição:', JSON.stringify(body, null, 2));
 
     if (!amount || !plan_name || !user_name || !user_email || !user_phone || !user_cpf) {
       return Response.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 });

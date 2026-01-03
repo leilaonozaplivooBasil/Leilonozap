@@ -46,47 +46,65 @@ export default function PlanCheckout() {
     try {
       if (paymentMethod === 'pix') {
         // Pagamento via PIX com AbacatePay
-        const response = await base44.functions.invoke('createPlanPixPayment', {
+        console.log('Iniciando pagamento PIX...');
+        
+        const payload = {
           amount: plan.minInvestment,
-          plan_id: plan.id,
+          plan_id: String(plan.id),
           plan_name: plan.name,
           user_name: currentUser.full_name,
           user_email: currentUser.email,
           user_phone: currentUser.phone || '11999999999',
           user_cpf: currentUser.cpf || '00000000000'
-        });
+        };
+        
+        console.log('Payload:', payload);
 
-        if (response.data.success) {
+        const response = await base44.functions.invoke('createPlanPixPayment', payload);
+
+        console.log('Resposta:', response);
+
+        if (response.data && response.data.success) {
           setPixData({
             qr_code: `data:image/png;base64,${response.data.qr_code_base64}`,
             copy_paste: response.data.pix_code,
             transaction_id: response.data.billing_id
           });
+          setIsProcessing(false);
         } else {
-          throw new Error(response.data.error || 'Erro ao gerar PIX');
+          throw new Error(response.data?.error || 'Erro ao gerar PIX');
         }
 
       } else if (paymentMethod === 'card') {
         // Pagamento via Cartão com Stripe
-        const response = await base44.functions.invoke('createPlanStripeCheckout', {
+        console.log('Iniciando pagamento Stripe...');
+        
+        const payload = {
           amount: plan.minInvestment,
-          plan_id: plan.id,
+          plan_id: String(plan.id),
           plan_name: plan.name,
           customer_email: currentUser.email,
           customer_name: currentUser.full_name
-        });
+        };
+        
+        console.log('Payload:', payload);
 
-        if (response.data.checkout_url) {
+        const response = await base44.functions.invoke('createPlanStripeCheckout', payload);
+
+        console.log('Resposta:', response);
+
+        if (response.data && response.data.checkout_url) {
           // Redireciona para o checkout do Stripe
           window.location.href = response.data.checkout_url;
         } else {
-          throw new Error('Erro ao criar sessão de pagamento');
+          throw new Error(response.data?.error || 'Erro ao criar sessão de pagamento');
         }
       }
 
     } catch (error) {
-      console.error("Erro no pagamento:", error);
-      alert("Erro ao processar pagamento: " + (error.message || "Tente novamente."));
+      console.error("Erro completo:", error);
+      const errorMsg = error.response?.data?.error || error.message || "Erro desconhecido. Tente novamente.";
+      alert("Erro ao processar pagamento: " + errorMsg);
       setIsProcessing(false);
     }
   };
