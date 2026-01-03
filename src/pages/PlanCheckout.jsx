@@ -53,7 +53,7 @@ export default function PlanCheckout() {
 
     try {
       if (paymentMethod === 'card') {
-        // 🎯 CRIA REGISTRO TEMPORÁRIO DE "LEILÃO" PARA O PLANO
+        // CRIA REGISTRO TEMPORARIO DE LEILAO PARA O PLANO
         const tempAuction = await base44.entities.Auction.create({
           title: `Plano de Investimento: ${plan.name}`,
           description: `Compra do plano ${plan.name} - Investimento de R$ ${plan.minInvestment.toLocaleString('pt-BR')}`,
