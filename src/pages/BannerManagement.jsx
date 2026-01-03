@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 export default function BannerManagement() {
   const [banners, setBanners] = useState([]);
@@ -162,6 +163,52 @@ export default function BannerManagement() {
     }
   };
 
+  const handleBannerDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(banners);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setBanners(items);
+
+    try {
+      await Promise.all(
+        items.map((item, index) =>
+          base44.entities.BannerImage.update(item.id, { order: index })
+        )
+      );
+      toast.success('Ordem atualizada!');
+    } catch (error) {
+      console.error('Erro ao atualizar ordem:', error);
+      toast.error('Erro ao atualizar ordem');
+      loadBanners();
+    }
+  };
+
+  const handleProductDragEnd = async (result) => {
+    if (!result.destination) return;
+
+    const items = Array.from(featuredProducts);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setFeaturedProducts(items);
+
+    try {
+      await Promise.all(
+        items.map((item, index) =>
+          base44.entities.FeaturedProduct.update(item.id, { order: index })
+        )
+      );
+      toast.success('Ordem atualizada!');
+    } catch (error) {
+      console.error('Erro ao atualizar ordem:', error);
+      toast.error('Erro ao atualizar ordem');
+      loadFeaturedProducts();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900">
@@ -244,12 +291,27 @@ export default function BannerManagement() {
         )}
 
         {/* Lista de Banners */}
-        <div className="space-y-4">
-          {banners.map((banner) => (
-            <Card key={banner.id} className="bg-gray-800 border-gray-700">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <GripVertical className="w-5 h-5 text-gray-500 cursor-move" />
+        <DragDropContext onDragEnd={handleBannerDragEnd}>
+          <Droppable droppableId="banners">
+            {(provided) => (
+              <div 
+                {...provided.droppableProps} 
+                ref={provided.innerRef}
+                className="space-y-4"
+              >
+                {banners.map((banner, index) => (
+                  <Draggable key={banner.id} draggableId={banner.id} index={index}>
+                    {(provided) => (
+                      <Card 
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        className="bg-gray-800 border-gray-700"
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-4">
+                            <div {...provided.dragHandleProps}>
+                              <GripVertical className="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing" />
+                            </div>
                   
                   <img
                     src={banner.image_url}
@@ -307,11 +369,16 @@ export default function BannerManagement() {
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </CardContent>
+                  </Card>
+                  )}
+                  </Draggable>
+                  ))}
+                  {provided.placeholder}
+                  </div>
+                  )}
+                  </Droppable>
+                  </DragDropContext>
 
         {/* Formulário de Edição/Criação */}
         {editingBanner && (
@@ -384,12 +451,27 @@ export default function BannerManagement() {
             )}
 
             {/* Lista de Produtos */}
-            <div className="space-y-4">
-              {featuredProducts.map((product) => (
-                <Card key={product.id} className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <GripVertical className="w-5 h-5 text-gray-500 cursor-move" />
+            <DragDropContext onDragEnd={handleProductDragEnd}>
+              <Droppable droppableId="products">
+                {(provided) => (
+                  <div 
+                    {...provided.droppableProps} 
+                    ref={provided.innerRef}
+                    className="space-y-4"
+                  >
+                    {featuredProducts.map((product, index) => (
+                      <Draggable key={product.id} draggableId={product.id} index={index}>
+                        {(provided) => (
+                          <Card 
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            className="bg-gray-800 border-gray-700"
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-center gap-4">
+                                <div {...provided.dragHandleProps}>
+                                  <GripVertical className="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing" />
+                                </div>
                       
                       <img
                         src={product.image_url}
@@ -436,13 +518,18 @@ export default function BannerManagement() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      </CardContent>
+                      </Card>
+                      )}
+                      </Draggable>
+                      ))}
+                      {provided.placeholder}
+                      </div>
+                      )}
+                      </Droppable>
+                      </DragDropContext>
 
-            {editingProduct && (
+                      {editingProduct && (
               <ProductForm
                 product={editingProduct}
                 onSave={(formData) => {
