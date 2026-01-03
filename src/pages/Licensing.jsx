@@ -30,7 +30,7 @@ import CareerPath from '../components/licensing/CareerPath';
 import AuctionSelectionModal from '../components/licensing/AuctionSelectionModal';
 import UserEditModal from '../components/admin/UserEditModal';
 import UserPasswordModal from '../components/admin/UserPasswordModal';
-import ValoraNotesGallery from '../components/licensing/ValoraNotesGallery';
+import EarningsSimulator from '../components/licensing/EarningsSimulator';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
 
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading }) => (
@@ -155,7 +155,7 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
             <JourneyAnimation />
 
             <div className="mb-16 mt-20">
-              <ValoraNotesGallery />
+              <EarningsSimulator />
             </div>
 
             <div ref={cardsRef} className="mt-16 max-w-2xl mx-auto">
