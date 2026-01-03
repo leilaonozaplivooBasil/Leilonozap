@@ -488,15 +488,23 @@ export default function InvestorDashboard() {
 
                               {/* Indicators */}
                               <div className="flex gap-2">
-                              {portfolios.map((_, idx) => (
+                                {portfolios.map((_, idx) => (
+                                  <button
+                                    key={idx}
+                                    onClick={() => setSelectedPlanIndex(idx)}
+                                    className={`w-2 h-2 rounded-full transition-all ${
+                                      idx === selectedPlanIndex ? 'bg-green-500 w-6' : 'bg-gray-600'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+
                               <button
-                                key={idx}
-                                onClick={() => setSelectedPlanIndex(idx)}
-                                className={`w-2 h-2 rounded-full transition-all ${
-                                  idx === selectedPlanIndex ? 'bg-green-500 w-6' : 'bg-gray-600'
-                                }`}
-                              />
-                              ))}
+                                onClick={() => setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
+                                className="w-12 h-12 bg-gray-800 hover:bg-gray-700 rounded-full flex items-center justify-center transition-colors"
+                              >
+                                <ChevronRight className="w-6 h-6 text-white" />
+                              </button>
                               </div>
                               </div>
                       </div>
