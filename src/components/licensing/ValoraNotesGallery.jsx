@@ -104,7 +104,7 @@ export default function ValoraNotesGallery() {
                 color: 'white'
               }}
             >
-              R$ {currentNote.value}
+              V$ {currentNote.value}
             </motion.div>
           </motion.div>
         </AnimatePresence>
@@ -124,7 +124,7 @@ export default function ValoraNotesGallery() {
               backgroundColor: index === currentIndex ? '#1DB24A' : '#4B5563',
               boxShadow: index === currentIndex ? '0 0 20px #1DB24A' : 'none'
             }}
-            aria-label={`Nota R$ ${note.value}`}
+            aria-label={`Nota V$ ${note.value}`}
           />
         ))}
       </div>
@@ -136,9 +136,9 @@ export default function ValoraNotesGallery() {
           animate={{ opacity: 1 }}
           className="text-2xl font-bold mb-2 text-white"
         >
-          {currentNote.name} - R$ {currentNote.value}
+          {currentNote.name} - V$ {currentNote.value}
         </motion.h3>
-        <p className="text-gray-400">Invista e lucre com produtos selecionados</p>
+        <p className="text-gray-400">Indique e lucre com produtos selecionados</p>
       </div>
     </div>
   );
