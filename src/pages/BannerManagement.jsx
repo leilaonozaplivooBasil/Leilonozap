@@ -618,7 +618,7 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
                       setFormData(prev => ({ 
                         ...prev, 
                         investment: value,
-                        expected_return: `R$ ${profit.replace('.', ',')}` 
+                        expected_return: `R$ ${profit}` 
                       }));
                     }
                   }}
