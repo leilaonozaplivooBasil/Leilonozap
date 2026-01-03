@@ -898,6 +898,7 @@ export default function CreateAuction() {
                               <span><strong>IA busca na internet:</strong> Digite apenas o nome do produto e a IA encontra dados e fotos automaticamente!</span>
                             </p>
                           </div>
+                          </div>
                         </TabsContent>
 
                         {/* ABA: BUSCA POR GTIN */}
@@ -956,6 +957,7 @@ export default function CreateAuction() {
                               Ou digite manualmente: EAN-13, UPC, GTIN, etc.
                             </p>
                           </div>
+                          </div>
                         </TabsContent>
 
                         {/* ABA: BUSCA POR URL */}
@@ -1002,6 +1004,7 @@ export default function CreateAuction() {
                               </>
                             )}
                           </Button>
+                          </div>
                         </TabsContent>
                       </Tabs>
                     )}
