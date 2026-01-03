@@ -120,9 +120,10 @@ export default function MyWinningsPage() {
                 
                 const allAuctions = await Auction.list("-updated_date", 500);
                 const wonAuctions = allAuctions.filter(auction => 
-                    auction.winner_id === user.id || 
+                    (auction.winner_id === user.id || 
                     (auction.status === 'sold' && auction.winner_id === user.id) ||
-                    (auction.status === 'ended' && auction.winner_id === user.id)
+                    (auction.status === 'ended' && auction.winner_id === user.id)) &&
+                    !auction.is_investment_plan
                 );
                 setWinnings(wonAuctions);
 
