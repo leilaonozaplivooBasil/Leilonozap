@@ -1185,16 +1185,6 @@ export default function AuctionRoom() {
 
       setShowBuyNowModal(false);
       
-      // Atualiza o estado local para refletir o fim do leilão
-      setAuction(prev => ({
-        ...prev,
-        status: "ended",
-        current_price: buyNowPrice,
-        winner_id: currentUser.id,
-        winner_name: currentUser.nickname || currentUser.full_name,
-        order_status: "awaiting_payment"
-      }));
-      
       // Para os intervalos de sync para evitar conflitos
       if (auctionSyncIntervalRef.current) {
         clearInterval(auctionSyncIntervalRef.current);
@@ -1209,10 +1199,55 @@ export default function AuctionRoom() {
         countdownIntervalRef.current = null;
       }
       
-      // Mostra o modal de vitória após 1 segundo
+      // Atualiza o estado local para refletir o fim do leilão
+      setAuction(prev => ({
+        ...prev,
+        status: "ended",
+        current_price: buyNowPrice,
+        winner_id: currentUser.id,
+        winner_name: currentUser.nickname || currentUser.full_name,
+        order_status: "awaiting_payment"
+      }));
+      
+      // Cria a mensagem de vitória no chat
+      const productImage = (auction.image_urls && auction.image_urls.length > 0) 
+        ? auction.image_urls[0] 
+        : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
+      
+      const victoryData = {
+        winner: {
+          id: currentUser.id,
+          full_name: currentUser.full_name || '',
+          nickname: currentUser.nickname || '',
+          email: currentUser.email || '',
+          avatar_url: currentUser.avatar_url || null
+        },
+        auction: {
+          id: auction.id,
+          title: auction.title || 'Produto',
+          image_urls: [productImage],
+          current_price: buyNowPrice,
+          starting_price: auction.starting_price || 0
+        }
+      };
+      
+      await AuctionMessage.create({
+        auction_id: auction.id,
+        message_type: "winner_announcement",
+        content: JSON.stringify(victoryData),
+        sender_name: "LanceIA",
+        is_system_message: true,
+      });
+      
+      // Atualiza as mensagens imediatamente
+      const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
+      setMessages(freshMessages);
+      lastMessageCountRef.current = freshMessages.length;
+      
+      // Mostra o modal de vitória após 5 segundos
       setTimeout(() => {
         setShowWinnerModal(true);
-      }, 1000);
+      }, 5000);
 
     } catch (error) {
       console.error("Erro ao arrematar:", error);
