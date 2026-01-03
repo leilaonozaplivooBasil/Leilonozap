@@ -366,8 +366,10 @@ export default function PlanCheckout() {
                           return;
                         }
 
-                        // Salva CPF e telefone no perfil do usuário
+                        setIsProcessing(true);
+
                         try {
+                          // Salva CPF e telefone no perfil do usuário
                           await base44.entities.AppUser.update(currentUser.id, {
                             cpf: cleanCpf,
                             phone: cleanPhone
@@ -378,15 +380,64 @@ export default function PlanCheckout() {
                           localStorage.setItem('currentUser', JSON.stringify(updatedUser));
                           setCurrentUser(updatedUser);
 
-                          setShowCpfForm(false);
-                          handlePayment();
+                          // Cria o leilão temporário e gera o PIX
+                          const tempAuction = await base44.entities.Auction.create({
+                            title: `Plano de Investimento: ${plan.name}`,
+                            description: `Compra do plano ${plan.name} - Investimento de R$ ${plan.minInvestment.toLocaleString('pt-BR')}`,
+                            starting_price: plan.minInvestment,
+                            current_price: plan.minInvestment,
+                            increment: 0,
+                            buy_now_price: plan.minInvestment,
+                            end_time: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                            status: 'ended',
+                            order_status: 'awaiting_payment',
+                            category: 'outros',
+                            winner_id: currentUser.id,
+                            winner_name: currentUser.full_name,
+                            product_source: 'factory_new',
+                            is_test_auction: false,
+                            image_urls: plan.imageKey ? [
+                              'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400'
+                            ] : []
+                          });
+
+                          const response = await base44.functions.invoke('createAbacatePayPix', {
+                            auction_id: tempAuction.id,
+                            user_name: currentUser.full_name,
+                            user_email: currentUser.email,
+                            user_phone: cleanPhone,
+                            user_cpf: cleanCpf
+                          });
+
+                          if (response.data && response.data.success) {
+                            setPixData({
+                              qr_code: `data:image/png;base64,${response.data.qr_code_base64}`,
+                              copy_paste: response.data.pix_code,
+                              transaction_id: response.data.billing_id,
+                              auction_id: tempAuction.id
+                            });
+                            setShowCpfForm(false);
+                          } else {
+                            throw new Error(response.data?.error || 'Erro ao gerar PIX');
+                          }
                         } catch (error) {
-                          alert("Erro ao salvar dados: " + error.message);
+                          console.error("Erro completo:", error);
+                          alert("Erro ao processar: " + (error.message || "Tente novamente"));
+                        } finally {
+                          setIsProcessing(false);
                         }
                       }}
+                      disabled={isProcessing}
                       className="flex-1 bg-green-600 hover:bg-green-700"
                     >
-                      Continuar
+                      {isProcessing ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          Processando...
+                        </>
+                      ) : (
+                        'Continuar'
+                      )}
                     </Button>
                   </div>
                 </div>
