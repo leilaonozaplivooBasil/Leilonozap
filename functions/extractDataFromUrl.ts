@@ -2,22 +2,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 const USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
 ];
 
 const getRandomUA = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-
-function decodeHtml(text) {
-    if (!text) return "";
-    return text.replace(/&quot;/g, '"')
-               .replace(/&apos;/g, "'")
-               .replace(/&lt;/g, '<')
-               .replace(/&gt;/g, '>')
-               .replace(/&amp;/g, '&')
-               .replace(/&#39;/g, "'")
-               .replace(/&#x27;/g, "'");
-}
 
 Deno.serve(async (req) => {
     try {
@@ -26,164 +14,155 @@ Deno.serve(async (req) => {
 
         const { productUrl } = await req.json();
         if (!productUrl) {
-            return Response.json({ error: "URL do produto é obrigatória" }, { status: 400 });
+            return Response.json({ error: "URL obrigatória" }, { status: 400 });
         }
 
-        console.log(`🔍 Iniciando extração: ${productUrl}`);
+        console.log(`🔍 Extraindo: ${productUrl}`);
 
         // IDENTIFICA MARKETPLACE
         const url = productUrl.toLowerCase();
-        let marketplace = 'unknown';
-        if (url.includes('mercadolivre') || url.includes('mercadolibre')) marketplace = 'mercadolivre';
+        let marketplace = 'generico';
+        if (url.includes('mercadolivre')) marketplace = 'mercadolivre';
         else if (url.includes('shopee')) marketplace = 'shopee';
         else if (url.includes('amazon')) marketplace = 'amazon';
-        else if (url.includes('magazineluiza') || url.includes('magalu')) marketplace = 'magazineluiza';
+        else if (url.includes('magalu') || url.includes('magazineluiza')) marketplace = 'magazineluiza';
         else if (url.includes('casasbahia')) marketplace = 'casasbahia';
         else if (url.includes('pontofrio')) marketplace = 'pontofrio';
         else if (url.includes('carrefour')) marketplace = 'carrefour';
         else if (url.includes('aliexpress')) marketplace = 'aliexpress';
 
-        console.log(`🏪 Marketplace: ${marketplace}`);
+        console.log(`🏪 ${marketplace}`);
 
-        // BUSCA HTML COM RETRY
-        let html = null;
-        for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-                const resp = await fetch(productUrl, {
-                    headers: {
-                        "User-Agent": getRandomUA(),
-                        "Accept": "text/html,application/xhtml+xml",
-                        "Accept-Language": "pt-BR,pt;q=0.9",
-                        "Cache-Control": "no-cache"
-                    },
-                    redirect: 'follow',
-                    signal: AbortSignal.timeout(15000)
-                });
-
-                if (resp.ok) {
-                    html = await resp.text();
-                    console.log(`✅ HTML: ${html.length} chars`);
-                    break;
-                }
-            } catch (error) {
-                if (attempt === 2) {
-                    return Response.json({
-                        error: "Site bloqueou acesso",
-                        suggestion: "Copie dados manualmente"
+        // BUSCA PÁGINA COM IA (usando ferramenta fetch_website)
+        let markdown = '';
+        let html = '';
+        
+        try {
+            // USA A INTEGRAÇÃO fetch_website DO BASE44
+            const pageData = await base44.integrations.Core.FetchWebsite({
+                url: productUrl,
+                formats: ['markdown', 'html']
+            });
+            
+            markdown = pageData.markdown || '';
+            html = pageData.html || '';
+            
+            console.log(`✅ Página carregada: ${markdown.length} chars markdown`);
+            
+        } catch (fetchError) {
+            console.warn('⚠️ Fetch website falhou, tentando fetch direto:', fetchError.message);
+            
+            // FALLBACK: fetch tradicional
+            for (let i = 0; i < 2; i++) {
+                try {
+                    const resp = await fetch(productUrl, {
+                        headers: {
+                            "User-Agent": getRandomUA(),
+                            "Accept": "text/html",
+                            "Accept-Language": "pt-BR"
+                        },
+                        signal: AbortSignal.timeout(15000)
                     });
+
+                    if (resp.ok) {
+                        html = await resp.text();
+                        break;
+                    }
+                } catch (e) {
+                    if (i === 1) throw new Error("Não foi possível acessar a página");
                 }
-                await new Promise(r => setTimeout(r, 1000));
             }
         }
 
-        if (!html) {
+        if (!markdown && !html) {
             return Response.json({
-                error: "Falha ao acessar página",
-                suggestion: "Verifique o link"
+                error: "Página inacessível",
+                suggestion: "Site pode estar bloqueando robôs"
             });
         }
 
-        // USA IA COM TRECHO REDUZIDO (15KB)
-        const htmlSnippet = html.substring(0, 15000);
+        // EXTRAI DADOS COM IA (usando markdown que é menor)
+        const contentToAnalyze = markdown || html.substring(0, 20000);
         
-        let title = '';
-        let description = '';
+        console.log('🤖 Usando IA para extrair dados...');
         
-        try {
-            console.log('🤖 Processando com IA...');
-            
-            const aiResponse = await base44.integrations.Core.InvokeLLM({
-                prompt: `Extraia do HTML abaixo:
-1. Título completo do produto
-2. Descrição com características principais
+        const aiResponse = await base44.integrations.Core.InvokeLLM({
+            prompt: `Extraia dados deste produto de e-commerce (${marketplace}):
 
-MARKETPLACE: ${marketplace}
+${contentToAnalyze}
 
-HTML (primeiros 15KB):
-${htmlSnippet}
+INSTRUÇÕES:
+1. Título: nome completo do produto
+2. Descrição: características principais (2-3 linhas)
+3. Imagens: encontre URLs completas de imagens do produto (não logos/ícones)
 
-Retorne JSON puro sem markdown.`,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        title: { type: "string" },
-                        description: { type: "string" }
-                    },
-                    required: ["title", "description"]
-                }
-            });
+Retorne JSON puro.`,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    imageUrls: {
+                        type: "array",
+                        items: { type: "string" }
+                    }
+                },
+                required: ["title", "description"]
+            }
+        });
 
-            title = aiResponse.title || '';
-            description = aiResponse.description || '';
-            console.log('✅ IA extraiu título e descrição');
+        let { title, description, imageUrls } = aiResponse;
+
+        // EXTRAI IMAGENS DO HTML SE IA NÃO ENCONTROU
+        if (!imageUrls || imageUrls.length === 0) {
+            console.log('📸 Extraindo imagens por regex...');
+            imageUrls = [];
             
-        } catch (aiError) {
-            console.warn('⚠️ IA falhou, usando regex:', aiError.message);
+            const source = html || markdown;
             
-            // FALLBACK REGEX
-            const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-            title = decodeHtml(titleMatch ? titleMatch[1] : '').split('|')[0].trim();
+            if (marketplace === 'mercadolivre') {
+                const mlRegex = /https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[^"'\s<>]+\.(?:jpg|webp|png)/gi;
+                imageUrls = [...new Set(source.match(mlRegex) || [])];
+                
+            } else if (marketplace === 'amazon') {
+                const amzRegex = /https?:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.jpg/gi;
+                const matches = source.match(amzRegex) || [];
+                imageUrls = [...new Set(matches)].filter(url => 
+                    !url.includes('_US100_') && 
+                    !url.includes('_SL75_') &&
+                    !url.includes('sprite')
+                );
+                
+            } else if (marketplace === 'shopee') {
+                const shopeeRegex = /https?:\/\/[^"'\s<>]*\.shopee\.com\.br\/[^"'\s<>]+\.(?:jpg|png|webp)/gi;
+                imageUrls = [...new Set(source.match(shopeeRegex) || [])];
+                
+            } else {
+                // GENÉRICO
+                const genericRegex = /https?:\/\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+                imageUrls = [...new Set(source.match(genericRegex) || [])]
+                    .filter(url => {
+                        const lower = url.toLowerCase();
+                        return !lower.includes('logo') && 
+                               !lower.includes('icon') && 
+                               url.length > 50;
+                    });
+            }
             
-            const descMatch = html.match(/<meta\s+(?:name|property)=["'](?:description|og:description)["']\s+content=["']([^"']*)["']/i);
-            description = decodeHtml(descMatch ? descMatch[1] : '');
+            imageUrls = imageUrls.slice(0, 12);
         }
 
-        // EXTRAI IMAGENS POR MARKETPLACE
-        let imageUrls = [];
-        
-        if (marketplace === 'mercadolivre') {
-            const mlRegex = /https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(mlRegex) || [])].slice(0, 10);
-            
-        } else if (marketplace === 'amazon') {
-            const amazonRegex = /https?:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.(?:jpg|jpeg|png|webp)/gi;
-            const matches = html.match(amazonRegex) || [];
-            imageUrls = [...new Set(matches)]
-                .filter(url => !url.includes('_US100_') && !url.includes('_SL75_'))
-                .slice(0, 10);
-            
-        } else if (marketplace === 'shopee') {
-            const shopeeRegex = /https?:\/\/[^"'\s<>]*\.shopee\.com\.br\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(shopeeRegex) || [])]
-                .filter(url => !url.includes('logo'))
-                .slice(0, 10);
-            
-        } else if (marketplace === 'magazineluiza') {
-            const magaluRegex = /https?:\/\/[^"'\s<>]*magazineluiza[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(magaluRegex) || [])].slice(0, 10);
-            
-        } else if (marketplace === 'casasbahia' || marketplace === 'pontofrio') {
-            const cbRegex = /https?:\/\/[^"'\s<>]*(?:casasbahia|pontofrio)[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(cbRegex) || [])].slice(0, 10);
-            
-        } else if (marketplace === 'carrefour') {
-            const carrefourRegex = /https?:\/\/[^"'\s<>]*carrefour[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(carrefourRegex) || [])].slice(0, 10);
-            
-        } else if (marketplace === 'aliexpress') {
-            const aliRegex = /https?:\/\/[^"'\s<>]*alicdn\.com[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(aliRegex) || [])].slice(0, 10);
-        }
-        
-        // FALLBACK GENÉRICO
-        if (imageUrls.length === 0) {
-            const genericRegex = /https?:\/\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(genericRegex) || [])]
-                .filter(url => {
-                    const lower = url.toLowerCase();
-                    return !lower.includes('logo') && 
-                           !lower.includes('icon') && 
-                           !lower.includes('sprite') &&
-                           url.length > 50;
-                })
-                .slice(0, 8);
-        }
+        // LIMPA URLs
+        imageUrls = (imageUrls || [])
+            .filter(url => url && typeof url === 'string' && url.startsWith('http'))
+            .map(url => url.split('&quot;')[0].split('"')[0])
+            .filter(url => url.length > 30);
 
-        console.log(`✅ Extração completa: ${imageUrls.length} imagens`);
+        console.log(`✅ ${imageUrls.length} imagens`);
 
         return Response.json({
             title: (title || 'Produto').substring(0, 200),
-            description: (description || 'Descrição não disponível').substring(0, 500),
+            description: (description || 'Produto importado').substring(0, 500),
             imageUrls: imageUrls,
             marketplace: marketplace
         });
