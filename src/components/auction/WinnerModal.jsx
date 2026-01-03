@@ -78,35 +78,16 @@ export default function WinnerModal({ isOpen, auction, finalPrice, onClose, curr
           </div>
         </div>
 
-        {/* Botão de ação */}
-        {isWinner ? (
-          <>
-            <Button
-              onClick={handleGoToWinnings}
-              className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 rounded-lg text-sm shadow-lg transform hover:scale-105 transition-all"
-            >
-              💳 Meus Arremates
-            </Button>
-            <p className="text-white/80 text-[10px] mt-2">
-              Realize o pagamento para garantir!
-            </p>
-          </>
-        ) : (
-          <>
-            <Button
-              onClick={() => {
-                onClose();
-                navigate(createPageUrl("Home"));
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg text-sm shadow-lg transform hover:scale-105 transition-all"
-            >
-              🏠 Ver Outros Leilões
-            </Button>
-            <p className="text-white/80 text-[10px] mt-2">
-              Continue participando!
-            </p>
-          </>
-        )}
+        {/* Botão de ação - sempre mostra Meus Arremates se for o vencedor */}
+        <Button
+          onClick={handleGoToWinnings}
+          className="w-full bg-yellow-400 hover:bg-yellow-500 text-gray-900 font-bold py-2 rounded-lg text-sm shadow-lg transform hover:scale-105 transition-all"
+        >
+          {isWinner ? '💳 Meus Arremates' : '📦 Ver Meus Arremates'}
+        </Button>
+        <p className="text-white/80 text-[10px] mt-2">
+          {isWinner ? 'Realize o pagamento para garantir!' : 'Confira seus produtos arrematados'}
+        </p>
       </div>
 
       <style>{`
