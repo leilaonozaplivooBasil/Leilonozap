@@ -99,7 +99,7 @@ const LandingContent = ({ onLoginClick }) => {
             title: "Receba seus lucros garantidos",
             icon: "🎁",
             color: "text-green-400",
-            description: "Ganhou"
+            description: "Lucrou"
           }
         ]}
       />
