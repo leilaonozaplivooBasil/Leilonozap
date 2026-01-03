@@ -794,7 +794,7 @@ export default function InvestorDashboard() {
               <div>
                 <h4 className="font-bold text-white mb-2">📊 Acompanhamento Real</h4>
                 <p className="text-gray-400 text-sm">
-                  Veja em tempo real todas as etapas do seu investimento neste dashboard.
+                  Veja em tempo real todas as etapas da sua compra neste dashboard.
                 </p>
               </div>
 
