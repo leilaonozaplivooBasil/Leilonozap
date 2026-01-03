@@ -46,23 +46,21 @@ export default function PlanCheckout() {
     try {
       if (paymentMethod === 'pix') {
         // Pagamento via PIX com AbacatePay
-        const response = await base44.functions.invoke('createAbacatePayPix', {
+        const response = await base44.functions.invoke('createPlanPixPayment', {
           amount: plan.minInvestment,
-          description: `Compra - ${plan.name}`,
-          customer_email: currentUser.email,
-          customer_name: currentUser.full_name,
-          metadata: {
-            plan_id: plan.id,
-            plan_name: plan.name,
-            user_id: currentUser.id
-          }
+          plan_id: plan.id,
+          plan_name: plan.name,
+          user_name: currentUser.full_name,
+          user_email: currentUser.email,
+          user_phone: currentUser.phone || '11999999999',
+          user_cpf: currentUser.cpf || '00000000000'
         });
 
         if (response.data.success) {
           setPixData({
-            qr_code: response.data.qr_code,
-            copy_paste: response.data.copy_paste,
-            transaction_id: response.data.transaction_id
+            qr_code: `data:image/png;base64,${response.data.qr_code_base64}`,
+            copy_paste: response.data.pix_code,
+            transaction_id: response.data.billing_id
           });
         } else {
           throw new Error(response.data.error || 'Erro ao gerar PIX');
@@ -70,26 +68,17 @@ export default function PlanCheckout() {
 
       } else if (paymentMethod === 'card') {
         // Pagamento via Cartão com Stripe
-        const response = await base44.functions.invoke('stripeCheckout', {
+        const response = await base44.functions.invoke('createPlanStripeCheckout', {
           amount: plan.minInvestment,
-          description: `Compra - ${plan.name}`,
+          plan_id: plan.id,
+          plan_name: plan.name,
           customer_email: currentUser.email,
-          metadata: {
-            plan_id: plan.id,
-            plan_name: plan.name,
-            user_id: currentUser.id
-          }
+          customer_name: currentUser.full_name
         });
 
-        if (response.data.sessionId) {
-          const stripe = await stripePromise;
-          const { error } = await stripe.redirectToCheckout({
-            sessionId: response.data.sessionId
-          });
-
-          if (error) {
-            throw new Error(error.message);
-          }
+        if (response.data.checkout_url) {
+          // Redireciona para o checkout do Stripe
+          window.location.href = response.data.checkout_url;
         } else {
           throw new Error('Erro ao criar sessão de pagamento');
         }
