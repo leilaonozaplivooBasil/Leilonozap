@@ -518,13 +518,13 @@ export default function InvestorDashboard() {
 
         {/* Modal de Planos */}
         <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700 text-white p-6">
-            <DialogHeader className="mb-6 text-center">
-              <DialogTitle className="text-3xl font-bold text-center">
+          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700 text-white p-4">
+            <DialogHeader className="mb-3 text-center">
+              <DialogTitle className="text-2xl font-bold text-center">
                 {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
                 <span className="text-green-400">Novo Plano</span>
               </DialogTitle>
-              <p className="text-gray-400 text-sm text-center mt-2">
+              <p className="text-gray-400 text-xs text-center">
                 {activeInvestments.length > 0 
                   ? 'Faça novos investimentos e aumente seus lucros' 
                   : 'Selecione o plano ideal para começar a investir'
@@ -533,7 +533,7 @@ export default function InvestorDashboard() {
             </DialogHeader>
 
             {/* Carousel para todos os tamanhos */}
-            <div className="relative py-4"
+            <div className="relative py-2"
                  onMouseEnter={() => setIsPaused(true)}
                  onMouseLeave={() => setIsPaused(false)}>
               <AnimatePresence mode="wait">
@@ -543,25 +543,25 @@ export default function InvestorDashboard() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -100 }}
                   transition={{ duration: 0.3 }}
-                  className="flex justify-center px-12"
+                  className="flex justify-center px-10"
                 >
                   {(() => {
                     const portfolio = portfolios[selectedPlanIndex];
                     const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
                     return (
-                      <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 w-full max-w-lg">
-                        <CardHeader className="p-4 pb-2 text-center">
-                          <div className="flex items-center justify-center gap-2 mb-2">
-                            <CardTitle className="text-xl text-white">{portfolio.name}</CardTitle>
-                            <Badge className="bg-green-600 text-xs">{portfolio.risk}</Badge>
+                      <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 w-full max-w-md">
+                        <CardHeader className="p-3 pb-2 text-center">
+                          <div className="flex items-center justify-center gap-2 mb-1">
+                            <CardTitle className="text-lg text-white">{portfolio.name}</CardTitle>
+                            <Badge className="bg-green-600 text-[10px] px-1.5 py-0.5">{portfolio.risk}</Badge>
                           </div>
-                          <p className="text-gray-400 text-sm">{portfolio.description}</p>
+                          <p className="text-gray-400 text-xs leading-tight">{portfolio.description}</p>
                         </CardHeader>
 
-                        <CardContent className="space-y-3 p-4 pt-0 text-center">
+                        <CardContent className="space-y-2 p-3 pt-0 text-center">
                           {/* Valores */}
-                          <div className="bg-gray-900/50 rounded-lg p-3 space-y-1.5 text-sm">
+                          <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
                             <div className="flex items-center justify-between">
                               <span className="text-gray-400">Investimento Mínimo</span>
                               <span className="text-white font-bold">
@@ -579,12 +579,12 @@ export default function InvestorDashboard() {
                           </div>
 
                           {/* Projeção */}
-                          <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
-                            <div className="flex items-center gap-2 mb-2">
-                              <Calculator className="w-4 h-4 text-green-400" />
-                              <span className="text-sm text-green-400 font-semibold">Projeção</span>
+                          <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
+                            <div className="flex items-center gap-1.5 mb-1">
+                              <Calculator className="w-3.5 h-3.5 text-green-400" />
+                              <span className="text-xs text-green-400 font-semibold">Projeção</span>
                             </div>
-                            <div className="space-y-1 text-sm">
+                            <div className="space-y-0.5 text-xs">
                               <div className="flex justify-between">
                                 <span className="text-gray-400">Lucro:</span>
                                 <span className="text-green-400 font-bold">
@@ -602,10 +602,10 @@ export default function InvestorDashboard() {
 
                           {/* Produtos */}
                           <div>
-                            <p className="text-sm text-gray-400 mb-2">Categorias:</p>
-                            <div className="flex flex-wrap gap-2 justify-center">
+                            <p className="text-xs text-gray-400 mb-1">Categorias:</p>
+                            <div className="flex flex-wrap gap-1.5 justify-center">
                               {portfolio.products.map((product, idx) => (
-                                <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-xs">
+                                <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-[10px] px-1.5 py-0">
                                   {product}
                                 </Badge>
                               ))}
@@ -614,11 +614,11 @@ export default function InvestorDashboard() {
 
                           {/* Features */}
                           <div>
-                            <p className="text-sm text-gray-400 mb-2">Benefícios:</p>
-                            <ul className="space-y-1.5">
+                            <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
+                            <ul className="space-y-1">
                               {portfolio.features.map((feature, idx) => (
-                                <li key={idx} className="flex items-center justify-center gap-2 text-sm text-gray-300">
-                                  <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                <li key={idx} className="flex items-center justify-center gap-1.5 text-xs text-gray-300">
+                                  <CheckCircle className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
                                   <span>{feature}</span>
                                 </li>
                               ))}
@@ -627,14 +627,14 @@ export default function InvestorDashboard() {
 
                           {/* Botão */}
                           <Button 
-                            className="w-full bg-green-600 hover:bg-green-700 text-base py-3 mt-4 font-semibold"
+                            className="w-full bg-green-600 hover:bg-green-700 text-sm py-2.5 mt-2 font-semibold"
                             onClick={() => {
                               window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
                               setShowPlansModal(false);
                             }}
                           >
                             Investir Agora
-                            <ArrowRight className="w-4 h-4 ml-2" />
+                            <ArrowRight className="w-4 h-4 ml-1.5" />
                           </Button>
                         </CardContent>
                       </Card>
@@ -646,33 +646,33 @@ export default function InvestorDashboard() {
               {/* Navigation Arrows */}
               <button
                 onClick={() => setSelectedPlanIndex((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1))}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
 
               <button
                 onClick={() => setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
-              </div>
+            </div>
 
-              {/* Indicators */}
-              <div className="flex justify-center gap-2 mt-4">
+            {/* Indicators */}
+            <div className="flex justify-center gap-2 mt-2">
               {portfolios.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedPlanIndex(idx)}
-                  className={`h-2 rounded-full transition-all duration-300 ${
+                  className={`h-1.5 rounded-full transition-all duration-300 ${
                     idx === selectedPlanIndex 
-                      ? 'w-8 bg-green-500' 
-                      : 'w-2 bg-gray-600 hover:bg-gray-500'
+                      ? 'w-6 bg-green-500' 
+                      : 'w-1.5 bg-gray-600 hover:bg-gray-500'
                   }`}
                 />
               ))}
-              </div>
+            </div>
 
 
               </DialogContent>
