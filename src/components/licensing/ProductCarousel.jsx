@@ -131,11 +131,7 @@ export default function ProductCarousel() {
                   <img 
                     src={currentProduct.image_url} 
                     alt={currentProduct.name}
-                    className="w-full h-full object-contain"
-                    style={{ 
-                      imageRendering: '-webkit-optimize-contrast',
-                      imageRendering: 'crisp-edges'
-                    }}
+                    className="w-full h-full object-cover"
                   />
                   <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-full font-bold shadow-lg">
                     {currentProduct.category}

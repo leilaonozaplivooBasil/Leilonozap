@@ -54,22 +54,12 @@ export default function BannerManagement() {
     }
     
     try {
-      toast.info('🎨 Otimizando qualidade da imagem com IA...');
-      
-      // Primeiro faz upload da imagem original
-      const { file_url: originalUrl } = await base44.integrations.Core.UploadFile({ file });
-      
-      // Usa IA para melhorar a qualidade e resolução da imagem
-      const { url: enhancedUrl } = await base44.integrations.Core.GenerateImage({
-        prompt: "High quality, professional product photography, crystal clear, ultra detailed, 4K resolution, perfect lighting, sharp focus",
-        existing_image_urls: [originalUrl]
-      });
-      
-      toast.success('✅ Imagem otimizada com sucesso!');
-      return enhancedUrl;
+      // Upload direto sem compressão para manter qualidade máxima
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      return file_url;
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
-      toast.error('Erro ao processar imagem');
+      toast.error('Erro ao fazer upload da imagem');
       return null;
     }
   };
