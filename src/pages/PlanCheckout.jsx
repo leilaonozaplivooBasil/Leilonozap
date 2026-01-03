@@ -266,13 +266,12 @@ export default function PlanCheckout() {
                         let value = e.target.value.replace(/\D/g, '');
                         if (value.length > 11) value = value.slice(0, 11);
 
-                        // Formata: 123.456.789-01
                         if (value.length > 9) {
-                          value = `${value.slice(0, 3)}.${value.slice(3, 6)}.${value.slice(6, 9)}-${value.slice(9)}`;
+                          value = value.slice(0, 3) + '.' + value.slice(3, 6) + '.' + value.slice(6, 9) + '-' + value.slice(9);
                         } else if (value.length > 6) {
-                          value = `${value.slice(0, 3)}.${value.slice(3, 6)}.${value.slice(6)}`;
+                          value = value.slice(0, 3) + '.' + value.slice(3, 6) + '.' + value.slice(6);
                         } else if (value.length > 3) {
-                          value = `${value.slice(0, 3)}.${value.slice(3)}`;
+                          value = value.slice(0, 3) + '.' + value.slice(3);
                         }
 
                         setCpf(value);
