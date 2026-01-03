@@ -560,8 +560,19 @@ export default function CreateAuction() {
         const fetchRes = await fetch(downloadResponse.data.dataUrl);
         const imageBlob = await fetchRes.blob();
         
-        const fileName = `imported_${index + 1}.${imageBlob.type.split('/')[1] || 'jpg'}`;
-        const file = new File([imageBlob], fileName, { type: imageBlob.type });
+        // Detecta extensão correta baseado no tipo MIME
+        let extension = 'jpg';
+        const mimeType = imageBlob.type || 'image/jpeg';
+        
+        if (mimeType.includes('png')) extension = 'png';
+        else if (mimeType.includes('webp')) extension = 'webp';
+        else if (mimeType.includes('gif')) extension = 'gif';
+        else if (mimeType.includes('svg')) extension = 'svg';
+        else if (mimeType.includes('avif')) extension = 'avif';
+        else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) extension = 'jpg';
+        
+        const fileName = `imported_${Date.now()}_${index + 1}.${extension}`;
+        const file = new File([imageBlob], fileName, { type: mimeType });
 
         const uploadResult = await base44.integrations.Core.UploadFile({ file });
         
