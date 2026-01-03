@@ -1,54 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-
-const products = [
-  {
-    id: 1,
-    name: "iPhone 13 Pro",
-    category: "Eletrônicos Premium",
-    investment: "R$ 8.000",
-    expectedReturn: "R$ 240",
-    image: "https://images.unsplash.com/photo-1632661674596-df8be070a5c5?w=600&h=400&fit=crop"
-  },
-  {
-    id: 2,
-    name: "Notebook Dell i7",
-    category: "Informática",
-    investment: "R$ 6.500",
-    expectedReturn: "R$ 195",
-    image: "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?w=600&h=400&fit=crop"
-  },
-  {
-    id: 3,
-    name: "Smart TV 65''",
-    category: "Eletrônicos",
-    investment: "R$ 5.000",
-    expectedReturn: "R$ 150",
-    image: "https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&h=400&fit=crop"
-  },
-  {
-    id: 4,
-    name: "Air Fryer Premium",
-    category: "Eletrodomésticos",
-    investment: "R$ 3.000",
-    expectedReturn: "R$ 90",
-    image: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=400&fit=crop"
-  },
-  {
-    id: 5,
-    name: "Console PlayStation 5",
-    category: "Games",
-    investment: "R$ 7.000",
-    expectedReturn: "R$ 210",
-    image: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&h=400&fit=crop"
-  }
-];
+import { base44 } from '@/api/base44Client';
 
 export default function ProductCarousel() {
+  const [products, setProducts] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const data = await base44.entities.FeaturedProduct.filter({ is_active: true }, 'order');
+        if (data && data.length > 0) {
+          setProducts(data);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar produtos:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, []);
 
   const slideVariants = {
     enter: (direction) => ({
@@ -84,14 +61,26 @@ export default function ProductCarousel() {
   };
 
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || products.length === 0) return;
     
     const interval = setInterval(() => {
       paginate(1);
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [currentIndex, isPaused]);
+  }, [currentIndex, isPaused, products.length]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full py-12 px-4">
+        <div className="text-center text-gray-400">Carregando produtos...</div>
+      </div>
+    );
+  }
+
+  if (products.length === 0) {
+    return null;
+  }
 
   const currentProduct = products[currentIndex];
 
@@ -140,7 +129,7 @@ export default function ProductCarousel() {
               <div className="bg-gray-800 rounded-2xl shadow-2xl border-2 border-gray-700 overflow-hidden transform-gpu">
                 <div className="relative h-80 overflow-hidden bg-gray-900">
                   <img 
-                    src={currentProduct.image} 
+                    src={currentProduct.image_url} 
                     alt={currentProduct.name}
                     className="w-full h-full object-cover"
                   />
@@ -159,7 +148,7 @@ export default function ProductCarousel() {
                     </div>
                     <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
                       <p className="text-gray-400 text-sm mb-1">Lucro Estimado (3%)</p>
-                      <p className="text-2xl font-bold text-green-400">{currentProduct.expectedReturn}</p>
+                      <p className="text-2xl font-bold text-green-400">{currentProduct.expected_return}</p>
                     </div>
                   </div>
 

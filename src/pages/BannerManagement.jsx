@@ -10,8 +10,11 @@ import { toast } from 'sonner';
 
 export default function BannerManagement() {
   const [banners, setBanners] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingBanner, setEditingBanner] = useState(null);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [activeTab, setActiveTab] = useState('banners');
 
   const loadBanners = async () => {
     try {
@@ -25,8 +28,19 @@ export default function BannerManagement() {
     }
   };
 
+  const loadFeaturedProducts = async () => {
+    try {
+      const data = await base44.entities.FeaturedProduct.list('order');
+      setFeaturedProducts(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
+      toast.error('Erro ao carregar produtos');
+    }
+  };
+
   useEffect(() => {
     loadBanners();
+    loadFeaturedProducts();
   }, []);
 
   const handleUploadImage = async (file) => {
@@ -95,6 +109,59 @@ export default function BannerManagement() {
     }
   };
 
+  const handleCreateProduct = async (formData) => {
+    try {
+      await base44.entities.FeaturedProduct.create({
+        ...formData,
+        order: featuredProducts.length
+      });
+      toast.success('Produto criado com sucesso!');
+      loadFeaturedProducts();
+      setEditingProduct(null);
+    } catch (error) {
+      console.error('Erro ao criar produto:', error);
+      toast.error('Erro ao criar produto');
+    }
+  };
+
+  const handleUpdateProduct = async (id, formData) => {
+    try {
+      await base44.entities.FeaturedProduct.update(id, formData);
+      toast.success('Produto atualizado com sucesso!');
+      loadFeaturedProducts();
+      setEditingProduct(null);
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      toast.error('Erro ao atualizar produto');
+    }
+  };
+
+  const handleDeleteProduct = async (id) => {
+    if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+    
+    try {
+      await base44.entities.FeaturedProduct.delete(id);
+      toast.success('Produto excluído com sucesso!');
+      loadFeaturedProducts();
+    } catch (error) {
+      console.error('Erro ao excluir produto:', error);
+      toast.error('Erro ao excluir produto');
+    }
+  };
+
+  const handleToggleProductActive = async (product) => {
+    try {
+      await base44.entities.FeaturedProduct.update(product.id, {
+        is_active: !product.is_active
+      });
+      loadFeaturedProducts();
+      toast.success(product.is_active ? 'Produto desativado' : 'Produto ativado');
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast.error('Erro ao atualizar status');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900">
@@ -106,8 +173,30 @@ export default function BannerManagement() {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Gerenciar Banners</h1>
+        <h1 className="text-3xl font-bold text-white mb-6">Gerenciamento de Conteúdo</h1>
+        
+        {/* Tabs */}
+        <div className="flex gap-2 mb-8">
+          <Button
+            onClick={() => setActiveTab('banners')}
+            variant={activeTab === 'banners' ? 'default' : 'outline'}
+            className={activeTab === 'banners' ? 'bg-green-600 hover:bg-green-700' : ''}
+          >
+            🎨 Banners
+          </Button>
+          <Button
+            onClick={() => setActiveTab('products')}
+            variant={activeTab === 'products' ? 'default' : 'outline'}
+            className={activeTab === 'products' ? 'bg-green-600 hover:bg-green-700' : ''}
+          >
+            ⭐ Produtos em Destaque
+          </Button>
+        </div>
+
+        {activeTab === 'banners' && (
+          <>
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold text-white">Gerenciar Banners</h2>
           <div className="flex gap-2">
             <Button
               onClick={() => setEditingBanner({ image_url: '', title: '', link_url: '', is_active: true, device_type: 'desktop' })}
@@ -239,7 +328,257 @@ export default function BannerManagement() {
             onUploadImage={handleUploadImage}
           />
         )}
+          </>
+        )}
+
+        {activeTab === 'products' && (
+          <>
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold text-white">Produtos em Destaque - Página Parceiros</h2>
+              <Button
+                onClick={() => setEditingProduct({ 
+                  name: '', 
+                  category: '', 
+                  investment: '', 
+                  expected_return: '', 
+                  image_url: '', 
+                  is_active: true 
+                })}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                + Novo Produto
+              </Button>
+            </div>
+
+            {/* Preview dos Produtos */}
+            {featuredProducts.filter(p => p.is_active).length > 0 && (
+              <Card className="bg-gray-800 border-gray-700 mb-8">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Eye className="w-5 h-5" />
+                    Preview dos Produtos Ativos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {featuredProducts.filter(p => p.is_active).map((product) => (
+                      <div key={product.id} className="bg-gray-900 rounded-lg overflow-hidden">
+                        <img
+                          src={product.image_url}
+                          alt={product.name}
+                          className="w-full h-40 object-cover"
+                        />
+                        <div className="p-3">
+                          <div className="text-xs text-green-400 mb-1">{product.category}</div>
+                          <h4 className="text-white font-bold mb-2">{product.name}</h4>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-400">💰 {product.investment}</span>
+                            <span className="text-green-400">✅ {product.expected_return}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Lista de Produtos */}
+            <div className="space-y-4">
+              {featuredProducts.map((product) => (
+                <Card key={product.id} className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <GripVertical className="w-5 h-5 text-gray-500 cursor-move" />
+                      
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="w-32 h-20 object-cover rounded-lg"
+                      />
+
+                      <div className="flex-1">
+                        <h3 className="text-white font-semibold">{product.name}</h3>
+                        <p className="text-gray-400 text-sm">{product.category}</p>
+                        <div className="flex gap-4 mt-1">
+                          <span className="text-xs text-gray-500">💰 {product.investment}</span>
+                          <span className="text-xs text-green-400">✅ {product.expected_return}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`product-active-${product.id}`} className="text-gray-300 text-sm">
+                            {product.is_active ? 'Ativo' : 'Inativo'}
+                          </Label>
+                          <Switch
+                            id={`product-active-${product.id}`}
+                            checked={product.is_active}
+                            onCheckedChange={() => handleToggleProductActive(product)}
+                          />
+                        </div>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingProduct(product)}
+                          className="text-blue-400 hover:text-blue-300"
+                        >
+                          Editar
+                        </Button>
+
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteProduct(product.id)}
+                          className="text-red-400 hover:text-red-300"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {editingProduct && (
+              <ProductForm
+                product={editingProduct}
+                onSave={(formData) => {
+                  if (editingProduct.id) {
+                    handleUpdateProduct(editingProduct.id, formData);
+                  } else {
+                    handleCreateProduct(formData);
+                  }
+                }}
+                onCancel={() => setEditingProduct(null)}
+                onUploadImage={handleUploadImage}
+              />
+            )}
+          </>
+        )}
       </div>
+    </div>
+  );
+}
+
+function ProductForm({ product, onSave, onCancel, onUploadImage }) {
+  const [formData, setFormData] = useState(product);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const imageUrl = await onUploadImage(file);
+    if (imageUrl) {
+      setFormData({ ...formData, image_url: imageUrl });
+    }
+    setIsUploading(false);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!formData.image_url || !formData.name || !formData.category || !formData.investment || !formData.expected_return) {
+      toast.error('Preencha todos os campos obrigatórios');
+      return;
+    }
+    onSave(formData);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+      <Card className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <CardHeader>
+          <CardTitle className="text-white">
+            {product.id ? 'Editar Produto' : 'Novo Produto em Destaque'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label className="text-gray-300">Imagem do Produto *</Label>
+              {formData.image_url && (
+                <img
+                  src={formData.image_url}
+                  alt="Preview"
+                  className="w-full h-48 object-cover rounded-lg mb-2"
+                />
+              )}
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                  className="bg-gray-700 text-white border-gray-600"
+                />
+                <Button type="button" disabled={isUploading} variant="outline">
+                  <Upload className="w-4 h-4 mr-2" />
+                  {isUploading ? 'Enviando...' : 'Upload'}
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-300">Nome do Produto *</Label>
+              <Input
+                value={formData.name || ''}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Ex: iPhone 13 Pro"
+                className="bg-gray-700 text-white border-gray-600"
+                required
+              />
+            </div>
+
+            <div>
+              <Label className="text-gray-300">Categoria *</Label>
+              <Input
+                value={formData.category || ''}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                placeholder="Ex: Eletrônicos Premium"
+                className="bg-gray-700 text-white border-gray-600"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-gray-300">Investimento *</Label>
+                <Input
+                  value={formData.investment || ''}
+                  onChange={(e) => setFormData({ ...formData, investment: e.target.value })}
+                  placeholder="Ex: R$ 8.000"
+                  className="bg-gray-700 text-white border-gray-600"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Lucro Estimado (3%) *</Label>
+                <Input
+                  value={formData.expected_return || ''}
+                  onChange={(e) => setFormData({ ...formData, expected_return: e.target.value })}
+                  placeholder="Ex: R$ 240"
+                  className="bg-gray-700 text-white border-gray-600"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                {product.id ? 'Atualizar' : 'Criar'} Produto
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }
