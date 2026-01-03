@@ -40,7 +40,7 @@ const careerSteps = [
     },
     {
         id: 'licenciado_catalogo',
-        title: 'Catálogo',
+        title: 'Licenciado Catálogo',
         icon: BookOpen,
         achievedDescription: '📚 Ótimo! Expanda seus ganhos com nosso catálogo de produtos exclusivo.',
         lockedDescription: 'Em breve: Expanda seus ganhos no sistema com catálogo exclusivo de produtos.'
