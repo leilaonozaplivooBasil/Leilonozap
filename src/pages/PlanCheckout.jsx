@@ -4,7 +4,7 @@ import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { CreditCard, Smartphone, ArrowLeft, Check, Copy, CheckCircle } from 'lucide-react';
+import { CreditCard, Smartphone, ArrowLeft, Check, Copy, CheckCircle, User } from 'lucide-react';
 
 // Importar Stripe
 import { loadStripe } from '@stripe/stripe-js';
@@ -19,13 +19,19 @@ export default function PlanCheckout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [pixData, setPixData] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [cpf, setCpf] = useState('');
+  const [phone, setPhone] = useState('');
+  const [showCpfForm, setShowCpfForm] = useState(false);
   
   const plan = location.state?.plan;
 
   useEffect(() => {
     const savedUserJSON = localStorage.getItem('currentUser');
     if (savedUserJSON) {
-      setCurrentUser(JSON.parse(savedUserJSON));
+      const user = JSON.parse(savedUserJSON);
+      setCurrentUser(user);
+      setCpf(user.cpf || '');
+      setPhone(user.phone || '');
     } else {
       navigate(createPageUrl("Partners"));
     }
@@ -39,6 +45,22 @@ export default function PlanCheckout() {
     if (!paymentMethod) {
       alert("Por favor, selecione um método de pagamento");
       return;
+    }
+
+    // 🆕 Se for PIX, valida CPF e telefone primeiro
+    if (paymentMethod === 'pix') {
+      const cleanCpf = cpf.replace(/\D/g, '');
+      const cleanPhone = phone.replace(/\D/g, '');
+      
+      if (!cleanCpf || cleanCpf.length !== 11) {
+        setShowCpfForm(true);
+        return;
+      }
+      
+      if (!cleanPhone || cleanPhone.length < 10) {
+        setShowCpfForm(true);
+        return;
+      }
     }
 
     setIsProcessing(true);
@@ -71,8 +93,8 @@ export default function PlanCheckout() {
           auction_id: tempAuction.id,
           user_name: currentUser.full_name,
           user_email: currentUser.email,
-          user_phone: currentUser.phone || '11999999999',
-          user_cpf: currentUser.cpf || '00000000000'
+          user_phone: phone.replace(/\D/g, ''),
+          user_cpf: cpf.replace(/\D/g, '')
         });
 
         if (response.data && response.data.success) {
@@ -267,10 +289,118 @@ export default function PlanCheckout() {
                     )}
                   </div>
                 </div>
+              ) : showCpfForm ? (
+                // 🆕 FORMULÁRIO DE CPF E TELEFONE
+                <div className="space-y-4">
+                  <div className="bg-blue-600/10 rounded-lg p-4 border border-blue-500/30 mb-4">
+                    <p className="text-blue-400 text-sm">
+                      📝 Para pagamento via PIX, precisamos do seu CPF e telefone
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">CPF *</label>
+                    <input
+                      type="text"
+                      value={cpf}
+                      onChange={(e) => {
+                        let value = e.target.value.replace(/\D/g, '');
+                        if (value.length > 11) value = value.slice(0, 11);
+
+                        // Formata: 123.456.789-01
+                        if (value.length > 9) {
+                          value = `${value.slice(0, 3)}.${value.slice(3, 6)}.${value.slice(6, 9)}-${value.slice(9)}`;
+                        } else if (value.length > 6) {
+                          value = `${value.slice(0, 3)}.${value.slice(3, 6)}.${value.slice(6)}`;
+                        } else if (value.length > 3) {
+                          value = `${value.slice(0, 3)}.${value.slice(3)}`;
+                        }
+
+                        setCpf(value);
+                      }}
+                      placeholder="000.000.000-00"
+                      maxLength={14}
+                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm text-gray-400 mb-2 block">Telefone (com DDD) *</label>
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e) => {
+                        let value = e.target.value.replace(/\D/g, '');
+                        if (value.length > 11) value = value.slice(0, 11);
+
+                        // Formata: (11) 99999-9999
+                        if (value.length > 10) {
+                          value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+                        } else if (value.length > 6) {
+                          value = `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
+                        } else if (value.length > 2) {
+                          value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+                        }
+
+                        setPhone(value);
+                      }}
+                      placeholder="(11) 99999-9999"
+                      maxLength={15}
+                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white"
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <Button
+                      onClick={() => setShowCpfForm(false)}
+                      variant="outline"
+                      className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                    >
+                      Voltar
+                    </Button>
+                    <Button
+                      onClick={async () => {
+                        const cleanCpf = cpf.replace(/\D/g, '');
+                        const cleanPhone = phone.replace(/\D/g, '');
+
+                        if (cleanCpf.length !== 11) {
+                          alert("CPF deve ter 11 dígitos");
+                          return;
+                        }
+
+                        if (cleanPhone.length < 10) {
+                          alert("Telefone inválido");
+                          return;
+                        }
+
+                        // Salva CPF e telefone no perfil do usuário
+                        try {
+                          await base44.entities.AppUser.update(currentUser.id, {
+                            cpf: cleanCpf,
+                            phone: cleanPhone
+                          });
+
+                          // Atualiza localStorage
+                          const updatedUser = { ...currentUser, cpf: cleanCpf, phone: cleanPhone };
+                          localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+                          setCurrentUser(updatedUser);
+
+                          setShowCpfForm(false);
+                          handlePayment();
+                        } catch (error) {
+                          alert("Erro ao salvar dados: " + error.message);
+                        }
+                      }}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      Continuar
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 // Seleção de método de pagamento
                 <>
-              
+
               {/* PIX */}
               <button
                 onClick={() => setPaymentMethod('pix')}
