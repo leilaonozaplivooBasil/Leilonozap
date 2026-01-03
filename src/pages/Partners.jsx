@@ -169,7 +169,7 @@ const LandingContent = ({ onLoginClick }) => {
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Receba seus Lucros</h3>
                   <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                    Nos primeiros 30 dias organizamos o produto para venda, nos 30 dias seguintes vendemos seus produtos e após 60 dias o valor total já com lucro fica disponível para saque ou nova rodada de compra.
+                    Em 60 dias você recebe seu valor de volta + 3% de lucro, disponível para saque ou reinvestimento em novos produtos.
                   </p>
                 </div>
               </div>
