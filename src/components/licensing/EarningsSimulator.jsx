@@ -62,7 +62,7 @@ export default function EarningsSimulator() {
               </div>
 
               <div className="text-center text-xs text-white font-bold">
-                Digite o valor de pessoas indicadas
+                Digite o número de pessoas indicadas
               </div>
             </div>
           </div>
@@ -95,14 +95,20 @@ export default function EarningsSimulator() {
                 ))}
               </div>
 
-              <div className="flex items-center justify-center">
-                <div className="text-4xl font-black text-white">
-                  R$ {selectedTicket}
-                </div>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-2xl font-bold text-white">R$</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10000"
+                  value={selectedTicket}
+                  onChange={(e) => setSelectedTicket(Math.min(10000, Math.max(1, parseInt(e.target.value) || 1)))}
+                  className="w-32 text-4xl font-black text-white bg-transparent text-center border-b-2 border-gray-500/30 focus:border-gray-400 focus:outline-none custom-number-input"
+                />
               </div>
 
               <div className="text-center text-xs text-white font-bold">
-                Valor médio por arremate
+                Digite o valor médio por arremate
               </div>
             </div>
           </div>
