@@ -142,7 +142,7 @@ export default function InvestorDashboard() {
       id: 1,
       title: "Produto Comprado",
       icon: Package,
-      description: "Produtos adquiridos com seu investimento",
+      description: "Produtos adquiridos",
       color: "text-blue-400",
       bgColor: "bg-blue-500/20",
       borderColor: "border-blue-500/30",
