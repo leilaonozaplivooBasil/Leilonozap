@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { base44 } from "@/api/base44Client";
+import { calculateShipping } from "@/functions/calculateShipping";
 
 export default function FreteCalculator({ productId }) {
   const [cep, setCep] = useState("");
@@ -35,17 +36,17 @@ export default function FreteCalculator({ productId }) {
     setResultado(null);
 
     try {
-      const response = await base44.functions.invoke('calculateShipping', {
+      const response = await calculateShipping({
         cepDestino: cleanCep,
         productId: productId
       });
 
-      if (response.data.error) {
-        toast.error(response.data.error);
+      if (response.error) {
+        toast.error(response.error);
         return;
       }
 
-      setResultado(response.data);
+      setResultado(response);
       toast.success("Frete calculado com sucesso!");
 
     } catch (error) {

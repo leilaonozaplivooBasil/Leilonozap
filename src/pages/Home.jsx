@@ -20,6 +20,7 @@ import {
   TooltipProvider,
   TooltipTrigger } from
 "@/components/ui/tooltip";
+import { checkLocation } from "@/functions/checkLocation";
 
 import AuctionCard from "../components/auction/AuctionCard";
 import WelcomeModal from "../components/common/WelcomeModal";
@@ -428,10 +429,10 @@ export default function Home() {
 
       // 🆕 VERIFICA LOCALIZAÇÃO DO USUÁRIO
       try {
-        const { data } = await base44.functions.invoke('checkLocation');
-        if (data && data.location && data.location.region) {
-          setUserRegion(data.location.region);
-          console.log('📍 Região detectada:', data.location.region);
+        const locationData = await checkLocation();
+        if (locationData?.location?.region) {
+          setUserRegion(locationData.location.region);
+          console.log('📍 Região detectada:', locationData.location.region);
         }
       } catch (error) {
         console.error('❌ Erro ao detectar localização:', error);
