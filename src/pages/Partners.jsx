@@ -17,6 +17,7 @@ import {
 import LoginModal from '../components/common/LoginModal';
 import ValoraNotesGallery from '../components/licensing/ValoraNotesGallery';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
+import ProductCarousel from '../components/licensing/ProductCarousel';
 
 const AppUser = base44.entities.AppUser;
 
@@ -103,6 +104,8 @@ const LandingContent = ({ onLoginClick }) => {
           }
         ]}
       />
+
+      <ProductCarousel />
 
       {/* COMO FUNCIONA - Mantém conteúdo original */}
       <div className="mb-12 sm:mb-16 max-w-4xl mx-auto px-4">
