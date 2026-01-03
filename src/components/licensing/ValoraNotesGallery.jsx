@@ -60,7 +60,7 @@ export default function ValoraNotesGallery() {
             onMouseLeave={() => { setIsHovered(false); setIsPaused(false); }}
           >
             <div 
-              className="w-96 h-56 rounded-2xl shadow-2xl border-4 relative transition-all cursor-pointer overflow-hidden bg-white"
+              className="w-[500px] h-72 rounded-2xl shadow-2xl border-4 relative transition-all cursor-pointer overflow-hidden bg-white"
               style={{ 
                 boxShadow: isHovered ? '0 40px 120px rgba(0,0,0,0.8), 0 0 60px #1DB24A' : '0 30px 80px rgba(0,0,0,0.6)',
                 borderColor: isHovered ? '#1DB24A' : 'rgba(255,255,255,0.3)'
@@ -97,14 +97,14 @@ export default function ValoraNotesGallery() {
             </div>
             
             <motion.div 
-              className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 px-8 py-3 rounded-full font-bold text-xl shadow-lg border-2"
+              className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 px-8 py-3 rounded-full font-bold text-2xl shadow-lg border-2"
               style={{
                 background: isHovered ? 'linear-gradient(to right, #1DB24A, #16a34a)' : 'linear-gradient(to right, #1f2937, #111827)',
                 borderColor: isHovered ? 'white' : 'rgba(75, 85, 99, 0.3)',
                 color: 'white'
               }}
             >
-              V$ {currentNote.value}
+              R$ {currentNote.value}
             </motion.div>
           </motion.div>
         </AnimatePresence>
@@ -124,7 +124,7 @@ export default function ValoraNotesGallery() {
               backgroundColor: index === currentIndex ? '#1DB24A' : '#4B5563',
               boxShadow: index === currentIndex ? '0 0 20px #1DB24A' : 'none'
             }}
-            aria-label={`Nota V$ {note.value}`}
+            aria-label={`Nota R$ ${note.value}`}
           />
         ))}
       </div>
@@ -136,9 +136,9 @@ export default function ValoraNotesGallery() {
           animate={{ opacity: 1 }}
           className="text-2xl font-bold mb-2 text-white"
         >
-          {currentNote.name} - V$ {currentNote.value}
+          {currentNote.name} - R$ {currentNote.value}
         </motion.h3>
-        <p className="text-gray-400">Sua moeda exclusiva para arrematar produtos</p>
+        <p className="text-gray-400">Invista e lucre com produtos selecionados</p>
       </div>
     </div>
   );
