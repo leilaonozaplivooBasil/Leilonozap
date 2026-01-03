@@ -45,8 +45,9 @@ export default function PlanCheckout() {
 
     try {
       // Cria registro temporário de "leilão" para o plano
+      console.log('🔄 Criando leilão temporário para o plano...');
       const tempAuction = await base44.entities.Auction.create({
-        title: `Compra: ${plan.name}`,
+        title: `Plano de Investimento: ${plan.name}`,
         description: `Compra do plano ${plan.name} - Investimento de R$ ${plan.minInvestment.toLocaleString('pt-BR')}`,
         starting_price: plan.minInvestment,
         current_price: plan.minInvestment,
@@ -60,18 +61,28 @@ export default function PlanCheckout() {
         product_source: 'factory_new',
         is_test_auction: false
       });
+      console.log('✅ Leilão temporário criado:', tempAuction.id);
 
       if (paymentMethod === 'pix') {
         // Usa sistema existente de PIX
-        const response = await base44.functions.invoke('createAbacatePayPix', {
+        console.log('💳 Gerando PIX com AbacatePay...');
+        
+        const pixPayload = {
           auction_id: tempAuction.id,
           user_name: currentUser.full_name,
           user_email: currentUser.email,
           user_phone: currentUser.phone || '11999999999',
           user_cpf: currentUser.cpf || '00000000000'
-        });
+        };
+        
+        console.log('📤 Payload PIX:', pixPayload);
+
+        const response = await base44.functions.invoke('createAbacatePayPix', pixPayload);
+
+        console.log('📥 Resposta PIX:', response);
 
         if (response.data && response.data.success) {
+          console.log('✅ PIX gerado com sucesso');
           setPixData({
             qr_code: `data:image/png;base64,${response.data.qr_code_base64}`,
             copy_paste: response.data.pix_code,
