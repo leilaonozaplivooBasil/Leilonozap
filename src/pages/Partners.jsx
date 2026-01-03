@@ -135,9 +135,9 @@ const LandingContent = ({ onLoginClick }) => {
                   <span className="text-white font-bold text-sm">2</span>
                 </div>
                 <div>
-                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Realize seu Investimento</h3>
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Realize sua Compra</h3>
                   <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                    Invista a partir de R$ 5.000,00 nos produtos selecionados. Seu capital fica aplicado por 60 dias.
+                    Compre a partir de R$ 5.000,00 nos produtos selecionados. E fique despreocupado que nós cuidamos do restante!
                   </p>
                 </div>
               </div>
@@ -169,7 +169,7 @@ const LandingContent = ({ onLoginClick }) => {
                 <div>
                   <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Receba seus Lucros</h3>
                   <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
-                    Em 60 dias, receba seu investimento de volta + 3% de lucro garantido sobre as vendas realizadas.
+                    Nos primeiros 30 dias organizamos o produto para venda, nos 30 dias seguintes vendemos seus produtos e após 60 dias o valor total já com lucro fica disponível para saque ou nova rodada de compra.
                   </p>
                 </div>
               </div>
