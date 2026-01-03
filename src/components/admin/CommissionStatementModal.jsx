@@ -76,10 +76,11 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                         return;
                     }
 
-                    // 2. Encontrar todos os leilões que esses usuários venceram
+                    // 2. Encontrar todos os leilões que esses usuários venceram (exceto planos de investimento)
                     const wonAuctions = await Auction.filter({ 
                         status: { $in: ["ended", "sold"] },
-                        winner_id: { $in: indicatedUserIds }
+                        winner_id: { $in: indicatedUserIds },
+                        is_investment_plan: { $ne: true }
                     }, "-updated_date", 100);
 
                     if (!Array.isArray(wonAuctions)) {
