@@ -66,6 +66,7 @@ export default function CreateAuction() {
   const [productName, setProductName] = useState("");
   const [isSearchingGtin, setIsSearchingGtin] = useState(false);
   const [isSearchingName, setIsSearchingName] = useState(false);
+  const [selectedMarketplace, setSelectedMarketplace] = useState(null);
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
   const [imageUrls, setImageUrls] = useState(["", "", "", "", "", ""]);
@@ -963,47 +964,88 @@ export default function CreateAuction() {
                         {/* ABA: BUSCA POR URL */}
                         <TabsContent value="url" className="mt-4">
                           <div>
-                          <Label htmlFor="productUrl" className="text-sm font-medium text-gray-400">
-                            🔗 Cole o link do produto:
-                          </Label>
-                          <div className="mb-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
-                            <p className="text-xs text-blue-300 mb-2 font-semibold">✨ Sites suportados:</p>
-                            <div className="grid grid-cols-2 gap-1 text-xs text-blue-200">
-                              <div>• Mercado Livre</div>
-                              <div>• Amazon</div>
-                              <div>• Shopee</div>
-                              <div>• Magazine Luiza</div>
-                              <div>• Casas Bahia</div>
-                              <div>• Ponto Frio</div>
-                              <div>• Carrefour</div>
-                              <div>• AliExpress</div>
-                            </div>
-                          </div>
-                          <Input
-                            id="productUrl"
-                            value={productUrl}
-                            onChange={(e) => setProductUrl(e.target.value)}
-                            placeholder="https://www.amazon.com.br/produto/..."
-                            className="mb-4 mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-blue-500"
-                            disabled={isProcessing}
-                          />
-                          <Button 
-                            onClick={extractAllData} 
-                            disabled={isProcessing || !productUrl.trim()}
-                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
-                          >
-                            {isProcessing ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Extraindo com IA...
-                              </>
+                            {!selectedMarketplace ? (
+                              <div>
+                                <Label className="text-sm font-bold text-blue-300 mb-3 block">
+                                  🔗 Selecione de qual site você vai importar:
+                                </Label>
+                                
+                                <div className="grid grid-cols-2 gap-3">
+                                  {[
+                                    { id: 'mercadolivre', name: 'Mercado Livre', color: 'yellow', placeholder: 'https://produto.mercadolivre.com.br/...' },
+                                    { id: 'amazon', name: 'Amazon', color: 'orange', placeholder: 'https://www.amazon.com.br/produto/...' },
+                                    { id: 'shopee', name: 'Shopee', color: 'red', placeholder: 'https://shopee.com.br/produto...' },
+                                    { id: 'magazineluiza', name: 'Magazine Luiza', color: 'blue', placeholder: 'https://www.magazineluiza.com.br/...' },
+                                    { id: 'casasbahia', name: 'Casas Bahia', color: 'orange', placeholder: 'https://www.casasbahia.com.br/...' },
+                                    { id: 'pontofrio', name: 'Ponto Frio', color: 'blue', placeholder: 'https://www.pontofrio.com.br/...' },
+                                    { id: 'carrefour', name: 'Carrefour', color: 'blue', placeholder: 'https://www.carrefour.com.br/...' },
+                                    { id: 'aliexpress', name: 'AliExpress', color: 'red', placeholder: 'https://pt.aliexpress.com/...' }
+                                  ].map((site) => (
+                                    <button
+                                      key={site.id}
+                                      onClick={() => setSelectedMarketplace(site)}
+                                      className={`p-4 rounded-lg border-2 transition-all hover:scale-105 hover:shadow-lg bg-gray-800/50 border-${site.color}-500/30 hover:border-${site.color}-400 hover:bg-${site.color}-900/20`}
+                                    >
+                                      <p className="text-white font-semibold text-sm">{site.name}</p>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
                             ) : (
-                              <>
-                                <Zap className="w-4 h-4 mr-2" />
-                                🤖 Extrair com IA
-                              </>
+                              <div>
+                                <div className="mb-4 flex items-center justify-between">
+                                  <Label className="text-sm font-bold text-blue-300 flex items-center gap-2">
+                                    🔗 {selectedMarketplace.name}
+                                  </Label>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedMarketplace(null);
+                                      setProductUrl("");
+                                    }}
+                                    className="text-gray-400 hover:text-white"
+                                  >
+                                    ← Voltar
+                                  </Button>
+                                </div>
+                                
+                                <Input
+                                  id="productUrl"
+                                  value={productUrl}
+                                  onChange={(e) => setProductUrl(e.target.value)}
+                                  placeholder={selectedMarketplace.placeholder}
+                                  className="mb-4 bg-gray-900 border-blue-600 text-gray-100 placeholder-gray-500 focus:border-blue-400"
+                                  disabled={isProcessing}
+                                  autoFocus
+                                />
+                                
+                                <Button 
+                                  onClick={extractAllData} 
+                                  disabled={isProcessing || !productUrl.trim()}
+                                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
+                                >
+                                  {isProcessing ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      Extraindo de {selectedMarketplace.name}...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Zap className="w-4 h-4 mr-2" />
+                                      🤖 Extrair de {selectedMarketplace.name}
+                                    </>
+                                  )}
+                                </Button>
+                                
+                                <div className="mt-3 p-2 bg-blue-900/30 rounded-lg border border-blue-500/30">
+                                  <p className="text-xs text-blue-300">
+                                    ✨ A IA já sabe que vai extrair de <strong>{selectedMarketplace.name}</strong> e buscará dados específicos deste site!
+                                  </p>
+                                </div>
+                              </div>
                             )}
-                          </Button>
                           </div>
                         </TabsContent>
                       </Tabs>
