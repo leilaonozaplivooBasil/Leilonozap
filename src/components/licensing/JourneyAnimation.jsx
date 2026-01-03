@@ -46,58 +46,71 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
             const ctx = audioContextRef.current;
             const now = ctx.currentTime;
 
-            // SOM DE CAIXA REGISTRADORA - "CHA-CHING!"
+            // SOM DE NOTAS SENDO CONTADAS/SACADAS - "SWISH SWISH SWISH"
 
-            // 1. Som de gaveta abrindo (grave)
-            const drawer = ctx.createOscillator();
-            const drawerGain = ctx.createGain();
-            drawer.connect(drawerGain);
-            drawerGain.connect(ctx.destination);
+            // Função para criar som de nota sendo passada
+            const createBillSwipe = (startTime) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
 
-            drawer.type = 'sawtooth';
-            drawer.frequency.setValueAtTime(150, now);
-            drawer.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+                // Adiciona ruído branco para simular papel
+                const noise = ctx.createBufferSource();
+                const noiseBuffer = ctx.createBuffer(1, ctx.sampleRate * 0.1, ctx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                for (let i = 0; i < output.length; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                noise.buffer = noiseBuffer;
 
-            drawerGain.gain.setValueAtTime(0, now);
-            drawerGain.gain.linearRampToValueAtTime(0.2, now + 0.01);
-            drawerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                const noiseGain = ctx.createGain();
+                noise.connect(noiseGain);
+                noiseGain.connect(ctx.destination);
 
-            drawer.start(now);
-            drawer.stop(now + 0.15);
+                // Tom de papel passando
+                osc.connect(gain);
+                gain.connect(ctx.destination);
 
-            // 2. Som de campainha/sino (agudo) - "CHING"
-            const bell = ctx.createOscillator();
-            const bellGain = ctx.createGain();
-            bell.connect(bellGain);
-            bellGain.connect(ctx.destination);
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(300, startTime);
+                osc.frequency.exponentialRampToValueAtTime(180, startTime + 0.06);
 
-            bell.type = 'sine';
-            bell.frequency.setValueAtTime(1800, now + 0.12);
-            bell.frequency.exponentialRampToValueAtTime(2400, now + 0.18);
+                gain.gain.setValueAtTime(0, startTime);
+                gain.gain.linearRampToValueAtTime(0.15, startTime + 0.01);
+                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.08);
 
-            bellGain.gain.setValueAtTime(0, now + 0.12);
-            bellGain.gain.linearRampToValueAtTime(0.5, now + 0.13);
-            bellGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                noiseGain.gain.setValueAtTime(0, startTime);
+                noiseGain.gain.linearRampToValueAtTime(0.08, startTime + 0.005);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.06);
 
-            bell.start(now + 0.12);
-            bell.stop(now + 0.45);
+                osc.start(startTime);
+                osc.stop(startTime + 0.08);
+                noise.start(startTime);
+                noise.stop(startTime + 0.06);
+            };
 
-            // 3. Harmônico adicional para riqueza sonora
-            const harmonic = ctx.createOscillator();
-            const harmonicGain = ctx.createGain();
-            harmonic.connect(harmonicGain);
-            harmonicGain.connect(ctx.destination);
+            // Sequência de notas sendo contadas (5 notas rápidas)
+            createBillSwipe(now);
+            createBillSwipe(now + 0.08);
+            createBillSwipe(now + 0.16);
+            createBillSwipe(now + 0.24);
+            createBillSwipe(now + 0.32);
 
-            harmonic.type = 'triangle';
-            harmonic.frequency.setValueAtTime(2400, now + 0.12);
-            harmonic.frequency.exponentialRampToValueAtTime(3000, now + 0.18);
+            // Som final de "pronto!" - nota aguda
+            const finalBell = ctx.createOscillator();
+            const finalGain = ctx.createGain();
+            finalBell.connect(finalGain);
+            finalGain.connect(ctx.destination);
 
-            harmonicGain.gain.setValueAtTime(0, now + 0.12);
-            harmonicGain.gain.linearRampToValueAtTime(0.3, now + 0.13);
-            harmonicGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+            finalBell.type = 'sine';
+            finalBell.frequency.setValueAtTime(1200, now + 0.45);
+            finalBell.frequency.exponentialRampToValueAtTime(1600, now + 0.5);
 
-            harmonic.start(now + 0.12);
-            harmonic.stop(now + 0.4);
+            finalGain.gain.setValueAtTime(0, now + 0.45);
+            finalGain.gain.linearRampToValueAtTime(0.3, now + 0.46);
+            finalGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+            finalBell.start(now + 0.45);
+            finalBell.stop(now + 0.7);
 
         } catch (error) {
             console.error("Erro ao tocar som:", error);
