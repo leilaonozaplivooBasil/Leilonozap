@@ -387,7 +387,7 @@ export default function InvestorDashboard() {
                   <Package className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-xs sm:text-sm">Investimentos Ativos</p>
+                  <p className="text-gray-400 text-xs sm:text-sm">Compras Ativas</p>
                   <p className="text-xl sm:text-2xl font-bold text-white">{activeInvestments.length}</p>
                 </div>
               </div>
