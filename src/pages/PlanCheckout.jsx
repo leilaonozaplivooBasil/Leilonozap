@@ -209,7 +209,7 @@ export default function PlanCheckout() {
             <CardContent className="space-y-4">
 
               {pixData ? (
-                // Exibe QR Code PIX
+                // Exibe QR Code PIX (qr_code_base64 já vem com prefixo data:image/png;base64, da AbacatePay)
                 <div className="space-y-4">
                   <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
                     <img 
@@ -222,7 +222,7 @@ export default function PlanCheckout() {
                       <input
                         value={pixData.pix_code}
                         readOnly
-                        className="text-xs bg-white border border-gray-300 rounded px-2 py-1 flex-1"
+                        className="text-xs bg-white border border-gray-300 rounded px-2 py-1 flex-1 font-mono"
                       />
                       <Button
                         onClick={() => {
