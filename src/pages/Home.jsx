@@ -139,8 +139,12 @@ export default function Home() {
       console.log('🔍 [NoZap] Filtrando apenas favoritos:', favoriteAuctions.length);
       filtered = favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
     } else {
-      // Filtra apenas leilões do NoZap (exclui Sai de Baixo)
-      let nozapOnly = auctions.filter((auction) => auction && auction.partner_store !== 'sai_de_baixo');
+      // Filtra apenas leilões do NoZap (exclui Sai de Baixo e planos de investimento)
+      let nozapOnly = auctions.filter((auction) => 
+        auction && 
+        auction.partner_store !== 'sai_de_baixo' && 
+        auction.is_investment_plan !== true
+      );
       
       // 🆕 FILTRO POR REGIÃO: Remove leilões que não são permitidos na região do usuário
       if (userRegion) {

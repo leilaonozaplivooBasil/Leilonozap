@@ -71,6 +71,7 @@ export default function PlanCheckout() {
           winner_name: currentUser.full_name,
           product_source: 'factory_new',
           is_test_auction: false,
+          is_investment_plan: true,
           image_urls: plan.imageKey ? [
             'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400'
           ] : []
@@ -351,6 +352,7 @@ export default function PlanCheckout() {
                             winner_name: currentUser.full_name,
                             product_source: 'factory_new',
                             is_test_auction: false,
+                            is_investment_plan: true,
                             image_urls: plan.imageKey ? [
                               'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400'
                             ] : []
