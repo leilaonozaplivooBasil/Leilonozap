@@ -211,46 +211,33 @@ export default function PlanCheckout() {
               {pixData ? (
                 // Exibe QR Code PIX
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg p-6 flex justify-center items-center">
+                  <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
                     <img 
-                      src={`data:image/png;base64,${pixData.qr_code_base64}`} 
+                      src={pixData.qr_code_base64} 
                       alt="QR Code PIX" 
-                      className="w-64 h-64 mx-auto rounded-lg"
+                      className="w-64 h-64 mx-auto mb-4 rounded-lg"
                     />
-                  </div>
-
-                  <div>
-                    <p className="text-sm text-gray-400 mb-2">Código PIX Copia e Cola:</p>
-                    <div className="bg-gray-900 rounded-lg p-3 relative">
-                      <div className="max-h-32 overflow-y-auto pr-20 text-xs text-gray-300 break-all font-mono">
-                        {pixData.pix_code}
-                      </div>
+                    <p className="text-sm text-gray-700 mb-2">Ou copie o código PIX:</p>
+                    <div className="flex gap-2">
+                      <input
+                        value={pixData.pix_code}
+                        readOnly
+                        className="text-xs bg-white border border-gray-300 rounded px-2 py-1 flex-1"
+                      />
                       <Button
                         onClick={() => {
                           navigator.clipboard.writeText(pixData.pix_code);
                           setCopied(true);
                           setTimeout(() => setCopied(false), 2000);
                         }}
-                        size="sm"
-                        className="absolute top-2 right-2 bg-green-600 hover:bg-green-700 text-xs"
+                        size="icon"
+                        variant="outline"
+                        className="flex-shrink-0"
                       >
-                        {copied ? (
-                          <>
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Copiado!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3 h-3 mr-1" />
-                            Copiar
-                          </>
-                        )}
+                        <Copy className="w-4 h-4" />
                       </Button>
                     </div>
-                  </div>
-
-                  <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30">
-                    <p className="text-lg font-bold text-center text-green-400">
+                    <p className="text-lg font-bold mt-4 text-green-700">
                       R$ {pixData.amount.toFixed(2)}
                     </p>
                   </div>
