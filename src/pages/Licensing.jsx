@@ -661,7 +661,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         valora_pay_balance: (licensee.valora_pay_balance || 0) + amount
       });
 
-      toast.success(`V$ ${amount.toFixed(2)} creditados!`);
+      toast.success(`R$ ${amount.toFixed(2)} creditados!`);
       await loadAllUsers();
       setSelectedLicenseeId('');
       setCommissionAmount('');
@@ -831,10 +831,10 @@ const DashboardContent = ({ user, isAdmin }) => {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-white mb-2">Sua Carteira Valora Pay</h3>
+              <h3 className="text-2xl font-bold text-white mb-2">Seus Ganhos em Dinheiro</h3>
               <div className="flex items-baseline gap-3 mb-4">
                 <span className="text-5xl font-bold text-white">
-                  V$ ${(user.valora_pay_balance || 0).toFixed(2)}
+                  R$ {(user.valora_pay_balance || 0).toFixed(2)}
                 </span>
               </div>
               <Button
@@ -904,8 +904,8 @@ const DashboardContent = ({ user, isAdmin }) => {
       <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={DollarSign}
-          label="Saldo Valora Pay"
-          value={`V$ ${(user.valora_pay_balance || 0).toFixed(2)}`}
+          label="Saldo em Dinheiro"
+          value={`R$ ${(user.valora_pay_balance || 0).toFixed(2)}`}
           onClick={() => setIsAuctionSelectionModalOpen(true)}
         />
         <StatCard
@@ -923,7 +923,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <StatCard
           icon={BarChart}
           label="Comissões Geradas"
-          value={`V$ ${(user.commission_balance || 0).toFixed(2)}`}
+          value={`R$ ${(user.commission_balance || 0).toFixed(2)}`}
           onClick={() => setViewingCommissionsFor(user)}
         />
       </div>
@@ -1090,7 +1090,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             <CardHeader>
               <CardTitle className="text-white">Extrato de Comissões</CardTitle>
               <CardDescription className="text-gray-400">
-                Total acumulado: V$ ${(user.commission_balance || 0).toFixed(2)}
+                Total acumulado: R$ {(user.commission_balance || 0).toFixed(2)}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1125,14 +1125,14 @@ const DashboardContent = ({ user, isAdmin }) => {
                         <SelectContent>
                           {licensees.map(lic => (
                             <SelectItem key={lic.id} value={lic.id}>
-                              {lic.full_name} - V$ ${(lic.valora_pay_balance || 0).toFixed(2)}
+                              {lic.full_name} - R$ {(lic.valora_pay_balance || 0).toFixed(2)}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-gray-300">Valor da Comissão (V$)</Label>
+                      <Label className="text-gray-300">Valor da Comissão (R$)</Label>
                       <Input
                         type="number"
                         placeholder="100.00"
