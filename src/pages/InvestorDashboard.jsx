@@ -648,16 +648,16 @@ export default function InvestorDashboard() {
 
                       return (
                         <div key={portfolio.id} className="w-full">
-                          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col">
+                          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col overflow-hidden">
                             <CardHeader className="p-3 pb-1.5 text-center">
-                              <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                                <CardTitle className="text-base text-white leading-tight">{portfolio.name}</CardTitle>
+                              <div className="flex items-center justify-center gap-1.5 mb-0.5 flex-wrap">
+                                <CardTitle className="text-sm text-white leading-tight">{portfolio.name}</CardTitle>
                                 <Badge className="bg-green-600 text-[9px] px-1.5 py-0.5">{portfolio.risk}</Badge>
                               </div>
-                              <p className="text-gray-400 text-[11px] leading-tight">{portfolio.description}</p>
+                              <p className="text-gray-400 text-[10px] leading-tight">{portfolio.description}</p>
                             </CardHeader>
 
-                            <CardContent className="space-y-1.5 p-3 pt-0 text-center flex-1 flex flex-col">
+                            <CardContent className="space-y-1.5 p-3 pt-0 text-center flex-1 flex flex-col overflow-x-hidden">
                               {/* Valores */}
                               <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
                                 <div className="flex items-center justify-between">
