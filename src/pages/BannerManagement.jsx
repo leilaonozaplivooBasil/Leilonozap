@@ -572,10 +572,27 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Verifica dimensões da imagem
+    const img = new Image();
+    img.onload = () => {
+      // Se não for 1200x600, abre o editor
+      if (img.width !== 1200 || img.height !== 600) {
+        setPendingImageFile(file);
+        setShowCropEditor(true);
+      } else {
+        // Dimensões perfeitas, faz upload direto
+        uploadImageFile(file);
+      }
+    };
+    img.src = URL.createObjectURL(file);
+  };
+
+  const uploadImageFile = async (file) => {
     setIsUploading(true);
     const imageUrl = await onUploadImage(file);
     if (imageUrl) {
       setFormData({ ...formData, image_url: imageUrl });
+      toast.success('Imagem enviada com sucesso!');
     }
     setIsUploading(false);
   };
@@ -628,13 +645,31 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <Card className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <CardTitle className="text-white">
-            {product.id ? 'Editar Produto' : 'Novo Produto em Destaque'}
-          </CardTitle>
-        </CardHeader>
+    <>
+      {showCropEditor && pendingImageFile && (
+        <ImageCropEditor
+          imageFile={pendingImageFile}
+          targetWidth={1200}
+          targetHeight={600}
+          onSave={(croppedFile) => {
+            setShowCropEditor(false);
+            setPendingImageFile(null);
+            uploadImageFile(croppedFile);
+          }}
+          onCancel={() => {
+            setShowCropEditor(false);
+            setPendingImageFile(null);
+          }}
+        />
+      )}
+
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <Card className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <CardHeader>
+            <CardTitle className="text-white">
+              {product.id ? 'Editar Produto' : 'Novo Produto em Destaque'}
+            </CardTitle>
+          </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -785,6 +820,7 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
 
