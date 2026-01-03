@@ -294,7 +294,7 @@ export default function InvestorDashboard() {
                   className="flex items-center gap-2"
                 >
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <p className="text-green-400 font-semibold text-sm sm:text-base">Parceiro Investidor</p>
+                  <p className="text-green-400 font-semibold text-sm sm:text-base">Parceiro de Compra</p>
                   </motion.div>
                   </div>
                   <div className="flex flex-col items-center sm:items-end gap-4 w-full sm:w-auto">
