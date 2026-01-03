@@ -94,7 +94,7 @@ export default function EarningsSimulator() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="relative"
         >
-          <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 rounded-2xl p-8 border-2 border-purple-500/30 hover:border-purple-400/60 transition-all duration-300 shadow-2xl hover:shadow-purple-500/20">
+          <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 rounded-2xl p-8 border-2 border-purple-500/30 hover:border-purple-400/60 transition-all duration-300 shadow-2xl hover:shadow-purple-500/20 h-full flex flex-col">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 bg-purple-500/20 rounded-xl border border-purple-500/30">
                 <DollarSign className="w-7 h-7 text-purple-400" />
@@ -102,7 +102,7 @@ export default function EarningsSimulator() {
               <h3 className="text-2xl font-bold text-white">Ticket Médio</h3>
             </div>
             
-            <div className="space-y-4">
+            <div className="flex-1 flex flex-col justify-center space-y-4">
               <div className="grid grid-cols-3 gap-2">
                 {tickets.map((ticket) => (
                   <motion.button
@@ -110,7 +110,7 @@ export default function EarningsSimulator() {
                     onClick={() => setSelectedTicket(ticket)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`py-3 px-4 rounded-xl font-bold transition-all duration-300 ${
+                    className={`py-2 px-3 rounded-xl text-sm font-bold transition-all duration-300 ${
                       selectedTicket === ticket
                         ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/50 border-2 border-purple-400'
                         : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border-2 border-gray-700'
@@ -121,12 +121,12 @@ export default function EarningsSimulator() {
                 ))}
               </div>
               
-              <div className="flex items-center justify-center mt-6">
+              <div className="flex items-center justify-center">
                 <motion.div 
                   key={selectedTicket}
                   initial={{ scale: 1.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="text-5xl font-black text-purple-400"
+                  className="text-6xl font-black text-purple-400"
                 >
                   R$ {selectedTicket}
                 </motion.div>
