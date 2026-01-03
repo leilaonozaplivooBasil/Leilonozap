@@ -130,14 +130,14 @@ const LandingContent = ({ onLoginClick }) => {
           </Card>
 
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-start gap-3 sm:gap-4">
                 <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold">2</span>
+                  <span className="text-white font-bold text-sm">2</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Realize seu Investimento</h3>
-                  <p className="text-gray-300">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Realize seu Investimento</h3>
+                  <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
                     Invista a partir de R$ 5.000,00 nos produtos selecionados. Seu capital fica aplicado por 60 dias.
                   </p>
                 </div>
