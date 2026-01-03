@@ -630,6 +630,17 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
             <div>
               <Label className="text-gray-300">Imagem do Produto *</Label>
               
+              {/* Informações sobre dimensões */}
+              <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3 mb-3">
+                <p className="text-blue-400 text-sm font-semibold mb-1">📐 Dimensões Recomendadas</p>
+                <p className="text-gray-300 text-xs leading-relaxed">
+                  • <strong>Formato:</strong> Horizontal (paisagem)<br/>
+                  • <strong>Dimensões:</strong> 1200 x 600 pixels (proporção 2:1)<br/>
+                  • <strong>Tipo:</strong> PNG ou JPG com alta qualidade<br/>
+                  • <strong>Peso:</strong> Até 2MB para melhor desempenho
+                </p>
+              </div>
+              
               {/* Área de Drop */}
               <div
                 onDrop={handleDrop}
