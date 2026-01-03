@@ -197,14 +197,14 @@ const LandingContent = ({ onLoginClick }) => {
               <div className="flex items-start gap-3 sm:gap-4">
                 <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5 sm:mt-1" />
                 <p className="text-gray-300 text-sm sm:text-lg leading-relaxed">
-                  <strong className="text-white">Primeiros 30 dias:</strong> compramos e organizamos o estoque
+                  <strong className="text-white">Primeiros 30 dias:</strong> Compramos e organizamos o estoque
                 </p>
               </div>
 
               <div className="flex items-start gap-3 sm:gap-4">
                 <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5 sm:mt-1" />
                 <p className="text-gray-300 text-sm sm:text-lg leading-relaxed">
-                  <strong className="text-white">Próximos 30 dias:</strong> nossa equipe vende seu produto em nosso catálogo
+                  <strong className="text-white">Próximos 30 dias:</strong> Nossa equipe vende seu produto em nosso catálogo
                 </p>
               </div>
 
