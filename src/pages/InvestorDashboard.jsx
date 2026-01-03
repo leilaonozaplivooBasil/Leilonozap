@@ -541,7 +541,7 @@ export default function InvestorDashboard() {
                     
                     <CardContent className="space-y-2 p-3 pt-0 text-center flex-1 flex flex-col">
                       {/* Valores */}
-                      <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
+                      <div className="bg-gray-900/50 rounded-lg p-1.5 space-y-0.5 text-[11px]">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-400">Investimento Mínimo</span>
                           <span className="text-white font-bold">
@@ -559,12 +559,12 @@ export default function InvestorDashboard() {
                       </div>
 
                       {/* Projeção */}
-                      <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
-                        <div className="flex items-center gap-1 mb-1">
+                      <div className="bg-green-600/10 rounded-lg p-1.5 border border-green-500/30">
+                        <div className="flex items-center gap-1 mb-0.5">
                           <Calculator className="w-3 h-3 text-green-400" />
-                          <span className="text-xs text-green-400 font-semibold">Projeção</span>
+                          <span className="text-[11px] text-green-400 font-semibold">Projeção</span>
                         </div>
-                        <div className="space-y-1 text-xs">
+                        <div className="space-y-0.5 text-[11px]">
                           <div className="flex justify-between">
                             <span className="text-gray-400">Lucro:</span>
                             <span className="text-green-400 font-bold">
@@ -582,10 +582,10 @@ export default function InvestorDashboard() {
 
                       {/* Produtos */}
                       <div>
-                        <p className="text-xs text-gray-400 mb-1">Categorias:</p>
+                        <p className="text-[11px] text-gray-400 mb-0.5">Categorias:</p>
                         <div className="flex flex-wrap gap-1 justify-center">
                           {portfolio.products.map((product, idx) => (
-                            <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-[10px] px-1.5 py-0.5">
+                            <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-[9px] px-1.5 py-0">
                               {product}
                             </Badge>
                           ))}
@@ -594,12 +594,12 @@ export default function InvestorDashboard() {
 
                       {/* Features */}
                       <div className="flex-1 flex flex-col justify-center">
-                        <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
+                        <p className="text-[11px] text-gray-400 mb-0.5">Benefícios:</p>
                         <ul className="space-y-0.5">
                           {portfolio.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-center justify-center gap-1 text-xs text-gray-300">
+                            <li key={idx} className="flex items-center justify-center gap-1 text-[11px] text-gray-300 leading-tight">
                               <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
-                              {feature}
+                              <span>{feature}</span>
                             </li>
                           ))}
                         </ul>
@@ -607,7 +607,7 @@ export default function InvestorDashboard() {
 
                       {/* Botão */}
                       <Button 
-                        className="w-full bg-green-600 hover:bg-green-700 text-sm py-2.5 mt-auto font-semibold"
+                        className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 mt-2 font-semibold"
                         onClick={() => {
                           window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
                           setShowPlansModal(false);
@@ -632,17 +632,17 @@ export default function InvestorDashboard() {
                         return (
                           <div key={portfolio.id} className="flex-[0_0_95%] min-w-0">
                         <Card 
-                          className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col"
+                          className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col h-[calc(100vh-200px)]"
                         >
-                          <CardHeader className="p-3 pb-2 text-center">
-                            <div className="flex items-center justify-center gap-2 mb-1">
-                              <CardTitle className="text-lg text-white">{portfolio.name}</CardTitle>
-                              <Badge className="bg-green-600 text-[10px] px-1.5 py-0.5">{portfolio.risk}</Badge>
+                          <CardHeader className="p-3 pb-1.5 text-center">
+                            <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                              <CardTitle className="text-base text-white leading-tight">{portfolio.name}</CardTitle>
+                              <Badge className="bg-green-600 text-[9px] px-1.5 py-0.5">{portfolio.risk}</Badge>
                             </div>
-                            <p className="text-gray-400 text-xs leading-tight">{portfolio.description}</p>
+                            <p className="text-gray-400 text-[11px] leading-tight">{portfolio.description}</p>
                           </CardHeader>
 
-                          <CardContent className="space-y-2 p-3 pt-0 text-center flex-1 flex flex-col">
+                          <CardContent className="space-y-1.5 p-3 pt-0 text-center flex-1 flex flex-col overflow-y-auto">
                             {/* Valores */}
                             <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
                               <div className="flex items-center justify-between">
