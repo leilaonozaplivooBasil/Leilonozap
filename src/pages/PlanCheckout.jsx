@@ -4,6 +4,8 @@ import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
+import { stripeCheckout } from '@/functions/stripeCheckout';
+import { createAbacatePayPix } from '@/functions/createAbacatePayPix';
 import { CreditCard, Smartphone, ArrowLeft, Check, Copy, CheckCircle, User } from 'lucide-react';
 
 export default function PlanCheckout() {
@@ -74,14 +76,14 @@ export default function PlanCheckout() {
           ] : []
         });
 
-        const response = await base44.functions.invoke('stripeCheckout', {
+        const response = await stripeCheckout({
           auction_id: tempAuction.id
         });
 
-        if (response.data && response.data.checkout_url) {
-          window.location.href = response.data.checkout_url;
+        if (response.checkout_url) {
+          window.location.href = response.checkout_url;
         } else {
-          throw new Error(response.data?.error || 'Erro ao criar sessão de pagamento');
+          throw new Error(response.error || 'Erro ao criar sessão de pagamento');
         }
       }
     } catch (error) {
@@ -354,7 +356,7 @@ export default function PlanCheckout() {
                             ] : []
                           });
 
-                          const response = await base44.functions.invoke('createAbacatePayPix', {
+                          const response = await createAbacatePayPix({
                             auction_id: tempAuction.id,
                             user_name: currentUser.full_name,
                             user_email: currentUser.email,
@@ -362,17 +364,17 @@ export default function PlanCheckout() {
                             user_cpf: cleanCpf
                           });
 
-                          if (response.data && response.data.success) {
+                          if (response.success) {
                             setPixData({
-                              qr_code_base64: response.data.qr_code_base64,
-                              pix_code: response.data.pix_code,
-                              billing_id: response.data.billing_id,
+                              qr_code_base64: response.qr_code_base64,
+                              pix_code: response.pix_code,
+                              billing_id: response.billing_id,
                               amount: plan.minInvestment,
                               auction_id: tempAuction.id
                             });
                             setShowCpfForm(false);
                           } else {
-                            throw new Error(response.data?.error || 'Erro ao gerar PIX');
+                            throw new Error(response.error || 'Erro ao gerar PIX');
                           }
                         } catch (error) {
                           console.error("Erro completo:", error);
