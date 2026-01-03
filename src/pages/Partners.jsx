@@ -399,7 +399,7 @@ export default function PartnersPage() {
     <>
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
         {/* Hero Section */}
-        <div className="relative overflow-hidden py-20 px-6">
+        <div className="relative overflow-hidden py-12 sm:py-20 px-4 sm:px-6">
           <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-blue-500/10"></div>
           <div className="relative max-w-6xl mx-auto text-center">
             <motion.div
@@ -407,18 +407,18 @@ export default function PartnersPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-3 mb-6 bg-green-500/10 px-6 py-3 rounded-full border border-green-500/30">
-                <TrendingUp className="w-6 h-6 text-green-400" />
-                <span className="text-green-400 font-semibold">Programa de Parceria Profissional</span>
+              <div className="inline-flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 bg-green-500/10 px-4 sm:px-6 py-2 sm:py-3 rounded-full border border-green-500/30">
+                <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-green-400" />
+                <span className="text-green-400 font-semibold text-xs sm:text-base">Programa de Parceria Profissional</span>
               </div>
-              
-              <h1 className="text-3xl md:text-4xl font-bold mb-6 text-white">
+
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6 text-white leading-tight px-2">
                 Torne-se um Parceiro e Lucre Conosco
               </h1>
-              <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
+              <p className="text-base sm:text-lg text-gray-300 max-w-3xl mx-auto mb-4 sm:mb-8 px-4 leading-relaxed">
                 Invista em produtos selecionados e receba <strong className="text-green-400">3% de lucro garantido</strong> sobre as vendas realizadas!
               </p>
-              <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
+              <p className="text-base sm:text-lg text-gray-300 max-w-3xl mx-auto mb-6 sm:mb-8 px-4 leading-relaxed">
                 Investimento a partir de <strong className="text-yellow-400">R$ 5.000,00</strong> com retorno em <strong className="text-yellow-400">60 dias</strong>!
               </p>
             </motion.div>
