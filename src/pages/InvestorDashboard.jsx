@@ -700,10 +700,10 @@ export default function InvestorDashboard() {
 
                               {/* Produtos */}
                               <div>
-                                <p className="text-xs text-gray-400 mb-1">Categorias:</p>
+                                <p className="text-[10px] text-gray-400 mb-1">Categorias:</p>
                                 <div className="flex flex-wrap gap-1 justify-center">
                                   {portfolio.products.map((product, idx) => (
-                                    <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-xs px-1.5 py-0">
+                                    <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-[9px] px-1.5 py-0">
                                       {product}
                                     </Badge>
                                   ))}
@@ -712,12 +712,12 @@ export default function InvestorDashboard() {
 
                               {/* Features */}
                               <div className="flex-1 flex flex-col justify-center">
-                                <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
+                                <p className="text-[10px] text-gray-400 mb-1">Benefícios:</p>
                                 <ul className="space-y-0.5">
                                   {portfolio.features.map((feature, idx) => (
-                                    <li key={idx} className="flex items-center justify-center gap-1 text-xs text-gray-300">
-                                      <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
-                                      {feature}
+                                    <li key={idx} className="flex items-start gap-1 text-[10px] text-gray-300 text-left">
+                                      <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
+                                      <span className="flex-1">{feature}</span>
                                     </li>
                                   ))}
                                 </ul>
@@ -725,7 +725,7 @@ export default function InvestorDashboard() {
 
                               {/* Botão */}
                               <Button 
-                                className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 mt-2"
+                                className="w-full bg-green-600 hover:bg-green-700 text-xs py-2 mt-2"
                                 onClick={() => {
                                   window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
                                   setShowPlansModal(false);
