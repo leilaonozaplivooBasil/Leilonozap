@@ -233,9 +233,6 @@ const LandingContent = ({ onLoginClick }) => {
         </Card>
       </div>
 
-      {/* EXEMPLO DE PRODUTOS - CARROSSEL */}
-      {/* Carrossel será adicionado aqui */}
-
       <div className="mt-12 sm:mt-20 px-4">
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Parceiro</h2>
         <div className="mt-8 sm:mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center">
