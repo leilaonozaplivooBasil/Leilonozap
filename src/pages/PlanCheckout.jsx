@@ -57,35 +57,28 @@ export default function PlanCheckout() {
     setIsProcessing(true);
 
     try {
-      // 🎯 CRIA REGISTRO TEMPORÁRIO DE "LEILÃO" PARA O PLANO (igual aos leilões reais)
-      const tempAuction = await base44.entities.Auction.create({
-        title: `Plano de Investimento: ${plan.name}`,
-        description: `Compra do plano ${plan.name} - Investimento de R$ ${plan.minInvestment.toLocaleString('pt-BR')}`,
-        starting_price: plan.minInvestment,
-        current_price: plan.minInvestment,
-        increment: 0,
-        buy_now_price: plan.minInvestment,
-        end_time: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'ended', // 🆕 Já marca como "ended" para não aparecer em leilões ativos
-        order_status: 'awaiting_payment', // 🆕 Status de pedido
-        category: 'outros',
-        winner_id: currentUser.id,
-        winner_name: currentUser.full_name,
-        product_source: 'factory_new',
-        is_test_auction: false,
-        image_urls: plan.imageKey ? [
-          'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400'
-        ] : []
-      });
+      if (paymentMethod === 'card') {
+        // 🎯 CRIA REGISTRO TEMPORÁRIO DE "LEILÃO" PARA O PLANO
+        const tempAuction = await base44.entities.Auction.create({
+          title: `Plano de Investimento: ${plan.name}`,
+          description: `Compra do plano ${plan.name} - Investimento de R$ ${plan.minInvestment.toLocaleString('pt-BR')}`,
+          starting_price: plan.minInvestment,
+          current_price: plan.minInvestment,
+          increment: 0,
+          buy_now_price: plan.minInvestment,
+          end_time: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'ended',
+          order_status: 'awaiting_payment',
+          category: 'outros',
+          winner_id: currentUser.id,
+          winner_name: currentUser.full_name,
+          product_source: 'factory_new',
+          is_test_auction: false,
+          image_urls: plan.imageKey ? [
+            'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400'
+          ] : []
+        });
 
-      if (paymentMethod === 'pix') {
-        // Este código nunca será executado porque PIX redireciona para o formulário
-        // mantido apenas por segurança
-        throw new Error('Fluxo inválido - use o formulário de CPF/telefone');
-      }
-
-      } else if (paymentMethod === 'card') {
-        // 🎯 USA EXATAMENTE O MESMO SISTEMA DOS LEILÕES
         const response = await base44.functions.invoke('stripeCheckout', {
           auction_id: tempAuction.id
         });
@@ -96,7 +89,6 @@ export default function PlanCheckout() {
           throw new Error(response.data?.error || 'Erro ao criar sessão de pagamento');
         }
       }
-
     } catch (error) {
       console.error("Erro completo:", error);
       const errorMsg = error.response?.data?.error || error.message || "Erro desconhecido. Tente novamente.";
