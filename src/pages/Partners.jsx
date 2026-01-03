@@ -146,14 +146,14 @@ const LandingContent = ({ onLoginClick }) => {
           </Card>
 
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
-            <CardContent className="p-6">
-              <div className="flex items-start gap-4">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-start gap-3 sm:gap-4">
                 <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold">3</span>
+                  <span className="text-white font-bold text-sm">3</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-2">Nós Vendemos Tudo</h3>
-                  <p className="text-gray-300">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-1 sm:mb-2">Nós Vendemos Tudo</h3>
+                  <p className="text-sm sm:text-base text-gray-300 leading-relaxed">
                     Nossa equipe cuida de toda a operação: gestão de estoque, vendas, atendimento, logística e entrega.
                   </p>
                 </div>
