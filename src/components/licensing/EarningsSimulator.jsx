@@ -54,20 +54,6 @@ export default function EarningsSimulator() {
             </div>
             
             <div className="space-y-3">
-              <div className="relative">
-                <input
-                  type="range"
-                  min="1"
-                  max="100000"
-                  value={people}
-                  onChange={(e) => setPeople(parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
-                  style={{
-                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(people / 100000) * 100}%, #374151 ${(people / 100000) * 100}%, #374151 100%)`
-                  }}
-                />
-              </div>
-              
               <div className="flex items-center justify-center gap-2">
                 <input
                   type="number"
@@ -81,7 +67,7 @@ export default function EarningsSimulator() {
               </div>
               
               <div className="text-center text-xs text-gray-500">
-                Arraste para ajustar (1-100.000)
+                Digite o valor (1-100.000)
               </div>
             </div>
           </div>
