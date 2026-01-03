@@ -624,7 +624,7 @@ export default function InvestorDashboard() {
                 {/* Mobile: Tabs System */}
                 <div className="md:hidden px-2">
                   {/* Tabs Navigation */}
-                  <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-2 px-2">
+                  <div className="flex flex-col gap-2 mb-4 -mx-2 px-2">
                     {portfolios.map((portfolio, idx) => (
                       <button
                         key={portfolio.id}
