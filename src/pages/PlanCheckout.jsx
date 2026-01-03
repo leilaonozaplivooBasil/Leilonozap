@@ -44,25 +44,32 @@ export default function PlanCheckout() {
     setIsProcessing(true);
 
     try {
+      // Cria registro temporário de "leilão" para o plano
+      const tempAuction = await base44.entities.Auction.create({
+        title: `Compra: ${plan.name}`,
+        description: `Compra do plano ${plan.name} - Investimento de R$ ${plan.minInvestment.toLocaleString('pt-BR')}`,
+        starting_price: plan.minInvestment,
+        current_price: plan.minInvestment,
+        increment: 0,
+        buy_now_price: plan.minInvestment,
+        end_time: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'processing',
+        category: 'outros',
+        winner_id: currentUser.id,
+        winner_name: currentUser.full_name,
+        product_source: 'factory_new',
+        is_test_auction: false
+      });
+
       if (paymentMethod === 'pix') {
-        // Pagamento via PIX com AbacatePay
-        console.log('Iniciando pagamento PIX...');
-        
-        const payload = {
-          amount: plan.minInvestment,
-          plan_id: String(plan.id),
-          plan_name: plan.name,
+        // Usa sistema existente de PIX
+        const response = await base44.functions.invoke('createAbacatePayPix', {
+          auction_id: tempAuction.id,
           user_name: currentUser.full_name,
           user_email: currentUser.email,
           user_phone: currentUser.phone || '11999999999',
           user_cpf: currentUser.cpf || '00000000000'
-        };
-        
-        console.log('Payload:', payload);
-
-        const response = await base44.functions.invoke('createPlanPixPayment', payload);
-
-        console.log('Resposta:', response);
+        });
 
         if (response.data && response.data.success) {
           setPixData({
@@ -76,25 +83,12 @@ export default function PlanCheckout() {
         }
 
       } else if (paymentMethod === 'card') {
-        // Pagamento via Cartão com Stripe
-        console.log('Iniciando pagamento Stripe...');
-        
-        const payload = {
-          amount: plan.minInvestment,
-          plan_id: String(plan.id),
-          plan_name: plan.name,
-          customer_email: currentUser.email,
-          customer_name: currentUser.full_name
-        };
-        
-        console.log('Payload:', payload);
-
-        const response = await base44.functions.invoke('createPlanStripeCheckout', payload);
-
-        console.log('Resposta:', response);
+        // Usa sistema existente de Stripe
+        const response = await base44.functions.invoke('stripeCheckout', {
+          auction_id: tempAuction.id
+        });
 
         if (response.data && response.data.checkout_url) {
-          // Redireciona para o checkout do Stripe
           window.location.href = response.data.checkout_url;
         } else {
           throw new Error(response.data?.error || 'Erro ao criar sessão de pagamento');
