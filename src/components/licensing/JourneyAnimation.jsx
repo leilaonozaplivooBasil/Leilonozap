@@ -41,52 +41,64 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
         if (!audioContextRef.current) {
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
         }
-        
+
         try {
             const ctx = audioContextRef.current;
             const now = ctx.currentTime;
-            
-            // Som de MÚLTIPLAS MOEDAS CAINDO (estilo jogo viciante)
-            const createCoinDrop = (startTime, frequency) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
-                osc.connect(gain);
-                gain.connect(ctx.destination);
-                
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(frequency, startTime);
-                osc.frequency.exponentialRampToValueAtTime(frequency * 0.6, startTime + 0.08);
-                
-                gain.gain.setValueAtTime(0, startTime);
-                gain.gain.linearRampToValueAtTime(0.4, startTime + 0.01);
-                gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.15);
-                
-                osc.start(startTime);
-                osc.stop(startTime + 0.15);
-            };
-            
-            // CASCATA DE MOEDAS (3 moedas caindo)
-            createCoinDrop(now, 1200);        // Primeira moeda (aguda)
-            createCoinDrop(now + 0.08, 1400); // Segunda moeda
-            createCoinDrop(now + 0.16, 1600); // Terceira moeda (mais aguda)
-            
-            // SOM DE "CHING" FINAL (recompensa cerebral)
-            const chingOsc = ctx.createOscillator();
-            const chingGain = ctx.createGain();
-            chingOsc.connect(chingGain);
-            chingGain.connect(ctx.destination);
-            
-            chingOsc.type = 'triangle';
-            chingOsc.frequency.setValueAtTime(2000, now + 0.25);
-            chingOsc.frequency.exponentialRampToValueAtTime(3000, now + 0.35);
-            
-            chingGain.gain.setValueAtTime(0, now + 0.25);
-            chingGain.gain.linearRampToValueAtTime(0.3, now + 0.26);
-            chingGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-            
-            chingOsc.start(now + 0.25);
-            chingOsc.stop(now + 0.45);
-            
+
+            // SOM DE CAIXA REGISTRADORA - "CHA-CHING!"
+
+            // 1. Som de gaveta abrindo (grave)
+            const drawer = ctx.createOscillator();
+            const drawerGain = ctx.createGain();
+            drawer.connect(drawerGain);
+            drawerGain.connect(ctx.destination);
+
+            drawer.type = 'sawtooth';
+            drawer.frequency.setValueAtTime(150, now);
+            drawer.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+
+            drawerGain.gain.setValueAtTime(0, now);
+            drawerGain.gain.linearRampToValueAtTime(0.2, now + 0.01);
+            drawerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+
+            drawer.start(now);
+            drawer.stop(now + 0.15);
+
+            // 2. Som de campainha/sino (agudo) - "CHING"
+            const bell = ctx.createOscillator();
+            const bellGain = ctx.createGain();
+            bell.connect(bellGain);
+            bellGain.connect(ctx.destination);
+
+            bell.type = 'sine';
+            bell.frequency.setValueAtTime(1800, now + 0.12);
+            bell.frequency.exponentialRampToValueAtTime(2400, now + 0.18);
+
+            bellGain.gain.setValueAtTime(0, now + 0.12);
+            bellGain.gain.linearRampToValueAtTime(0.5, now + 0.13);
+            bellGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+            bell.start(now + 0.12);
+            bell.stop(now + 0.45);
+
+            // 3. Harmônico adicional para riqueza sonora
+            const harmonic = ctx.createOscillator();
+            const harmonicGain = ctx.createGain();
+            harmonic.connect(harmonicGain);
+            harmonicGain.connect(ctx.destination);
+
+            harmonic.type = 'triangle';
+            harmonic.frequency.setValueAtTime(2400, now + 0.12);
+            harmonic.frequency.exponentialRampToValueAtTime(3000, now + 0.18);
+
+            harmonicGain.gain.setValueAtTime(0, now + 0.12);
+            harmonicGain.gain.linearRampToValueAtTime(0.3, now + 0.13);
+            harmonicGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+            harmonic.start(now + 0.12);
+            harmonic.stop(now + 0.4);
+
         } catch (error) {
             console.error("Erro ao tocar som:", error);
         }
