@@ -278,9 +278,9 @@ const LandingContent = ({ onLoginClick }) => {
         </div>
       </div>
 
-      <div className="mt-20">
-        <h2 className="text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Parceiro</h2>
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+      <div className="mt-12 sm:mt-20 px-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Parceiro</h2>
+        <div className="mt-8 sm:mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center">
           {benefits.map((item, index) => (
             <div 
               key={item.text} 
