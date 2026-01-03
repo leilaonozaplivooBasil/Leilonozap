@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'API Key não configurada' }, { status: 500 });
     }
 
-    console.log('🔍 Verificando pagamento:', billing_id);
+    console.log('Verificando pagamento:', billing_id);
 
     const response = await fetch(`https://api.abacatepay.com/v1/pixQrCode/check?id=${billing_id}`, {
       method: 'GET',
