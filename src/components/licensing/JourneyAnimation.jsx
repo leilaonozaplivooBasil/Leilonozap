@@ -144,13 +144,13 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
             {/* LINHA DE PROGRESSO */}
             <div className="max-w-4xl mx-auto mb-12">
                 <div className="relative">
-                    {/* Linha de fundo - passa pelo centro dos círculos */}
-                    <div className="absolute top-8 left-0 right-0 h-1 bg-gray-700 z-0" style={{ left: '32px', right: '32px' }} />
+                    {/* Linha de fundo - passa pelo centro dos círculos - ATRÁS (z-0) */}
+                    <div className="absolute top-8 left-0 right-0 h-1 bg-gray-700" style={{ left: '32px', right: '32px', zIndex: 0 }} />
                     
-                    {/* Linha de progresso verde */}
+                    {/* Linha de progresso verde - ATRÁS (z-0) */}
                     <motion.div 
-                        className="absolute top-8 h-1 bg-green-500 z-0"
-                        style={{ left: '32px' }}
+                        className="absolute top-8 h-1 bg-green-500"
+                        style={{ left: '32px', zIndex: 0 }}
                         initial={{ width: '0%' }}
                         animate={{ 
                             width: `calc(${(currentPhase / (phases.length - 1)) * 100}% - 32px)` 
@@ -158,10 +158,10 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
                         transition={{ duration: 0.5, ease: "easeInOut" }}
                     />
                     
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between relative z-10">
                         {/* ETAPAS */}
                         {phases.map((phase, index) => (
-                            <div key={phase.id} className="relative z-10 flex flex-col items-center">
+                            <div key={phase.id} className="relative flex flex-col items-center">
                                 {/* Círculo */}
                                 <motion.div 
                                     className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-500 ${
