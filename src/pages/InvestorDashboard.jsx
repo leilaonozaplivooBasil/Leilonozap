@@ -659,18 +659,18 @@ export default function InvestorDashboard() {
 
                             <CardContent className="space-y-1.5 p-3 pt-0 text-center flex-1 flex flex-col overflow-x-hidden">
                               {/* Valores */}
-                              <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-gray-400">Investimento Mínimo</span>
-                                  <span className="text-white font-bold">
+                              <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-[10px]">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-gray-400 flex-shrink-0">Investimento Mínimo</span>
+                                  <span className="text-white font-bold text-right">
                                     R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between gap-2">
                                   <span className="text-gray-400">Retorno</span>
                                   <span className="text-green-400 font-bold">{portfolio.expectedReturn}%</span>
                                 </div>
-                                <div className="flex items-center justify-between">
+                                <div className="flex items-center justify-between gap-2">
                                   <span className="text-gray-400">Prazo</span>
                                   <span className="text-white font-bold">{portfolio.duration} dias</span>
                                 </div>
