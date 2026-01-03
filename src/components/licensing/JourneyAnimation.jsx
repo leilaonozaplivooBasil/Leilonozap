@@ -25,10 +25,10 @@ const defaultPhases = [
     },
     {
         id: 3,
-        title: "4. Você ganha V$!",
+        title: "4. Você ganha R$!",
         icon: "💰",
         color: "text-green-400",
-        description: "3% em Valora Pay"
+        description: "3% em Dinheiro Real"
     }
 ];
 
