@@ -626,8 +626,8 @@ export default function InvestorDashboard() {
                           <Button 
                             className="w-full bg-green-600 hover:bg-green-700 text-base py-3 font-semibold"
                             onClick={() => {
-                              window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
                               setShowPlansModal(false);
+                              navigate(createPageUrl("PlanCheckout"), { state: { plan: portfolio } });
                             }}
                           >
                             Comprar Agora
