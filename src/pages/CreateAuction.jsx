@@ -363,18 +363,27 @@ export default function CreateAuction() {
         description: productDesc 
       }));
 
+      // 🆕 APLICA IMAGENS DIRETAMENTE NO FORMULÁRIO
       if (data.imageUrls && data.imageUrls.length > 0) {
-        const validUrls = data.imageUrls.filter(url => url && url.trim().startsWith('http')).slice(0, 6);
+        const validUrls = data.imageUrls.filter(url => url && url.trim().startsWith('http')).slice(0, 5);
         
-        while (validUrls.length < 6) {
-          validUrls.push("");
+        const finalImageUrls = [...validUrls];
+        while (finalImageUrls.length < 5) {
+          finalImageUrls.push("");
         }
         
-        setImageUrls(validUrls);
-        toast.success(`✅ ${productTitle} encontrado! ${data.imageUrls.length} imagens`);
-        setManualStep(3);
+        setFormData(prev => ({ 
+          ...prev, 
+          title: productTitle, 
+          description: productDesc,
+          image_urls: finalImageUrls,
+          source_url: "" // Limpa source_url pois foi busca genérica
+        }));
+        
+        toast.success(`✅ ${productTitle} encontrado! ${validUrls.length} imagens aplicadas no formulário!`);
+        setManualStep(0);
       } else {
-        toast.success(`✅ ${productTitle} encontrado! Use upload manual para imagens.`);
+        toast.success(`✅ ${productTitle} encontrado! Use upload manual para adicionar imagens.`);
         setManualStep(0);
       }
 
@@ -432,19 +441,26 @@ export default function CreateAuction() {
         description: productDesc 
       }));
 
-      // Se encontrou imagens, processa
+      // 🆕 APLICA IMAGENS DIRETAMENTE NO FORMULÁRIO
       if (data.imageUrls && data.imageUrls.length > 0) {
-        const validUrls = data.imageUrls.filter(url => url && url.trim().startsWith('http')).slice(0, 6);
+        const validUrls = data.imageUrls.filter(url => url && url.trim().startsWith('http')).slice(0, 5);
         
-        while (validUrls.length < 6) {
-          validUrls.push("");
+        const finalImageUrls = [...validUrls];
+        while (finalImageUrls.length < 5) {
+          finalImageUrls.push("");
         }
         
-        setImageUrls(validUrls);
-        toast.success(`✅ Produto encontrado! Fonte: ${data.source || 'API'}`);
-        setManualStep(3); // Vai para confirmação de imagens
+        setFormData(prev => ({ 
+          ...prev, 
+          title: productTitle, 
+          description: productDesc,
+          image_urls: finalImageUrls,
+          source_url: "" // Limpa source_url pois foi busca genérica
+        }));
+        
+        toast.success(`✅ Produto encontrado! ${validUrls.length} imagens aplicadas! Fonte: ${data.source || 'API'}`);
+        setManualStep(0);
       } else {
-        // Sem imagens, aplica dados direto e pede upload manual
         toast.success(`✅ ${productTitle} encontrado! Use o upload manual para adicionar imagens.`);
         setManualStep(0);
       }
@@ -499,22 +515,37 @@ export default function CreateAuction() {
       
       toast.success(`✅ Dados extraídos de ${marketplace || 'site'}!`);
       
-      setExtractedData({ title, description });
-      setFormData(prev => ({ ...prev, title, description }));
-
-      const finalUrls = [...(extractedImageUrls || [])];
-      while (finalUrls.length < 6) {
-        finalUrls.push("");
-      }
-      setImageUrls(finalUrls.slice(0, 6));
-      
+      // 🆕 APLICA IMAGENS DIRETAMENTE NO FORMULÁRIO
       if (extractedImageUrls && extractedImageUrls.length > 0) {
-        toast.success(`📸 ${extractedImageUrls.length} imagens encontradas!`);
+        const validUrls = extractedImageUrls.filter(url => url && url.trim().startsWith('http')).slice(0, 5);
+        
+        const finalImageUrls = [...validUrls];
+        while (finalImageUrls.length < 5) {
+          finalImageUrls.push("");
+        }
+        
+        setFormData(prev => ({ 
+          ...prev, 
+          title, 
+          description,
+          image_urls: finalImageUrls,
+          source_url: productUrl // Salva URL original
+        }));
+        
+        toast.success(`📸 ${validUrls.length} imagens aplicadas no formulário!`);
+        setManualStep(0);
       } else {
-        toast.warning("⚠️ Nenhuma imagem encontrada. Adicione manualmente.");
+        // Sem imagens, só aplica texto
+        setFormData(prev => ({ 
+          ...prev, 
+          title, 
+          description,
+          source_url: productUrl
+        }));
+        
+        toast.warning("⚠️ Nenhuma imagem encontrada. Use upload manual.");
+        setManualStep(0);
       }
-      
-      setManualStep(3);
 
     } catch (error) {
       console.error("Erro ao extrair dados:", error);
