@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     console.log('RESPOSTA COMPLETA AbacatePay:', responseText);
 
     if (!response.ok) {
-      console.error('❌ Erro AbacatePay:', response.status, responseText);
+      console.error('Erro AbacatePay:', response.status, responseText);
       return Response.json({ 
         error: 'Erro ao criar cobrança PIX',
         details: responseText 
