@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      console.log('✅ Pagamento confirmado e atualizado!');
+      console.log('Pagamento confirmado e atualizado!');
     }
 
     return Response.json({
