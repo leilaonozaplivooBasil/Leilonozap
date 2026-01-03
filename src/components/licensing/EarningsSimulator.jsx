@@ -58,12 +58,12 @@ export default function EarningsSimulator() {
                 <input
                   type="range"
                   min="1"
-                  max="500"
+                  max="100000"
                   value={people}
                   onChange={(e) => setPeople(parseInt(e.target.value))}
                   className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
                   style={{
-                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(people / 500) * 100}%, #374151 ${(people / 500) * 100}%, #374151 100%)`
+                    background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(people / 100000) * 100}%, #374151 ${(people / 100000) * 100}%, #374151 100%)`
                   }}
                 />
               </div>
@@ -81,7 +81,7 @@ export default function EarningsSimulator() {
               </div>
               
               <div className="text-center text-sm text-gray-500">
-                Arraste para ajustar (1-500)
+                Arraste para ajustar (1-100.000)
               </div>
             </div>
           </div>
