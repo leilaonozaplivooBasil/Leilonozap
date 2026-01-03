@@ -680,18 +680,18 @@ export default function InvestorDashboard() {
                               <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
                                 <div className="flex items-center gap-1 mb-1">
                                   <Calculator className="w-3 h-3 text-green-400" />
-                                  <span className="text-xs text-green-400 font-semibold">Projeção</span>
+                                  <span className="text-[10px] text-green-400 font-semibold">Projeção</span>
                                 </div>
-                                <div className="space-y-0.5 text-xs">
-                                  <div className="flex justify-between">
+                                <div className="space-y-0.5 text-[10px]">
+                                  <div className="flex justify-between gap-2">
                                     <span className="text-gray-400">Lucro:</span>
-                                    <span className="text-green-400 font-bold">
+                                    <span className="text-green-400 font-bold text-right">
                                       + R$ {projection.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
                                   </div>
-                                  <div className="flex justify-between">
+                                  <div className="flex justify-between gap-2">
                                     <span className="text-gray-400">Total:</span>
-                                    <span className="text-white font-bold">
+                                    <span className="text-white font-bold text-right">
                                       R$ {projection.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
                                   </div>
