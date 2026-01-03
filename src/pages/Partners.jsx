@@ -109,10 +109,10 @@ const LandingContent = ({ onLoginClick }) => {
       </div>
 
       {/* COMO FUNCIONA - Mantém conteúdo original */}
-      <div className="mb-16 max-w-4xl mx-auto">
-        <h2 className="text-3xl font-bold text-white mb-4 text-center">Como Funciona</h2>
-        
-        <div className="grid md:grid-cols-2 gap-6 mt-12">
+      <div className="mb-12 sm:mb-16 max-w-4xl mx-auto px-4">
+        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 text-center">Como Funciona</h2>
+
+        <div className="grid md:grid-cols-2 gap-4 sm:gap-6 mt-8 sm:mt-12">
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
