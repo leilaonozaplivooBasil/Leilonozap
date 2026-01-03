@@ -226,31 +226,33 @@ export default function PlanCheckout() {
               {pixData ? (
                 // Exibe QR Code PIX
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg p-4 flex justify-center">
+                  <div className="bg-white rounded-lg p-6 flex justify-center items-center">
                     <img 
                       src={pixData.qr_code} 
                       alt="QR Code PIX" 
-                      className="w-64 h-64"
+                      className="w-full h-auto max-w-[280px] object-contain"
                     />
                   </div>
-                  
+
                   <div>
                     <p className="text-sm text-gray-400 mb-2">Código PIX Copia e Cola:</p>
-                    <div className="bg-gray-900 rounded-lg p-3 break-all text-sm text-gray-300 relative">
-                      {pixData.copy_paste}
+                    <div className="bg-gray-900 rounded-lg p-3 relative">
+                      <div className="max-h-32 overflow-y-auto pr-20 text-xs text-gray-300 break-all font-mono">
+                        {pixData.copy_paste}
+                      </div>
                       <Button
                         onClick={copyPixCode}
                         size="sm"
-                        className="absolute top-2 right-2 bg-green-600 hover:bg-green-700"
+                        className="absolute top-2 right-2 bg-green-600 hover:bg-green-700 text-xs"
                       >
                         {copied ? (
                           <>
-                            <CheckCircle className="w-4 h-4 mr-1" />
+                            <CheckCircle className="w-3 h-3 mr-1" />
                             Copiado!
                           </>
                         ) : (
                           <>
-                            <Copy className="w-4 h-4 mr-1" />
+                            <Copy className="w-3 h-3 mr-1" />
                             Copiar
                           </>
                         )}
