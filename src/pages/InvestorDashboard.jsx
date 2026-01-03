@@ -631,7 +631,7 @@ export default function InvestorDashboard() {
                       const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
                       return (
-                        <div key={portfolio.id} className="w-[80%]">
+                        <div key={portfolio.id} className="w-[95%]">
                           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col">
                             <CardHeader className="p-3 pb-1.5 text-center">
                               <div className="flex items-center justify-center gap-1.5 mb-0.5">
