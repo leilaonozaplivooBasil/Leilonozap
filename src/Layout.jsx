@@ -532,13 +532,6 @@ export default function Layout({ children, currentPageName }) {
                           </DropdownMenuItem>
                         )
                       ))}
-                      <DropdownMenuSeparator className="bg-gray-700" />
-                      <DropdownMenuItem 
-                        onClick={() => navigate(createPageUrl("MemoryBackup"))}
-                        className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 text-green-400"
-                      >
-                        🛡️ Proteção Master
-                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
