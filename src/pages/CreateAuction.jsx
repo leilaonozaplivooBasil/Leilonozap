@@ -1047,8 +1047,7 @@ export default function CreateAuction() {
                               
                               try {
                                 for (const file of files) {
-                                  const { UploadFile } = await import("@/integrations/Core");
-                                  const result = await UploadFile({ file });
+                                  const result = await base44.integrations.Core.UploadFile({ file });
                                   
                                   if (result?.file_url) {
                                     uploadedUrls.push(result.file_url);
@@ -1098,8 +1097,7 @@ export default function CreateAuction() {
                               
                               try {
                                 for (const file of files) {
-                                  const { UploadFile } = await import("@/integrations/Core");
-                                  const result = await UploadFile({ file });
+                                  const result = await base44.integrations.Core.UploadFile({ file });
                                   
                                   if (result?.file_url) {
                                     uploadedUrls.push(result.file_url);
