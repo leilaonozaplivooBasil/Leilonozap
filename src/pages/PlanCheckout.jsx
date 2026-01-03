@@ -6,11 +6,6 @@ import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
 import { CreditCard, Smartphone, ArrowLeft, Check, Copy, CheckCircle, User } from 'lucide-react';
 
-// Importar Stripe
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe('pk_live_51QcWdFBjHfNcD5d0Yd5w6qHzafNk7cQKqzUZEuMwOkVvZKFaJHWgWKPUJYnxWc4CzcTWMWLvlzYXi8Sz4pGHO9gQ00tjL6bvI0');
-
 export default function PlanCheckout() {
   const navigate = useNavigate();
   const location = useLocation();
