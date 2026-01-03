@@ -48,6 +48,7 @@ const products = [
 export default function ProductCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   const slideVariants = {
     enter: (direction) => ({
@@ -83,12 +84,14 @@ export default function ProductCarousel() {
   };
 
   useEffect(() => {
+    if (isPaused) return;
+    
     const interval = setInterval(() => {
       paginate(1);
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [currentIndex]);
+  }, [currentIndex, isPaused]);
 
   const currentProduct = products[currentIndex];
 
@@ -131,6 +134,8 @@ export default function ProductCarousel() {
                 rotateY: { duration: 0.4 }
               }}
               className="absolute w-full max-w-3xl"
+              onMouseEnter={() => setIsPaused(true)}
+              onMouseLeave={() => setIsPaused(false)}
             >
               <div className="bg-gray-800 rounded-2xl shadow-2xl border-2 border-gray-700 overflow-hidden transform-gpu">
                 <div className="relative h-80 overflow-hidden bg-gray-900">
