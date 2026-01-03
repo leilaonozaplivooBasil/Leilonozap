@@ -240,7 +240,7 @@ export default function PlanCheckout() {
                     </Button>
                     {pixData.auction_id && (
                       <Button
-                        onClick={() => navigate(`${createPageUrl("OrderTracking")}?auction_id=${pixData.auction_id}`)}
+                        onClick={() => navigate(createPageUrl("OrderTracking") + '?auction_id=' + pixData.auction_id)}
                         className="flex-1 bg-green-600 hover:bg-green-700"
                       >
                         Acompanhar Pedido
