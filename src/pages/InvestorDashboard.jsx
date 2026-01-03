@@ -40,6 +40,8 @@ export default function InvestorDashboard() {
   const [showInvestments, setShowInvestments] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
   const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState(0);
+  const [touchEnd, setTouchEnd] = useState(0);
 
   useEffect(() => {
     const loadUser = async () => {
