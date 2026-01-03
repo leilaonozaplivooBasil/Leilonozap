@@ -4,12 +4,6 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         
-        // Autenticar o usuário (opcional - remova se quiser verificar para todos)
-        const user = await base44.auth.me();
-        if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         // 1. Obter o IP do cliente
         const clientIp = req.headers.get('X-Forwarded-For')?.split(',')[0].trim() || 
                         req.headers.get('CF-Connecting-IP') || 
