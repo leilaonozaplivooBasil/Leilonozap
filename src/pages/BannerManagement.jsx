@@ -608,21 +608,36 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
                 <Input
                   value={formData.investment || ''}
                   onChange={(e) => {
-                    const value = e.target.value;
-                    setFormData({ ...formData, investment: value });
+                    let value = e.target.value;
                     
-                    // Calcula automaticamente o lucro de 3%
-                    const numericValue = parseFloat(value.replace(/[^\d.,]/g, '').replace(',', '.'));
-                    if (!isNaN(numericValue)) {
+                    // Remove tudo exceto números
+                    const numbers = value.replace(/\D/g, '');
+                    
+                    if (numbers) {
+                      // Converte para número e formata
+                      const numericValue = parseFloat(numbers) / 100;
+                      const formatted = numericValue.toLocaleString('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                      });
+                      
+                      // Calcula o lucro de 3%
                       const profit = (numericValue * 0.03).toFixed(2);
+                      
                       setFormData(prev => ({ 
                         ...prev, 
-                        investment: value,
+                        investment: formatted,
                         expected_return: `R$ ${profit}` 
+                      }));
+                    } else {
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        investment: '',
+                        expected_return: '' 
                       }));
                     }
                   }}
-                  placeholder="Ex: R$ 8.000"
+                  placeholder="Ex: R$ 8.000,00"
                   className="bg-gray-700 text-white border-gray-600"
                   required
                 />
