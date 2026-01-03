@@ -106,7 +106,7 @@ export default function InvestorDashboard() {
       minInvestment: 5000,
       expectedReturn: 3,
       duration: 60,
-      products: ["Eletrodomésticos"],
+      products: ["Eletrônicos"],
       risk: "Baixo",
       description: "Ideal para quem está começando. Produtos de alta liquidez e demanda garantida.",
       features: commonFeatures
