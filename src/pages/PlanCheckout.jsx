@@ -226,7 +226,7 @@ export default function PlanCheckout() {
                       <li>Confirme o pagamento</li>
                     </ol>
                     <p className="mt-3 text-yellow-400">
-                      ⚠️ Aguarde a confirmação do pagamento. Isso pode levar alguns minutos.
+                      Aguarde a confirmacao do pagamento. Isso pode levar alguns minutos.
                     </p>
                   </div>
 
