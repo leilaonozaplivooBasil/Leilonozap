@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const valoraNotes = [
-  { value: 1, url: "https://images.unsplash.com/photo-1585515320310-259814833e62?w=600&h=400&fit=crop&bg=transparent", name: "Micro-ondas", icon: "📻" },
-  { value: 2, url: "https://images.unsplash.com/photo-1570222094114-d054a817e56b?w=600&h=400&fit=crop&bg=transparent", name: "Liquidificador", icon: "🌪️" },
-  { value: 5, url: "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=600&h=400&fit=crop&bg=transparent", name: "Cafeteira", icon: "☕" },
-  { value: 20, url: "https://images.unsplash.com/photo-1558317374-067fb5f30001?w=600&h=400&fit=crop&bg=transparent", name: "Aspirador", icon: "🧹" },
-  { value: 100, url: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?w=600&h=400&fit=crop&bg=transparent", name: "Geladeira", icon: "❄️" },
-  { value: 200, url: "https://images.unsplash.com/photo-1574269909862-7e1d70bb8078?w=600&h=400&fit=crop&bg=transparent", name: "Fogão", icon: "🔥" },
-  { value: 500, url: "https://images.unsplash.com/photo-1626806787461-102c1bfaaea1?w=600&h=400&fit=crop&bg=transparent", name: "Máquina de Lavar", icon: "🌊" },
-  { value: 1000, url: "https://images.unsplash.com/photo-1631545806609-c22c80d77c7c?w=600&h=400&fit=crop&bg=transparent", name: "Ar-Condicionado", icon: "❄️" }
+  { value: 1, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/92dfe7c21_17cee75b0_90515FAF-DF1E-4B38-88A2-0DB1650A0338.png" },
+  { value: 2, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/2caf4c091_D19AF866-7F01-4359-B34C-6E1E49BB5B662.png" },
+  { value: 5, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/51d72aa1d_C92CFAFF-FF7B-450A-9148-2B1B09CE77A512.png" },
+  { value: 20, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/940575a06_7E0EC402-D37F-4C7E-A9AF-9CBAFAEC67B5.png" },
+  { value: 100, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/35cd22e8d_22E71172-1469-40C1-91F5-52FB1CEB81B7.png" },
+  { value: 200, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/5af62ec46_560AB3F0-BC1C-455F-9909-8366C699B0A3.png" },
+  { value: 500, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/e743cb8f9_A098D677-881A-4913-9F73-1B09CE77A512.png" },
+  { value: 1000, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/3f149d7ea_9F6550BF-035D-4171-85DA-960040528E39.png" }
 ];
 
 
@@ -68,7 +68,7 @@ export default function ValoraNotesGallery() {
             >
               <img 
                 src={currentNote.url}
-                alt={`Nota ${currentNote.name}`} 
+                alt={`Nota V$ ${currentNote.value}`} 
                 className="w-full h-full object-contain p-4"
                 onLoad={() => setImagesLoaded(prev => ({ ...prev, [currentIndex]: true }))}
                 onError={() => setImagesFailed(prev => ({ ...prev, [currentIndex]: true }))}
@@ -136,9 +136,9 @@ export default function ValoraNotesGallery() {
           animate={{ opacity: 1 }}
           className="text-2xl font-bold mb-2 text-white"
         >
-          {currentNote.name} - V$ {currentNote.value}
+          Nota Valora Pay - V$ {currentNote.value}
         </motion.h3>
-        <p className="text-gray-400">Indique e lucre com produtos selecionados</p>
+        <p className="text-gray-400">Indique e lucre com o sistema de alavancagem</p>
       </div>
     </div>
   );
