@@ -40,26 +40,28 @@ export default function ComparaiModal({ auction, onClose }) {
     try {
       console.log('🚀 Iniciando comparação...', { auctionId: localAuction.id, forceGoogleShopping });
       
-      const { comparaiPrices } = await import("@/functions/comparaiPrices");
-      console.log('✅ Função importada');
+      const { base44 } = await import('@/api/base44Client');
+      console.log('✅ SDK Base44 importado');
       
-      const response = await comparaiPrices({
+      const apiResponse = await base44.functions.invoke('comparaiPrices', {
         auctionId: localAuction.id,
         forceRefresh: false,
         forceGoogleShopping: forceGoogleShopping
       });
 
-      console.log('📊 Resposta completa:', JSON.stringify(response, null, 2));
-      console.log('📊 Tipo da resposta:', typeof response);
-      console.log('📊 Keys da resposta:', Object.keys(response || {}));
+      console.log('📊 Resposta completa da API:', JSON.stringify(apiResponse, null, 2));
+      console.log('📊 Tipo da resposta da API:', typeof apiResponse);
       
-      if (response?.success) {
-        setComparisonData(response.comparison);
-        setIsCached(response.cached || false);
-        setCacheAge(response.cacheAge || null);
+      const responseData = apiResponse.data || apiResponse;
+      console.log('📊 Dados extraídos:', JSON.stringify(responseData, null, 2));
+      
+      if (responseData?.success) {
+        setComparisonData(responseData.comparison);
+        setIsCached(responseData.cached || false);
+        setCacheAge(responseData.cacheAge || null);
       } else {
-        console.error('❌ Success=false:', response);
-        throw new Error(response?.error || 'Erro ao buscar comparação');
+        console.error('❌ Success=false na resposta:', responseData);
+        throw new Error(responseData?.error || 'Erro ao buscar comparação');
       }
     } catch (err) {
       console.error('❌ Erro completo:', err);
