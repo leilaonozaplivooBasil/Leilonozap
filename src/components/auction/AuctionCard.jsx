@@ -21,7 +21,16 @@ import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
 import PechincaBadge from '../comparai/PechincaBadge';
-import ComparaiModal from '../comparai/ComparaiModal'; // 🆕 IMPORT DO MODAL
+import ComparaiModal from '../comparai/ComparaiModal';
+
+// 🔍 DEBUG: Log para verificar se auction está sendo passado
+const logAuctionData = (auction) => {
+  console.log('🎯 [AuctionCard] Auction passado para modal:', {
+    id: auction?.id,
+    title: auction?.title,
+    hasData: !!auction
+  });
+}; // 🆕 IMPORT DO MODAL
 import FavoriteButton from '../recommendations/FavoriteButton';
 
 const SAO_PAULO_TIMEZONE = 'America/Sao_Paulo'; // This constant is no longer strictly necessary with the removal of `date-fns-tz` but kept as it might be used in other contexts or for clarity.
