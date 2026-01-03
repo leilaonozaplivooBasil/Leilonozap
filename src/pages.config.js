@@ -10,7 +10,6 @@ import CustomerDetails from './pages/CustomerDetails';
 import EditAuction from './pages/EditAuction';
 import ErrorReport from './pages/ErrorReport';
 import Home from './pages/Home';
-import InfluencerRanking from './pages/InfluencerRanking';
 import Influencers from './pages/Influencers';
 import InfluencersDashboard from './pages/InfluencersDashboard';
 import InfluencersNoZap from './pages/InfluencersNoZap';
@@ -37,7 +36,6 @@ import ProductManagement from './pages/ProductManagement';
 import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
 import ProtectionDashboard from './pages/ProtectionDashboard';
-import Ranking from './pages/Ranking';
 import Register from './pages/Register';
 import RegisterBatches from './pages/RegisterBatches';
 import SaiDeBaixo from './pages/SaiDeBaixo';
@@ -67,7 +65,6 @@ export const PAGES = {
     "EditAuction": EditAuction,
     "ErrorReport": ErrorReport,
     "Home": Home,
-    "InfluencerRanking": InfluencerRanking,
     "Influencers": Influencers,
     "InfluencersDashboard": InfluencersDashboard,
     "InfluencersNoZap": InfluencersNoZap,
@@ -94,7 +91,6 @@ export const PAGES = {
     "Profile": Profile,
     "ProtecaoCriacao": ProtecaoCriacao,
     "ProtectionDashboard": ProtectionDashboard,
-    "Ranking": Ranking,
     "Register": Register,
     "RegisterBatches": RegisterBatches,
     "SaiDeBaixo": SaiDeBaixo,

@@ -348,7 +348,6 @@ export default function Layout({ children, currentPageName }) {
     { title: "Leilões", pageName: "Home" },
     { title: "Sistema de Alavancagem", pageName: "Licensing" },
     { title: "Lucre Conosco", pageName: "Partners" },
-    { title: "Ranking", pageName: "Ranking" },
   ];
 
   const noZapLoggedItems = [
@@ -361,7 +360,6 @@ export default function Layout({ children, currentPageName }) {
   
   const saiDeBaixoLoggedItems = [
     { title: "Influencie", pageName: "Influencers" },
-    { title: "Ranking Influenciadores", pageName: "InfluencerRanking" },
   ];
 
   const loggedMenuItems = [
@@ -418,7 +416,6 @@ export default function Layout({ children, currentPageName }) {
         { title: "Leilões", pageName: "Home" },
         ...(isLoggedIn ? noZapLoggedItems : []),
         { title: "Sistema de Alavancagem", pageName: "Licensing" },
-        { title: "Ranking", pageName: "Ranking" },
         ...(isLoggedIn ? loggedMenuItems : [])
       ];
 
