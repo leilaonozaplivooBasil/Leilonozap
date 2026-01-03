@@ -108,12 +108,15 @@ export default function SaiDeBaixo() {
       console.log('🔍 [Sai de Baixo] Filtrando apenas favoritos:', favoriteAuctions.length);
       filtered = favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
     } else {
+      // Exclui planos de investimento
+      let allFiltered = auctions.filter(auction => auction && !auction.is_investment_plan);
+      
       if (activeSourceFilter === "todos") {
-        filtered = auctions.filter(auction => auction && auction.product_source !== 'factory_new');
+        filtered = allFiltered.filter(auction => auction.product_source !== 'factory_new');
       } else if (activeSourceFilter === "factory") {
-        filtered = auctions.filter(auction => auction && auction.product_source === 'factory_new');
+        filtered = allFiltered.filter(auction => auction.product_source === 'factory_new');
       } else {
-        filtered = auctions;
+        filtered = allFiltered;
       }
 
       if (activeCategory === "ativos") {
