@@ -1114,29 +1114,45 @@ export default function CreateAuction() {
                             disabled={isProcessing || !imageUrls.some(url => url.trim())}
                             className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                           >
-                            <Trash2 className="w-4 h-4 mr-2" /> Limpar Todas as Imagens
+                            <Trash2 className="w-4 h-4 mr-2" /> Limpar Todas
                           </Button>
                           <Button 
                             type="button"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              visualizeImages();
+                              
+                              const validUrls = imageUrls.filter(url => url && url.trim().startsWith('http'));
+                              
+                              if (validUrls.length === 0) {
+                                toast.error("Adicione pelo menos uma URL válida!");
+                                return;
+                              }
+                              
+                              // Aplica URLs diretamente no formulário
+                              const finalImages = [...validUrls];
+                              while (finalImages.length < 5) {
+                                finalImages.push("");
+                              }
+                              
+                              setFormData(prev => ({
+                                ...prev,
+                                image_urls: finalImages.slice(0, 5)
+                              }));
+                              
+                              // Limpa o importador
+                              setManualStep(0);
+                              setProductUrl("");
+                              setImageUrls(["", "", "", "", "", ""]);
+                              setExtractedData({title: "", description: ""});
+                              
+                              toast.success(`✅ ${validUrls.length} imagens aplicadas no formulário!`);
                             }}
                             disabled={isProcessing || !imageUrls.some(url => url.trim().startsWith('http'))} 
-                            className="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white"
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                           >
-                            {isProcessing ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Processando...
-                              </>
-                            ) : (
-                              <>
-                                <ImageIcon className="w-4 h-4 mr-2" />
-                                👁️ Processar e Visualizar Imagens
-                              </>
-                            )}
+                            <Upload className="w-4 h-4 mr-2" />
+                            ✅ Aplicar no Formulário
                           </Button>
                         </div>
                       </div>
