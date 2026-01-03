@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       }
     };
 
-    console.log('📤 DADOS ENVIADOS PARA ABACATEPAY:');
+    console.log('DADOS ENVIADOS PARA ABACATEPAY:');
     console.log('- Valor (centavos):', abacatePayload.amount);
     console.log('- Telefone formatado:', formattedPhone);
     console.log('- CPF limpo:', cleanCpf);
