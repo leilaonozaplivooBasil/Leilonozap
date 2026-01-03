@@ -313,65 +313,66 @@ export default function BannerManagement() {
                               <GripVertical className="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing" />
                             </div>
                   
-                  <img
-                    src={banner.image_url}
-                    alt={banner.title}
-                    className="w-32 h-20 object-cover rounded-lg"
-                  />
+                            <img
+                              src={banner.image_url}
+                              alt={banner.title}
+                              className="w-32 h-20 object-cover rounded-lg"
+                            />
 
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-white font-semibold">{banner.title || 'Sem título'}</h3>
-                      {banner.device_type === 'mobile' ? (
-                        <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full flex items-center gap-1">
-                          <Smartphone className="w-3 h-3" />
-                          Mobile
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full flex items-center gap-1">
-                          <Monitor className="w-3 h-3" />
-                          Desktop
-                        </span>
-                      )}
-                    </div>
-                    {banner.link_url && (
-                      <p className="text-gray-400 text-sm truncate">{banner.link_url}</p>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-white font-semibold">{banner.title || 'Sem título'}</h3>
+                                {banner.device_type === 'mobile' ? (
+                                  <span className="px-2 py-1 bg-blue-600 text-white text-xs rounded-full flex items-center gap-1">
+                                    <Smartphone className="w-3 h-3" />
+                                    Mobile
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 bg-green-600 text-white text-xs rounded-full flex items-center gap-1">
+                                    <Monitor className="w-3 h-3" />
+                                    Desktop
+                                  </span>
+                                )}
+                              </div>
+                              {banner.link_url && (
+                                <p className="text-gray-400 text-sm truncate">{banner.link_url}</p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-2">
+                                <Label htmlFor={`active-${banner.id}`} className="text-gray-300 text-sm">
+                                  {banner.is_active ? 'Ativo' : 'Inativo'}
+                                </Label>
+                                <Switch
+                                  id={`active-${banner.id}`}
+                                  checked={banner.is_active}
+                                  onCheckedChange={() => handleToggleActive(banner)}
+                                />
+                              </div>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditingBanner(banner)}
+                                className="text-blue-400 hover:text-blue-300"
+                              >
+                                Editar
+                              </Button>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteBanner(banner.id)}
+                                className="text-red-400 hover:text-red-300"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     )}
-                  </div>
-
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`active-${banner.id}`} className="text-gray-300 text-sm">
-                        {banner.is_active ? 'Ativo' : 'Inativo'}
-                      </Label>
-                      <Switch
-                        id={`active-${banner.id}`}
-                        checked={banner.is_active}
-                        onCheckedChange={() => handleToggleActive(banner)}
-                      />
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingBanner(banner)}
-                      className="text-blue-400 hover:text-blue-300"
-                    >
-                      Editar
-                    </Button>
-
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteBanner(banner.id)}
-                      className="text-red-400 hover:text-red-300"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  </CardContent>
-                  </Card>
-                  )}
                   </Draggable>
                   ))}
                   {provided.placeholder}
@@ -473,54 +474,55 @@ export default function BannerManagement() {
                                   <GripVertical className="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing" />
                                 </div>
                       
-                      <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="w-32 h-20 object-cover rounded-lg"
-                      />
+                                <img
+                                  src={product.image_url}
+                                  alt={product.name}
+                                  className="w-32 h-20 object-cover rounded-lg"
+                                />
 
-                      <div className="flex-1">
-                        <h3 className="text-white font-semibold">{product.name}</h3>
-                        <p className="text-gray-400 text-sm">{product.category}</p>
-                        <div className="flex gap-4 mt-1">
-                          <span className="text-xs text-gray-500">💰 {product.investment}</span>
-                          <span className="text-xs text-green-400">✅ {product.expected_return}</span>
-                        </div>
-                      </div>
+                                <div className="flex-1">
+                                  <h3 className="text-white font-semibold">{product.name}</h3>
+                                  <p className="text-gray-400 text-sm">{product.category}</p>
+                                  <div className="flex gap-4 mt-1">
+                                    <span className="text-xs text-gray-500">💰 {product.investment}</span>
+                                    <span className="text-xs text-green-400">✅ {product.expected_return}</span>
+                                  </div>
+                                </div>
 
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`product-active-${product.id}`} className="text-gray-300 text-sm">
-                            {product.is_active ? 'Ativo' : 'Inativo'}
-                          </Label>
-                          <Switch
-                            id={`product-active-${product.id}`}
-                            checked={product.is_active}
-                            onCheckedChange={() => handleToggleProductActive(product)}
-                          />
-                        </div>
+                                <div className="flex items-center gap-4">
+                                  <div className="flex items-center gap-2">
+                                    <Label htmlFor={`product-active-${product.id}`} className="text-gray-300 text-sm">
+                                      {product.is_active ? 'Ativo' : 'Inativo'}
+                                    </Label>
+                                    <Switch
+                                      id={`product-active-${product.id}`}
+                                      checked={product.is_active}
+                                      onCheckedChange={() => handleToggleProductActive(product)}
+                                    />
+                                  </div>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingProduct(product)}
-                          className="text-blue-400 hover:text-blue-300"
-                        >
-                          Editar
-                        </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingProduct(product)}
+                                    className="text-blue-400 hover:text-blue-300"
+                                  >
+                                    Editar
+                                  </Button>
 
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteProduct(product.id)}
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                      </CardContent>
-                      </Card>
-                      )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteProduct(product.id)}
+                                    className="text-red-400 hover:text-red-300"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </Draggable>
                       ))}
                       {provided.placeholder}
