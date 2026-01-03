@@ -19,25 +19,25 @@ export default function EarningsSimulator() {
   }, [people, selectedTicket]);
 
   return (
-    <div className="w-full max-w-5xl mx-auto py-12 px-4">
+    <div className="w-full max-w-5xl mx-auto py-6 px-4">
       {/* Header com efeito brilhante */}
       <motion.div 
-        className="text-center mb-12"
+        className="text-center mb-6"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 px-6 py-3 rounded-full border border-yellow-500/30 mb-4">
-          <Sparkles className="w-5 h-5 text-yellow-400 animate-pulse" />
-          <span className="text-yellow-400 font-bold">Simulador de Ganhos</span>
+        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 px-4 py-2 rounded-full border border-yellow-500/30 mb-3">
+          <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
+          <span className="text-yellow-400 font-semibold text-sm">Simulador de Ganhos</span>
         </div>
-        <h2 className="text-4xl md:text-5xl font-black text-white mb-3 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
+        <h2 className="text-2xl md:text-3xl font-black text-white mb-2 bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent">
           Calcule Seu Potencial de Renda
         </h2>
-        <p className="text-gray-400 text-lg">Veja quanto você pode ganhar como Influenciador!</p>
+        <p className="text-gray-400 text-sm">Veja quanto você pode ganhar como Influenciador!</p>
       </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-8 mb-8">
+      <div className="grid md:grid-cols-2 gap-4 mb-4">
         {/* Card 1: Quantidade de Pessoas */}
         <motion.div
           initial={{ opacity: 0, x: -50 }}
@@ -45,15 +45,15 @@ export default function EarningsSimulator() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="relative"
         >
-          <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 rounded-2xl p-8 border-2 border-blue-500/30 hover:border-blue-400/60 transition-all duration-300 shadow-2xl hover:shadow-blue-500/20">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-blue-500/20 rounded-xl border border-blue-500/30">
-                <Users className="w-7 h-7 text-blue-400" />
+          <div className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 rounded-xl p-4 border-2 border-blue-500/30 hover:border-blue-400/60 transition-all duration-300 shadow-xl hover:shadow-blue-500/20">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                <Users className="w-5 h-5 text-blue-400" />
               </div>
-              <h3 className="text-2xl font-bold text-white">Indicados Ativos</h3>
+              <h3 className="text-lg font-bold text-white">Indicados Ativos</h3>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="relative">
                 <input
                   type="range"
@@ -61,7 +61,7 @@ export default function EarningsSimulator() {
                   max="100000"
                   value={people}
                   onChange={(e) => setPeople(parseInt(e.target.value))}
-                  className="w-full h-3 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
+                  className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider-thumb"
                   style={{
                     background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${(people / 100000) * 100}%, #374151 ${(people / 100000) * 100}%, #374151 100%)`
                   }}
@@ -73,14 +73,14 @@ export default function EarningsSimulator() {
                   key={people}
                   initial={{ scale: 1.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="text-6xl font-black text-blue-400"
+                  className="text-4xl font-black text-blue-400"
                 >
                   {people}
                 </motion.div>
-                <span className="text-gray-400 text-xl ml-3">pessoas</span>
+                <span className="text-gray-400 text-base ml-2">pessoas</span>
               </div>
               
-              <div className="text-center text-sm text-gray-500">
+              <div className="text-center text-xs text-gray-500">
                 Arraste para ajustar (1-100.000)
               </div>
             </div>
@@ -94,23 +94,23 @@ export default function EarningsSimulator() {
           transition={{ duration: 0.6, delay: 0.3 }}
           className="relative"
         >
-          <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 rounded-2xl p-8 border-2 border-purple-500/30 hover:border-purple-400/60 transition-all duration-300 shadow-2xl hover:shadow-purple-500/20 h-full flex flex-col">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-purple-500/20 rounded-xl border border-purple-500/30">
-                <DollarSign className="w-7 h-7 text-purple-400" />
+          <div className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 rounded-xl p-4 border-2 border-purple-500/30 hover:border-purple-400/60 transition-all duration-300 shadow-xl hover:shadow-purple-500/20 h-full flex flex-col">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-2 bg-purple-500/20 rounded-lg border border-purple-500/30">
+                <DollarSign className="w-5 h-5 text-purple-400" />
               </div>
-              <h3 className="text-2xl font-bold text-white">Ticket Médio</h3>
+              <h3 className="text-lg font-bold text-white">Ticket Médio</h3>
             </div>
             
-            <div className="flex-1 flex flex-col justify-center space-y-4">
-              <div className="grid grid-cols-3 gap-2">
+            <div className="flex-1 flex flex-col justify-center space-y-3">
+              <div className="grid grid-cols-3 gap-1.5">
                 {tickets.map((ticket) => (
                   <motion.button
                     key={ticket}
                     onClick={() => setSelectedTicket(ticket)}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`py-2 px-3 rounded-xl text-sm font-bold transition-all duration-300 ${
+                    className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all duration-300 ${
                       selectedTicket === ticket
                         ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg shadow-purple-500/50 border-2 border-purple-400'
                         : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border-2 border-gray-700'
@@ -126,13 +126,13 @@ export default function EarningsSimulator() {
                   key={selectedTicket}
                   initial={{ scale: 1.5, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="text-6xl font-black text-purple-400"
+                  className="text-4xl font-black text-purple-400"
                 >
                   R$ {selectedTicket}
                 </motion.div>
               </div>
               
-              <div className="text-center text-sm text-gray-500">
+              <div className="text-center text-xs text-gray-500">
                 Valor médio por arremate
               </div>
             </div>
@@ -151,53 +151,53 @@ export default function EarningsSimulator() {
             transition={{ duration: 0.5, type: "spring" }}
             className="relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-teal-500/20 blur-3xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-emerald-500/20 to-teal-500/20 blur-2xl"></div>
             
-            <div className="relative bg-gradient-to-br from-gray-900 via-green-900/30 to-emerald-900/30 rounded-3xl p-10 border-4 border-green-500/50 shadow-2xl overflow-hidden">
+            <div className="relative bg-gradient-to-br from-gray-900 via-green-900/30 to-emerald-900/30 rounded-2xl p-6 border-3 border-green-500/50 shadow-xl overflow-hidden">
               {/* Efeito de brilho animado */}
               <div className="absolute top-0 left-0 w-full h-full">
-                <div className="absolute top-0 left-0 w-32 h-32 bg-green-500/30 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+                <div className="absolute top-0 left-0 w-24 h-24 bg-green-500/30 rounded-full blur-2xl animate-pulse"></div>
+                <div className="absolute bottom-0 right-0 w-24 h-24 bg-emerald-500/30 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '1s' }}></div>
               </div>
 
               <div className="relative z-10">
                 {/* Título com ícone */}
-                <div className="flex items-center justify-center gap-3 mb-8">
+                <div className="flex items-center justify-center gap-2 mb-4">
                   <motion.div
                     animate={{ rotate: [0, 360] }}
                     transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                   >
-                    <Zap className="w-10 h-10 text-yellow-400" />
+                    <Zap className="w-6 h-6 text-yellow-400" />
                   </motion.div>
-                  <h3 className="text-3xl md:text-4xl font-black text-white">
+                  <h3 className="text-xl md:text-2xl font-black text-white">
                     Seus Ganhos Mensais
                   </h3>
                 </div>
 
                 {/* Cálculo Visual */}
-                <div className="flex flex-wrap items-center justify-center gap-4 mb-8 text-xl md:text-2xl font-bold">
+                <div className="flex flex-wrap items-center justify-center gap-2 mb-4 text-sm md:text-base font-bold">
                   <motion.div 
-                    className="flex items-center gap-2 bg-blue-500/20 px-6 py-3 rounded-xl border border-blue-500/30"
+                    className="flex items-center gap-1.5 bg-blue-500/20 px-3 py-2 rounded-lg border border-blue-500/30"
                     whileHover={{ scale: 1.05 }}
                   >
-                    <Users className="w-6 h-6 text-blue-400" />
+                    <Users className="w-4 h-4 text-blue-400" />
                     <span className="text-blue-400">{people} pessoas</span>
                   </motion.div>
                   
-                  <span className="text-gray-500">×</span>
+                  <span className="text-gray-500 text-sm">×</span>
                   
                   <motion.div 
-                    className="flex items-center gap-2 bg-purple-500/20 px-6 py-3 rounded-xl border border-purple-500/30"
+                    className="flex items-center gap-1.5 bg-purple-500/20 px-3 py-2 rounded-lg border border-purple-500/30"
                     whileHover={{ scale: 1.05 }}
                   >
-                    <DollarSign className="w-6 h-6 text-purple-400" />
+                    <DollarSign className="w-4 h-4 text-purple-400" />
                     <span className="text-purple-400">R$ {selectedTicket}</span>
                   </motion.div>
                   
-                  <span className="text-gray-500">×</span>
+                  <span className="text-gray-500 text-sm">×</span>
                   
                   <motion.div 
-                    className="bg-yellow-500/20 px-6 py-3 rounded-xl border border-yellow-500/30"
+                    className="bg-yellow-500/20 px-3 py-2 rounded-lg border border-yellow-500/30"
                     whileHover={{ scale: 1.05 }}
                   >
                     <span className="text-yellow-400">3%</span>
@@ -207,21 +207,21 @@ export default function EarningsSimulator() {
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ duration: 1, repeat: Infinity }}
                   >
-                    <ArrowRight className="w-8 h-8 text-green-400" />
+                    <ArrowRight className="w-5 h-5 text-green-400" />
                   </motion.div>
                 </div>
 
                 {/* Valor GIGANTE de destaque */}
-                <div className="text-center mb-6">
-                  <div className="text-sm text-gray-400 mb-2">Você recebe por mês:</div>
+                <div className="text-center mb-4">
+                  <div className="text-xs text-gray-400 mb-1">Você recebe por mês:</div>
                   <motion.div
                     key={yourEarnings}
                     initial={{ scale: 0.5, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                    className="text-7xl md:text-8xl font-black bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent"
+                    className="text-4xl md:text-5xl font-black bg-gradient-to-r from-green-400 via-emerald-400 to-teal-400 bg-clip-text text-transparent"
                     style={{
-                      textShadow: '0 0 80px rgba(52, 211, 153, 0.5)'
+                      textShadow: '0 0 60px rgba(52, 211, 153, 0.5)'
                     }}
                   >
                     R$ {yourEarnings.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -229,16 +229,16 @@ export default function EarningsSimulator() {
                 </div>
 
                 {/* Info adicional */}
-                <div className="grid md:grid-cols-2 gap-4 mb-6">
-                  <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center">
-                    <div className="text-green-400 text-sm mb-1">Faturamento Total da Rede</div>
-                    <div className="text-white text-2xl font-bold">
+                <div className="grid md:grid-cols-2 gap-3 mb-4">
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+                    <div className="text-green-400 text-xs mb-0.5">Faturamento Total da Rede</div>
+                    <div className="text-white text-lg font-bold">
                       R$ {totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
-                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
-                    <div className="text-emerald-400 text-sm mb-1">Ganho Anual Estimado</div>
-                    <div className="text-white text-2xl font-bold">
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 text-center">
+                    <div className="text-emerald-400 text-xs mb-0.5">Ganho Anual Estimado</div>
+                    <div className="text-white text-lg font-bold">
                       R$ {(yourEarnings * 12).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
                   </div>
@@ -249,24 +249,24 @@ export default function EarningsSimulator() {
                   <motion.div
                     animate={{ 
                       boxShadow: [
-                        '0 0 20px rgba(52, 211, 153, 0.3)',
-                        '0 0 40px rgba(52, 211, 153, 0.6)',
-                        '0 0 20px rgba(52, 211, 153, 0.3)'
+                        '0 0 15px rgba(52, 211, 153, 0.3)',
+                        '0 0 30px rgba(52, 211, 153, 0.6)',
+                        '0 0 15px rgba(52, 211, 153, 0.3)'
                       ]
                     }}
                     transition={{ duration: 2, repeat: Infinity }}
                     className="inline-block"
                   >
-                    <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-8 py-4 rounded-2xl">
-                      <div className="flex items-center gap-3">
-                        <TrendingUp className="w-6 h-6 text-white" />
-                        <span className="text-white font-black text-xl">
+                    <div className="bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 px-6 py-3 rounded-xl">
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-white" />
+                        <span className="text-white font-black text-base">
                           Comece a ganhar agora! 🚀
                         </span>
                       </div>
                     </div>
                   </motion.div>
-                  <p className="text-gray-400 text-sm mt-4">
+                  <p className="text-gray-400 text-xs mt-3">
                     * Valores calculados com base em 3% de comissão por arremate
                   </p>
                 </div>
@@ -279,34 +279,34 @@ export default function EarningsSimulator() {
       <style>{`
         .slider-thumb::-webkit-slider-thumb {
           appearance: none;
-          width: 24px;
-          height: 24px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
           background: linear-gradient(135deg, #3b82f6, #2563eb);
           cursor: pointer;
-          box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+          box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
           transition: all 0.2s;
         }
         
         .slider-thumb::-webkit-slider-thumb:hover {
           transform: scale(1.2);
-          box-shadow: 0 0 20px rgba(59, 130, 246, 1);
+          box-shadow: 0 0 15px rgba(59, 130, 246, 1);
         }
         
         .slider-thumb::-moz-range-thumb {
-          width: 24px;
-          height: 24px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
           background: linear-gradient(135deg, #3b82f6, #2563eb);
           cursor: pointer;
           border: none;
-          box-shadow: 0 0 10px rgba(59, 130, 246, 0.8);
+          box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
           transition: all 0.2s;
         }
         
         .slider-thumb::-moz-range-thumb:hover {
           transform: scale(1.2);
-          box-shadow: 0 0 20px rgba(59, 130, 246, 1);
+          box-shadow: 0 0 15px rgba(59, 130, 246, 1);
         }
       `}</style>
     </div>
