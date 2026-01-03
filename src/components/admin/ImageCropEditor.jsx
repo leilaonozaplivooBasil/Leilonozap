@@ -107,6 +107,21 @@ export default function ImageCropEditor({ imageFile, targetWidth = 1200, targetH
 
   const handleSave = () => {
     const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    
+    // Limpa o canvas e desenha apenas a imagem sem as linhas guia
+    ctx.fillStyle = '#1f2937';
+    ctx.fillRect(0, 0, targetWidth, targetHeight);
+    
+    ctx.drawImage(
+      image,
+      position.x,
+      position.y,
+      image.width * scale,
+      image.height * scale
+    );
+    
+    // Exporta o canvas sem as linhas
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], imageFile.name, { type: 'image/png' });
