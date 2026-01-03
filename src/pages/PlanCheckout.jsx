@@ -4,7 +4,12 @@ import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { base44 } from '@/api/base44Client';
-import { CreditCard, Smartphone, ArrowLeft, Check } from 'lucide-react';
+import { CreditCard, Smartphone, ArrowLeft, Check, Copy, CheckCircle } from 'lucide-react';
+
+// Importar Stripe
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe('pk_live_51QcWdFBjHfNcD5d0Yd5w6qHzafNk7cQKqzUZEuMwOkVvZKFaJHWgWKPUJYnxWc4CzcTWMWLvlzYXi8Sz4pGHO9gQ00tjL6bvI0');
 
 export default function PlanCheckout() {
   const navigate = useNavigate();
@@ -12,6 +17,8 @@ export default function PlanCheckout() {
   const [currentUser, setCurrentUser] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [pixData, setPixData] = useState(null);
+  const [copied, setCopied] = useState(false);
   
   const plan = location.state?.plan;
 
@@ -37,18 +44,69 @@ export default function PlanCheckout() {
     setIsProcessing(true);
 
     try {
-      // Aqui você implementará a integração com o gateway de pagamento
-      // Por enquanto, apenas simula o processo
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      alert(`Pagamento de R$ ${plan.minInvestment.toLocaleString('pt-BR')} via ${paymentMethod === 'pix' ? 'PIX' : 'Cartão'} processado!`);
-      
-      navigate(createPageUrl("InvestorDashboard"));
+      if (paymentMethod === 'pix') {
+        // Pagamento via PIX com AbacatePay
+        const response = await base44.functions.invoke('createAbacatePayPix', {
+          amount: plan.minInvestment,
+          description: `Compra - ${plan.name}`,
+          customer_email: currentUser.email,
+          customer_name: currentUser.full_name,
+          metadata: {
+            plan_id: plan.id,
+            plan_name: plan.name,
+            user_id: currentUser.id
+          }
+        });
+
+        if (response.data.success) {
+          setPixData({
+            qr_code: response.data.qr_code,
+            copy_paste: response.data.copy_paste,
+            transaction_id: response.data.transaction_id
+          });
+        } else {
+          throw new Error(response.data.error || 'Erro ao gerar PIX');
+        }
+
+      } else if (paymentMethod === 'card') {
+        // Pagamento via Cartão com Stripe
+        const response = await base44.functions.invoke('stripeCheckout', {
+          amount: plan.minInvestment,
+          description: `Compra - ${plan.name}`,
+          customer_email: currentUser.email,
+          metadata: {
+            plan_id: plan.id,
+            plan_name: plan.name,
+            user_id: currentUser.id
+          }
+        });
+
+        if (response.data.sessionId) {
+          const stripe = await stripePromise;
+          const { error } = await stripe.redirectToCheckout({
+            sessionId: response.data.sessionId
+          });
+
+          if (error) {
+            throw new Error(error.message);
+          }
+        } else {
+          throw new Error('Erro ao criar sessão de pagamento');
+        }
+      }
+
     } catch (error) {
       console.error("Erro no pagamento:", error);
-      alert("Erro ao processar pagamento. Tente novamente.");
-    } finally {
+      alert("Erro ao processar pagamento: " + (error.message || "Tente novamente."));
       setIsProcessing(false);
+    }
+  };
+
+  const copyPixCode = () => {
+    if (pixData?.copy_paste) {
+      navigator.clipboard.writeText(pixData.copy_paste);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -131,9 +189,71 @@ export default function PlanCheckout() {
           {/* Método de Pagamento */}
           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
             <CardHeader>
-              <CardTitle className="text-xl text-white">Método de Pagamento</CardTitle>
+              <CardTitle className="text-xl text-white">
+                {pixData ? 'Pagamento PIX' : 'Método de Pagamento'}
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+
+              {pixData ? (
+                // Exibe QR Code PIX
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg p-4 flex justify-center">
+                    <img 
+                      src={pixData.qr_code} 
+                      alt="QR Code PIX" 
+                      className="w-64 h-64"
+                    />
+                  </div>
+                  
+                  <div>
+                    <p className="text-sm text-gray-400 mb-2">Código PIX Copia e Cola:</p>
+                    <div className="bg-gray-900 rounded-lg p-3 break-all text-sm text-gray-300 relative">
+                      {pixData.copy_paste}
+                      <Button
+                        onClick={copyPixCode}
+                        size="sm"
+                        className="absolute top-2 right-2 bg-green-600 hover:bg-green-700"
+                      >
+                        {copied ? (
+                          <>
+                            <CheckCircle className="w-4 h-4 mr-1" />
+                            Copiado!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-4 h-4 mr-1" />
+                            Copiar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-600/10 rounded-lg p-4 border border-blue-500/30 text-sm text-gray-300">
+                    <p className="font-semibold mb-2">Instruções:</p>
+                    <ol className="list-decimal list-inside space-y-1">
+                      <li>Abra o app do seu banco</li>
+                      <li>Escolha pagar via PIX</li>
+                      <li>Escaneie o QR Code ou cole o código</li>
+                      <li>Confirme o pagamento</li>
+                    </ol>
+                    <p className="mt-3 text-yellow-400">
+                      ⚠️ Aguarde a confirmação do pagamento. Isso pode levar alguns minutos.
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={() => navigate(createPageUrl("InvestorDashboard"))}
+                    variant="outline"
+                    className="w-full border-gray-600 text-gray-300 hover:bg-gray-700"
+                  >
+                    Voltar ao Dashboard
+                  </Button>
+                </div>
+              ) : (
+                // Seleção de método de pagamento
+                <>
               
               {/* PIX */}
               <button
@@ -204,6 +324,8 @@ export default function PlanCheckout() {
               <p className="text-xs text-gray-500 text-center mt-4">
                 Ao confirmar, você concorda com nossos termos e condições
               </p>
+              </>
+              )}
             </CardContent>
           </Card>
 
