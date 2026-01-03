@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { X, Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { comparaiPrices } from '@/functions/comparaiPrices';
 
 export default function ComparaiModal({ auction, onClose }) {
   const [comparisonData, setComparisonData] = useState(null);
@@ -40,37 +41,24 @@ export default function ComparaiModal({ auction, onClose }) {
     try {
       console.log('🚀 Iniciando comparação...', { auctionId: localAuction.id, forceGoogleShopping });
       
-      const { base44 } = await import('@/api/base44Client');
-      console.log('✅ SDK Base44 importado');
-      
-      const apiResponse = await base44.functions.invoke('comparaiPrices', {
+      const response = await comparaiPrices({
         auctionId: localAuction.id,
         forceRefresh: false,
         forceGoogleShopping: forceGoogleShopping
       });
 
-      console.log('📊 Resposta completa da API:', JSON.stringify(apiResponse, null, 2));
-      console.log('📊 Tipo da resposta da API:', typeof apiResponse);
+      console.log('📊 Resposta recebida:', response);
       
-      const responseData = apiResponse.data || apiResponse;
-      console.log('📊 Dados extraídos:', JSON.stringify(responseData, null, 2));
-      
-      if (responseData?.success) {
-        setComparisonData(responseData.comparison);
-        setIsCached(responseData.cached || false);
-        setCacheAge(responseData.cacheAge || null);
+      if (response?.success) {
+        setComparisonData(response.comparison);
+        setIsCached(response.cached || false);
+        setCacheAge(response.cacheAge || null);
       } else {
-        console.error('❌ Success=false na resposta:', responseData);
-        throw new Error(responseData?.error || 'Erro ao buscar comparação');
+        throw new Error(response?.error || 'Erro ao buscar comparação');
       }
     } catch (err) {
-      console.error('❌ Erro completo:', err);
-      console.error('❌ Erro stack:', err.stack);
-      console.error('❌ Erro response:', err.response);
-      console.error('❌ Erro response data:', err.response?.data);
-      
-      const errorMsg = err.response?.data?.error || err.message || 'Não foi possível comparar preços';
-      setError(errorMsg);
+      console.error('❌ Erro na comparação:', err);
+      setError(err.message || 'Não foi possível comparar preços');
     } finally {
       setIsLoading(false);
     }
