@@ -384,7 +384,8 @@ const DashboardContent = ({ user, isAdmin }) => {
           const wonAuctions = await fetchWithRetry(
             () => Auction.filter({
               status: { $in: ["ended", "sold"] },
-              winner_id: { $in: indicatedUserIds }
+              winner_id: { $in: indicatedUserIds },
+              is_investment_plan: { $ne: true }
             })
           );
           networkBidsCount = Array.isArray(wonAuctions) ? wonAuctions.length : 0;
