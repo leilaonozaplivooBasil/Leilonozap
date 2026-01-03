@@ -56,7 +56,7 @@ export default function EarningsSimulator() {
                   max="100000"
                   value={people}
                   onChange={(e) => setPeople(Math.min(100000, Math.max(1, parseInt(e.target.value) || 1)))}
-                  className="w-32 text-4xl font-black text-white bg-transparent text-center border-b-2 border-green-500/30 focus:border-green-400 focus:outline-none"
+                  className="w-32 text-4xl font-black text-white bg-transparent text-center border-b-2 border-green-500/30 focus:border-green-400 focus:outline-none custom-number-input"
                 />
                 <span className="text-white text-base font-bold">pessoas</span>
               </div>
@@ -193,36 +193,51 @@ export default function EarningsSimulator() {
             )}
 
       <style>{`
-        .slider-thumb::-webkit-slider-thumb {
-          appearance: none;
+        /* Estilo customizado para input number */
+        .custom-number-input::-webkit-outer-spin-button,
+        .custom-number-input::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
           width: 20px;
           height: 20px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          background: transparent;
           cursor: pointer;
-          box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
-          transition: all 0.2s;
+          position: relative;
         }
-        
-        .slider-thumb::-webkit-slider-thumb:hover {
-          transform: scale(1.2);
-          box-shadow: 0 0 15px rgba(59, 130, 246, 1);
+
+        .custom-number-input {
+          -moz-appearance: textfield;
         }
-        
-        .slider-thumb::-moz-range-thumb {
+
+        /* Setas customizadas para Chrome/Safari/Edge */
+        .custom-number-input::-webkit-inner-spin-button {
+          opacity: 1;
           width: 20px;
-          height: 20px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #3b82f6, #2563eb);
+          height: 40px;
           cursor: pointer;
-          border: none;
-          box-shadow: 0 0 8px rgba(59, 130, 246, 0.8);
-          transition: all 0.2s;
+          position: absolute;
+          right: 0;
+          background: transparent;
         }
-        
-        .slider-thumb::-moz-range-thumb:hover {
-          transform: scale(1.2);
-          box-shadow: 0 0 15px rgba(59, 130, 246, 1);
+
+        .custom-number-input::-webkit-outer-spin-button {
+          -webkit-appearance: inner-spin-button;
+          background: transparent;
+          opacity: 1;
+        }
+
+        /* Remove fundo e estiliza apenas as setas */
+        input[type="number"]::-webkit-inner-spin-button {
+          opacity: 1;
+          cursor: pointer;
+          background: transparent;
+          color: #22c55e;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button {
+          opacity: 1;
+          cursor: pointer;
+          background: transparent;
         }
       `}</style>
     </div>
