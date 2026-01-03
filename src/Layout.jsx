@@ -741,19 +741,8 @@ export default function Layout({ children, currentPageName }) {
                             {item.title}
                           </Link>
                         )
-                      ))}
-                      <Link
-                        to={createPageUrl("MemoryBackup")}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${
-                          isSaiDeBaixoPage 
-                            ? "text-green-600 hover:bg-green-50 hover:text-green-700" 
-                            : "text-green-400 hover:bg-green-600/20 hover:text-green-300"
-                        }`}
-                      >
-                        🛡️ Proteção Master
-                      </Link>
-                    </div>
+                        ))}
+                        </div>
                   )}
               
                   {/* ENTRAR MOBILE - SÓ SE NÃO LOGADO */}
