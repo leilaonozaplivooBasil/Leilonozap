@@ -487,12 +487,14 @@ Retorne JSON:
 
     } catch (error) {
         console.error('❌ ERRO FATAL:', error);
+        console.error('Stack trace:', error.stack);
         
         return Response.json({
             success: false,
             error: "Erro ao comparar preços. Tente novamente em alguns instantes.",
             errorCode: 'FATAL_ERROR',
-            details: error.message
+            details: error.message,
+            stack: error.stack
         }, { status: 200 });
     }
 });
