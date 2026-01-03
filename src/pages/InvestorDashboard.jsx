@@ -518,13 +518,13 @@ export default function InvestorDashboard() {
 
         {/* Modal de Planos */}
         <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
-          <DialogContent className="max-w-4xl max-h-[95vh] bg-gray-900 border-gray-700 text-white p-4">
-            <DialogHeader className="mb-3 text-center">
-              <DialogTitle className="text-2xl sm:text-3xl font-bold text-center">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700 text-white p-6">
+            <DialogHeader className="mb-6 text-center">
+              <DialogTitle className="text-3xl font-bold text-center">
                 {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
                 <span className="text-green-400">Novo Plano</span>
               </DialogTitle>
-              <p className="text-gray-400 text-xs sm:text-sm text-center">
+              <p className="text-gray-400 text-sm text-center mt-2">
                 {activeInvestments.length > 0 
                   ? 'Faça novos investimentos e aumente seus lucros' 
                   : 'Selecione o plano ideal para começar a investir'
@@ -533,7 +533,7 @@ export default function InvestorDashboard() {
             </DialogHeader>
 
             {/* Carousel para todos os tamanhos */}
-            <div className="relative px-2"
+            <div className="relative py-4"
                  onMouseEnter={() => setIsPaused(true)}
                  onMouseLeave={() => setIsPaused(false)}>
               <AnimatePresence mode="wait">
@@ -543,14 +543,14 @@ export default function InvestorDashboard() {
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -100 }}
                   transition={{ duration: 0.3 }}
-                  className="flex justify-center"
+                  className="flex justify-center px-12"
                 >
                   {(() => {
                     const portfolio = portfolios[selectedPlanIndex];
                     const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
                     return (
-                      <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 max-w-md w-full">
+                      <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 w-full max-w-lg">
                         <CardHeader className="p-4 pb-2 text-center">
                           <div className="flex items-center justify-center gap-2 mb-2">
                             <CardTitle className="text-xl text-white">{portfolio.name}</CardTitle>
