@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { useLocation } from 'react-router-dom';
 import { createAbacatePayPix } from '@/functions/createAbacatePayPix';
 import { checkAbacatePayPix } from '@/functions/checkAbacatePayPix';
+import { stripeCheckout } from '@/functions/stripeCheckout';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
@@ -159,16 +160,16 @@ export default function MyWinningsPage() {
         try {
             toast.info("Criando sessão de pagamento...");
 
-            const response = await base44.functions.invoke('stripeCheckout', {
+            const response = await stripeCheckout({
                 auction_id: selectedAuction.id
             });
 
             console.log('📦 Resposta Stripe:', response);
 
-            if (response?.data?.success && response?.data?.checkout_url) {
-                window.location.href = response.data.checkout_url;
+            if (response?.success && response?.checkout_url) {
+                window.location.href = response.checkout_url;
             } else {
-                const errorMsg = response?.data?.error || "Erro desconhecido ao criar checkout";
+                const errorMsg = response?.error || "Erro desconhecido ao criar checkout";
                 console.error('❌ Erro Stripe:', errorMsg);
                 toast.error(errorMsg);
             }
@@ -201,11 +202,11 @@ export default function MyWinningsPage() {
                 user_cpf: cpf
             });
 
-            if (response?.data?.success) {
-                setPixData(response.data);
+            if (response?.success) {
+                setPixData(response);
                 toast.success("QR Code gerado com sucesso!");
             } else {
-                toast.error(response?.data?.error || "Erro ao gerar QR Code");
+                toast.error(response?.error || "Erro ao gerar QR Code");
             }
         } catch (error) {
             console.error("Erro ao gerar PIX:", error);
@@ -429,7 +430,7 @@ export default function MyWinningsPage() {
                                             auction_id: selectedAuction.id
                                         });
 
-                                        if (response?.data?.is_paid) {
+                                        if (response?.is_paid) {
                                             setPaymentConfirmed(true);
                                             toast.success("Pagamento confirmado!");
                                         } else {
