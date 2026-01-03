@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('❌ Erro ao criar PIX:', error);
+    console.error('Erro ao criar PIX:', error);
     return Response.json({ 
       error: error.message,
       stack: error.stack 
