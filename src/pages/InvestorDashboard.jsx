@@ -588,11 +588,11 @@ export default function InvestorDashboard() {
                         <CardContent className="space-y-2 p-3 pt-0 text-center">
                           {/* Imagem do Produto */}
                           {productImages[portfolio.imageKey] && (
-                            <div className="w-full h-[600px] max-w-[1200px] mx-auto bg-gray-900/50 rounded-lg overflow-hidden border border-gray-700">
+                            <div className="w-full h-32 bg-gray-900/50 rounded-lg overflow-hidden border border-gray-700">
                               <img 
                                 src={productImages[portfolio.imageKey]} 
                                 alt={portfolio.name}
-                                className="w-full h-full object-contain p-4"
+                                className="w-full h-full object-contain p-2"
                               />
                             </div>
                           )}
