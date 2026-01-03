@@ -50,7 +50,7 @@ export default function InvestorDashboard() {
           const user = JSON.parse(savedUserJSON);
           setCurrentUser(user);
           
-          // Simula investimentos ativos (em produção, viria do banco)
+          // Simula compras ativas (em produção, viria do banco)
           setActiveInvestments([
             {
               id: 1,
@@ -120,7 +120,7 @@ export default function InvestorDashboard() {
       duration: 60,
       products: ["Eletrodomésticos", "Eletrônicos", "Apple"],
       risk: "Baixo",
-      description: "Para investidores que buscam maior retorno com segurança.",
+      description: "Para parceiros que buscam maior retorno com segurança.",
       features: commonFeatures
     },
     {
@@ -385,7 +385,7 @@ export default function InvestorDashboard() {
           </Card>
         </div>
 
-        {/* Investimentos Ativos */}
+        {/* Compras Ativas */}
         {activeInvestments.length > 0 && showInvestments && (
           <div className="mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">
@@ -526,8 +526,8 @@ export default function InvestorDashboard() {
               </DialogTitle>
               <p className="text-gray-400 text-xs text-center">
                 {activeInvestments.length > 0 
-                  ? 'Faça novos investimentos e aumente seus lucros' 
-                  : 'Selecione o plano ideal para começar a investir'
+                  ? 'Faça novas compras e aumente seus lucros' 
+                  : 'Selecione o plano ideal para começar a comprar'
                 }
               </p>
             </DialogHeader>
@@ -563,7 +563,7 @@ export default function InvestorDashboard() {
                           {/* Valores */}
                           <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
                             <div className="flex items-center justify-between">
-                              <span className="text-gray-400">Investimento Mínimo</span>
+                              <span className="text-gray-400">Compra Mínima</span>
                               <span className="text-white font-bold">
                                 R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
                               </span>
@@ -608,7 +608,7 @@ export default function InvestorDashboard() {
                               setShowPlansModal(false);
                             }}
                           >
-                            Investir Agora
+                            Comprar Agora
                             <ArrowRight className="w-4 h-4 ml-1.5" />
                           </Button>
                         </CardContent>
