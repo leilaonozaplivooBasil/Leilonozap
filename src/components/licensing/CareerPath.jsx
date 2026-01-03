@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Award, BookOpen, Briefcase, Star, ArrowUp, Users, Crown, Gem, Trophy } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -41,16 +40,16 @@ const careerSteps = [
     },
     {
         id: 'licenciado_catalogo',
-        title: 'Licenciado Catálogo',
+        title: 'Catálogo',
         icon: BookOpen,
         achievedDescription: '📚 Ótimo! Expanda seus ganhos com nosso catálogo de produtos exclusivo.',
         lockedDescription: 'Em breve: Expanda seus ganhos no sistema com catálogo exclusivo de produtos.'
     },
     {
         id: 'licenciado_aplicativo',
-        title: 'Licenciado Aplicativo',
+        title: 'Influenciador',
         icon: Award,
-        achievedDescription: '✅ Você é um Licenciado! Indique clientes e ganhe 3% em cada arremate deles.',
+        achievedDescription: '✅ Você é um Influenciador! Indique clientes e ganhe 3% em cada arremate deles.',
         lockedDescription: 'Indique clientes para o app e ganhe 3% em cada arremate através do sistema de alavancagem.'
     },
     {
@@ -75,8 +74,8 @@ export default function CareerPath({ currentUser }) {
     return (
         <div className="p-6">
             <div className="relative">
-                {/* Linha de Conexão */}
-                <div className="absolute left-5 top-5 h-[calc(100%-40px)] w-0.5 bg-gray-700" aria-hidden="true" />
+                {/* Linha de Conexão - ATRÁS DOS CÍRCULOS */}
+                <div className="absolute left-5 top-5 h-[calc(100%-40px)] w-0.5 bg-gray-700 z-0" aria-hidden="true" />
                 
                 <ul className="space-y-8">
                     {careerSteps.map((step) => {
@@ -84,7 +83,7 @@ export default function CareerPath({ currentUser }) {
                         const isPrimary = step.id === primaryLevel;
 
                         return (
-                            <li key={step.id} className="flex items-start gap-4">
+                            <li key={step.id} className="flex items-start gap-4 relative z-10">
                                 <div className={cn(
                                     "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full",
                                     isActive ? "bg-green-500 ring-4 ring-green-500/30" : "border-2 border-gray-600 bg-gray-800",
