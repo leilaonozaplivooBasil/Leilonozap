@@ -32,6 +32,9 @@ import UserEditModal from '../components/admin/UserEditModal';
 import UserPasswordModal from '../components/admin/UserPasswordModal';
 import ValoraNotesGallery from '../components/licensing/ValoraNotesGallery';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
+import EarningsSimulator from '../components/licensing/EarningsSimulator';
+import RealNotesCarousel from '../components/licensing/RealNotesCarousel';
+import LeverageSystem from '../components/licensing/LeverageSystem';
 
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading }) => (
     <Card
@@ -155,7 +158,15 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
             <JourneyAnimation />
 
             <div className="mb-16 mt-20">
-              <ValoraNotesGallery />
+              <RealNotesCarousel />
+            </div>
+
+            <div className="mb-16">
+              <LeverageSystem />
+            </div>
+
+            <div className="mb-16 max-w-3xl mx-auto">
+              <EarningsSimulator />
             </div>
 
             <div ref={cardsRef} className="mt-16 max-w-2xl mx-auto">
