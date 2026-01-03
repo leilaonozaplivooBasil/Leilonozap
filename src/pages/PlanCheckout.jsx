@@ -416,7 +416,7 @@ export default function PlanCheckout() {
                   </div>
                   <div className="text-left flex-1">
                     <p className="font-bold text-white">PIX</p>
-                    <p className="text-sm text-gray-400">Pagamento instantâneo</p>
+                    <p className="text-sm text-gray-400">Pagamento instantaneo</p>
                   </div>
                   {paymentMethod === 'pix' && (
                     <Check className="w-6 h-6 text-green-400" />
