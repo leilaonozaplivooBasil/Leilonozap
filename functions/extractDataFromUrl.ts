@@ -8,6 +8,75 @@ const USER_AGENTS = [
 
 const getRandomUA = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 
+function decodeHtml(text) {
+    if (!text) return "";
+    return text.replace(/&quot;/g, '"')
+               .replace(/&apos;/g, "'")
+               .replace(/&lt;/g, '<')
+               .replace(/&gt;/g, '>')
+               .replace(/&amp;/g, '&')
+               .replace(/&#39;/g, "'")
+               .replace(/&#x27;/g, "'");
+}
+
+// EXTRAI IMAGENS POR MARKETPLACE
+function extractImagesByMarketplace(html, marketplace) {
+    const imageUrls = [];
+    
+    if (marketplace === 'mercadolivre') {
+        // Mercado Livre: busca URLs específicas
+        const mlRegex = /https?:\/\/http2\.mlstatic\.com\/[^"'\s<>()]+\.(?:jpg|jpeg|png|webp)/gi;
+        const mlMatches = html.match(mlRegex) || [];
+        imageUrls.push(...mlMatches.map(url => url.replace(/-[A-Z]\.(jpg|jpeg|png|webp)$/i, '-F.$1')));
+        
+    } else if (marketplace === 'amazon') {
+        // Amazon: busca padrão /images/I/
+        const amazonRegex = /https?:\/\/[^"'\s<>()]*\/images\/I\/[^"'\s<>()]+\.(?:jpg|jpeg|png|webp)/gi;
+        imageUrls.push(...(html.match(amazonRegex) || []));
+        
+    } else if (marketplace === 'shopee') {
+        // Shopee: busca URLs específicas
+        const shopeeRegex = /https?:\/\/[^"'\s<>()]*shopee[^"'\s<>()]*\.(?:jpg|jpeg|png|webp)/gi;
+        const shopeeMatches = html.match(shopeeRegex) || [];
+        imageUrls.push(...shopeeMatches.filter(url => !url.includes('logo') && !url.includes('icon')));
+        
+    } else if (marketplace === 'magazineluiza' || marketplace === 'casasbahia' || marketplace === 'pontofrio') {
+        // Magazine Luiza / Casas Bahia / Ponto Frio
+        const magazineRegex = /https?:\/\/[^"'\s<>()]*(?:magazineluiza|casasbahia|pontofrio)[^"'\s<>()]*\.(?:jpg|jpeg|png|webp)/gi;
+        imageUrls.push(...(html.match(magazineRegex) || []));
+        
+    } else if (marketplace === 'carrefour') {
+        // Carrefour
+        const carrefourRegex = /https?:\/\/[^"'\s<>()]*carrefour[^"'\s<>()]*\.(?:jpg|jpeg|png|webp)/gi;
+        imageUrls.push(...(html.match(carrefourRegex) || []));
+        
+    } else if (marketplace === 'aliexpress') {
+        // AliExpress
+        const aliRegex = /https?:\/\/[^"'\s<>()]*alicdn[^"'\s<>()]*\.(?:jpg|jpeg|png|webp)/gi;
+        imageUrls.push(...(html.match(aliRegex) || []));
+    }
+    
+    // FALLBACK: Busca genérica
+    if (imageUrls.length === 0) {
+        const genericRegex = /https?:\/\/[^"'\s<>()]+\.(?:jpg|jpeg|png|webp)/gi;
+        const allMatches = html.match(genericRegex) || [];
+        imageUrls.push(...allMatches.filter(url => {
+            const urlLower = url.toLowerCase();
+            return !urlLower.includes('logo') && 
+                   !urlLower.includes('icon') && 
+                   !urlLower.includes('sprite') &&
+                   !urlLower.includes('banner');
+        }));
+    }
+    
+    // Remove duplicatas e limita
+    const uniqueUrls = [...new Set(imageUrls)]
+        .filter(url => url.length > 40)
+        .slice(0, 12);
+    
+    return uniqueUrls;
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -32,9 +101,9 @@ Deno.serve(async (req) => {
         else if (url.includes('carrefour')) marketplace = 'carrefour';
         else if (url.includes('aliexpress')) marketplace = 'aliexpress';
 
-        console.log(`🏪 Marketplace detectado: ${marketplace}`);
+        console.log(`🏪 Marketplace: ${marketplace}`);
 
-        // TENTA BUSCAR O HTML
+        // BUSCA HTML
         let html = null;
         let fetchError = null;
 
@@ -44,14 +113,8 @@ Deno.serve(async (req) => {
                     headers: {
                         "User-Agent": getRandomUA(),
                         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                        "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-                        "Accept-Encoding": "gzip, deflate, br",
-                        "Cache-Control": "no-cache",
-                        "Pragma": "no-cache",
-                        "Sec-Fetch-Dest": "document",
-                        "Sec-Fetch-Mode": "navigate",
-                        "Sec-Fetch-Site": "none",
-                        "Upgrade-Insecure-Requests": "1"
+                        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+                        "Cache-Control": "no-cache"
                     },
                     redirect: 'follow',
                     signal: AbortSignal.timeout(15000)
@@ -64,156 +127,77 @@ Deno.serve(async (req) => {
                 }
 
                 fetchError = `HTTP ${resp.status}`;
-                console.warn(`⚠️ Tentativa ${attempt + 1} falhou: ${fetchError}`);
-                
             } catch (error) {
                 fetchError = error.message;
-                console.warn(`⚠️ Tentativa ${attempt + 1} erro: ${fetchError}`);
                 if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
             }
         }
 
         if (!html) {
-            console.error(`❌ Todas as tentativas falharam para ${productUrl}`);
             return Response.json({
                 error: "Não foi possível acessar a página",
-                suggestion: "Site pode estar bloqueando robôs. Tente copiar dados manualmente",
-                details: fetchError,
+                suggestion: "Copie os dados manualmente ou tente outro link",
                 marketplace: marketplace
             });
         }
 
-        // 🤖 USA IA PARA EXTRAIR DADOS ESTRUTURADOS
-        console.log('🤖 Processando com IA...');
+        // EXTRAI IMAGENS POR MARKETPLACE
+        const imageUrls = extractImagesByMarketplace(html, marketplace);
+        console.log(`📸 ${imageUrls.length} imagens encontradas`);
+
+        // EXTRAI TÍTULO E DESCRIÇÃO COM REGEX
+        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+        let title = decodeHtml(titleMatch ? titleMatch[1] : '');
+        title = title.split('|')[0].split(' - ')[0].trim();
         
-        const aiPrompt = `Você é um extrator de dados de produtos para e-commerce. Analise o HTML fornecido e extraia:
+        const descMatch = html.match(/<meta\s+(?:name|property)=["'](?:description|og:description)["']\s+content=["']([^"']*)["']/i);
+        let description = decodeHtml(descMatch ? descMatch[1] : '');
 
-1. **Título do produto**: Nome completo e preciso
-2. **Descrição**: Descrição detalhada com características principais
-3. **URLs de imagens**: TODAS as URLs de imagens do produto (mínimo 3, máximo 10)
+        // SE TÍTULO/DESCRIÇÃO VAZIOS, USA IA EM TRECHO MENOR
+        if (!title || title.length < 10 || !description || description.length < 20) {
+            console.log('🤖 Usando IA para extrair título/descrição...');
+            
+            try {
+                // Pega apenas os primeiros 15KB do HTML
+                const htmlSnippet = html.substring(0, 15000);
+                
+                const aiResponse = await base44.integrations.Core.InvokeLLM({
+                    prompt: `Extraia o TÍTULO e DESCRIÇÃO deste produto de e-commerce (${marketplace}).
+                    
+HTML: ${htmlSnippet}
 
-IMPORTANTE SOBRE IMAGENS:
-- Busque URLs COMPLETAS que começam com http:// ou https://
-- Priorize imagens GRANDES do produto (não thumbnails)
-- Ignore logos, ícones, banners, sprites
-- Para Mercado Livre: busque URLs com "/D_NQ_NP_" (alta qualidade)
-- Para Amazon: busque URLs com "/images/I/" 
-- Para Shopee: busque URLs com "shopee.com.br" e extensões .jpg, .png, .webp
-- Para Magazine Luiza: busque URLs com "magazineluiza" 
-- Retorne APENAS URLs válidas de imagens do produto
-
-MARKETPLACE: ${marketplace}
-
-Retorne SOMENTE JSON válido, sem texto adicional.`;
-
-        try {
-            const aiResponse = await base44.integrations.Core.InvokeLLM({
-                prompt: aiPrompt,
-                add_context_from_internet: false,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        title: { type: "string" },
-                        description: { type: "string" },
-                        imageUrls: {
-                            type: "array",
-                            items: { type: "string" }
+Retorne JSON:
+{
+  "title": "título completo do produto",
+  "description": "descrição detalhada com características"
+}`,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            title: { type: "string" },
+                            description: { type: "string" }
                         }
-                    },
-                    required: ["title", "description", "imageUrls"]
-                },
-                file_urls: [`data:text/html;base64,${btoa(html.substring(0, 100000))}`]
-            });
-
-            console.log('✅ IA processou os dados!');
-
-            // VALIDA E LIMPA OS DADOS
-            let { title, description, imageUrls } = aiResponse;
-
-            // Limpa título
-            title = title.split('|')[0].split(' - ')[0].trim();
-            if (title.length > 100) title = title.substring(0, 97) + '...';
-
-            // Limpa descrição
-            if (description.length > 500) description = description.substring(0, 497) + '...';
-
-            // VALIDA E FILTRA IMAGENS
-            const validImageUrls = (imageUrls || [])
-                .filter(url => {
-                    if (!url || typeof url !== 'string') return false;
-                    const urlLower = url.toLowerCase();
-                    return urlLower.startsWith('http') && 
-                           /\.(jpg|jpeg|png|webp)/.test(urlLower) &&
-                           !urlLower.includes('logo') &&
-                           !urlLower.includes('icon') &&
-                           !urlLower.includes('sprite') &&
-                           url.length > 40;
-                })
-                .map(url => {
-                    // Normaliza URLs do Mercado Livre para versão -F (full size)
-                    if (url.includes('mlstatic.com')) {
-                        return url.replace(/-\w\.(jpg|jpeg|png|webp)$/i, '-F.$1');
                     }
-                    return url;
-                })
-                .slice(0, 10);
+                });
 
-            console.log(`📸 ${validImageUrls.length} imagens válidas encontradas`);
-
-            // FALLBACK: Se IA não encontrou imagens, tenta regex tradicional
-            if (validImageUrls.length === 0) {
-                console.log('⚠️ IA não encontrou imagens, tentando regex...');
+                if (aiResponse?.title) title = aiResponse.title;
+                if (aiResponse?.description) description = aiResponse.description;
                 
-                const regex = /https?:\/\/[^"'\s<>()]+\.(jpg|jpeg|png|webp)/gi;
-                const allUrls = html.match(regex) || [];
-                
-                const filteredUrls = allUrls
-                    .filter(url => {
-                        const urlLower = url.toLowerCase();
-                        return !urlLower.includes('logo') &&
-                               !urlLower.includes('icon') &&
-                               !urlLower.includes('sprite') &&
-                               !urlLower.includes('banner');
-                    })
-                    .map(url => url.split('?')[0])
-                    .filter((url, index, self) => self.indexOf(url) === index)
-                    .slice(0, 6);
-
-                validImageUrls.push(...filteredUrls);
+            } catch (aiError) {
+                console.warn('⚠️ IA falhou, usando valores extraídos:', aiError.message);
             }
-
-            return Response.json({
-                title: title || 'Produto',
-                description: description || 'Sem descrição disponível',
-                imageUrls: validImageUrls,
-                marketplace: marketplace
-            });
-
-        } catch (aiError) {
-            console.error('❌ Erro na IA:', aiError);
-            
-            // FALLBACK COMPLETO: Extração regex tradicional
-            console.log('🔧 Usando extração tradicional como fallback...');
-            
-            const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-            const title = titleMatch ? titleMatch[1].split('|')[0].trim() : 'Produto';
-
-            const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-            const description = descMatch ? descMatch[1] : 'Descrição não disponível';
-
-            const regex = /https?:\/\/[^"'\s<>()]+\.(jpg|jpeg|png|webp)/gi;
-            const allUrls = html.match(regex) || [];
-            const imageUrls = allUrls
-                .filter(url => {
-                    const urlLower = url.toLowerCase();
-                    return !urlLower.includes('logo') && !urlLower.includes('icon');
-                })
-                .map(url => url.split('?')[0])
-                .filter((url, index, self) => self.indexOf(url) === index)
-                .slice(0, 6);
-
-            return Response.json({ title, description, imageUrls, marketplace });
         }
+
+        // FALLBACK FINAL
+        if (!title || title.length < 5) title = 'Produto Importado';
+        if (!description || description.length < 10) description = 'Produto importado de ' + marketplace;
+
+        return Response.json({
+            title: title.substring(0, 200),
+            description: description.substring(0, 500),
+            imageUrls: imageUrls,
+            marketplace: marketplace
+        });
 
     } catch (error) {
         console.error('❌ Erro geral:', error);
