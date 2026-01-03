@@ -110,7 +110,8 @@ export default function InvestorDashboard() {
       products: ["Eletrônicos"],
       risk: "Baixo",
       description: "Ideal para quem está começando. Produtos de alta liquidez e demanda garantida.",
-      features: commonFeatures
+      features: commonFeatures,
+      imageUrl: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
     },
     {
       id: 2,
@@ -121,7 +122,8 @@ export default function InvestorDashboard() {
       products: ["Eletrodomésticos", "Eletrônicos", "Apple"],
       risk: "Baixo",
       description: "Para parceiros que buscam maior retorno com segurança.",
-      features: commonFeatures
+      features: commonFeatures,
+      imageUrl: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
     },
     {
       id: 3,
@@ -132,7 +134,8 @@ export default function InvestorDashboard() {
       products: ["Todas as categorias"],
       risk: "Baixo",
       description: "Máximo retorno com acesso a todas as oportunidades.",
-      features: commonFeatures
+      features: commonFeatures,
+      imageUrl: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
     }
   ];
 
@@ -560,6 +563,15 @@ export default function InvestorDashboard() {
                         </CardHeader>
 
                         <CardContent className="space-y-2 p-3 pt-0 text-center">
+                          {/* Imagem do Produto */}
+                          <div className="w-full h-32 bg-gray-900/50 rounded-lg overflow-hidden border border-gray-700">
+                            <img 
+                              src={portfolio.imageUrl} 
+                              alt={portfolio.name}
+                              className="w-full h-full object-contain p-2"
+                            />
+                          </div>
+
                           {/* Valores */}
                           <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
                             <div className="flex items-center justify-between">
