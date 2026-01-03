@@ -1594,7 +1594,7 @@ export default function LicensingPage() {
                     Indique amigos e ganhe <strong className="text-green-400">3% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
                   </p>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Construa sua rede e <strong className="text-yellow-400">multiplique seus ganhos</strong> com o sistema de alavancagem!
+                    Construa um negócio sólido com o sistema de alavancagem da Leilão NoZap!
                   </p>
                 </>
               ) : userLevel === 'licenciado_aplicativo' ? (
