@@ -45,15 +45,21 @@ export default function ComparaiModal({ auction, onClose }) {
         forceGoogleShopping: forceGoogleShopping
       });
 
+      console.log('📊 Resposta Comparai:', response);
+      
       if (response.data && response.data.success) {
         setComparisonData(response.data.comparison);
         setIsCached(response.data.cached || false);
         setCacheAge(response.data.cacheAge || null);
       } else {
-        throw new Error(response.data?.userMessage || 'Erro ao buscar comparação');
+        const errorMsg = response.data?.error || response.data?.userMessage || response.data?.details || 'Erro ao buscar comparação';
+        console.error('❌ Erro Comparai:', errorMsg);
+        throw new Error(errorMsg);
       }
     } catch (err) {
-      setError(err.message || 'Não foi possível comparar preços');
+      console.error('❌ Erro no handleCompare:', err);
+      const errorMessage = err.response?.data?.error || err.response?.data?.details || err.message || 'Não foi possível comparar preços';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
