@@ -7,6 +7,7 @@ const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 import { extractDataFromUrl } from "@/functions/extractDataFromUrl";
 import { searchProductByGTIN } from "@/functions/searchProductByGTIN";
+import { searchProductByName } from "@/functions/searchProductByName";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -62,7 +63,9 @@ export default function CreateAuction() {
   
   const [productUrl, setProductUrl] = useState("");
   const [gtinCode, setGtinCode] = useState("");
+  const [productName, setProductName] = useState("");
   const [isSearchingGtin, setIsSearchingGtin] = useState(false);
+  const [isSearchingName, setIsSearchingName] = useState(false);
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
   const [imageUrls, setImageUrls] = useState(["", "", "", "", "", ""]);
@@ -315,6 +318,74 @@ export default function CreateAuction() {
       ...prev,
       [field]: value
     }));
+  };
+
+  // BUSCA POR NOME DO PRODUTO
+  const searchByName = async () => {
+    if (!productName || productName.trim().length < 3) {
+      toast.error("Digite pelo menos 3 caracteres do nome do produto");
+      return;
+    }
+
+    setIsSearchingName(true);
+    setManualStep(1);
+
+    try {
+      const response = await searchProductByName({ productName: productName.trim() });
+      
+      console.log('🔍 Resposta busca por nome:', response);
+
+      if (!response || response.status !== 200) {
+        throw new Error(response?.data?.error || 'Erro ao buscar produto');
+      }
+
+      const data = response.data;
+
+      if (data.error) {
+        toast.error(data.error + (data.suggestion ? `\n💡 ${data.suggestion}` : ''));
+        setManualStep(0);
+        setIsSearchingName(false);
+        return;
+      }
+
+      const productTitle = data.title || "Produto";
+      const productDesc = data.description || "Produto encontrado na internet";
+      
+      setExtractedData({ 
+        title: productTitle, 
+        description: productDesc 
+      });
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        title: productTitle, 
+        description: productDesc 
+      }));
+
+      if (data.imageUrls && data.imageUrls.length > 0) {
+        const validUrls = data.imageUrls.filter(url => url && url.trim().startsWith('http')).slice(0, 6);
+        
+        while (validUrls.length < 6) {
+          validUrls.push("");
+        }
+        
+        setImageUrls(validUrls);
+        toast.success(`✅ ${productTitle} encontrado! ${data.imageUrls.length} imagens`);
+        setManualStep(3);
+      } else {
+        toast.success(`✅ ${productTitle} encontrado! Use upload manual para imagens.`);
+        setManualStep(0);
+      }
+
+      setProductName("");
+      
+    } catch (error) {
+      console.error("❌ Erro ao buscar por nome:", error);
+      toast.error(`Erro: ${error.message}`);
+      setManualStep(0);
+    } finally {
+      setIsSearchingName(false);
+    }
   };
 
   // BUSCA POR GTIN
@@ -766,9 +837,66 @@ export default function CreateAuction() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     
-                    {/* ETAPA 0: INSERIR URL OU GTIN */}
+                    {/* ETAPA 0: INSERIR URL, NOME OU GTIN */}
                     {manualStep === 0 && (
                       <div className="space-y-4">
+                        {/* 🆕 BUSCA POR NOME DO PRODUTO */}
+                        <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
+                          <Label htmlFor="productName" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
+                            <Zap className="w-4 h-4" />
+                            🌐 Buscar Produto na Internet (Apenas o Nome)
+                          </Label>
+                          
+                          <Input
+                            id="productName"
+                            value={productName}
+                            onChange={(e) => setProductName(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter' && !isSearchingName && productName.trim()) {
+                                searchByName();
+                              }
+                            }}
+                            placeholder="Ex: iPhone 15 Pro, Geladeira Samsung 500L..."
+                            className="mb-3 bg-gray-900 border-purple-600 text-gray-100 placeholder-gray-500 focus:border-purple-400"
+                            disabled={isSearchingName}
+                          />
+
+                          <Button 
+                            onClick={searchByName} 
+                            disabled={isSearchingName || !productName.trim()}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                          >
+                            {isSearchingName ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Buscando na internet...
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="w-4 h-4 mr-2" />
+                                🌐 Buscar na Internet
+                              </>
+                            )}
+                          </Button>
+                          
+                          <div className="mt-3 p-2 bg-purple-900/30 rounded-lg border border-purple-700/50">
+                            <p className="text-xs text-purple-300 flex items-center gap-2">
+                              <span className="text-base">✨</span>
+                              <span><strong>IA busca na internet:</strong> Digite apenas o nome do produto e a IA encontra dados e fotos automaticamente!</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* DIVISOR */}
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-600"></div>
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-gray-800 px-2 text-gray-400">ou</span>
+                          </div>
+                        </div>
+
                         {/* BUSCA POR GTIN */}
                         <div className="bg-green-900/20 border-2 border-green-500/50 rounded-xl p-4">
                           <Label htmlFor="gtinCode" className="text-sm font-bold text-green-300 flex items-center gap-2 mb-2">
@@ -888,7 +1016,7 @@ export default function CreateAuction() {
                       <div className="text-center py-8">
                         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
                         <p className="text-blue-400">
-                          {isSearchingGtin ? 'Buscando produto por código de barras...' : 'Extraindo imagens e dados...'}
+                          {isSearchingName ? 'IA buscando produto na internet...' : isSearchingGtin ? 'Buscando produto por código de barras...' : 'Extraindo imagens e dados...'}
                         </p>
                       </div>
                     )}
