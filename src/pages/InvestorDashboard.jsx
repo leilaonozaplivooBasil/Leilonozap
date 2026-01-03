@@ -150,7 +150,7 @@ export default function InvestorDashboard() {
     },
     {
       id: 3,
-      name: "Plano Fundadores",
+      name: "Plano Elite",
       minInvestment: 30000,
       expectedReturn: 3,
       duration: 60,
