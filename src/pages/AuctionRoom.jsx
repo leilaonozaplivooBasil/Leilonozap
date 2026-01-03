@@ -358,7 +358,7 @@ export default function AuctionRoom() {
       }
 
       // 🆕 ATUALIZAR LICENCIADO SE O VENCEDOR FOI INDICADO
-      if (winnerData && winnerData.referred_by_id) {
+      if (winnerData && winnerData.referred_by_id && !auction.is_investment_plan) {
         try {
           console.log(`💰 [COMMISSION] Vencedor foi indicado! Buscando licenciado...`);
           
@@ -372,8 +372,9 @@ export default function AuctionRoom() {
             const isTestAuction = auction.is_test_auction === true;
             
             console.log(`✅ [COMMISSION] Licenciado: ${licensee.full_name}`);
-            console.log(`💵 [COMMISSION] Comissão: V$ ${commission.toFixed(2)}`);
+            console.log(`💵 [COMMISSION] Comissão: R$ ${commission.toFixed(2)}`);
             console.log(`🧪 [COMMISSION] É teste? ${isTestAuction ? 'SIM' : 'NÃO'}`);
+            console.log(`📊 [COMMISSION] É plano? ${auction.is_investment_plan ? 'SIM' : 'NÃO'}`);
             
             if (isTestAuction) {
               // LEILÃO DE TESTE - atualiza saldo de teste
@@ -401,7 +402,11 @@ export default function AuctionRoom() {
           console.error(`❌ [COMMISSION] Erro ao atualizar licenciado:`, commissionError);
         }
       } else {
-        console.log(`ℹ️ [COMMISSION] Vencedor não tem licenciado associado.`);
+        if (auction.is_investment_plan) {
+          console.log(`ℹ️ [COMMISSION] Plano de investimento - SEM comissão`);
+        } else {
+          console.log(`ℹ️ [COMMISSION] Vencedor não tem licenciado associado.`);
+        }
       }
 
       // 🆕 GARANTIR QUE A IMAGEM SEMPRE EXISTA
@@ -1154,32 +1159,34 @@ export default function AuctionRoom() {
         console.warn("Erro ao atualizar stats:", error);
       }
 
-      // Comissão para licenciado
-      const winnerData = await AppUser.filter({ id: currentUser.id });
-      if (winnerData && winnerData.length > 0 && winnerData[0].referred_by_id) {
-        try {
-          const licensees = await AppUser.filter({ id: winnerData[0].referred_by_id });
-          if (licensees && licensees.length > 0) {
-            const licensee = licensees[0];
-            const commission = buyNowPrice * 0.03;
-            const isTestAuction = auction.is_test_auction === true;
+      // Comissão para licenciado (se não for plano de investimento)
+      if (!auction.is_investment_plan) {
+        const winnerData = await AppUser.filter({ id: currentUser.id });
+        if (winnerData && winnerData.length > 0 && winnerData[0].referred_by_id) {
+          try {
+            const licensees = await AppUser.filter({ id: winnerData[0].referred_by_id });
+            if (licensees && licensees.length > 0) {
+              const licensee = licensees[0];
+              const commission = buyNowPrice * 0.03;
+              const isTestAuction = auction.is_test_auction === true;
 
-            if (isTestAuction) {
-              await AppUser.update(licensee.id, {
-                network_bids_count: (licensee.network_bids_count || 0) + 1,
-                commission_balance: (licensee.commission_balance || 0) + commission,
-                test_valora_balance: (licensee.test_valora_balance || 0) + commission,
-              });
-            } else {
-              await AppUser.update(licensee.id, {
-                network_bids_count: (licensee.network_bids_count || 0) + 1,
-                commission_balance: (licensee.commission_balance || 0) + commission,
-                valora_pay_balance: (licensee.valora_pay_balance || 0) + commission,
-              });
+              if (isTestAuction) {
+                await AppUser.update(licensee.id, {
+                  network_bids_count: (licensee.network_bids_count || 0) + 1,
+                  commission_balance: (licensee.commission_balance || 0) + commission,
+                  test_valora_balance: (licensee.test_valora_balance || 0) + commission,
+                });
+              } else {
+                await AppUser.update(licensee.id, {
+                  network_bids_count: (licensee.network_bids_count || 0) + 1,
+                  commission_balance: (licensee.commission_balance || 0) + commission,
+                  valora_pay_balance: (licensee.valora_pay_balance || 0) + commission,
+                });
+              }
             }
+          } catch (error) {
+            console.error("Erro ao atualizar comissão:", error);
           }
-        } catch (error) {
-          console.error("Erro ao atualizar comissão:", error);
         }
       }
 

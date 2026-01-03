@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     try {
@@ -44,7 +44,9 @@ Deno.serve(async (req) => {
                     if (indicatedUserIds.length > 0) {
                         const wonAuctions = await base44.asServiceRole.entities.Auction.filter({
                             status: { $in: ["ended", "sold"] },
-                            winner_id: { $in: indicatedUserIds }
+                            winner_id: { $in: indicatedUserIds },
+                            is_investment_plan: { $ne: true },
+                            is_test_auction: { $ne: true }
                         });
                         network_bids_count = Array.isArray(wonAuctions) ? wonAuctions.length : 0;
                     }
