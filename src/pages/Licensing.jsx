@@ -297,7 +297,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const isFetchingRef = useRef(false);
   const lastFetchTimeRef = useRef(0);
 
-  const referralLink = `${window.location.origin}${createPageUrl('Home')}?ref=${user.referral_code}`;
+  const referralLink = `https://leilaonozap.app${createPageUrl('Home')}?ref=${user.referral_code}`;
 
   const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
   const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
