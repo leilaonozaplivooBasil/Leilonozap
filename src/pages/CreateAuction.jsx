@@ -1146,7 +1146,18 @@ export default function CreateAuction() {
                               onClick={() => selectCover(index)}
                             >
                               <div className="w-full h-24 bg-gray-900 flex items-center justify-center">
-                                <img src={img} alt={`Imagem ${index + 1}`} className="max-w-full max-h-full object-contain" />
+                                <img 
+                                  src={img} 
+                                  alt={`Imagem ${index + 1}`} 
+                                  className="max-w-full max-h-full object-contain"
+                                  crossOrigin="anonymous"
+                                  loading="eager"
+                                  onError={(e) => {
+                                    console.error(`❌ Erro ao carregar imagem ${index + 1}:`, img);
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs text-center p-2">❌ Erro ao carregar</div>`;
+                                  }}
+                                />
                               </div>
                               
                               <Button
@@ -1353,9 +1364,19 @@ export default function CreateAuction() {
                                     manualCoverIndex === index ? 'border-purple-500 ring-2 ring-purple-500/30' : 'border-gray-700 hover:border-purple-600'
                                   }`}
                                   onClick={() => setManualCoverIndex(index)}
-                                >
+                                  >
                                   <div className="w-full h-24 bg-gray-900 flex items-center justify-center">
-                                    <img src={img} alt={`Imagem ${index + 1}`} className="max-w-full max-h-full object-contain" />
+                                    <img 
+                                      src={img} 
+                                      alt={`Imagem ${index + 1}`} 
+                                      className="max-w-full max-h-full object-contain"
+                                      crossOrigin="anonymous"
+                                      loading="eager"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.parentElement.innerHTML = '<div class="text-xs text-red-400">❌ Erro</div>';
+                                      }}
+                                    />
                                   </div>
                                   
                                   <Button
@@ -1763,7 +1784,17 @@ export default function CreateAuction() {
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {formData.image_urls.filter(url => url).map((url, index) => (
                               <div key={index} className="relative w-full h-24 bg-gray-800 rounded overflow-hidden flex items-center justify-center border border-gray-700">
-                                <img src={url} alt={`Preview ${index + 1}`} className="max-w-full max-h-full object-contain" />
+                                <img 
+                                  src={url} 
+                                  alt={`Preview ${index + 1}`} 
+                                  className="max-w-full max-h-full object-contain"
+                                  crossOrigin="anonymous"
+                                  loading="eager"
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.parentElement.innerHTML = `<div class="text-xs text-gray-400">❌ Erro</div>`;
+                                  }}
+                                />
                                 <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1 rounded">
                                   {index === 0 ? 'Capa' : index + 1}
                                 </div>
