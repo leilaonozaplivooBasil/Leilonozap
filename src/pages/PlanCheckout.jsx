@@ -340,21 +340,6 @@ export default function PlanCheckout() {
                         setIsProcessing(true);
 
                         try {
-                          // Tenta salvar CPF e telefone no perfil (não crítico)
-                          try {
-                            await base44.entities.AppUser.update(currentUser.id, {
-                              cpf: cleanCpf,
-                              phone: cleanPhone
-                            });
-
-                            // Atualiza localStorage
-                            const updatedUser = { ...currentUser, cpf: cleanCpf, phone: cleanPhone };
-                            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-                            setCurrentUser(updatedUser);
-                          } catch (updateError) {
-                            console.log('Não foi possível atualizar perfil, mas continuando com pagamento');
-                          }
-
                           // Cria o leilão temporário e gera o PIX
                           const tempAuction = await base44.entities.Auction.create({
                             title: `Plano de Investimento: ${plan.name}`,
@@ -385,7 +370,6 @@ export default function PlanCheckout() {
                           });
 
                           if (response.data && response.data.success) {
-                            // ✅ A API retorna qr_code_base64 que já contém o prefixo data:image/png;base64,
                             setPixData({
                               qr_code_base64: response.data.qr_code_base64,
                               pix_code: response.data.pix_code,
