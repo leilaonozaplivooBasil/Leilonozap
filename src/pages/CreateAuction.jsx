@@ -525,42 +525,39 @@ export default function CreateAuction() {
     setIsProcessing(false);
   };
   
-  // ETAPA 2: VISUALIZAR IMAGENS - AGORA COM FALLBACK INTELIGENTE
+  // ETAPA 2: VISUALIZAR IMAGENS - USA URLs ORIGINAIS QUANDO DOWNLOAD FALHAR
   const visualizeImages = async () => {
     const validUrls = imageUrls.filter(url => url && url.trim().startsWith('http'));
     
     if (validUrls.length === 0) {
-      alert("Nenhuma URL válida para processar. Tente extrair novamente.");
+      toast.error("Nenhuma URL válida para processar. Tente extrair novamente.");
       return;
     }
 
     setIsProcessing(true);
     setManualStep(4);
     const uploadedImages = [];
-    const failedImages = [];
+    let downloadFailCount = 0;
 
     console.log(`📸 Processando ${validUrls.length} imagens...`);
 
-    // Loop sequencial para evitar sobrecarga
+    // Tenta baixar e fazer upload, mas se falhar usa a URL original
     for (const [index, url] of validUrls.entries()) {
       try {
-        console.log(`[${index + 1}/${validUrls.length}] Processando: ${url}`);
+        console.log(`[${index + 1}/${validUrls.length}] Tentando baixar: ${url}`);
         
         const downloadResponse = await downloadImage({ imageUrl: url });
         
-        // VERIFICA SE TEM FALLBACK (imagem falhou mas não quebrou)
-        if (downloadResponse?.fallbackUrl && !downloadResponse?.success) {
-          console.warn(`⚠️ Falha ao baixar, usando URL original como fallback: ${url}`);
-          // Usa a URL original diretamente (não baixa)
+        // Se download falhou, usa URL original direto
+        if (!downloadResponse?.data?.success || !downloadResponse?.data?.dataUrl) {
+          console.warn(`⚠️ Download bloqueado, usando URL original: ${url}`);
           uploadedImages.push(url);
+          downloadFailCount++;
           continue;
         }
         
-        if (!downloadResponse?.dataUrl) {
-          throw new Error(downloadResponse?.error || 'Falha ao baixar imagem');
-        }
-        
-        const fetchRes = await fetch(downloadResponse.dataUrl);
+        // Download OK - converte e faz upload
+        const fetchRes = await fetch(downloadResponse.data.dataUrl);
         const imageBlob = await fetchRes.blob();
         
         const fileName = `imported_${index + 1}.${imageBlob.type.split('/')[1] || 'jpg'}`;
@@ -568,35 +565,36 @@ export default function CreateAuction() {
 
         const uploadResult = await base44.integrations.Core.UploadFile({ file });
         
-        if (!uploadResult?.file_url) {
-          throw new Error("Falha no upload final");
+        if (uploadResult?.file_url) {
+          uploadedImages.push(uploadResult.file_url);
+          console.log(`✅ [${index + 1}/${validUrls.length}] Upload completo!`);
+        } else {
+          // Se upload falhou, usa URL original
+          uploadedImages.push(url);
+          downloadFailCount++;
         }
-        
-        uploadedImages.push(uploadResult.file_url);
-        console.log(`✅ [${index + 1}/${validUrls.length}] Sucesso!`);
         
       } catch (error) {
         console.error(`❌ [${index + 1}/${validUrls.length}] Erro:`, error.message);
-        failedImages.push({ url, error: error.message });
-        // CONTINUA MESMO COM ERRO (não para tudo!)
+        // Sempre adiciona a URL original como fallback
+        uploadedImages.push(url);
+        downloadFailCount++;
       }
     }
 
     setIsProcessing(false);
 
-    // FEEDBACK MAIS CLARO
+    // Mostra resultado
     if (uploadedImages.length === 0) {
-      alert("❌ Nenhuma imagem foi processada. Tente URLs diferentes ou adicione manualmente.");
+      toast.error("❌ Nenhuma imagem foi processada. Use o upload manual de imagens.");
       setManualStep(3);
       return;
     }
 
-    if (failedImages.length > 0) {
-      const successCount = uploadedImages.length;
-      const failCount = failedImages.length;
-      alert(`⚠️ Processamento parcial:\n✅ ${successCount} imagens OK\n❌ ${failCount} falharam\n\nAs que funcionaram serão exibidas!`);
+    if (downloadFailCount > 0) {
+      toast.success(`✅ ${uploadedImages.length} imagens OK! (${downloadFailCount} usando links originais)`);
     } else {
-      alert(`✅ Todas as ${uploadedImages.length} imagens foram processadas!`);
+      toast.success(`✅ Todas as ${uploadedImages.length} imagens processadas!`);
     }
 
     setDownloadedImages(uploadedImages);
