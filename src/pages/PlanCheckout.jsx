@@ -253,7 +253,7 @@ export default function PlanCheckout() {
                 <div className="space-y-4">
                   <div className="bg-blue-600/10 rounded-lg p-4 border border-blue-500/30 mb-4">
                     <p className="text-blue-400 text-sm">
-                      📝 Para pagamento via PIX, precisamos do seu CPF e telefone
+                      Para pagamento via PIX, precisamos do seu CPF e telefone
                     </p>
                   </div>
 
