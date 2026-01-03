@@ -47,7 +47,14 @@ export default function BannerManagement() {
   const handleUploadImage = async (file) => {
     if (!file) return null;
     
+    // Verifica se é uma imagem
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, envie apenas imagens');
+      return null;
+    }
+    
     try {
+      // Upload direto sem compressão para manter qualidade máxima
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
       return file_url;
     } catch (error) {
@@ -653,7 +660,7 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
                       {isUploading ? 'Enviando imagem...' : 'Clique ou arraste uma imagem'}
                     </p>
                     <p className="text-gray-500 text-sm">
-                      PNG, JPG ou GIF (máx. 10MB)
+                      PNG, JPG ou WebP (qualidade máxima preservada)
                     </p>
                   </div>
                 )}
@@ -662,7 +669,7 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
                 onChange={handleFileChange}
                 disabled={isUploading}
                 className="hidden"
@@ -807,7 +814,7 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
               <div className="flex gap-2">
                 <Input
                   type="file"
-                  accept="image/*"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
                   onChange={handleFileChange}
                   disabled={isUploading}
                   className="bg-gray-700 text-white border-gray-600"
