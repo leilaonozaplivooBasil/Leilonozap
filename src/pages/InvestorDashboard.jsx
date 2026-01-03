@@ -646,7 +646,12 @@ export default function InvestorDashboard() {
                 {/* Mobile: Carousel System */}
                 <div className="md:hidden px-2">
                   {/* Selected Plan Card */}
-                  <div className="flex justify-center mb-4">
+                  <div 
+                    className="flex justify-center mb-4"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
                     {portfolios.map((portfolio, idx) => {
                       if (idx !== selectedPlanIndex) return null;
                       const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
