@@ -56,10 +56,10 @@ const LandingContent = ({ onLoginClick }) => {
             </p>
             <button
               onClick={onLoginClick}
-              className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-green-500/50 transition-all duration-300 transform hover:scale-105 flex items-center gap-3"
+              className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold text-base rounded-xl shadow-lg hover:shadow-green-500/50 transition-all duration-300 transform hover:scale-105 flex items-center gap-2"
             >
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <LogIn className="w-5 h-5" />
+              <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                <LogIn className="w-4 h-4" />
               </div>
               <span>Entrar na Minha Conta</span>
             </button>
