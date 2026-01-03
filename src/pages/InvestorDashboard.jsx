@@ -751,34 +751,17 @@ export default function InvestorDashboard() {
                     })}
                   </div>
 
-                  {/* Navigation Arrows */}
-                  <div className="flex justify-center items-center gap-4 mt-4">
-                    <button
-                      onClick={() => setSelectedPlanIndex((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1))}
-                      className="w-12 h-12 bg-gray-800 hover:bg-gray-700 rounded-full flex items-center justify-center transition-colors"
-                    >
-                      <ChevronLeft className="w-6 h-6 text-white" />
-                    </button>
-
-                    {/* Indicators */}
-                    <div className="flex gap-2">
-                      {portfolios.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setSelectedPlanIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${
-                            idx === selectedPlanIndex ? 'bg-green-500 w-6' : 'bg-gray-600'
-                          }`}
-                        />
-                      ))}
-                    </div>
-
-                    <button
-                      onClick={() => setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
-                      className="w-12 h-12 bg-gray-800 hover:bg-gray-700 rounded-full flex items-center justify-center transition-colors"
-                    >
-                      <ChevronRight className="w-6 h-6 text-white" />
-                    </button>
+                  {/* Indicators */}
+                  <div className="flex justify-center gap-2 mt-4">
+                    {portfolios.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedPlanIndex(idx)}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          idx === selectedPlanIndex ? 'bg-green-500 w-6' : 'bg-gray-600'
+                        }`}
+                      />
+                    ))}
                   </div>
                 </div>
               </DialogContent>
