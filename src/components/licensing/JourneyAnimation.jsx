@@ -112,7 +112,7 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
     return (
         <div className="py-12 px-4">
             {/* TÍTULO */}
-            <h2 className="text-4xl md:text-5xl font-bold text-center mb-12 bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
+            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
                 {journeyTitle || "Sistema automático de ganhos recorrentes ✨"}
             </h2>
 
@@ -139,7 +139,7 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
                             <div key={phase.id} className="relative z-10 flex flex-col items-center">
                                 {/* Círculo */}
                                 <motion.div 
-                                    className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl transition-all duration-500 ${
+                                    className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-500 ${
                                         index <= currentPhase 
                                             ? 'bg-green-500 shadow-lg shadow-green-500/50' 
                                             : 'bg-gray-700'
