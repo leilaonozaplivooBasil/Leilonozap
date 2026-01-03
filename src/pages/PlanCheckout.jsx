@@ -321,12 +321,12 @@ export default function PlanCheckout() {
                         const cleanPhone = phone.replace(/\D/g, '');
 
                         if (cleanCpf.length !== 11) {
-                          alert("CPF deve ter 11 dígitos");
+                          alert("CPF deve ter 11 digitos");
                           return;
                         }
 
                         if (cleanPhone.length < 10) {
-                          alert("Telefone inválido");
+                          alert("Telefone invalido");
                           return;
                         }
 
