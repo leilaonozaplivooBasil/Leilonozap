@@ -43,43 +43,69 @@ export default function ProductCarousel() {
   const currentProduct = products[currentIndex];
 
   return (
-    <div className="mb-12 sm:mb-16 max-w-4xl mx-auto px-4">
+    <div className="mb-12 sm:mb-16 max-w-6xl mx-auto px-4">
       <h2 className="text-2xl sm:text-3xl font-bold text-center text-white mb-8 sm:mb-12">
         Exemplo de <span className="text-green-400">Produtos</span>
       </h2>
 
-      <div className="relative w-full max-w-lg mx-auto py-12">
-        <div className="relative h-96 flex items-center justify-center" style={{ perspective: '1500px' }}>
-          {/* Cards de fundo */}
+      <div className="relative w-full h-[400px] flex items-center justify-center overflow-hidden">
+        <div className="relative w-full h-full flex items-center justify-center">
           {products.map((product, index) => {
-            const offset = (index - currentIndex + products.length) % products.length;
-            const isActive = offset === 0;
+            const position = index - currentIndex;
+            const isActive = position === 0;
+            
+            // Calcula a posição horizontal
+            let xOffset = 0;
+            let scale = 0.75;
+            let zIndex = 1;
+            let opacity = 0.4;
+            
+            if (position === 0) {
+              xOffset = 0;
+              scale = 1;
+              zIndex = 10;
+              opacity = 1;
+            } else if (position === 1 || position === -2) {
+              xOffset = 350;
+              scale = 0.85;
+              zIndex = 5;
+              opacity = 0.7;
+            } else if (position === -1 || position === 2) {
+              xOffset = -350;
+              scale = 0.85;
+              zIndex = 5;
+              opacity = 0.7;
+            }
             
             return (
               <motion.div
                 key={product.name}
                 className="absolute"
                 animate={{
-                  scale: isActive ? (isHovered ? 1.05 : 1) : 0.85 - (offset * 0.05),
-                  y: isActive ? (isHovered ? -10 : 0) : offset * 15,
-                  z: isActive ? 0 : -offset * 100,
-                  opacity: offset < 2 ? 1 : 0,
-                  rotateY: isActive ? 0 : offset * 5
+                  x: xOffset,
+                  scale: isActive && isHovered ? 1.05 : scale,
+                  y: isActive && isHovered ? -20 : 0,
+                  opacity: opacity,
                 }}
-                transition={{ duration: 0.5, ease: [0.34, 1.56, 0.64, 1] }}
+                transition={{ 
+                  duration: 0.6, 
+                  ease: [0.34, 1.56, 0.64, 1] 
+                }}
                 style={{ 
-                  zIndex: products.length - offset,
-                  pointerEvents: isActive ? 'auto' : 'none'
+                  zIndex: zIndex,
+                  pointerEvents: isActive ? 'auto' : 'none',
                 }}
                 onMouseEnter={() => { if (isActive) { setIsHovered(true); setIsPaused(true); } }}
                 onMouseLeave={() => { setIsHovered(false); setIsPaused(false); }}
               >
                 <Card 
-                  className="w-[400px] h-[280px] cursor-pointer bg-gray-800/90 backdrop-blur-sm border-gray-700 shadow-2xl transition-all"
+                  className="w-[380px] h-[300px] cursor-pointer bg-gray-800/90 backdrop-blur-sm border-gray-700 shadow-2xl transition-all"
                   style={{
                     boxShadow: isActive && isHovered 
                       ? '0 40px 120px rgba(0,0,0,0.8), 0 0 60px #1DB24A' 
-                      : '0 30px 80px rgba(0,0,0,0.6)',
+                      : isActive 
+                        ? '0 30px 80px rgba(0,0,0,0.6)' 
+                        : '0 20px 40px rgba(0,0,0,0.4)',
                     borderColor: isActive && isHovered ? '#1DB24A' : 'rgba(107, 114, 128, 0.5)'
                   }}
                   onClick={() => {
@@ -107,28 +133,28 @@ export default function ProductCarousel() {
             );
           })}
         </div>
+      </div>
 
-        {/* Indicadores */}
-        <div className="flex justify-center gap-3 mt-8">
-          {products.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => {
-                setCurrentIndex(index);
-                setIsPaused(true);
-                setTimeout(() => setIsPaused(false), 4000);
-              }}
-              className={`transition-all duration-300 rounded-full ${
-                index === currentIndex ? 'w-10 h-3' : 'w-3 h-3'
-              }`}
-              style={{
-                backgroundColor: index === currentIndex ? '#1DB24A' : '#4B5563',
-                boxShadow: index === currentIndex ? '0 0 20px #1DB24A' : 'none'
-              }}
-              aria-label={`Ver ${products[index].name}`}
-            />
-          ))}
-        </div>
+      {/* Indicadores */}
+      <div className="flex justify-center gap-3 mt-8">
+        {products.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => {
+              setCurrentIndex(index);
+              setIsPaused(true);
+              setTimeout(() => setIsPaused(false), 4000);
+            }}
+            className={`transition-all duration-300 rounded-full ${
+              index === currentIndex ? 'w-10 h-3' : 'w-3 h-3'
+            }`}
+            style={{
+              backgroundColor: index === currentIndex ? '#1DB24A' : '#4B5563',
+              boxShadow: index === currentIndex ? '0 0 20px #1DB24A' : 'none'
+            }}
+            aria-label={`Ver ${products[index].name}`}
+          />
+        ))}
       </div>
     </div>
   );
