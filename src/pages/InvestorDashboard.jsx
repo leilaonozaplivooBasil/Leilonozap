@@ -356,7 +356,7 @@ export default function InvestorDashboard() {
                   <Wallet className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-xs sm:text-sm">Total Investido</p>
+                  <p className="text-gray-400 text-xs sm:text-sm">Total de Compras</p>
                   <p className="text-xl sm:text-2xl font-bold text-white">R$ {totalInvested.toLocaleString('pt-BR')}</p>
                 </div>
               </div>
