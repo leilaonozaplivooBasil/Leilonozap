@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -81,6 +81,14 @@ export default function ProductCarousel() {
       return nextIndex;
     });
   };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      paginate(1);
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [currentIndex]);
 
   const currentProduct = products[currentIndex];
 
