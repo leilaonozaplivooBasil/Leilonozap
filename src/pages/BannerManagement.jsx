@@ -607,7 +607,21 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
                 <Label className="text-gray-300">Investimento *</Label>
                 <Input
                   value={formData.investment || ''}
-                  onChange={(e) => setFormData({ ...formData, investment: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, investment: value });
+                    
+                    // Calcula automaticamente o lucro de 3%
+                    const numericValue = parseFloat(value.replace(/[^\d.,]/g, '').replace(',', '.'));
+                    if (!isNaN(numericValue)) {
+                      const profit = (numericValue * 0.03).toFixed(2);
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        investment: value,
+                        expected_return: `R$ ${profit.replace('.', ',')}` 
+                      }));
+                    }
+                  }}
                   placeholder="Ex: R$ 8.000"
                   className="bg-gray-700 text-white border-gray-600"
                   required
@@ -619,10 +633,11 @@ function ProductForm({ product, onSave, onCancel, onUploadImage }) {
                 <Input
                   value={formData.expected_return || ''}
                   onChange={(e) => setFormData({ ...formData, expected_return: e.target.value })}
-                  placeholder="Ex: R$ 240"
+                  placeholder="Calculado automaticamente"
                   className="bg-gray-700 text-white border-gray-600"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">💡 Calculado automaticamente ao digitar o investimento</p>
               </div>
             </div>
 
