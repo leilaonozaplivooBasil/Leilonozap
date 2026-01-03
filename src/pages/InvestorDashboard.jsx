@@ -787,7 +787,7 @@ export default function InvestorDashboard() {
               <div>
                 <h4 className="font-bold text-white mb-2">💰 Lucro Garantido</h4>
                 <p className="text-gray-400 text-sm">
-                  3% de retorno sobre o valor investido, independente do volume de vendas.
+                  3% de retorno sobre o valor de compra, independente do volume de vendas.
                 </p>
               </div>
 
