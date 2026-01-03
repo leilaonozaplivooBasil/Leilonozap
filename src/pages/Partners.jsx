@@ -211,21 +211,21 @@ const LandingContent = ({ onLoginClick }) => {
               <div className="flex items-start gap-3 sm:gap-4">
                 <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5 sm:mt-1" />
                 <p className="text-gray-300 text-sm sm:text-lg leading-relaxed">
-                  <strong className="text-white">Gestão:</strong> 100% gerenciada pela nossa equipe
+                  <strong className="text-white">Gestão:</strong> 100% gerenciada pela nossa equipe, da compra até a entrega
                 </p>
               </div>
 
               <div className="flex items-start gap-3 sm:gap-4">
                 <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400 flex-shrink-0 mt-0.5 sm:mt-1" />
                 <p className="text-gray-300 text-sm sm:text-lg leading-relaxed">
-                  <strong className="text-white">Risco:</strong> Baixíssimo - produtos de alta liquidez
+                  <strong className="text-white">Risco:</strong> ZERO, garantia é o produto!
                 </p>
               </div>
             </div>
 
             <div className="mt-6 sm:mt-8 bg-green-600/20 rounded-lg p-4 sm:p-6 border border-green-500/30">
               <p className="text-white text-base sm:text-xl font-bold text-center leading-relaxed">
-                💰 Invista a partir de R$ 5.000,00 e receba seu valor de volta + 3% em 60 dias!
+                💰 Compre a partir de R$5.000,00 e receba seu valor de volta + 3% em 60 dias!
               </p>
             </div>
           </CardContent>
