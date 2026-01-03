@@ -209,13 +209,17 @@ export default function PlanCheckout() {
             <CardContent className="space-y-4">
 
               {pixData ? (
-                // Exibe QR Code PIX (qr_code_base64 já vem com prefixo data:image/png;base64, da AbacatePay)
+                // Exibe QR Code PIX
                 <div className="space-y-4">
                   <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4 text-center">
                     <img 
-                      src={pixData.qr_code_base64} 
+                      src={pixData.qr_code_base64}
                       alt="QR Code PIX" 
                       className="w-64 h-64 mx-auto mb-4 rounded-lg"
+                      onError={(e) => {
+                        console.error('❌ Erro ao carregar imagem do QR Code');
+                        console.error('URL da imagem:', pixData.qr_code_base64?.substring(0, 100));
+                      }}
                     />
                     <p className="text-sm text-gray-700 mb-2">Ou copie o código PIX:</p>
                     <div className="flex gap-2">
