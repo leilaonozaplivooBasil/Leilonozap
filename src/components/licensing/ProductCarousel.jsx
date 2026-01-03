@@ -27,6 +27,7 @@ const products = [
   }
 ];
 
+// 🔥 CARROSSEL DECK HORIZONTAL - VERSÃO 2026-01-03
 export default function ProductCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
