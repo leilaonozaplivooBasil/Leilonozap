@@ -399,7 +399,7 @@ export default function InvestorDashboard() {
         {activeInvestments.length > 0 && showInvestments && (
           <div className="mb-8">
             <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">
-              Meus <span className="text-green-400">Investimentos Ativos</span>
+              Minhas <span className="text-green-400">Compras Ativas</span>
             </h2>
             
             <div className="space-y-6">
