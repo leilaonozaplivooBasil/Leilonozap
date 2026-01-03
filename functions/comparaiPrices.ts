@@ -332,30 +332,34 @@ Deno.serve(async (req) => {
                     }
                 }
                 
+                // 🆕 PRIORIDADE 1: IA PRIMEIRO (mais precisa)
                 if (!supplierPrice) {
-                    const visualResult = extractPriceWithContext(html, validCurrentPrice, category);
-                    if (visualResult) {
-                        supplierPrice = visualResult.price;
-                        extractionMethod = visualResult.method;
-                    }
-                }
-                
-                if (!supplierPrice) {
-                    console.log(`   🤖 Tentando IA...`);
+                    console.log(`   🤖 Tentando IA (prioridade)...`);
                     
-                    const htmlSnippet = html.substring(0, 30000);
+                    const htmlSnippet = html.substring(0, 50000);
                     
-                    const llmPrompt = `Extraia o preço COMPLETO deste produto (não preço promocional ou parcelado).
+                    const llmPrompt = `Você é um extrator de preços especializado. Analise o HTML e extraia o preço de venda atual do produto.
 
 PRODUTO: "${productTitle}"
 CATEGORIA: ${category}
 
-HTML:
+HTML DA PÁGINA:
 ${htmlSnippet}
 
-IMPORTANTE: Retorne o preço CHEIO do produto, não o preço com desconto ou parcelado.
+INSTRUÇÕES CRÍTICAS:
+- Busque o preço de venda À VISTA (não parcelado)
+- IGNORE preços riscados/antigos
+- IGNORE preços de frete
+- IGNORE ofertas "compre 2 leve 3"
+- O preço deve estar entre R$ 10,00 e R$ ${maxAllowedPrice.toFixed(2)}
+- Se encontrar múltiplos preços, escolha o maior (preço sem desconto)
 
-Retorne JSON: {"price": 392.00, "confidence": "high"}`;
+Retorne JSON:
+{
+  "price": 999.99,
+  "confidence": "high",
+  "found": true
+}`;
 
                     const llmResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
                         prompt: llmPrompt,
@@ -364,14 +368,27 @@ Retorne JSON: {"price": 392.00, "confidence": "high"}`;
                             type: "object",
                             properties: {
                                 price: { type: ["number", "null"] },
-                                confidence: { type: "string" }
+                                confidence: { type: "string" },
+                                found: { type: "boolean" }
                             }
                         }
                     });
                     
-                    if (llmResult?.price && llmResult.price >= 10 && llmResult.price <= maxAllowedPrice * 2) {
+                    if (llmResult?.found && llmResult.price && llmResult.price >= 10 && llmResult.price <= maxAllowedPrice * 2) {
                         supplierPrice = llmResult.price;
-                        extractionMethod = 'ai';
+                        extractionMethod = 'ai-extraction';
+                        console.log(`   ✅ IA extraiu: R$ ${supplierPrice.toFixed(2)} (confiança: ${llmResult.confidence})`);
+                    } else {
+                        console.log(`   ⚠️ IA não encontrou preço válido, tentando métodos tradicionais...`);
+                    }
+                }
+                
+                // PRIORIDADE 2: Métodos tradicionais (fallback)
+                if (!supplierPrice) {
+                    const visualResult = extractPriceWithContext(html, validCurrentPrice, category);
+                    if (visualResult) {
+                        supplierPrice = visualResult.price;
+                        extractionMethod = visualResult.method;
                     }
                 }
                 
