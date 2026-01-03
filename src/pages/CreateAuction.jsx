@@ -964,52 +964,47 @@ export default function CreateAuction() {
                         {/* ABA: BUSCA POR URL */}
                         <TabsContent value="url" className="mt-4">
                           <div>
-                            {!selectedMarketplace ? (
+                            <Label htmlFor="marketplace" className="text-sm font-bold text-blue-300 mb-2 block">
+                              🔗 Selecione de qual site você vai importar:
+                            </Label>
+                            
+                            <Select 
+                              value={selectedMarketplace?.id || ""} 
+                              onValueChange={(value) => {
+                                const sites = [
+                                  { id: 'mercadolivre', name: 'Mercado Livre', placeholder: 'https://produto.mercadolivre.com.br/...' },
+                                  { id: 'amazon', name: 'Amazon', placeholder: 'https://www.amazon.com.br/produto/...' },
+                                  { id: 'shopee', name: 'Shopee', placeholder: 'https://shopee.com.br/produto...' },
+                                  { id: 'magazineluiza', name: 'Magazine Luiza', placeholder: 'https://www.magazineluiza.com.br/...' },
+                                  { id: 'casasbahia', name: 'Casas Bahia', placeholder: 'https://www.casasbahia.com.br/...' },
+                                  { id: 'pontofrio', name: 'Ponto Frio', placeholder: 'https://www.pontofrio.com.br/...' },
+                                  { id: 'carrefour', name: 'Carrefour', placeholder: 'https://www.carrefour.com.br/...' },
+                                  { id: 'aliexpress', name: 'AliExpress', placeholder: 'https://pt.aliexpress.com/...' }
+                                ];
+                                const selected = sites.find(s => s.id === value);
+                                setSelectedMarketplace(selected || null);
+                              }}
+                            >
+                              <SelectTrigger className="bg-gray-900 border-blue-600 text-gray-100 mb-4">
+                                <SelectValue placeholder="Escolha o site..." />
+                              </SelectTrigger>
+                              <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
+                                <SelectItem value="mercadolivre">• Mercado Livre</SelectItem>
+                                <SelectItem value="amazon">• Amazon</SelectItem>
+                                <SelectItem value="shopee">• Shopee</SelectItem>
+                                <SelectItem value="magazineluiza">• Magazine Luiza</SelectItem>
+                                <SelectItem value="casasbahia">• Casas Bahia</SelectItem>
+                                <SelectItem value="pontofrio">• Ponto Frio</SelectItem>
+                                <SelectItem value="carrefour">• Carrefour</SelectItem>
+                                <SelectItem value="aliexpress">• AliExpress</SelectItem>
+                              </SelectContent>
+                            </Select>
+
+                            {selectedMarketplace && (
                               <div>
-                                <Label className="text-sm font-bold text-blue-300 mb-3 block">
-                                  🔗 Selecione de qual site você vai importar:
+                                <Label htmlFor="productUrl" className="text-sm font-medium text-gray-400 mb-2 block">
+                                  🔗 Cole o link do produto:
                                 </Label>
-                                
-                                <div className="grid grid-cols-2 gap-3">
-                                  {[
-                                    { id: 'mercadolivre', name: 'Mercado Livre', color: 'yellow', placeholder: 'https://produto.mercadolivre.com.br/...' },
-                                    { id: 'amazon', name: 'Amazon', color: 'orange', placeholder: 'https://www.amazon.com.br/produto/...' },
-                                    { id: 'shopee', name: 'Shopee', color: 'red', placeholder: 'https://shopee.com.br/produto...' },
-                                    { id: 'magazineluiza', name: 'Magazine Luiza', color: 'blue', placeholder: 'https://www.magazineluiza.com.br/...' },
-                                    { id: 'casasbahia', name: 'Casas Bahia', color: 'orange', placeholder: 'https://www.casasbahia.com.br/...' },
-                                    { id: 'pontofrio', name: 'Ponto Frio', color: 'blue', placeholder: 'https://www.pontofrio.com.br/...' },
-                                    { id: 'carrefour', name: 'Carrefour', color: 'blue', placeholder: 'https://www.carrefour.com.br/...' },
-                                    { id: 'aliexpress', name: 'AliExpress', color: 'red', placeholder: 'https://pt.aliexpress.com/...' }
-                                  ].map((site) => (
-                                    <button
-                                      key={site.id}
-                                      onClick={() => setSelectedMarketplace(site)}
-                                      className={`p-4 rounded-lg border-2 transition-all hover:scale-105 hover:shadow-lg bg-gray-800/50 border-${site.color}-500/30 hover:border-${site.color}-400 hover:bg-${site.color}-900/20`}
-                                    >
-                                      <p className="text-white font-semibold text-sm">{site.name}</p>
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div>
-                                <div className="mb-4 flex items-center justify-between">
-                                  <Label className="text-sm font-bold text-blue-300 flex items-center gap-2">
-                                    🔗 {selectedMarketplace.name}
-                                  </Label>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedMarketplace(null);
-                                      setProductUrl("");
-                                    }}
-                                    className="text-gray-400 hover:text-white"
-                                  >
-                                    ← Voltar
-                                  </Button>
-                                </div>
                                 
                                 <Input
                                   id="productUrl"
@@ -1018,7 +1013,6 @@ export default function CreateAuction() {
                                   placeholder={selectedMarketplace.placeholder}
                                   className="mb-4 bg-gray-900 border-blue-600 text-gray-100 placeholder-gray-500 focus:border-blue-400"
                                   disabled={isProcessing}
-                                  autoFocus
                                 />
                                 
                                 <Button 
