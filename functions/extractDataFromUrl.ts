@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: "URL obrigatória" }, { status: 400 });
         }
 
-        console.log(`🔍 Extraindo: ${productUrl}`);
+        console.log(`🔍 URL: ${productUrl}`);
 
         // IDENTIFICA MARKETPLACE
         const url = productUrl.toLowerCase();
@@ -33,130 +33,104 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // BUSCA PÁGINA COM IA (usando ferramenta fetch_website)
-        let markdown = '';
+        // BUSCA HTML DIRETO
         let html = '';
-        
-        try {
-            // USA A INTEGRAÇÃO fetch_website DO BASE44
-            const pageData = await base44.integrations.Core.FetchWebsite({
-                url: productUrl,
-                formats: ['markdown', 'html']
-            });
-            
-            markdown = pageData.markdown || '';
-            html = pageData.html || '';
-            
-            console.log(`✅ Página carregada: ${markdown.length} chars markdown`);
-            
-        } catch (fetchError) {
-            console.warn('⚠️ Fetch website falhou, tentando fetch direto:', fetchError.message);
-            
-            // FALLBACK: fetch tradicional
-            for (let i = 0; i < 2; i++) {
-                try {
-                    const resp = await fetch(productUrl, {
-                        headers: {
-                            "User-Agent": getRandomUA(),
-                            "Accept": "text/html",
-                            "Accept-Language": "pt-BR"
-                        },
-                        signal: AbortSignal.timeout(15000)
-                    });
+        for (let i = 0; i < 2; i++) {
+            try {
+                const resp = await fetch(productUrl, {
+                    headers: {
+                        "User-Agent": getRandomUA(),
+                        "Accept": "text/html,application/xhtml+xml",
+                        "Accept-Language": "pt-BR,pt;q=0.9"
+                    },
+                    signal: AbortSignal.timeout(15000)
+                });
 
-                    if (resp.ok) {
-                        html = await resp.text();
-                        break;
-                    }
-                } catch (e) {
-                    if (i === 1) throw new Error("Não foi possível acessar a página");
+                if (resp.ok) {
+                    html = await resp.text();
+                    console.log(`✅ ${html.length} chars`);
+                    break;
                 }
+            } catch (e) {
+                if (i === 1) {
+                    return Response.json({
+                        error: "Página inacessível",
+                        suggestion: "Copie dados manualmente"
+                    });
+                }
+                await new Promise(r => setTimeout(r, 1000));
             }
         }
 
-        if (!markdown && !html) {
+        if (!html) {
             return Response.json({
-                error: "Página inacessível",
-                suggestion: "Site pode estar bloqueando robôs"
+                error: "Falha ao carregar página",
+                suggestion: "Verifique o link"
             });
         }
 
-        // EXTRAI DADOS COM IA (usando markdown que é menor)
-        const contentToAnalyze = markdown || html.substring(0, 20000);
+        // EXTRAI COM IA (trecho reduzido)
+        const snippet = html.substring(0, 12000);
         
-        console.log('🤖 Usando IA para extrair dados...');
+        console.log('🤖 IA processando...');
         
-        const aiResponse = await base44.integrations.Core.InvokeLLM({
-            prompt: `Extraia dados deste produto de e-commerce (${marketplace}):
+        const aiResult = await base44.integrations.Core.InvokeLLM({
+            prompt: `Extraia do HTML (${marketplace}):
+- Título do produto
+- Descrição (2-3 linhas)
+- URLs de imagens do produto (máximo 10)
 
-${contentToAnalyze}
+HTML:
+${snippet}
 
-INSTRUÇÕES:
-1. Título: nome completo do produto
-2. Descrição: características principais (2-3 linhas)
-3. Imagens: encontre URLs completas de imagens do produto (não logos/ícones)
-
-Retorne JSON puro.`,
+Retorne JSON.`,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
                     description: { type: "string" },
-                    imageUrls: {
-                        type: "array",
-                        items: { type: "string" }
-                    }
+                    imageUrls: { type: "array", items: { type: "string" } }
                 },
                 required: ["title", "description"]
             }
         });
 
-        let { title, description, imageUrls } = aiResponse;
+        let { title, description, imageUrls } = aiResult;
 
-        // EXTRAI IMAGENS DO HTML SE IA NÃO ENCONTROU
+        // EXTRAI IMAGENS POR REGEX SE IA FALHOU
         if (!imageUrls || imageUrls.length === 0) {
-            console.log('📸 Extraindo imagens por regex...');
-            imageUrls = [];
-            
-            const source = html || markdown;
+            console.log('📸 Regex para imagens...');
             
             if (marketplace === 'mercadolivre') {
-                const mlRegex = /https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[^"'\s<>]+\.(?:jpg|webp|png)/gi;
-                imageUrls = [...new Set(source.match(mlRegex) || [])];
+                const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_[^"'\s<>]+\.(?:jpg|webp)/gi;
+                imageUrls = [...new Set(html.match(regex) || [])].slice(0, 10);
                 
             } else if (marketplace === 'amazon') {
-                const amzRegex = /https?:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.jpg/gi;
-                const matches = source.match(amzRegex) || [];
-                imageUrls = [...new Set(matches)].filter(url => 
-                    !url.includes('_US100_') && 
-                    !url.includes('_SL75_') &&
-                    !url.includes('sprite')
-                );
-                
+                const regex = /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.jpg/gi;
+                imageUrls = [...new Set(html.match(regex) || [])]
+                    .filter(u => !u.includes('_US100_') && !u.includes('_SL75_'))
+                    .slice(0, 10);
+                    
             } else if (marketplace === 'shopee') {
-                const shopeeRegex = /https?:\/\/[^"'\s<>]*\.shopee\.com\.br\/[^"'\s<>]+\.(?:jpg|png|webp)/gi;
-                imageUrls = [...new Set(source.match(shopeeRegex) || [])];
+                const regex = /https:\/\/[^"'\s<>]*shopee\.com\.br\/[^"'\s<>]+\.(?:jpg|png|webp)/gi;
+                imageUrls = [...new Set(html.match(regex) || [])].slice(0, 10);
                 
             } else {
-                // GENÉRICO
-                const genericRegex = /https?:\/\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-                imageUrls = [...new Set(source.match(genericRegex) || [])]
-                    .filter(url => {
-                        const lower = url.toLowerCase();
-                        return !lower.includes('logo') && 
-                               !lower.includes('icon') && 
-                               url.length > 50;
-                    });
+                const regex = /https?:\/\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+                imageUrls = [...new Set(html.match(regex) || [])]
+                    .filter(u => {
+                        const l = u.toLowerCase();
+                        return !l.includes('logo') && !l.includes('icon') && u.length > 50;
+                    })
+                    .slice(0, 8);
             }
-            
-            imageUrls = imageUrls.slice(0, 12);
         }
 
         // LIMPA URLs
         imageUrls = (imageUrls || [])
-            .filter(url => url && typeof url === 'string' && url.startsWith('http'))
-            .map(url => url.split('&quot;')[0].split('"')[0])
-            .filter(url => url.length > 30);
+            .filter(u => u && u.startsWith('http'))
+            .map(u => u.split('"')[0].split('&quot;')[0])
+            .filter(u => u.length > 30);
 
         console.log(`✅ ${imageUrls.length} imagens`);
 
@@ -168,7 +142,7 @@ Retorne JSON puro.`,
         });
 
     } catch (error) {
-        console.error('❌ Erro:', error);
+        console.error('❌', error);
         return Response.json({
             error: "Erro ao processar",
             details: error.message
