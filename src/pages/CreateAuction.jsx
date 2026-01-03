@@ -391,21 +391,41 @@ export default function CreateAuction() {
   // ETAPA 1: EXTRAIR TUDO (TÍTULO, DESCRIÇÃO, IMAGENS) DE UMA VEZ
   const extractAllData = async () => {
     if (!productUrl) {
-      alert("Cole a URL do produto primeiro!");
+      toast.error("Cole a URL do produto primeiro!");
       return;
     }
     setIsProcessing(true);
     setManualStep(1);
     
     try {
-      // NOVO FLUXO: Chama a função unificada
-      const responseData = await extractDataFromUrl({ productUrl });
+      toast.info("🤖 IA analisando o produto...");
+      
+      const response = await extractDataFromUrl({ productUrl });
 
-      if (!responseData) {
-          throw new Error("A função de extração falhou.");
+      if (!response || !response.data) {
+          throw new Error("Falha na extração");
       }
       
-      const { title, description, imageUrls: extractedImageUrls } = responseData;
+      const responseData = response.data;
+      
+      // Verifica se houve erro
+      if (responseData.error) {
+        toast.error(responseData.error);
+        if (responseData.suggestion) {
+          alert(`❌ ${responseData.error}\n\n💡 ${responseData.suggestion}`);
+        }
+        setManualStep(0);
+        setIsProcessing(false);
+        return;
+      }
+      
+      const { title, description, imageUrls: extractedImageUrls, marketplace } = responseData;
+      
+      if (!title || !description) {
+        throw new Error("Dados incompletos extraídos");
+      }
+      
+      toast.success(`✅ Dados extraídos de ${marketplace || 'site'}!`);
       
       setExtractedData({ title, description });
       setFormData(prev => ({ ...prev, title, description }));
@@ -416,11 +436,17 @@ export default function CreateAuction() {
       }
       setImageUrls(finalUrls.slice(0, 6));
       
-      setManualStep(3); // Pula direto para a etapa de confirmação de imagens
+      if (extractedImageUrls && extractedImageUrls.length > 0) {
+        toast.success(`📸 ${extractedImageUrls.length} imagens encontradas!`);
+      } else {
+        toast.warning("⚠️ Nenhuma imagem encontrada. Adicione manualmente.");
+      }
+      
+      setManualStep(3);
 
     } catch (error) {
       console.error("Erro ao extrair dados:", error);
-      alert("Erro ao extrair dados: " + (error.message || "Verifique a URL e tente novamente."));
+      toast.error("Erro ao extrair dados: " + (error.message || "Verifique a URL"));
       setManualStep(0);
     }
     
@@ -813,23 +839,45 @@ export default function CreateAuction() {
                         {/* BUSCA POR URL */}
                         <div>
                           <Label htmlFor="productUrl" className="text-sm font-medium text-gray-400">
-                            🔗 Cole o link do produto (Mercado Livre, etc):
+                            🔗 Cole o link do produto:
                           </Label>
+                          <div className="mb-3 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
+                            <p className="text-xs text-blue-300 mb-2 font-semibold">✨ Sites suportados:</p>
+                            <div className="grid grid-cols-2 gap-1 text-xs text-blue-200">
+                              <div>• Mercado Livre</div>
+                              <div>• Amazon</div>
+                              <div>• Shopee</div>
+                              <div>• Magazine Luiza</div>
+                              <div>• Casas Bahia</div>
+                              <div>• Ponto Frio</div>
+                              <div>• Carrefour</div>
+                              <div>• AliExpress</div>
+                            </div>
+                          </div>
                           <Input
                             id="productUrl"
                             value={productUrl}
                             onChange={(e) => setProductUrl(e.target.value)}
-                            placeholder="https://www.mercadolivre.com.br/..."
+                            placeholder="https://www.amazon.com.br/produto/..."
                             className="mb-4 mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-blue-500"
                             disabled={isProcessing}
                           />
                           <Button 
                             onClick={extractAllData} 
                             disabled={isProcessing || !productUrl.trim()}
-                            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                            className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
                           >
-                            <Zap className="w-4 h-4 mr-2" />
-                            Extrair Dados da URL
+                            {isProcessing ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Extraindo com IA...
+                              </>
+                            ) : (
+                              <>
+                                <Zap className="w-4 h-4 mr-2" />
+                                🤖 Extrair com IA
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>

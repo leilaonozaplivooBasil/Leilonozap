@@ -1,83 +1,12 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// --- Funções Auxiliares ---
 const USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 ];
 
 const getRandomUA = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-
-function normalizeUrl(url) {
-    if (!url) return url;
-    return url.replace(/^http:\/\//i, "https://")
-              .split("?")[0]
-              .replace(/-\w\.(jpg|jpeg|png|webp)$/i, "-F.$1");
-}
-
-function deduplicate(arr) {
-    const seen = new Set();
-    return arr.filter(item => {
-        const k = item.url;
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-    });
-}
-
-function scoreUrl(url) {
-    const lowerUrl = url.toLowerCase();
-    let score = 0;
-
-    // --- POSITIVE SIGNALS (More likely to be a product image) ---
-    if (/\/d_nq_np_/.test(lowerUrl)) score += 150; // ML High Quality
-    if (/-f\.(jpg|jpeg|png|webp)$/.test(lowerUrl)) score += 100; // ML Full size
-    if (lowerUrl.includes('/products/')) score += 80;
-    if (lowerUrl.includes('/media/')) score += 50;
-    if (lowerUrl.includes('uploads')) score += 30;
-    if ((lowerUrl.match(/\d/g) || []).length > 8) score += 20; // Lots of numbers = likely an ID
-    if (/\.(jpg|jpeg|png|webp)/.test(lowerUrl)) score += 10; // Basic check
-
-    // --- NEGATIVE SIGNALS (More likely to be UI/junk) ---
-    // Keywords
-    const junkKeywords = ['logo', 'sprite', 'icon', 'avatar', 'placeholder', 'banner', 'cover', 'header', 'footer', 'ui-', 'ad-', 'advert', 'background', 'pattern'];
-    for (const keyword of junkKeywords) {
-        if (lowerUrl.includes(keyword)) score -= 500;
-    }
-    // Specific to this case
-    if (lowerUrl.includes('leilao-no-zap')) score -= 1000;
-    
-    // Structure
-    if (lowerUrl.endsWith('.svg')) score -= 200;
-    if (lowerUrl.endsWith('.gif')) score -= 100;
-    if (url.length < 60) score -= 50; // Penalize short URLs
-    
-    // Dimensions in URL
-    const sizeMatch = lowerUrl.match(/_(\d+)x(\d+)/) || lowerUrl.match(/-(\d+)x(\d+)/);
-    if (sizeMatch) {
-        const width = parseInt(sizeMatch[1], 10);
-        const height = parseInt(sizeMatch[2], 10);
-        if (width < 200 || height < 200) score -= 400; // Penalize small thumbnails heavily
-    }
-    
-    // Domain specific
-    if (lowerUrl.includes('frontend-assets')) score -= 500;
-    if (lowerUrl.includes('ui-navigation')) score -= 500;
-    
-    return score;
-}
-
-// Função para decodificar entidades HTML (ex: &amp; -> &)
-function decodeHtmlEntities(text) {
-    if (!text) return "";
-    return text.replace(/&quot;/g, '"')
-               .replace(/&apos;/g, "'")
-               .replace(/&lt;/g, '<')
-               .replace(/&gt;/g, '>')
-               .replace(/&amp;/g, '&');
-}
-
 
 Deno.serve(async (req) => {
     try {
@@ -86,99 +15,211 @@ Deno.serve(async (req) => {
 
         const { productUrl } = await req.json();
         if (!productUrl) {
-            return new Response(JSON.stringify({ error: "URL do produto é obrigatória" }), { status: 400 });
+            return Response.json({ error: "URL do produto é obrigatória" }, { status: 400 });
         }
 
+        console.log(`🔍 Extraindo dados de: ${productUrl}`);
+
+        // IDENTIFICA O MARKETPLACE
+        const url = productUrl.toLowerCase();
+        let marketplace = 'unknown';
+        if (url.includes('mercadolivre') || url.includes('mercadolibre')) marketplace = 'mercadolivre';
+        else if (url.includes('shopee')) marketplace = 'shopee';
+        else if (url.includes('amazon')) marketplace = 'amazon';
+        else if (url.includes('magazineluiza') || url.includes('magalu')) marketplace = 'magazineluiza';
+        else if (url.includes('casasbahia')) marketplace = 'casasbahia';
+        else if (url.includes('pontofrio')) marketplace = 'pontofrio';
+        else if (url.includes('carrefour')) marketplace = 'carrefour';
+        else if (url.includes('aliexpress')) marketplace = 'aliexpress';
+
+        console.log(`🏪 Marketplace detectado: ${marketplace}`);
+
+        // TENTA BUSCAR O HTML
         let html = null;
-        let lastError = null;
-        
-        // MÉTODO 1: Fetch direto com User-Agent
-        for (let attempt = 0; attempt < 2; attempt++) {
+        let fetchError = null;
+
+        for (let attempt = 0; attempt < 3; attempt++) {
             try {
-                const resp = await fetch(productUrl, { 
-                    headers: { 
+                const resp = await fetch(productUrl, {
+                    headers: {
                         "User-Agent": getRandomUA(),
                         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                         "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+                        "Accept-Encoding": "gzip, deflate, br",
                         "Cache-Control": "no-cache",
-                        "Pragma": "no-cache"
+                        "Pragma": "no-cache",
+                        "Sec-Fetch-Dest": "document",
+                        "Sec-Fetch-Mode": "navigate",
+                        "Sec-Fetch-Site": "none",
+                        "Upgrade-Insecure-Requests": "1"
                     },
-                    redirect: 'follow'
+                    redirect: 'follow',
+                    signal: AbortSignal.timeout(15000)
                 });
-                
+
                 if (resp.ok) {
                     html = await resp.text();
-                    console.log("✅ HTML obtido via fetch direto");
+                    console.log(`✅ HTML obtido (${html.length} chars)`);
                     break;
                 }
+
+                fetchError = `HTTP ${resp.status}`;
+                console.warn(`⚠️ Tentativa ${attempt + 1} falhou: ${fetchError}`);
                 
-                lastError = `HTTP ${resp.status}`;
-            } catch (fetchError) {
-                lastError = fetchError.message;
+            } catch (error) {
+                fetchError = error.message;
+                console.warn(`⚠️ Tentativa ${attempt + 1} erro: ${fetchError}`);
+                if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
             }
         }
-        
-        // MÉTODO 2: Se fetch falhou, retorna erro claro para o usuário
+
         if (!html) {
-            console.warn(`⚠️ Não foi possível acessar ${productUrl}. Erro: ${lastError}`);
-            
-            return new Response(JSON.stringify({ 
-                error: "Site bloqueou acesso automático",
-                suggestion: "Por favor, copie manualmente as informações do produto",
-                details: `Erro: ${lastError}`,
-                fallbackAvailable: true
-            }), { 
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
+            console.error(`❌ Todas as tentativas falharam para ${productUrl}`);
+            return Response.json({
+                error: "Não foi possível acessar a página",
+                suggestion: "Site pode estar bloqueando robôs. Tente copiar dados manualmente",
+                details: fetchError,
+                marketplace: marketplace
             });
         }
 
-        // 1. EXTRAIR TÍTULO
-        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-        const title = decodeHtmlEntities(titleMatch ? titleMatch[1] : 'Título não encontrado').split('|')[0].trim();
-
-        // 2. EXTRAIR DESCRIÇÃO
-        const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
-        let description = decodeHtmlEntities(descMatch ? descMatch[1] : '');
-        // Se a descrição for muito curta, tenta pegar do og:description
-        if (description.length < 50) {
-            const ogDescMatch = html.match(/<meta\s+property="og:description"\s+content="([^"]*)"/i);
-            if (ogDescMatch && ogDescMatch[1].length > description.length) {
-                description = decodeHtmlEntities(ogDescMatch[1]);
-            }
-        }
-        if (!description) {
-            description = "Descrição não encontrada.";
-        }
-
-        // 3. EXTRAIR IMAGENS (lógica mantida)
-        const regex = /https?:\/\/[^"'\\\s<>()]+/gi;
-        const allUrls = html.match(regex) || [];
-        const scoredUrls = allUrls
-            .filter(url => /mlstatic\.com/i.test(url) || /\.(jpg|jpeg|png|webp)/.test(url))
-            .map(url => ({
-                url: normalizeUrl(url),
-                score: scoreUrl(url)
-            }))
-            .filter(item => item.score > 0);
-
-        const uniqueScoredUrls = deduplicate(scoredUrls);
-        uniqueScoredUrls.sort((a, b) => b.score - a.score);
-        const imageUrls = uniqueScoredUrls.slice(0, 6).map(item => item.url);
+        // 🤖 USA IA PARA EXTRAIR DADOS ESTRUTURADOS
+        console.log('🤖 Processando com IA...');
         
-        return new Response(JSON.stringify({ title, description, imageUrls }), {
-             headers: { 'Content-Type': 'application/json' }
-        });
+        const aiPrompt = `Você é um extrator de dados de produtos para e-commerce. Analise o HTML fornecido e extraia:
+
+1. **Título do produto**: Nome completo e preciso
+2. **Descrição**: Descrição detalhada com características principais
+3. **URLs de imagens**: TODAS as URLs de imagens do produto (mínimo 3, máximo 10)
+
+IMPORTANTE SOBRE IMAGENS:
+- Busque URLs COMPLETAS que começam com http:// ou https://
+- Priorize imagens GRANDES do produto (não thumbnails)
+- Ignore logos, ícones, banners, sprites
+- Para Mercado Livre: busque URLs com "/D_NQ_NP_" (alta qualidade)
+- Para Amazon: busque URLs com "/images/I/" 
+- Para Shopee: busque URLs com "shopee.com.br" e extensões .jpg, .png, .webp
+- Para Magazine Luiza: busque URLs com "magazineluiza" 
+- Retorne APENAS URLs válidas de imagens do produto
+
+MARKETPLACE: ${marketplace}
+
+Retorne SOMENTE JSON válido, sem texto adicional.`;
+
+        try {
+            const aiResponse = await base44.integrations.Core.InvokeLLM({
+                prompt: aiPrompt,
+                add_context_from_internet: false,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        title: { type: "string" },
+                        description: { type: "string" },
+                        imageUrls: {
+                            type: "array",
+                            items: { type: "string" }
+                        }
+                    },
+                    required: ["title", "description", "imageUrls"]
+                },
+                file_urls: [`data:text/html;base64,${btoa(html.substring(0, 100000))}`]
+            });
+
+            console.log('✅ IA processou os dados!');
+
+            // VALIDA E LIMPA OS DADOS
+            let { title, description, imageUrls } = aiResponse;
+
+            // Limpa título
+            title = title.split('|')[0].split(' - ')[0].trim();
+            if (title.length > 100) title = title.substring(0, 97) + '...';
+
+            // Limpa descrição
+            if (description.length > 500) description = description.substring(0, 497) + '...';
+
+            // VALIDA E FILTRA IMAGENS
+            const validImageUrls = (imageUrls || [])
+                .filter(url => {
+                    if (!url || typeof url !== 'string') return false;
+                    const urlLower = url.toLowerCase();
+                    return urlLower.startsWith('http') && 
+                           /\.(jpg|jpeg|png|webp)/.test(urlLower) &&
+                           !urlLower.includes('logo') &&
+                           !urlLower.includes('icon') &&
+                           !urlLower.includes('sprite') &&
+                           url.length > 40;
+                })
+                .map(url => {
+                    // Normaliza URLs do Mercado Livre para versão -F (full size)
+                    if (url.includes('mlstatic.com')) {
+                        return url.replace(/-\w\.(jpg|jpeg|png|webp)$/i, '-F.$1');
+                    }
+                    return url;
+                })
+                .slice(0, 10);
+
+            console.log(`📸 ${validImageUrls.length} imagens válidas encontradas`);
+
+            // FALLBACK: Se IA não encontrou imagens, tenta regex tradicional
+            if (validImageUrls.length === 0) {
+                console.log('⚠️ IA não encontrou imagens, tentando regex...');
+                
+                const regex = /https?:\/\/[^"'\s<>()]+\.(jpg|jpeg|png|webp)/gi;
+                const allUrls = html.match(regex) || [];
+                
+                const filteredUrls = allUrls
+                    .filter(url => {
+                        const urlLower = url.toLowerCase();
+                        return !urlLower.includes('logo') &&
+                               !urlLower.includes('icon') &&
+                               !urlLower.includes('sprite') &&
+                               !urlLower.includes('banner');
+                    })
+                    .map(url => url.split('?')[0])
+                    .filter((url, index, self) => self.indexOf(url) === index)
+                    .slice(0, 6);
+
+                validImageUrls.push(...filteredUrls);
+            }
+
+            return Response.json({
+                title: title || 'Produto',
+                description: description || 'Sem descrição disponível',
+                imageUrls: validImageUrls,
+                marketplace: marketplace
+            });
+
+        } catch (aiError) {
+            console.error('❌ Erro na IA:', aiError);
+            
+            // FALLBACK COMPLETO: Extração regex tradicional
+            console.log('🔧 Usando extração tradicional como fallback...');
+            
+            const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+            const title = titleMatch ? titleMatch[1].split('|')[0].trim() : 'Produto';
+
+            const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*)"/i);
+            const description = descMatch ? descMatch[1] : 'Descrição não disponível';
+
+            const regex = /https?:\/\/[^"'\s<>()]+\.(jpg|jpeg|png|webp)/gi;
+            const allUrls = html.match(regex) || [];
+            const imageUrls = allUrls
+                .filter(url => {
+                    const urlLower = url.toLowerCase();
+                    return !urlLower.includes('logo') && !urlLower.includes('icon');
+                })
+                .map(url => url.split('?')[0])
+                .filter((url, index, self) => self.indexOf(url) === index)
+                .slice(0, 6);
+
+            return Response.json({ title, description, imageUrls, marketplace });
+        }
 
     } catch (error) {
-        console.error('❌ Erro na função extractDataFromUrl:', error);
-        return new Response(JSON.stringify({ 
+        console.error('❌ Erro geral:', error);
+        return Response.json({
             error: "Erro ao processar URL",
-            suggestion: "Tente novamente ou insira os dados manualmente",
-            details: error.message 
-        }), { 
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
-        });
+            details: error.message
+        }, { status: 500 });
     }
 });
