@@ -19,64 +19,6 @@ function decodeHtml(text) {
                .replace(/&#x27;/g, "'");
 }
 
-// EXTRAI IMAGENS POR MARKETPLACE
-function extractImagesByMarketplace(html, marketplace) {
-    const imageUrls = [];
-    
-    if (marketplace === 'mercadolivre') {
-        // Mercado Livre: busca URLs específicas
-        const mlRegex = /https?:\/\/http2\.mlstatic\.com\/[^"'\s<>()]+\.(?:jpg|jpeg|png|webp)/gi;
-        const mlMatches = html.match(mlRegex) || [];
-        imageUrls.push(...mlMatches.map(url => url.replace(/-[A-Z]\.(jpg|jpeg|png|webp)$/i, '-F.$1')));
-        
-    } else if (marketplace === 'amazon') {
-        // Amazon: busca padrão /images/I/
-        const amazonRegex = /https?:\/\/[^"'\s<>()]*\/images\/I\/[^"'\s<>()]+\.(?:jpg|jpeg|png|webp)/gi;
-        imageUrls.push(...(html.match(amazonRegex) || []));
-        
-    } else if (marketplace === 'shopee') {
-        // Shopee: busca URLs específicas
-        const shopeeRegex = /https?:\/\/[^"'\s<>()]*shopee[^"'\s<>()]*\.(?:jpg|jpeg|png|webp)/gi;
-        const shopeeMatches = html.match(shopeeRegex) || [];
-        imageUrls.push(...shopeeMatches.filter(url => !url.includes('logo') && !url.includes('icon')));
-        
-    } else if (marketplace === 'magazineluiza' || marketplace === 'casasbahia' || marketplace === 'pontofrio') {
-        // Magazine Luiza / Casas Bahia / Ponto Frio
-        const magazineRegex = /https?:\/\/[^"'\s<>()]*(?:magazineluiza|casasbahia|pontofrio)[^"'\s<>()]*\.(?:jpg|jpeg|png|webp)/gi;
-        imageUrls.push(...(html.match(magazineRegex) || []));
-        
-    } else if (marketplace === 'carrefour') {
-        // Carrefour
-        const carrefourRegex = /https?:\/\/[^"'\s<>()]*carrefour[^"'\s<>()]*\.(?:jpg|jpeg|png|webp)/gi;
-        imageUrls.push(...(html.match(carrefourRegex) || []));
-        
-    } else if (marketplace === 'aliexpress') {
-        // AliExpress
-        const aliRegex = /https?:\/\/[^"'\s<>()]*alicdn[^"'\s<>()]*\.(?:jpg|jpeg|png|webp)/gi;
-        imageUrls.push(...(html.match(aliRegex) || []));
-    }
-    
-    // FALLBACK: Busca genérica
-    if (imageUrls.length === 0) {
-        const genericRegex = /https?:\/\/[^"'\s<>()]+\.(?:jpg|jpeg|png|webp)/gi;
-        const allMatches = html.match(genericRegex) || [];
-        imageUrls.push(...allMatches.filter(url => {
-            const urlLower = url.toLowerCase();
-            return !urlLower.includes('logo') && 
-                   !urlLower.includes('icon') && 
-                   !urlLower.includes('sprite') &&
-                   !urlLower.includes('banner');
-        }));
-    }
-    
-    // Remove duplicatas e limita
-    const uniqueUrls = [...new Set(imageUrls)]
-        .filter(url => url.length > 40)
-        .slice(0, 12);
-    
-    return uniqueUrls;
-}
-
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -87,9 +29,9 @@ Deno.serve(async (req) => {
             return Response.json({ error: "URL do produto é obrigatória" }, { status: 400 });
         }
 
-        console.log(`🔍 Extraindo dados de: ${productUrl}`);
+        console.log(`🔍 Iniciando extração: ${productUrl}`);
 
-        // IDENTIFICA O MARKETPLACE
+        // IDENTIFICA MARKETPLACE
         const url = productUrl.toLowerCase();
         let marketplace = 'unknown';
         if (url.includes('mercadolivre') || url.includes('mercadolibre')) marketplace = 'mercadolivre';
@@ -103,17 +45,15 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 Marketplace: ${marketplace}`);
 
-        // BUSCA HTML
+        // BUSCA HTML COM RETRY
         let html = null;
-        let fetchError = null;
-
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
                 const resp = await fetch(productUrl, {
                     headers: {
                         "User-Agent": getRandomUA(),
-                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-                        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+                        "Accept": "text/html,application/xhtml+xml",
+                        "Accept-Language": "pt-BR,pt;q=0.9",
                         "Cache-Control": "no-cache"
                     },
                     redirect: 'follow',
@@ -122,87 +62,136 @@ Deno.serve(async (req) => {
 
                 if (resp.ok) {
                     html = await resp.text();
-                    console.log(`✅ HTML obtido (${html.length} chars)`);
+                    console.log(`✅ HTML: ${html.length} chars`);
                     break;
                 }
-
-                fetchError = `HTTP ${resp.status}`;
             } catch (error) {
-                fetchError = error.message;
-                if (attempt < 2) await new Promise(r => setTimeout(r, 1000));
+                if (attempt === 2) {
+                    return Response.json({
+                        error: "Site bloqueou acesso",
+                        suggestion: "Copie dados manualmente"
+                    });
+                }
+                await new Promise(r => setTimeout(r, 1000));
             }
         }
 
         if (!html) {
             return Response.json({
-                error: "Não foi possível acessar a página",
-                suggestion: "Copie os dados manualmente ou tente outro link",
-                marketplace: marketplace
+                error: "Falha ao acessar página",
+                suggestion: "Verifique o link"
             });
         }
 
-        // EXTRAI IMAGENS POR MARKETPLACE
-        const imageUrls = extractImagesByMarketplace(html, marketplace);
-        console.log(`📸 ${imageUrls.length} imagens encontradas`);
-
-        // EXTRAI TÍTULO E DESCRIÇÃO COM REGEX
-        const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-        let title = decodeHtml(titleMatch ? titleMatch[1] : '');
-        title = title.split('|')[0].split(' - ')[0].trim();
+        // USA IA COM TRECHO REDUZIDO (15KB)
+        const htmlSnippet = html.substring(0, 15000);
         
-        const descMatch = html.match(/<meta\s+(?:name|property)=["'](?:description|og:description)["']\s+content=["']([^"']*)["']/i);
-        let description = decodeHtml(descMatch ? descMatch[1] : '');
-
-        // SE TÍTULO/DESCRIÇÃO VAZIOS, USA IA EM TRECHO MENOR
-        if (!title || title.length < 10 || !description || description.length < 20) {
-            console.log('🤖 Usando IA para extrair título/descrição...');
+        let title = '';
+        let description = '';
+        
+        try {
+            console.log('🤖 Processando com IA...');
             
-            try {
-                // Pega apenas os primeiros 15KB do HTML
-                const htmlSnippet = html.substring(0, 15000);
-                
-                const aiResponse = await base44.integrations.Core.InvokeLLM({
-                    prompt: `Extraia o TÍTULO e DESCRIÇÃO deste produto de e-commerce (${marketplace}).
-                    
-HTML: ${htmlSnippet}
+            const aiResponse = await base44.integrations.Core.InvokeLLM({
+                prompt: `Extraia do HTML abaixo:
+1. Título completo do produto
+2. Descrição com características principais
 
-Retorne JSON:
-{
-  "title": "título completo do produto",
-  "description": "descrição detalhada com características"
-}`,
-                    response_json_schema: {
-                        type: "object",
-                        properties: {
-                            title: { type: "string" },
-                            description: { type: "string" }
-                        }
-                    }
-                });
+MARKETPLACE: ${marketplace}
 
-                if (aiResponse?.title) title = aiResponse.title;
-                if (aiResponse?.description) description = aiResponse.description;
-                
-            } catch (aiError) {
-                console.warn('⚠️ IA falhou, usando valores extraídos:', aiError.message);
-            }
+HTML (primeiros 15KB):
+${htmlSnippet}
+
+Retorne JSON puro sem markdown.`,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        title: { type: "string" },
+                        description: { type: "string" }
+                    },
+                    required: ["title", "description"]
+                }
+            });
+
+            title = aiResponse.title || '';
+            description = aiResponse.description || '';
+            console.log('✅ IA extraiu título e descrição');
+            
+        } catch (aiError) {
+            console.warn('⚠️ IA falhou, usando regex:', aiError.message);
+            
+            // FALLBACK REGEX
+            const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+            title = decodeHtml(titleMatch ? titleMatch[1] : '').split('|')[0].trim();
+            
+            const descMatch = html.match(/<meta\s+(?:name|property)=["'](?:description|og:description)["']\s+content=["']([^"']*)["']/i);
+            description = decodeHtml(descMatch ? descMatch[1] : '');
         }
 
-        // FALLBACK FINAL
-        if (!title || title.length < 5) title = 'Produto Importado';
-        if (!description || description.length < 10) description = 'Produto importado de ' + marketplace;
+        // EXTRAI IMAGENS POR MARKETPLACE
+        let imageUrls = [];
+        
+        if (marketplace === 'mercadolivre') {
+            const mlRegex = /https?:\/\/http2\.mlstatic\.com\/D_NQ_NP_[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+            imageUrls = [...new Set(html.match(mlRegex) || [])].slice(0, 10);
+            
+        } else if (marketplace === 'amazon') {
+            const amazonRegex = /https?:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.(?:jpg|jpeg|png|webp)/gi;
+            const matches = html.match(amazonRegex) || [];
+            imageUrls = [...new Set(matches)]
+                .filter(url => !url.includes('_US100_') && !url.includes('_SL75_'))
+                .slice(0, 10);
+            
+        } else if (marketplace === 'shopee') {
+            const shopeeRegex = /https?:\/\/[^"'\s<>]*\.shopee\.com\.br\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+            imageUrls = [...new Set(html.match(shopeeRegex) || [])]
+                .filter(url => !url.includes('logo'))
+                .slice(0, 10);
+            
+        } else if (marketplace === 'magazineluiza') {
+            const magaluRegex = /https?:\/\/[^"'\s<>]*magazineluiza[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+            imageUrls = [...new Set(html.match(magaluRegex) || [])].slice(0, 10);
+            
+        } else if (marketplace === 'casasbahia' || marketplace === 'pontofrio') {
+            const cbRegex = /https?:\/\/[^"'\s<>]*(?:casasbahia|pontofrio)[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+            imageUrls = [...new Set(html.match(cbRegex) || [])].slice(0, 10);
+            
+        } else if (marketplace === 'carrefour') {
+            const carrefourRegex = /https?:\/\/[^"'\s<>]*carrefour[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+            imageUrls = [...new Set(html.match(carrefourRegex) || [])].slice(0, 10);
+            
+        } else if (marketplace === 'aliexpress') {
+            const aliRegex = /https?:\/\/[^"'\s<>]*alicdn\.com[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+            imageUrls = [...new Set(html.match(aliRegex) || [])].slice(0, 10);
+        }
+        
+        // FALLBACK GENÉRICO
+        if (imageUrls.length === 0) {
+            const genericRegex = /https?:\/\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+            imageUrls = [...new Set(html.match(genericRegex) || [])]
+                .filter(url => {
+                    const lower = url.toLowerCase();
+                    return !lower.includes('logo') && 
+                           !lower.includes('icon') && 
+                           !lower.includes('sprite') &&
+                           url.length > 50;
+                })
+                .slice(0, 8);
+        }
+
+        console.log(`✅ Extração completa: ${imageUrls.length} imagens`);
 
         return Response.json({
-            title: title.substring(0, 200),
-            description: description.substring(0, 500),
+            title: (title || 'Produto').substring(0, 200),
+            description: (description || 'Descrição não disponível').substring(0, 500),
             imageUrls: imageUrls,
             marketplace: marketplace
         });
 
     } catch (error) {
-        console.error('❌ Erro geral:', error);
+        console.error('❌ Erro:', error);
         return Response.json({
-            error: "Erro ao processar URL",
+            error: "Erro ao processar",
             details: error.message
         }, { status: 500 });
     }
