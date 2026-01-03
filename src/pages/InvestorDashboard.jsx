@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
+import useEmblaCarousel from 'embla-carousel-react';
 import { 
   DollarSign, 
   Package, 
@@ -20,7 +21,9 @@ import {
   Store,
   User,
   Plus,
-  X
+  X,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import {
   Dialog,
@@ -36,6 +39,7 @@ export default function InvestorDashboard() {
   const [activeInvestments, setActiveInvestments] = useState([]);
   const [showInvestments, setShowInvestments] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', loop: false });
 
   useEffect(() => {
     const loadUser = async () => {
@@ -505,19 +509,20 @@ export default function InvestorDashboard() {
         <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
           <DialogContent className="max-w-6xl max-h-[95vh] bg-gray-900 border-gray-700 text-white p-4">
             <DialogHeader className="mb-3 text-center">
-              <DialogTitle className="text-3xl font-bold text-center">
+              <DialogTitle className="text-2xl sm:text-3xl font-bold text-center">
                 {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
                 <span className="text-green-400">Novo Plano</span>
               </DialogTitle>
-              <p className="text-gray-400 text-sm text-center">
+              <p className="text-gray-400 text-xs sm:text-sm text-center">
                 {activeInvestments.length > 0 
                   ? 'Faça novos investimentos e aumente seus lucros' 
                   : 'Selecione o plano ideal para começar a investir'
                 }
               </p>
             </DialogHeader>
-            
-            <div className="grid md:grid-cols-3 gap-3">
+
+            {/* Desktop: Grid / Mobile: Carousel */}
+            <div className="hidden md:grid md:grid-cols-3 gap-3">
               {portfolios.map((portfolio) => {
                 const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
                 
@@ -614,10 +619,148 @@ export default function InvestorDashboard() {
                     </CardContent>
                   </Card>
                 );
-              })}
-            </div>
-          </DialogContent>
-        </Dialog>
+                })}
+                </div>
+
+                {/* Mobile: Carousel */}
+                <div className="md:hidden relative">
+                <div className="overflow-hidden" ref={emblaRef}>
+                <div className="flex gap-3">
+                  {portfolios.map((portfolio) => {
+                    const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
+
+                    return (
+                      <div key={portfolio.id} className="flex-[0_0_85%] min-w-0">
+                        <Card 
+                          className="bg-gray-800/80 backdrop-blur-sm border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:scale-[1.02] flex flex-col h-full"
+                        >
+                          <CardHeader className="p-3 pb-2 text-center">
+                            <div className="flex items-center justify-center gap-2 mb-1">
+                              <CardTitle className="text-lg text-white">{portfolio.name}</CardTitle>
+                              <Badge className="bg-green-600 text-xs">{portfolio.risk}</Badge>
+                            </div>
+                            <p className="text-gray-400 text-xs min-h-[32px]">{portfolio.description}</p>
+                          </CardHeader>
+
+                          <CardContent className="space-y-2 p-3 pt-0 text-center flex-1 flex flex-col">
+                            {/* Valores */}
+                            <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Investimento Mínimo</span>
+                                <span className="text-white font-bold">
+                                  R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Retorno</span>
+                                <span className="text-green-400 font-bold">{portfolio.expectedReturn}%</span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Prazo</span>
+                                <span className="text-white font-bold">{portfolio.duration} dias</span>
+                              </div>
+                            </div>
+
+                            {/* Projeção */}
+                            <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Calculator className="w-3 h-3 text-green-400" />
+                                <span className="text-xs text-green-400 font-semibold">Projeção</span>
+                              </div>
+                              <div className="space-y-0.5 text-xs">
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Lucro:</span>
+                                  <span className="text-green-400 font-bold">
+                                    + R$ {projection.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Total:</span>
+                                  <span className="text-white font-bold">
+                                    R$ {projection.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Produtos */}
+                            <div className="min-h-[50px]">
+                              <p className="text-xs text-gray-400 mb-1">Categorias:</p>
+                              <div className="flex flex-wrap gap-1 justify-center">
+                                {portfolio.products.map((product, idx) => (
+                                  <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-xs px-1.5 py-0">
+                                    {product}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Features */}
+                            <div className="flex-1 flex flex-col justify-center">
+                              <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
+                              <ul className="space-y-0.5">
+                                {portfolio.features.map((feature, idx) => (
+                                  <li key={idx} className="flex items-center justify-center gap-1 text-xs text-gray-300">
+                                    <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                                    {feature}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+
+                            {/* Botão */}
+                            <Button 
+                              className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 mt-auto"
+                              onClick={() => {
+                                window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
+                                setShowPlansModal(false);
+                              }}
+                            >
+                              Investir Agora
+                              <ArrowRight className="w-3 h-3 ml-1" />
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })}
+                </div>
+                </div>
+
+                {/* Carousel Navigation Buttons */}
+                <div className="flex justify-center gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => emblaApi?.scrollPrev()}
+                  className="bg-gray-800 border-gray-700 hover:bg-gray-700"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => emblaApi?.scrollNext()}
+                  className="bg-gray-800 border-gray-700 hover:bg-gray-700"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                </div>
+
+                {/* Indicator Dots */}
+                <div className="flex justify-center gap-1.5 mt-3">
+                {portfolios.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => emblaApi?.scrollTo(idx)}
+                    className="w-2 h-2 rounded-full bg-gray-600 hover:bg-green-400 transition-colors"
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+                </div>
+                </div>
+                </DialogContent>
+                </Dialog>
 
         {/* Informações */}
         <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
