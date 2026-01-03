@@ -181,7 +181,7 @@ const LandingContent = ({ onLoginClick }) => {
       {/* DETALHES DO INVESTIMENTO */}
       <div className="mb-12 sm:mb-16 max-w-4xl mx-auto px-4">
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-6 sm:mb-8 text-center">
-          Detalhes do <span className="text-green-400">Investimento</span>
+          Detalhes da <span className="text-green-400">Operação</span>
         </h2>
 
         <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
