@@ -416,7 +416,7 @@ export default function PartnersPage() {
                 Torne-se um Parceiro e Lucre Conosco
               </h1>
               <p className="text-base sm:text-lg text-gray-300 max-w-3xl mx-auto mb-4 sm:mb-8 px-4 leading-relaxed">
-                Invista em produtos selecionados e receba <strong className="text-green-400">3% de lucro garantido</strong> sobre as vendas realizadas!
+                Compre produtos conosco e receba <strong className="text-green-400">3% de lucro garantido</strong> sobre as vendas realizadas pelo nosso time!
               </p>
               <p className="text-base sm:text-lg text-gray-300 max-w-3xl mx-auto mb-6 sm:mb-8 px-4 leading-relaxed">
                 Investimento a partir de <strong className="text-yellow-400">R$ 5.000,00</strong> com retorno em <strong className="text-yellow-400">60 dias</strong>!
