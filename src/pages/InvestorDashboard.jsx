@@ -641,36 +641,36 @@ export default function InvestorDashboard() {
                   </div>
 
                   {/* Selected Plan Card */}
-                  <div className="w-full max-w-sm mx-auto">
+                  <div className="flex justify-center">
                     {portfolios.map((portfolio, idx) => {
                       if (idx !== selectedPlanIndex) return null;
                       const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
                       return (
-                        <div key={portfolio.id} className="w-full">
-                          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col overflow-hidden">
+                        <div key={portfolio.id} className="w-[70%]">
+                          <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col">
                             <CardHeader className="p-3 pb-1.5 text-center">
-                              <div className="flex items-center justify-center gap-1.5 mb-0.5 flex-wrap">
-                                <CardTitle className="text-sm text-white leading-tight">{portfolio.name}</CardTitle>
+                              <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                                <CardTitle className="text-base text-white leading-tight">{portfolio.name}</CardTitle>
                                 <Badge className="bg-green-600 text-[9px] px-1.5 py-0.5">{portfolio.risk}</Badge>
                               </div>
-                              <p className="text-gray-400 text-[10px] leading-tight">{portfolio.description}</p>
+                              <p className="text-gray-400 text-[11px] leading-tight">{portfolio.description}</p>
                             </CardHeader>
 
-                            <CardContent className="space-y-1.5 p-3 pt-0 text-center flex-1 flex flex-col overflow-x-hidden">
+                            <CardContent className="space-y-1.5 p-3 pt-0 text-center flex-1 flex flex-col">
                               {/* Valores */}
-                              <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-[10px]">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-gray-400 flex-shrink-0">Investimento Mínimo</span>
-                                  <span className="text-white font-bold text-right">
+                              <div className="bg-gray-900/50 rounded-lg p-2 space-y-1 text-xs">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-400">Investimento Mínimo</span>
+                                  <span className="text-white font-bold">
                                     R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
                                   </span>
                                 </div>
-                                <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center justify-between">
                                   <span className="text-gray-400">Retorno</span>
                                   <span className="text-green-400 font-bold">{portfolio.expectedReturn}%</span>
                                 </div>
-                                <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center justify-between">
                                   <span className="text-gray-400">Prazo</span>
                                   <span className="text-white font-bold">{portfolio.duration} dias</span>
                                 </div>
@@ -680,18 +680,18 @@ export default function InvestorDashboard() {
                               <div className="bg-green-600/10 rounded-lg p-2 border border-green-500/30">
                                 <div className="flex items-center gap-1 mb-1">
                                   <Calculator className="w-3 h-3 text-green-400" />
-                                  <span className="text-[10px] text-green-400 font-semibold">Projeção</span>
+                                  <span className="text-xs text-green-400 font-semibold">Projeção</span>
                                 </div>
-                                <div className="space-y-0.5 text-[10px]">
-                                  <div className="flex justify-between gap-2">
+                                <div className="space-y-0.5 text-xs">
+                                  <div className="flex justify-between">
                                     <span className="text-gray-400">Lucro:</span>
-                                    <span className="text-green-400 font-bold text-right">
+                                    <span className="text-green-400 font-bold">
                                       + R$ {projection.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
                                   </div>
-                                  <div className="flex justify-between gap-2">
+                                  <div className="flex justify-between">
                                     <span className="text-gray-400">Total:</span>
-                                    <span className="text-white font-bold text-right">
+                                    <span className="text-white font-bold">
                                       R$ {projection.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                     </span>
                                   </div>
@@ -700,10 +700,10 @@ export default function InvestorDashboard() {
 
                               {/* Produtos */}
                               <div>
-                                <p className="text-[10px] text-gray-400 mb-1">Categorias:</p>
+                                <p className="text-xs text-gray-400 mb-1">Categorias:</p>
                                 <div className="flex flex-wrap gap-1 justify-center">
                                   {portfolio.products.map((product, idx) => (
-                                    <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-[9px] px-1.5 py-0">
+                                    <Badge key={idx} variant="outline" className="border-gray-600 text-gray-300 text-xs px-1.5 py-0">
                                       {product}
                                     </Badge>
                                   ))}
@@ -712,12 +712,12 @@ export default function InvestorDashboard() {
 
                               {/* Features */}
                               <div className="flex-1 flex flex-col justify-center">
-                                <p className="text-[10px] text-gray-400 mb-1">Benefícios:</p>
+                                <p className="text-xs text-gray-400 mb-1">Benefícios:</p>
                                 <ul className="space-y-0.5">
                                   {portfolio.features.map((feature, idx) => (
-                                    <li key={idx} className="flex items-start gap-1 text-[10px] text-gray-300 text-left">
-                                      <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0 mt-0.5" />
-                                      <span className="flex-1">{feature}</span>
+                                    <li key={idx} className="flex items-center justify-center gap-1 text-xs text-gray-300">
+                                      <CheckCircle className="w-3 h-3 text-green-400 flex-shrink-0" />
+                                      {feature}
                                     </li>
                                   ))}
                                 </ul>
@@ -725,7 +725,7 @@ export default function InvestorDashboard() {
 
                               {/* Botão */}
                               <Button 
-                                className="w-full bg-green-600 hover:bg-green-700 text-xs py-2 mt-2"
+                                className="w-full bg-green-600 hover:bg-green-700 text-sm py-2 mt-2"
                                 onClick={() => {
                                   window.open('https://wa.me/5511999999999?text=Olá! Tenho interesse na ' + portfolio.name, '_blank');
                                   setShowPlansModal(false);
