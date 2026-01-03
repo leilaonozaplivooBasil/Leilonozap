@@ -217,12 +217,23 @@ export default function PlanCheckout() {
               {pixData ? (
                 // Exibe QR Code PIX
                 <div className="space-y-4">
-                  <div className="bg-white rounded-lg p-6 flex justify-center items-center">
-                    <img 
-                      src={pixData.qr_code} 
-                      alt="QR Code PIX" 
-                      className="w-full h-auto max-w-[280px] object-contain"
-                    />
+                  <div className="bg-white rounded-lg p-6 flex justify-center items-center min-h-[300px]">
+                    {pixData.qr_code ? (
+                      <img 
+                        src={pixData.qr_code} 
+                        alt="QR Code PIX" 
+                        className="w-full h-auto max-w-[280px] object-contain"
+                        onError={(e) => {
+                          console.error('❌ Erro ao carregar imagem QR Code');
+                          console.error('URL da imagem:', pixData.qr_code?.substring(0, 100));
+                          e.target.style.display = 'none';
+                          e.target.parentElement.innerHTML = '<p class="text-red-600 text-sm">Erro ao carregar QR Code. Use o código copia e cola abaixo.</p>';
+                        }}
+                        onLoad={() => console.log('✅ QR Code carregado com sucesso')}
+                      />
+                    ) : (
+                      <p className="text-red-600 text-sm">QR Code não disponível</p>
+                    )}
                   </div>
 
                   <div>
@@ -410,13 +421,27 @@ export default function PlanCheckout() {
                           });
 
                           if (response.data && response.data.success) {
+                            console.log('📥 Dados recebidos do backend:', {
+                              has_qr_code: !!response.data.qr_code_base64,
+                              qr_code_length: response.data.qr_code_base64?.length,
+                              has_pix_code: !!response.data.pix_code,
+                              pix_code_preview: response.data.pix_code?.substring(0, 50)
+                            });
+
+                            const qrCodeBase64 = response.data.qr_code_base64;
+                            if (!qrCodeBase64) {
+                              console.error('❌ QR Code base64 não recebido do backend');
+                              throw new Error('QR Code não foi gerado pelo sistema de pagamento');
+                            }
+
                             setPixData({
-                              qr_code: `data:image/png;base64,${response.data.qr_code_base64}`,
+                              qr_code: `data:image/png;base64,${qrCodeBase64}`,
                               copy_paste: response.data.pix_code,
                               transaction_id: response.data.billing_id,
                               auction_id: tempAuction.id
                             });
                             setShowCpfForm(false);
+                            console.log('✅ PixData configurado com sucesso');
                           } else {
                             throw new Error(response.data?.error || 'Erro ao gerar PIX');
                           }
