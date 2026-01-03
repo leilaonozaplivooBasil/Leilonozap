@@ -32,6 +32,7 @@ import OrderTrackingSaiDeBaixo from './pages/OrderTrackingSaiDeBaixo';
 import PDV from './pages/PDV';
 import Partners from './pages/Partners';
 import PaymentSettings from './pages/PaymentSettings';
+import PlanCheckout from './pages/PlanCheckout';
 import ProductManagement from './pages/ProductManagement';
 import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
@@ -49,7 +50,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
-import PlanCheckout from './pages/PlanCheckout';
 import __Layout from './Layout.jsx';
 
 
@@ -88,6 +88,7 @@ export const PAGES = {
     "PDV": PDV,
     "Partners": Partners,
     "PaymentSettings": PaymentSettings,
+    "PlanCheckout": PlanCheckout,
     "ProductManagement": ProductManagement,
     "Profile": Profile,
     "ProtecaoCriacao": ProtecaoCriacao,
@@ -105,7 +106,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
-    "PlanCheckout": PlanCheckout,
 }
 
 export const pagesConfig = {
