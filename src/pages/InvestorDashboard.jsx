@@ -622,14 +622,14 @@ export default function InvestorDashboard() {
                 </div>
 
                 {/* Mobile: Tabs System */}
-                <div className="md:hidden">
+                <div className="md:hidden px-2">
                   {/* Tabs Navigation */}
-                  <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                  <div className="flex gap-2 mb-4 overflow-x-auto pb-2 -mx-2 px-2">
                     {portfolios.map((portfolio, idx) => (
                       <button
                         key={portfolio.id}
                         onClick={() => setSelectedPlanIndex(idx)}
-                        className={`px-4 py-2 rounded-lg font-semibold text-sm whitespace-nowrap transition-all ${
+                        className={`px-3 py-2 rounded-lg font-semibold text-xs whitespace-nowrap transition-all ${
                           selectedPlanIndex === idx
                             ? 'bg-green-600 text-white'
                             : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
@@ -641,13 +641,13 @@ export default function InvestorDashboard() {
                   </div>
 
                   {/* Selected Plan Card */}
-                  <div className="flex justify-center">
+                  <div className="w-full max-w-sm mx-auto">
                     {portfolios.map((portfolio, idx) => {
                       if (idx !== selectedPlanIndex) return null;
                       const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
 
                       return (
-                        <div key={portfolio.id} className="w-[70%]">
+                        <div key={portfolio.id} className="w-full">
                           <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700 flex flex-col">
                             <CardHeader className="p-3 pb-1.5 text-center">
                               <div className="flex items-center justify-center gap-1.5 mb-0.5">
