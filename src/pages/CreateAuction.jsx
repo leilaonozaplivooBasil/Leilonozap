@@ -544,13 +544,26 @@ export default function CreateAuction() {
     // Tenta baixar e fazer upload, mas se falhar usa a URL original
     for (const [index, url] of validUrls.entries()) {
       try {
-        console.log(`[${index + 1}/${validUrls.length}] Tentando baixar: ${url}`);
+        console.log(`[${index + 1}/${validUrls.length}] URL original: ${url}`);
+        
+        // Primeiro valida se a URL está acessível
+        try {
+          const testFetch = await fetch(url, { method: 'HEAD' });
+          if (!testFetch.ok) {
+            console.warn(`⚠️ URL inacessível, pulando: ${url}`);
+            uploadedImages.push(url);
+            downloadFailCount++;
+            continue;
+          }
+        } catch (testError) {
+          console.warn(`⚠️ URL falhou no teste, mas tentando usar mesmo assim: ${url}`);
+        }
         
         const downloadResponse = await downloadImage({ imageUrl: url });
         
         // Se download falhou, usa URL original direto
         if (!downloadResponse?.data?.success || !downloadResponse?.data?.dataUrl) {
-          console.warn(`⚠️ Download bloqueado, usando URL original: ${url}`);
+          console.warn(`⚠️ Download falhou, usando URL original: ${url}`);
           uploadedImages.push(url);
           downloadFailCount++;
           continue;
@@ -578,20 +591,26 @@ export default function CreateAuction() {
         
         if (uploadResult?.file_url) {
           uploadedImages.push(uploadResult.file_url);
-          console.log(`✅ [${index + 1}/${validUrls.length}] Upload completo!`);
+          console.log(`✅ [${index + 1}/${validUrls.length}] Upload OK: ${uploadResult.file_url}`);
         } else {
-          // Se upload falhou, usa URL original
+          console.warn(`⚠️ Upload falhou, usando URL original: ${url}`);
           uploadedImages.push(url);
           downloadFailCount++;
         }
         
       } catch (error) {
-        console.error(`❌ [${index + 1}/${validUrls.length}] Erro:`, error.message);
-        // Sempre adiciona a URL original como fallback
+        console.error(`❌ [${index + 1}/${validUrls.length}] Erro (${error.message}), usando URL original: ${url}`);
         uploadedImages.push(url);
         downloadFailCount++;
       }
     }
+    
+    console.log(`📊 Resultado: ${uploadedImages.length} imagens processadas (${downloadFailCount} usaram URL original)`);
+    
+    // Log das URLs finais
+    uploadedImages.forEach((img, idx) => {
+      console.log(`Imagem ${idx + 1}: ${img.substring(0, 100)}...`);
+    });
 
     setIsProcessing(false);
 
