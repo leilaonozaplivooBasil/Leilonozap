@@ -39,31 +39,24 @@ export default function ComparaiModal({ auction, onClose }) {
 
     try {
       const { comparaiPrices } = await import("@/functions/comparaiPrices");
-      const result = await comparaiPrices({
+      const response = await comparaiPrices({
         auctionId: localAuction.id,
         forceRefresh: false,
         forceGoogleShopping: forceGoogleShopping
       });
 
-      console.log('📊 Resposta Comparai completa:', result);
+      console.log('📊 Resposta Comparai:', response);
       
-      // Platform V2: resposta vem em result.data
-      const data = result.data;
-      console.log('📊 Data extraído:', data);
-      
-      if (data && data.success) {
-        setComparisonData(data.comparison);
-        setIsCached(data.cached || false);
-        setCacheAge(data.cacheAge || null);
+      if (response.success) {
+        setComparisonData(response.comparison);
+        setIsCached(response.cached || false);
+        setCacheAge(response.cacheAge || null);
       } else {
-        const errorMsg = data?.error || 'Erro ao buscar comparação';
-        console.error('❌ Erro Comparai:', errorMsg);
-        throw new Error(errorMsg);
+        throw new Error(response.error || 'Erro ao buscar comparação');
       }
     } catch (err) {
-      console.error('❌ Erro no handleCompare:', err);
-      const errorMessage = err.message || 'Não foi possível comparar preços';
-      setError(errorMessage);
+      console.error('❌ Erro:', err);
+      setError(err.message || 'Não foi possível comparar preços');
     } finally {
       setIsLoading(false);
     }
