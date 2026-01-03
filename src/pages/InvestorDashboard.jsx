@@ -39,7 +39,7 @@ export default function InvestorDashboard() {
   const [activeInvestments, setActiveInvestments] = useState([]);
   const [showInvestments, setShowInvestments] = useState(false);
   const [showPlansModal, setShowPlansModal] = useState(false);
-  const [emblaRef, emblaApi] = useEmblaCarousel({ align: 'start', loop: false });
+  const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
 
   useEffect(() => {
     const loadUser = async () => {
