@@ -1184,12 +1184,35 @@ export default function AuctionRoom() {
       }
 
       setShowBuyNowModal(false);
-      setShowWinnerModal(true);
       
-      // Força refresh da página
+      // Atualiza o estado local para refletir o fim do leilão
+      setAuction(prev => ({
+        ...prev,
+        status: "ended",
+        current_price: buyNowPrice,
+        winner_id: currentUser.id,
+        winner_name: currentUser.nickname || currentUser.full_name,
+        order_status: "awaiting_payment"
+      }));
+      
+      // Para os intervalos de sync para evitar conflitos
+      if (auctionSyncIntervalRef.current) {
+        clearInterval(auctionSyncIntervalRef.current);
+        auctionSyncIntervalRef.current = null;
+      }
+      if (messageSyncIntervalRef.current) {
+        clearInterval(messageSyncIntervalRef.current);
+        messageSyncIntervalRef.current = null;
+      }
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+        countdownIntervalRef.current = null;
+      }
+      
+      // Mostra o modal de vitória após 1 segundo
       setTimeout(() => {
-        window.location.reload();
-      }, 3000);
+        setShowWinnerModal(true);
+      }, 1000);
 
     } catch (error) {
       console.error("Erro ao arrematar:", error);
