@@ -213,7 +213,7 @@ export default function PlanCheckout() {
                 <div className="space-y-4">
                   <div className="bg-white rounded-lg p-6 flex justify-center items-center">
                     <img 
-                      src={pixData.qr_code_base64} 
+                      src={`data:image/png;base64,${pixData.qr_code_base64}`} 
                       alt="QR Code PIX" 
                       className="w-64 h-64 mx-auto rounded-lg"
                     />
