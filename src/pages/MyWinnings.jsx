@@ -204,11 +204,11 @@ export default function MyWinningsPage() {
 
             console.log('📦 Resposta completa:', response);
 
-            if (response?.success) {
-                setPixData(response);
+            if (response?.data?.success) {
+                setPixData(response.data);
                 toast.success("QR Code gerado com sucesso!");
             } else {
-                const errorMsg = response?.error || response?.details || "Erro ao gerar QR Code";
+                const errorMsg = response?.data?.error || response?.error || "Erro ao gerar QR Code";
                 console.error('❌ Erro AbacatePay:', errorMsg);
                 toast.error(errorMsg);
 
