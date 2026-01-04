@@ -39,33 +39,38 @@ Deno.serve(async (req) => {
         console.log('🤖 IA buscando produto na web...');
 
         const extractionResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse e analise este produto:
+            prompt: `Acesse esta URL e extraia informações REAIS do produto:
 ${productUrl}
 
-EXTRAIA e RETORNE em português brasileiro:
+RETORNE JSON com:
 
-1. **Título completo** do produto (modelo, marca, especificações)
-2. **Preço atual** em REAIS (apenas o número, ex: 1299.90)
-3. **Descrição detalhada** com especificações técnicas (mínimo 8 linhas)
-4. **URLs DIRETAS** das imagens do produto em ALTA RESOLUÇÃO
+1. title: Nome COMPLETO do produto (marca + modelo + especificações)
+2. price: Preço em REAIS como NUMBER (ex: 3299.90). Se houver preço À VISTA e PARCELADO, use o À VISTA.
+3. description: Descrição DETALHADA com especificações técnicas (mínimo 150 caracteres, máximo 500)
+4. imageUrls: Array com URLs DIRETAS das imagens GRANDES do produto
 
-REGRAS PARA IMAGENS:
-- Apenas fotos PRINCIPAIS do produto (não logos, não ícones)
-- URLs completas e diretas (http2.mlstatic.com, images-amazon.com, etc)
-- Versões grandes/originais (sem miniaturas)
-- Mínimo 6 imagens, máximo 10
+REGRAS CRÍTICAS PARA IMAGENS:
+✅ SEMPRE buscar URLs que começam com: http2.mlstatic.com, images-amazon, etc
+✅ SEMPRE versões GRANDES (-O.jpg, -F.jpg, _large, _original)
+✅ NO MÍNIMO 6 imagens DIFERENTES do produto
+❌ NUNCA miniaturas pequenas (-I.jpg, _thumb, _small)
+❌ NUNCA logos ou ícones de UI
+❌ NUNCA URLs duplicadas
 
-Seja preciso e completo.`,
+Exemplo de URL CORRETA: https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB12345678901_012024-F.webp
+
+IMPORTANTE: Retorne URLs DIFERENTES e REAIS que você encontrou na página!`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string" },
-                    price: { type: "number", description: "Preço em reais" },
-                    description: { type: "string" },
+                    title: { type: "string", description: "Nome completo do produto" },
+                    price: { type: "number", description: "Preço em reais como número" },
+                    description: { type: "string", description: "Descrição detalhada mínimo 150 caracteres" },
                     imageUrls: {
                         type: "array",
-                        items: { type: "string" }
+                        items: { type: "string" },
+                        description: "Array de URLs DIFERENTES de imagens grandes"
                     }
                 },
                 required: ["title", "description", "imageUrls"]
