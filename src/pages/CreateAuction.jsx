@@ -6,8 +6,6 @@ const Auction = base44.entities.Auction;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 import { extractDataFromUrl } from "@/functions/extractDataFromUrl";
-import { searchProductByGTIN } from "@/functions/searchProductByGTIN";
-import { searchProductByName } from "@/functions/searchProductByName";
 import { importFromUrl } from "@/functions/importFromUrl";
 import { Button } from "@/components/ui/button";
 
@@ -346,10 +344,12 @@ export default function CreateAuction() {
     setDebugError(null);
 
     try {
-      console.log('🔍 Buscando produto:', productName);
-      const response = await searchProductByName({ productName: productName.trim() });
+        console.log('🔍 Buscando produto:', productName);
+        const response = await base44.functions.invoke('searchProductByName', { 
+          productName: productName.trim() 
+        });
 
-      console.log('📦 Resposta:', response);
+        console.log('📦 Resposta:', response);
 
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro na busca');
@@ -418,10 +418,12 @@ export default function CreateAuction() {
     setDebugError(null);
 
     try {
-      console.log('🚀 [GTIN] Iniciando busca para:', gtinCode);
-      const response = await searchProductByGTIN({ gtin: gtinCode.trim() });
+        console.log('🚀 [GTIN] Iniciando busca para:', gtinCode);
+        const response = await base44.functions.invoke('searchProductByGTIN', { 
+          gtin: gtinCode.trim() 
+        });
 
-      console.log('📦 [GTIN] Resposta RAW:', response);
+        console.log('📦 [GTIN] Resposta RAW:', response);
       console.log('📦 [GTIN] Status:', response?.status);
       console.log('📦 [GTIN] Data:', response?.data);
 
