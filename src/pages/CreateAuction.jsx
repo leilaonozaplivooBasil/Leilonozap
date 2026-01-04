@@ -30,6 +30,7 @@ import { resetTestValora } from "@/functions/resetTestValora";
 import { toast } from "sonner";
 import { addSeconds } from 'date-fns';
 import ImageAnalyzer from "../components/admin/ImageAnalyzer";
+import { CheckCircle } from "lucide-react";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -673,6 +674,57 @@ export default function CreateAuction() {
     }
   };
 
+  const handleSmartImport = async () => {
+    if (!imageUrlInput) {
+      toast.error('Cole a URL da imagem');
+      return;
+    }
+
+    setIsImporting(true);
+    
+    try {
+      const { data } = await base44.functions.invoke('analyzeImageUrlAndImport', {
+        imageUrl: imageUrlInput
+      });
+
+      if (data.success) {
+        setImportedData(data.productData);
+        setSuggestedProducts(data.suggestedProducts || []);
+
+        // PREENCHE FORMULÁRIO AUTOMATICAMENTE
+        setFormData(prev => ({
+          ...prev,
+          title: data.productData.name,
+          description: data.productData.description,
+          category: data.productData.category || 'outros',
+          image_urls: data.productData.images || ["", "", "", "", ""]
+        }));
+
+        toast.success('✅ Produto importado! Revise os dados antes de criar.');
+      } else {
+        toast.error(data.message || 'Erro ao importar produto');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+      toast.error('Erro ao processar importação');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleUseSuggested = (product) => {
+    if (product.latest_auction) {
+      setFormData(prev => ({
+        ...prev,
+        title: product.latest_auction.title,
+        starting_price: (product.latest_auction.price * 0.9).toFixed(2),
+        image_urls: [product.latest_auction.image || "", "", "", "", ""]
+      }));
+      toast.success(`Dados de "${product.name}" carregados!`);
+    }
+    setSuggestedProducts([]);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -955,7 +1007,102 @@ export default function CreateAuction() {
                   </Alert>
                 )}
 
-                {/* 🆕 ANALISADOR DE IMAGEM COM IA */}
+                {/* 🆕 IMPORTADOR INTELIGENTE POR URL DE IMAGEM */}
+                <Card className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 border-purple-500/30">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-purple-400">
+                      <Sparkles className="w-5 h-5" />
+                      Importador Inteligente - IA Turbinada
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-sm text-gray-400">
+                      Cole a URL de uma imagem de produto. A IA vai identificar, buscar detalhes na internet e verificar duplicatas.
+                    </p>
+                    
+                    <div className="flex gap-2">
+                      <Input
+                        type="url"
+                        placeholder="https://exemplo.com/imagem-produto.jpg"
+                        value={imageUrlInput}
+                        onChange={(e) => setImageUrlInput(e.target.value)}
+                        className="bg-gray-800 border-purple-500/30"
+                      />
+                      <Button
+                        onClick={handleSmartImport}
+                        disabled={isImporting || !imageUrlInput}
+                        className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                      >
+                        {isImporting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Analisando...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Importar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {importedData && (
+                      <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-4 space-y-3">
+                        <div className="flex items-center gap-2 text-green-400 font-bold">
+                          <CheckCircle className="w-5 h-5" />
+                          Produto Importado!
+                        </div>
+                        <div className="text-sm space-y-1">
+                          <p><strong>Nome:</strong> {importedData.name}</p>
+                          <p><strong>Categoria:</strong> {importedData.category}</p>
+                          {importedData.price_range && (
+                            <p><strong>Preço Mercado:</strong> {importedData.price_range}</p>
+                          )}
+                        </div>
+                        {importedData.images && importedData.images.length > 0 && (
+                          <div className="flex gap-2 flex-wrap">
+                            {importedData.images.map((img, idx) => (
+                              <img key={idx} src={img} alt="" className="w-16 h-16 object-cover rounded" />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {suggestedProducts.length > 0 && (
+                      <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4 space-y-3">
+                        <div className="text-blue-400 font-bold">
+                          🔄 Produtos Similares Encontrados
+                        </div>
+                        {suggestedProducts.map((prod) => (
+                          <div key={prod.product_id} className="flex items-center gap-3 bg-gray-800 p-2 rounded">
+                            {prod.latest_auction?.image && (
+                              <img src={prod.latest_auction.image} alt="" className="w-12 h-12 object-cover rounded" />
+                            )}
+                            <div className="flex-1 text-sm">
+                              <p className="font-bold">{prod.name}</p>
+                              {prod.latest_auction && (
+                                <p className="text-xs text-gray-400">
+                                  Último leilão: R$ {prod.latest_auction.price?.toFixed(2)}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleUseSuggested(prod)}
+                            >
+                              Usar
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* 🆕 ANALISADOR DE IMAGEM COM IA (Upload) */}
                 <ImageAnalyzer 
                   onAnalysisComplete={(data) => {
                     setFormData(prev => ({
