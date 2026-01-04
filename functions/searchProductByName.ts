@@ -194,27 +194,31 @@ Deno.serve(async (req) => {
             console.log(`🔄 Tentativa ${attempts}/${maxAttempts}...`);
             
             searchResult = await base44.integrations.Core.InvokeLLM({
-                prompt: `BUSCA RIGOROSA: "${productName}"
+                prompt: `BUSCA ULTRA RIGOROSA: "${productName}"
 
-REGRAS OBRIGATÓRIAS:
-1. Busque APENAS o produto PRINCIPAL "${productName}" - NÃO acessórios
-2. REJEITE: carregadores, capas, películas, adaptadores, fones, cabos
-3. O título DEVE conter as palavras-chave: "${productName}"
-4. Priorize: Mercado Livre, Amazon, Shopee
+🎯 OBJETIVO: Encontrar UMA página de PRODUTO INDIVIDUAL (não lista de busca)
 
-RETORNE:
-- Título completo do produto
-- Descrição com especificações
-- URL COMPLETA da página
+⚠️ FORMATO DE URL OBRIGATÓRIO - EXEMPLOS VÁLIDOS:
+✅ https://produto.mercadolivre.com.br/MLB-1234567890-iphone-15-pro-256gb
+✅ https://www.amazon.com.br/dp/B0XXXXXXXXX
+✅ https://shopee.com.br/product/123456789/987654321
 
-EXEMPLOS VÁLIDOS:
-✅ "iPhone 15 Pro 256GB"
-✅ "Samsung Galaxy S23 Ultra 512GB"
+❌ FORMATOS INVÁLIDOS (NÃO USE):
+❌ https://lista.mercadolivre.com.br/... (LISTA DE BUSCA - ERRADO)
+❌ https://www.amazon.com.br/s?k=... (PÁGINA DE BUSCA - ERRADO)
+❌ https://shopee.com.br/search?keyword=... (BUSCA - ERRADO)
 
-EXEMPLOS INVÁLIDOS:
-❌ "Carregador para iPhone"
-❌ "Capa iPhone 15"
-❌ "Película iPhone"`,
+📋 REGRAS:
+1. A URL DEVE ser de UM produto específico (ex: produto.mercadolivre, /dp/, /product/)
+2. Busque o produto PRINCIPAL "${productName}" - NÃO acessórios
+3. REJEITE: carregadores, capas, películas, adaptadores, fones, cabos
+4. O título DEVE conter: "${productName}"
+5. Se não encontrar, retorne title vazio
+
+RETORNE JSON:
+- title: Nome completo do produto (ou "" se não encontrar)
+- description: Especificações
+- productPageUrl: URL de PRODUTO INDIVIDUAL (não lista)`,
                 add_context_from_internet: true,
                 response_json_schema: {
                     type: "object",
