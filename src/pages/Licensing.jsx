@@ -852,12 +852,12 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
 
     if (amount < 30) {
-      toast.error('Valor mínimo para saque é R$ 30,00');
+      toast.error('Saque mínimo é de R$ 30,00');
       return;
     }
 
     if (amount > user.commission_balance) {
-      toast.error('Saldo insuficiente');
+      toast.error('Saldo indisponível');
       return;
     }
 
