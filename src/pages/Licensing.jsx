@@ -919,6 +919,8 @@ const DashboardContent = ({ user, isAdmin }) => {
     setIsProcessingWithdrawal(true);
 
     try {
+      console.log('📡 [VIGIA] Testando conexão com função requestWithdrawal...');
+      
       const response = await base44.functions.invoke('requestWithdrawal', {
         amount,
         pix_key: pixKey,
@@ -927,7 +929,6 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       console.log('📥 [SAQUE] Resposta completa:', response);
 
-      // ✅ CORREÇÃO: Acessa response.data (axios response)
       const data = response?.data;
 
       if (data?.success) {
@@ -937,7 +938,6 @@ const DashboardContent = ({ user, isAdmin }) => {
         setWithdrawalAmount('');
         setPixKey('');
 
-        // Recarrega dados
         await delay(2000);
         await fetchRealMetrics();
         await delay(1000);
@@ -948,19 +948,51 @@ const DashboardContent = ({ user, isAdmin }) => {
         toast.error(errorMsg);
       }
     } catch (error) {
-      console.error('❌ [SAQUE] Exceção capturada:', error);
-      console.error('Stack:', error.stack);
+      console.error('❌ [VIGIA DE ERRO] Erro capturado:', error);
+      console.error('❌ [VIGIA DE ERRO] Status:', error.response?.status);
+      console.error('❌ [VIGIA DE ERRO] Mensagem:', error.message);
+      console.error('❌ [VIGIA DE ERRO] Stack:', error.stack);
 
-      let errorMessage = 'Erro ao processar saque. ';
-      if (error.message?.includes('404')) {
-        errorMessage += 'Função não encontrada. Contate o suporte.';
+      // 🔥 SISTEMA DE DIAGNÓSTICO AUTOMÁTICO
+      if (error.response?.status === 404 || error.message?.includes('404')) {
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Função requestWithdrawal NÃO EXISTE!');
+        console.error('🚨 [VIGIA] CAUSA: A função não foi criada ou não está deployada.');
+        console.error('🚨 [VIGIA] SOLUÇÃO:');
+        console.error('   1. Verifique se functions/requestWithdrawal.js existe');
+        console.error('   2. Deploy pode estar pendente');
+        console.error('   3. Nome da função pode estar incorreto');
+        
+        toast.error('❌ ERRO 404: Função de saque não encontrada. Por favor, contate o suporte técnico.');
+        
+        // Cria registro de erro no banco
+        try {
+          await base44.entities.SystemLog.create({
+            step: 'WITHDRAWAL_404_ERROR',
+            status: 'error',
+            message: 'Função requestWithdrawal retornou 404',
+            component_name: 'LicensingPage',
+            entity_id: user.id,
+            payload: {
+              error: error.message,
+              status: error.response?.status,
+              timestamp: new Date().toISOString()
+            }
+          });
+        } catch {}
+        
       } else if (error.message?.includes('Network')) {
-        errorMessage += 'Erro de conexão. Verifique sua internet.';
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro de rede/conexão');
+        toast.error('❌ Erro de conexão. Verifique sua internet e tente novamente.');
+      } else if (error.response?.status === 401) {
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Não autorizado');
+        toast.error('❌ Sessão expirada. Faça login novamente.');
+      } else if (error.response?.status === 500) {
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro no servidor');
+        toast.error('❌ Erro no servidor. Tente novamente em instantes.');
       } else {
-        errorMessage += error.message || 'Erro desconhecido';
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro desconhecido');
+        toast.error(`❌ Erro: ${error.message || 'Erro desconhecido'}`);
       }
-
-      toast.error(errorMessage);
     } finally {
       setIsProcessingWithdrawal(false);
       console.log('🏁 [SAQUE] Processo finalizado');
