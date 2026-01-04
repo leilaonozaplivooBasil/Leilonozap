@@ -517,7 +517,7 @@ export default function CreateAuction() {
     }
   };
 
-  // ETAPA 1: EXTRAIR TUDO (TÍTULO, DESCRIÇÃO, IMAGENS) DE UMA VEZ
+  // ETAPA 1: EXTRAIR TUDO (TÍTULO, DESCRIÇÃO, URLs DE IMAGENS) DE UMA VEZ
   const extractAllData = async () => {
     if (!productUrl) {
       toast.error("Cole a URL do produto primeiro!");
@@ -528,14 +528,13 @@ export default function CreateAuction() {
     setDebugError(null);
     
     try {
-      console.log('🚀 [URL] Iniciando extração para:', productUrl);
-      toast.info("🤖 IA analisando o produto...");
+      console.log('🚀 [URL] Iniciando extração COMPLETA para:', productUrl);
+      toast.info("🤖 IA analisando o produto e extraindo imagens...");
       
+      // 1️⃣ EXTRAIR DADOS BÁSICOS (título, descrição, preço)
       const response = await extractDataFromUrl({ productUrl });
 
       console.log('📦 [URL] Resposta RAW:', response);
-      console.log('📦 [URL] Status:', response?.status);
-      console.log('📦 [URL] Data:', response?.data);
 
       if (!response || !response.data) {
           throw new Error("Falha na extração");
@@ -543,7 +542,6 @@ export default function CreateAuction() {
       
       const responseData = response.data;
       
-      // Verifica se houve erro
       if (responseData.error) {
         toast.error(responseData.error);
         if (responseData.suggestion) {
@@ -554,42 +552,46 @@ export default function CreateAuction() {
         return;
       }
       
-      const { title, description, imageUrls: extractedImageUrls, marketplace } = responseData;
+      const { title, description, imageUrls: dataImageUrls, marketplace } = responseData;
       
-      console.log('🔍 [URL] RESPOSTA COMPLETA DO BACKEND:', JSON.stringify(responseData, null, 2));
+      console.log('✅ Título:', title);
+      console.log('📝 Descrição:', description);
       
       if (!title || !description) {
         throw new Error("Dados incompletos");
       }
       
-      console.log(`✅ Título: ${title}`);
-      console.log(`🖼️ Array imageUrls do backend:`, extractedImageUrls);
-      console.log(`🖼️ Quantidade: ${extractedImageUrls?.length || 0}`);
+      setImportedData({ title, description, price: responseData.price });
       
-      setExtractedData({ title, description });
-      setFormData(prev => ({ ...prev, title, description, source_url: productUrl }));
+      // 2️⃣ EXTRAIR URLs DAS IMAGENS DO MERCADO LIVRE
+      toast.info("🖼️ Extraindo URLs das imagens do anúncio...");
+      let imageUrlsExtracted = [];
       
-      const validUrls = (extractedImageUrls || [])
-        .filter(url => url && typeof url === 'string' && url.trim());
+      try {
+        const imageResponse = await base44.functions.invoke('getImageUrlsFromPage', { 
+          productUrl: productUrl.trim() 
+        });
 
-      console.log(`🖼️ [URL] URLs FILTRADAS:`, validUrls);
-      console.log(`🖼️ [URL] Quantidade de URLs válidas:`, validUrls.length);
-      
-      if (validUrls.length === 0) {
-        toast.warning(`⚠️ ${title} sem imagens. Use upload manual.`);
-        setManualStep(0);
-        setIsProcessing(false);
-      } else {
-        toast.success(`✅ ${marketplace}: ${validUrls.length} imagens prontas!`);
-        setDownloadedImages(validUrls);
-        setCoverIndex(0);
-        setManualStep(5);
+        console.log('📦 URLs de imagens:', imageResponse);
+
+        if (imageResponse?.status === 200 && imageResponse.data?.imageUrls) {
+          imageUrlsExtracted = imageResponse.data.imageUrls || [];
+          console.log(`✅ ${imageUrlsExtracted.length} URLs extraídas automaticamente!`);
+        }
+      } catch (imgError) {
+        console.error('⚠️ Erro ao extrair URLs:', imgError);
       }
-
+      
+      // Preenche array de 6 URLs (vazias se não encontrou)
+      const filledUrls = [...imageUrlsExtracted];
+      while (filledUrls.length < 6) filledUrls.push('');
+      setExtractedImageUrls(filledUrls.slice(0, 6));
+      
+      toast.success(`✅ Dados extraídos! ${imageUrlsExtracted.length} URLs de imagens encontradas.`);
+      setManualStep(2); // VAI PARA ETAPA 2: REVISAR URLs
+      
     } catch (error) {
       console.error("❌ [URL] ERRO COMPLETO:", error);
-      console.error("❌ [URL] Stack:", error.stack);
-      console.error("❌ [URL] Message:", error.message);
       
       setDebugError({
         type: 'extractDataFromUrl',
@@ -1315,7 +1317,7 @@ export default function CreateAuction() {
                       <div className="text-center py-8">
                         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
                         <p className="text-blue-400">
-                          {isSearchingName ? 'IA buscando produto na internet...' : isSearchingGtin ? 'Buscando produto por código de barras...' : 'Extraindo imagens e dados...'}
+                          {isSearchingName ? 'IA buscando produto na internet...' : isSearchingGtin ? 'Buscando produto por código de barras...' : 'Extraindo dados e URLs de imagens...'}
                         </p>
                       </div>
                     )}
@@ -1326,7 +1328,7 @@ export default function CreateAuction() {
                         <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
                           <h4 className="font-bold text-green-300 mb-3 flex items-center gap-2">
                             <CheckCircle className="w-4 h-4" />
-                            1️⃣ Dados Extraídos
+                            1️⃣ Dados Extraídos com Sucesso!
                           </h4>
                           <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
                             <div><span className="text-green-400 font-semibold">Título:</span> {importedData.title || '❌ Não encontrado'}</div>
@@ -1340,12 +1342,14 @@ export default function CreateAuction() {
                             <ImageIcon className="w-4 h-4" />
                             2️⃣ URLs das Imagens Extraídas
                           </h4>
-                          <p className="text-xs text-purple-400 mb-3">Revise as URLs abaixo. Edite se necessário ou adicione manualmente se estiverem vazias.</p>
-
+                          <p className="text-xs text-purple-400 mb-3">
+                            ✨ URLs extraídas automaticamente! Revise abaixo, edite se necessário ou preencha manualmente as vazias.
+                          </p>
+                          
                           <div className="space-y-3">
                             {extractedImageUrls.map((url, index) => (
                               <div key={index} className="flex items-center gap-3">
-                                <span className="text-xs text-gray-400 w-8">{index + 1}:</span>
+                                <span className="text-xs text-gray-400 w-8 font-mono">{index + 1}:</span>
                                 <input
                                   type="text"
                                   value={url}
@@ -1355,72 +1359,29 @@ export default function CreateAuction() {
                                     setExtractedImageUrls(newUrls);
                                   }}
                                   placeholder="Cole a URL da imagem aqui..."
-                                  className="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                                  className="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
                                 />
-                                {url && (
-                                  <img 
-                                    src={url} 
-                                    alt={`Preview ${index + 1}`}
-                                    className="w-12 h-12 object-cover rounded border border-gray-600"
-                                    crossOrigin="anonymous"
-                                    onError={(e) => {
-                                      e.target.style.display = 'none';
-                                    }}
-                                  />
+                                {url && url.trim() && (
+                                  <div className="w-14 h-14 bg-gray-900 rounded border border-gray-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                                    <img 
+                                      src={url} 
+                                      alt={`Preview ${index + 1}`}
+                                      className="max-w-full max-h-full object-contain"
+                                      crossOrigin="anonymous"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.parentElement.innerHTML = '<div class="text-xs text-red-400">❌</div>';
+                                      }}
+                                    />
+                                  </div>
                                 )}
                               </div>
                             ))}
                           </div>
 
                           <Button 
-                            onClick={async () => {
-                              const validUrls = extractedImageUrls.filter(u => u.trim());
-                              if (validUrls.length === 0) {
-                                toast.error("❌ Adicione pelo menos 1 URL de imagem!");
-                                return;
-                              }
-
-                              setIsDownloadingImages(true);
-                              toast.info("⬇️ Baixando imagens...");
-
-                              try {
-                                const downloaded = [];
-                                for (let i = 0; i < extractedImageUrls.length; i++) {
-                                  const url = extractedImageUrls[i];
-                                  if (!url.trim()) continue;
-
-                                  try {
-                                    console.log(`⬇️ Baixando imagem ${i + 1}:`, url);
-                                    const response = await base44.integrations.Core.UploadFile({ file: url });
-
-                                    if (response?.file_url) {
-                                      downloaded.push(response.file_url);
-                                      console.log(`✅ Imagem ${i + 1} baixada:`, response.file_url);
-                                    }
-                                  } catch (error) {
-                                    console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
-                                  }
-                                }
-
-                                if (downloaded.length === 0) {
-                                  toast.error("❌ Nenhuma imagem foi baixada com sucesso");
-                                  setIsDownloadingImages(false);
-                                  return;
-                                }
-
-                                setDownloadedImages(downloaded);
-                                setSelectedCoverIndex(0);
-                                setManualStep(3);
-                                toast.success(`✅ ${downloaded.length} imagem(ns) baixada(s)!`);
-
-                              } catch (error) {
-                                console.error("❌ Erro ao baixar imagens:", error);
-                                toast.error("Erro ao baixar imagens");
-                              } finally {
-                                setIsDownloadingImages(false);
-                              }
-                            }}
-                            disabled={isDownloadingImages}
+                            onClick={downloadImagesFromUrls}
+                            disabled={isDownloadingImages || !extractedImageUrls.some(u => u.trim())}
                             className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold"
                           >
                             {isDownloadingImages ? (
@@ -1435,6 +1396,11 @@ export default function CreateAuction() {
                               </>
                             )}
                           </Button>
+
+                          <p className="text-xs text-purple-300 mt-3 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4" />
+                            <span>O sistema vai baixar as imagens das URLs acima e hospedar no servidor</span>
+                          </p>
                         </div>
                       </div>
                     )}
@@ -1446,8 +1412,8 @@ export default function CreateAuction() {
                           <ImageIcon className="w-4 h-4" />
                           3️⃣ Escolha a Imagem de Capa
                         </h4>
-                        <p className="text-xs text-blue-400 mb-4">Clique na imagem que será a CAPA do leilão</p>
-
+                        <p className="text-xs text-blue-400 mb-4">Clique na imagem que será a CAPA do leilão (primeira posição)</p>
+                        
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
                           {downloadedImages.map((imgUrl, index) => (
                             <div
@@ -1459,24 +1425,25 @@ export default function CreateAuction() {
                               }`}
                               onClick={() => setSelectedCoverIndex(index)}
                             >
-                              <div className="w-full h-32 bg-gray-900 flex items-center justify-center">
+                              <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
                                 <img 
                                   src={imgUrl} 
                                   alt={`Imagem ${index + 1}`}
                                   className="max-w-full max-h-full object-contain"
+                                  crossOrigin="anonymous"
                                 />
                               </div>
-
+                              
                               <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
                                 {index + 1}
                               </div>
-
+                              
                               {selectedCoverIndex === index && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-blue-500/40 backdrop-blur-[2px] text-white font-bold text-sm">
                                   ✅ CAPA
                                 </div>
                               )}
-
+                              
                               {selectedCoverIndex !== index && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium">
                                   Clique para capa
@@ -1494,41 +1461,184 @@ export default function CreateAuction() {
                             downloadedImages.forEach((img, i) => {
                               if (i !== selectedCoverIndex) finalImages.push(img);
                             });
-
+                            
                             // Aplica no formulário (até 5 imagens)
                             finalImages = finalImages.slice(0, 5);
                             while (finalImages.length < 5) {
                               finalImages.push("");
                             }
-
+                            
                             setFormData(prev => ({
                               ...prev,
                               title: importedData?.title || prev.title,
                               description: importedData?.description || prev.description,
-                              starting_price: importedData?.price || prev.starting_price,
-                              image_urls: finalImages
+                              starting_price: importedData?.price ? importedData.price.toString() : prev.starting_price,
+                              image_urls: finalImages,
+                              source_url: productUrl
                             }));
-
+                            
                             // Reseta estados
                             setManualStep(0);
                             setImportedData(null);
                             setExtractedImageUrls(['', '', '', '', '', '']);
                             setDownloadedImages([]);
                             setProductUrl("");
-                            setIsProcessing(false);
-
-                            toast.success("✅ Dados aplicados no formulário!");
+                            setSelectedCoverIndex(0);
+                            
+                            toast.success("✅ Todos os dados aplicados no formulário!");
                           }}
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
                         >
                           <CheckCircle className="w-4 h-4 mr-2" />
-                          ✅ Aplicar no Formulário
+                          🚀 Aplicar no Formulário
                         </Button>
                       </div>
                     )}
 
-                    {/* ETAPA 3: INSERIR/CONFIRMAR URLs DAS IMAGENS */}
-                    {manualStep === 3 && (
+                    // ETAPA 1: EXTRAIR TUDO (TÍTULO, DESCRIÇÃO, URLs DE IMAGENS) DE UMA VEZ  
+                    const extractAllData = async () => {
+                      if (!productUrl) {
+                        toast.error("Cole a URL do produto primeiro!");
+                        return;
+                      }
+                      setIsProcessing(true);
+                      setManualStep(1);
+                      setDebugError(null);
+
+                      try {
+                        console.log('🚀 [URL] Iniciando extração COMPLETA para:', productUrl);
+                        toast.info("🤖 IA analisando produto e extraindo imagens...");
+
+                        // 1️⃣ EXTRAIR DADOS BÁSICOS (título, descrição, preço)
+                        const response = await extractDataFromUrl({ productUrl });
+
+                        console.log('📦 [URL] Resposta dados básicos:', response);
+
+                        if (!response || !response.data) {
+                            throw new Error("Falha na extração");
+                        }
+
+                        const responseData = response.data;
+
+                        if (responseData.error) {
+                          toast.error(responseData.error);
+                          if (responseData.suggestion) {
+                            alert(`❌ ${responseData.error}\n\n💡 ${responseData.suggestion}`);
+                          }
+                          setManualStep(0);
+                          setIsProcessing(false);
+                          return;
+                        }
+
+                        const { title, description, marketplace } = responseData;
+
+                        console.log('✅ Título:', title);
+                        console.log('📝 Descrição:', description);
+
+                        if (!title || !description) {
+                          throw new Error("Dados incompletos");
+                        }
+
+                        setImportedData({ title, description, price: responseData.price });
+
+                        // 2️⃣ EXTRAIR URLs DAS IMAGENS DO ANÚNCIO
+                        toast.info("🖼️ Extraindo URLs das imagens...");
+                        let imageUrlsExtracted = [];
+
+                        try {
+                          const imageResponse = await base44.functions.invoke('getImageUrlsFromPage', { 
+                            productUrl: productUrl.trim() 
+                          });
+
+                          console.log('📦 URLs de imagens extraídas:', imageResponse);
+
+                          if (imageResponse?.status === 200 && imageResponse.data?.imageUrls) {
+                            imageUrlsExtracted = imageResponse.data.imageUrls || [];
+                            console.log(`✅ ${imageUrlsExtracted.length} URLs extraídas!`);
+                            toast.success(`✅ Dados + ${imageUrlsExtracted.length} URLs de imagens extraídos!`);
+                          } else {
+                            toast.info("✅ Dados extraídos! URLs de imagens não encontradas - preencha manualmente.");
+                          }
+                        } catch (imgError) {
+                          console.error('⚠️ Erro ao extrair URLs:', imgError);
+                          toast.info("✅ Dados extraídos! Preencha URLs de imagens manualmente.");
+                        }
+
+                        // Preenche array de 6 URLs
+                        const filledUrls = [...imageUrlsExtracted];
+                        while (filledUrls.length < 6) filledUrls.push('');
+                        setExtractedImageUrls(filledUrls.slice(0, 6));
+
+                        setManualStep(2); // VAI PARA ETAPA 2
+
+                      } catch (error) {
+                        console.error("❌ [URL] ERRO:", error);
+
+                        setDebugError({
+                          type: 'extractDataFromUrl',
+                          message: error.message,
+                          stack: error.stack,
+                          timestamp: new Date().toISOString()
+                        });
+
+                        toast.error("Erro ao extrair. Use outro método.");
+                        setManualStep(0);
+                      }
+
+                      setIsProcessing(false);
+                    };
+
+                    // 🆕 FUNÇÃO PARA BAIXAR IMAGENS DAS URLs
+                    const downloadImagesFromUrls = async () => {
+                      const validUrls = extractedImageUrls.filter(u => u.trim());
+                      if (validUrls.length === 0) {
+                        toast.error("❌ Adicione pelo menos 1 URL de imagem!");
+                        return;
+                      }
+
+                      setIsDownloadingImages(true);
+                      toast.info("⬇️ Baixando imagens...");
+
+                      try {
+                        const downloaded = [];
+                        for (let i = 0; i < extractedImageUrls.length; i++) {
+                          const url = extractedImageUrls[i];
+                          if (!url.trim()) continue;
+
+                          try {
+                            console.log(`⬇️ Baixando imagem ${i + 1}:`, url);
+                            const response = await downloadImage({ imageUrl: url });
+
+                            if (response?.data?.uploaded_url) {
+                              downloaded.push(response.data.uploaded_url);
+                              console.log(`✅ Imagem ${i + 1} baixada!`);
+                            }
+                          } catch (error) {
+                            console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
+                          }
+                        }
+
+                        if (downloaded.length === 0) {
+                          toast.error("❌ Nenhuma imagem foi baixada com sucesso");
+                          setIsDownloadingImages(false);
+                          return;
+                        }
+
+                        setDownloadedImages(downloaded);
+                        setSelectedCoverIndex(0);
+                        setManualStep(3);
+                        toast.success(`✅ ${downloaded.length} imagem(ns) baixada(s)!`);
+
+                      } catch (error) {
+                        console.error("❌ Erro ao baixar imagens:", error);
+                        toast.error("Erro ao baixar imagens");
+                      } finally {
+                        setIsDownloadingImages(false);
+                      }
+                    };
+
+{/* ETAPA ANTIGA 3 - REMOVIDA (agora é etapa 2 e 3 acima) */}
+{manualStep === 999 && (
                       <div className="bg-yellow-900/30 p-4 rounded-lg border border-yellow-700">
                         <h4 className="font-bold text-yellow-300 mb-4 flex items-center gap-2">
                           <ImageIcon className="w-4 h-4" />
@@ -1618,16 +1728,16 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* ETAPA 4: PROCESSANDO IMAGENS */}
-                    {manualStep === 4 && (
+                    {/* ETAPA ANTIGA 4 - REMOVIDA */}
+                    {manualStep === 998 && (
                       <div className="text-center py-8">
                         <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-yellow-500" />
                         <p className="text-yellow-400">Baixando e enviando imagens, por favor, aguarde...</p>
                       </div>
                     )}
 
-                    {/* ETAPA 5: ESCOLHER CAPA */}
-                    {manualStep === 5 && downloadedImages.length > 0 && (
+                    {/* ETAPA ANTIGA 5 - REMOVIDA (substituída pela nova etapa 3) */}
+                    {manualStep === 997 && downloadedImages.length > 0 && (
                       <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="font-bold text-green-300 flex items-center gap-2">
@@ -1715,8 +1825,8 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* ETAPA 6: APLICAR NO FORMULÁRIO */}
-                    {manualStep === 6 && (
+                    {/* ETAPA ANTIGA 6 - REMOVIDA */}
+                    {manualStep === 996 && (
                       <div className="bg-blue-900/30 p-4 rounded-lg border border-blue-700 text-center">
                         <h4 className="font-bold text-blue-300 mb-2 flex items-center justify-center gap-2">
                           <Upload className="w-4 h-4" />
