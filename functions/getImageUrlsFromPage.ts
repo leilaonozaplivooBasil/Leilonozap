@@ -11,21 +11,25 @@ Deno.serve(async (req) => {
         
         console.log('🤖 Usando IA para extrair imagens de:', productUrl);
         
-        // 🆕 USA IA COM ACESSO À INTERNET - CONTORNA PROTEÇÕES ANTI-BOT
+        // 🆕 USA IA COM ACESSO À INTERNET - PROMPT MELHORADO
         const aiResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Você é um extrator de URLs de imagens de produtos.
+            prompt: `Acesse esta página de produto: ${productUrl}
 
-Acesse esta página: ${productUrl}
+Encontre e retorne URLs de imagens DO PRODUTO que estejam no HTML da página.
 
-Extraia APENAS as URLs das IMAGENS DO PRODUTO (fotos principais que mostram o produto).
+REGRAS CRÍTICAS:
+✅ URLs devem começar com: http2.mlstatic.com, images-amazon, ou similar
+✅ APENAS versões GRANDES: terminam com -F.jpg, -O.jpg, -F.webp, _large.jpg
+✅ Retorne NO MÍNIMO 6 URLs DIFERENTES (não duplicadas!)
+✅ Fotos principais do produto, não miniaturas, não logos
 
-IGNORE:
-- Logos, ícones, banners
-- Imagens de UI/navegação
-- Miniaturas pequenas
-- Imagens de reviews/comentários
+❌ NÃO retorne URLs duplicadas
+❌ NÃO use miniaturas: -I.jpg, _thumb, _small
+❌ NÃO use imagens de UI ou propaganda
 
-RETORNE as 6 melhores URLs de alta qualidade do produto.`,
+Exemplo correto: https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB78901234_052024-F.webp
+
+IMPORTANTE: Cada URL deve ser DIFERENTE das outras!`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -33,7 +37,8 @@ RETORNE as 6 melhores URLs de alta qualidade do produto.`,
                     image_urls: {
                         type: "array",
                         items: { type: "string" },
-                        description: "URLs das imagens do produto em alta qualidade"
+                        minItems: 6,
+                        description: "Array com 6+ URLs DIFERENTES de imagens grandes"
                     }
                 },
                 required: ["image_urls"]
@@ -44,10 +49,14 @@ RETORNE as 6 melhores URLs de alta qualidade do produto.`,
         
         const imageUrls = aiResponse?.image_urls || [];
         
-        // Valida e limpa URLs
-        const validUrls = imageUrls
+        // Remove duplicatas usando Set e valida URLs
+        const uniqueUrls = [...new Set(imageUrls)];
+        
+        const validUrls = uniqueUrls
             .filter(url => url && typeof url === 'string' && url.startsWith('http'))
-            .slice(0, 6);
+            .map(url => url.split('?')[0].trim()) // Remove query params
+            .filter((url, index, arr) => arr.indexOf(url) === index) // Remove duplicatas novamente
+            .slice(0, 10); // Pega até 10 imagens diferentes
         
         console.log(`✅ ${validUrls.length} URLs extraídas pela IA`);
         
