@@ -93,6 +93,7 @@ export default function CreateAuction() {
   const [secondsToSkip, setSecondsToSkip] = useState(60);
   const [isProcessingTest, setIsProcessingTest] = useState(false);
   const [isResettingTestValora, setIsResettingTestValora] = useState(false);
+  const [validationReport, setValidationReport] = useState(null);
 
 
 
@@ -1284,19 +1285,7 @@ export default function CreateAuction() {
                               }
 
                               setIsProcessing(false);
-
-                              // Monta relatório visual
-                              const report = results.map(r => 
-                                `\n🖼️ Imagem ${r.index}:\n` +
-                                `   Status: ${r.status}\n` +
-                                `   Tipo: ${r.contentType}\n` +
-                                `   Validação: ${r.isImage}\n` +
-                                `   URL: ${r.url.substring(0, 80)}...` +
-                                (r.error ? `\n   ⚠️ Erro: ${r.error}` : '')
-                              ).join('\n');
-
-                              alert(`🔍 RELATÓRIO DE VALIDAÇÃO:\n${report}\n\n` +
-                                    `✅ Imagens válidas: ${results.filter(r => r.isImage === '✅ É imagem').length}/${results.length}`);
+                              setValidationReport(results);
                             }}
                             disabled={isProcessing}
                             className="border-yellow-600 text-yellow-400 hover:bg-yellow-600/10"
