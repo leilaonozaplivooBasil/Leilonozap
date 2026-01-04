@@ -7,6 +7,29 @@ const USER_AGENTS = [
 
 const getRandomUA = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 
+// 🔥 VALIDA SE IMAGEM CARREGA REALMENTE
+async function validateImageUrl(url) {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(url, {
+            method: 'HEAD',
+            headers: { 'User-Agent': getRandomUA() },
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeout);
+        
+        if (!response.ok) return false;
+        
+        const contentType = response.headers.get('content-type');
+        return contentType && contentType.startsWith('image/');
+    } catch {
+        return false;
+    }
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -140,19 +163,34 @@ RETORNE JSON com imageUrls OBRIGATÓRIO.`,
             }
         }
 
-        // LIMPA E VALIDA URLs (menos restritivo)
+        // LIMPA URLs
         imageUrls = (imageUrls || [])
             .filter(u => u && typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')))
-            .map(u => u.split('"')[0].split('&quot;')[0].split('?')[0]) // Remove aspas e query
+            .map(u => u.split('"')[0].split('&quot;')[0].split('?')[0])
             .filter(u => u.length > 30)
-            .filter((u, i, arr) => arr.indexOf(u) === i); // Remove duplicatas
+            .filter((u, i, arr) => arr.indexOf(u) === i);
 
-        console.log(`✅ Final: ${imageUrls.length} imagens válidas`);
+        console.log(`🔍 Validando ${imageUrls.length} imagens...`);
+
+        // 🔥 VALIDA CADA IMAGEM
+        const validatedUrls = [];
+        for (const url of imageUrls) {
+            const isValid = await validateImageUrl(url);
+            if (isValid) {
+                validatedUrls.push(url);
+                console.log(`✅ OK: ${url.substring(0, 60)}`);
+            } else {
+                console.log(`❌ FALHOU: ${url.substring(0, 60)}`);
+            }
+            if (validatedUrls.length >= 8) break; // Máximo 8 imagens
+        }
+
+        console.log(`✅ ${validatedUrls.length} imagens validadas`);
 
         return Response.json({
             title: (title || 'Produto').substring(0, 200),
             description: (description || 'Produto importado').substring(0, 500),
-            imageUrls: imageUrls,
+            imageUrls: validatedUrls,
             marketplace: marketplace
         });
 
