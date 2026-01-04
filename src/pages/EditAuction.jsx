@@ -402,6 +402,10 @@ export default function EditAuction() {
             console.log(`✅ Leilão reativado com sucesso!`);
             
             setIsReactivating(false);
+            
+            // 🆕 LIMPA FLAGS DE REDIRECIONAMENTO
+            sessionStorage.removeItem('loginFromPartners');
+            
             alert(`✅ Leilão reativado!\n\n- ${deletedCount} mensagens removidas\n- Status: ATIVO\n- Histórico de lances mantido\n- Termina: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
             
             // Redireciona para a sala do leilão
