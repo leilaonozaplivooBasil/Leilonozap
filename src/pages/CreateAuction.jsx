@@ -374,10 +374,32 @@ export default function CreateAuction() {
         setProductName("");
         setManualStep(0);
       } else {
-        toast.success(`✅ ${validUrls.length} imagens encontradas!`);
-        setDownloadedImages(validUrls);
-        setCoverIndex(0);
-        setManualStep(5);
+        // 🆕 FORÇA DOWNLOAD REAL DAS IMAGENS PARA EVITAR CORS
+        toast.info(`📥 Baixando ${validUrls.length} imagens para evitar bloqueio...`);
+        setManualStep(4); // Mostra loading
+        
+        const uploadedImages = [];
+        for (let i = 0; i < validUrls.length; i++) {
+          try {
+            const result = await downloadImage({ imageUrl: validUrls[i] });
+            if (result?.data?.file_url) {
+              uploadedImages.push(result.data.file_url);
+              console.log(`✅ Imagem ${i + 1} baixada:`, result.data.file_url);
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
+          }
+        }
+        
+        if (uploadedImages.length > 0) {
+          toast.success(`✅ ${uploadedImages.length} imagens prontas!`);
+          setDownloadedImages(uploadedImages);
+          setCoverIndex(0);
+          setManualStep(5);
+        } else {
+          toast.error("❌ Não foi possível baixar as imagens. Use upload manual.");
+          setManualStep(0);
+        }
       }
 
       setProductName("");
@@ -454,11 +476,32 @@ export default function CreateAuction() {
         setGtinCode("");
         setManualStep(0);
       } else {
-        toast.success(`✅ ${validUrls.length} imagens validadas! (${data.source})`);
-        setDownloadedImages(validUrls);
-        setCoverIndex(0);
-        setManualStep(5);
-        console.log(`✅ [GTIN] manualStep=5, downloadedImages:`, validUrls);
+        // 🆕 FORÇA DOWNLOAD REAL DAS IMAGENS PARA EVITAR CORS
+        toast.info(`📥 Baixando ${validUrls.length} imagens para evitar bloqueio...`);
+        setManualStep(4); // Mostra loading
+        
+        const uploadedImages = [];
+        for (let i = 0; i < validUrls.length; i++) {
+          try {
+            const result = await downloadImage({ imageUrl: validUrls[i] });
+            if (result?.data?.file_url) {
+              uploadedImages.push(result.data.file_url);
+              console.log(`✅ Imagem ${i + 1} baixada:`, result.data.file_url);
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
+          }
+        }
+        
+        if (uploadedImages.length > 0) {
+          toast.success(`✅ ${uploadedImages.length} imagens prontas! (${data.source})`);
+          setDownloadedImages(uploadedImages);
+          setCoverIndex(0);
+          setManualStep(5);
+        } else {
+          toast.error("❌ Não foi possível baixar as imagens. Use upload manual.");
+          setManualStep(0);
+        }
       }
 
       setGtinCode("");
@@ -545,11 +588,34 @@ export default function CreateAuction() {
         setManualStep(0);
         setIsProcessing(false);
       } else {
-        toast.success(`✅ ${marketplace}: ${validUrls.length} imagens validadas!`);
-        setDownloadedImages(validUrls);
-        setCoverIndex(0);
-        setManualStep(5);
-        console.log(`✅ [URL] manualStep=5, downloadedImages:`, validUrls);
+        // 🆕 FORÇA DOWNLOAD REAL DAS IMAGENS PARA EVITAR CORS
+        toast.info(`📥 Baixando ${validUrls.length} imagens para evitar bloqueio...`);
+        setManualStep(4); // Mantém loading
+        
+        const uploadedImages = [];
+        for (let i = 0; i < validUrls.length; i++) {
+          try {
+            const result = await downloadImage({ imageUrl: validUrls[i] });
+            if (result?.data?.file_url) {
+              uploadedImages.push(result.data.file_url);
+              console.log(`✅ Imagem ${i + 1} baixada:`, result.data.file_url);
+            }
+          } catch (error) {
+            console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
+          }
+        }
+        
+        setIsProcessing(false);
+        
+        if (uploadedImages.length > 0) {
+          toast.success(`✅ ${marketplace}: ${uploadedImages.length} imagens prontas!`);
+          setDownloadedImages(uploadedImages);
+          setCoverIndex(0);
+          setManualStep(5);
+        } else {
+          toast.error("❌ Não foi possível baixar as imagens. Use upload manual.");
+          setManualStep(0);
+        }
       }
 
     } catch (error) {
