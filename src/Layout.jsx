@@ -170,6 +170,12 @@ export default function Layout({ children, currentPageName }) {
     }
 
     const initApp = async () => {
+        if (hasInitializedRef.current) {
+          return; // Já inicializou, não roda de novo
+        }
+        
+        hasInitializedRef.current = true;
+        
         try {
         let userFound = false;
 
