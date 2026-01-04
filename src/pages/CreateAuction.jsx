@@ -1021,7 +1021,9 @@ export default function CreateAuction() {
                           <div className="mt-3 p-2 bg-purple-900/30 rounded-lg border border-purple-700/50">
                             <p className="text-xs text-purple-300 flex items-center gap-2">
                               <span className="text-base">✨</span>
-                              <span><strong>IA busca na internet:</strong> Digite apenas o nome do produto e a IA encontra dados e fotos automaticamente!</span>
+                              <span><strong>Novo fluxo em 2 etapas:</strong><br/>
+                              1️⃣ Busca mostra lista de anúncios<br/>
+                              2️⃣ Você escolhe qual importar!</span>
                             </p>
                           </div>
                           </div>
