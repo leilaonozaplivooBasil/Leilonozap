@@ -374,38 +374,10 @@ export default function CreateAuction() {
         setProductName("");
         setManualStep(0);
       } else {
-        // 🆕 FORÇA DOWNLOAD REAL DAS IMAGENS PARA EVITAR CORS
-        toast.info(`📥 Baixando ${validUrls.length} imagens para evitar bloqueio...`);
-        setManualStep(4); // Mostra loading
-        
-        const uploadedImages = [];
-        for (let i = 0; i < validUrls.length; i++) {
-          try {
-            const result = await downloadImage({ imageUrl: validUrls[i] });
-            if (result?.data?.dataUrl) {
-              uploadedImages.push(result.data.dataUrl);
-              console.log(`✅ Imagem ${i + 1} convertida para base64`);
-            } else if (result?.data?.fallbackUrl) {
-              // Se falhar, usa a URL original como fallback
-              uploadedImages.push(result.data.fallbackUrl);
-              console.log(`⚠️ Imagem ${i + 1} usando URL original (fallback)`);
-            }
-          } catch (error) {
-            console.error(`❌ Erro ao processar imagem ${i + 1}:`, error);
-            // Tenta usar URL original como último recurso
-            uploadedImages.push(validUrls[i]);
-          }
-        }
-        
-        if (uploadedImages.length > 0) {
-          toast.success(`✅ ${uploadedImages.length} imagens prontas!`);
-          setDownloadedImages(uploadedImages);
-          setCoverIndex(0);
-          setManualStep(5);
-        } else {
-          toast.error("❌ Não foi possível processar as imagens. Use upload manual.");
-          setManualStep(0);
-        }
+        toast.success(`✅ ${validUrls.length} imagens encontradas!`);
+        setDownloadedImages(validUrls);
+        setCoverIndex(0);
+        setManualStep(5);
       }
 
       setProductName("");
@@ -482,38 +454,11 @@ export default function CreateAuction() {
         setGtinCode("");
         setManualStep(0);
       } else {
-        // 🆕 FORÇA DOWNLOAD REAL DAS IMAGENS PARA EVITAR CORS
-        toast.info(`📥 Baixando ${validUrls.length} imagens para evitar bloqueio...`);
-        setManualStep(4); // Mostra loading
-        
-        const uploadedImages = [];
-        for (let i = 0; i < validUrls.length; i++) {
-          try {
-            const result = await downloadImage({ imageUrl: validUrls[i] });
-            if (result?.data?.dataUrl) {
-              uploadedImages.push(result.data.dataUrl);
-              console.log(`✅ Imagem ${i + 1} convertida para base64`);
-            } else if (result?.data?.fallbackUrl) {
-              // Se falhar, usa a URL original como fallback
-              uploadedImages.push(result.data.fallbackUrl);
-              console.log(`⚠️ Imagem ${i + 1} usando URL original (fallback)`);
-            }
-          } catch (error) {
-            console.error(`❌ Erro ao processar imagem ${i + 1}:`, error);
-            // Tenta usar URL original como último recurso
-            uploadedImages.push(validUrls[i]);
-          }
-        }
-        
-        if (uploadedImages.length > 0) {
-          toast.success(`✅ ${uploadedImages.length} imagens prontas! (${data.source})`);
-          setDownloadedImages(uploadedImages);
-          setCoverIndex(0);
-          setManualStep(5);
-        } else {
-          toast.error("❌ Não foi possível processar as imagens. Use upload manual.");
-          setManualStep(0);
-        }
+        toast.success(`✅ ${validUrls.length} imagens validadas! (${data.source})`);
+        setDownloadedImages(validUrls);
+        setCoverIndex(0);
+        setManualStep(5);
+        console.log(`✅ [GTIN] manualStep=5, downloadedImages:`, validUrls);
       }
 
       setGtinCode("");
@@ -600,40 +545,10 @@ export default function CreateAuction() {
         setManualStep(0);
         setIsProcessing(false);
       } else {
-        // 🆕 FORÇA DOWNLOAD REAL DAS IMAGENS PARA EVITAR CORS
-        toast.info(`📥 Baixando ${validUrls.length} imagens para evitar bloqueio...`);
-        setManualStep(4); // Mantém loading
-        
-        const uploadedImages = [];
-        for (let i = 0; i < validUrls.length; i++) {
-          try {
-            const result = await downloadImage({ imageUrl: validUrls[i] });
-            if (result?.data?.dataUrl) {
-              uploadedImages.push(result.data.dataUrl);
-              console.log(`✅ Imagem ${i + 1} convertida para base64`);
-            } else if (result?.data?.fallbackUrl) {
-              // Se falhar, usa a URL original como fallback
-              uploadedImages.push(result.data.fallbackUrl);
-              console.log(`⚠️ Imagem ${i + 1} usando URL original (fallback)`);
-            }
-          } catch (error) {
-            console.error(`❌ Erro ao processar imagem ${i + 1}:`, error);
-            // Tenta usar URL original como último recurso
-            uploadedImages.push(validUrls[i]);
-          }
-        }
-        
-        setIsProcessing(false);
-        
-        if (uploadedImages.length > 0) {
-          toast.success(`✅ ${marketplace}: ${uploadedImages.length} imagens prontas!`);
-          setDownloadedImages(uploadedImages);
-          setCoverIndex(0);
-          setManualStep(5);
-        } else {
-          toast.error("❌ Não foi possível processar as imagens. Use upload manual.");
-          setManualStep(0);
-        }
+        toast.success(`✅ ${marketplace}: ${validUrls.length} imagens prontas!`);
+        setDownloadedImages(validUrls);
+        setCoverIndex(0);
+        setManualStep(5);
       }
 
     } catch (error) {
@@ -1424,71 +1339,7 @@ export default function CreateAuction() {
                             <ImageIcon className="w-4 h-4" />
                             3️⃣ Escolha a imagem de capa:
                           </h4>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={async () => {
-                              setIsProcessing(true);
-                              const results = [];
 
-                              for (let i = 0; i < downloadedImages.length; i++) {
-                                const url = downloadedImages[i];
-                                console.log(`🔍 Validando imagem ${i + 1}/${downloadedImages.length}: ${url.substring(0, 60)}...`);
-
-                                let response;
-                                let method = 'HEAD';
-                                
-                                try {
-                                  // Tenta HEAD primeiro
-                                  response = await fetch(url, { 
-                                    method: 'HEAD',
-                                    signal: AbortSignal.timeout(5000)
-                                  });
-
-                                  // Se receber 405 (Method Not Allowed), tenta GET
-                                  if (response.status === 405) {
-                                    console.log(`⚠️ Erro 405 em HEAD, tentando GET...`);
-                                    method = 'GET';
-                                    response = await fetch(url, { 
-                                      method: 'GET',
-                                      signal: AbortSignal.timeout(5000)
-                                    });
-                                  }
-
-                                  const contentType = response.headers.get('content-type');
-
-                                  results.push({
-                                    index: i + 1,
-                                    url: url,
-                                    status: response.ok ? `✅ OK (${method})` : `❌ Erro ${response.status}`,
-                                    contentType: contentType || '❌ Sem content-type',
-                                    isImage: contentType?.startsWith('image/') ? '✅ É imagem' : '❌ NÃO é imagem'
-                                  });
-                                } catch (error) {
-                                  results.push({
-                                    index: i + 1,
-                                    url: url,
-                                    status: `❌ Timeout/Erro`,
-                                    contentType: '❌ Não acessível',
-                                    isImage: '❌ Não validada',
-                                    error: error.message
-                                  });
-                                }
-                              }
-
-                              setIsProcessing(false);
-                              setValidationReport(results);
-                            }}
-                            disabled={isProcessing}
-                            className="border-yellow-600 text-yellow-400 hover:bg-yellow-600/10"
-                          >
-                            {isProcessing ? (
-                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Validando...</>
-                            ) : (
-                              <>🔍 Validar Imagens</>
-                            )}
-                          </Button>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {downloadedImages.map((img, index) => (
