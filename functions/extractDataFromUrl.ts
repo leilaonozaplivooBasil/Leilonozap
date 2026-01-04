@@ -90,16 +90,52 @@ IMPORTANTE: Retorne URLs DIFERENTES e REAIS que você encontrou na página!`,
 
         console.log(`🧹 ${imageUrls.length} URLs após limpeza`);
 
-        // Se não encontrou imagens, retorna array vazio (usuário usará upload manual)
+        // Se não encontrou imagens, FORÇA IA A BUSCAR NOVAMENTE COM PROMPT DIRETO
         if (imageUrls.length === 0) {
-            console.log('⚠️ Nenhuma imagem encontrada - usuário precisará usar upload manual');
-            return Response.json({
-                title: (title || 'Produto').substring(0, 200),
-                description: (description || 'Produto importado').substring(0, 500),
-                imageUrls: [],
-                marketplace: marketplace,
-                message: 'Produto encontrado, mas sem imagens. Use upload manual.'
+            console.log('⚠️ IA não retornou imagens. Forçando busca específica...');
+            
+            const imageSearchResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                prompt: `Acesse esta URL: ${productUrl}
+
+RETORNE APENAS as URLs DIRETAS das imagens GRANDES do produto.
+
+BUSQUE no HTML/código da página URLs que:
+✅ Começam com http2.mlstatic.com ou https://images
+✅ Terminam com -F.jpg, -O.jpg, .webp, _large.jpg
+✅ São imagens GRANDES do produto (NÃO miniaturas)
+
+Retorne NO MÍNIMO 6 URLs DIFERENTES.`,
+                add_context_from_internet: true,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        imageUrls: { 
+                            type: "array", 
+                            items: { type: "string" },
+                            minItems: 6
+                        }
+                    },
+                    required: ["imageUrls"]
+                }
             });
+            
+            imageUrls = (imageSearchResult?.imageUrls || [])
+                .filter(u => u && typeof u === 'string' && u.startsWith('http'))
+                .filter((u, i, arr) => arr.indexOf(u) === i);
+                
+            console.log(`🔄 Busca forçada retornou ${imageUrls.length} URLs`);
+            
+            if (imageUrls.length === 0) {
+                console.log('❌ Nem na segunda tentativa. Retornando sem imagens.');
+                return Response.json({
+                    title: (title || 'Produto').substring(0, 200),
+                    description: (description || 'Produto importado').substring(0, 500),
+                    price: price || null,
+                    imageUrls: [],
+                    marketplace: marketplace,
+                    message: 'Produto encontrado, mas sem imagens. Use upload manual.'
+                });
+            }
         }
 
         console.log(`🔍 Processando ${imageUrls.length} imagens do ${marketplace}...`);
