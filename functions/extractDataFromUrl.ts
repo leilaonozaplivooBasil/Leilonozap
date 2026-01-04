@@ -85,12 +85,24 @@ Deno.serve(async (req) => {
                     title = data.title || '';
 
                     // Extrai imagens da API
-                    imageUrls = (data.pictures || [])
+                    const rawImages = (data.pictures || [])
                         .map(p => p.secure_url || p.url)
-                        .filter(u => u && u.includes('http2.mlstatic.com'))
+                        .filter(u => u && u.includes('http2.mlstatic.com'));
+
+                    console.log(`✅ API ML retornou ${rawImages.length} URLs de imagem`);
+                    console.log('📸 Primeiras URLs:', rawImages.slice(0, 3));
+
+                    // Converte para versão ORIGINAL (_O)
+                    imageUrls = rawImages
+                        .map(u => {
+                            // Remove query params
+                            const cleanUrl = u.split('?')[0];
+                            // Garante versão ORIGINAL
+                            return cleanUrl.replace(/_[VSWT]\./, '_O.');
+                        })
                         .slice(0, 10);
 
-                    console.log(`✅ API ML: ${imageUrls.length} imagens`);
+                    console.log(`✅ ${imageUrls.length} URLs processadas para versão original`);
 
                     // Busca descrição completa se disponível
                     try {
