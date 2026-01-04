@@ -1,5 +1,21 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+async function validateImageUrl(url) {
+    try {
+        const response = await fetch(url, {
+            method: 'HEAD',
+            signal: AbortSignal.timeout(5000)
+        });
+        
+        if (!response.ok) return false;
+        
+        const contentType = response.headers.get('content-type');
+        return contentType && contentType.startsWith('image/');
+    } catch {
+        return false;
+    }
+}
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -80,13 +96,38 @@ Se só encontrar acessórios ou nada: found = false`,
             }, { status: 404 });
         }
 
-        console.log(`✅ SUCESSO: ${result.title} com ${imageUrls.length} imagens`);
+        console.log(`📸 Validando ${imageUrls.length} imagens...`);
+
+        // Valida cada imagem
+        const validUrls = [];
+        for (const url of imageUrls) {
+            if (validUrls.length >= 6) break;
+            
+            console.log(`🔍 Testando: ${url.substring(0, 60)}...`);
+            if (await validateImageUrl(url)) {
+                validUrls.push(url);
+                console.log(`✅ Válida (${validUrls.length})`);
+            } else {
+                console.log(`❌ Inválida`);
+            }
+        }
+
+        if (validUrls.length === 0) {
+            return Response.json({
+                error: "Nenhuma imagem válida encontrada",
+                suggestion: "Use o importador por URL ou upload manual",
+                title: result.title,
+                description: result.description
+            }, { status: 404 });
+        }
+
+        console.log(`✅ SUCESSO: ${result.title} com ${validUrls.length} imagens validadas`);
 
         return Response.json({
             found: true,
             title: result.title,
             description: result.description || 'Produto encontrado',
-            imageUrls: imageUrls.slice(0, 6),
+            imageUrls: validUrls,
             source: result.productUrl?.includes('mercadolivre') ? 'Mercado Livre' :
                     result.productUrl?.includes('amazon') ? 'Amazon' :
                     result.productUrl?.includes('shopee') ? 'Shopee' : 'Internet'
