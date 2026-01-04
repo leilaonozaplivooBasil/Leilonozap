@@ -39,6 +39,7 @@ export default function Layout({ children, currentPageName }) {
   const [showTerms, setShowTerms] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState(null);
+  const hasInitializedRef = useRef(false);
 
   const handleLogout = useCallback(() => {
     console.log("🚪 INICIANDO LOGOUT...");
