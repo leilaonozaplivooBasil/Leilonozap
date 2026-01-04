@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle } from "lucide-react";
+import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle, Sparkles, CheckCircle } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { downloadImage } from "@/functions/downloadImage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -86,6 +86,12 @@ export default function CreateAuction() {
   const [showManualUpload, setShowManualUpload] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [debugError, setDebugError] = useState(null);
+
+  // 🆕 ESTADOS PARA IMPORTADOR INTELIGENTE
+  const [imageUrlInput, setImageUrlInput] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importedData, setImportedData] = useState(null);
+  const [suggestedProducts, setSuggestedProducts] = useState([]);
 
   // ESTADOS DO LABORATÓRIO DE TESTES
   const [testAuctions, setTestAuctions] = useState([]);
