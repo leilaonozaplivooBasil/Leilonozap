@@ -27,8 +27,9 @@ import { fastForwardTestAuction } from "@/functions/fastForwardTestAuction";
 import { deleteTestAuctions } from "@/functions/deleteTestAuctions";
 import { resetTestData } from "@/functions/resetTestData";
 import { resetTestValora } from "@/functions/resetTestValora";
-import { toast } from "sonner"; // Assuming sonner is used for notifications
+import { toast } from "sonner";
 import { addSeconds } from 'date-fns';
+import ImageAnalyzer from "../components/admin/ImageAnalyzer";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -953,6 +954,21 @@ export default function CreateAuction() {
                     </AlertDescription>
                   </Alert>
                 )}
+
+                {/* 🆕 ANALISADOR DE IMAGEM COM IA */}
+                <ImageAnalyzer 
+                  onAnalysisComplete={(data) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      title: data.title,
+                      description: data.description,
+                      category: data.category,
+                      starting_price: (data.estimated_price * 0.4).toFixed(2),
+                      image_urls: [data.imageUrl, "", "", "", ""]
+                    }));
+                    toast.success("✅ Dados da IA aplicados! Revise e ajuste.");
+                  }}
+                />
 
                 <Card className="bg-gray-800 border border-gray-700">
                   <CardHeader>

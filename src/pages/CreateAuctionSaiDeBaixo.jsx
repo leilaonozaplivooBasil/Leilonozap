@@ -18,6 +18,7 @@ import { createPageUrl } from "@/utils";
 import { downloadImage } from "@/functions/downloadImage";
 import { toast } from "sonner";
 import { addSeconds } from 'date-fns';
+import ImageAnalyzer from "../components/admin/ImageAnalyzer";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -392,6 +393,21 @@ export default function CreateAuctionSaiDeBaixo() {
                 Este leilão será criado exclusivamente para a página <strong>Sai de Baixo</strong>
               </AlertDescription>
             </Alert>
+
+            {/* 🆕 ANALISADOR DE IMAGEM COM IA */}
+            <ImageAnalyzer 
+              onAnalysisComplete={(data) => {
+                setFormData(prev => ({
+                  ...prev,
+                  title: data.title,
+                  description: data.description,
+                  category: data.category === 'roupas_acessorios' ? 'masculino' : prev.category,
+                  starting_price: (data.estimated_price * 0.4).toFixed(2),
+                  image_urls: [data.imageUrl, "", "", "", ""]
+                }));
+                toast.success("✅ Dados da IA aplicados! Revise e ajuste.");
+              }}
+            />
 
             <Card className="bg-red-50 border-2 border-red-300 mb-6">
               <CardHeader>
