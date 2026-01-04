@@ -261,7 +261,7 @@ export default function Layout({ children, currentPageName }) {
       };
 
       initApp();
-  }, [location, currentPageName, navigate, handleLogout]);
+  }, []); // Roda apenas UMA VEZ ao montar o componente
 
   useEffect(() => {
     if (!currentUser) return;
