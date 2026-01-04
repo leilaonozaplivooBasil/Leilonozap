@@ -1239,10 +1239,75 @@ export default function CreateAuction() {
                     {/* ETAPA 5: ESCOLHER CAPA */}
                     {manualStep === 5 && downloadedImages.length > 0 && (
                       <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
-                        <h4 className="font-bold text-green-300 mb-4 flex items-center gap-2">
-                          <ImageIcon className="w-4 h-4" />
-                          3️⃣ Escolha a imagem de capa:
-                        </h4>
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-bold text-green-300 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            3️⃣ Escolha a imagem de capa:
+                          </h4>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              setIsProcessing(true);
+                              const results = [];
+
+                              for (let i = 0; i < downloadedImages.length; i++) {
+                                const url = downloadedImages[i];
+                                console.log(`🔍 Validando imagem ${i + 1}/${downloadedImages.length}: ${url.substring(0, 60)}...`);
+
+                                try {
+                                  const response = await fetch(url, { 
+                                    method: 'HEAD',
+                                    signal: AbortSignal.timeout(5000)
+                                  });
+
+                                  const contentType = response.headers.get('content-type');
+
+                                  results.push({
+                                    index: i + 1,
+                                    url: url,
+                                    status: response.ok ? '✅ OK' : `❌ Erro ${response.status}`,
+                                    contentType: contentType || '❌ Sem content-type',
+                                    isImage: contentType?.startsWith('image/') ? '✅ É imagem' : '❌ NÃO é imagem'
+                                  });
+                                } catch (error) {
+                                  results.push({
+                                    index: i + 1,
+                                    url: url,
+                                    status: `❌ Timeout/Erro`,
+                                    contentType: '❌ Não acessível',
+                                    isImage: '❌ Não validada',
+                                    error: error.message
+                                  });
+                                }
+                              }
+
+                              setIsProcessing(false);
+
+                              // Monta relatório visual
+                              const report = results.map(r => 
+                                `\n🖼️ Imagem ${r.index}:\n` +
+                                `   Status: ${r.status}\n` +
+                                `   Tipo: ${r.contentType}\n` +
+                                `   Validação: ${r.isImage}\n` +
+                                `   URL: ${r.url.substring(0, 80)}...` +
+                                (r.error ? `\n   ⚠️ Erro: ${r.error}` : '')
+                              ).join('\n');
+
+                              alert(`🔍 RELATÓRIO DE VALIDAÇÃO:\n${report}\n\n` +
+                                    `✅ Imagens válidas: ${results.filter(r => r.isImage === '✅ É imagem').length}/${results.length}`);
+                            }}
+                            disabled={isProcessing}
+                            className="border-yellow-600 text-yellow-400 hover:bg-yellow-600/10"
+                          >
+                            {isProcessing ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Validando...</>
+                            ) : (
+                              <>🔍 Validar Imagens</>
+                            )}
+                          </Button>
+                        </div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                           {downloadedImages.map((img, index) => (
                             <div
@@ -1268,27 +1333,24 @@ export default function CreateAuction() {
                                   }}
                                 />
                               </div>
-                              
+
                               <Button
                                   variant="destructive"
                                   size="icon"
                                   className="absolute top-1 right-1 h-6 w-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
                                   onClick={(e) => {
-                                      e.stopPropagation(); // Impede que o clique selecione a imagem como capa
+                                      e.stopPropagation();
                                       const newImages = downloadedImages.filter((_, i) => i !== index);
                                       setDownloadedImages(newImages);
 
                                       if (newImages.length === 0) {
-                                          setManualStep(3); // Volta para a etapa de URL se não sobrar nenhuma imagem
+                                          setManualStep(3);
                                           return;
                                       }
 
-                                      // Ajusta o índice da capa se necessário
                                       if (coverIndex === index) {
-                                          // Se a capa foi removida, a primeira imagem restante se torna a capa
                                           setCoverIndex(0); 
                                       } else if (coverIndex > index) {
-                                          // Se uma imagem antes da capa foi removida, decrementa o coverIndex
                                           setCoverIndex(prev => prev - 1); 
                                       }
                                   }}
