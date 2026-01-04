@@ -171,10 +171,13 @@ export default function Layout({ children, currentPageName }) {
 
     const initApp = async () => {
         if (hasInitializedRef.current) {
-          return; // Já inicializou, não roda de novo
+          return;
         }
-        
+
         hasInitializedRef.current = true;
+
+        // 🆕 PROTEÇÃO: Remove flags de redirecionamento ao inicializar
+        sessionStorage.removeItem('loginFromPartners');
         
         try {
         let userFound = false;
