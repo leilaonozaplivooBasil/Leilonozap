@@ -132,12 +132,12 @@ Seja preciso e completo.`,
                 }
 
                 const blob = await imgResponse.blob();
+                
+                // Cria File object (UploadFile esperado pela integração)
+                const file = new File([blob], `product-img-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
 
-                const formData = new FormData();
-                formData.append('file', blob, `image-${Date.now()}-${rehostedUrls.length}.jpg`);
-
-                // Usa SDK corretamente (não fetch direto)
-                const uploadData = await base44.asServiceRole.integrations.Core.UploadFile({ file: blob });
+                // Usa SDK corretamente
+                const uploadData = await base44.asServiceRole.integrations.Core.UploadFile({ file });
 
                 if (uploadData?.file_url) {
                     rehostedUrls.push(uploadData.file_url);
