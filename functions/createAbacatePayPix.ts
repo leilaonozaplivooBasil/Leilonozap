@@ -157,7 +157,7 @@ Deno.serve(async (req) => {
     // Registra pagamento no banco
     await base44.asServiceRole.entities.Payment.create({
       auction_id: auction_id,
-      buyer_id: auction.winner_id,
+      buyer_id: auction.winner_id || user_email,
       buyer_name: user_name,
       buyer_email: user_email,
       amount: amount,
@@ -187,6 +187,7 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       billing_id: pixData.id,
+      auction_id: auction_id,
       qr_code_base64: pixData.brCodeBase64,
       pix_code: pixData.brCode,
       amount: amount,

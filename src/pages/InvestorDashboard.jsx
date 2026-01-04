@@ -4,8 +4,13 @@ import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createAbacatePayPix } from '@/functions/createAbacatePayPix';
+import { checkAbacatePayPix } from '@/functions/checkAbacatePayPix';
+import { toast } from 'sonner';
 
 import { 
   DollarSign, 
@@ -25,6 +30,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Loader2,
+  Copy,
 } from 'lucide-react';
 import {
   Dialog,
@@ -45,6 +52,11 @@ export default function InvestorDashboard() {
   const [selectedPlanIndex, setSelectedPlanIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [productImages, setProductImages] = useState({});
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [pixFormData, setPixFormData] = useState({ name: '', phone: '', email: '', cpf: '' });
+  const [pixData, setPixData] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isCheckingPayment, setIsCheckingPayment] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -53,6 +65,12 @@ export default function InvestorDashboard() {
         if (savedUserJSON) {
           const user = JSON.parse(savedUserJSON);
           setCurrentUser(user);
+          setPixFormData({
+            name: user?.full_name || '',
+            phone: user?.phone || '',
+            email: user?.email || '',
+            cpf: user?.cpf || ''
+          });
 
           // Carrega imagens dos produtos em destaque
           try {
@@ -626,8 +644,8 @@ export default function InvestorDashboard() {
                           <Button 
                             className="w-full bg-green-600 hover:bg-green-700 text-base py-3 font-semibold"
                             onClick={() => {
-                              setShowPlansModal(false);
-                              navigate(createPageUrl("PlanCheckout"), { state: { plan: portfolio } });
+                              setSelectedPlan(portfolio);
+                              setPixData(null);
                             }}
                           >
                             Comprar Agora
