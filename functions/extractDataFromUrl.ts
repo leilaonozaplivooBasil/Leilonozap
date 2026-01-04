@@ -136,20 +136,12 @@ Seja preciso e completo.`,
                 const formData = new FormData();
                 formData.append('file', blob, `image-${Date.now()}-${rehostedUrls.length}.jpg`);
 
-                const uploadResponse = await fetch(`${base44.baseUrl}/integrations/Core/UploadFile`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${base44.token}` },
-                    body: formData
-                });
+                // Usa SDK corretamente (não fetch direto)
+                const uploadData = await base44.asServiceRole.integrations.Core.UploadFile({ file: blob });
 
-                if (uploadResponse.ok) {
-                    const uploadData = await uploadResponse.json();
-                    if (uploadData?.file_url) {
-                        rehostedUrls.push(uploadData.file_url);
-                        console.log(`✅ Re-hospedada!`);
-                    }
-                } else {
-                    console.log(`❌ Upload falhou: ${uploadResponse.status}`);
+                if (uploadData?.file_url) {
+                    rehostedUrls.push(uploadData.file_url);
+                    console.log(`✅ Re-hospedada!`);
                 }
             } catch (error) {
                 console.log(`❌ Erro: ${error.message}`);
