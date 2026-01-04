@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
 
     // Busca usuário atualizado
     console.log('🔍 Buscando dados do usuário...');
-    const users = await base44.asServiceRole.entities.AppUser.filter({ id: user.id });
+    const users = await base44.asServiceRole.entities.AppUser.filter({ _id: user.id });
     
     if (!users || users.length === 0) {
       console.log('❌ Usuário não encontrado:', user.id);
