@@ -1106,7 +1106,7 @@ export default function CreateAuction() {
                     {/* ETAPA 0: TABS PARA ESCOLHER MÉTODO */}
                     {manualStep === 0 && (
                       <Tabs defaultValue="nome" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 bg-gray-700/50">
+                        <TabsList className="grid w-full grid-cols-4 bg-gray-700/50">
                           <TabsTrigger value="nome" className="data-[state=active]:bg-purple-600">
                             🌐 Por Nome
                           </TabsTrigger>
@@ -1115,6 +1115,9 @@ export default function CreateAuction() {
                           </TabsTrigger>
                           <TabsTrigger value="url" className="data-[state=active]:bg-blue-600">
                             🔗 Por URL
+                          </TabsTrigger>
+                          <TabsTrigger value="ia" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600">
+                            🤖 IA + Imagem
                           </TabsTrigger>
                         </TabsList>
 
@@ -1224,6 +1227,27 @@ export default function CreateAuction() {
                             </p>
                           </div>
                           </div>
+                        </TabsContent>
+
+                        {/* ABA: ANÁLISE DE IMAGEM COM IA */}
+                        <TabsContent value="ia" className="mt-4">
+                          <ImageAnalyzer 
+                            onAnalysisComplete={(analysis) => {
+                              console.log('🤖 Análise recebida:', analysis);
+                              
+                              // Preenche formulário automaticamente
+                              setFormData(prev => ({
+                                ...prev,
+                                title: analysis.title || prev.title,
+                                description: analysis.description || prev.description,
+                                category: analysis.category || prev.category,
+                                starting_price: analysis.estimated_price || prev.starting_price,
+                                image_urls: analysis.imageUrl ? [analysis.imageUrl, "", "", "", ""] : prev.image_urls
+                              }));
+                              
+                              toast.success('✅ Dados da IA aplicados! Revise e complete o formulário.');
+                            }}
+                          />
                         </TabsContent>
 
                         {/* ABA: BUSCA POR URL */}
