@@ -2,9 +2,13 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Share2, TrendingUp, Users, DollarSign, CheckCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Copy, Share2, TrendingUp, Users, DollarSign, CheckCircle, Wallet, Loader2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
+import { requestWithdrawal } from "@/functions/requestWithdrawal";
+import { toast } from "sonner";
 
 const AppUser = base44.entities.AppUser;
 
@@ -19,6 +23,11 @@ export default function Influencers() {
     totalRevenue: 0
   });
   const [leads, setLeads] = useState([]);
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [pixKey, setPixKey] = useState('');
+  const [pixKeyType, setPixKeyType] = useState('CPF');
+  const [isProcessing, setIsProcessing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -82,6 +91,50 @@ export default function Influencers() {
     }
   };
 
+  const handleWithdrawalSubmit = async () => {
+    setIsProcessing(true);
+    try {
+      const amount = parseFloat(withdrawalAmount);
+      
+      if (!amount || amount <= 0) {
+        toast.error('Valor inválido');
+        return;
+      }
+
+      if (amount > currentUser.commission_balance) {
+        toast.error('Saldo insuficiente');
+        return;
+      }
+
+      if (!pixKey) {
+        toast.error('Informe a chave PIX');
+        return;
+      }
+
+      const response = await requestWithdrawal({
+        amount,
+        pix_key: pixKey,
+        pix_key_type: pixKeyType
+      });
+
+      if (response?.data?.success) {
+        toast.success('Saque solicitado! Aguarde aprovação.');
+        setShowWithdrawalModal(false);
+        setWithdrawalAmount('');
+        setPixKey('');
+        
+        // Atualiza saldo local
+        setCurrentUser({ ...currentUser, commission_balance: currentUser.commission_balance - amount });
+      } else {
+        toast.error(response?.data?.error || 'Erro ao solicitar saque');
+      }
+    } catch (error) {
+      toast.error('Erro: ' + error.message);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -139,6 +192,41 @@ export default function Influencers() {
               <Share2 className="w-6 h-6 mr-2" />
               Compartilhar Link
             </Button>
+          </CardContent>
+        </Card>
+
+        {/* Saldo de Comissão */}
+        <Card className="mb-8 border-2 border-green-500 shadow-xl">
+          <CardHeader className="bg-gradient-to-r from-green-600 to-green-500 text-white">
+            <CardTitle className="text-2xl flex items-center gap-2">
+              <DollarSign className="w-6 h-6" />
+              Seus Ganhos em Dinheiro
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="bg-green-50 rounded-lg p-6 mb-4 text-center">
+              <p className="text-sm text-gray-600 mb-2">Saldo em Dinheiro</p>
+              <p className="text-5xl font-bold text-green-600 mb-2">
+                R$ {(currentUser?.commission_balance || 0).toFixed(2)}
+              </p>
+              <p className="text-sm text-gray-500">3% de comissão a cada compra</p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                onClick={() => navigate(createPageUrl("WalletDeposit"))}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4"
+              >
+                💚 Usar Saldo em Leilões
+              </Button>
+              <Button
+                onClick={() => setShowWithdrawalModal(true)}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-4"
+              >
+                <Wallet className="w-5 h-5 mr-2" />
+                Sacar Dinheiro
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
@@ -228,6 +316,99 @@ export default function Influencers() {
               </Button>
             </CardContent>
           </Card>
+        )}
+
+        {/* Modal de Saque */}
+        {showWithdrawalModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-900">💸 Solicitar Saque</h3>
+                <button
+                  onClick={() => setShowWithdrawalModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <p className="text-sm text-gray-600 mb-1">Saldo Disponível:</p>
+                  <p className="text-3xl font-bold text-purple-600">
+                    R$ {(currentUser?.commission_balance || 0).toFixed(2)}
+                  </p>
+                </div>
+
+                <div>
+                  <Label className="text-gray-700">Valor do Saque</Label>
+                  <Input
+                    type="number"
+                    value={withdrawalAmount}
+                    onChange={(e) => setWithdrawalAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="text-lg"
+                    disabled={isProcessing}
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-gray-700">Tipo de Chave PIX</Label>
+                  <select
+                    value={pixKeyType}
+                    onChange={(e) => setPixKeyType(e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white"
+                    disabled={isProcessing}
+                  >
+                    <option value="CPF">CPF</option>
+                    <option value="CNPJ">CNPJ</option>
+                    <option value="EMAIL">E-mail</option>
+                    <option value="PHONE">Telefone</option>
+                    <option value="RANDOM">Chave Aleatória</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label className="text-gray-700">Chave PIX</Label>
+                  <Input
+                    type="text"
+                    value={pixKey}
+                    onChange={(e) => setPixKey(e.target.value)}
+                    placeholder="Sua chave PIX"
+                    disabled={isProcessing}
+                  />
+                </div>
+
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <p className="text-sm text-blue-800">
+                    ℹ️ O saque será processado em até 2 dias úteis após aprovação.
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    onClick={() => setShowWithdrawalModal(false)}
+                    variant="outline"
+                    className="flex-1"
+                    disabled={isProcessing}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleWithdrawalSubmit}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700"
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      'Solicitar Saque'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
