@@ -87,13 +87,26 @@ Deno.serve(async (req) => {
 
         console.log(`✅ IA: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
-        // LIMPA URLs
+        // LIMPA E VALIDA URLs
         imageUrls = (imageUrls || [])
             .filter(u => u && typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')))
-            .map(u => u.split('"')[0].split('&quot;')[0].split(' ')[0])
-            .filter((u, i, arr) => arr.indexOf(u) === i);
+            .map(u => u.split('"')[0].split('&quot;')[0].split(' ')[0].trim())
+            .filter((u, i, arr) => arr.indexOf(u) === i)
+            .filter(u => u.length > 20);
 
-        console.log(`🧹 ${imageUrls.length} URLs finais para processar`);
+        console.log(`🧹 ${imageUrls.length} URLs após limpeza`);
+
+        // Se não encontrou imagens, retorna array vazio (usuário usará upload manual)
+        if (imageUrls.length === 0) {
+            console.log('⚠️ Nenhuma imagem encontrada - usuário precisará usar upload manual');
+            return Response.json({
+                title: (title || 'Produto').substring(0, 200),
+                description: (description || 'Produto importado').substring(0, 500),
+                imageUrls: [],
+                marketplace: marketplace,
+                message: 'Produto encontrado, mas sem imagens. Use upload manual.'
+            });
+        }
 
         console.log(`🔍 Processando ${imageUrls.length} imagens do ${marketplace}...`);
 
