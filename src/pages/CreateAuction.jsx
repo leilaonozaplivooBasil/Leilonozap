@@ -844,6 +844,18 @@ export default function CreateAuction() {
           </CardHeader>
 
           <CardContent className="p-6 md:p-8">
+            {/* MODAL DE RESULTADOS */}
+            <ProductResultsModal
+              isOpen={showResultsModal}
+              onClose={() => {
+                setShowResultsModal(false);
+                setSearchResults([]);
+              }}
+              results={searchResults}
+              searchTerm={productName}
+              onSelectProduct={handleImportProduct}
+            />
+
             <Tabs defaultValue="criar" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6 bg-gray-700/50">
                 <TabsTrigger value="criar" className="data-[state=active]:bg-green-600">
