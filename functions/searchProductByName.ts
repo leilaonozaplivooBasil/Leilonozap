@@ -430,15 +430,31 @@ EXEMPLOS INVÁLIDOS:
         let uniqueUrls = deduplicateImages(validatedUrls);
         console.log(`🧹 Após deduplicação: ${uniqueUrls.length} imagens`);
         
-        // 🤖 Valida com IA Vision (primeira imagem apenas - otimização)
+        // 🤖 Valida com IA Vision (primeiras 2 imagens para garantir qualidade)
         if (uniqueUrls.length > 0) {
-            console.log('🤖 Validando primeira imagem com IA Vision...');
-            const isValidProduct = await validateImageWithAI(uniqueUrls[0], productName, base44);
+            console.log('🤖 Validando com IA Vision...');
+            const validImages = [];
             
-            if (!isValidProduct) {
-                console.log('⚠️ IA detectou que primeira imagem NÃO é do produto! Tentando fallback...');
-                uniqueUrls.shift();
+            for (const url of uniqueUrls.slice(0, 2)) {
+                const isValid = await validateImageWithAI(url, productName, base44);
+                if (isValid) {
+                    validImages.push(url);
+                } else {
+                    console.log(`🚫 IA rejeitou: ${url.substring(0, 60)}`);
+                }
             }
+            
+            // Se nenhuma passou na IA, FALHA TOTAL
+            if (validImages.length === 0 && uniqueUrls.length > 0) {
+                console.log('❌ IA REJEITOU TODAS as imagens - são acessórios!');
+                return Response.json({
+                    error: "Imagens encontradas são de acessórios, não do produto principal",
+                    suggestion: "Tente buscar com mais detalhes ou use o importador por URL"
+                }, { status: 404 });
+            }
+            
+            // Reconstrói a lista com as validadas primeiro
+            uniqueUrls = [...validImages, ...uniqueUrls.slice(2)];
         }
         
         console.log(`✅ RESULTADO PARCIAL: ${uniqueUrls.length} imagens validadas`);
