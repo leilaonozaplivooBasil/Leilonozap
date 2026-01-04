@@ -30,22 +30,33 @@ Deno.serve(async (req) => {
 
         // Busca completa em uma chamada só
         const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `Busque o produto "${productName}" e extraia tudo.
+            prompt: `Busque "${productName}" na internet e EXTRAIA O MÁXIMO DE IMAGENS POSSÍVEL.
 
-🎯 IMPORTANTE:
-- Produto PRINCIPAL (não acessórios como capa, carregador, cabo, película)
-- Busque em Mercado Livre, Amazon ou Shopee
-- Extraia título, descrição E imagens de produto
+🎯 PRIORIDADE MÁXIMA: ENCONTRAR PELO MENOS 8-12 IMAGENS DIFERENTES
+
+Busque em MÚLTIPLOS sites:
+- Mercado Livre (várias páginas de produtos)
+- Amazon Brasil (várias listagens)
+- Magazine Luiza
+- Shopee
+- Google Shopping
+
+Para cada site, extraia:
+- Imagem principal do produto
+- Imagens de galeria/carrossel
+- Imagens de variações (cores, ângulos)
+- Miniaturas em alta resolução
 
 OBRIGATÓRIO retornar:
 {
   "found": true,
-  "title": "Nome completo do produto",
-  "description": "Descrição com specs",
-  "imageUrls": ["url1", "url2", ...]  // URLs COMPLETAS de imagens
+  "title": "Nome exato do produto",
+  "description": "Descrição completa com especificações",
+  "imageUrls": ["url1", "url2", "url3", ...]  // MÍNIMO 8 URLs, MÁXIMO 15
 }
 
-Se só encontrar acessórios ou páginas de busca: found = false`,
+❌ REJEITE acessórios (capa, carregador, cabo, película)
+❌ Se encontrar < 5 imagens, retorne found = false`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
