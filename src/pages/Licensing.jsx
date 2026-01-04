@@ -844,25 +844,30 @@ const DashboardContent = ({ user, isAdmin }) => {
   };
 
   const handleWithdrawalSubmit = async () => {
+    const amount = parseFloat(withdrawalAmount);
+    
+    if (!amount || amount <= 0) {
+      toast.error('Valor inválido');
+      return;
+    }
+
+    if (amount < 30) {
+      toast.error('Valor mínimo para saque é R$ 30,00');
+      return;
+    }
+
+    if (amount > user.commission_balance) {
+      toast.error('Saldo insuficiente');
+      return;
+    }
+
+    if (!pixKey) {
+      toast.error('Informe a chave PIX');
+      return;
+    }
+
     setIsProcessingWithdrawal(true);
     try {
-      const amount = parseFloat(withdrawalAmount);
-      
-      if (!amount || amount <= 0) {
-        toast.error('Valor inválido');
-        return;
-      }
-
-      if (amount > user.commission_balance) {
-        toast.error('Saldo insuficiente');
-        return;
-      }
-
-      if (!pixKey) {
-        toast.error('Informe a chave PIX');
-        return;
-      }
-
       const response = await requestWithdrawal({
         amount,
         pix_key: pixKey,
@@ -1420,9 +1425,11 @@ const DashboardContent = ({ user, isAdmin }) => {
                   value={withdrawalAmount}
                   onChange={(e) => setWithdrawalAmount(e.target.value)}
                   placeholder="0.00"
+                  min="30"
                   className="bg-gray-700 border-gray-600 text-white text-lg"
                   disabled={isProcessingWithdrawal}
                 />
+                <p className="text-xs text-gray-400 mt-1">Valor mínimo: R$ 30,00</p>
               </div>
 
               <div>
