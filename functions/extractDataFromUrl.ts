@@ -56,62 +56,87 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🤖 USA IA PARA TÍTULO E DESCRIÇÃO + REGEX PARA IMAGENS
-        console.log('🤖 IA extraindo título e descrição...');
-
-        const extractionResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta URL e extraia os dados do produto:
-        ${productUrl}
-
-        RETORNE em português brasileiro:
-        1. Título EXATO do produto (texto limpo, sem HTML)
-        2. Descrição detalhada com especificações técnicas (6-10 linhas)
-
-        IMPORTANTE: Seja preciso e completo na descrição.`,
-            add_context_from_internet: true,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    title: { type: "string" },
-                    description: { type: "string" }
-                },
-                required: ["title", "description"]
+        // 🔥 EXTRAI ID DO PRODUTO PARA USAR API DO MERCADO LIVRE
+        let productId = null;
+        if (marketplace === 'mercadolivre') {
+            const mlbMatch = productUrl.match(/\/p\/(MLB\d+)/);
+            if (mlbMatch) {
+                productId = mlbMatch[1];
+                console.log(`🎯 ID do produto: ${productId}`);
             }
-        });
+        }
 
-        let { title, description } = extractionResult;
-        console.log(`🤖 IA: título=${!!title}, desc=${!!description}`);
-
-        // 📸 EXTRAI IMAGENS VIA REGEX DIRETO DO HTML (mais confiável)
+        let title = '';
+        let description = '';
         let imageUrls = [];
-        console.log('📸 Buscando HTML para extrair imagens...');
 
-        try {
-            const htmlResp = await fetch(productUrl, {
-                headers: {
-                    "User-Agent": getRandomUA(),
-                    "Accept": "text/html",
-                    "Accept-Language": "pt-BR,pt;q=0.9"
-                },
-                signal: AbortSignal.timeout(12000)
+        // 📸 USA API PÚBLICA DO MERCADO LIVRE
+        if (productId && marketplace === 'mercadolivre') {
+            try {
+                console.log('🔍 Buscando via API do Mercado Livre...');
+
+                const apiResp = await fetch(`https://api.mercadolibre.com/items/${productId}`, {
+                    signal: AbortSignal.timeout(10000)
+                });
+
+                if (apiResp.ok) {
+                    const data = await apiResp.json();
+
+                    title = data.title || '';
+
+                    // Extrai imagens da API
+                    imageUrls = (data.pictures || [])
+                        .map(p => p.secure_url || p.url)
+                        .filter(u => u && u.includes('http2.mlstatic.com'))
+                        .slice(0, 10);
+
+                    console.log(`✅ API ML: ${imageUrls.length} imagens`);
+
+                    // Busca descrição completa se disponível
+                    try {
+                        const descResp = await fetch(`https://api.mercadolibre.com/items/${productId}/description`, {
+                            signal: AbortSignal.timeout(8000)
+                        });
+                        if (descResp.ok) {
+                            const descData = await descResp.json();
+                            description = descData.plain_text || data.title || '';
+                        }
+                    } catch (e) {
+                        description = data.title || '';
+                    }
+                }
+            } catch (e) {
+                console.log('⚠️ API ML falhou:', e.message);
+            }
+        }
+
+        // 🤖 FALLBACK: USA IA SE API FALHOU
+        if (!title || !description) {
+            console.log('🤖 Fallback: usando IA...');
+
+            const extractionResult = await base44.integrations.Core.InvokeLLM({
+                prompt: `Extraia do Mercado Livre:
+        URL: ${productUrl}
+
+        RETORNE:
+        1. Título do produto
+        2. Descrição com especificações (6-10 linhas em português)`,
+                add_context_from_internet: true,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        title: { type: "string" },
+                        description: { type: "string" }
+                    },
+                    required: ["title", "description"]
+                }
             });
 
-            if (htmlResp.ok) {
-                const html = await htmlResp.text();
-                console.log(`✅ HTML: ${html.length} chars`);
-
-                if (marketplace === 'mercadolivre') {
-                    const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_\d+-[A-Z]{3}\d+_[A-Z]\.(?:jpg|webp)/gi;
-                    const matches = html.match(regex) || [];
-                    imageUrls = [...new Set(matches)]
-                        .map(u => u.replace(/_[VSWT]\./, '_O.'))
-                        .slice(0, 10);
-                    console.log(`📸 Regex extraiu ${imageUrls.length} URLs de imagem`);
-                }
-            }
-        } catch (e) {
-            console.log('⚠️ Erro ao buscar HTML para imagens:', e.message);
+            title = title || extractionResult.title;
+            description = description || extractionResult.description;
         }
+
+        console.log(`✅ Dados: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
         // LIMPA URLs
         imageUrls = (imageUrls || [])
