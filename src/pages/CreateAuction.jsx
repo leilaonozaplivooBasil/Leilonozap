@@ -2365,20 +2365,23 @@ export default function CreateAuction() {
                         {formData.image_urls.filter(url => url).length > 0 ? (
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {formData.image_urls.filter(url => url).map((url, index) => (
-                              <div key={index} className="relative w-full h-24 bg-gray-800 rounded overflow-hidden flex items-center justify-center border border-gray-700">
+                              <div key={`${url}-${index}`} className="relative w-full h-24 bg-gray-800 rounded overflow-hidden flex items-center justify-center border border-gray-700">
                                 <img 
+                                  key={url}
                                   src={url} 
                                   alt={`Preview ${index + 1}`} 
                                   className="max-w-full max-h-full object-contain"
                                   loading="eager"
                                   onLoad={(e) => {
-                                    console.log(`✅ Imagem ${index + 1} carregada:`, url.substring(0, 60));
+                                    console.log(`✅ Imagem ${index + 1} RENDERIZADA:`, url);
+                                    e.target.style.opacity = '1';
                                   }}
                                   onError={(e) => {
                                     console.error(`❌ ERRO ao carregar imagem ${index + 1}:`, url);
                                     e.target.style.display = 'none';
-                                    e.target.parentElement.innerHTML = `<div class="text-xs text-red-400">❌ Erro ao carregar</div>`;
+                                    e.target.parentElement.innerHTML = `<div class="text-xs text-red-400">❌ Falha</div>`;
                                   }}
+                                  style={{ opacity: 0, transition: 'opacity 0.3s' }}
                                 />
                                 <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1 rounded">
                                   {index === 0 ? 'Capa' : index + 1}
