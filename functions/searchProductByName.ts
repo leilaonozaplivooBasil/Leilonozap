@@ -36,32 +36,85 @@ Deno.serve(async (req) => {
 
         console.log('🤖 Buscando com IA + Internet...');
         
-        const searchResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `BUSCA DE PRODUTO: "${productName}"
+        // 🔥 TENTA ATÉ 3 VEZES COM VALIDAÇÃO RIGOROSA
+        let searchResult;
+        let attempts = 0;
+        const maxAttempts = 3;
+        
+        while (attempts < maxAttempts) {
+            attempts++;
+            console.log(`🔄 Tentativa ${attempts}/${maxAttempts}...`);
+            
+            searchResult = await base44.integrations.Core.InvokeLLM({
+                prompt: `BUSCA RIGOROSA: "${productName}"
 
-TAREFA:
-1. Encontre uma página de produto que vende "${productName}" (Mercado Livre, Amazon, Magazine Luiza, etc)
-2. Retorne:
-   - Nome completo do produto
-   - Descrição com especificações (3-5 linhas)
-   - URL COMPLETA da página do produto (obrigatório)
+REGRAS OBRIGATÓRIAS:
+1. Busque APENAS o produto PRINCIPAL "${productName}" - NÃO acessórios
+2. REJEITE: carregadores, capas, películas, adaptadores, fones, cabos
+3. O título DEVE conter as palavras-chave: "${productName}"
+4. Priorize: Mercado Livre, Amazon, Shopee
 
-IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
-            add_context_from_internet: true,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    title: { type: "string" },
-                    description: { type: "string" },
-                    productPageUrl: { type: "string" }
-                },
-                required: ["title", "description", "productPageUrl"]
+RETORNE:
+- Título completo do produto
+- Descrição com especificações
+- URL COMPLETA da página
+
+EXEMPLOS VÁLIDOS:
+✅ "iPhone 15 Pro 256GB"
+✅ "Samsung Galaxy S23 Ultra 512GB"
+
+EXEMPLOS INVÁLIDOS:
+❌ "Carregador para iPhone"
+❌ "Capa iPhone 15"
+❌ "Película iPhone"`,
+                add_context_from_internet: true,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        title: { type: "string" },
+                        description: { type: "string" },
+                        productPageUrl: { type: "string" }
+                    },
+                    required: ["title", "description", "productPageUrl"]
+                }
+            });
+
+            const { title: resultTitle } = searchResult;
+            
+            // 🔥 VALIDAÇÃO RIGOROSA
+            const lowerTitle = resultTitle.toLowerCase();
+            const lowerSearch = productName.toLowerCase();
+            
+            // Bloqueia acessórios
+            const isAccessory = [
+                'carregador', 'charger', 'cabo', 'cable', 
+                'capa', 'case', 'película', 'protetor',
+                'adaptador', 'adapter', 'fone', 'earphone',
+                'suporte', 'stand', 'película', 'glass'
+            ].some(keyword => lowerTitle.includes(keyword));
+            
+            if (isAccessory) {
+                console.log(`❌ Tentativa ${attempts}: Acessório detectado - "${resultTitle}"`);
+                if (attempts < maxAttempts) continue;
             }
-        });
+            
+            // Valida se contém palavras-chave do produto
+            const searchWords = lowerSearch.split(' ').filter(w => w.length > 2);
+            const matchCount = searchWords.filter(word => lowerTitle.includes(word)).length;
+            const matchRatio = matchCount / searchWords.length;
+            
+            if (matchRatio < 0.5) {
+                console.log(`❌ Tentativa ${attempts}: Título não corresponde - "${resultTitle}"`);
+                if (attempts < maxAttempts) continue;
+            }
+            
+            console.log(`✅ Validação passou: "${resultTitle}"`);
+            break;
+        }
 
         let { title, description, productPageUrl } = searchResult;
         
-        console.log(`📦 Título: ${title}`);
+        console.log(`📦 Título final: ${title}`);
         console.log(`🔗 URL encontrada: ${productPageUrl}`);
         
         if (!title || !productPageUrl || title === 'PRODUTO_NAO_ENCONTRADO') {
