@@ -394,6 +394,7 @@ export default function Layout({ children, currentPageName }) {
     { title: "📊 CRM", pageName: "CRM" },
     { title: "🏪 Registrar Lojista", pageName: "StoreRegistration" },
     { title: "👥 Influenciadores", pageName: "InfluencersDashboard" },
+    { title: "💸 Saques", pageName: "AdminWithdrawals" },
     { title: "Painel de Controle", pageName: "NetworkOverview" },
     { title: "Gerenciar Senhas", pageName: "AdminUsers" },
   ];
