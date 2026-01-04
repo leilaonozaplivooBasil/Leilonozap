@@ -559,7 +559,8 @@ export default function CreateAuction() {
       setImportedData({ title, description, price });
       
       // 🔥 IMAGENS JÁ HOSPEDADAS - APLICA DIRETO NO FORMULÁRIO
-      console.log(`✅ ${imageUrls?.length || 0} imagens JÁ RE-HOSPEDADAS pelo backend!`);
+      console.log(`✅ Backend retornou ${imageUrls?.length || 0} imagens!`);
+      console.log('📸 URLs recebidas:', imageUrls);
       
       if (imageUrls && imageUrls.length > 0) {
         // Prepara array com até 5 imagens
@@ -567,6 +568,11 @@ export default function CreateAuction() {
         while (finalImages.length < 5) {
           finalImages.push("");
         }
+        
+        console.log('🚀 APLICANDO NO FORMULÁRIO:');
+        console.log('   Título:', title);
+        console.log('   Preço:', price);
+        console.log('   Imagens:', finalImages);
         
         // Aplica tudo de uma vez
         setFormData(prev => ({
@@ -578,12 +584,14 @@ export default function CreateAuction() {
           source_url: productUrl
         }));
         
+        console.log('✅ formData.image_urls atualizado!');
+        
         // Limpa tudo
         setProductUrl("");
         setManualStep(0);
         setImportedData(null);
         
-        toast.success(`✅ Produto importado! ${imageUrls.length} imagens aplicadas!`);
+        toast.success(`✅ Produto + ${imageUrls.length} imagens aplicadas!`);
       } else {
         toast.warning("⚠️ Produto sem imagens. Use upload manual.");
         
