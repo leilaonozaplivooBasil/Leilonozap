@@ -843,6 +843,51 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
 
+  const handleWithdrawalSubmit = async () => {
+    setIsProcessingWithdrawal(true);
+    try {
+      const amount = parseFloat(withdrawalAmount);
+      
+      if (!amount || amount <= 0) {
+        toast.error('Valor inválido');
+        return;
+      }
+
+      if (amount > user.commission_balance) {
+        toast.error('Saldo insuficiente');
+        return;
+      }
+
+      if (!pixKey) {
+        toast.error('Informe a chave PIX');
+        return;
+      }
+
+      const response = await requestWithdrawal({
+        amount,
+        pix_key: pixKey,
+        pix_key_type: pixKeyType
+      });
+
+      if (response?.data?.success) {
+        toast.success('Saque solicitado com sucesso! Aguarde aprovação.');
+        setShowWithdrawalModal(false);
+        setWithdrawalAmount('');
+        setPixKey('');
+        
+        // Atualiza dados
+        await delay(2000);
+        await fetchRealMetrics();
+      } else {
+        toast.error(response?.data?.error || 'Erro ao solicitar saque');
+      }
+    } catch (error) {
+      toast.error('Erro: ' + error.message);
+    } finally {
+      setIsProcessingWithdrawal(false);
+    }
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
