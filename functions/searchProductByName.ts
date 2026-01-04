@@ -86,7 +86,7 @@ Se só encontrar acessórios ou páginas de busca: found = false`,
 
         const imageUrls = (result.imageUrls || [])
             .filter(url => url && typeof url === 'string' && url.startsWith('http') && !url.includes('...'))
-            .slice(0, 8);
+            .slice(0, 12);
 
         if (imageUrls.length === 0) {
             return Response.json({
@@ -120,8 +120,8 @@ Se só encontrar acessórios ou páginas de busca: found = false`,
                 
                 const blob = await imgResponse.blob();
                 
-                // Rejeita thumbnails/ícones (< 5KB)
-                if (blob.size < 5000) {
+                // Aceita imagens maiores que 1KB
+                if (blob.size < 1000) {
                     console.log(`⚠️ Muito pequena (${blob.size} bytes), pulando`);
                     continue;
                 }
@@ -150,7 +150,7 @@ Se só encontrar acessórios ou páginas de busca: found = false`,
                         uploadedUrls.push(signedResult.signed_url);
                         console.log(`✅ Hospedada com sucesso`);
                         
-                        if (uploadedUrls.length >= 6) break;
+                        if (uploadedUrls.length >= 8) break;
                     }
                 }
                 
