@@ -1348,23 +1348,16 @@ export default function AuctionRoom() {
     );
   }
 
+  // Redireciona imediatamente se não tem ID (sem mostrar nada)
   if (!auctionId) {
-    // Redireciona silenciosamente para Home sem mostrar erro
-    useEffect(() => {
-      window.location.href = '/';
-    }, []);
-    
     return null;
   }
 
-  if (!auction) {
+  if (!auction && !isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4 text-center bg-gray-900">
         <div>
           <h2 className="text-xl font-semibold mb-2 text-white">Leilão não encontrado</h2>
-          <p className="text-gray-400 mb-4">
-            ID: {auctionId}
-          </p>
           <Button onClick={() => window.location.href = '/'} className="bg-green-600 hover:bg-green-700">
             Voltar para Home
           </Button>
