@@ -126,9 +126,16 @@ Se só encontrar acessórios ou páginas de busca: found = false`,
                     continue;
                 }
                 
-                // Converte Blob → File (compatível com UploadFile)
+                // Converte Blob → File (compatível com UploadFile em Deno)
                 const arrayBuffer = await blob.arrayBuffer();
-                const file = new File([arrayBuffer], 'image.jpg', { type: blob.type });
+                
+                // Cria File object com nome único
+                const fileName = `product_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+                const file = new File([arrayBuffer], fileName, { 
+                    type: blob.type || 'image/jpeg' 
+                });
+                
+                console.log(`📤 Enviando arquivo: ${fileName} (${blob.size} bytes)`);
                 
                 // Upload para Base44
                 const uploadResult = await base44.integrations.Core.UploadFile({ file });
