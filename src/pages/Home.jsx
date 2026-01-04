@@ -45,9 +45,7 @@ export default function Home() {
   const [retryCount, setRetryCount] = useState(0);
   const [favoriteAuctions, setFavoriteAuctions] = useState([]);
   const [banners, setBanners] = useState([]);
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const [showTrackButton, setShowTrackButton] = useState(false);
-  const [successAuctionId, setSuccessAuctionId] = useState(null);
+
   const [userRegion, setUserRegion] = useState(null); // Estado do usuário (ex: "RJ")
 
 
@@ -398,27 +396,9 @@ export default function Home() {
 
 
 
-  // Redirecionamento de pagamento confirmado
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    
-    // Só processa se realmente tiver o parâmetro payment=success
-    if (urlParams.get('payment') === 'success') {
-      const auctionId = urlParams.get('auction_id');
-      if (auctionId) {
-        setIsRedirecting(true);
-        setSuccessAuctionId(auctionId);
-        
-        // Após 5 segundos, mostra o botão
-        setTimeout(() => {
-          setShowTrackButton(true);
-        }, 5000);
-      }
-    }
-  }, []);
+
 
   useEffect(() => {
-    if (isRedirecting) return;
     
     const loadInitialData = async () => {
       setIsLoading(true);
@@ -528,33 +508,6 @@ export default function Home() {
   if (showWelcomeModal) {
     return <WelcomeModal onAccept={handleAcceptWelcome} />;
   }
-
-  if (isRedirecting) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="text-7xl mb-6 animate-bounce">🎉</div>
-          <h2 className="text-3xl font-bold text-white mb-3">Pagamento Confirmado!</h2>
-          <p className="text-gray-400 text-lg mb-8">Seu pedido foi recebido com sucesso!</p>
-
-          {showTrackButton ? (
-            <Button
-              onClick={() => navigate(createPageUrl("OrderTracking") + `?auction_id=${successAuctionId}`)}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg font-bold"
-            >
-              📦 Acompanhar Pedido
-            </Button>
-          ) : (
-            <div className="mt-6">
-              <div className="inline-block w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-
 
   return (
     <div className="bg-gray-900 text-white min-h-screen">
