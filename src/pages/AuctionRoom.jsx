@@ -673,18 +673,13 @@ export default function AuctionRoom() {
   }, [auctionId, auction, messages, syncAuctionDataOnly]);
 
   useEffect(() => {
-    if (hasInitializedRef.current) {
+    // Se não tem ID, redireciona imediatamente
+    if (!auctionId) {
+      window.location.replace('/');
       return;
     }
     
-    if (!auctionId) {
-      setIsLoading(false);
-      setAuction(null);
-      
-      setTimeout(() => {
-        window.location.href = '/';
-      }, 2000);
-      
+    if (hasInitializedRef.current) {
       return;
     }
     
