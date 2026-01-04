@@ -290,7 +290,24 @@ export default function ArquitetoFloatingButton({ currentUser }) {
                         </Button>
                       </>
                     ) : (
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                      <>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                        {msg.file_urls && msg.file_urls.length > 0 && (
+                          <div className="mt-2 space-y-2">
+                            {msg.file_urls.map((url, imgIdx) => (
+                              <img 
+                                key={imgIdx}
+                                src={url} 
+                                alt={`Anexo ${imgIdx + 1}`}
+                                className="max-w-full rounded-lg border border-purple-500/30"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                }}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                   {msg.role === 'user' && (
