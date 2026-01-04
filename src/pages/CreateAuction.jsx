@@ -361,27 +361,58 @@ export default function CreateAuction() {
 
       console.log(`✅ Título: ${productTitle}`);
       console.log(`🖼️ Array imageUrls do backend:`, data.imageUrls);
+      console.log(`🖼️ Tipo do array:`, typeof data.imageUrls, Array.isArray(data.imageUrls));
       console.log(`🖼️ Quantidade: ${data.imageUrls?.length || 0}`);
 
       setExtractedData({ title: productTitle, description: productDesc });
       setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
 
-      const validUrls = (data.imageUrls || [])
-        .filter(url => url && typeof url === 'string' && url.trim());
+      // 🔥 VALIDAÇÃO RIGOROSA DAS IMAGENS
+      if (!data.imageUrls || !Array.isArray(data.imageUrls)) {
+        console.error('❌ [NOME] imageUrls não é um array válido:', data.imageUrls);
+        setDebugError({
+          type: 'searchByName - imageUrls inválido',
+          message: `Backend retornou imageUrls: ${typeof data.imageUrls}`,
+          stack: `Esperado: array, Recebido: ${JSON.stringify(data.imageUrls)}`,
+          timestamp: new Date().toISOString()
+        });
+        toast.warning(`⚠️ ${productTitle} encontrado, mas sem imagens. Use upload manual.`);
+        setProductName("");
+        setManualStep(0);
+        setIsSearchingName(false);
+        return;
+      }
+
+      const validUrls = data.imageUrls
+        .filter(url => {
+          const isValid = url && typeof url === 'string' && url.trim().length > 0;
+          if (!isValid) {
+            console.warn(`⚠️ [NOME] URL inválida filtrada:`, url, typeof url);
+          }
+          return isValid;
+        });
 
       console.log(`🖼️ [NOME] URLs FILTRADAS:`, validUrls);
       console.log(`🖼️ [NOME] Quantidade de URLs válidas:`, validUrls.length);
 
       if (validUrls.length === 0) {
+        console.error('❌ [NOME] Nenhuma URL válida após filtragem');
+        setDebugError({
+          type: 'searchByName - sem imagens válidas',
+          message: `Título encontrado: "${productTitle}", mas 0 imagens válidas`,
+          stack: `Backend retornou: ${JSON.stringify(data.imageUrls)}\nApós filtro: []`,
+          timestamp: new Date().toISOString()
+        });
         toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
         setProductName("");
         setManualStep(0);
       } else {
+        console.log(`✅ [NOME] SALVANDO ${validUrls.length} imagens em downloadedImages`);
         toast.success(`✅ ${validUrls.length} imagens validadas pelo backend!`);
         setDownloadedImages(validUrls);
         setCoverIndex(0);
         setManualStep(5);
-        console.log(`✅ [NOME] manualStep=5, downloadedImages:`, validUrls);
+        console.log(`✅ [NOME] Estado atualizado: manualStep=5, downloadedImages tem ${validUrls.length} URLs`);
       }
 
       setProductName("");
