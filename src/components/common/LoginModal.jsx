@@ -146,12 +146,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
         
         setTimeout(() => {
           try {
-            // Verifica se veio da página Partners para redirecionar ao dashboard de investidor
-            const fromPartners = sessionStorage.getItem('loginFromPartners');
-            if (fromPartners === 'true') {
-              sessionStorage.removeItem('loginFromPartners');
-              window.location.href = '/InvestorDashboard';
-            } else if (onSuccess) {
+            if (onSuccess) {
               onSuccess(user);
             }
             onClose();
