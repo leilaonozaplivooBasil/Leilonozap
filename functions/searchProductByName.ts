@@ -323,33 +323,16 @@ Retorne apenas a URL encontrada ou null.`,
         
         // 🎯 Limita a 6 imagens finais
         const finalUrls = imageUrls.slice(0, 6);
-        
-        console.log(`🎉 RETORNANDO ${finalUrls.length} IMAGENS VALIDADAS`);
-
-        const detectedMarketplace = 
-            productPageUrl.includes('mercadolivre') || productPageUrl.includes('mercadolibre') ? 'Mercado Livre' :
-            productPageUrl.includes('amazon') ? 'Amazon' :
-            productPageUrl.includes('shopee') ? 'Shopee' :
-            productPageUrl.includes('magazineluiza') || productPageUrl.includes('magalu') ? 'Magazine Luiza' :
-            productPageUrl.includes('casasbahia') ? 'Casas Bahia' :
-            productPageUrl.includes('americanas') ? 'Americanas' : 'Internet';
-        
-        if (finalUrls.length === 0) {
-            return Response.json({
-                error: `Produto encontrado mas sem imagens disponíveis`,
-                suggestion: "Use o importador por URL ou upload manual de imagens",
-                title: title,
-                description: description
-            }, { status: 404 });
-        }
+        console.log(`🎉 SUCESSO: ${title} com ${finalUrls.length} imagens`);
         
         return Response.json({
-            title: title.substring(0, 200),
-            description: (description || 'Produto encontrado').substring(0, 500),
+            found: true,
+            title: title,
+            description: description || 'Produto encontrado',
             imageUrls: finalUrls,
-            marketplace: detectedMarketplace,
-            sourceUrl: productPageUrl,
-            searchTerm: productName
+            source: productPageUrl.includes('mercadolivre') ? 'Mercado Livre' :
+                    productPageUrl.includes('amazon') ? 'Amazon' :
+                    productPageUrl.includes('shopee') ? 'Shopee' : 'Internet'
         }, { status: 200 });
 
     } catch (error) {
