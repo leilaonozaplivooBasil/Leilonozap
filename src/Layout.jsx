@@ -827,6 +827,9 @@ export default function Layout({ children, currentPageName }) {
             }}
           />
         )}
+
+        {/* 🤖 ARQUITETO IA FLUTUANTE - SEMPRE VISÍVEL PARA ADMIN */}
+        <ArquitetoFloatingButton currentUser={currentUser} />
       </div>
       
       <style>{`
