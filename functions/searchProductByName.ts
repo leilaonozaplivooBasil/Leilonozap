@@ -480,31 +480,83 @@ EXEMPLOS INVÁLIDOS:
         let uniqueUrls = deduplicateImages(validatedUrls);
         console.log(`🧹 Após deduplicação: ${uniqueUrls.length} imagens`);
         
-        // 🤖 Valida com IA Vision (primeiras 2 imagens para garantir qualidade)
+        // 🤖 ANÁLISE AVANÇADA COM IA (primeiras 3 imagens)
+        const analyzedImages = [];
         if (uniqueUrls.length > 0) {
-            console.log('🤖 Validando com IA Vision...');
-            const validImages = [];
+            console.log('🤖 Análise avançada com IA Vision...');
             
-            for (const url of uniqueUrls.slice(0, 2)) {
-                const isValid = await validateImageWithAI(url, productName, base44);
-                if (isValid) {
-                    validImages.push(url);
+            for (const url of uniqueUrls.slice(0, 3)) {
+                const analysis = await analyzeImageWithAI(url, productName, base44);
+                
+                if (analysis.isProduct) {
+                    analyzedImages.push({
+                        url,
+                        type: analysis.imageType,
+                        confidence: analysis.confidence,
+                        text: analysis.extractedText,
+                        reason: analysis.reason
+                    });
+                    console.log(`✅ Aprovada: ${analysis.imageType} (${analysis.confidence}%)`);
                 } else {
-                    console.log(`🚫 IA rejeitou: ${url.substring(0, 60)}`);
+                    console.log(`🚫 Rejeitada: ${analysis.imageType} - ${analysis.reason}`);
                 }
             }
             
-            // Se nenhuma passou na IA, FALHA TOTAL
-            if (validImages.length === 0 && uniqueUrls.length > 0) {
-                console.log('❌ IA REJEITOU TODAS as imagens - são acessórios!');
+            // FALHA TOTAL se nenhuma passou
+            if (analyzedImages.length === 0 && uniqueUrls.length > 0) {
+                console.log('❌ IA REJEITOU TODAS - não são do produto!');
                 return Response.json({
-                    error: "Imagens encontradas são de acessórios, não do produto principal",
-                    suggestion: "Tente buscar com mais detalhes ou use o importador por URL"
+                    error: "Apenas acessórios ou imagens irrelevantes encontradas",
+                    suggestion: "Tente com mais especificidade no nome do produto"
                 }, { status: 404 });
             }
             
-            // Reconstrói a lista com as validadas primeiro
-            uniqueUrls = [...validImages, ...uniqueUrls.slice(2)];
+            // 🔍 DETECÇÃO DE DUPLICATAS VISUAIS
+            if (analyzedImages.length >= 2) {
+                console.log('🔍 Detectando duplicatas visuais...');
+                const uniqueAnalyzed = [analyzedImages[0]];
+                
+                for (let i = 1; i < analyzedImages.length; i++) {
+                    let isDuplicate = false;
+                    
+                    for (const existing of uniqueAnalyzed) {
+                        const similarity = await calculateImageSimilarity(
+                            existing.url, 
+                            analyzedImages[i].url, 
+                            base44
+                        );
+                        
+                        if (similarity.areSimilar && similarity.similarityScore > 80) {
+                            console.log(`🔄 Duplicata detectada: ${similarity.similarityScore}% - ${similarity.reason}`);
+                            isDuplicate = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!isDuplicate) {
+                        uniqueAnalyzed.push(analyzedImages[i]);
+                    }
+                }
+                
+                console.log(`✅ ${uniqueAnalyzed.length} imagens únicas após deduplicação visual`);
+                
+                // Prioriza fotos de produto (fundo branco) sobre lifestyle
+                uniqueAnalyzed.sort((a, b) => {
+                    if (a.type === 'product_photo' && b.type !== 'product_photo') return -1;
+                    if (b.type === 'product_photo' && a.type !== 'product_photo') return 1;
+                    return b.confidence - a.confidence;
+                });
+                
+                uniqueUrls = [
+                    ...uniqueAnalyzed.map(i => i.url),
+                    ...uniqueUrls.slice(3)
+                ];
+            } else {
+                uniqueUrls = [
+                    ...analyzedImages.map(i => i.url),
+                    ...uniqueUrls.slice(3)
+                ];
+            }
         }
         
         console.log(`✅ RESULTADO PARCIAL: ${uniqueUrls.length} imagens validadas`);
