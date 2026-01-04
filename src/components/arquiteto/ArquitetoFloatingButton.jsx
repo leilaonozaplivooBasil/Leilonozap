@@ -353,7 +353,24 @@ export default function ArquitetoFloatingButton({ currentUser }) {
                     sendMessage();
                   }
                 }}
-                placeholder="Descreva o problema ou anexe screenshots..."
+                onPaste={async (e) => {
+                  const items = e.clipboardData?.items;
+                  if (!items) return;
+                  
+                  const imageFiles = [];
+                  for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                      const file = items[i].getAsFile();
+                      if (file) imageFiles.push(file);
+                    }
+                  }
+                  
+                  if (imageFiles.length > 0) {
+                    e.preventDefault();
+                    await handleImageUpload(imageFiles);
+                  }
+                }}
+                placeholder="Descreva o problema ou cole screenshots (Ctrl+V)..."
                 disabled={isSending || isUploading}
                 className="flex-1 bg-gray-800 text-white px-4 py-2 rounded-xl border border-gray-700 focus:outline-none focus:border-purple-500 text-sm resize-none min-h-[60px] max-h-[120px]"
               />
