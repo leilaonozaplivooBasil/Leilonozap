@@ -1354,34 +1354,12 @@ export default function AuctionRoom() {
   }
 
   if (!auctionId) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-        <div className="max-w-lg w-full">
-          <div className="bg-gray-800 rounded-2xl shadow-2xl p-8 border border-gray-700 text-center">
-            <div className="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <span className="text-5xl">⚠️</span>
-            </div>
-            
-            <h2 className="text-2xl font-bold text-center mb-4 text-white">
-              Nenhum Leilão Selecionado
-            </h2>
-            
-            <p className="text-gray-400 mb-6">
-              Redirecionando...
-            </p>
-            
-            <div className="animate-spin w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full mx-auto mb-6"></div>
-            
-            <Button 
-              onClick={() => window.location.href = '/'}
-              className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold py-3 rounded-xl shadow-lg"
-            >
-              🏠 Ir para Home
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    // Redireciona silenciosamente para Home sem mostrar erro
+    useEffect(() => {
+      window.location.href = '/';
+    }, []);
+    
+    return null;
   }
 
   if (!auction) {
