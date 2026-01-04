@@ -801,55 +801,6 @@ export default function CreateAuction() {
     setSuggestedProducts([]);
   };
 
-  // 🆕 FUNÇÃO PARA BAIXAR IMAGENS DAS URLs
-  const downloadImagesFromUrls = async () => {
-    const validUrls = extractedImageUrls.filter(u => u.trim());
-    if (validUrls.length === 0) {
-      toast.error("❌ Adicione pelo menos 1 URL de imagem!");
-      return;
-    }
-
-    setIsDownloadingImages(true);
-    toast.info("⬇️ Baixando imagens...");
-
-    try {
-      const downloaded = [];
-      for (let i = 0; i < extractedImageUrls.length; i++) {
-        const url = extractedImageUrls[i];
-        if (!url.trim()) continue;
-
-        try {
-          console.log(`⬇️ Baixando imagem ${i + 1}:`, url);
-          const response = await downloadImage({ imageUrl: url });
-
-          if (response?.data?.uploaded_url) {
-            downloaded.push(response.data.uploaded_url);
-            console.log(`✅ Imagem ${i + 1} baixada!`);
-          }
-        } catch (error) {
-          console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
-        }
-      }
-
-      if (downloaded.length === 0) {
-        toast.error("❌ Nenhuma imagem foi baixada com sucesso");
-        setIsDownloadingImages(false);
-        return;
-      }
-
-      setDownloadedImages(downloaded);
-      setSelectedCoverIndex(0);
-      setManualStep(3);
-      toast.success(`✅ ${downloaded.length} imagem(ns) baixada(s)!`);
-
-    } catch (error) {
-      console.error("❌ Erro ao baixar imagens:", error);
-      toast.error("Erro ao baixar imagens");
-    } finally {
-      setIsDownloadingImages(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     
