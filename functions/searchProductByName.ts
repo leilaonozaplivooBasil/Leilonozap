@@ -189,17 +189,23 @@ EXEMPLOS INVÁLIDOS:
             const lowerTitle = resultTitle.toLowerCase();
             const lowerSearch = productName.toLowerCase();
             
-            // Bloqueia acessórios
-            const isAccessory = [
-                'carregador', 'charger', 'cabo', 'cable', 
-                'capa', 'case', 'película', 'protetor',
-                'adaptador', 'adapter', 'fone', 'earphone',
-                'suporte', 'stand', 'película', 'glass'
-            ].some(keyword => lowerTitle.includes(keyword));
+            // 🚨 BLOQUEIO BRUTAL DE ACESSÓRIOS
+            const accessoryKeywords = [
+                'carregador', 'charger', 'cabo', 'cable', 'power', 'adapter',
+                'capa', 'case', 'película', 'protetor', 'glass', 'screen',
+                'adaptador', 'fone', 'earphone', 'headphone', 'earbud',
+                'suporte', 'stand', 'holder', 'mount', 'usb', 'plug'
+            ];
+            const isAccessory = accessoryKeywords.some(keyword => lowerTitle.includes(keyword));
             
             if (isAccessory) {
-                console.log(`❌ Tentativa ${attempts}: Acessório detectado - "${resultTitle}"`);
+                console.log(`🚫 BLOQUEADO: Acessório - "${resultTitle}"`);
                 if (attempts < maxAttempts) continue;
+                // Força erro se todas tentativas falharam
+                return Response.json({
+                    error: "Sistema encontrou apenas acessórios, não o produto principal",
+                    suggestion: `Tente com mais detalhes: "${productName} 256GB" ou "${productName} preto"`
+                }, { status: 404 });
             }
             
             // Valida se contém palavras-chave do produto
