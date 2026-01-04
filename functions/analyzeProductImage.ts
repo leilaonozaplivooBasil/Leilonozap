@@ -18,9 +18,20 @@ Deno.serve(async (req) => {
 
     console.log('📸 Analisando imagem:', imageUrl);
 
+    // Log de início da análise
+    await base44.asServiceRole.entities.SystemLog.create({
+      step: 'IMAGE_ANALYSIS_RAW_INPUT',
+      status: 'info',
+      message: 'Iniciando analise de imagem',
+      component_name: 'analyzeProductImage',
+      payload: { imageUrl: imageUrl.substring(0, 100) }
+    }).catch(() => {});
+
     // Analisar imagem com IA (visao)
-    const analysis = await base44.integrations.Core.InvokeLLM({
-      prompt: `Analise esta imagem de produto e extraia as seguintes informações:
+    let analysis;
+    try {
+      const llmResult = await base44.integrations.Core.InvokeLLM({
+        prompt: `Analise esta imagem de produto e extraia as seguintes informações:
 
 1. **Título do produto** (nome comercial exato, marca + modelo)
 2. **Descrição detalhada** (especificações, características, estado aparente)
@@ -42,29 +53,71 @@ Deno.serve(async (req) => {
 5. **Estado do produto** (novo, usado, com avarias, etc)
 
 Seja PRECISO e DETALHADO. Use conhecimento de mercado para estimar precos realistas.`,
-      add_context_from_internet: true,
-      file_urls: [imageUrl],
-      response_json_schema: {
-        type: "object",
-        properties: {
-          title: { type: "string" },
-          description: { type: "string" },
-          category: { 
-            type: "string",
-            enum: [
-              "eletronicos", "eletrodomesticos", "moveis_decoracao", 
-              "casa_jardim", "ferramentas", "roupas_acessorios",
-              "esportes_lazer", "brinquedos_hobbies", "livros_midia",
-              "veiculos_pecas", "instrumentos_musicais", 
-              "beleza_cuidado_pessoal", "outros"
-            ]
+        add_context_from_internet: true,
+        file_urls: [imageUrl],
+        response_json_schema: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            description: { type: "string" },
+            category: { 
+              type: "string",
+              enum: [
+                "eletronicos", "eletrodomesticos", "moveis_decoracao", 
+                "casa_jardim", "ferramentas", "roupas_acessorios",
+                "esportes_lazer", "brinquedos_hobbies", "livros_midia",
+                "veiculos_pecas", "instrumentos_musicais", 
+                "beleza_cuidado_pessoal", "outros"
+              ]
+            },
+            estimated_price: { type: "number" },
+            condition: { type: "string" }
           },
-          estimated_price: { type: "number" },
-          condition: { type: "string" }
-        },
-        required: ["title", "description", "category", "estimated_price", "condition"]
+          required: ["title", "description", "category", "estimated_price", "condition"]
+        }
+      });
+
+      // Se retornou string, tentar parsear
+      if (typeof llmResult === 'string') {
+        await base44.asServiceRole.entities.SystemLog.create({
+          step: 'IMAGE_ANALYSIS_STRING_RESPONSE',
+          status: 'warning',
+          message: 'LLM retornou string em vez de objeto',
+          component_name: 'analyzeProductImage',
+          payload: { rawResponse: llmResult.substring(0, 500) }
+        }).catch(() => {});
+
+        try {
+          analysis = JSON.parse(llmResult);
+        } catch (parseError) {
+          await base44.asServiceRole.entities.SystemLog.create({
+            step: 'IMAGE_ANALYSIS_JSON_PARSE_ERROR',
+            status: 'error',
+            message: 'Falha ao parsear resposta do LLM',
+            component_name: 'analyzeProductImage',
+            error_details: {
+              parseError: parseError.message,
+              rawResponse: llmResult.substring(0, 1000)
+            }
+          }).catch(() => {});
+          throw new Error('Resposta do LLM em formato invalido');
+        }
+      } else {
+        analysis = llmResult;
       }
-    });
+    } catch (llmError) {
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'IMAGE_ANALYSIS_LLM_ERROR',
+        status: 'error',
+        message: 'Erro ao chamar LLM para analise',
+        component_name: 'analyzeProductImage',
+        error_details: {
+          message: llmError.message,
+          stack: llmError.stack
+        }
+      }).catch(() => {});
+      throw llmError;
+    }
 
     console.log('🧠 Analise completa:', analysis);
 
