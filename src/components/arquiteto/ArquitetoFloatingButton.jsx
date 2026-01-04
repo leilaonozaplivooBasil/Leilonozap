@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Bot, X, Send, Sparkles, Trash2, Copy, CheckCircle } from 'lucide-react';
+import { Bot, X, Send, Sparkles, Trash2, Copy, CheckCircle, Paperclip, Image as ImageIcon } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 
@@ -12,7 +12,10 @@ export default function ArquitetoFloatingButton({ currentUser }) {
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [attachedImages, setAttachedImages] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
   const chatRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Só mostra para admin
   if (!currentUser || currentUser.role !== 'admin') {
@@ -55,18 +58,50 @@ export default function ArquitetoFloatingButton({ currentUser }) {
     }
   };
 
+  const handleImageUpload = async (files) => {
+    if (!files || files.length === 0) return;
+    
+    setIsUploading(true);
+    const uploadedUrls = [];
+    
+    try {
+      for (const file of Array.from(files).slice(0, 5)) {
+        if (!file.type.startsWith('image/')) continue;
+        
+        const result = await base44.integrations.Core.UploadFile({ file });
+        if (result?.file_url) {
+          uploadedUrls.push(result.file_url);
+        }
+      }
+      
+      if (uploadedUrls.length > 0) {
+        setAttachedImages([...attachedImages, ...uploadedUrls]);
+        toast.success(`✅ ${uploadedUrls.length} imagem(ns) anexada(s)`);
+      }
+    } catch (error) {
+      console.error('Erro ao enviar imagens:', error);
+      toast.error('Erro ao anexar imagens');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const sendMessage = async () => {
-    if (!inputMessage.trim() || !conversationId || isSending) return;
+    if ((!inputMessage.trim() && attachedImages.length === 0) || !conversationId || isSending) return;
 
     setIsSending(true);
-    const userMessage = inputMessage.trim();
+    const userMessage = inputMessage.trim() || '🖼️ Imagem anexada';
+    const imagesToSend = [...attachedImages];
+    
     setInputMessage('');
+    setAttachedImages([]);
 
     try {
       const conversation = await base44.agents.getConversation(conversationId);
       await base44.agents.addMessage(conversation, {
         role: 'user',
-        content: userMessage
+        content: userMessage,
+        file_urls: imagesToSend.length > 0 ? imagesToSend : undefined
       });
     } catch (error) {
       console.error('Erro ao enviar:', error);
