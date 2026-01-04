@@ -365,6 +365,11 @@ export default function Layout({ children, currentPageName }) {
 
   const adminMenuItems = [
     { 
+      title: "🤖 Arquiteto IA", 
+      pageName: "ArquitetoIA",
+      highlight: true
+    },
+    { 
       title: "Leilões", 
       isCategory: true,
       items: [
@@ -522,7 +527,9 @@ export default function Layout({ children, currentPageName }) {
                           <DropdownMenuItem 
                             key={item.pageName}
                             onClick={() => navigate(createPageUrl(item.pageName))}
-                            className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700"
+                            className={`cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${
+                              item.highlight ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-l-2 border-purple-500' : ''
+                            }`}
                           >
                             {item.title}
                           </DropdownMenuItem>
@@ -722,15 +729,17 @@ export default function Layout({ children, currentPageName }) {
                             to={createPageUrl(item.pageName)}
                             onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${
-                              isSaiDeBaixoPage 
-                                ? "text-gray-700 hover:bg-gray-50 hover:text-gray-900" 
-                                : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                              item.highlight 
+                                ? "bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 hover:from-purple-600/40 hover:to-blue-600/40" 
+                                : isSaiDeBaixoPage 
+                                  ? "text-gray-700 hover:bg-gray-50 hover:text-gray-900" 
+                                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
                             }`}
                           >
                             {item.title}
                           </Link>
                         )
-                        ))}
+                      ))}
                         </div>
                   )}
               
