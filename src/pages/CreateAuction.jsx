@@ -517,12 +517,138 @@ export default function CreateAuction() {
     }
   };
 
-                    )}
+  // ETAPA 1: EXTRAIR TUDO  
+  const extractAllData = async () => {
+    if (!productUrl) {
+      toast.error("Cole a URL do produto primeiro!");
+      return;
+    }
+    setIsProcessing(true);
+    setManualStep(1);
+    setDebugError(null);
+    
+    try {
+      console.log('🚀 [URL] Iniciando extração COMPLETA para:', productUrl);
+      toast.info("🤖 IA analisando produto e extraindo imagens...");
+      
+      const response = await extractDataFromUrl({ productUrl });
+      console.log('📦 [URL] Resposta dados básicos:', response);
 
-                    {/* ETAPA ANTIGA 3 - REMOVIDA (agora é etapa 2 e 3 acima) */}
-                    {manualStep === 999 && (
+      if (!response || !response.data) {
+          throw new Error("Falha na extração");
+      }
+      
+      const responseData = response.data;
+      
+      if (responseData.error) {
+        toast.error(responseData.error);
+        if (responseData.suggestion) {
+          alert(`❌ ${responseData.error}\n\n💡 ${responseData.suggestion}`);
+        }
+        setManualStep(0);
+        setIsProcessing(false);
+        return;
+      }
+      
+      const { title, description, marketplace } = responseData;
+      
+      if (!title || !description) {
+        throw new Error("Dados incompletos");
+      }
+      
+      setImportedData({ title, description, price: responseData.price });
+      
+      toast.info("🖼️ Extraindo URLs das imagens...");
+      let imageUrlsExtracted = [];
+      
+      try {
+        const imageResponse = await base44.functions.invoke('getImageUrlsFromPage', { 
+          productUrl: productUrl.trim() 
+        });
+
+        if (imageResponse?.status === 200 && imageResponse.data?.imageUrls) {
+          imageUrlsExtracted = imageResponse.data.imageUrls || [];
+          toast.success(`✅ Dados + ${imageUrlsExtracted.length} URLs de imagens extraídos!`);
+        } else {
+          toast.info("✅ Dados extraídos! URLs não encontradas - preencha manualmente.");
+        }
+      } catch (imgError) {
+        console.error('⚠️ Erro ao extrair URLs:', imgError);
+        toast.info("✅ Dados extraídos! Preencha URLs manualmente.");
+      }
+      
+      const filledUrls = [...imageUrlsExtracted];
+      while (filledUrls.length < 6) filledUrls.push('');
+      setExtractedImageUrls(filledUrls.slice(0, 6));
+      
+      setManualStep(2);
+      
+    } catch (error) {
+      console.error("❌ [URL] ERRO:", error);
+      
+      setDebugError({
+        type: 'extractDataFromUrl',
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      
+      toast.error("Erro ao extrair. Use outro método.");
+      setManualStep(0);
+    }
+    
+    setIsProcessing(false);
+  };
+
+  // 🆕 FUNÇÃO PARA BAIXAR IMAGENS DAS URLs
+  const downloadImagesFromUrls = async () => {
+    const validUrls = extractedImageUrls.filter(u => u.trim());
+    if (validUrls.length === 0) {
+      toast.error("❌ Adicione pelo menos 1 URL de imagem!");
+      return;
+    }
+
+    setIsDownloadingImages(true);
+    toast.info("⬇️ Baixando imagens...");
+
+    try {
+      const downloaded = [];
+      for (let i = 0; i < extractedImageUrls.length; i++) {
+        const url = extractedImageUrls[i];
+        if (!url.trim()) continue;
+
+        try {
+          console.log(`⬇️ Baixando imagem ${i + 1}:`, url);
+          const response = await downloadImage({ imageUrl: url });
+
+          if (response?.data?.uploaded_url) {
+            downloaded.push(response.data.uploaded_url);
+            console.log(`✅ Imagem ${i + 1} baixada!`);
+          }
+        } catch (error) {
+          console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
+        }
+      }
+
+      if (downloaded.length === 0) {
+        toast.error("❌ Nenhuma imagem foi baixada com sucesso");
+        setIsDownloadingImages(false);
+        return;
+      }
+
+      setDownloadedImages(downloaded);
+      setSelectedCoverIndex(0);
+      setManualStep(3);
+      toast.success(`✅ ${downloaded.length} imagem(ns) baixada(s)!`);
+
+    } catch (error) {
+      console.error("❌ Erro ao baixar imagens:", error);
+      toast.error("Erro ao baixar imagens");
+    } finally {
+      setIsDownloadingImages(false);
+    }
+  };
   
-  // ETAPA 2: VISUALIZAR IMAGENS - USA URLs ORIGINAIS QUANDO DOWNLOAD FALHAR
   const visualizeImages = async () => {
     const validUrls = imageUrls.filter(url => url && url.trim().startsWith('http'));
     
