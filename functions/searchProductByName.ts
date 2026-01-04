@@ -26,73 +26,53 @@ Deno.serve(async (req) => {
             return Response.json({ error: "Nome do produto obrigatório" }, { status: 400 });
         }
 
-        console.log(`🔍 ETAPA 1: Buscar URL do produto`);
+        console.log(`🔍 Buscando: ${productName}`);
 
-        // Busca URL da página do produto
-        const searchResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Busque "${productName}" na internet.
+        // Busca completa em uma chamada só
+        const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Busque o produto "${productName}" e extraia tudo.
 
-Encontre a URL de UM produto individual (não lista/busca).
+🎯 IMPORTANTE:
+- Produto PRINCIPAL (não acessórios como capa, carregador, cabo, película)
+- Busque em Mercado Livre, Amazon ou Shopee
+- Extraia título, descrição E imagens de produto
 
-VÁLIDO:
-✅ produto.mercadolivre.com.br/MLB-...
-✅ amazon.com.br/dp/...
-✅ shopee.com.br/produto-...
+OBRIGATÓRIO retornar:
+{
+  "found": true,
+  "title": "Nome completo do produto",
+  "description": "Descrição com specs",
+  "imageUrls": ["url1", "url2", ...]  // URLs COMPLETAS de imagens
+}
 
-INVÁLIDO:
-❌ lista.mercadolivre
-❌ /s?k=
-❌ /search
-❌ acessórios (capa, carregador, cabo)
-
-Retorne apenas a URL ou null.`,
+Se só encontrar acessórios ou páginas de busca: found = false`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    productUrl: { type: ["string", "null"] }
+                    found: { type: "boolean" },
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    imageUrls: { 
+                        type: "array",
+                        items: { type: "string" }
+                    }
                 },
-                required: ["productUrl"]
+                required: ["found"]
             }
         });
 
-        const productUrl = searchResult?.productUrl;
-        
-        if (!productUrl || typeof productUrl !== 'string' || !productUrl.startsWith('http')) {
+        console.log(`📦 Resultado: found=${result.found}, title="${result.title}", ${result.imageUrls?.length || 0} imgs`);
+
+        if (!result.found || !result.title) {
             return Response.json({
                 error: "Produto não encontrado",
-                suggestion: "Tente com marca + modelo completo"
+                suggestion: "Tente com marca + modelo (ex: Samsung Galaxy S23)"
             }, { status: 404 });
         }
 
-        console.log(`✅ URL encontrada: ${productUrl}`);
-        console.log(`🔍 ETAPA 2: Extrair dados da página`);
-
-        // Usa extractDataFromUrl que já funciona perfeitamente
-        const extractResult = await base44.functions.invoke('extractDataFromUrl', {
-            productUrl: productUrl
-        });
-
-        if (!extractResult || extractResult.status !== 200) {
-            return Response.json({
-                error: "Erro ao extrair dados do produto",
-                suggestion: "Tente usar o importador por URL"
-            }, { status: 500 });
-        }
-
-        const data = extractResult.data;
-
-        if (!data.title || !data.imageUrls || data.imageUrls.length === 0) {
-            return Response.json({
-                error: "Produto encontrado mas sem imagens",
-                suggestion: "Use o importador por URL ou upload manual",
-                title: data.title,
-                description: data.description
-            }, { status: 404 });
-        }
-
-        // Valida acessórios
-        const lower = data.title.toLowerCase();
+        // Valida acessórios no título
+        const lower = result.title.toLowerCase();
         const accessoryKeywords = [
             'carregador', 'charger', 'cabo', 'cable', 'capa', 'case',
             'película', 'protetor', 'glass', 'adaptador', 'adapter', 'fone'
@@ -104,14 +84,27 @@ Retorne apenas a URL ou null.`,
             }, { status: 404 });
         }
 
-        console.log(`✅ SUCESSO: ${data.title} com ${data.imageUrls.length} imagens`);
+        const imageUrls = (result.imageUrls || [])
+            .filter(url => url && typeof url === 'string' && url.startsWith('http') && !url.includes('...'))
+            .slice(0, 6);
+
+        if (imageUrls.length === 0) {
+            return Response.json({
+                error: "Produto encontrado mas sem imagens válidas",
+                suggestion: "Use o importador por URL com link direto do produto",
+                title: result.title,
+                description: result.description
+            }, { status: 404 });
+        }
+
+        console.log(`✅ ${result.title}: ${imageUrls.length} imagens`);
 
         return Response.json({
             found: true,
-            title: data.title,
-            description: data.description || 'Produto encontrado',
-            imageUrls: data.imageUrls.slice(0, 6),
-            source: data.marketplace || 'Internet'
+            title: result.title,
+            description: result.description || 'Produto encontrado',
+            imageUrls: imageUrls,
+            source: 'Internet'
         }, { status: 200 });
 
     } catch (error) {
