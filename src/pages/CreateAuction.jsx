@@ -403,6 +403,9 @@ export default function CreateAuction() {
       console.log(`✅ Título: ${productTitle}`);
       console.log(`🖼️ Imagens recebidas: ${data.imageUrls?.length || 0}`);
 
+      setExtractedData({ title: productTitle, description: productDesc });
+      setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
+
       // FILTRA URLs BÁSICAS
       const candidateUrls = (data.imageUrls || [])
         .filter(url => url && typeof url === 'string' && url.trim())
@@ -410,13 +413,6 @@ export default function CreateAuction() {
 
       if (candidateUrls.length === 0) {
         toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
-        setFormData(prev => ({ 
-          ...prev, 
-          title: productTitle, 
-          description: productDesc,
-          image_urls: ["", "", "", "", ""],
-          source_url: ""
-        }));
         setProductName("");
         setManualStep(0);
         setIsSearchingName(false);
@@ -433,30 +429,16 @@ export default function CreateAuction() {
 
       if (validUrls.length === 0) {
         toast.error(`❌ Nenhuma imagem funcionou. Use upload manual.`);
-        setFormData(prev => ({ 
-          ...prev, 
-          title: productTitle, 
-          description: productDesc,
-          image_urls: ["", "", "", "", ""],
-          source_url: ""
-        }));
+        setProductName("");
+        setManualStep(0);
       } else {
-        const finalImageUrls = [...validUrls.slice(0, 5)];
-        while (finalImageUrls.length < 5) finalImageUrls.push("");
-
-        setFormData(prev => ({ 
-          ...prev, 
-          title: productTitle, 
-          description: productDesc,
-          image_urls: finalImageUrls,
-          source_url: ""
-        }));
-
-        toast.success(`✅ ${validUrls.length} imagens VALIDADAS aplicadas!`);
+        toast.success(`✅ ${validUrls.length} imagens validadas!`);
+        setDownloadedImages(validUrls);
+        setCoverIndex(0);
+        setManualStep(5); // Vai para escolha de capa
       }
 
       setProductName("");
-      setManualStep(0);
       
     } catch (error) {
       console.error("❌ Erro ao buscar por nome:", error);
@@ -501,6 +483,9 @@ export default function CreateAuction() {
       console.log(`✅ ${productTitle}`);
       console.log(`🖼️ Imagens: ${data.imageUrls?.length || 0}`);
 
+      setExtractedData({ title: productTitle, description: productDesc });
+      setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
+
       // FILTRA URLs BÁSICAS
       const candidateUrls = (data.imageUrls || [])
         .filter(url => url && typeof url === 'string' && url.trim())
@@ -508,13 +493,6 @@ export default function CreateAuction() {
 
       if (candidateUrls.length === 0) {
         toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
-        setFormData(prev => ({ 
-          ...prev, 
-          title: productTitle, 
-          description: productDesc,
-          image_urls: ["", "", "", "", ""],
-          source_url: ""
-        }));
         setGtinCode("");
         setManualStep(0);
         setIsSearchingGtin(false);
@@ -531,30 +509,16 @@ export default function CreateAuction() {
 
       if (validUrls.length === 0) {
         toast.error(`❌ Nenhuma imagem funcionou. Use upload manual.`);
-        setFormData(prev => ({ 
-          ...prev, 
-          title: productTitle, 
-          description: productDesc,
-          image_urls: ["", "", "", "", ""],
-          source_url: ""
-        }));
+        setGtinCode("");
+        setManualStep(0);
       } else {
-        const finalImageUrls = [...validUrls.slice(0, 5)];
-        while (finalImageUrls.length < 5) finalImageUrls.push("");
-
-        setFormData(prev => ({ 
-          ...prev, 
-          title: productTitle, 
-          description: productDesc,
-          image_urls: finalImageUrls,
-          source_url: ""
-        }));
-
-        toast.success(`✅ ${validUrls.length} imagens VALIDADAS! (${data.source})`);
+        toast.success(`✅ ${validUrls.length} imagens validadas! (${data.source})`);
+        setDownloadedImages(validUrls);
+        setCoverIndex(0);
+        setManualStep(5); // Vai para escolha de capa
       }
 
       setGtinCode("");
-      setManualStep(0);
       
     } catch (error) {
       console.error("❌ Erro ao buscar GTIN:", error);
@@ -605,6 +569,9 @@ export default function CreateAuction() {
       console.log(`✅ ${marketplace}: ${title}`);
       console.log(`🖼️ Imagens recebidas: ${extractedImageUrls?.length || 0}`);
       
+      setExtractedData({ title, description });
+      setFormData(prev => ({ ...prev, title, description, source_url: productUrl }));
+      
       // FILTRA URLs BÁSICAS
       const candidateUrls = (extractedImageUrls || [])
         .filter(url => url && typeof url === 'string' && url.trim())
@@ -612,13 +579,6 @@ export default function CreateAuction() {
       
       if (candidateUrls.length === 0) {
         toast.warning(`⚠️ ${title} sem imagens. Use upload manual.`);
-        setFormData(prev => ({ 
-          ...prev, 
-          title, 
-          description,
-          image_urls: ["", "", "", "", ""],
-          source_url: productUrl
-        }));
         setManualStep(0);
         setIsProcessing(false);
         return;
@@ -634,29 +594,13 @@ export default function CreateAuction() {
       
       if (validUrls.length === 0) {
         toast.error(`❌ Nenhuma imagem funcionou. Use upload manual.`);
-        setFormData(prev => ({ 
-          ...prev, 
-          title, 
-          description,
-          image_urls: ["", "", "", "", ""],
-          source_url: productUrl
-        }));
+        setManualStep(0);
       } else {
-        const finalImageUrls = [...validUrls.slice(0, 5)];
-        while (finalImageUrls.length < 5) finalImageUrls.push("");
-        
-        setFormData(prev => ({ 
-          ...prev, 
-          title, 
-          description,
-          image_urls: finalImageUrls,
-          source_url: productUrl
-        }));
-        
-        toast.success(`✅ ${marketplace}: ${validUrls.length} imagens VALIDADAS!`);
+        toast.success(`✅ ${marketplace}: ${validUrls.length} imagens validadas!`);
+        setDownloadedImages(validUrls);
+        setCoverIndex(0);
+        setManualStep(5); // Vai para escolha de capa
       }
-      
-      setManualStep(0);
 
     } catch (error) {
       console.error("Erro ao extrair dados:", error);
