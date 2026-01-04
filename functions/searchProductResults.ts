@@ -76,10 +76,44 @@ Deno.serve(async (req) => {
             }
         });
 
-        console.log(`✅ ${result.results.length} anúncios encontrados`);
+        console.log(`✅ ${result.results.length} anúncios retornados pela IA`);
+
+        // 🔍 VALIDA E FILTRA DUPLICATAS
+        const seen = new Set();
+        const uniqueResults = result.results.filter(item => {
+            // Remove duplicatas por URL
+            if (seen.has(item.productUrl)) {
+                console.log(`🚫 Duplicata removida: ${item.productUrl}`);
+                return false;
+            }
+            seen.add(item.productUrl);
+
+            // Valida campos obrigatórios
+            if (!item.title || !item.marketplace || !item.productUrl) {
+                console.log(`🚫 Anúncio inválido (campos faltando)`);
+                return false;
+            }
+
+            // Valida formato de URL
+            if (!item.productUrl.startsWith('http')) {
+                console.log(`🚫 URL inválida: ${item.productUrl}`);
+                return false;
+            }
+
+            return true;
+        });
+
+        console.log(`✅ ${uniqueResults.length} anúncios únicos e válidos`);
+
+        if (uniqueResults.length === 0) {
+            return Response.json({
+                error: "Nenhum anúncio válido encontrado",
+                results: []
+            }, { status: 404 });
+        }
 
         return Response.json({
-            results: result.results,
+            results: uniqueResults,
             searchTerm: productName
         });
 
