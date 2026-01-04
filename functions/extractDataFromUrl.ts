@@ -93,22 +93,48 @@ Retorne JSON estruturado.`,
         
         console.log(`🤖 IA retornou: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
-        // LIMPA E VALIDA URLs
+        // Se IA não retornou imagens, tenta extrair do HTML
+        if (!imageUrls || imageUrls.length === 0) {
+            console.log('⚠️ IA não retornou imagens, tentando regex no HTML...');
+            
+            // Busca HTML se ainda não foi buscado
+            if (!html) {
+                try {
+                    const resp = await fetch(productUrl, {
+                        headers: {
+                            "User-Agent": getRandomUA(),
+                            "Accept": "text/html",
+                            "Accept-Language": "pt-BR"
+                        },
+                        signal: AbortSignal.timeout(15000)
+                    });
+
+                    if (resp.ok) {
+                        html = await resp.text();
+                        console.log(`✅ HTML: ${html.length} chars`);
+                    }
+                } catch (e) {
+                    console.log('❌ Erro ao buscar HTML:', e.message);
+                }
+            }
+            
+            if (html && marketplace === 'mercadolivre') {
+                const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_\d+-[A-Z]{3}\d+_[A-Z]\.(?:jpg|webp)/gi;
+                const matches = html.match(regex) || [];
+                imageUrls = [...new Set(matches)]
+                    .map(u => u.replace(/_[VSWT]\./, '_O.'))
+                    .slice(0, 10);
+                console.log(`📸 Regex encontrou ${imageUrls.length} imagens`);
+            }
+        }
+        
+        // LIMPA URLs
         imageUrls = (imageUrls || [])
             .filter(u => u && typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')))
-            .map(u => {
-                // Remove parâmetros de query e aspas
-                let cleanUrl = u.split('"')[0].split('&quot;')[0];
-                // Para Mercado Livre, garante extensão correta
-                if (marketplace === 'mercadolivre' && !cleanUrl.match(/\.(jpg|jpeg|webp|png)$/i)) {
-                    cleanUrl += '.jpg';
-                }
-                return cleanUrl;
-            })
-            .filter(u => u.length > 30 && u.match(/\.(jpg|jpeg|webp|png)$/i))
+            .map(u => u.split('"')[0].split('&quot;')[0].split(' ')[0])
             .filter((u, i, arr) => arr.indexOf(u) === i);
         
-        console.log(`🧹 ${imageUrls.length} URLs limpas e validadas`);
+        console.log(`🧹 ${imageUrls.length} URLs finais`);
 
         console.log(`🔍 Processando ${imageUrls.length} imagens do ${marketplace}...`);
 
