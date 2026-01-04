@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { forceSyncStats } from "@/functions/forceSyncStats";
 import { resetTestData } from "@/functions/resetTestData";
 import { resetAllBalances } from "@/functions/resetAllBalances";
-import { requestWithdrawal } from "@/functions/requestWithdrawal";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -908,9 +907,9 @@ const DashboardContent = ({ user, isAdmin }) => {
 
     console.log('✅ [SAQUE] Validações OK, processando...');
     setIsProcessingWithdrawal(true);
-    
+
     try {
-      const response = await requestWithdrawal({
+      const response = await base44.functions.invoke('requestWithdrawal', {
         amount,
         pix_key: pixKey,
         pix_key_type: pixKeyType
@@ -918,17 +917,18 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       console.log('📥 [SAQUE] Resposta:', response);
 
-      if (response?.data?.success) {
+      if (response?.success) {
         alert('Saque solicitado com sucesso! Aguarde aprovação.');
         toast.success('Saque solicitado com sucesso! Aguarde aprovação.');
         setShowWithdrawalModal(false);
         setWithdrawalAmount('');
         setPixKey('');
-        
+
         await delay(2000);
         await fetchRealMetrics();
+        await fetchMyWithdrawals();
       } else {
-        const errorMsg = response?.data?.error || 'Erro ao solicitar saque';
+        const errorMsg = response?.error || 'Erro ao solicitar saque';
         console.error('❌ [SAQUE] Erro:', errorMsg);
         alert(errorMsg);
         toast.error(errorMsg);
