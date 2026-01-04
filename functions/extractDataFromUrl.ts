@@ -56,110 +56,61 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // BUSCA HTML DIRETO
-        let html = '';
-        for (let i = 0; i < 2; i++) {
-            try {
-                const resp = await fetch(productUrl, {
-                    headers: {
-                        "User-Agent": getRandomUA(),
-                        "Accept": "text/html,application/xhtml+xml",
-                        "Accept-Language": "pt-BR,pt;q=0.9"
-                    },
-                    signal: AbortSignal.timeout(15000)
-                });
-
-                if (resp.ok) {
-                    html = await resp.text();
-                    console.log(`✅ ${html.length} chars`);
-                    break;
-                }
-            } catch (e) {
-                if (i === 1) {
-                    return Response.json({
-                        error: "Página inacessível",
-                        suggestion: "Copie dados manualmente"
-                    });
-                }
-                await new Promise(r => setTimeout(r, 1000));
-            }
-        }
-
-        if (!html) {
-            return Response.json({
-                error: "Falha ao carregar página",
-                suggestion: "Verifique o link"
-            });
-        }
-
-        // EXTRAI IMAGENS POR REGEX PRIMEIRO (mais confiável que IA)
-        let imageUrls = [];
-        
-        console.log('📸 Extraindo imagens com regex...');
-        
-        if (marketplace === 'mercadolivre') {
-            const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_[^"'\s<>]+\.(?:jpg|webp)/gi;
-            imageUrls = [...new Set(html.match(regex) || [])].slice(0, 10);
-            
-        } else if (marketplace === 'amazon') {
-            const regex = /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.jpg/gi;
-            imageUrls = [...new Set(html.match(regex) || [])]
-                .filter(u => !u.includes('_US100_') && !u.includes('_SL75_'))
-                .slice(0, 10);
-                
-        } else if (marketplace === 'shopee') {
-            const regex = /https:\/\/[^"'\s<>]*shopee\.com\.br\/[^"'\s<>]+\.(?:jpg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(regex) || [])].slice(0, 10);
-            
-        } else {
-            const regex = /https?:\/\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            imageUrls = [...new Set(html.match(regex) || [])]
-                .filter(u => {
-                    const l = u.toLowerCase();
-                    return !l.includes('logo') && !l.includes('icon') && u.length > 50;
-                })
-                .slice(0, 8);
-        }
-
-        console.log(`📸 ${imageUrls.length} URLs extraídas por regex`);
-        
-        // EXTRAI TÍTULO E DESCRIÇÃO COM IA
-        const snippet = html.substring(0, 15000);
-        
-        console.log('🤖 IA analisando título e descrição...');
+        // 🆕 USA IA COM CONTEXTO DA WEB (contorna bloqueios do Mercado Livre)
+        console.log('🤖 Usando IA com busca na web...');
         
         const aiResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Extraia do HTML do ${marketplace.toUpperCase()}:
+            prompt: `Acesse esta URL do Mercado Livre e extraia os dados do produto:
+${productUrl}
 
-1. TÍTULO exato do produto (linha única, sem formatação HTML)
-2. DESCRIÇÃO técnica com especificações principais (3-5 linhas)
+TAREFA:
+1. TÍTULO completo do produto (sem tags HTML)
+2. DESCRIÇÃO detalhada com especificações técnicas (5-8 linhas)
+3. CRÍTICO: Encontre e retorne 6-10 URLs COMPLETAS das imagens do produto
 
-HTML:
-${snippet}
+IMAGENS:
+- URLs diretas começando com https://
+- Formato: .jpg, .jpeg, .png, .webp
+- GRANDES/originais (NÃO miniaturas)
+- SEM logos de marca d'água
 
-Retorne apenas título e descrição em português claro.`,
+Retorne dados em português do Brasil.`,
+            add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
-                    description: { type: "string" }
+                    description: { type: "string" },
+                    imageUrls: { 
+                        type: "array", 
+                        items: { type: "string" },
+                        minItems: 1
+                    }
                 },
-                required: ["title", "description"]
+                required: ["title", "description", "imageUrls"]
             }
         });
 
-        let { title, description } = aiResult;
+        let { title, description, imageUrls } = aiResult;
         
-        console.log(`🤖 IA: título=${!!title}, desc=${!!description}`);
+        console.log(`🤖 IA: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
-        // LIMPA URLs
+        // LIMPA E VALIDA URLs
         imageUrls = (imageUrls || [])
             .filter(u => u && typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')))
-            .map(u => u.split('"')[0].split('&quot;')[0])
-            .filter(u => u.length > 30)
+            .map(u => {
+                // Remove parâmetros de query e aspas
+                let cleanUrl = u.split('"')[0].split('&quot;')[0];
+                // Para Mercado Livre, garante extensão correta
+                if (marketplace === 'mercadolivre' && !cleanUrl.match(/\.(jpg|jpeg|webp|png)$/i)) {
+                    cleanUrl += '.jpg';
+                }
+                return cleanUrl;
+            })
+            .filter(u => u.length > 30 && u.match(/\.(jpg|jpeg|webp|png)$/i))
             .filter((u, i, arr) => arr.indexOf(u) === i);
         
-        console.log(`🧹 ${imageUrls.length} URLs limpas`);
+        console.log(`🧹 ${imageUrls.length} URLs limpas e validadas`);
 
         console.log(`🔍 Processando ${imageUrls.length} imagens do ${marketplace}...`);
 
