@@ -456,19 +456,29 @@ export default function MyWinningsPage() {
                                 onClick={async () => {
                                     setIsCheckingPayment(true);
                                     try {
+                                        toast.info("Verificando pagamento...");
+                                        
                                         const response = await checkAbacatePayPix({
                                             billing_id: pixData.billing_id,
                                             auction_id: selectedAuction.id
                                         });
 
-                                        if (response?.is_paid) {
+                                        console.log('🔍 Resposta da verificação:', response);
+
+                                        if (response?.data?.is_paid || response?.is_paid) {
                                             setPaymentConfirmed(true);
-                                            toast.success("Pagamento confirmado!");
+                                            toast.success("✅ Pagamento confirmado! Atualizando...");
+                                            
+                                            // Recarregar a lista de arremates
+                                            setTimeout(() => {
+                                                window.location.reload();
+                                            }, 2000);
                                         } else {
-                                            toast.info("Pagamento ainda não identificado. Aguarde alguns instantes.");
+                                            toast.info("⏳ Pagamento ainda não identificado. Aguarde alguns instantes e tente novamente.");
                                         }
                                     } catch (error) {
-                                        toast.error("Erro ao verificar pagamento");
+                                        console.error('❌ Erro ao verificar:', error);
+                                        toast.error("Erro ao verificar pagamento: " + error.message);
                                     } finally {
                                         setIsCheckingPayment(false);
                                     }
