@@ -81,6 +81,12 @@ EXEMPLOS INVÁLIDOS:
 
             const { title: resultTitle } = searchResult;
             
+            if (!resultTitle) {
+                console.log(`❌ Tentativa ${attempts}: Sem título retornado`);
+                if (attempts < maxAttempts) continue;
+                break;
+            }
+            
             // 🔥 VALIDAÇÃO RIGOROSA
             const lowerTitle = resultTitle.toLowerCase();
             const lowerSearch = productName.toLowerCase();
