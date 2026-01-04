@@ -60,6 +60,13 @@ export default function EditAuction() {
 
     const loadData = useCallback(async () => {
         setIsLoading(true);
+        
+        // 🆕 PROTEÇÃO: Se não tem ID, redireciona silenciosamente SEM alert
+        if (!auctionId) {
+            navigate(createPageUrl("Home"), { replace: true });
+            return;
+        }
+        
         try {
             let userFound = null;
             const savedUserJSON = localStorage.getItem('currentUser');
@@ -71,18 +78,12 @@ export default function EditAuction() {
 
             if (userFound?.role !== 'admin') {
                  alert("Acesso negado. Apenas administradores podem editar leilões.");
-                 navigate(createPageUrl("Home"));
+                 navigate(createPageUrl("Home"), { replace: true });
                  return;
             }
 
             if (isTestMode) {
                 console.log("TEST MODE: Edição de Leilão - Carregando dados.");
-            }
-
-            if (!auctionId) {
-                alert("ID do leilão não encontrado.");
-                navigate(createPageUrl("Home"));
-                return;
             }
             const auctionData = await Auction.filter({ id: auctionId });
             if (auctionData.length === 0) {
