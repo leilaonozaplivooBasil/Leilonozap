@@ -326,8 +326,6 @@ export default function PartnersPage() {
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
     setShowLoginModal(false);
-    // Redireciona para o dashboard do investidor
-    navigate(createPageUrl("InvestorDashboard"));
   };
 
   const handleLoginClick = () => {
