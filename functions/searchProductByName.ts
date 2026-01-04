@@ -88,7 +88,22 @@ Se NÃO encontrar: title="PRODUTO_NAO_ENCONTRADO"`,
             .filter((url, index, self) => self.indexOf(url) === index) // Remove duplicatas
             .slice(0, 10);
 
-        console.log(`✅ Imagens válidas: ${imageUrls.length}`);
+        console.log(`🔍 Validando ${imageUrls.length} imagens...`);
+        
+        // 🔥 VALIDA CADA IMAGEM ANTES DE RETORNAR
+        const validatedUrls = [];
+        for (const url of imageUrls) {
+            const isValid = await validateImageUrl(url);
+            if (isValid) {
+                validatedUrls.push(url);
+                console.log(`✅ OK: ${url.substring(0, 60)}`);
+            } else {
+                console.log(`❌ FALHOU: ${url.substring(0, 60)}`);
+            }
+            if (validatedUrls.length >= 8) break;
+        }
+
+        console.log(`✅ ${validatedUrls.length} imagens validadas`);
 
         if (!title || title === 'PRODUTO_NAO_ENCONTRADO') {
             return Response.json({
@@ -100,7 +115,7 @@ Se NÃO encontrar: title="PRODUTO_NAO_ENCONTRADO"`,
         return Response.json({
             title: title.substring(0, 200),
             description: (description || 'Produto encontrado').substring(0, 500),
-            imageUrls: imageUrls,
+            imageUrls: validatedUrls,
             marketplace: marketplace || 'internet',
             searchTerm: productName
         }, { status: 200 });

@@ -1,5 +1,27 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
 
+// 🔥 VALIDA SE IMAGEM CARREGA REALMENTE
+async function validateImageUrl(url) {
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(url, {
+            method: 'HEAD',
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeout);
+        
+        if (!response.ok) return false;
+        
+        const contentType = response.headers.get('content-type');
+        return contentType && contentType.startsWith('image/');
+    } catch {
+        return false;
+    }
+}
+
 Deno.serve(async (req) => {
   try {
     // Clone request to read body multiple times
@@ -163,9 +185,26 @@ Se NÃO encontrar: found=false`,
       });
     }
 
+    // 🔥 VALIDA IMAGENS ANTES DE RETORNAR
+    console.log(`🔍 Validando ${productData.imageUrls.length} imagens...`);
+    const validatedUrls = [];
+    for (const url of productData.imageUrls) {
+      const isValid = await validateImageUrl(url);
+      if (isValid) {
+        validatedUrls.push(url);
+        console.log(`✅ OK: ${url.substring(0, 60)}`);
+      } else {
+        console.log(`❌ FALHOU: ${url.substring(0, 60)}`);
+      }
+      if (validatedUrls.length >= 8) break;
+    }
+
+    console.log(`✅ ${validatedUrls.length} imagens validadas`);
+
     return Response.json({
       found: true,
       ...productData,
+      imageUrls: validatedUrls,
       gtin: normalizedGtin
     });
 
