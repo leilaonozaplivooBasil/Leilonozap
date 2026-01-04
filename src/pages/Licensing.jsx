@@ -884,7 +884,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
     console.log('🔍 [SAQUE] Botão clicado!');
     console.log('📊 [SAQUE] Valor digitado:', withdrawalAmount);
-    console.log('💰 [SAQUE] Saldo disponível:', user.valora_pay_balance);
+    console.log('💰 [SAQUE] Saldo de comissão disponível:', user.commission_balance);
 
     const amount = parseFloat(withdrawalAmount);
     console.log('💵 [SAQUE] Valor convertido:', amount);
@@ -901,7 +901,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       return;
     }
 
-    if (amount > user.valora_pay_balance) {
+    if (amount > (user.commission_balance || 0)) {
       console.log('❌ [SAQUE] Saldo insuficiente');
       toast.error('Saldo indisponível');
       return;
@@ -1561,6 +1561,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               <button
                 onClick={() => setShowWithdrawalModal(false)}
                 className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                disabled={isProcessingWithdrawal}
               >
                 <X className="w-5 h-5 text-gray-400" />
               </button>
@@ -1568,7 +1569,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
             <div className="p-6 space-y-4">
               <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
-                <p className="text-sm text-gray-300 mb-1">Saldo Disponível:</p>
+                <p className="text-sm text-gray-300 mb-1">Saldo de Comissões Disponível:</p>
                 <p className="text-3xl font-bold text-green-400">
                   R$ {(user?.commission_balance || 0).toFixed(2)}
                 </p>
