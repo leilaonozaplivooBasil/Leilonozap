@@ -49,115 +49,43 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🔥 EXTRAI ID DO PRODUTO PARA USAR API DO MERCADO LIVRE
-        let productId = null;
-        if (marketplace === 'mercadolivre') {
-            const mlbMatch = productUrl.match(/\/p\/(MLB\d+)/);
-            if (mlbMatch) {
-                productId = mlbMatch[1];
-                console.log(`🎯 ID do produto: ${productId}`);
-            }
-        }
+        // 🤖 USA APENAS IA COM WEB SEARCH (método mais confiável)
+        console.log('🤖 IA buscando produto na web...');
 
-        let title = '';
-        let description = '';
-        let imageUrls = [];
+        const extractionResult = await base44.integrations.Core.InvokeLLM({
+            prompt: `Busque informações sobre este produto do Mercado Livre:
+        ${productUrl}
 
-        // 📸 USA API PÚBLICA DO MERCADO LIVRE
-        if (productId && marketplace === 'mercadolivre') {
-            try {
-                console.log('🔍 Buscando via API do Mercado Livre...');
+        EXTRAIA E RETORNE em português brasileiro:
+        1. Título completo do produto
+        2. Descrição detalhada com especificações técnicas (mínimo 6 linhas, máximo 10 linhas)
+        3. URLs DIRETAS das imagens em alta resolução
 
-                const apiResp = await fetch(`https://api.mercadolibre.com/items/${productId}`, {
-                    headers: {
-                        "User-Agent": getRandomUA()
-                    },
-                    signal: AbortSignal.timeout(10000)
-                });
+        IMPORTANTE sobre as imagens do Mercado Livre:
+        - As URLs começam com https://http2.mlstatic.com/
+        - Use APENAS versões ORIGINAIS/GRANDES
+        - NÃO use miniaturas pequenas
+        - Retorne TODAS as imagens que encontrar (mínimo 5, ideal 8-10)
 
-                console.log(`📡 API Status: ${apiResp.status}`);
-
-                if (apiResp.ok) {
-                    const data = await apiResp.json();
-
-                    console.log(`📦 API response keys:`, Object.keys(data));
-                    console.log(`📸 Pictures array length:`, data.pictures?.length || 0);
-
-                    title = data.title || '';
-
-                    // Extrai imagens da API
-                    const rawImages = (data.pictures || [])
-                        .map(p => {
-                            console.log(`🖼️ Picture object:`, JSON.stringify(p).substring(0, 200));
-                            return p.secure_url || p.url;
-                        })
-                        .filter(u => u && typeof u === 'string' && u.length > 0);
-
-                    console.log(`✅ API ML retornou ${rawImages.length} URLs`);
-                    if (rawImages.length > 0) {
-                        console.log('📸 Primeira URL completa:', rawImages[0]);
+        Seja completo e preciso.`,
+            add_context_from_internet: true,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    imageUrls: {
+                        type: "array",
+                        items: { type: "string" }
                     }
-
-                    // Converte para versão ORIGINAL (_O)
-                    imageUrls = rawImages
-                        .map(u => {
-                            const cleanUrl = u.split('?')[0];
-                            // Substitui tamanho por _O (original)
-                            const match = cleanUrl.match(/(.*_)([VSWT])(\.(?:jpg|webp|png))$/i);
-                            if (match) {
-                                return match[1] + 'O' + match[3];
-                            }
-                            return cleanUrl;
-                        })
-                        .slice(0, 10);
-
-                    console.log(`✅ ${imageUrls.length} URLs em versão original`);
-
-                    // Busca descrição completa se disponível
-                    try {
-                        const descResp = await fetch(`https://api.mercadolibre.com/items/${productId}/description`, {
-                            signal: AbortSignal.timeout(8000)
-                        });
-                        if (descResp.ok) {
-                            const descData = await descResp.json();
-                            description = descData.plain_text || data.title || '';
-                        }
-                    } catch (e) {
-                        description = data.title || '';
-                    }
-                }
-            } catch (e) {
-                console.log('⚠️ API ML falhou:', e.message);
+                },
+                required: ["title", "description", "imageUrls"]
             }
-        }
+        });
 
-        // 🤖 FALLBACK: USA IA SE API FALHOU
-        if (!title || !description) {
-            console.log('🤖 Fallback: usando IA...');
+        let { title, description, imageUrls } = extractionResult;
 
-            const extractionResult = await base44.integrations.Core.InvokeLLM({
-                prompt: `Extraia do Mercado Livre:
-        URL: ${productUrl}
-
-        RETORNE:
-        1. Título do produto
-        2. Descrição com especificações (6-10 linhas em português)`,
-                add_context_from_internet: true,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        title: { type: "string" },
-                        description: { type: "string" }
-                    },
-                    required: ["title", "description"]
-                }
-            });
-
-            title = title || extractionResult.title;
-            description = description || extractionResult.description;
-        }
-
-        console.log(`✅ Dados: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
+        console.log(`✅ IA: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
         // LIMPA URLs
         imageUrls = (imageUrls || [])
