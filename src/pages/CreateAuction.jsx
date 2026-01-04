@@ -1352,18 +1352,32 @@ export default function CreateAuction() {
                                 const url = downloadedImages[i];
                                 console.log(`🔍 Validando imagem ${i + 1}/${downloadedImages.length}: ${url.substring(0, 60)}...`);
 
+                                let response;
+                                let method = 'HEAD';
+                                
                                 try {
-                                  const response = await fetch(url, { 
+                                  // Tenta HEAD primeiro
+                                  response = await fetch(url, { 
                                     method: 'HEAD',
                                     signal: AbortSignal.timeout(5000)
                                   });
+
+                                  // Se receber 405 (Method Not Allowed), tenta GET
+                                  if (response.status === 405) {
+                                    console.log(`⚠️ Erro 405 em HEAD, tentando GET...`);
+                                    method = 'GET';
+                                    response = await fetch(url, { 
+                                      method: 'GET',
+                                      signal: AbortSignal.timeout(5000)
+                                    });
+                                  }
 
                                   const contentType = response.headers.get('content-type');
 
                                   results.push({
                                     index: i + 1,
                                     url: url,
-                                    status: response.ok ? '✅ OK' : `❌ Erro ${response.status}`,
+                                    status: response.ok ? `✅ OK (${method})` : `❌ Erro ${response.status}`,
                                     contentType: contentType || '❌ Sem content-type',
                                     isImage: contentType?.startsWith('image/') ? '✅ É imagem' : '❌ NÃO é imagem'
                                   });
