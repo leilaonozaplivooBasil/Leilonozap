@@ -126,8 +126,12 @@ Se só encontrar acessórios ou páginas de busca: found = false`,
                     continue;
                 }
                 
+                // Converte Blob → File (compatível com UploadFile)
+                const arrayBuffer = await blob.arrayBuffer();
+                const file = new File([arrayBuffer], 'image.jpg', { type: blob.type });
+                
                 // Upload para Base44
-                const uploadResult = await base44.integrations.Core.UploadFile({ file: blob });
+                const uploadResult = await base44.integrations.Core.UploadFile({ file });
                 
                 if (uploadResult?.file_url) {
                     uploadedUrls.push(uploadResult.file_url);
