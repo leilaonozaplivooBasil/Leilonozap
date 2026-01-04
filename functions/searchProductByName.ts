@@ -27,6 +27,15 @@ Deno.serve(async (req) => {
         }
 
         console.log(`🔍 Buscando: ${productName}`);
+        
+        // Log de início
+        await base44.asServiceRole.entities.SystemLog.create({
+          step: 'PRODUCT_SEARCH_BY_NAME_INITIATED',
+          status: 'info',
+          message: 'Busca de produto por nome iniciada',
+          component_name: 'searchProductByName',
+          payload: { productName }
+        }).catch(() => {});
 
         // Busca completa em uma chamada só
         const result = await base44.integrations.Core.InvokeLLM({
@@ -76,6 +85,15 @@ OBRIGATÓRIO retornar:
         console.log(`📦 Resultado: found=${result.found}, title="${result.title}", ${result.imageUrls?.length || 0} imgs`);
 
         if (!result.found || !result.title) {
+            // Log de produto não encontrado
+            await base44.asServiceRole.entities.SystemLog.create({
+              step: 'PRODUCT_SEARCH_BY_NAME_NOT_FOUND',
+              status: 'warning',
+              message: 'Produto não encontrado na busca',
+              component_name: 'searchProductByName',
+              payload: { productName }
+            }).catch(() => {});
+            
             return Response.json({
                 error: "Produto não encontrado",
                 suggestion: "Tente com marca + modelo (ex: Samsung Galaxy S23)"
@@ -109,6 +127,19 @@ OBRIGATÓRIO retornar:
         }
 
         console.log(`✅ ${result.title}: ${imageUrls.length} imagens encontradas`);
+
+        // Log de sucesso
+        await base44.asServiceRole.entities.SystemLog.create({
+          step: 'PRODUCT_SEARCH_BY_NAME_SUCCESS',
+          status: 'success',
+          message: `Produto encontrado: ${result.title}`,
+          component_name: 'searchProductByName',
+          payload: { 
+            productName,
+            title: result.title,
+            imageCount: imageUrls.length
+          }
+        }).catch(() => {});
 
         return Response.json({
             found: true,

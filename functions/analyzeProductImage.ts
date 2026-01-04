@@ -10,7 +10,30 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    const { imageFile } = await req.json();
+    // Log do payload bruto para debug
+    const bodyText = await req.text();
+    console.log('📥 Payload recebido (primeiros 200 chars):', bodyText.substring(0, 200));
+    
+    let parsedBody;
+    try {
+      parsedBody = JSON.parse(bodyText);
+    } catch (parseError) {
+      console.error('❌ Erro ao parsear JSON:', parseError.message);
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'IMAGE_ANALYSIS_PARSE_ERROR',
+        status: 'error',
+        message: 'Payload JSON inválido recebido',
+        component_name: 'analyzeProductImage',
+        error_details: {
+          parseError: parseError.message,
+          receivedData: bodyText.substring(0, 500)
+        }
+      }).catch(() => {});
+      
+      return Response.json({ error: 'Dados inválidos recebidos' }, { status: 400 });
+    }
+    
+    const { imageFile } = parsedBody;
     
     if (!imageFile) {
       return Response.json({ error: 'Imagem não fornecida' }, { status: 400 });
