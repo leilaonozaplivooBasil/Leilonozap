@@ -55,10 +55,11 @@ Retorne APENAS JSON.`,
 - description: descrição completa
 - price_range: faixa de preço em R$ (ex: "R$ 100-150")
 - specifications: objeto com especificações técnicas
-- images: lista de URLs de imagens (até 5)
+- images: lista de URLs COMPLETAS de imagens de produto (até 8)
 - gtin: código de barras se encontrar
 
 Priorize sites como Amazon, Mercado Livre, Magazine Luiza.
+IMPORTANTE: URLs de imagens devem ser completas (começar com http/https).
 Retorne APENAS JSON.`,
       add_context_from_internet: true,
       response_json_schema: {
@@ -73,7 +74,74 @@ Retorne APENAS JSON.`,
       }
     });
 
-    console.log(`💰 [WEB] Preço estimado: ${webSearch.price_range || 'N/A'}`);
+    console.log(`💰 [WEB] Preço: ${webSearch.price_range || 'N/A'}`);
+    console.log(`🖼️ [WEB] Imagens encontradas: ${webSearch.images?.length || 0}`);
+
+    // BAIXAR E HOSPEDAR IMAGENS NO BASE44
+    const imageUrlsToDownload = [imageUrl, ...(webSearch.images || [])]
+      .filter(url => url && typeof url === 'string' && url.startsWith('http') && !url.includes('...'))
+      .slice(0, 8);
+
+    console.log(`📥 Baixando ${imageUrlsToDownload.length} imagens...`);
+
+    const uploadedUrls = [];
+
+    for (const url of imageUrlsToDownload) {
+      try {
+        console.log(`🔄 Baixando: ${url.substring(0, 60)}...`);
+        
+        const imgResponse = await fetch(url, { 
+          signal: AbortSignal.timeout(8000),
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        if (!imgResponse.ok) {
+          console.log(`❌ HTTP ${imgResponse.status}`);
+          continue;
+        }
+        
+        const blob = await imgResponse.blob();
+        
+        if (blob.size < 5000) {
+          console.log(`⚠️ Muito pequena (${blob.size} bytes)`);
+          continue;
+        }
+        
+        const arrayBuffer = await blob.arrayBuffer();
+        const fileName = `product_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
+        const file = new File([arrayBuffer], fileName, { type: blob.type || 'image/jpeg' });
+        
+        const uploadResult = await base44.asServiceRole.integrations.Core.UploadPrivateFile({ file });
+        
+        if (uploadResult?.file_uri) {
+          const signedResult = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
+            file_uri: uploadResult.file_uri,
+            expires_in: 31536000
+          });
+          
+          if (signedResult?.signed_url) {
+            uploadedUrls.push(signedResult.signed_url);
+            console.log(`✅ Hospedada (${uploadedUrls.length}/${imageUrlsToDownload.length})`);
+            
+            if (uploadedUrls.length >= 6) break;
+          }
+        }
+        
+      } catch (err) {
+        console.log(`❌ Falhou: ${err.message}`);
+      }
+    }
+
+    console.log(`📊 RESULTADO: ${uploadedUrls.length} imagens hospedadas`);
+
+    if (uploadedUrls.length === 0) {
+      return Response.json({
+        success: false,
+        message: 'Não foi possível baixar as imagens do produto'
+      });
+    }
 
     // PASSO 3: VERIFICAR PRODUTOS SIMILARES
     const similarProducts = await base44.asServiceRole.entities.Product.filter({
@@ -114,7 +182,7 @@ Retorne APENAS JSON.`,
       price_range: webSearch.price_range || '',
       gtin: webSearch.gtin || '',
       specifications: webSearch.specifications || {},
-      images: [imageUrl, ...(webSearch.images || [])].slice(0, 5)
+      images: uploadedUrls
     };
 
     // LOG
