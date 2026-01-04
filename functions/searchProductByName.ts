@@ -319,7 +319,10 @@ Retorne apenas a URL encontrada ou null.`,
         
         let { title, description, productPageUrl } = best;
         
-        // AGORA EXTRAI AS IMAGENS DA PÁGINA REAL
+        const imageUrls = best.imageUrls;
+        productPageUrl = best.sourceUrl;
+        
+        // JÁ TEMOS IMAGENS EXTRAÍDAS - PULA TODA A LÓGICA ANTIGA
         console.log('📸 Extraindo imagens da página...');
         console.log('🔗 URL do produto:', productPageUrl);
         
