@@ -93,7 +93,6 @@ export default function CreateAuction() {
   // 🆕 ESTADOS PARA URLs DE IMAGENS EXTRAÍDAS
   const [extractedImageUrls, setExtractedImageUrls] = useState(['', '', '', '', '', '']);
   const [isDownloadingImages, setIsDownloadingImages] = useState(false);
-  const [downloadedImages, setDownloadedImages] = useState([]);
   const [selectedCoverIndex, setSelectedCoverIndex] = useState(0);
 
   // ESTADOS DO LABORATÓRIO DE TESTES
