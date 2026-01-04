@@ -56,66 +56,40 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // USA IA COM CONTEXTO DA WEB
-        console.log('🤖 Usando IA com busca na web...');
+        // 🆕 USA IA COM SCREENSHOT (contorna bloqueios)
+        console.log('📸 Capturando screenshot da página...');
         
-        const aiResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Acesse: ${productUrl}
+        const screenshotResult = await base44.integrations.Core.InvokeLLM({
+            prompt: `Analise esta página do Mercado Livre e extraia:
 
-Extraia:
-1. TÍTULO completo do produto
-2. DESCRIÇÃO técnica (5-8 linhas em português)
+1. TÍTULO exato do produto (sem HTML, apenas texto)
+2. DESCRIÇÃO completa com especificações técnicas (6-10 linhas em português)
+3. TODAS as URLs das imagens do produto que você conseguir ver
 
-Retorne JSON limpo sem HTML.`,
-            add_context_from_internet: true,
+IMPORTANTE para as imagens:
+- Busque por URLs que começam com https://http2.mlstatic.com/D_NQ_NP_
+- São URLs grandes/originais, não miniaturas
+- Retorne pelo menos 5-10 URLs se disponível
+
+Retorne tudo em português do Brasil.`,
+            file_urls: [productUrl],
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
-                    description: { type: "string" }
+                    description: { type: "string" },
+                    imageUrls: { 
+                        type: "array", 
+                        items: { type: "string" }
+                    }
                 },
-                required: ["title", "description"]
+                required: ["title", "description", "imageUrls"]
             }
         });
 
-        let { title, description } = aiResult;
+        let { title, description, imageUrls } = screenshotResult;
         
-        console.log(`🤖 IA: título=${!!title}, desc=${!!description}`);
-        
-        // BUSCA HTML PARA EXTRAIR IMAGENS
-        console.log('📄 Buscando HTML da página...');
-        let html = '';
-        
-        try {
-            const resp = await fetch(productUrl, {
-                headers: {
-                    "User-Agent": getRandomUA(),
-                    "Accept": "text/html",
-                    "Accept-Language": "pt-BR"
-                },
-                signal: AbortSignal.timeout(15000)
-            });
-
-            if (resp.ok) {
-                html = await resp.text();
-                console.log(`✅ ${html.length} chars`);
-            }
-        } catch (e) {
-            console.log('⚠️ Não conseguiu buscar HTML:', e.message);
-        }
-        
-        // EXTRAI IMAGENS POR REGEX
-        let imageUrls = [];
-        
-        if (html && marketplace === 'mercadolivre') {
-            console.log('📸 Extraindo imagens do HTML...');
-            const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_\d+-[A-Z]{3}\d+_[A-Z]\.(?:jpg|webp)/gi;
-            const matches = html.match(regex) || [];
-            imageUrls = [...new Set(matches)]
-                .map(u => u.replace(/_[VSWT]\./, '_O.')) // Converte para original
-                .slice(0, 10);
-            console.log(`📸 ${imageUrls.length} URLs encontradas`);
-        }
+        console.log(`🤖 IA: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
         // LIMPA E VALIDA URLs
         imageUrls = (imageUrls || [])
