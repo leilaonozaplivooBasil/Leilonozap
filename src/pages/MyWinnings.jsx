@@ -202,15 +202,46 @@ export default function MyWinningsPage() {
                 user_cpf: cpf
             });
 
+            console.log('📦 Resposta completa:', response);
+
             if (response?.success) {
                 setPixData(response);
                 toast.success("QR Code gerado com sucesso!");
             } else {
-                toast.error(response?.error || "Erro ao gerar QR Code");
+                const errorMsg = response?.error || response?.details || "Erro ao gerar QR Code";
+                console.error('❌ Erro AbacatePay:', errorMsg);
+                toast.error(errorMsg);
+
+                // Log do erro no SystemLog
+                await base44.entities.SystemLog.create({
+                    step: 'PIX_GENERATION_FRONTEND_ERROR',
+                    status: 'error',
+                    message: 'Falha ao gerar PIX no frontend',
+                    component_name: 'MyWinnings',
+                    error_details: { response },
+                    payload: { auction_id: selectedAuction.id, name, email },
+                    user_agent: navigator.userAgent,
+                    url: window.location.href
+                }).catch(() => {});
             }
         } catch (error) {
-            console.error("Erro ao gerar PIX:", error);
-            toast.error("Erro ao gerar QR Code. Tente novamente.");
+            console.error("❌ Exceção ao gerar PIX:", error);
+            toast.error(`Erro ao gerar QR Code: ${error.message}`);
+
+            // Log da exceção no SystemLog
+            await base44.entities.SystemLog.create({
+                step: 'PIX_GENERATION_FRONTEND_EXCEPTION',
+                status: 'error',
+                message: error.message || 'Exceção durante geração de PIX',
+                component_name: 'MyWinnings',
+                error_details: {
+                    stack: error.stack,
+                    name: error.name
+                },
+                payload: { auction_id: selectedAuction.id },
+                user_agent: navigator.userAgent,
+                url: window.location.href
+            }).catch(() => {});
         } finally {
             setIsProcessing(false);
         }
