@@ -28,12 +28,20 @@ function calculateImageScore(url, productName) {
     const lowerUrl = url.toLowerCase();
     const lowerProduct = productName.toLowerCase();
     
-    // ❌ PENALIDADES - Imagens ruins
+    // ❌ PENALIDADES BRUTAIS - Acessórios e imagens ruins
+    const accessoryKeywords = [
+        'adapter', 'adaptador', 'charger', 'carregador', 'cabo', 'cable',
+        'capa', 'case', 'cover', 'pelicula', 'protetor', 'glass',
+        'fone', 'earphone', 'headphone', 'suporte', 'stand', 'holder',
+        'power', 'usb', 'plug'
+    ];
+    if (accessoryKeywords.some(k => lowerUrl.includes(k))) score -= 500; // BLOQUEIO TOTAL
+    
     if (lowerUrl.match(/logo|icon|banner|sprite|button|arrow|star|badge|seal|stamp/i)) score -= 100;
     if (lowerUrl.includes('thumbnail') || lowerUrl.includes('thumb')) score -= 50;
     if (lowerUrl.includes('avatar') || lowerUrl.includes('user')) score -= 100;
-    if (lowerUrl.match(/\d{1,3}x\d{1,3}/)) score -= 30; // Dimensões pequenas no nome
-    if (lowerUrl.includes('az-request')) score -= 200; // Mercado Livre bug
+    if (lowerUrl.match(/\d{1,3}x\d{1,3}/)) score -= 30;
+    if (lowerUrl.includes('az-request')) score -= 200;
     
     // ✅ BONIFICAÇÕES - CDNs confiáveis de produtos
     if (lowerUrl.includes('mlstatic.com')) score += 50;
