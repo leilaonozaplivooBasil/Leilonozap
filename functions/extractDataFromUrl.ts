@@ -56,44 +56,66 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🆕 USA IA COM CONTEXTO DA WEB (contorna bloqueios do Mercado Livre)
+        // USA IA COM CONTEXTO DA WEB
         console.log('🤖 Usando IA com busca na web...');
         
         const aiResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta URL do Mercado Livre e extraia os dados do produto:
-${productUrl}
+            prompt: `Acesse: ${productUrl}
 
-TAREFA:
-1. TÍTULO completo do produto (sem tags HTML)
-2. DESCRIÇÃO detalhada com especificações técnicas (5-8 linhas)
-3. CRÍTICO: Encontre e retorne 6-10 URLs COMPLETAS das imagens do produto
+Extraia:
+1. TÍTULO completo do produto
+2. DESCRIÇÃO técnica (5-8 linhas em português)
 
-IMAGENS:
-- URLs diretas começando com https://
-- Formato: .jpg, .jpeg, .png, .webp
-- GRANDES/originais (NÃO miniaturas)
-- SEM logos de marca d'água
-
-Retorne dados em português do Brasil.`,
+Retorne JSON limpo sem HTML.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
-                    description: { type: "string" },
-                    imageUrls: { 
-                        type: "array", 
-                        items: { type: "string" },
-                        minItems: 1
-                    }
+                    description: { type: "string" }
                 },
-                required: ["title", "description", "imageUrls"]
+                required: ["title", "description"]
             }
         });
 
-        let { title, description, imageUrls } = aiResult;
+        let { title, description } = aiResult;
         
-        console.log(`🤖 IA: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
+        console.log(`🤖 IA: título=${!!title}, desc=${!!description}`);
+        
+        // BUSCA HTML PARA EXTRAIR IMAGENS
+        console.log('📄 Buscando HTML da página...');
+        let html = '';
+        
+        try {
+            const resp = await fetch(productUrl, {
+                headers: {
+                    "User-Agent": getRandomUA(),
+                    "Accept": "text/html",
+                    "Accept-Language": "pt-BR"
+                },
+                signal: AbortSignal.timeout(15000)
+            });
+
+            if (resp.ok) {
+                html = await resp.text();
+                console.log(`✅ ${html.length} chars`);
+            }
+        } catch (e) {
+            console.log('⚠️ Não conseguiu buscar HTML:', e.message);
+        }
+        
+        // EXTRAI IMAGENS POR REGEX
+        let imageUrls = [];
+        
+        if (html && marketplace === 'mercadolivre') {
+            console.log('📸 Extraindo imagens do HTML...');
+            const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_\d+-[A-Z]{3}\d+_[A-Z]\.(?:jpg|webp)/gi;
+            const matches = html.match(regex) || [];
+            imageUrls = [...new Set(matches)]
+                .map(u => u.replace(/_[VSWT]\./, '_O.')) // Converte para original
+                .slice(0, 10);
+            console.log(`📸 ${imageUrls.length} URLs encontradas`);
+        }
 
         // LIMPA E VALIDA URLs
         imageUrls = (imageUrls || [])
