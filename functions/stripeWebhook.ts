@@ -28,6 +28,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Webhook inválido' }, { status: 400 });
     }
     
+    const base44 = createClientFromRequest(req);
+
+    // Log webhook recebido
+    await base44.asServiceRole.entities.SystemLog.create({
+      step: 'STRIPE_WEBHOOK_RECEIVED',
+      status: 'info',
+      message: `Webhook Stripe recebido: ${event.type}`,
+      component_name: 'stripeWebhook',
+      payload: { event_type: event.type, event_id: event.id }
+    }).catch(() => {});
+
     console.log('Evento Stripe:', event.type);
     
     // Processa pagamento confirmado
@@ -39,8 +50,6 @@ Deno.serve(async (req) => {
         console.error('auction_id ausente no metadata');
         return Response.json({ error: 'auction_id missing' }, { status: 400 });
       }
-      
-      const base44 = createClientFromRequest(req);
       
       // Atualiza leilão
       await base44.asServiceRole.entities.Auction.update(auctionId, {
@@ -57,6 +66,16 @@ Deno.serve(async (req) => {
           status: 'paid',
           payment_date: new Date().toISOString()
         });
+
+        // Log de sucesso
+        await base44.asServiceRole.entities.SystemLog.create({
+          step: 'STRIPE_PAYMENT_CONFIRMED',
+          status: 'success',
+          message: 'Pagamento Stripe confirmado',
+          component_name: 'stripeWebhook',
+          entity_id: payments[0].id,
+          payload: { auction_id: auctionId, session_id: session.id }
+        }).catch(() => {});
       }
       
       // 🆕 PROCESSA BAIXA NO ESTOQUE
@@ -77,6 +96,22 @@ Deno.serve(async (req) => {
     
   } catch (error) {
     console.error('Erro no webhook:', error);
+    
+    // Log de erro
+    try {
+      const base44 = createClientFromRequest(req);
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'STRIPE_WEBHOOK_ERROR',
+        status: 'error',
+        message: 'Erro ao processar webhook Stripe',
+        component_name: 'stripeWebhook',
+        error_details: {
+          message: error.message,
+          stack: error.stack
+        }
+      });
+    } catch {}
+
     return Response.json({ 
       error: error.message 
     }, { status: 500 });
