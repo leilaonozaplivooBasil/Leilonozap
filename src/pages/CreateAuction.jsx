@@ -566,10 +566,14 @@ export default function CreateAuction() {
           productUrl: productUrl.trim() 
         });
 
+        console.log('📦 [IMAGE_URLS] Resposta completa:', imageResponse);
+
         if (imageResponse?.status === 200 && imageResponse.data?.imageUrls) {
           imageUrlsExtracted = imageResponse.data.imageUrls || [];
+          console.log(`✅ [IMAGE_URLS] ${imageUrlsExtracted.length} URLs extraídas:`, imageUrlsExtracted);
           toast.success(`✅ Dados + ${imageUrlsExtracted.length} URLs de imagens extraídos!`);
         } else {
+          console.warn('⚠️ [IMAGE_URLS] Resposta sem imageUrls');
           toast.info("✅ Dados extraídos! URLs não encontradas - preencha manualmente.");
         }
       } catch (imgError) {
@@ -577,9 +581,14 @@ export default function CreateAuction() {
         toast.info("✅ Dados extraídos! Preencha URLs manualmente.");
       }
       
-      const filledUrls = [...imageUrlsExtracted];
-      while (filledUrls.length < 6) filledUrls.push('');
-      setExtractedImageUrls(filledUrls.slice(0, 6));
+      // Preenche array com URLs extraídas
+      const filledUrls = [];
+      for (let i = 0; i < 6; i++) {
+        filledUrls.push(imageUrlsExtracted[i] || '');
+      }
+      
+      console.log('📋 [IMAGE_URLS] URLs que vão para o estado:', filledUrls);
+      setExtractedImageUrls(filledUrls);
       
       setManualStep(2);
       
