@@ -143,7 +143,7 @@ Retorne JSON estruturado.`,
         for (const url of imageUrls.slice(0, 8)) {
             try {
                 console.log(`📥 Baixando: ${url.substring(0, 60)}...`);
-                
+
                 // Baixa a imagem
                 const imgResponse = await fetch(url, {
                     headers: {
@@ -159,17 +159,11 @@ Retorne JSON estruturado.`,
                     continue;
                 }
 
-                const arrayBuffer = await imgResponse.arrayBuffer();
-                const uint8Array = new Uint8Array(arrayBuffer);
-                
-                // Cria File object do blob
-                const file = new File([uint8Array], `image-${Date.now()}-${rehostedUrls.length}.jpg`, {
-                    type: imgResponse.headers.get('content-type') || 'image/jpeg'
-                });
-                
+                const blob = await imgResponse.blob();
+
                 // Re-hospeda no Base44
                 const uploadResult = await base44.integrations.Core.UploadFile({ 
-                    file: file 
+                    file: blob 
                 });
 
                 if (uploadResult?.file_url) {
