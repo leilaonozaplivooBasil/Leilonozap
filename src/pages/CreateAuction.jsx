@@ -344,99 +344,85 @@ export default function CreateAuction() {
       console.log('🔍 ETAPA 1: Buscando resultados para:', productName);
       const response = await searchProductResults({ productName: productName.trim() });
 
-      console.log('📦 [NOME] Resposta RAW:', response);
-      console.log('📦 [NOME] Status:', response?.status);
-      console.log('📦 [NOME] Data:', response?.data);
-
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro na busca');
       }
 
       const data = response.data;
 
-      console.log('🔍 [NOME] RESPOSTA COMPLETA DO BACKEND:', JSON.stringify(data, null, 2));
+      if (data.error || !data.results || data.results.length === 0) {
+        toast.error("Nenhum resultado encontrado. Tente outro termo.");
+        setIsSearchingResults(false);
+        return;
+      }
+
+      console.log(`✅ ${data.results.length} anúncios encontrados`);
+      setSearchResults(data.results);
+      setShowResultsModal(true);
+      
+    } catch (error) {
+      console.error("❌ Erro na busca:", error);
+      toast.error(`❌ Erro: ${error.message}`);
+    } finally {
+      setIsSearchingResults(false);
+    }
+  };
+
+  // 🆕 ETAPA 2: IMPORTA PRODUTO SELECIONADO
+  const handleImportProduct = async (productUrl) => {
+    setShowResultsModal(false);
+    setManualStep(1);
+    setIsSearchingName(true);
+
+    try {
+      console.log('📥 ETAPA 2: Importando produto de:', productUrl);
+      toast.info("🤖 Importando produto...");
+
+      const response = await importFromUrl({ productUrl });
+
+      if (!response || response.status !== 200) {
+        throw new Error(response?.data?.error || 'Erro na importação');
+      }
+
+      const data = response.data;
 
       if (data.error) {
-        toast.error(data.error + (data.suggestion ? `\n💡 ${data.suggestion}` : ''));
+        toast.error(data.error);
         setManualStep(0);
         setIsSearchingName(false);
         return;
       }
 
-      const productTitle = data.title || "Produto";
-      const productDesc = data.description || "Produto encontrado";
+      const { title, description, imageUrls, price } = data;
 
-      console.log(`✅ Título: ${productTitle}`);
-      console.log(`🖼️ Array imageUrls do backend:`, data.imageUrls);
-      console.log(`🖼️ Tipo do array:`, typeof data.imageUrls, Array.isArray(data.imageUrls));
-      console.log(`🖼️ Quantidade: ${data.imageUrls?.length || 0}`);
+      console.log(`✅ Importado: ${title} | ${imageUrls?.length || 0} imagens`);
 
-      setExtractedData({ title: productTitle, description: productDesc });
-      setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
+      setExtractedData({ title, description });
+      setFormData(prev => ({ 
+        ...prev, 
+        title, 
+        description,
+        starting_price: price ? (price * 0.3).toFixed(2) : "",
+        source_url: productUrl
+      }));
 
-      // 🔥 VALIDAÇÃO RIGOROSA DAS IMAGENS
-      if (!data.imageUrls || !Array.isArray(data.imageUrls)) {
-        console.error('❌ [NOME] imageUrls não é um array válido:', data.imageUrls);
-        setDebugError({
-          type: 'searchByName - imageUrls inválido',
-          message: `Backend retornou imageUrls: ${typeof data.imageUrls}`,
-          stack: `Esperado: array, Recebido: ${JSON.stringify(data.imageUrls)}`,
-          timestamp: new Date().toISOString()
-        });
-        toast.warning(`⚠️ ${productTitle} encontrado, mas sem imagens. Use upload manual.`);
-        setProductName("");
-        setManualStep(0);
-        setIsSearchingName(false);
-        return;
-      }
-
-      const validUrls = data.imageUrls
-        .filter(url => {
-          const isValid = url && typeof url === 'string' && url.trim().length > 0;
-          if (!isValid) {
-            console.warn(`⚠️ [NOME] URL inválida filtrada:`, url, typeof url);
-          }
-          return isValid;
-        });
-
-      console.log(`🖼️ [NOME] URLs FILTRADAS:`, validUrls);
-      console.log(`🖼️ [NOME] Quantidade de URLs válidas:`, validUrls.length);
+      const validUrls = (imageUrls || []).filter(url => url && typeof url === 'string');
 
       if (validUrls.length === 0) {
-        console.error('❌ [NOME] Nenhuma URL válida após filtragem');
-        setDebugError({
-          type: 'searchByName - sem imagens válidas',
-          message: `Título encontrado: "${productTitle}", mas 0 imagens válidas`,
-          stack: `Backend retornou: ${JSON.stringify(data.imageUrls)}\nApós filtro: []`,
-          timestamp: new Date().toISOString()
-        });
-        toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
-        setProductName("");
+        toast.warning("Produto importado mas sem imagens. Use upload manual.");
         setManualStep(0);
       } else {
-        console.log(`✅ [NOME] SALVANDO ${validUrls.length} imagens em downloadedImages`);
-        toast.success(`✅ ${validUrls.length} imagens validadas pelo backend!`);
+        toast.success(`✅ ${validUrls.length} imagens importadas!`);
         setDownloadedImages(validUrls);
         setCoverIndex(0);
         setManualStep(5);
-        console.log(`✅ [NOME] Estado atualizado: manualStep=5, downloadedImages tem ${validUrls.length} URLs`);
       }
 
       setProductName("");
       
     } catch (error) {
-      console.error("❌ [NOME] ERRO COMPLETO:", error);
-      console.error("❌ [NOME] Stack:", error.stack);
-      console.error("❌ [NOME] Message:", error.message);
-      
-      setDebugError({
-        type: 'searchByName',
-        message: error.message,
-        stack: error.stack,
-        timestamp: new Date().toISOString()
-      });
-      
-      toast.error(`❌ Erro na busca: ${error.message}`);
+      console.error("❌ Erro ao importar:", error);
+      toast.error(`❌ Erro: ${error.message}`);
       setManualStep(0);
     } finally {
       setIsSearchingName(false);
