@@ -170,27 +170,51 @@ RETORNE JSON com imageUrls OBRIGATÓRIO.`,
             .filter(u => u.length > 30)
             .filter((u, i, arr) => arr.indexOf(u) === i);
 
-        console.log(`🔍 Validando ${imageUrls.length} imagens...`);
+        console.log(`🔍 Processando ${imageUrls.length} imagens do ${marketplace}...`);
 
-        // 🔥 VALIDA CADA IMAGEM
-        const validatedUrls = [];
-        for (const url of imageUrls) {
-            const isValid = await validateImageUrl(url);
-            if (isValid) {
-                validatedUrls.push(url);
-                console.log(`✅ OK: ${url.substring(0, 60)}`);
-            } else {
-                console.log(`❌ FALHOU: ${url.substring(0, 60)}`);
+        // 🔥 BAIXA E RE-HOSPEDA IMAGENS (evita bloqueio anti-hotlink)
+        const rehostedUrls = [];
+        for (const url of imageUrls.slice(0, 8)) {
+            try {
+                console.log(`📥 Baixando: ${url.substring(0, 60)}...`);
+                
+                // Baixa a imagem
+                const imgResponse = await fetch(url, {
+                    headers: {
+                        "User-Agent": getRandomUA(),
+                        "Referer": productUrl,
+                        "Accept": "image/webp,image/apng,image/*,*/*;q=0.8"
+                    },
+                    signal: AbortSignal.timeout(10000)
+                });
+
+                if (!imgResponse.ok) {
+                    console.log(`❌ HTTP ${imgResponse.status}: ${url.substring(0, 60)}`);
+                    continue;
+                }
+
+                const blob = await imgResponse.blob();
+                
+                // Re-hospeda no Base44
+                const uploadResult = await base44.integrations.Core.UploadFile({ 
+                    file: blob 
+                });
+
+                if (uploadResult?.file_url) {
+                    rehostedUrls.push(uploadResult.file_url);
+                    console.log(`✅ Re-hospedada: ${uploadResult.file_url.substring(0, 60)}`);
+                }
+            } catch (error) {
+                console.log(`❌ Erro: ${url.substring(0, 60)} - ${error.message}`);
             }
-            if (validatedUrls.length >= 8) break; // Máximo 8 imagens
         }
 
-        console.log(`✅ ${validatedUrls.length} imagens validadas`);
+        console.log(`✅ ${rehostedUrls.length} imagens re-hospedadas`);
 
         return Response.json({
             title: (title || 'Produto').substring(0, 200),
             description: (description || 'Produto importado').substring(0, 500),
-            imageUrls: validatedUrls,
+            imageUrls: rehostedUrls,
             marketplace: marketplace
         });
 
