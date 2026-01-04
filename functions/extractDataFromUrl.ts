@@ -35,44 +35,63 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🆕 USA FUNÇÃO getImageUrlsFromPage PARA EXTRAIR IMAGENS
-        console.log('🖼️ Chamando getImageUrlsFromPage para extrair imagens...');
-        
-        let imageUrls = [];
-        try {
-            const imageResponse = await base44.functions.invoke('getImageUrlsFromPage', { productUrl });
-            imageUrls = imageResponse?.data?.imageUrls || [];
-            console.log(`✅ getImageUrlsFromPage retornou ${imageUrls.length} URLs`);
-        } catch (imgError) {
-            console.log(`⚠️ Erro ao chamar getImageUrlsFromPage: ${imgError.message}`);
-        }
-
-        // 🆕 EXTRAI DADOS DO PRODUTO COM IA
-        console.log('📝 Extraindo dados do produto...');
+        // 🔥 UMA CHAMADA SÓ - EXTRAI TUDO DE UMA VEZ
+        console.log('🤖 Extraindo TUDO com IA (dados + URLs)...');
         
         const extractionResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
             prompt: `Acesse: ${productUrl}
 
-Extraia e retorne:
+Extraia e retorne em JSON:
 1. title: Nome COMPLETO do produto (marca + modelo + especificações + cor)
 2. price: Preço À VISTA em REAIS como NUMBER (exemplo: 3299.90)
 3. description: Descrição DETALHADA com especificações técnicas (mínimo 200 caracteres)
+4. image_urls: Array com URLs de TODAS as imagens do produto em ALTA RESOLUÇÃO
 
-Se houver preço parcelado E à vista, use o À VISTA.
-Seja preciso e completo.`,
+IMPORTANTE PARA IMAGENS:
+• Busque imagens em ALTA RESOLUÇÃO (-F.jpg, -O.jpg, -F.webp, _large.jpg)
+• Se encontrar galeria/carousel, pegue TODAS as fotos diferentes
+• Retorne NO MÍNIMO 6 URLs DIFERENTES
+• Inclua diferentes ângulos: frente, verso, lateral, detalhe
+• ❌ NÃO DUPLIQUE URLs
+• ❌ NÃO use miniaturas (-I.jpg, _thumb)
+
+Se houver preço parcelado E à vista, use o À VISTA.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
                     price: { type: "number" },
-                    description: { type: "string" }
+                    description: { type: "string" },
+                    image_urls: { 
+                        type: "array", 
+                        items: { type: "string" },
+                        minItems: 6
+                    }
                 },
-                required: ["title", "description"]
+                required: ["title", "description", "image_urls"]
             }
         });
 
-        let { title, description, price } = extractionResult;
+        let { title, description, price, image_urls } = extractionResult;
+        
+        console.log(`✅ IA retornou: ${image_urls?.length || 0} URLs`);
+        
+        // LIMPA E VALIDA URLs
+        const urlSet = new Set();
+        let imageUrls = (image_urls || [])
+            .filter(u => u && typeof u === 'string' && u.startsWith('http'))
+            .map(u => {
+                let cleaned = u.split('?')[0].split('"')[0].split('&quot;')[0].split(' ')[0].trim();
+                cleaned = cleaned.replace(/\/+$/, '');
+                return cleaned;
+            })
+            .filter(u => {
+                if (u.length < 20) return false;
+                if (urlSet.has(u)) return false;
+                urlSet.add(u);
+                return true;
+            });
 
         console.log(`✅ Dados: título=${!!title}, preço=${price || 'não encontrado'}, desc=${!!description}`);
 
