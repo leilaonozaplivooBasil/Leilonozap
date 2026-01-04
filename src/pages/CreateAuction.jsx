@@ -30,7 +30,6 @@ import { resetTestValora } from "@/functions/resetTestValora";
 import { toast } from "sonner";
 import { addSeconds } from 'date-fns';
 import ImageAnalyzer from "../components/admin/ImageAnalyzer";
-import { CheckCircle } from "lucide-react";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
