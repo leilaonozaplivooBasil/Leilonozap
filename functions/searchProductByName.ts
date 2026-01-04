@@ -145,18 +145,34 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
             
         } else if (url.includes('magazineluiza') || url.includes('magalu')) {
             console.log('🛒 Processando Magazine Luiza...');
-            const regex = /https:\/\/a-static\.mlcdn\.com\.br\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            const matches = html.match(regex) || [];
-            console.log(`📸 Regex encontrou ${matches.length} matches`);
-            imageUrls = [...new Set(matches)]
-                .filter(u => {
-                    const lower = u.toLowerCase();
-                    return !lower.includes('selo') && 
-                           !lower.includes('logo') && 
-                           !lower.includes('banner') &&
-                           u.length > 60;
-                });
-            console.log(`✅ Após filtro: ${imageUrls.length} imagens`);
+            // Busca especificamente imagens de produtos (wx.mlcdn.com.br/produtos)
+            const produtoRegex = /https:\/\/(?:a-static|wx)\.mlcdn\.com\.br\/produtos\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+            const matches = html.match(produtoRegex) || [];
+            console.log(`📸 Regex produtos encontrou ${matches.length} matches`);
+            
+            if (matches.length === 0) {
+                // Fallback: busca outros CDNs mas com filtro rigoroso
+                const fallbackRegex = /https:\/\/(?:a-static|wx)\.mlcdn\.com\.br\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+                const fallbackMatches = html.match(fallbackRegex) || [];
+                console.log(`📸 Fallback encontrou ${fallbackMatches.length} matches`);
+                imageUrls = [...new Set(fallbackMatches)];
+            } else {
+                imageUrls = [...new Set(matches)];
+            }
+            
+            // Filtro rigoroso para Magazine Luiza
+            imageUrls = imageUrls.filter(u => {
+                const lower = u.toLowerCase();
+                return !lower.includes('magalu-logo') &&
+                       !lower.includes('selo') && 
+                       !lower.includes('/logo') && 
+                       !lower.includes('banner') &&
+                       !lower.includes('sprite') &&
+                       !lower.includes('icon') &&
+                       !lower.includes('shared/') &&
+                       u.length > 70;
+            });
+            console.log(`✅ Após filtro rigoroso: ${imageUrls.length} imagens`);
                 
         } else if (url.includes('casasbahia')) {
             console.log('🛒 Processando Casas Bahia...');
