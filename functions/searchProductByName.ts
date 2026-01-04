@@ -68,37 +68,87 @@ function calculateImageScore(url, productName) {
     return score;
 }
 
-// 🤖 VALIDAÇÃO COM IA VISION
-async function validateImageWithAI(imageUrl, productName, base44) {
+// 🤖 ANÁLISE COMPLETA COM IA VISION
+async function analyzeImageWithAI(imageUrl, productName, base44) {
     try {
         const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `Você está vendo uma imagem de um produto.
+            prompt: `ANÁLISE DETALHADA DA IMAGEM:
 
 PRODUTO BUSCADO: "${productName}"
 
-RESPONDA:
-- Esta imagem mostra o produto "${productName}"? (sim/não)
-- Justificativa em 1 linha
+RESPONDA EM JSON:
+1. isProduct: Esta é uma imagem do produto "${productName}"? (true/false)
+2. imageType: Tipo da imagem
+   - "product_photo" = foto do produto isolado em fundo branco
+   - "lifestyle" = produto em uso/ambiente real
+   - "accessory" = acessório/complemento
+   - "logo" = logo/marca
+   - "banner" = banner/propaganda
+   - "text" = principalmente texto
+3. confidence: Confiança da análise (0-100)
+4. extractedText: Qualquer texto visível na imagem (OCR)
+5. reason: Justificativa em 1 linha
 
 REGRAS:
-- Se for logo, ícone, banner, pessoa, texto: responda NÃO
-- Se for o produto real: responda SIM`,
+- Se não for o produto exato: isProduct = false
+- Fotos de acessórios isolados = accessory
+- Logos/ícones = logo`,
             file_urls: [imageUrl],
             response_json_schema: {
                 type: "object",
                 properties: {
                     isProduct: { type: "boolean" },
+                    imageType: { 
+                        type: "string",
+                        enum: ["product_photo", "lifestyle", "accessory", "logo", "banner", "text"]
+                    },
+                    confidence: { type: "number" },
+                    extractedText: { type: "string" },
                     reason: { type: "string" }
                 },
-                required: ["isProduct", "reason"]
+                required: ["isProduct", "imageType", "confidence", "reason"]
             }
         });
         
-        console.log(`🤖 IA Vision: ${result.isProduct ? '✅' : '❌'} - ${result.reason}`);
-        return result.isProduct;
+        console.log(`🤖 Análise IA: ${result.isProduct ? '✅' : '❌'} | Tipo: ${result.imageType} | Conf: ${result.confidence}% | Texto: "${result.extractedText || 'nenhum'}"`);
+        return result;
     } catch (error) {
-        console.log(`⚠️ IA Vision falhou: ${error.message}`);
-        return true; // Fallback: assume válida se IA falhar
+        console.log(`⚠️ Análise IA falhou: ${error.message}`);
+        return { isProduct: true, imageType: "product_photo", confidence: 50, extractedText: "", reason: "Fallback" };
+    }
+}
+
+// 🔍 DETECÇÃO DE SIMILARIDADE VISUAL (via IA)
+async function calculateImageSimilarity(imageUrl1, imageUrl2, base44) {
+    try {
+        const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Compare estas duas imagens de produto:
+
+RESPONDA:
+- areSimilar: As imagens mostram o MESMO produto? (true/false)
+- similarityScore: Score de similaridade 0-100
+- reason: Breve explicação
+
+CRITÉRIOS:
+- Mesmo modelo/cor = similar
+- Ângulos diferentes do mesmo produto = similar
+- Produtos diferentes = não similar`,
+            file_urls: [imageUrl1, imageUrl2],
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    areSimilar: { type: "boolean" },
+                    similarityScore: { type: "number" },
+                    reason: { type: "string" }
+                },
+                required: ["areSimilar", "similarityScore", "reason"]
+            }
+        });
+        
+        return result;
+    } catch (error) {
+        console.log(`⚠️ Similaridade falhou: ${error.message}`);
+        return { areSimilar: false, similarityScore: 0, reason: "Error" };
     }
 }
 
