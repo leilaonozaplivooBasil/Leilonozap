@@ -175,9 +175,12 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
                 imageUrls = [...new Set(allMatches)];
             }
             
-            // Filtro ULTRA rigoroso
-            const original = imageUrls.length;
-            imageUrls = imageUrls.filter(u => {
+            // Filtro ULTRA rigoroso - BLOQUEIA az-request primeiro
+            const preFilter = imageUrls.filter(u => !u.toLowerCase().includes('az-request'));
+            console.log(`🔒 Bloqueou az-request: ${imageUrls.length} → ${preFilter.length}`);
+            
+            const original = preFilter.length;
+            imageUrls = preFilter.filter(u => {
                 const lower = u.toLowerCase();
                 const blocked = lower.includes('magalu-logo') ||
                        lower.includes('selo') || 
@@ -186,7 +189,6 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
                        lower.includes('sprite') ||
                        lower.includes('/icon') ||
                        lower.includes('shared/') ||
-                       lower.includes('az-request') ||
                        u.length < 80;
                        
                 if (blocked) {
@@ -194,7 +196,7 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
                 }
                 return !blocked;
             });
-            console.log(`✅ Filtro: ${original} → ${imageUrls.length} imagens`);
+            console.log(`✅ Filtro final: ${original} → ${imageUrls.length} imagens`);
                 
         } else if (url.includes('casasbahia')) {
             console.log('🛒 Processando Casas Bahia...');
