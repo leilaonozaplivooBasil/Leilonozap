@@ -9,6 +9,7 @@ import CRM from './pages/CRM';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionSaiDeBaixo from './pages/CreateAuctionSaiDeBaixo';
 import CustomerDetails from './pages/CustomerDetails';
+import EditAuction from './pages/EditAuction';
 import ErrorReport from './pages/ErrorReport';
 import Home from './pages/Home';
 import Influencers from './pages/Influencers';
@@ -49,7 +50,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
-import EditAuction from './pages/EditAuction';
 import __Layout from './Layout.jsx';
 
 
@@ -65,6 +65,7 @@ export const PAGES = {
     "CreateAuction": CreateAuction,
     "CreateAuctionSaiDeBaixo": CreateAuctionSaiDeBaixo,
     "CustomerDetails": CustomerDetails,
+    "EditAuction": EditAuction,
     "ErrorReport": ErrorReport,
     "Home": Home,
     "Influencers": Influencers,
@@ -105,7 +106,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
-    "EditAuction": EditAuction,
 }
 
 export const pagesConfig = {

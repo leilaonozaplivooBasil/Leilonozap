@@ -203,37 +203,80 @@ export default function MyWinningsPage() {
                 user_cpf: cpf
             });
 
-            console.log('📦 Resposta completa:', response);
+            console.log('📦 Resposta completa createAbacatePayPix:', response);
+            console.log('📦 Tipo da resposta:', typeof response);
+            console.log('📦 response.data:', response?.data);
 
-            // ✅ Verifica sucesso corretamente
-            if (response?.data?.success === true) {
-                console.log('✅ PIX gerado com sucesso');
-                setPixData(response.data);
+            // ✅ CORREÇÃO: Tratamento robusto da resposta
+            // A função retorna objeto com .data contendo os dados do PIX
+            const pixResponseData = response?.data || response;
+            
+            if (!pixResponseData) {
+                throw new Error('Resposta vazia do servidor');
+            }
+
+            console.log('📦 pixResponseData extraído:', pixResponseData);
+            console.log('📦 pixResponseData.success:', pixResponseData.success);
+
+            // Verifica se tem os dados essenciais do PIX
+            const hasQRCode = pixResponseData.qr_code_base64;
+            const hasPixCode = pixResponseData.pix_code;
+            const hasBillingId = pixResponseData.billing_id;
+
+            if (pixResponseData.success === true && hasQRCode && hasPixCode && hasBillingId) {
+                console.log('✅ PIX gerado com sucesso - dados validados');
+                
+                setPixData({
+                    billing_id: pixResponseData.billing_id,
+                    qr_code_base64: pixResponseData.qr_code_base64,
+                    pix_code: pixResponseData.pix_code,
+                    expires_at: pixResponseData.expires_at,
+                    amount: selectedAuction.current_price
+                });
+                
                 toast.success("QR Code gerado com sucesso!");
                 
                 // Log de sucesso
                 await base44.entities.SystemLog.create({
                     step: 'PIX_GENERATION_SUCCESS',
                     status: 'success',
-                    message: 'PIX gerado com sucesso',
+                    message: 'PIX gerado com sucesso no frontend',
                     component_name: 'MyWinnings',
                     entity_id: selectedAuction.id,
-                    payload: { auction_id: selectedAuction.id, billing_id: response.data.billing_id },
+                    payload: { 
+                        auction_id: selectedAuction.id, 
+                        billing_id: pixResponseData.billing_id,
+                        has_qr_code: !!hasQRCode,
+                        has_pix_code: !!hasPixCode
+                    },
                     user_agent: navigator.userAgent,
                     url: window.location.href
                 }).catch(() => {});
             } else {
-                console.error('❌ Resposta indica falha:', response);
-                const errorMsg = response?.data?.error || response?.error || "Erro ao gerar QR Code";
-                toast.error(errorMsg);
+                // Identifica qual dado está faltando
+                const missingData = [];
+                if (!pixResponseData.success) missingData.push('success=false');
+                if (!hasQRCode) missingData.push('qr_code_base64');
+                if (!hasPixCode) missingData.push('pix_code');
+                if (!hasBillingId) missingData.push('billing_id');
 
-                // Log do erro no SystemLog
+                const errorMsg = `Dados incompletos do PIX: ${missingData.join(', ')}`;
+                console.error('❌ Resposta com dados faltando:', errorMsg);
+                console.error('❌ Dados recebidos:', pixResponseData);
+                
+                toast.error("Erro ao gerar QR Code: dados incompletos");
+
+                // Log detalhado do erro
                 await base44.entities.SystemLog.create({
-                    step: 'PIX_GENERATION_BACKEND_ERROR',
+                    step: 'PIX_GENERATION_FRONTEND_ERROR',
                     status: 'error',
-                    message: 'Backend indicou falha na geração do PIX',
+                    message: 'Falha ao gerar PIX no frontend - dados incompletos',
                     component_name: 'MyWinnings',
-                    error_details: { response },
+                    error_details: { 
+                        missing_fields: missingData,
+                        response_data: pixResponseData,
+                        full_response: response
+                    },
                     payload: { auction_id: selectedAuction.id, name, email },
                     user_agent: navigator.userAgent,
                     url: window.location.href
