@@ -956,7 +956,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </Button>
                 <Button
                   onClick={() => setShowWithdrawalModal(true)}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-gray-700 hover:bg-gray-600 text-white"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
                   Sacar Dinheiro
