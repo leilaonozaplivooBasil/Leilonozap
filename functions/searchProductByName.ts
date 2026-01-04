@@ -26,54 +26,73 @@ Deno.serve(async (req) => {
             return Response.json({ error: "Nome do produto obrigatório" }, { status: 400 });
         }
 
-        console.log(`🔍 BUSCA DIRETA: ${productName}`);
+        console.log(`🔍 ETAPA 1: Buscar URL do produto`);
 
-        // 🚀 IA BUSCA + EXTRAI TUDO DE UMA VEZ
-        const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `Busque o produto "${productName}" na internet e extraia TODOS os dados.
+        // Busca URL da página do produto
+        const searchResult = await base44.integrations.Core.InvokeLLM({
+            prompt: `Busque "${productName}" na internet.
 
-🎯 REGRAS:
-1. Produto PRINCIPAL - NÃO acessórios (carregador, capa, película, cabo)
-2. Encontre página oficial (Mercado Livre, Amazon, Shopee)
-3. Extraia TODAS as URLs de imagens de PRODUTO (não logo, banner, ícone)
-4. Máximo 8 imagens de melhor qualidade
+Encontre a URL de UM produto individual (não lista/busca).
 
-RETORNE:
-- found: true se achou produto válido
-- title: Nome completo
-- description: Descrição com especificações
-- imageUrls: Array com URLs das imagens
-- productUrl: URL da página
+VÁLIDO:
+✅ produto.mercadolivre.com.br/MLB-...
+✅ amazon.com.br/dp/...
+✅ shopee.com.br/produto-...
 
-Se só encontrar acessórios ou nada: found = false`,
+INVÁLIDO:
+❌ lista.mercadolivre
+❌ /s?k=
+❌ /search
+❌ acessórios (capa, carregador, cabo)
+
+Retorne apenas a URL ou null.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    found: { type: "boolean" },
-                    title: { type: "string" },
-                    description: { type: "string" },
-                    imageUrls: { 
-                        type: "array",
-                        items: { type: "string" }
-                    },
-                    productUrl: { type: "string" }
+                    productUrl: { type: ["string", "null"] }
                 },
-                required: ["found"]
+                required: ["productUrl"]
             }
         });
 
-        console.log(`📦 IA retornou: found=${result.found}, title="${result.title}", ${result.imageUrls?.length || 0} imagens`);
-
-        if (!result.found || !result.title) {
+        const productUrl = searchResult?.productUrl;
+        
+        if (!productUrl || typeof productUrl !== 'string' || !productUrl.startsWith('http')) {
             return Response.json({
                 error: "Produto não encontrado",
-                suggestion: "Tente com marca + modelo (ex: Samsung Galaxy S23)"
+                suggestion: "Tente com marca + modelo completo"
+            }, { status: 404 });
+        }
+
+        console.log(`✅ URL encontrada: ${productUrl}`);
+        console.log(`🔍 ETAPA 2: Extrair dados da página`);
+
+        // Usa extractDataFromUrl que já funciona perfeitamente
+        const extractResult = await base44.functions.invoke('extractDataFromUrl', {
+            productUrl: productUrl
+        });
+
+        if (!extractResult || extractResult.status !== 200) {
+            return Response.json({
+                error: "Erro ao extrair dados do produto",
+                suggestion: "Tente usar o importador por URL"
+            }, { status: 500 });
+        }
+
+        const data = extractResult.data;
+
+        if (!data.title || !data.imageUrls || data.imageUrls.length === 0) {
+            return Response.json({
+                error: "Produto encontrado mas sem imagens",
+                suggestion: "Use o importador por URL ou upload manual",
+                title: data.title,
+                description: data.description
             }, { status: 404 });
         }
 
         // Valida acessórios
-        const lower = result.title.toLowerCase();
+        const lower = data.title.toLowerCase();
         const accessoryKeywords = [
             'carregador', 'charger', 'cabo', 'cable', 'capa', 'case',
             'película', 'protetor', 'glass', 'adaptador', 'adapter', 'fone'
@@ -85,49 +104,14 @@ Se só encontrar acessórios ou nada: found = false`,
             }, { status: 404 });
         }
 
-        const imageUrls = result.imageUrls || [];
-        
-        if (imageUrls.length === 0) {
-            return Response.json({
-                error: "Produto encontrado mas sem imagens",
-                suggestion: "Use o importador por URL ou upload manual",
-                title: result.title,
-                description: result.description
-            }, { status: 404 });
-        }
-
-        console.log(`📸 ${imageUrls.length} URLs recebidas da IA`);
-
-        // Filtra apenas URLs válidas (não truncadas, com formato correto)
-        const cleanUrls = imageUrls
-            .filter(url => url && typeof url === 'string' && url.startsWith('http'))
-            .filter(url => {
-                // Remove URLs incompletas ou suspeitas
-                return !url.includes('...') && url.length > 40;
-            })
-            .slice(0, 6);
-
-        console.log(`🔍 ${cleanUrls.length} URLs filtradas e limpas`);
-
-        if (cleanUrls.length === 0) {
-            return Response.json({
-                error: "Nenhuma imagem válida encontrada",
-                suggestion: "Use o importador por URL ou upload manual",
-                title: result.title,
-                description: result.description
-            }, { status: 404 });
-        }
-
-        console.log(`✅ SUCESSO: ${result.title} com ${cleanUrls.length} imagens`);
+        console.log(`✅ SUCESSO: ${data.title} com ${data.imageUrls.length} imagens`);
 
         return Response.json({
             found: true,
-            title: result.title,
-            description: result.description || 'Produto encontrado',
-            imageUrls: cleanUrls,
-            source: result.productUrl?.includes('mercadolivre') ? 'Mercado Livre' :
-                    result.productUrl?.includes('amazon') ? 'Amazon' :
-                    result.productUrl?.includes('shopee') ? 'Shopee' : 'Internet'
+            title: data.title,
+            description: data.description || 'Produto encontrado',
+            imageUrls: data.imageUrls.slice(0, 6),
+            source: data.marketplace || 'Internet'
         }, { status: 200 });
 
     } catch (error) {
