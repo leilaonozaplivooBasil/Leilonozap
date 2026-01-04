@@ -36,17 +36,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Dados PIX obrigatórios' }, { status: 400 });
     }
 
-    // Busca usuário atualizado
-    console.log('🔍 Buscando dados do usuário...');
-    const users = await base44.asServiceRole.entities.AppUser.filter({ id: user.id });
+    // Busca usuário atualizado pelo email
+    console.log('🔍 Buscando dados do usuário pelo email...');
+    const users = await base44.asServiceRole.entities.AppUser.filter({ email: user.email });
     
     if (!users || users.length === 0) {
-      console.log('❌ Usuário não encontrado:', user.id);
+      console.log('❌ Usuário não encontrado. Email:', user.email);
       return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
     const currentUser = users[0];
-    console.log('✅ Usuário encontrado. Saldo:', currentUser.commission_balance);
+    console.log('✅ Usuário encontrado. ID:', currentUser.id, 'Saldo:', currentUser.commission_balance);
 
     // Verifica saldo
     if ((currentUser.commission_balance || 0) < amount) {
