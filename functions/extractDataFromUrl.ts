@@ -35,43 +35,65 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🔥 UMA CHAMADA SÓ - EXTRAI TUDO DE UMA VEZ
-        console.log('🤖 Extraindo TUDO com IA (dados + URLs)...');
+        // 🔥 EXTRAÇÃO EM DUAS ETAPAS - DADOS + IMAGENS SEPARADAS
+        console.log('🤖 ETAPA 1: Extraindo dados básicos...');
         
-        const extractionResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+        const basicDataResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
             prompt: `Acesse: ${productUrl}
 
-Extraia e retorne em JSON:
-1. title: Nome COMPLETO do produto (marca + modelo + especificações + cor)
-2. price: Preço À VISTA em REAIS como NUMBER (exemplo: 3299.90)
-3. description: Descrição DETALHADA com especificações técnicas (mínimo 200 caracteres)
-4. image_urls: Array com URLs de TODAS as imagens do produto em ALTA RESOLUÇÃO
-
-IMPORTANTE PARA IMAGENS:
-• Busque imagens em ALTA RESOLUÇÃO (-F.jpg, -O.jpg, -F.webp, _large.jpg)
-• Se encontrar galeria/carousel, pegue TODAS as fotos diferentes
-• Retorne NO MÍNIMO 6 URLs DIFERENTES
-• Inclua diferentes ângulos: frente, verso, lateral, detalhe
-• ❌ NÃO DUPLIQUE URLs
-• ❌ NÃO use miniaturas (-I.jpg, _thumb)
-
-Se houver preço parcelado E à vista, use o À VISTA.`,
+Extraia:
+1. title: Nome COMPLETO do produto
+2. price: Preço À VISTA em REAIS como NUMBER
+3. description: Descrição DETALHADA (mínimo 200 caracteres)`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
                     price: { type: "number" },
-                    description: { type: "string" },
+                    description: { type: "string" }
+                },
+                required: ["title", "description"]
+            }
+        });
+        
+        console.log('✅ ETAPA 1:', basicDataResult);
+        
+        console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
+        
+        const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: `Acesse: ${productUrl}
+
+MISSÃO: Encontre TODAS as URLs de imagens do produto em ALTA RESOLUÇÃO.
+
+INSTRUÇÕES PARA MERCADO LIVRE:
+1. Procure elementos <img> com class="ui-pdp-image" ou similar
+2. Busque URLs que contenham: http2.mlstatic.com, mlstatic.com
+3. Priorize URLs terminadas em: -F.jpg, -O.jpg, .jpg, .webp
+4. IGNORE miniaturas (-I.jpg, -W.jpg, thumb)
+5. Retorne NO MÍNIMO 4 URLs diferentes
+
+Exemplo válido: https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB12345678-F.jpg`,
+            add_context_from_internet: true,
+            response_json_schema: {
+                type: "object",
+                properties: {
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        minItems: 6
+                        minItems: 1
                     }
                 },
-                required: ["title", "description", "image_urls"]
+                required: ["image_urls"]
             }
         });
+        
+        console.log('✅ ETAPA 2:', imagesResult);
+        
+        const extractionResult = {
+            ...basicDataResult,
+            image_urls: imagesResult.image_urls || []
+        };
 
         let { title, description, price, image_urls } = extractionResult;
         
