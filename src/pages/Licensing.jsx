@@ -906,6 +906,8 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
 
     console.log('✅ [SAQUE] Validações OK, processando...');
+    console.log('📤 [SAQUE] Enviando:', { amount, pixKey, pixKeyType });
+
     setIsProcessingWithdrawal(true);
 
     try {
@@ -915,31 +917,42 @@ const DashboardContent = ({ user, isAdmin }) => {
         pix_key_type: pixKeyType
       });
 
-      console.log('📥 [SAQUE] Resposta:', response);
+      console.log('📥 [SAQUE] Resposta completa:', response);
 
       if (response?.success) {
-        alert('Saque solicitado com sucesso! Aguarde aprovação.');
-        toast.success('Saque solicitado com sucesso! Aguarde aprovação.');
+        console.log('✅ [SAQUE] Sucesso!');
+        toast.success(response.message || 'Saque solicitado com sucesso! Aguarde aprovação.');
         setShowWithdrawalModal(false);
         setWithdrawalAmount('');
         setPixKey('');
 
         await delay(2000);
         await fetchRealMetrics();
+        await delay(1000);
         await fetchMyWithdrawals();
       } else {
-        const errorMsg = response?.error || 'Erro ao solicitar saque';
-        console.error('❌ [SAQUE] Erro:', errorMsg);
-        alert(errorMsg);
+        const errorMsg = response?.error || 'Erro desconhecido ao solicitar saque';
+        console.error('❌ [SAQUE] Erro da API:', errorMsg);
         toast.error(errorMsg);
       }
     } catch (error) {
-      console.error('❌ [SAQUE] Exceção:', error);
-      alert('Erro: ' + error.message);
-      toast.error('Erro: ' + error.message);
+      console.error('❌ [SAQUE] Exceção capturada:', error);
+      console.error('Stack:', error.stack);
+
+      // Mensagem de erro mais amigável
+      let errorMessage = 'Erro ao processar saque. ';
+      if (error.message.includes('404')) {
+        errorMessage += 'Função não encontrada. Contate o suporte.';
+      } else if (error.message.includes('Network')) {
+        errorMessage += 'Erro de conexão. Verifique sua internet.';
+      } else {
+        errorMessage += error.message;
+      }
+
+      toast.error(errorMessage);
     } finally {
       setIsProcessingWithdrawal(false);
-      console.log('✅ [SAQUE] Processo finalizado');
+      console.log('🏁 [SAQUE] Processo finalizado');
     }
   };
 
