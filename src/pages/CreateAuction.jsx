@@ -342,6 +342,8 @@ export default function CreateAuction() {
 
       const data = response.data;
 
+      console.log('🔍 [NOME] RESPOSTA COMPLETA DO BACKEND:', JSON.stringify(data, null, 2));
+
       if (data.error) {
         toast.error(data.error + (data.suggestion ? `\n💡 ${data.suggestion}` : ''));
         setManualStep(0);
@@ -353,7 +355,8 @@ export default function CreateAuction() {
       const productDesc = data.description || "Produto encontrado";
 
       console.log(`✅ Título: ${productTitle}`);
-      console.log(`🖼️ Imagens recebidas: ${data.imageUrls?.length || 0}`);
+      console.log(`🖼️ Array imageUrls do backend:`, data.imageUrls);
+      console.log(`🖼️ Quantidade: ${data.imageUrls?.length || 0}`);
 
       setExtractedData({ title: productTitle, description: productDesc });
       setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
@@ -361,7 +364,8 @@ export default function CreateAuction() {
       const validUrls = (data.imageUrls || [])
         .filter(url => url && typeof url === 'string' && url.trim());
 
-      console.log(`🖼️ [NOME] URLs recebidas do backend:`, validUrls);
+      console.log(`🖼️ [NOME] URLs FILTRADAS:`, validUrls);
+      console.log(`🖼️ [NOME] Quantidade de URLs válidas:`, validUrls.length);
 
       if (validUrls.length === 0) {
         toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
@@ -407,6 +411,8 @@ export default function CreateAuction() {
 
       const data = response.data;
 
+      console.log('🔍 [GTIN] RESPOSTA COMPLETA DO BACKEND:', JSON.stringify(data, null, 2));
+
       if (!data?.found) {
         toast.error(`❌ GTIN ${gtinCode} não encontrado`);
         setManualStep(0);
@@ -417,8 +423,9 @@ export default function CreateAuction() {
       const productTitle = data.title || "Produto";
       const productDesc = data.description || `${data.brand || 'Produto'} - GTIN: ${data.gtin}`;
 
-      console.log(`✅ ${productTitle}`);
-      console.log(`🖼️ Imagens: ${data.imageUrls?.length || 0}`);
+      console.log(`✅ Título: ${productTitle}`);
+      console.log(`🖼️ Array imageUrls do backend:`, data.imageUrls);
+      console.log(`🖼️ Quantidade: ${data.imageUrls?.length || 0}`);
 
       setExtractedData({ title: productTitle, description: productDesc });
       setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
@@ -426,7 +433,8 @@ export default function CreateAuction() {
       const validUrls = (data.imageUrls || [])
         .filter(url => url && typeof url === 'string' && url.trim());
 
-      console.log(`🖼️ [GTIN] URLs recebidas do backend:`, validUrls);
+      console.log(`🖼️ [GTIN] URLs FILTRADAS:`, validUrls);
+      console.log(`🖼️ [GTIN] Quantidade de URLs válidas:`, validUrls.length);
 
       if (validUrls.length === 0) {
         toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
@@ -484,12 +492,15 @@ export default function CreateAuction() {
       
       const { title, description, imageUrls: extractedImageUrls, marketplace } = responseData;
       
+      console.log('🔍 [URL] RESPOSTA COMPLETA DO BACKEND:', JSON.stringify(responseData, null, 2));
+      
       if (!title || !description) {
         throw new Error("Dados incompletos");
       }
       
-      console.log(`✅ ${marketplace}: ${title}`);
-      console.log(`🖼️ Imagens recebidas: ${extractedImageUrls?.length || 0}`);
+      console.log(`✅ Título: ${title}`);
+      console.log(`🖼️ Array imageUrls do backend:`, extractedImageUrls);
+      console.log(`🖼️ Quantidade: ${extractedImageUrls?.length || 0}`);
       
       setExtractedData({ title, description });
       setFormData(prev => ({ ...prev, title, description, source_url: productUrl }));
@@ -497,7 +508,8 @@ export default function CreateAuction() {
       const validUrls = (extractedImageUrls || [])
         .filter(url => url && typeof url === 'string' && url.trim());
 
-      console.log(`🖼️ [URL] URLs recebidas do backend:`, validUrls);
+      console.log(`🖼️ [URL] URLs FILTRADAS:`, validUrls);
+      console.log(`🖼️ [URL] Quantidade de URLs válidas:`, validUrls.length);
       
       if (validUrls.length === 0) {
         toast.warning(`⚠️ ${title} sem imagens. Use upload manual.`);
