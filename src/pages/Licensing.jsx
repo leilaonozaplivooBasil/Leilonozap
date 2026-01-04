@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Users, BarChart, DollarSign, Zap, Star, ShieldCheck, LogIn, Loader2, Search, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, Smartphone, MessageCircle, X, Wallet } from 'lucide-react';
+import { Copy, Users, BarChart, DollarSign, Zap, Star, ShieldCheck, LogIn, Loader2, Search, TrendingUp, Info, RefreshCw, Link2, Trash2, AlertCircle, Smartphone, MessageCircle, X, Wallet, Clock } from 'lucide-react';
 
 import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
 import LoginModal from '../components/common/LoginModal';
