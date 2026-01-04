@@ -927,19 +927,23 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       console.log('📥 [SAQUE] Resposta completa:', response);
 
-      if (response?.success) {
+      // ✅ CORREÇÃO: Acessa response.data (axios response)
+      const data = response?.data;
+
+      if (data?.success) {
         console.log('✅ [SAQUE] Sucesso!');
-        toast.success(response.message || 'Saque solicitado com sucesso! Aguarde aprovação.');
+        toast.success(data.message || 'Saque solicitado com sucesso! Aguarde aprovação.');
         setShowWithdrawalModal(false);
         setWithdrawalAmount('');
         setPixKey('');
 
+        // Recarrega dados
         await delay(2000);
         await fetchRealMetrics();
         await delay(1000);
         await fetchMyWithdrawals();
       } else {
-        const errorMsg = response?.error || 'Erro desconhecido ao solicitar saque';
+        const errorMsg = data?.error || 'Erro ao solicitar saque';
         console.error('❌ [SAQUE] Erro da API:', errorMsg);
         toast.error(errorMsg);
       }
@@ -948,12 +952,12 @@ const DashboardContent = ({ user, isAdmin }) => {
       console.error('Stack:', error.stack);
 
       let errorMessage = 'Erro ao processar saque. ';
-      if (error.message.includes('404')) {
+      if (error.message?.includes('404')) {
         errorMessage += 'Função não encontrada. Contate o suporte.';
-      } else if (error.message.includes('Network')) {
+      } else if (error.message?.includes('Network')) {
         errorMessage += 'Erro de conexão. Verifique sua internet.';
       } else {
-        errorMessage += error.message;
+        errorMessage += error.message || 'Erro desconhecido';
       }
 
       toast.error(errorMessage);
