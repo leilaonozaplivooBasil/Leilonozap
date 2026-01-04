@@ -83,34 +83,30 @@ Deno.serve(async (req) => {
       }
     }
 
-    // TENTATIVA 3: BUSCA INTELIGENTE COM IA (procura em TODA a internet)
+    // TENTATIVA 3: BUSCA AVANÇADA COM IA
     if (!productData) {
       try {
-        console.log('🤖 Ativando busca AVANÇADA com IA...');
+        console.log('🤖 IA buscando GTIN na internet...');
         
         const llmResponse = await base44.integrations.Core.InvokeLLM({
-          prompt: `MISSÃO CRÍTICA: Encontre TODAS as informações possíveis sobre o produto com código de barras/EAN/GTIN: ${gtin}
+          prompt: `BUSCA POR CÓDIGO DE BARRAS: ${gtin}
 
-INSTRUÇÕES:
-1. Busque em TODAS as fontes: Google Shopping, Mercado Livre, Amazon, Americanas, Magazine Luiza, sites de fabricantes, etc.
-2. Retorne dados COMPLETOS e DETALHADOS do produto
-3. Inclua links de imagens de alta qualidade (no mínimo 3, máximo 10 URLs)
-4. Se for eletrônico, inclua especificações técnicas
-5. Descrição deve ter no mínimo 100 caracteres
+TAREFA CRÍTICA:
+1. Busque este código em: Google Shopping, Mercado Livre, Amazon BR, Magazine Luiza, Americanas
+2. Retorne TÍTULO COMPLETO do produto
+3. Descrição DETALHADA (características técnicas, marca, modelo)
+4. OBRIGATÓRIO: 5-10 URLs de imagens COMPLETAS E VÁLIDAS
 
-BUSQUE EM:
-- Google Shopping (preços e comparação)
-- Mercado Livre Brasil (busque: "${gtin}")
-- Amazon.com.br (busque: "${gtin}")
-- Sites oficiais do fabricante
-- Lojas especializadas
-- Qualquer e-commerce brasileiro que tenha o produto
+FORMATO IMAGENS:
+- URLs diretas: https://...
+- Extensões: .jpg, .jpeg, .png, .webp
+- Imagens GRANDES (não thumb)
+- SEM logos/ícones
 
-IMPORTANTE: 
-- Se encontrar o produto, retorne found=true
-- Se NÃO encontrar NADA, retorne found=false
-- Priorize fontes brasileiras (.com.br)
-- URLs de imagem devem ser diretas (jpg, png, webp)`,
+EXEMPLO URL:
+https://http2.mlstatic.com/D_NQ_NP_881751-MLB51234567890-V.jpg
+
+Se NÃO encontrar: found=false`,
           add_context_from_internet: true,
           response_json_schema: {
             type: 'object',
@@ -122,32 +118,40 @@ IMPORTANTE:
               category: { type: 'string' },
               imageUrls: {
                 type: 'array',
-                items: { type: 'string' }
+                items: { type: 'string' },
+                minItems: 1
               },
-              specifications: { type: 'string' },
-              averagePrice: { type: 'number' }
+              specifications: { type: 'string' }
             },
             required: ['found']
           }
         });
 
+        console.log(`🔍 IA retornou: found=${llmResponse?.found}, imagens=${llmResponse?.imageUrls?.length || 0}`);
+
         if (llmResponse?.found) {
+          // Limpa URLs (menos restritivo)
+          const cleanUrls = (llmResponse.imageUrls || [])
+            .filter(url => url && typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://')))
+            .map(url => url.split('?')[0].split('#')[0])
+            .filter((url, i, arr) => arr.indexOf(url) === i)
+            .slice(0, 10);
+
           productData = {
             title: llmResponse.title || 'Produto',
             description: llmResponse.description || llmResponse.specifications || 'Produto encontrado',
-            imageUrls: llmResponse.imageUrls || [],
+            imageUrls: cleanUrls,
             brand: llmResponse.brand || '',
             category: llmResponse.category || '',
-            source: 'Busca Inteligente (IA)',
-            averagePrice: llmResponse.averagePrice
+            source: 'IA + Internet'
           };
 
-          console.log('✅ Produto encontrado via IA - Imagens:', productData.imageUrls.length);
+          console.log('✅ IA encontrou:', cleanUrls.length, 'imagens');
         } else {
-          console.log('⚠️ IA não encontrou o produto');
+          console.log('❌ IA não encontrou');
         }
       } catch (error) {
-        console.log('⚠️ Busca via IA falhou:', error.message);
+        console.error('❌ IA error:', error.message);
       }
     }
 

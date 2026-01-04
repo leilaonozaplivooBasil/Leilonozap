@@ -69,33 +69,47 @@ Deno.serve(async (req) => {
             });
         }
 
-        // EXTRAI COM IA (trecho reduzido)
-        const snippet = html.substring(0, 12000);
+        // EXTRAI COM IA
+        const snippet = html.substring(0, 15000);
         
-        console.log('🤖 IA processando...');
+        console.log('🤖 IA analisando HTML...');
         
         const aiResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Extraia do HTML (${marketplace}):
-- Título do produto
-- Descrição (2-3 linhas)
-- URLs de imagens do produto (máximo 10)
+            prompt: `EXTRAÇÃO DE DADOS DO HTML (${marketplace.toUpperCase()}):
+
+TAREFA:
+1. Encontre o TÍTULO exato do produto
+2. Descrição com especificações (3-5 linhas)
+3. CRÍTICO: Extraia 5-10 URLs COMPLETAS de imagens
+
+IMAGENS:
+- URLs diretas: https://...
+- Formato: .jpg, .jpeg, .png, .webp
+- GRANDES (não thumb/miniatura)
+- SEM logos
 
 HTML:
 ${snippet}
 
-Retorne JSON.`,
+RETORNE JSON com imageUrls OBRIGATÓRIO.`,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
                     description: { type: "string" },
-                    imageUrls: { type: "array", items: { type: "string" } }
+                    imageUrls: { 
+                        type: "array", 
+                        items: { type: "string" },
+                        minItems: 1
+                    }
                 },
-                required: ["title", "description"]
+                required: ["title", "description", "imageUrls"]
             }
         });
 
         let { title, description, imageUrls } = aiResult;
+        
+        console.log(`🤖 IA: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
         // EXTRAI IMAGENS POR REGEX SE IA FALHOU
         if (!imageUrls || imageUrls.length === 0) {
@@ -126,13 +140,14 @@ Retorne JSON.`,
             }
         }
 
-        // LIMPA URLs
+        // LIMPA E VALIDA URLs (menos restritivo)
         imageUrls = (imageUrls || [])
-            .filter(u => u && u.startsWith('http'))
-            .map(u => u.split('"')[0].split('&quot;')[0])
-            .filter(u => u.length > 30);
+            .filter(u => u && typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://')))
+            .map(u => u.split('"')[0].split('&quot;')[0].split('?')[0]) // Remove aspas e query
+            .filter(u => u.length > 30)
+            .filter((u, i, arr) => arr.indexOf(u) === i); // Remove duplicatas
 
-        console.log(`✅ ${imageUrls.length} imagens`);
+        console.log(`✅ Final: ${imageUrls.length} imagens válidas`);
 
         return Response.json({
             title: (title || 'Produto').substring(0, 200),

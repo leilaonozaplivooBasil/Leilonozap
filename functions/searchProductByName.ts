@@ -12,22 +12,27 @@ Deno.serve(async (req) => {
 
         console.log(`🔍 Buscando: ${productName}`);
 
-        // USA IA COM BUSCA NA INTERNET
+        console.log('🤖 Buscando com IA + Internet...');
+        
         const searchResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Busque na internet informações sobre o produto: "${productName}"
+            prompt: `BUSCA AVANÇADA DE PRODUTO: "${productName}"
 
-Encontre:
-1. Nome completo e correto do produto
-2. Descrição detalhada (2-3 linhas com características principais)
-3. URLs de imagens reais do produto (mínimo 3, máximo 10)
+TAREFA OBRIGATÓRIA:
+1. Busque no Google Shopping, Mercado Livre, Amazon, Magazine Luiza
+2. Retorne o nome EXATO do produto
+3. Descrição com especificações técnicas (3-5 linhas)
+4. CRÍTICO: Retorne URLs COMPLETAS E VÁLIDAS de 5-10 imagens do produto
 
-IMPORTANTE: 
-- Imagens devem ser URLs diretas (.jpg, .png, .webp)
-- Priorize imagens de marketplaces conhecidos (Amazon, Mercado Livre, Magalu, etc)
-- Evite logos ou ícones
-- Retorne apenas dados reais encontrados na internet
+FORMATO DAS IMAGENS:
+- URLs diretas e completas (https://...)
+- Formato: .jpg, .jpeg, .png, .webp
+- Imagens GRANDES do produto (não miniaturas)
+- NÃO incluir logos, ícones ou banners
 
-Se não encontrar o produto, retorne title="Produto não encontrado" e description vazia.`,
+EXEMPLO DE URL VÁLIDA:
+https://http2.mlstatic.com/D_NQ_NP_123456-MLB12345678-000-V.jpg
+
+Se NÃO encontrar: title="PRODUTO_NAO_ENCONTRADO"`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -36,50 +41,47 @@ Se não encontrar o produto, retorne title="Produto não encontrado" e descripti
                     description: { type: "string" },
                     imageUrls: {
                         type: "array",
-                        items: { type: "string" }
+                        items: { type: "string" },
+                        minItems: 1
                     },
                     marketplace: { type: "string" }
                 },
-                required: ["title", "description"]
+                required: ["title", "description", "imageUrls"]
             }
         });
 
         let { title, description, imageUrls, marketplace } = searchResult;
 
-        // VALIDA E LIMPA IMAGENS
+        console.log(`📦 Título: ${title}`);
+        console.log(`🖼️ Imagens brutas: ${imageUrls?.length || 0}`);
+
+        // VALIDA URLs (menos restritivo)
         imageUrls = (imageUrls || [])
-            .filter(url => url && typeof url === 'string' && url.startsWith('http'))
             .filter(url => {
-                const lower = url.toLowerCase();
-                return (lower.endsWith('.jpg') || 
-                        lower.endsWith('.jpeg') || 
-                        lower.endsWith('.png') || 
-                        lower.endsWith('.webp') ||
-                        lower.includes('.jpg') ||
-                        lower.includes('.png') ||
-                        lower.includes('.webp')) &&
-                       !lower.includes('logo') &&
-                       !lower.includes('icon') &&
-                       url.length > 40;
+                if (!url || typeof url !== 'string') return false;
+                const clean = url.trim();
+                return clean.startsWith('http://') || clean.startsWith('https://');
             })
+            .map(url => url.split('?')[0].split('#')[0]) // Remove query params
+            .filter((url, index, self) => self.indexOf(url) === index) // Remove duplicatas
             .slice(0, 10);
 
-        console.log(`✅ ${title} - ${imageUrls.length} imagens`);
+        console.log(`✅ Imagens válidas: ${imageUrls.length}`);
 
-        if (!title || title.toLowerCase().includes('não encontrado')) {
+        if (!title || title === 'PRODUTO_NAO_ENCONTRADO') {
             return Response.json({
                 error: "Produto não encontrado",
-                suggestion: "Tente com um nome mais específico ou marca"
+                suggestion: "Tente com marca + modelo (ex: Samsung Galaxy S23)"
             }, { status: 404 });
         }
 
         return Response.json({
             title: title.substring(0, 200),
-            description: (description || 'Produto encontrado na internet').substring(0, 500),
+            description: (description || 'Produto encontrado').substring(0, 500),
             imageUrls: imageUrls,
             marketplace: marketplace || 'internet',
             searchTerm: productName
-        });
+        }, { status: 200 });
 
     } catch (error) {
         console.error('❌', error);
