@@ -1,4 +1,5 @@
 import AdminUsers from './pages/AdminUsers';
+import ArquitetoIA from './pages/ArquitetoIA';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
@@ -48,12 +49,12 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
-import ArquitetoIA from './pages/ArquitetoIA';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "AdminUsers": AdminUsers,
+    "ArquitetoIA": ArquitetoIA,
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
     "AuctionRoom": AuctionRoom,
@@ -103,7 +104,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
-    "ArquitetoIA": ArquitetoIA,
 }
 
 export const pagesConfig = {

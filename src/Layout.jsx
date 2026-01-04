@@ -8,9 +8,10 @@ import TermsModal from "@/components/common/TermsModal";
 import GlobalMonitor from "@/components/system/GlobalMonitor";
 import LoginModal from "@/components/common/LoginModal";
 import ErrorBoundary from "@/components/system/ErrorBoundary";
+import ArquitetoFloatingButton from "@/components/arquiteto/ArquitetoFloatingButton";
 
-import { Button } from "@/components/ui/button";
-import { base44 } from '@/api/base44Client';
+      import { Button } from "@/components/ui/button";
+      import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
