@@ -550,13 +550,13 @@ export default function CreateAuction() {
         return;
       }
       
-      const { title, description, marketplace } = responseData;
+      const { title, description, price, marketplace } = responseData;
       
       if (!title || !description) {
         throw new Error("Dados incompletos");
       }
       
-      setImportedData({ title, description, price: responseData.price });
+      setImportedData({ title, description, price });
       
       toast.info("🖼️ Extraindo URLs das imagens...");
       let imageUrlsExtracted = [];

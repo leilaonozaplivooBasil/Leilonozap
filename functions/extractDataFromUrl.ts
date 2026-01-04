@@ -1,26 +1,12 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// 🔥 VALIDA SE IMAGEM CARREGA REALMENTE
-async function validateImageUrl(url) {
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-        
-        const response = await fetch(url, {
-            method: 'HEAD',
-            headers: { 'User-Agent': getRandomUA() },
-            signal: controller.signal
-        });
-        
-        clearTimeout(timeout);
-        
-        if (!response.ok) return false;
-        
-        const contentType = response.headers.get('content-type');
-        return contentType && contentType.startsWith('image/');
-    } catch {
-        return false;
-    }
+function getRandomUA() {
+    const userAgents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0'
+    ];
+    return userAgents[Math.floor(Math.random() * userAgents.length)];
 }
 
 Deno.serve(async (req) => {
@@ -52,27 +38,30 @@ Deno.serve(async (req) => {
         // 🤖 USA APENAS IA COM WEB SEARCH (método mais confiável)
         console.log('🤖 IA buscando produto na web...');
 
-        const extractionResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Busque informações sobre este produto do Mercado Livre:
-        ${productUrl}
+        const extractionResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: `Acesse e analise este produto:
+${productUrl}
 
-        EXTRAIA E RETORNE em português brasileiro:
-        1. Título completo do produto
-        2. Descrição detalhada com especificações técnicas (mínimo 6 linhas, máximo 10 linhas)
-        3. URLs DIRETAS das imagens em alta resolução
+EXTRAIA e RETORNE em português brasileiro:
 
-        IMPORTANTE sobre as imagens do Mercado Livre:
-        - As URLs começam com https://http2.mlstatic.com/
-        - Use APENAS versões ORIGINAIS/GRANDES
-        - NÃO use miniaturas pequenas
-        - Retorne TODAS as imagens que encontrar (mínimo 5, ideal 8-10)
+1. **Título completo** do produto (modelo, marca, especificações)
+2. **Preço atual** em REAIS (apenas o número, ex: 1299.90)
+3. **Descrição detalhada** com especificações técnicas (mínimo 8 linhas)
+4. **URLs DIRETAS** das imagens do produto em ALTA RESOLUÇÃO
 
-        Seja completo e preciso.`,
+REGRAS PARA IMAGENS:
+- Apenas fotos PRINCIPAIS do produto (não logos, não ícones)
+- URLs completas e diretas (http2.mlstatic.com, images-amazon.com, etc)
+- Versões grandes/originais (sem miniaturas)
+- Mínimo 6 imagens, máximo 10
+
+Seja preciso e completo.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
+                    price: { type: "number", description: "Preço em reais" },
                     description: { type: "string" },
                     imageUrls: {
                         type: "array",
@@ -83,9 +72,9 @@ Deno.serve(async (req) => {
             }
         });
 
-        let { title, description, imageUrls } = extractionResult;
+        let { title, description, price, imageUrls } = extractionResult;
 
-        console.log(`✅ IA: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
+        console.log(`✅ IA: título=${!!title}, preço=${price || 'não encontrado'}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
         // LIMPA E VALIDA URLs
         imageUrls = (imageUrls || [])
@@ -165,6 +154,7 @@ Deno.serve(async (req) => {
         return Response.json({
             title: (title || 'Produto').substring(0, 200),
             description: (description || 'Produto importado').substring(0, 500),
+            price: price || null,
             imageUrls: rehostedUrls,
             marketplace: marketplace
         });
