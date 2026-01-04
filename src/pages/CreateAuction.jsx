@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle, Sparkles, CheckCircle } from "lucide-react";
+import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle, Sparkles, CheckCircle, Download } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { downloadImage } from "@/functions/downloadImage";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1319,7 +1319,214 @@ export default function CreateAuction() {
                         </p>
                       </div>
                     )}
-                    
+
+                    {/* 🆕 ETAPA 2: DADOS EXTRAÍDOS + URLs DE IMAGENS */}
+                    {manualStep === 2 && importedData && (
+                      <div className="space-y-4">
+                        <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
+                          <h4 className="font-bold text-green-300 mb-3 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            1️⃣ Dados Extraídos
+                          </h4>
+                          <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
+                            <div><span className="text-green-400 font-semibold">Título:</span> {importedData.title || '❌ Não encontrado'}</div>
+                            <div><span className="text-green-400 font-semibold">Preço:</span> {importedData.price ? `R$ ${importedData.price.toFixed(2)}` : '❌ Não encontrado'}</div>
+                            <div><span className="text-green-400 font-semibold">Descrição:</span> {importedData.description ? `${importedData.description.substring(0, 100)}...` : '❌ Não encontrada'}</div>
+                          </div>
+                        </div>
+
+                        <div className="bg-purple-900/30 p-4 rounded-lg border border-purple-700">
+                          <h4 className="font-bold text-purple-300 mb-3 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            2️⃣ URLs das Imagens Extraídas
+                          </h4>
+                          <p className="text-xs text-purple-400 mb-3">Revise as URLs abaixo. Edite se necessário ou adicione manualmente se estiverem vazias.</p>
+
+                          <div className="space-y-3">
+                            {extractedImageUrls.map((url, index) => (
+                              <div key={index} className="flex items-center gap-3">
+                                <span className="text-xs text-gray-400 w-8">{index + 1}:</span>
+                                <input
+                                  type="text"
+                                  value={url}
+                                  onChange={(e) => {
+                                    const newUrls = [...extractedImageUrls];
+                                    newUrls[index] = e.target.value;
+                                    setExtractedImageUrls(newUrls);
+                                  }}
+                                  placeholder="Cole a URL da imagem aqui..."
+                                  className="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:border-purple-500 focus:outline-none"
+                                />
+                                {url && (
+                                  <img 
+                                    src={url} 
+                                    alt={`Preview ${index + 1}`}
+                                    className="w-12 h-12 object-cover rounded border border-gray-600"
+                                    crossOrigin="anonymous"
+                                    onError={(e) => {
+                                      e.target.style.display = 'none';
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          <Button 
+                            onClick={async () => {
+                              const validUrls = extractedImageUrls.filter(u => u.trim());
+                              if (validUrls.length === 0) {
+                                toast.error("❌ Adicione pelo menos 1 URL de imagem!");
+                                return;
+                              }
+
+                              setIsDownloadingImages(true);
+                              toast.info("⬇️ Baixando imagens...");
+
+                              try {
+                                const downloaded = [];
+                                for (let i = 0; i < extractedImageUrls.length; i++) {
+                                  const url = extractedImageUrls[i];
+                                  if (!url.trim()) continue;
+
+                                  try {
+                                    console.log(`⬇️ Baixando imagem ${i + 1}:`, url);
+                                    const response = await base44.integrations.Core.UploadFile({ file: url });
+
+                                    if (response?.file_url) {
+                                      downloaded.push(response.file_url);
+                                      console.log(`✅ Imagem ${i + 1} baixada:`, response.file_url);
+                                    }
+                                  } catch (error) {
+                                    console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
+                                  }
+                                }
+
+                                if (downloaded.length === 0) {
+                                  toast.error("❌ Nenhuma imagem foi baixada com sucesso");
+                                  setIsDownloadingImages(false);
+                                  return;
+                                }
+
+                                setDownloadedImages(downloaded);
+                                setSelectedCoverIndex(0);
+                                setManualStep(3);
+                                toast.success(`✅ ${downloaded.length} imagem(ns) baixada(s)!`);
+
+                              } catch (error) {
+                                console.error("❌ Erro ao baixar imagens:", error);
+                                toast.error("Erro ao baixar imagens");
+                              } finally {
+                                setIsDownloadingImages(false);
+                              }
+                            }}
+                            disabled={isDownloadingImages}
+                            className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                          >
+                            {isDownloadingImages ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Baixando Imagens...
+                              </>
+                            ) : (
+                              <>
+                                <Download className="w-4 h-4 mr-2" />
+                                ⬇️ Baixar Imagens das URLs
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🆕 ETAPA 3: ESCOLHER CAPA DAS IMAGENS BAIXADAS */}
+                    {manualStep === 3 && downloadedImages.length > 0 && (
+                      <div className="bg-blue-900/30 p-4 rounded-lg border border-blue-700">
+                        <h4 className="font-bold text-blue-300 mb-3 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4" />
+                          3️⃣ Escolha a Imagem de Capa
+                        </h4>
+                        <p className="text-xs text-blue-400 mb-4">Clique na imagem que será a CAPA do leilão</p>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                          {downloadedImages.map((imgUrl, index) => (
+                            <div
+                              key={index}
+                              className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 ${
+                                selectedCoverIndex === index 
+                                  ? 'border-blue-500 ring-2 ring-blue-500/50 scale-105' 
+                                  : 'border-gray-700 hover:border-blue-600'
+                              }`}
+                              onClick={() => setSelectedCoverIndex(index)}
+                            >
+                              <div className="w-full h-32 bg-gray-900 flex items-center justify-center">
+                                <img 
+                                  src={imgUrl} 
+                                  alt={`Imagem ${index + 1}`}
+                                  className="max-w-full max-h-full object-contain"
+                                />
+                              </div>
+
+                              <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
+                                {index + 1}
+                              </div>
+
+                              {selectedCoverIndex === index && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-blue-500/40 backdrop-blur-[2px] text-white font-bold text-sm">
+                                  ✅ CAPA
+                                </div>
+                              )}
+
+                              {selectedCoverIndex !== index && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium">
+                                  Clique para capa
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        <Button 
+                          onClick={() => {
+                            // Reorganiza com capa primeiro
+                            let finalImages = [];
+                            finalImages.push(downloadedImages[selectedCoverIndex]);
+                            downloadedImages.forEach((img, i) => {
+                              if (i !== selectedCoverIndex) finalImages.push(img);
+                            });
+
+                            // Aplica no formulário (até 5 imagens)
+                            finalImages = finalImages.slice(0, 5);
+                            while (finalImages.length < 5) {
+                              finalImages.push("");
+                            }
+
+                            setFormData(prev => ({
+                              ...prev,
+                              title: importedData?.title || prev.title,
+                              description: importedData?.description || prev.description,
+                              starting_price: importedData?.price || prev.starting_price,
+                              image_urls: finalImages
+                            }));
+
+                            // Reseta estados
+                            setManualStep(0);
+                            setImportedData(null);
+                            setExtractedImageUrls(['', '', '', '', '', '']);
+                            setDownloadedImages([]);
+                            setProductUrl("");
+                            setIsProcessing(false);
+
+                            toast.success("✅ Dados aplicados no formulário!");
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          ✅ Aplicar no Formulário
+                        </Button>
+                      </div>
+                    )}
+
                     {/* ETAPA 3: INSERIR/CONFIRMAR URLs DAS IMAGENS */}
                     {manualStep === 3 && (
                       <div className="bg-yellow-900/30 p-4 rounded-lg border border-yellow-700">
