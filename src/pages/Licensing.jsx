@@ -300,6 +300,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [isLoadingClients, setIsLoadingClients] = useState(false);
   const [myWithdrawals, setMyWithdrawals] = useState([]);
   const [isLoadingWithdrawals, setIsLoadingWithdrawals] = useState(false);
+  const [pendingWithdrawalAmount, setPendingWithdrawalAmount] = useState(0);
 
   // 🆕 REF PARA EVITAR MÚLTIPLAS CHAMADAS SIMULTÂNEAS
   const isFetchingRef = useRef(false);
@@ -455,9 +456,16 @@ const DashboardContent = ({ user, isAdmin }) => {
       );
       
       setMyWithdrawals(Array.isArray(withdrawals) ? withdrawals : []);
+      
+      // Calcula total de saques pendentes
+      const pending = withdrawals
+        .filter(w => w.status === 'pending')
+        .reduce((sum, w) => sum + (w.amount || 0), 0);
+      setPendingWithdrawalAmount(pending);
     } catch (error) {
       console.error("Erro ao buscar saques:", error);
       setMyWithdrawals([]);
+      setPendingWithdrawalAmount(0);
       toast.error("Erro ao carregar histórico de saques.");
     } finally {
       setIsLoadingWithdrawals(false);
@@ -1009,11 +1017,22 @@ const DashboardContent = ({ user, isAdmin }) => {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex-1">
               <h3 className="text-2xl font-bold text-white mb-2">Seus Ganhos em Dinheiro</h3>
-              <div className="flex items-baseline gap-3 mb-4">
+              <div className="flex items-baseline gap-3 mb-2">
                 <span className="text-5xl font-bold text-white">
                   R$ {(user.valora_pay_balance || 0).toFixed(2)}
                 </span>
               </div>
+              {pendingWithdrawalAmount > 0 && (
+                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Saque em Processo: R$ {pendingWithdrawalAmount.toFixed(2)}
+                  </p>
+                  <p className="text-xs text-yellow-300/70 mt-1">
+                    Aguardando aprovação
+                  </p>
+                </div>
+              )}
               <div className="flex gap-3">
                 <Button
                   onClick={() => setIsAuctionSelectionModalOpen(true)}

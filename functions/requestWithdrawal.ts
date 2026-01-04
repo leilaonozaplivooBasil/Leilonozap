@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Cria solicitação
+    // Cria solicitação (NÃO deduz do saldo ainda - só na aprovação)
     console.log('📝 Criando solicitação de saque...');
     const withdrawal = await base44.asServiceRole.entities.WithdrawalRequest.create({
       influencer_id: user.id,
@@ -69,13 +69,6 @@ Deno.serve(async (req) => {
       recipient_document: currentUser.cpf || ''
     });
     console.log('✅ Solicitação criada:', withdrawal.id);
-
-    // Deduz do saldo
-    console.log('💰 Atualizando saldo...');
-    await base44.asServiceRole.entities.AppUser.update(user.id, {
-      commission_balance: (currentUser.commission_balance || 0) - amount
-    });
-    console.log('✅ Saldo atualizado');
 
     // Log
     await base44.asServiceRole.entities.SystemLog.create({
