@@ -76,14 +76,25 @@ Seja preciso e completo.`,
 
         console.log(`✅ Dados: título=${!!title}, preço=${price || 'não encontrado'}, desc=${!!description}`);
 
-        // LIMPA E VALIDA URLs
+        // LIMPA E VALIDA URLs - REMOVE DUPLICATAS VERDADEIRAS
+        const urlSet = new Set();
         imageUrls = (imageUrls || [])
             .filter(u => u && typeof u === 'string' && u.startsWith('http'))
-            .map(u => u.split('"')[0].split('&quot;')[0].split(' ')[0].trim())
-            .filter((u, i, arr) => arr.indexOf(u) === i)
-            .filter(u => u.length > 20);
+            .map(u => {
+                // Remove query params e caracteres especiais
+                let cleaned = u.split('?')[0].split('"')[0].split('&quot;')[0].split(' ')[0].trim();
+                // Remove trailing slashes
+                cleaned = cleaned.replace(/\/+$/, '');
+                return cleaned;
+            })
+            .filter(u => {
+                if (u.length < 20) return false;
+                if (urlSet.has(u)) return false; // Remove duplicata REAL
+                urlSet.add(u);
+                return true;
+            });
 
-        console.log(`🧹 ${imageUrls.length} URLs após limpeza`);
+        console.log(`🧹 ${imageUrls.length} URLs únicas após limpeza`);
 
         // Se não encontrou imagens, retorna sem imagens
         if (imageUrls.length === 0) {
