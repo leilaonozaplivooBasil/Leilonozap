@@ -290,6 +290,8 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [pixKey, setPixKey] = useState('');
   const [pixKeyType, setPixKeyType] = useState('CPF');
   const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState(false);
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientDocument, setRecipientDocument] = useState('');
 
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
@@ -877,38 +879,36 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
 
-  const handleWithdrawalSubmit = async () => {
+  const handleWithdrawalSubmit = async (e) => {
+    if (e) e.preventDefault();
+
     console.log('🔍 [SAQUE] Botão clicado!');
     console.log('📊 [SAQUE] Valor digitado:', withdrawalAmount);
-    console.log('💰 [SAQUE] Saldo disponível:', user.commission_balance);
-    
+    console.log('💰 [SAQUE] Saldo disponível:', user.valora_pay_balance);
+
     const amount = parseFloat(withdrawalAmount);
     console.log('💵 [SAQUE] Valor convertido:', amount);
-    
-    if (!amount || amount <= 0) {
+
+    if (!amount || amount <= 0 || isNaN(amount)) {
       console.log('❌ [SAQUE] Valor inválido');
-      alert('Valor inválido');
       toast.error('Valor inválido');
       return;
     }
 
     if (amount < 30) {
       console.log('❌ [SAQUE] Valor menor que mínimo');
-      alert('Saque mínimo é de R$ 30,00');
       toast.error('Saque mínimo é de R$ 30,00');
       return;
     }
 
-    if (amount > user.commission_balance) {
+    if (amount > user.valora_pay_balance) {
       console.log('❌ [SAQUE] Saldo insuficiente');
-      alert('Saldo indisponível');
       toast.error('Saldo indisponível');
       return;
     }
 
     if (!pixKey || pixKey.trim() === '') {
       console.log('❌ [SAQUE] Chave PIX não informada');
-      alert('Informe a chave PIX');
       toast.error('Informe a chave PIX');
       return;
     }
@@ -947,7 +947,6 @@ const DashboardContent = ({ user, isAdmin }) => {
       console.error('❌ [SAQUE] Exceção capturada:', error);
       console.error('Stack:', error.stack);
 
-      // Mensagem de erro mais amigável
       let errorMessage = 'Erro ao processar saque. ';
       if (error.message.includes('404')) {
         errorMessage += 'Função não encontrada. Contate o suporte.';
@@ -1625,6 +1624,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               <div className="flex gap-3 pt-2">
                 <Button
+                  type="button"
                   onClick={() => setShowWithdrawalModal(false)}
                   variant="outline"
                   className="flex-1 border-gray-600 text-gray-300"
@@ -1633,12 +1633,16 @@ const DashboardContent = ({ user, isAdmin }) => {
                   Cancelar
                 </Button>
                 <Button
+                  type="button"
                   onClick={handleWithdrawalSubmit}
                   className="flex-1 bg-green-600 hover:bg-green-700"
                   disabled={isProcessingWithdrawal}
                 >
                   {isProcessingWithdrawal ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Processando...
+                    </>
                   ) : (
                     'Solicitar Saque'
                   )}
