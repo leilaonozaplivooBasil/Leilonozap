@@ -901,7 +901,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       return;
     }
 
-    if (amount > (user.commission_balance || 0)) {
+    if (amount > (user.valora_pay_balance || 0)) {
       console.log('❌ [SAQUE] Saldo insuficiente');
       toast.error('Saldo indisponível');
       return;
@@ -1605,9 +1605,9 @@ const DashboardContent = ({ user, isAdmin }) => {
 
             <div className="p-6 space-y-4">
               <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
-                <p className="text-sm text-gray-300 mb-1">Saldo de Comissões Disponível:</p>
+                <p className="text-sm text-gray-300 mb-1">Saldo Disponível para Saque:</p>
                 <p className="text-3xl font-bold text-green-400">
-                  R$ {(user?.commission_balance || 0).toFixed(2)}
+                  R$ {(user?.valora_pay_balance || 0).toFixed(2)}
                 </p>
               </div>
 
