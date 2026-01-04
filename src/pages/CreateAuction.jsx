@@ -75,7 +75,6 @@ export default function CreateAuction() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [supplierLogoPreview, setSupplierLogoPreview] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  const [isValidatingImages, setIsValidatingImages] = useState(false);
   
   // 🆕 ESTADOS PARA UPLOAD MANUAL
   const [manualUploadImages, setManualUploadImages] = useState([]);
@@ -322,53 +321,6 @@ export default function CreateAuction() {
     }));
   };
 
-  // 🔥 VALIDADOR DE IMAGENS - TESTA SE REALMENTE CARREGAM
-  const validateImageUrls = async (urls) => {
-    console.log(`🔍 Validando ${urls.length} URLs...`);
-    const validUrls = [];
-    
-    for (let i = 0; i < urls.length; i++) {
-      const url = urls[i];
-      if (!url || !url.trim()) continue;
-      
-      try {
-        console.log(`  ${i+1}. Testando: ${url.substring(0, 60)}...`);
-        
-        // Cria uma promessa que testa o carregamento real da imagem
-        const isValid = await new Promise((resolve) => {
-          const img = new Image();
-          const timeout = setTimeout(() => {
-            console.log(`  ❌ Timeout`);
-            resolve(false);
-          }, 8000);
-          
-          img.onload = () => {
-            clearTimeout(timeout);
-            console.log(`  ✅ OK (${img.width}x${img.height})`);
-            resolve(true);
-          };
-          
-          img.onerror = () => {
-            clearTimeout(timeout);
-            console.log(`  ❌ Erro ao carregar`);
-            resolve(false);
-          };
-          
-          img.src = url;
-        });
-        
-        if (isValid) {
-          validUrls.push(url);
-        }
-      } catch (error) {
-        console.log(`  ❌ Exceção: ${error.message}`);
-      }
-    }
-    
-    console.log(`✅ ${validUrls.length}/${urls.length} imagens válidas`);
-    return validUrls;
-  };
-
   // BUSCA POR NOME DO PRODUTO
   const searchByName = async () => {
     if (!productName || productName.trim().length < 3) {
@@ -406,36 +358,21 @@ export default function CreateAuction() {
       setExtractedData({ title: productTitle, description: productDesc });
       setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
 
-      // FILTRA URLs BÁSICAS
-      const candidateUrls = (data.imageUrls || [])
-        .filter(url => url && typeof url === 'string' && url.trim())
-        .slice(0, 10);
+      const validUrls = (data.imageUrls || [])
+        .filter(url => url && typeof url === 'string' && url.trim());
 
-      if (candidateUrls.length === 0) {
+      console.log(`🖼️ [NOME] URLs recebidas do backend:`, validUrls);
+
+      if (validUrls.length === 0) {
         toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
         setProductName("");
         setManualStep(0);
-        setIsSearchingName(false);
-        return;
-      }
-
-      // 🔥 VALIDA IMAGENS REAIS
-      setIsValidatingImages(true);
-      toast.info(`⏳ Testando ${candidateUrls.length} imagens...`);
-
-      const validUrls = await validateImageUrls(candidateUrls);
-
-      setIsValidatingImages(false);
-
-      if (validUrls.length === 0) {
-        toast.error(`❌ Nenhuma imagem funcionou. Use upload manual.`);
-        setProductName("");
-        setManualStep(0);
       } else {
-        toast.success(`✅ ${validUrls.length} imagens validadas!`);
+        toast.success(`✅ ${validUrls.length} imagens validadas pelo backend!`);
         setDownloadedImages(validUrls);
         setCoverIndex(0);
-        setManualStep(5); // Vai para escolha de capa
+        setManualStep(5);
+        console.log(`✅ [NOME] manualStep=5, downloadedImages:`, validUrls);
       }
 
       setProductName("");
@@ -486,36 +423,21 @@ export default function CreateAuction() {
       setExtractedData({ title: productTitle, description: productDesc });
       setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
 
-      // FILTRA URLs BÁSICAS
-      const candidateUrls = (data.imageUrls || [])
-        .filter(url => url && typeof url === 'string' && url.trim())
-        .slice(0, 10);
+      const validUrls = (data.imageUrls || [])
+        .filter(url => url && typeof url === 'string' && url.trim());
 
-      if (candidateUrls.length === 0) {
-        toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
-        setGtinCode("");
-        setManualStep(0);
-        setIsSearchingGtin(false);
-        return;
-      }
-
-      // 🔥 VALIDA IMAGENS REAIS
-      setIsValidatingImages(true);
-      toast.info(`⏳ Testando ${candidateUrls.length} imagens...`);
-
-      const validUrls = await validateImageUrls(candidateUrls);
-
-      setIsValidatingImages(false);
+      console.log(`🖼️ [GTIN] URLs recebidas do backend:`, validUrls);
 
       if (validUrls.length === 0) {
-        toast.error(`❌ Nenhuma imagem funcionou. Use upload manual.`);
+        toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
         setGtinCode("");
         setManualStep(0);
       } else {
         toast.success(`✅ ${validUrls.length} imagens validadas! (${data.source})`);
         setDownloadedImages(validUrls);
         setCoverIndex(0);
-        setManualStep(5); // Vai para escolha de capa
+        setManualStep(5);
+        console.log(`✅ [GTIN] manualStep=5, downloadedImages:`, validUrls);
       }
 
       setGtinCode("");
@@ -572,34 +494,21 @@ export default function CreateAuction() {
       setExtractedData({ title, description });
       setFormData(prev => ({ ...prev, title, description, source_url: productUrl }));
       
-      // FILTRA URLs BÁSICAS
-      const candidateUrls = (extractedImageUrls || [])
-        .filter(url => url && typeof url === 'string' && url.trim())
-        .slice(0, 10);
+      const validUrls = (extractedImageUrls || [])
+        .filter(url => url && typeof url === 'string' && url.trim());
+
+      console.log(`🖼️ [URL] URLs recebidas do backend:`, validUrls);
       
-      if (candidateUrls.length === 0) {
+      if (validUrls.length === 0) {
         toast.warning(`⚠️ ${title} sem imagens. Use upload manual.`);
         setManualStep(0);
         setIsProcessing(false);
-        return;
-      }
-
-      // 🔥 VALIDA IMAGENS REAIS
-      setIsValidatingImages(true);
-      toast.info(`⏳ Testando ${candidateUrls.length} imagens...`);
-      
-      const validUrls = await validateImageUrls(candidateUrls);
-      
-      setIsValidatingImages(false);
-      
-      if (validUrls.length === 0) {
-        toast.error(`❌ Nenhuma imagem funcionou. Use upload manual.`);
-        setManualStep(0);
       } else {
         toast.success(`✅ ${marketplace}: ${validUrls.length} imagens validadas!`);
         setDownloadedImages(validUrls);
         setCoverIndex(0);
-        setManualStep(5); // Vai para escolha de capa
+        setManualStep(5);
+        console.log(`✅ [URL] manualStep=5, downloadedImages:`, validUrls);
       }
 
     } catch (error) {
@@ -978,10 +887,10 @@ export default function CreateAuction() {
                             disabled={isSearchingName || !productName.trim()}
                             className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                           >
-                            {(isSearchingName || isValidatingImages) ? (
+                            {isSearchingName ? (
                               <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                {isValidatingImages ? 'Validando imagens...' : 'Buscando na internet...'}
+                                Buscando na internet...
                               </>
                             ) : (
                               <>
@@ -1034,10 +943,10 @@ export default function CreateAuction() {
                             disabled={isSearchingGtin || !gtinCode.trim()}
                             className="w-full bg-green-600 hover:bg-green-700 text-white"
                           >
-                            {(isSearchingGtin || isValidatingImages) ? (
+                            {isSearchingGtin ? (
                               <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                {isValidatingImages ? 'Validando imagens...' : 'Buscando...'}
+                                Buscando...
                               </>
                             ) : (
                               <>
@@ -1115,13 +1024,13 @@ export default function CreateAuction() {
                                 
                                 <Button 
                                   onClick={extractAllData} 
-                                  disabled={isProcessing || isValidatingImages || !productUrl.trim()}
+                                  disabled={isProcessing || !productUrl.trim()}
                                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
                                 >
-                                  {(isProcessing || isValidatingImages) ? (
+                                  {isProcessing ? (
                                     <>
                                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                      {isValidatingImages ? 'Validando imagens...' : `Extraindo de ${selectedMarketplace.name}...`}
+                                      Extraindo de {selectedMarketplace.name}...
                                     </>
                                   ) : (
                                     <>
