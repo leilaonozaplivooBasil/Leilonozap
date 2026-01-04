@@ -1,6 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// 🔥 VALIDA SE IMAGEM CARREGA REALMENTE
+// 🔥 VALIDAÇÃO AVANÇADA DE IMAGENS
 async function validateImageUrl(url) {
     try {
         const controller = new AbortController();
@@ -20,6 +20,96 @@ async function validateImageUrl(url) {
     } catch {
         return false;
     }
+}
+
+// 🎯 SCORE DE RELEVÂNCIA DA IMAGEM
+function calculateImageScore(url, productName) {
+    let score = 0;
+    const lowerUrl = url.toLowerCase();
+    const lowerProduct = productName.toLowerCase();
+    
+    // ❌ PENALIDADES - Imagens ruins
+    if (lowerUrl.match(/logo|icon|banner|sprite|button|arrow|star|badge|seal|stamp/i)) score -= 100;
+    if (lowerUrl.includes('thumbnail') || lowerUrl.includes('thumb')) score -= 50;
+    if (lowerUrl.includes('avatar') || lowerUrl.includes('user')) score -= 100;
+    if (lowerUrl.match(/\d{1,3}x\d{1,3}/)) score -= 30; // Dimensões pequenas no nome
+    if (lowerUrl.includes('az-request')) score -= 200; // Mercado Livre bug
+    
+    // ✅ BONIFICAÇÕES - CDNs confiáveis de produtos
+    if (lowerUrl.includes('mlstatic.com')) score += 50;
+    if (lowerUrl.includes('amazonaws.com') || lowerUrl.includes('cloudfront')) score += 40;
+    if (lowerUrl.includes('shopee') || lowerUrl.includes('magazineluiza')) score += 40;
+    if (lowerUrl.includes('images-')) score += 30;
+    if (lowerUrl.includes('product') || lowerUrl.includes('produto')) score += 30;
+    
+    // ✅ Nome do arquivo contém palavras do produto
+    const productWords = lowerProduct.split(' ').filter(w => w.length > 3);
+    productWords.forEach(word => {
+        if (lowerUrl.includes(word)) score += 20;
+    });
+    
+    // ✅ Extensões de imagem de qualidade
+    if (lowerUrl.match(/\.(jpg|jpeg|webp|png)$/i)) score += 10;
+    
+    // ✅ Galeria de produtos (padrões comuns)
+    if (lowerUrl.match(/gallery|galeria|slide|carousel|zoom/i)) score += 25;
+    
+    // ✅ URL longa geralmente = imagem de produto
+    if (lowerUrl.length > 100) score += 15;
+    
+    return score;
+}
+
+// 🤖 VALIDAÇÃO COM IA VISION
+async function validateImageWithAI(imageUrl, productName, base44) {
+    try {
+        const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Você está vendo uma imagem de um produto.
+
+PRODUTO BUSCADO: "${productName}"
+
+RESPONDA:
+- Esta imagem mostra o produto "${productName}"? (sim/não)
+- Justificativa em 1 linha
+
+REGRAS:
+- Se for logo, ícone, banner, pessoa, texto: responda NÃO
+- Se for o produto real: responda SIM`,
+            file_urls: [imageUrl],
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    isProduct: { type: "boolean" },
+                    reason: { type: "string" }
+                },
+                required: ["isProduct", "reason"]
+            }
+        });
+        
+        console.log(`🤖 IA Vision: ${result.isProduct ? '✅' : '❌'} - ${result.reason}`);
+        return result.isProduct;
+    } catch (error) {
+        console.log(`⚠️ IA Vision falhou: ${error.message}`);
+        return true; // Fallback: assume válida se IA falhar
+    }
+}
+
+// 🧹 DEDUPLICAÇÃO INTELIGENTE
+function deduplicateImages(urls) {
+    const seen = new Set();
+    const unique = [];
+    
+    for (const url of urls) {
+        // Remove parâmetros de query e fragmentos
+        const cleanUrl = url.split('?')[0].split('#')[0];
+        
+        if (!seen.has(cleanUrl)) {
+            seen.add(cleanUrl);
+            unique.push(url);
+        }
+    }
+    
+    return unique;
 }
 
 Deno.serve(async (req) => {
@@ -205,7 +295,6 @@ EXEMPLOS INVÁLIDOS:
         } else if (url.includes('magazineluiza') || url.includes('magalu')) {
             console.log('🛒 Processando Magazine Luiza...');
             
-            // ESTRATÉGIA 1: Buscar dentro de JSON embutido (dados estruturados)
             const jsonRegex = /"images":\s*\[(.*?)\]/s;
             const jsonMatch = html.match(jsonRegex);
             
@@ -216,7 +305,6 @@ EXEMPLOS INVÁLIDOS:
                 imageUrls = [...new Set(imageMatches)];
             }
             
-            // ESTRATÉGIA 2: Se não achou JSON, busca por padrões de URL
             if (imageUrls.length === 0) {
                 console.log('🔄 Tentando regex de produtos...');
                 const produtoRegex = /https:\/\/(?:a-static|wx)\.mlcdn\.com\.br\/produtos\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
@@ -225,7 +313,6 @@ EXEMPLOS INVÁLIDOS:
                 imageUrls = [...new Set(matches)];
             }
             
-            // ESTRATÉGIA 3: Fallback amplo com filtro pesado
             if (imageUrls.length === 0) {
                 console.log('🔄 Fallback amplo com filtro...');
                 const allRegex = /https:\/\/[^"'\s<>]+\.mlcdn\.com\.br\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
@@ -234,7 +321,6 @@ EXEMPLOS INVÁLIDOS:
                 imageUrls = [...new Set(allMatches)];
             }
             
-            // Filtro ULTRA rigoroso - BLOQUEIA az-request primeiro
             const preFilter = imageUrls.filter(u => !u.toLowerCase().includes('az-request'));
             console.log(`🔒 Bloqueou az-request: ${imageUrls.length} → ${preFilter.length}`);
             
@@ -291,9 +377,8 @@ EXEMPLOS INVÁLIDOS:
         }
         
         console.log(`📸 Total extraído: ${imageUrls.length} URLs`);
-        imageUrls = imageUrls.slice(0, 15);
 
-        // Limpa URLs
+        // 🧹 Limpa URLs
         console.log('🧹 Limpando URLs...');
         const cleanedUrls = imageUrls
             .map(url => url.split('"')[0].split('&quot;')[0].trim())
@@ -302,43 +387,51 @@ EXEMPLOS INVÁLIDOS:
         
         console.log(`📦 ${cleanedUrls.length} URLs após limpeza`);
         
-        if (cleanedUrls.length === 0) {
-            console.error('❌ NENHUMA URL após limpeza!');
-            // Tenta fallback: buscar qualquer imagem no HTML
-            console.log('🔄 Tentando fallback genérico...');
-            const fallbackRegex = /https?:\/\/[^\s"'<>]+\.(jpg|jpeg|png|webp)/gi;
-            const fallbackMatches = html.match(fallbackRegex) || [];
-            console.log(`🔄 Fallback encontrou ${fallbackMatches.length} imagens`);
-            
-            if (fallbackMatches.length > 0) {
-                cleanedUrls.push(...fallbackMatches.slice(0, 10));
-            }
-        }
-
-        console.log(`🔍 Validando ${cleanedUrls.length} imagens...`);
+        // 🎯 Calcula score de relevância
+        console.log('🎯 Calculando relevância...');
+        const scoredUrls = cleanedUrls.map(url => ({
+            url,
+            score: calculateImageScore(url, productName)
+        }))
+        .filter(item => item.score > -50) // Remove imagens obviamente ruins
+        .sort((a, b) => b.score - a.score); // Ordena por score
         
-        // 🔥 VALIDA CADA IMAGEM
+        console.log(`📊 Top 5 scores: ${scoredUrls.slice(0, 5).map(i => `${i.score}`).join(', ')}`);
+        
+        // 🔍 Valida URLs (prioritárias primeiro)
+        console.log(`🔍 Validando ${Math.min(scoredUrls.length, 15)} imagens...`);
         const validatedUrls = [];
-        const failedUrls = [];
         
-        for (let i = 0; i < cleanedUrls.length && validatedUrls.length < 8; i++) {
-            const url = cleanedUrls[i];
+        for (const { url, score } of scoredUrls.slice(0, 15)) {
             const isValid = await validateImageUrl(url);
-            
             if (isValid) {
                 validatedUrls.push(url);
-                console.log(`✅ [${i+1}/${cleanedUrls.length}] OK: ${url.substring(0, 70)}`);
-            } else {
-                failedUrls.push(url);
-                console.log(`❌ [${i+1}/${cleanedUrls.length}] FALHOU: ${url.substring(0, 70)}`);
+                console.log(`✅ [${validatedUrls.length}] Score ${score}: ${url.substring(0, 60)}...`);
+                
+                if (validatedUrls.length >= 8) break; // Limita a 8 imagens
             }
         }
+        
+        // 🧹 Remove duplicatas
+        let uniqueUrls = deduplicateImages(validatedUrls);
+        console.log(`🧹 Após deduplicação: ${uniqueUrls.length} imagens`);
+        
+        // 🤖 Valida com IA Vision (primeira imagem apenas - otimização)
+        if (uniqueUrls.length > 0) {
+            console.log('🤖 Validando primeira imagem com IA Vision...');
+            const isValidProduct = await validateImageWithAI(uniqueUrls[0], productName, base44);
+            
+            if (!isValidProduct) {
+                console.log('⚠️ IA detectou que primeira imagem NÃO é do produto! Tentando fallback...');
+                uniqueUrls.shift();
+            }
+        }
+        
+        console.log(`✅ RESULTADO PARCIAL: ${uniqueUrls.length} imagens validadas`);
 
-        console.log(`✅ RESULTADO: ${validatedUrls.length} validadas, ${failedUrls.length} falharam`);
-
-        // 🔥 FALLBACK AUTOMÁTICO: Se < 2 imagens, tenta outros marketplaces
-        if (validatedUrls.length < 2) {
-            console.log('⚠️ Poucas imagens encontradas, tentando fallback...');
+        // ⚠️ FALLBACK: Se poucas imagens, tenta outros marketplaces
+        if (uniqueUrls.length < 3) {
+            console.log('⚠️ Poucas imagens, tentando fallback...');
             
             const triedMarkets = [productPageUrl];
             const marketsToTry = ['mercado livre', 'amazon', 'shopee'];
@@ -399,16 +492,24 @@ Retorne o título, descrição e URL COMPLETA da página do produto.`,
                         fallbackImages = [...new Set(fallbackHtml.match(regex) || [])];
                     }
                     
-                    // Valida imagens do fallback
-                    for (const img of fallbackImages.slice(0, 8)) {
-                        if (validatedUrls.length >= 6) break;
-                        if (await validateImageUrl(img)) {
-                            validatedUrls.push(img);
-                            console.log(`✅ Fallback ${market}: ${img.substring(0, 60)}`);
+                    // Calcula score e valida fallback
+                    const scoredFallback = fallbackImages.map(url => ({
+                        url,
+                        score: calculateImageScore(url, productName)
+                    }))
+                    .filter(item => item.score > -30)
+                    .sort((a, b) => b.score - a.score)
+                    .slice(0, 5);
+                    
+                    for (const { url } of scoredFallback) {
+                        if (uniqueUrls.length >= 6) break;
+                        if (await validateImageUrl(url)) {
+                            uniqueUrls.push(url);
+                            console.log(`✅ Fallback ${market}: ${url.substring(0, 60)}`);
                         }
                     }
                     
-                    if (validatedUrls.length >= 2) {
+                    if (uniqueUrls.length >= 3) {
                         console.log(`🎉 Fallback ${market} encontrou imagens!`);
                         productPageUrl = fallbackUrl;
                         title = fallbackResult.title || title;
@@ -421,6 +522,11 @@ Retorne o título, descrição e URL COMPLETA da página do produto.`,
             }
         }
 
+        // 🎯 Limita a 6 imagens finais
+        const finalUrls = deduplicateImages(uniqueUrls).slice(0, 6);
+        
+        console.log(`🎉 RETORNANDO ${finalUrls.length} IMAGENS VALIDADAS`);
+
         const detectedMarketplace = 
             productPageUrl.includes('mercadolivre') || productPageUrl.includes('mercadolibre') ? 'Mercado Livre' :
             productPageUrl.includes('amazon') ? 'Amazon' :
@@ -429,7 +535,7 @@ Retorne o título, descrição e URL COMPLETA da página do produto.`,
             productPageUrl.includes('casasbahia') ? 'Casas Bahia' :
             productPageUrl.includes('americanas') ? 'Americanas' : 'Internet';
         
-        if (validatedUrls.length === 0) {
+        if (finalUrls.length === 0) {
             return Response.json({
                 error: `Produto encontrado mas sem imagens disponíveis`,
                 suggestion: "Use o importador por URL ou upload manual de imagens",
@@ -441,7 +547,7 @@ Retorne o título, descrição e URL COMPLETA da página do produto.`,
         return Response.json({
             title: title.substring(0, 200),
             description: (description || 'Produto encontrado').substring(0, 500),
-            imageUrls: validatedUrls,
+            imageUrls: finalUrls,
             marketplace: detectedMarketplace,
             sourceUrl: productPageUrl,
             searchTerm: productName
