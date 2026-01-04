@@ -558,16 +558,45 @@ export default function CreateAuction() {
       
       setImportedData({ title, description, price });
       
-      // 🔥 USA AS IMAGENS JÁ BAIXADAS DO extractDataFromUrl
+      // 🔥 IMAGENS JÁ HOSPEDADAS - APLICA DIRETO NO FORMULÁRIO
       console.log(`✅ ${imageUrls?.length || 0} imagens JÁ RE-HOSPEDADAS pelo backend!`);
       
       if (imageUrls && imageUrls.length > 0) {
-        toast.success(`✅ Produto + ${imageUrls.length} imagens extraídas e hospedadas!`);
-        setDownloadedImages(imageUrls);
-        setSelectedCoverIndex(0);
-        setManualStep(3); // Pula direto para escolher capa
+        // Prepara array com até 5 imagens
+        const finalImages = imageUrls.slice(0, 5);
+        while (finalImages.length < 5) {
+          finalImages.push("");
+        }
+        
+        // Aplica tudo de uma vez
+        setFormData(prev => ({
+          ...prev,
+          title: title || prev.title,
+          description: description || prev.description,
+          starting_price: price ? price.toString() : prev.starting_price,
+          image_urls: finalImages,
+          source_url: productUrl
+        }));
+        
+        // Limpa tudo
+        setProductUrl("");
+        setManualStep(0);
+        setImportedData(null);
+        
+        toast.success(`✅ Produto importado! ${imageUrls.length} imagens aplicadas!`);
       } else {
-        toast.warning("⚠️ Nenhuma imagem encontrada. Use upload manual.");
+        toast.warning("⚠️ Produto sem imagens. Use upload manual.");
+        
+        // Aplica só os dados textuais
+        setFormData(prev => ({
+          ...prev,
+          title: title || prev.title,
+          description: description || prev.description,
+          starting_price: price ? price.toString() : prev.starting_price,
+          source_url: productUrl
+        }));
+        
+        setProductUrl("");
         setManualStep(0);
       }
       
