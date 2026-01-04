@@ -149,7 +149,10 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
             title: title.substring(0, 200),
             description: (description || 'Produto encontrado').substring(0, 500),
             imageUrls: validatedUrls,
-            marketplace: marketplace || 'internet',
+            marketplace: productPageUrl.includes('mercadolivre') ? 'Mercado Livre' :
+                        productPageUrl.includes('amazon') ? 'Amazon' :
+                        productPageUrl.includes('shopee') ? 'Shopee' :
+                        productPageUrl.includes('magazineluiza') ? 'Magazine Luiza' : 'Internet',
             searchTerm: productName
         }, { status: 200 });
 
