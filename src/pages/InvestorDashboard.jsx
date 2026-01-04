@@ -576,118 +576,329 @@ export default function InvestorDashboard() {
               </p>
             </DialogHeader>
 
-            {/* Carousel para todos os tamanhos */}
-            <div className="relative py-2"
-                 onMouseEnter={() => setIsPaused(true)}
-                 onMouseLeave={() => setIsPaused(false)}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={selectedPlanIndex}
-                  initial={{ opacity: 0, x: 100 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -100 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex justify-center px-10"
+            {/* Seleção do Plano e Formulário PIX */}
+            {!selectedPlan ? (
+              <>
+                {/* Carousel para todos os tamanhos */}
+                <div className="relative py-2"
+                     onMouseEnter={() => setIsPaused(true)}
+                     onMouseLeave={() => setIsPaused(false)}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={selectedPlanIndex}
+                      initial={{ opacity: 0, x: 100 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -100 }}
+                      transition={{ duration: 0.3 }}
+                      className="flex justify-center px-10"
+                    >
+                      {(() => {
+                        const portfolio = portfolios[selectedPlanIndex];
+                        const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
+
+                        return (
+                          <Card className="bg-gray-800 backdrop-blur-sm border-2 border-gray-700 w-full max-w-md overflow-hidden">
+                            {/* Imagem do Produto */}
+                            <div className="relative h-64 overflow-hidden bg-gray-900">
+                              {productImages[portfolio.imageKey] ? (
+                                <img 
+                                  src={productImages[portfolio.imageKey]} 
+                                  alt={portfolio.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                                  <Package className="w-16 h-16 text-gray-600" />
+                                </div>
+                              )}
+                              <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-full font-bold shadow-lg">
+                                RISCO ZERO
+                              </div>
+                            </div>
+
+                            <CardContent className="p-4">
+                              {/* Título e Descrição */}
+                              <h3 className="text-2xl font-bold text-white mb-2">{portfolio.name}</h3>
+                              <p className="text-gray-400 text-sm mb-4">{portfolio.description}</p>
+                              
+                              {/* Cards de Valores */}
+                              <div className="grid grid-cols-2 gap-4 mb-4">
+                                <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
+                                  <p className="text-gray-400 text-sm mb-1">Compra Mínima</p>
+                                  <p className="text-2xl font-bold text-white">
+                                    R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
+                                  </p>
+                                </div>
+                                <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
+                                  <p className="text-gray-400 text-sm mb-1">Lucro Estimado ({portfolio.expectedReturn}%)</p>
+                                  <p className="text-2xl font-bold text-green-400">
+                                    R$ {projection.profit.toLocaleString('pt-BR')}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Informações Inferiores */}
+                              <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
+                                <span>⏱️ Retorno em {portfolio.duration} dias</span>
+                                <span>📦 Gestão 100% nossa</span>
+                              </div>
+
+                              {/* Botão */}
+                              <Button 
+                                className="w-full bg-green-600 hover:bg-green-700 text-base py-3 font-semibold"
+                                onClick={() => {
+                                  setSelectedPlan(portfolio);
+                                  setPixData(null);
+                                }}
+                              >
+                                Comprar Agora
+                                <ArrowRight className="w-5 h-5 ml-2" />
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        );
+                      })()}
+                    </motion.div>
+                  </AnimatePresence>
+
+                  {/* Navigation Arrows */}
+                  <button
+                    onClick={() => setSelectedPlanIndex((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1))}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    onClick={() => setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Indicators */}
+                <div className="flex justify-center gap-2 mt-2">
+                  {portfolios.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedPlanIndex(idx)}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${
+                        idx === selectedPlanIndex 
+                          ? 'w-6 bg-green-500' 
+                          : 'w-1.5 bg-gray-600 hover:bg-gray-500'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : !pixData ? (
+              /* Formulário PIX */
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+              >
+                <div className="text-center mb-4">
+                  <h3 className="text-xl font-bold text-white">{selectedPlan.name}</h3>
+                  <p className="text-2xl font-bold text-green-400 mt-2">
+                    R$ {selectedPlan.minInvestment.toLocaleString('pt-BR')}
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-gray-300">Nome Completo</Label>
+                    <Input
+                      value={pixFormData.name}
+                      onChange={(e) => setPixFormData({...pixFormData, name: e.target.value})}
+                      placeholder="João Silva"
+                      className="bg-gray-700 border-gray-600 text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-300">Telefone</Label>
+                    <Input
+                      value={pixFormData.phone}
+                      onChange={(e) => setPixFormData({...pixFormData, phone: e.target.value})}
+                      placeholder="(11) 99999-9999"
+                      className="bg-gray-700 border-gray-600 text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-300">E-mail</Label>
+                    <Input
+                      value={pixFormData.email}
+                      onChange={(e) => setPixFormData({...pixFormData, email: e.target.value})}
+                      placeholder="joao@email.com"
+                      type="email"
+                      className="bg-gray-700 border-gray-600 text-white"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-gray-300">CPF</Label>
+                    <Input
+                      value={pixFormData.cpf}
+                      onChange={(e) => setPixFormData({...pixFormData, cpf: e.target.value})}
+                      placeholder="000.000.000-00"
+                      className="bg-gray-700 border-gray-600 text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => setSelectedPlan(null)}
+                    variant="outline"
+                    className="flex-1 border-gray-600 text-gray-300"
+                  >
+                    Voltar
+                  </Button>
+                  <Button
+                    onClick={async () => {
+                      const { name, phone, email, cpf } = pixFormData;
+                      if (!name || !phone || !email || !cpf) {
+                        toast.error("Preencha todos os campos");
+                        return;
+                      }
+
+                      setIsProcessing(true);
+                      try {
+                        toast.info("Gerando QR Code PIX...");
+
+                        const tempAuction = await base44.entities.Auction.create({
+                          title: selectedPlan.name,
+                          description: selectedPlan.description,
+                          starting_price: selectedPlan.minInvestment,
+                          current_price: selectedPlan.minInvestment,
+                          increment: 0,
+                          end_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                          status: 'sold',
+                          winner_id: currentUser.id,
+                          winner_name: currentUser.full_name,
+                          order_status: 'awaiting_payment',
+                          is_investment_plan: true,
+                          image_urls: productImages[selectedPlan.imageKey] ? [productImages[selectedPlan.imageKey]] : []
+                        });
+
+                        const response = await createAbacatePayPix({
+                          auction_id: tempAuction.id,
+                          user_name: name,
+                          user_email: email,
+                          user_phone: phone,
+                          user_cpf: cpf
+                        });
+
+                        if (response?.data?.success) {
+                          setPixData(response.data);
+                          toast.success("QR Code gerado com sucesso!");
+                        } else {
+                          toast.error(response?.data?.error || "Erro ao gerar QR Code");
+                        }
+                      } catch (error) {
+                        console.error('❌ Erro:', error);
+                        toast.error("Erro ao processar: " + error.message);
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
+                    disabled={isProcessing}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>📱 Gerar PIX</>
+                    )}
+                  </Button>
+                </div>
+              </motion.div>
+            ) : (
+              /* QR Code PIX */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-4"
+              >
+                <h3 className="text-lg font-bold text-white text-center">💚 Pague com PIX</h3>
+                <div className="bg-white rounded-lg p-4">
+                  <img 
+                    src={pixData.qr_code_base64} 
+                    alt="QR Code PIX" 
+                    className="w-64 h-64 mx-auto"
+                  />
+                </div>
+                <p className="text-sm text-gray-300 text-center">Ou copie o código PIX:</p>
+                <div className="flex gap-2">
+                  <Input
+                    value={pixData.pix_code}
+                    readOnly
+                    className="text-xs bg-gray-700 border-gray-600 text-white"
+                  />
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(pixData.pix_code);
+                      toast.success("Código copiado!");
+                    }}
+                    size="icon"
+                    variant="outline"
+                    className="border-gray-600"
+                  >
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+                <p className="text-2xl font-bold text-green-400 text-center">
+                  R$ {selectedPlan.minInvestment.toLocaleString('pt-BR')}
+                </p>
+
+                <Button
+                  onClick={async () => {
+                    setIsCheckingPayment(true);
+                    try {
+                      toast.info("Verificando pagamento...");
+                      
+                      const response = await checkAbacatePayPix({
+                        billing_id: pixData.billing_id,
+                        auction_id: pixData.auction_id
+                      });
+
+                      if (response?.data?.is_paid || response?.is_paid) {
+                        toast.success("✅ Pagamento confirmado!");
+                        setShowPlansModal(false);
+                        setTimeout(() => {
+                          window.location.reload();
+                        }, 2000);
+                      } else {
+                        toast.info("⏳ Pagamento ainda não identificado. Aguarde e tente novamente.");
+                      }
+                    } catch (error) {
+                      toast.error("Erro ao verificar: " + error.message);
+                    } finally {
+                      setIsCheckingPayment(false);
+                    }
+                  }}
+                  disabled={isCheckingPayment}
+                  className="w-full bg-blue-600 hover:bg-blue-700 font-bold py-4"
                 >
-                  {(() => {
-                    const portfolio = portfolios[selectedPlanIndex];
-                    const projection = calculateProjection(portfolio.minInvestment, portfolio.expectedReturn);
+                  {isCheckingPayment ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>✅ Já efetuei o pagamento</>
+                  )}
+                </Button>
 
-                    return (
-                      <Card className="bg-gray-800 backdrop-blur-sm border-2 border-gray-700 w-full max-w-md overflow-hidden">
-                        {/* Imagem do Produto */}
-                        <div className="relative h-64 overflow-hidden bg-gray-900">
-                          {productImages[portfolio.imageKey] ? (
-                            <img 
-                              src={productImages[portfolio.imageKey]} 
-                              alt={portfolio.name}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                              <Package className="w-16 h-16 text-gray-600" />
-                            </div>
-                          )}
-                          <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-full font-bold shadow-lg">
-                            RISCO ZERO
-                          </div>
-                        </div>
-
-                        <CardContent className="p-4">
-                          {/* Título e Descrição */}
-                          <h3 className="text-2xl font-bold text-white mb-2">{portfolio.name}</h3>
-                          <p className="text-gray-400 text-sm mb-4">{portfolio.description}</p>
-                          
-                          {/* Cards de Valores */}
-                          <div className="grid grid-cols-2 gap-4 mb-4">
-                            <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
-                              <p className="text-gray-400 text-sm mb-1">Compra Mínima</p>
-                              <p className="text-2xl font-bold text-white">
-                                R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
-                              </p>
-                            </div>
-                            <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
-                              <p className="text-gray-400 text-sm mb-1">Lucro Estimado ({portfolio.expectedReturn}%)</p>
-                              <p className="text-2xl font-bold text-green-400">
-                                R$ {projection.profit.toLocaleString('pt-BR')}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Informações Inferiores */}
-                          <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
-                            <span>⏱️ Retorno em {portfolio.duration} dias</span>
-                            <span>📦 Gestão 100% nossa</span>
-                          </div>
-
-                          {/* Botão */}
-                          <Button 
-                            className="w-full bg-green-600 hover:bg-green-700 text-base py-3 font-semibold"
-                            onClick={() => {
-                              setSelectedPlan(portfolio);
-                              setPixData(null);
-                            }}
-                          >
-                            Comprar Agora
-                            <ArrowRight className="w-5 h-5 ml-2" />
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })()}
-                </motion.div>
-              </AnimatePresence>
-
-              {/* Navigation Arrows */}
-              <button
-                onClick={() => setSelectedPlanIndex((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1))}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-
-              <button
-                onClick={() => setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Indicators */}
-            <div className="flex justify-center gap-2 mt-2">
-              {portfolios.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedPlanIndex(idx)}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    idx === selectedPlanIndex 
-                      ? 'w-6 bg-green-500' 
-                      : 'w-1.5 bg-gray-600 hover:bg-gray-500'
-                  }`}
-                />
-              ))}
-            </div>
+                <Button
+                  onClick={() => {
+                    setPixData(null);
+                    setSelectedPlan(null);
+                  }}
+                  variant="outline"
+                  className="w-full border-gray-600 text-gray-300"
+                >
+                  Cancelar
+                </Button>
+              </motion.div>
+            )}
 
 
               </DialogContent>
