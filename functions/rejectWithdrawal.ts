@@ -27,12 +27,13 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Saque já processado' }, { status: 400 });
     }
 
-    // Estorna saldo
+    // Estorna saldo (devolve para ambos os saldos)
     const influencers = await base44.asServiceRole.entities.AppUser.filter({ id: withdrawal.influencer_id });
     if (influencers && influencers.length > 0) {
       const influencer = influencers[0];
       await base44.asServiceRole.entities.AppUser.update(withdrawal.influencer_id, {
-        commission_balance: influencer.commission_balance + withdrawal.amount
+        valora_pay_balance: (influencer.valora_pay_balance || 0) + withdrawal.amount,
+        commission_balance: (influencer.commission_balance || 0) + withdrawal.amount
       });
     }
 
