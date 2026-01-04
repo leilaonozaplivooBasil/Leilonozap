@@ -1312,7 +1312,11 @@ export default function CreateAuction() {
                                 />
                                 
                                 <Button 
-                                  onClick={extractAllData} 
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    if (isProcessing) return;
+                                    extractAllData();
+                                  }}
                                   disabled={isProcessing || !productUrl.trim()}
                                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
                                 >
