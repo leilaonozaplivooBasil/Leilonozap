@@ -895,13 +895,21 @@ const DashboardContent = ({ user, isAdmin }) => {
                   R$ {(user.valora_pay_balance || 0).toFixed(2)}
                 </span>
               </div>
-              <Button
-                onClick={() => setIsAuctionSelectionModalOpen(true)}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <Zap className="w-4 h-4 mr-2" />
-                Usar Saldo em Leilões
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => setIsAuctionSelectionModalOpen(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  <Zap className="w-4 h-4 mr-2" />
+                  Usar Saldo em Leilões
+                </Button>
+                <Button
+                  onClick={() => navigate(createPageUrl("AdminWithdrawals"))}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  💸 Sacar Dinheiro
+                </Button>
+              </div>
             </div>
             
             <div className="relative w-64 h-40 flex items-center justify-center nota-stack-container">

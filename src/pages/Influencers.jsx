@@ -212,21 +212,12 @@ export default function Influencers() {
               <p className="text-sm text-gray-500">3% de comissão a cada compra</p>
             </div>
 
-            <div className="flex gap-3">
-              <Button
-                onClick={() => navigate(createPageUrl("WalletDeposit"))}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4"
-              >
-                💚 Usar Saldo em Leilões
-              </Button>
-              <Button
-                onClick={() => setShowWithdrawalModal(true)}
-                className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-4"
-              >
-                <Wallet className="w-5 h-5 mr-2" />
-                Sacar Dinheiro
-              </Button>
-            </div>
+            <Button
+              onClick={() => navigate(createPageUrl("WalletDeposit"))}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4"
+            >
+              💚 Usar Saldo em Leilões
+            </Button>
           </CardContent>
         </Card>
 
