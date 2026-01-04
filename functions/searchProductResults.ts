@@ -14,25 +14,41 @@ Deno.serve(async (req) => {
         console.log(`🔍 Buscando resultados para: ${productName}`);
 
         const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `BUSCA RIGOROSA: "${productName}"
+            prompt: `BUSQUE NO GOOGLE SHOPPING: "${productName}"
 
-RETORNE UMA LISTA com 5-8 anúncios DIFERENTES do produto:
+        🎯 OBJETIVO: Encontrar 6-8 anúncios REAIS e DIFERENTES do produto
 
-Para cada anúncio, retorne:
-1. title: Título do anúncio
-2. price: Preço aproximado (número)
-3. marketplace: Nome da loja (Mercado Livre, Amazon, etc)
-4. productUrl: URL COMPLETA do anúncio
-5. condition: "Novo", "Usado", ou "Recondicionado"
-6. thumbnailUrl: URL de uma foto do anúncio
-7. rating: Avaliação 0-5 (se houver)
-8. seller: Nome do vendedor
+        📋 PARA CADA ANÚNCIO ENCONTRADO:
+        1. title: Título exato do anúncio
+        2. price: Preço em número (extraia apenas números, ex: 2999.90)
+        3. marketplace: Site (Mercado Livre, Amazon, Shopee, Magazine Luiza, etc)
+        4. productUrl: URL COMPLETA e REAL do anúncio (começando com https://)
+        5. condition: Estado ("Novo", "Usado", ou "Recondicionado")
+        6. thumbnailUrl: URL da imagem do produto
+        7. rating: Nota 0-5 se houver avaliações
+        8. seller: Nome do vendedor/loja
 
-REGRAS:
-- PRIORIZE anúncios com FOTOS CLARAS
-- EVITE acessórios isolados
-- VARIE os marketplaces
-- URLs devem ser REAIS e ACESSÍVEIS`,
+        ⚠️ REGRAS CRÍTICAS:
+        - URLs devem ser REAIS e ACESSÍVEIS (teste antes de retornar)
+        - VARIE os marketplaces (Mercado Livre, Amazon, Shopee, etc)
+        - VARIE os preços (do mais barato ao mais caro)
+        - VARIE os vendedores
+        - NÃO retorne o mesmo anúncio repetido
+        - NÃO invente URLs, use apenas anúncios que você REALMENTE ENCONTROU
+
+        🔍 BUSQUE EM:
+        - Google Shopping
+        - Mercado Livre Brasil
+        - Amazon Brasil
+        - Shopee Brasil
+        - Magazine Luiza
+        - Casas Bahia
+
+        ✅ RETORNE APENAS ANÚNCIOS COM:
+        - URL válida e acessível
+        - Foto do produto
+        - Preço visível
+        - Marketplace confiável`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
