@@ -27,6 +27,19 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Saque já processado' }, { status: 400 });
     }
 
+    // Busca usuário para deduzir saldo
+    const users = await base44.asServiceRole.entities.AppUser.filter({ id: withdrawal.influencer_id });
+    if (!users || users.length === 0) {
+      return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
+    }
+
+    const influencer = users[0];
+
+    // Deduz do saldo na aprovação
+    await base44.asServiceRole.entities.AppUser.update(withdrawal.influencer_id, {
+      commission_balance: (influencer.commission_balance || 0) - withdrawal.amount
+    });
+
     // Atualiza status
     await base44.asServiceRole.entities.WithdrawalRequest.update(withdrawal_id, {
       status: 'completed',
