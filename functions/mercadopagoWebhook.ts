@@ -1,10 +1,11 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+  const base44 = createClientFromRequest(req);
+  
   try {
     console.log('🔔 Webhook recebido do Mercado Pago');
     
-    const base44 = createClientFromRequest(req);
     const url = new URL(req.url);
     
     // Mercado Pago envia notificações via query params
@@ -12,6 +13,14 @@ Deno.serve(async (req) => {
     const id = url.searchParams.get('id');
 
     console.log('📨 Topic:', topic, 'ID:', id);
+
+    await base44.asServiceRole.entities.SystemLog.create({
+      step: 'MERCADOPAGO_WEBHOOK_RECEIVED',
+      status: 'info',
+      message: 'Webhook recebido do Mercado Pago',
+      component_name: 'mercadopagoWebhook',
+      payload: { topic, id }
+    }).catch(() => {});
 
     if (!topic || !id) {
       console.log('⚠️ Notificação sem topic/id');
@@ -24,8 +33,14 @@ Deno.serve(async (req) => {
       return Response.json({ received: true });
     }
 
-    const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
+    const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
     if (!accessToken) {
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'MERCADOPAGO_WEBHOOK_TOKEN_MISSING',
+        status: 'error',
+        message: 'MERCADOPAGO_ACCESS_TOKEN não configurado',
+        component_name: 'mercadopagoWebhook'
+      }).catch(() => {});
       return Response.json({ error: 'Token não configurado' }, { status: 500 });
     }
 
@@ -118,6 +133,15 @@ Deno.serve(async (req) => {
         order_status: orderStatus
       });
       console.log(`📦 Leilão atualizado: ${orderStatus}`);
+
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'MERCADOPAGO_WEBHOOK_AUCTION_UPDATED',
+        status: 'success',
+        message: `Leilão atualizado para ${orderStatus}`,
+        component_name: 'mercadopagoWebhook',
+        entity_id: auctionId,
+        payload: { payment_status: paymentData.status, order_status: orderStatus }
+      }).catch(() => {});
     }
 
     // Atualiza ou cria pagamento
@@ -141,6 +165,15 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Erro no webhook:', error);
+    
+    await base44.asServiceRole.entities.SystemLog.create({
+      step: 'MERCADOPAGO_WEBHOOK_ERROR',
+      status: 'error',
+      message: error.message || 'Erro ao processar webhook',
+      component_name: 'mercadopagoWebhook',
+      error_details: { message: error.message, stack: error.stack }
+    }).catch(() => {});
+    
     return Response.json({ error: error.message }, { status: 500 });
   }
 });

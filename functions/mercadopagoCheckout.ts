@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
@@ -33,8 +33,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Usuário não encontrado' }, { status: 404 });
     }
 
-    const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
+    const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
     if (!accessToken) {
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'MERCADOPAGO_CHECKOUT_TOKEN_MISSING',
+        status: 'error',
+        message: 'MERCADOPAGO_ACCESS_TOKEN não configurado',
+        component_name: 'mercadopagoCheckout'
+      }).catch(() => {});
       return Response.json({ error: 'Mercado Pago não configurado' }, { status: 500 });
     }
 
@@ -102,6 +108,14 @@ Deno.serve(async (req) => {
     const data = await response.json();
     console.log('✅ Preferência criada:', data.id);
 
+    await base44.asServiceRole.entities.SystemLog.create({
+      step: 'MERCADOPAGO_CHECKOUT_SUCCESS',
+      status: 'success',
+      message: 'Preferência de pagamento criada no Mercado Pago',
+      component_name: 'mercadopagoCheckout',
+      payload: { preference_id: data.id, auction_id: auction.id }
+    }).catch(() => {});
+
     // Cria registro de pagamento
     await base44.asServiceRole.entities.Payment.create({
       auction_id: auction.id,
@@ -125,6 +139,18 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('❌ Erro:', error);
+    
+    try {
+      const base44 = createClientFromRequest(req);
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'MERCADOPAGO_CHECKOUT_ERROR',
+        status: 'error',
+        message: error.message || 'Erro ao criar checkout',
+        component_name: 'mercadopagoCheckout',
+        error_details: { message: error.message, stack: error.stack }
+      });
+    } catch {}
+    
     return Response.json({ error: error.message }, { status: 500 });
   }
 });
