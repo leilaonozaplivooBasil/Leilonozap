@@ -97,26 +97,71 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
         if (html) {
             const url = productPageUrl.toLowerCase();
             
-            if (url.includes('mercadolivre')) {
-                const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_[^"'\s<>]+\.(?:jpg|webp)/gi;
-                imageUrls = [...new Set(html.match(regex) || [])];
-            } else if (url.includes('amazon')) {
-                const regex = /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.jpg/gi;
+            if (url.includes('mercadolivre') || url.includes('mercadolibre')) {
+                // Mercado Livre: busca imagens grandes de produto
+                const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:jpg|webp)/gi;
                 imageUrls = [...new Set(html.match(regex) || [])]
-                    .filter(u => !u.includes('_US100_') && !u.includes('_SL75_'));
+                    .filter(u => !u.includes('-O.jpg') && !u.includes('-I.jpg')); // Remove miniaturas
+                    
+            } else if (url.includes('amazon')) {
+                // Amazon: busca imagens originais grandes
+                const regex = /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.(?:jpg|png)/gi;
+                imageUrls = [...new Set(html.match(regex) || [])]
+                    .filter(u => {
+                        const lower = u.toLowerCase();
+                        return !lower.includes('_us100_') && 
+                               !lower.includes('_sl75_') && 
+                               !lower.includes('_ss') &&
+                               !lower.includes('_ac_ul');
+                    });
+                    
             } else if (url.includes('shopee')) {
-                const regex = /https:\/\/[^"'\s<>]*shopee\.com\.br\/[^"'\s<>]+\.(?:jpg|png|webp)/gi;
+                // Shopee: busca imagens de produto
+                const regex = /https:\/\/cf\.shopee\.com\.br\/file\/[A-Za-z0-9_-]+/gi;
+                const altRegex = /https:\/\/down-br\.img\.susercontent\.com\/file\/[A-Za-z0-9_-]+/gi;
+                imageUrls = [...new Set([
+                    ...(html.match(regex) || []),
+                    ...(html.match(altRegex) || [])
+                ])];
+                
+            } else if (url.includes('magazineluiza') || url.includes('magalu')) {
+                // Magazine Luiza: busca imagens de produto
+                const regex = /https:\/\/a-static\.mlcdn\.com\.br\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+                imageUrls = [...new Set(html.match(regex) || [])]
+                    .filter(u => {
+                        const lower = u.toLowerCase();
+                        return !lower.includes('selo') && 
+                               !lower.includes('logo') && 
+                               !lower.includes('banner') &&
+                               u.length > 60;
+                    });
+                    
+            } else if (url.includes('casasbahia')) {
+                // Casas Bahia: busca imagens grandes
+                const regex = /https:\/\/a-static\.mlcdn\.com\.br\/[^"'\s<>]+\/[0-9]+\/[^"'\s<>]+\.(?:jpg|jpeg|png)/gi;
                 imageUrls = [...new Set(html.match(regex) || [])];
+                
+            } else if (url.includes('americanas')) {
+                // Americanas: busca imagens de produto
+                const regex = /https:\/\/images-americanas\.b2w\.io\/produtos\/[^"'\s<>]+\.(?:jpg|png|webp)/gi;
+                imageUrls = [...new Set(html.match(regex) || [])];
+                
             } else {
+                // Fallback genérico: busca imagens grandes
                 const regex = /https?:\/\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
                 imageUrls = [...new Set(html.match(regex) || [])]
                     .filter(u => {
-                        const l = u.toLowerCase();
-                        return !l.includes('logo') && !l.includes('icon') && u.length > 50;
+                        const lower = u.toLowerCase();
+                        return !lower.includes('logo') && 
+                               !lower.includes('icon') && 
+                               !lower.includes('selo') &&
+                               !lower.includes('banner') &&
+                               u.length > 60;
                     });
             }
             
-            imageUrls = imageUrls.slice(0, 10);
+            console.log(`📸 Extraídas ${imageUrls.length} URLs do marketplace`);
+            imageUrls = imageUrls.slice(0, 15); // Aumenta limite para validar mais
         }
 
         console.log(`🖼️ Imagens extraídas do HTML: ${imageUrls.length}`);
@@ -145,14 +190,20 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
 
         console.log(`✅ ${validatedUrls.length} imagens validadas`);
 
+        const detectedMarketplace = 
+            productPageUrl.includes('mercadolivre') || productPageUrl.includes('mercadolibre') ? 'Mercado Livre' :
+            productPageUrl.includes('amazon') ? 'Amazon' :
+            productPageUrl.includes('shopee') ? 'Shopee' :
+            productPageUrl.includes('magazineluiza') || productPageUrl.includes('magalu') ? 'Magazine Luiza' :
+            productPageUrl.includes('casasbahia') ? 'Casas Bahia' :
+            productPageUrl.includes('americanas') ? 'Americanas' : 'Internet';
+        
         return Response.json({
             title: title.substring(0, 200),
             description: (description || 'Produto encontrado').substring(0, 500),
             imageUrls: validatedUrls,
-            marketplace: productPageUrl.includes('mercadolivre') ? 'Mercado Livre' :
-                        productPageUrl.includes('amazon') ? 'Amazon' :
-                        productPageUrl.includes('shopee') ? 'Shopee' :
-                        productPageUrl.includes('magazineluiza') ? 'Magazine Luiza' : 'Internet',
+            marketplace: detectedMarketplace,
+            sourceUrl: productPageUrl,
             searchTerm: productName
         }, { status: 200 });
 
