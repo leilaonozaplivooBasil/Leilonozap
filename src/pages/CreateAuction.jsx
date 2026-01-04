@@ -330,20 +330,19 @@ export default function CreateAuction() {
     }));
   };
 
-  // BUSCA POR NOME DO PRODUTO
+  // 🆕 ETAPA 1: BUSCA E MOSTRA RESULTADOS
   const searchByName = async () => {
     if (!productName || productName.trim().length < 3) {
       toast.error("Digite pelo menos 3 caracteres do nome do produto");
       return;
     }
 
-    setIsSearchingName(true);
-    setManualStep(1);
+    setIsSearchingResults(true);
     setDebugError(null);
 
     try {
-      console.log('🚀 [NOME] Iniciando busca para:', productName);
-      const response = await searchProductByName({ productName: productName.trim() });
+      console.log('🔍 ETAPA 1: Buscando resultados para:', productName);
+      const response = await searchProductResults({ productName: productName.trim() });
 
       console.log('📦 [NOME] Resposta RAW:', response);
       console.log('📦 [NOME] Status:', response?.status);
