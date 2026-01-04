@@ -75,26 +75,20 @@ Se houver preço parcelado E à vista, use o À VISTA.`,
 
         let { title, description, price, image_urls } = extractionResult;
         
-        console.log(`✅ IA retornou: ${image_urls?.length || 0} URLs`);
+        console.log(`✅ IA retornou: ${image_urls?.length || 0} URLs de imagens`);
         
-        // LIMPA E VALIDA URLs
+        // LIMPA URLs (remove duplicatas e URLs inválidas)
         const urlSet = new Set();
-        let imageUrls = (image_urls || [])
+        const imageUrls = (image_urls || [])
             .filter(u => u && typeof u === 'string' && u.startsWith('http'))
-            .map(u => {
-                let cleaned = u.split('?')[0].split('"')[0].split('&quot;')[0].split(' ')[0].trim();
-                cleaned = cleaned.replace(/\/+$/, '');
-                return cleaned;
-            })
+            .map(u => u.split('?')[0].trim().replace(/\/+$/, ''))
             .filter(u => {
-                if (u.length < 20) return false;
-                if (urlSet.has(u)) return false;
+                if (u.length < 20 || urlSet.has(u)) return false;
                 urlSet.add(u);
                 return true;
             });
 
-        console.log(`✅ Dados: título=${!!title}, preço=${price || 'não encontrado'}, desc=${!!description}`);
-        console.log(`🧹 ${imageUrls.length} URLs únicas após limpeza`);
+        console.log(`✅ ${imageUrls.length} URLs únicas prontas para download`);
 
         // Se não encontrou imagens, retorna sem imagens
         if (imageUrls.length === 0) {
