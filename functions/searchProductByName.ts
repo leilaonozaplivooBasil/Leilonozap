@@ -277,6 +277,91 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
 
         console.log(`✅ RESULTADO: ${validatedUrls.length} validadas, ${failedUrls.length} falharam`);
 
+        // 🔥 FALLBACK AUTOMÁTICO: Se < 2 imagens, tenta outros marketplaces
+        if (validatedUrls.length < 2) {
+            console.log('⚠️ Poucas imagens encontradas, tentando fallback...');
+            
+            const triedMarkets = [productPageUrl];
+            const marketsToTry = ['mercado livre', 'amazon', 'shopee'];
+            
+            for (const market of marketsToTry) {
+                if (triedMarkets.some(url => url.toLowerCase().includes(market))) {
+                    console.log(`⏭️ Já tentou ${market}, pulando...`);
+                    continue;
+                }
+                
+                console.log(`🔄 Tentando buscar em ${market}...`);
+                
+                try {
+                    const fallbackResult = await base44.integrations.Core.InvokeLLM({
+                        prompt: `Encontre "${productName}" ESPECIFICAMENTE no site: ${market}.
+Retorne o título, descrição e URL COMPLETA da página do produto.`,
+                        add_context_from_internet: true,
+                        response_json_schema: {
+                            type: "object",
+                            properties: {
+                                title: { type: "string" },
+                                description: { type: "string" },
+                                productPageUrl: { type: "string" }
+                            },
+                            required: ["title", "productPageUrl"]
+                        }
+                    });
+                    
+                    const fallbackUrl = fallbackResult.productPageUrl;
+                    if (!fallbackUrl) continue;
+                    
+                    triedMarkets.push(fallbackUrl);
+                    console.log(`📦 Fallback URL: ${fallbackUrl}`);
+                    
+                    // Extrai imagens do fallback
+                    const fallbackHtml = await fetch(fallbackUrl, {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                            "Accept": "text/html,application/xhtml+xml"
+                        },
+                        signal: AbortSignal.timeout(10000)
+                    }).then(r => r.ok ? r.text() : '').catch(() => '');
+                    
+                    if (!fallbackHtml || fallbackHtml.length < 1000) continue;
+                    
+                    let fallbackImages = [];
+                    const lowerUrl = fallbackUrl.toLowerCase();
+                    
+                    if (lowerUrl.includes('mercado')) {
+                        const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:jpg|webp)/gi;
+                        fallbackImages = [...new Set(fallbackHtml.match(regex) || [])]
+                            .filter(u => !u.includes('-O.jpg'));
+                    } else if (lowerUrl.includes('amazon')) {
+                        const regex = /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.(?:jpg|png)/gi;
+                        fallbackImages = [...new Set(fallbackHtml.match(regex) || [])];
+                    } else if (lowerUrl.includes('shopee')) {
+                        const regex = /https:\/\/cf\.shopee\.com\.br\/file\/[A-Za-z0-9_-]+/gi;
+                        fallbackImages = [...new Set(fallbackHtml.match(regex) || [])];
+                    }
+                    
+                    // Valida imagens do fallback
+                    for (const img of fallbackImages.slice(0, 8)) {
+                        if (validatedUrls.length >= 6) break;
+                        if (await validateImageUrl(img)) {
+                            validatedUrls.push(img);
+                            console.log(`✅ Fallback ${market}: ${img.substring(0, 60)}`);
+                        }
+                    }
+                    
+                    if (validatedUrls.length >= 2) {
+                        console.log(`🎉 Fallback ${market} encontrou imagens!`);
+                        productPageUrl = fallbackUrl;
+                        title = fallbackResult.title || title;
+                        description = fallbackResult.description || description;
+                        break;
+                    }
+                } catch (e) {
+                    console.error(`❌ Fallback ${market} falhou:`, e.message);
+                }
+            }
+        }
+
         const detectedMarketplace = 
             productPageUrl.includes('mercadolivre') || productPageUrl.includes('mercadolibre') ? 'Mercado Livre' :
             productPageUrl.includes('amazon') ? 'Amazon' :
@@ -284,6 +369,15 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
             productPageUrl.includes('magazineluiza') || productPageUrl.includes('magalu') ? 'Magazine Luiza' :
             productPageUrl.includes('casasbahia') ? 'Casas Bahia' :
             productPageUrl.includes('americanas') ? 'Americanas' : 'Internet';
+        
+        if (validatedUrls.length === 0) {
+            return Response.json({
+                error: `Produto encontrado mas sem imagens disponíveis`,
+                suggestion: "Use o importador por URL ou upload manual de imagens",
+                title: title,
+                description: description
+            }, { status: 404 });
+        }
         
         return Response.json({
             title: title.substring(0, 200),
