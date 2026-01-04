@@ -1051,7 +1051,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex-1">
-              <h3 className="text-2xl font-bold text-white mb-2">Seus Ganhos em Dinheiro</h3>
+              <h3 className="text-2xl font-bold text-white mb-2">Saldo Disponível</h3>
               <div className="flex items-baseline gap-3 mb-2">
                 <span className="text-5xl font-bold text-white">
                   R$ {(user.valora_pay_balance || 0).toFixed(2)}
@@ -1331,7 +1331,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             <CardHeader>
               <CardTitle className="text-white">Extrato de Comissões</CardTitle>
               <CardDescription className="text-gray-400">
-                Total acumulado: R$ {(user.commission_balance || 0).toFixed(2)}
+                Total histórico gerado: R$ {(user.total_commissions_generated || 0).toFixed(2)}
               </CardDescription>
             </CardHeader>
             <CardContent>
