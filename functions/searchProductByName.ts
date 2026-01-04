@@ -180,113 +180,144 @@ Deno.serve(async (req) => {
             return Response.json({ error: "Nome do produto obrigatório" }, { status: 400 });
         }
 
-        console.log(`🔍 Buscando: ${productName}`);
+        console.log(`🔍 NOVA ESTRATÉGIA: ${productName}`);
 
-        console.log('🤖 Buscando com IA + Internet...');
+        // 🎯 ETAPA 1: BUSCA INTELIGENTE DE URLs REAIS
+        console.log('🌐 Buscando páginas de produto nos marketplaces...');
         
-        // 🔥 TENTA ATÉ 3 VEZES COM VALIDAÇÃO RIGOROSA
-        let searchResult;
-        let attempts = 0;
-        const maxAttempts = 3;
+        const searchQueries = [
+            `site:produto.mercadolivre.com.br ${productName}`,
+            `site:www.amazon.com.br ${productName}`,
+            `site:shopee.com.br ${productName}`,
+            `${productName} mercado livre`,
+            `${productName} amazon`,
+        ];
         
-        while (attempts < maxAttempts) {
-            attempts++;
-            console.log(`🔄 Tentativa ${attempts}/${maxAttempts}...`);
-            
-            searchResult = await base44.integrations.Core.InvokeLLM({
-                prompt: `BUSCA ULTRA RIGOROSA: "${productName}"
+        const foundUrls = [];
+        
+        for (const query of searchQueries) {
+            try {
+                const searchResult = await base44.integrations.Core.InvokeLLM({
+                    prompt: `Busque na internet: "${query}"
+                    
+Encontre a URL de UM produto individual (não lista de busca).
 
-🎯 OBJETIVO: Encontrar UMA página de PRODUTO INDIVIDUAL (não lista de busca)
+VÁLIDO:
+✅ produto.mercadolivre.com.br/MLB-...
+✅ amazon.com.br/dp/...
+✅ amazon.com.br/.../dp/...
+✅ shopee.com.br/product/...
 
-⚠️ FORMATO DE URL OBRIGATÓRIO - EXEMPLOS VÁLIDOS:
-✅ https://produto.mercadolivre.com.br/MLB-1234567890-iphone-15-pro-256gb
-✅ https://www.amazon.com.br/dp/B0XXXXXXXXX
-✅ https://shopee.com.br/product/123456789/987654321
+INVÁLIDO:
+❌ lista.mercadolivre
+❌ /s?k=
+❌ /search
 
-❌ FORMATOS INVÁLIDOS (NÃO USE):
-❌ https://lista.mercadolivre.com.br/... (LISTA DE BUSCA - ERRADO)
-❌ https://www.amazon.com.br/s?k=... (PÁGINA DE BUSCA - ERRADO)
-❌ https://shopee.com.br/search?keyword=... (BUSCA - ERRADO)
-
-📋 REGRAS:
-1. A URL DEVE ser de UM produto específico (ex: produto.mercadolivre, /dp/, /product/)
-2. Busque o produto PRINCIPAL "${productName}" - NÃO acessórios
-3. REJEITE: carregadores, capas, películas, adaptadores, fones, cabos
-4. O título DEVE conter: "${productName}"
-5. Se não encontrar, retorne title vazio
-
-RETORNE JSON:
-- title: Nome completo do produto (ou "" se não encontrar)
-- description: Especificações
-- productPageUrl: URL de PRODUTO INDIVIDUAL (não lista)`,
-                add_context_from_internet: true,
-                response_json_schema: {
-                    type: "object",
-                    properties: {
-                        title: { type: "string" },
-                        description: { type: "string" },
-                        productPageUrl: { type: "string" }
-                    },
-                    required: ["title", "description", "productPageUrl"]
+Retorne apenas a URL encontrada ou null.`,
+                    add_context_from_internet: true,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            productUrl: { type: ["string", "null"] }
+                        },
+                        required: ["productUrl"]
+                    }
+                });
+                
+                const url = searchResult?.productUrl;
+                if (url && typeof url === 'string' && url.startsWith('http')) {
+                    // Valida formato
+                    const lower = url.toLowerCase();
+                    const isValid = 
+                        (lower.includes('produto.mercadolivre') || lower.includes('articulo.mercadolibre')) ||
+                        (lower.includes('amazon') && (lower.includes('/dp/') || lower.includes('/gp/product/'))) ||
+                        (lower.includes('shopee') && lower.includes('/product/')) ||
+                        lower.includes('magazineluiza.com.br/') ||
+                        lower.includes('casasbahia.com.br/');
+                    
+                    const isInvalidList = 
+                        lower.includes('lista.mercado') ||
+                        lower.includes('/s?k=') ||
+                        lower.includes('/search');
+                    
+                    if (isValid && !isInvalidList && !foundUrls.includes(url)) {
+                        foundUrls.push(url);
+                        console.log(`✅ URL encontrada: ${url.substring(0, 80)}`);
+                        
+                        if (foundUrls.length >= 3) break; // Limita a 3 URLs
+                    }
                 }
-            });
-
-            const { title: resultTitle } = searchResult;
-            
-            if (!resultTitle) {
-                console.log(`❌ Tentativa ${attempts}: Sem título retornado`);
-                if (attempts < maxAttempts) continue;
-                break;
+            } catch (e) {
+                console.log(`⚠️ Busca falhou: ${e.message}`);
             }
-            
-            // 🔥 VALIDAÇÃO RIGOROSA
-            const lowerTitle = resultTitle.toLowerCase();
-            const lowerSearch = productName.toLowerCase();
-            
-            // 🚨 BLOQUEIO BRUTAL DE ACESSÓRIOS
-            const accessoryKeywords = [
-                'carregador', 'charger', 'cabo', 'cable', 'power', 'adapter',
-                'capa', 'case', 'película', 'protetor', 'glass', 'screen',
-                'adaptador', 'fone', 'earphone', 'headphone', 'earbud',
-                'suporte', 'stand', 'holder', 'mount', 'usb', 'plug'
-            ];
-            const isAccessory = accessoryKeywords.some(keyword => lowerTitle.includes(keyword));
-            
-            if (isAccessory) {
-                console.log(`🚫 BLOQUEADO: Acessório - "${resultTitle}"`);
-                if (attempts < maxAttempts) continue;
-                // Força erro se todas tentativas falharam
-                return Response.json({
-                    error: "Sistema encontrou apenas acessórios, não o produto principal",
-                    suggestion: `Tente com mais detalhes: "${productName} 256GB" ou "${productName} preto"`
-                }, { status: 404 });
-            }
-            
-            // Valida se contém palavras-chave do produto
-            const searchWords = lowerSearch.split(' ').filter(w => w.length > 2);
-            const matchCount = searchWords.filter(word => lowerTitle.includes(word)).length;
-            const matchRatio = matchCount / searchWords.length;
-            
-            if (matchRatio < 0.5) {
-                console.log(`❌ Tentativa ${attempts}: Título não corresponde - "${resultTitle}"`);
-                if (attempts < maxAttempts) continue;
-            }
-            
-            console.log(`✅ Validação passou: "${resultTitle}"`);
-            break;
         }
-
-        let { title, description, productPageUrl } = searchResult;
         
-        console.log(`📦 Título final: ${title}`);
-        console.log(`🔗 URL encontrada: ${productPageUrl}`);
-        
-        if (!title || !productPageUrl || title === 'PRODUTO_NAO_ENCONTRADO') {
+        if (foundUrls.length === 0) {
             return Response.json({
-                error: "Produto não encontrado",
-                suggestion: "Tente com marca + modelo (ex: Samsung Galaxy S23)"
+                error: "Nenhuma página de produto encontrada",
+                suggestion: "Tente com mais detalhes: marca + modelo + capacidade"
             }, { status: 404 });
         }
+        
+        console.log(`📦 ${foundUrls.length} URLs para processar`);
+        
+        // 🎯 ETAPA 2: EXTRAI DADOS DE CADA URL USANDO extractDataFromUrl
+        const results = [];
+        
+        for (const url of foundUrls) {
+            try {
+                console.log(`🔄 Extraindo: ${url.substring(0, 60)}...`);
+                
+                // Chama a função extractDataFromUrl que já funciona bem
+                const extractResult = await base44.functions.invoke('extractDataFromUrl', {
+                    productUrl: url
+                });
+                
+                if (extractResult?.data) {
+                    const data = extractResult.data;
+                    
+                    if (data.title && data.imageUrls?.length > 0) {
+                        // Valida se não é acessório
+                        const lower = data.title.toLowerCase();
+                        const accessoryKeywords = [
+                            'carregador', 'charger', 'cabo', 'cable', 'capa', 'case',
+                            'película', 'protetor', 'glass', 'adaptador', 'adapter'
+                        ];
+                        const isAccessory = accessoryKeywords.some(k => lower.includes(k));
+                        
+                        if (!isAccessory) {
+                            results.push({
+                                title: data.title,
+                                description: data.description,
+                                imageUrls: data.imageUrls,
+                                sourceUrl: url,
+                                imageCount: data.imageUrls.length
+                            });
+                            console.log(`✅ Extraído: ${data.title} (${data.imageUrls.length} imgs)`);
+                        } else {
+                            console.log(`🚫 Rejeitado acessório: ${data.title}`);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.log(`❌ Erro ao extrair ${url}: ${e.message}`);
+            }
+        }
+        
+        if (results.length === 0) {
+            return Response.json({
+                error: "Nenhum produto válido foi extraído",
+                suggestion: "Tente usar o importador por URL ou upload manual"
+            }, { status: 404 });
+        }
+        
+        // 🎯 ETAPA 3: SELECIONA O MELHOR RESULTADO
+        results.sort((a, b) => b.imageCount - a.imageCount);
+        const best = results[0];
+        
+        console.log(`🏆 Melhor resultado: ${best.title} com ${best.imageCount} imagens`);
+        
+        let { title, description, productPageUrl } = best;
         
         // AGORA EXTRAI AS IMAGENS DA PÁGINA REAL
         console.log('📸 Extraindo imagens da página...');
