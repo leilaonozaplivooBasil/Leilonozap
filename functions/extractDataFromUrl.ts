@@ -35,20 +35,31 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🤖 USA APENAS IA COM WEB SEARCH (método mais confiável)
-        console.log('🤖 IA buscando produto na web...');
+        // 🆕 USA FUNÇÃO getImageUrlsFromPage PARA EXTRAIR IMAGENS
+        console.log('🖼️ Chamando getImageUrlsFromPage para extrair imagens...');
+        
+        let imageUrls = [];
+        try {
+            const imageResponse = await base44.functions.invoke('getImageUrlsFromPage', { productUrl });
+            imageUrls = imageResponse?.data?.imageUrls || [];
+            console.log(`✅ getImageUrlsFromPage retornou ${imageUrls.length} URLs`);
+        } catch (imgError) {
+            console.log(`⚠️ Erro ao chamar getImageUrlsFromPage: ${imgError.message}`);
+        }
 
-        // 🆕 DUAS CHAMADAS: 1ª para dados, 2ª FORÇADA para imagens
+        // 🆕 EXTRAI DADOS DO PRODUTO COM IA
+        console.log('📝 Extraindo dados do produto...');
+        
         const extractionResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta página do Mercado Livre e extraia:
-${productUrl}
+            prompt: `Acesse: ${productUrl}
 
-RETORNE:
-1. title: Nome completo (marca + modelo + cor)
-2. price: Preço À VISTA em reais como NUMBER
-3. description: Descrição com especificações (150-500 caracteres)
+Extraia e retorne:
+1. title: Nome COMPLETO do produto (marca + modelo + especificações + cor)
+2. price: Preço À VISTA em REAIS como NUMBER (exemplo: 3299.90)
+3. description: Descrição DETALHADA com especificações técnicas (mínimo 200 caracteres)
 
-Seja preciso!`,
+Se houver preço parcelado E à vista, use o À VISTA.
+Seja preciso e completo.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -63,46 +74,18 @@ Seja preciso!`,
 
         let { title, description, price } = extractionResult;
 
-        console.log(`✅ IA (dados): título=${!!title}, preço=${price || 'não encontrado'}, desc=${!!description}`);
+        console.log(`✅ Dados: título=${!!title}, preço=${price || 'não encontrado'}, desc=${!!description}`);
 
-        // 🆕 BUSCA SEPARADA E FORÇADA PARA IMAGENS
-        console.log('🖼️ Buscando imagens separadamente...');
-        
-        const imageResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse: ${productUrl}
-
-Encontre e retorne URLs DIRETAS das imagens DO PRODUTO.
-
-IMPORTANTE:
-- URLs devem começar com https://http2.mlstatic.com/
-- Use versões GRANDES: -F.webp, -F.jpg, -O.jpg (NÃO use -I.jpg ou thumbnails)
-- Retorne NO MÍNIMO 6 URLs DIFERENTES
-- URLs completas e válidas
-
-Exemplo: https://http2.mlstatic.com/D_NQ_NP_2X_988019-MLB52201901945_112022-F.webp`,
-            add_context_from_internet: true,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    imageUrls: { 
-                        type: "array", 
-                        items: { type: "string" },
-                        minItems: 6
-                    }
-                },
-                required: ["imageUrls"]
-            }
-        });
-
-        let imageUrls = (imageResult?.imageUrls || [])
+        // LIMPA E VALIDA URLs
+        imageUrls = (imageUrls || [])
             .filter(u => u && typeof u === 'string' && u.startsWith('http'))
             .map(u => u.split('"')[0].split('&quot;')[0].split(' ')[0].trim())
             .filter((u, i, arr) => arr.indexOf(u) === i)
             .filter(u => u.length > 20);
 
-        console.log(`✅ IA (imagens): ${imageUrls.length} URLs encontradas`);
+        console.log(`🧹 ${imageUrls.length} URLs após limpeza`);
 
-        // Se ainda não encontrou, retorna sem imagens
+        // Se não encontrou imagens, retorna sem imagens
         if (imageUrls.length === 0) {
             console.log('❌ Nenhuma imagem encontrada. Retornando sem imagens.');
             return Response.json({
@@ -115,15 +98,14 @@ Exemplo: https://http2.mlstatic.com/D_NQ_NP_2X_988019-MLB52201901945_112022-F.we
             });
         }
 
-        console.log(`🔍 Processando ${imageUrls.length} imagens do ${marketplace}...`);
+        console.log(`🔍 Processando ${imageUrls.length} imagens...`);
 
-        // 🔥 BAIXA E RE-HOSPEDA IMAGENS (evita bloqueio anti-hotlink)
+        // 🔥 BAIXA E RE-HOSPEDA IMAGENS
         const rehostedUrls = [];
         for (const url of imageUrls.slice(0, 8)) {
             try {
                 console.log(`📥 Baixando: ${url.substring(0, 60)}...`);
 
-                // Baixa a imagem
                 const imgResponse = await fetch(url, {
                     headers: {
                         "User-Agent": getRandomUA(),
@@ -134,22 +116,18 @@ Exemplo: https://http2.mlstatic.com/D_NQ_NP_2X_988019-MLB52201901945_112022-F.we
                 });
 
                 if (!imgResponse.ok) {
-                    console.log(`❌ HTTP ${imgResponse.status}: ${url.substring(0, 60)}`);
+                    console.log(`❌ HTTP ${imgResponse.status}`);
                     continue;
                 }
 
                 const blob = await imgResponse.blob();
 
-                // Cria FormData para upload correto
                 const formData = new FormData();
                 formData.append('file', blob, `image-${Date.now()}-${rehostedUrls.length}.jpg`);
 
-                // Re-hospeda no Base44 usando fetch direto
                 const uploadResponse = await fetch(`${base44.baseUrl}/integrations/Core/UploadFile`, {
                     method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${base44.token}`,
-                    },
+                    headers: { 'Authorization': `Bearer ${base44.token}` },
                     body: formData
                 });
 
@@ -157,13 +135,13 @@ Exemplo: https://http2.mlstatic.com/D_NQ_NP_2X_988019-MLB52201901945_112022-F.we
                     const uploadData = await uploadResponse.json();
                     if (uploadData?.file_url) {
                         rehostedUrls.push(uploadData.file_url);
-                        console.log(`✅ Re-hospedada: ${uploadData.file_url.substring(0, 60)}`);
+                        console.log(`✅ Re-hospedada!`);
                     }
                 } else {
                     console.log(`❌ Upload falhou: ${uploadResponse.status}`);
                 }
             } catch (error) {
-                console.log(`❌ Erro: ${url.substring(0, 60)} - ${error.message}`);
+                console.log(`❌ Erro: ${error.message}`);
             }
         }
 
