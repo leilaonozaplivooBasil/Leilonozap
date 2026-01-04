@@ -550,7 +550,7 @@ export default function CreateAuction() {
         return;
       }
       
-      const { title, description, price, marketplace } = responseData;
+      const { title, description, price, imageUrls, marketplace } = responseData;
       
       if (!title || !description) {
         throw new Error("Dados incompletos");
@@ -558,39 +558,18 @@ export default function CreateAuction() {
       
       setImportedData({ title, description, price });
       
-      toast.info("🖼️ Extraindo URLs das imagens...");
-      let imageUrlsExtracted = [];
+      // 🔥 USA AS IMAGENS JÁ BAIXADAS DO extractDataFromUrl
+      console.log(`✅ ${imageUrls?.length || 0} imagens JÁ RE-HOSPEDADAS pelo backend!`);
       
-      try {
-        const imageResponse = await base44.functions.invoke('getImageUrlsFromPage', { 
-          productUrl: productUrl.trim() 
-        });
-
-        console.log('📦 [IMAGE_URLS] Resposta completa:', imageResponse);
-
-        if (imageResponse?.status === 200 && imageResponse.data?.imageUrls) {
-          imageUrlsExtracted = imageResponse.data.imageUrls || [];
-          console.log(`✅ [IMAGE_URLS] ${imageUrlsExtracted.length} URLs extraídas:`, imageUrlsExtracted);
-          toast.success(`✅ Dados + ${imageUrlsExtracted.length} URLs de imagens extraídos!`);
-        } else {
-          console.warn('⚠️ [IMAGE_URLS] Resposta sem imageUrls');
-          toast.info("✅ Dados extraídos! URLs não encontradas - preencha manualmente.");
-        }
-      } catch (imgError) {
-        console.error('⚠️ Erro ao extrair URLs:', imgError);
-        toast.info("✅ Dados extraídos! Preencha URLs manualmente.");
+      if (imageUrls && imageUrls.length > 0) {
+        toast.success(`✅ Produto + ${imageUrls.length} imagens extraídas e hospedadas!`);
+        setDownloadedImages(imageUrls);
+        setSelectedCoverIndex(0);
+        setManualStep(3); // Pula direto para escolher capa
+      } else {
+        toast.warning("⚠️ Nenhuma imagem encontrada. Use upload manual.");
+        setManualStep(0);
       }
-      
-      // Preenche array com URLs extraídas
-      const filledUrls = [];
-      for (let i = 0; i < 6; i++) {
-        filledUrls.push(imageUrlsExtracted[i] || '');
-      }
-      
-      console.log('📋 [IMAGE_URLS] URLs que vão para o estado:', filledUrls);
-      setExtractedImageUrls(filledUrls);
-      
-      setManualStep(2);
       
     } catch (error) {
       console.error("❌ [URL] ERRO:", error);
