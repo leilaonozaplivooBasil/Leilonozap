@@ -145,34 +145,56 @@ IMPORTANTE: A URL deve ser de uma página REAL que existe.`,
             
         } else if (url.includes('magazineluiza') || url.includes('magalu')) {
             console.log('🛒 Processando Magazine Luiza...');
-            // Busca especificamente imagens de produtos (wx.mlcdn.com.br/produtos)
-            const produtoRegex = /https:\/\/(?:a-static|wx)\.mlcdn\.com\.br\/produtos\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-            const matches = html.match(produtoRegex) || [];
-            console.log(`📸 Regex produtos encontrou ${matches.length} matches`);
             
-            if (matches.length === 0) {
-                // Fallback: busca outros CDNs mas com filtro rigoroso
-                const fallbackRegex = /https:\/\/(?:a-static|wx)\.mlcdn\.com\.br\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
-                const fallbackMatches = html.match(fallbackRegex) || [];
-                console.log(`📸 Fallback encontrou ${fallbackMatches.length} matches`);
-                imageUrls = [...new Set(fallbackMatches)];
-            } else {
+            // ESTRATÉGIA 1: Buscar dentro de JSON embutido (dados estruturados)
+            const jsonRegex = /"images":\s*\[(.*?)\]/s;
+            const jsonMatch = html.match(jsonRegex);
+            
+            if (jsonMatch) {
+                console.log('📦 Encontrado JSON de imagens no HTML');
+                const imageMatches = jsonMatch[1].match(/https:\/\/[^"]+\.(?:jpg|jpeg|png|webp)/gi) || [];
+                console.log(`📸 JSON tinha ${imageMatches.length} URLs`);
+                imageUrls = [...new Set(imageMatches)];
+            }
+            
+            // ESTRATÉGIA 2: Se não achou JSON, busca por padrões de URL
+            if (imageUrls.length === 0) {
+                console.log('🔄 Tentando regex de produtos...');
+                const produtoRegex = /https:\/\/(?:a-static|wx)\.mlcdn\.com\.br\/produtos\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+                const matches = html.match(produtoRegex) || [];
+                console.log(`📸 Produtos: ${matches.length} matches`);
                 imageUrls = [...new Set(matches)];
             }
             
-            // Filtro rigoroso para Magazine Luiza
+            // ESTRATÉGIA 3: Fallback amplo com filtro pesado
+            if (imageUrls.length === 0) {
+                console.log('🔄 Fallback amplo com filtro...');
+                const allRegex = /https:\/\/[^"'\s<>]+\.mlcdn\.com\.br\/[^"'\s<>]+\.(?:jpg|jpeg|png|webp)/gi;
+                const allMatches = html.match(allRegex) || [];
+                console.log(`📸 Todas URLs: ${allMatches.length}`);
+                imageUrls = [...new Set(allMatches)];
+            }
+            
+            // Filtro ULTRA rigoroso
+            const original = imageUrls.length;
             imageUrls = imageUrls.filter(u => {
                 const lower = u.toLowerCase();
-                return !lower.includes('magalu-logo') &&
-                       !lower.includes('selo') && 
-                       !lower.includes('/logo') && 
-                       !lower.includes('banner') &&
-                       !lower.includes('sprite') &&
-                       !lower.includes('icon') &&
-                       !lower.includes('shared/') &&
-                       u.length > 70;
+                const blocked = lower.includes('magalu-logo') ||
+                       lower.includes('selo') || 
+                       lower.includes('/logo') || 
+                       lower.includes('banner') ||
+                       lower.includes('sprite') ||
+                       lower.includes('/icon') ||
+                       lower.includes('shared/') ||
+                       lower.includes('az-request') ||
+                       u.length < 80;
+                       
+                if (blocked) {
+                    console.log(`🚫 Bloqueado: ${u.substring(0, 80)}`);
+                }
+                return !blocked;
             });
-            console.log(`✅ Após filtro rigoroso: ${imageUrls.length} imagens`);
+            console.log(`✅ Filtro: ${original} → ${imageUrls.length} imagens`);
                 
         } else if (url.includes('casasbahia')) {
             console.log('🛒 Processando Casas Bahia...');
