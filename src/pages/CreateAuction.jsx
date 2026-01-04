@@ -7,6 +7,7 @@ const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 import { extractDataFromUrl } from "@/functions/extractDataFromUrl";
 import { importFromUrl } from "@/functions/importFromUrl";
+import { getImageUrlsFromPage } from "@/functions/getImageUrlsFromPage";
 import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +90,11 @@ export default function CreateAuction() {
   const [isImporting, setIsImporting] = useState(false);
   const [importedData, setImportedData] = useState(null);
   const [suggestedProducts, setSuggestedProducts] = useState([]);
+  
+  // 🆕 ESTADOS PARA EXTRAÇÃO DE URLs DE IMAGENS
+  const [isExtractingUrls, setIsExtractingUrls] = useState(false);
+  const [extractedImageUrls, setExtractedImageUrls] = useState([]);
+  const [previewCoverIndex, setPreviewCoverIndex] = useState(0);
 
   // ESTADOS DO LABORATÓRIO DE TESTES
   const [testAuctions, setTestAuctions] = useState([]);
@@ -509,6 +515,60 @@ export default function CreateAuction() {
       setManualStep(0);
     } finally {
       setIsSearchingGtin(false);
+    }
+  };
+
+  // 🆕 NOVA FUNÇÃO: EXTRAIR APENAS URLs DAS IMAGENS (SEM BAIXAR)
+  const extractImageUrlsOnly = async () => {
+    if (!productUrl) {
+      toast.error("Cole a URL do produto primeiro!");
+      return;
+    }
+    
+    setIsExtractingUrls(true);
+    setDebugError(null);
+    
+    try {
+      console.log('🔍 Extraindo URLs de imagens de:', productUrl);
+      toast.info("🔍 Buscando imagens da página...");
+      
+      const response = await base44.functions.invoke('getImageUrlsFromPage', { 
+        productUrl: productUrl.trim() 
+      });
+
+      console.log('📦 Resposta getImageUrlsFromPage:', response);
+
+      if (!response || response.status !== 200) {
+        throw new Error(response?.data?.error || 'Erro ao extrair URLs');
+      }
+
+      const imageUrls = response.data?.imageUrls || [];
+
+      if (imageUrls.length === 0) {
+        toast.warning("⚠️ Nenhuma imagem encontrada na página. Use upload manual.");
+        setIsExtractingUrls(false);
+        return;
+      }
+
+      console.log(`✅ ${imageUrls.length} URLs de imagens extraídas!`);
+      toast.success(`✅ ${imageUrls.length} imagens encontradas!`);
+      
+      setExtractedImageUrls(imageUrls);
+      setPreviewCoverIndex(0);
+      setManualStep(7); // Nova etapa: Preview de URLs extraídas
+      
+    } catch (error) {
+      console.error("❌ Erro ao extrair URLs:", error);
+      toast.error("Erro ao extrair imagens. Tente upload manual.");
+      
+      setDebugError({
+        type: 'extractImageUrls',
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+    } finally {
+      setIsExtractingUrls(false);
     }
   };
 
@@ -1275,23 +1335,43 @@ export default function CreateAuction() {
                                   disabled={isProcessing}
                                 />
                                 
-                                <Button 
-                                  onClick={extractAllData} 
-                                  disabled={isProcessing || !productUrl.trim()}
-                                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
-                                >
-                                  {isProcessing ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                      Extraindo de {selectedMarketplace.name}...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Zap className="w-4 h-4 mr-2" />
-                                      🤖 Extrair de {selectedMarketplace.name}
-                                    </>
-                                  )}
-                                </Button>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Button 
+                                    onClick={extractImageUrlsOnly} 
+                                    disabled={isExtractingUrls || !productUrl.trim()}
+                                    className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-bold"
+                                  >
+                                    {isExtractingUrls ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Extraindo...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ImageIcon className="w-4 h-4 mr-2" />
+                                        🖼️ Extrair Imagens
+                                      </>
+                                    )}
+                                  </Button>
+                                  
+                                  <Button 
+                                    onClick={extractAllData} 
+                                    disabled={isProcessing || !productUrl.trim()}
+                                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
+                                  >
+                                    {isProcessing ? (
+                                      <>
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                        Extraindo...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Zap className="w-4 h-4 mr-2" />
+                                        🤖 Tudo (IA)
+                                      </>
+                                    )}
+                                  </Button>
+                                </div>
                                 
                                 <div className="mt-3 p-2 bg-blue-900/30 rounded-lg border border-blue-500/30">
                                   <p className="text-xs text-blue-300">
@@ -1514,6 +1594,113 @@ export default function CreateAuction() {
                         <Button onClick={applyToForm} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
                           🚀 Aplicar Dados no Formulário
                         </Button>
+                      </div>
+                    )}
+
+                    {/* 🆕 ETAPA 7: PREVIEW DE URLs EXTRAÍDAS */}
+                    {manualStep === 7 && extractedImageUrls.length > 0 && (
+                      <div className="bg-purple-900/30 p-4 rounded-lg border border-purple-700">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-bold text-purple-300 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            🖼️ Preview das Imagens Encontradas
+                          </h4>
+                          <span className="text-xs text-purple-400 bg-purple-900/40 px-3 py-1 rounded-full">
+                            {extractedImageUrls.length} imagem{extractedImageUrls.length !== 1 ? 'ns' : ''}
+                          </span>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
+                          {extractedImageUrls.map((url, index) => (
+                            <div
+                              key={index}
+                              className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 ${
+                                previewCoverIndex === index 
+                                  ? 'border-purple-500 ring-2 ring-purple-500/30 scale-105' 
+                                  : 'border-gray-700 hover:border-purple-600'
+                              }`}
+                              onClick={() => setPreviewCoverIndex(index)}
+                            >
+                              <div className="w-full h-28 bg-gray-900 flex items-center justify-center">
+                                <img 
+                                  src={url} 
+                                  alt={`Preview ${index + 1}`} 
+                                  className="max-w-full max-h-full object-contain"
+                                  crossOrigin="anonymous"
+                                  loading="eager"
+                                  onError={(e) => {
+                                    console.error(`❌ Erro ao carregar imagem ${index + 1}:`, url);
+                                    e.target.style.display = 'none';
+                                    if (e.target.parentElement) {
+                                      e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs text-center p-2">❌ Inválida</div>`;
+                                    }
+                                  }}
+                                />
+                              </div>
+                              
+                              <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full pointer-events-none">
+                                {index + 1}
+                              </div>
+                              
+                              {previewCoverIndex === index && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-purple-500/40 backdrop-blur-[2px] text-white font-bold text-sm pointer-events-none">
+                                  ✅ CAPA
+                                </div>
+                              )}
+                              
+                              {previewCoverIndex !== index && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium pointer-events-none">
+                                  Clique para capa
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => {
+                              setManualStep(0);
+                              setExtractedImageUrls([]);
+                              setPreviewCoverIndex(0);
+                            }}
+                            variant="outline"
+                            className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
+                          >
+                            Cancelar
+                          </Button>
+                          <Button 
+                            onClick={() => {
+                              // Aplica URLs no formulário com a capa primeiro
+                              let finalImages = [];
+                              finalImages.push(extractedImageUrls[previewCoverIndex]);
+                              extractedImageUrls.forEach((img, i) => {
+                                if (i !== previewCoverIndex) finalImages.push(img);
+                              });
+                              finalImages = finalImages.slice(0, 5);
+                              
+                              while (finalImages.length < 5) {
+                                finalImages.push("");
+                              }
+                              
+                              setFormData(prev => ({
+                                ...prev,
+                                image_urls: finalImages
+                              }));
+                              
+                              setManualStep(0);
+                              setExtractedImageUrls([]);
+                              setPreviewCoverIndex(0);
+                              setProductUrl("");
+                              
+                              toast.success(`✅ ${finalImages.filter(u => u).length} imagens aplicadas no formulário!`);
+                            }}
+                            className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+                          >
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            ✅ Confirmar e Aplicar
+                          </Button>
+                        </div>
                       </div>
                     )}
 
