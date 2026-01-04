@@ -56,62 +56,43 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🔥 FETCH DO HTML PRIMEIRO
-        console.log('📥 Baixando HTML da página...');
-        let html = '';
-        try {
-            const resp = await fetch(productUrl, {
-                headers: {
-                    "User-Agent": getRandomUA(),
-                    "Accept": "text/html",
-                    "Accept-Language": "pt-BR"
-                },
-                signal: AbortSignal.timeout(15000)
-            });
-
-            if (resp.ok) {
-                html = await resp.text();
-                console.log(`✅ HTML: ${html.length} chars`);
-            }
-        } catch (e) {
-            console.log('❌ Erro ao buscar HTML:', e.message);
-        }
-
-        // EXTRAI IMAGENS DO HTML VIA REGEX (mais confiável)
-        let imageUrls = [];
-        if (html && marketplace === 'mercadolivre') {
-            const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_\d+-[A-Z]{3}\d+_[A-Z]\.(?:jpg|webp)/gi;
-            const matches = html.match(regex) || [];
-            imageUrls = [...new Set(matches)]
-                .map(u => u.replace(/_[VSWT]\./, '_O.'))
-                .slice(0, 10);
-            console.log(`📸 Regex encontrou ${imageUrls.length} imagens do HTML`);
-        }
-
-        // USA IA APENAS PARA TÍTULO E DESCRIÇÃO
-        console.log('🤖 IA extraindo título e descrição...');
+        // 🤖 USA IA PARA EXTRAIR TUDO DE UMA VEZ
+        console.log('🤖 IA extraindo título, descrição e imagens...');
 
         const extractionResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta URL e extraia APENAS o título e descrição do produto:
+            prompt: `Acesse esta URL e extraia os dados completos do produto:
         ${productUrl}
 
         RETORNE em português brasileiro:
         1. Título do produto (texto limpo, sem HTML)
-        2. Descrição detalhada com especificações (6-10 linhas)`,
+        2. Descrição detalhada com especificações técnicas (6-10 linhas)
+        3. URLs diretas das imagens do produto (TODAS as imagens disponíveis)
+
+        IMPORTANTE para Mercado Livre:
+        - As URLs devem começar com https://http2.mlstatic.com/D_NQ_NP_
+        - Use URLs GRANDES/ORIGINAIS que terminam com _O.jpg ou _O.webp
+        - NÃO use miniaturas (_V, _S, _T)
+        - Retorne pelo menos 5-8 URLs se disponível
+
+        Retorne JSON estruturado.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
-                    description: { type: "string" }
+                    description: { type: "string" },
+                    imageUrls: {
+                        type: "array",
+                        items: { type: "string" }
+                    }
                 },
-                required: ["title", "description"]
+                required: ["title", "description", "imageUrls"]
             }
         });
 
-        let { title, description } = extractionResult;
+        let { title, description, imageUrls } = extractionResult;
 
-        console.log(`🤖 IA retornou: título=${!!title}, desc=${!!description}`);
+        console.log(`🤖 IA retornou: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
         // LIMPA URLs
         imageUrls = (imageUrls || [])
