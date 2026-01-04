@@ -8,10 +8,9 @@ const AppUser = base44.entities.AppUser;
 import { extractDataFromUrl } from "@/functions/extractDataFromUrl";
 import { searchProductByGTIN } from "@/functions/searchProductByGTIN";
 import { searchProductByName } from "@/functions/searchProductByName";
-import { searchProductResults } from "@/functions/searchProductResults";
 import { importFromUrl } from "@/functions/importFromUrl";
 import { Button } from "@/components/ui/button";
-import ProductResultsModal from "../components/auction/ProductResultsModal";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -95,10 +94,7 @@ export default function CreateAuction() {
   const [isProcessingTest, setIsProcessingTest] = useState(false);
   const [isResettingTestValora, setIsResettingTestValora] = useState(false);
 
-  // 🆕 ESTADOS PARA FLUXO DE 2 ETAPAS
-  const [showResultsModal, setShowResultsModal] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  const [isSearchingResults, setIsSearchingResults] = useState(false);
+
 
   // CORREÇÃO DEFINITIVA: Lógica de autenticação robusta, igual à do Layout.
   const loadCurrentUser = useCallback(async () => {
@@ -330,19 +326,22 @@ export default function CreateAuction() {
     }));
   };
 
-  // 🆕 ETAPA 1: BUSCA E MOSTRA RESULTADOS
+  // BUSCA DIRETA POR NOME (fluxo único)
   const searchByName = async () => {
     if (!productName || productName.trim().length < 3) {
       toast.error("Digite pelo menos 3 caracteres do nome do produto");
       return;
     }
 
-    setIsSearchingResults(true);
+    setIsSearchingName(true);
+    setManualStep(1);
     setDebugError(null);
 
     try {
-      console.log('🔍 ETAPA 1: Buscando resultados para:', productName);
-      const response = await searchProductResults({ productName: productName.trim() });
+      console.log('🔍 Buscando produto:', productName);
+      const response = await searchProductByName({ productName: productName.trim() });
+
+      console.log('📦 Resposta:', response);
 
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro na busca');
@@ -350,112 +349,31 @@ export default function CreateAuction() {
 
       const data = response.data;
 
-      if (data.error || !data.results || data.results.length === 0) {
-        toast.error("Nenhum resultado encontrado. Tente outro termo.");
-        setIsSearchingResults(false);
-        return;
-      }
-
-      console.log(`✅ ${data.results.length} anúncios encontrados`);
-      setSearchResults(data.results);
-      setShowResultsModal(true);
-      
-    } catch (error) {
-      console.error("❌ Erro na busca:", error);
-      toast.error(`❌ Erro: ${error.message}`);
-    } finally {
-      setIsSearchingResults(false);
-    }
-  };
-
-  // 🆕 ETAPA 2: IMPORTA PRODUTO SELECIONADO
-  const handleImportProduct = async (productUrl) => {
-    setShowResultsModal(false);
-    setManualStep(1);
-    setIsSearchingName(true);
-
-    const diagnosticData = {
-      url: productUrl,
-      timestamp: new Date().toISOString(),
-      steps: []
-    };
-
-    try {
-      console.log('📥 ETAPA 2: Importando produto de:', productUrl);
-      toast.info("🤖 Extraindo dados do anúncio...");
-      diagnosticData.steps.push({ step: 'inicio', status: 'ok' });
-
-      const response = await importFromUrl({ productUrl });
-      diagnosticData.steps.push({ step: 'requisicao', status: response?.status || 'erro', data: response?.data });
-
-      if (!response || response.status !== 200) {
-        diagnosticData.steps.push({ step: 'erro_status', status: response?.status });
-        throw new Error(response?.data?.error || 'Erro na importação');
-      }
-
-      const data = response.data;
-
-      if (data.error) {
-        diagnosticData.steps.push({ step: 'erro_backend', error: data.error });
-        toast.error(data.error);
+      if (!data?.found) {
+        toast.error(`❌ Produto "${productName}" não encontrado`);
         setManualStep(0);
         setIsSearchingName(false);
         return;
       }
 
-      const { title, description, imageUrls, price } = data;
-      diagnosticData.steps.push({ 
-        step: 'dados_extraidos', 
-        title, 
-        imageCount: imageUrls?.length || 0,
-        imageUrls: imageUrls?.slice(0, 3) // primeiras 3 para debug
-      });
+      const productTitle = data.title || "Produto";
+      const productDesc = data.description || `Produto encontrado: ${productName}`;
 
-      console.log('📊 DIAGNÓSTICO IMPORTAÇÃO:');
-      console.log(`   Título: ${title}`);
-      console.log(`   Imagens retornadas: ${imageUrls?.length || 0}`);
-      console.log(`   Tipo imageUrls: ${typeof imageUrls}, isArray: ${Array.isArray(imageUrls)}`);
-      if (imageUrls && imageUrls.length > 0) {
-        console.log(`   Primeira URL: ${imageUrls[0]}`);
-      }
+      console.log(`✅ Título: ${productTitle}`);
+      console.log(`🖼️ Imagens: ${data.imageUrls?.length || 0}`);
 
-      setExtractedData({ title, description });
-      setFormData(prev => ({ 
-        ...prev, 
-        title, 
-        description,
-        starting_price: price ? (price * 0.3).toFixed(2) : "",
-        source_url: productUrl
-      }));
+      setExtractedData({ title: productTitle, description: productDesc });
+      setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
 
-      const validUrls = (imageUrls || []).filter(url => url && typeof url === 'string' && url.trim().length > 0);
-      diagnosticData.steps.push({ step: 'validacao_urls', validCount: validUrls.length });
+      const validUrls = (data.imageUrls || [])
+        .filter(url => url && typeof url === 'string' && url.trim());
 
       if (validUrls.length === 0) {
-        console.error('❌ FALHA CRÍTICA: Nenhuma imagem extraída!');
-        console.error('Diagnóstico completo:', JSON.stringify(diagnosticData, null, 2));
-        
-        // POPUP DE DIAGNÓSTICO
-        toast.error(
-          `⚠️ Produto importado mas SEM IMAGENS!\n\n` +
-          `📦 Título: ${title.substring(0, 40)}...\n` +
-          `🔗 URL: ${productUrl.substring(0, 40)}...\n` +
-          `❌ Imagens encontradas: 0\n\n` +
-          `💡 Solução: Use "Upload Manual de Imagens"`,
-          { duration: 8000 }
-        );
-        
-        setDebugError({
-          type: 'importacao_sem_imagens',
-          message: `Importado "${title}" mas backend não retornou imagens`,
-          diagnostic: diagnosticData,
-          timestamp: new Date().toISOString()
-        });
-        
+        toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
+        setProductName("");
         setManualStep(0);
       } else {
-        console.log(`✅ SUCESSO: ${validUrls.length} imagens validadas`);
-        toast.success(`✅ Importado com ${validUrls.length} imagens!`);
+        toast.success(`✅ ${validUrls.length} imagens encontradas!`);
         setDownloadedImages(validUrls);
         setCoverIndex(0);
         setManualStep(5);
@@ -464,17 +382,16 @@ export default function CreateAuction() {
       setProductName("");
       
     } catch (error) {
-      console.error("❌ ERRO CRÍTICO:", error);
-      diagnosticData.steps.push({ step: 'erro_catch', error: error.message, stack: error.stack });
+      console.error("❌ Erro:", error);
       
       setDebugError({
-        type: 'importacao_erro',
+        type: 'searchByName',
         message: error.message,
-        diagnostic: diagnosticData,
+        stack: error.stack,
         timestamp: new Date().toISOString()
       });
       
-      toast.error(`❌ Falha na importação: ${error.message}`);
+      toast.error(`❌ Erro: ${error.message}`);
       setManualStep(0);
     } finally {
       setIsSearchingName(false);
@@ -1035,9 +952,9 @@ export default function CreateAuction() {
                           <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
                           <Label htmlFor="productName" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
                             <Zap className="w-4 h-4" />
-                            🌐 Buscar Produto na Internet (Apenas o Nome)
+                            🌐 Buscar na Internet (Apenas o Nome)
                           </Label>
-                          
+
                           <Input
                             id="productName"
                             value={productName}
@@ -1054,28 +971,26 @@ export default function CreateAuction() {
 
                           <Button 
                             onClick={searchByName} 
-                            disabled={isSearchingResults || !productName.trim()}
+                            disabled={isSearchingName || !productName.trim()}
                             className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                           >
-                            {isSearchingResults ? (
+                            {isSearchingName ? (
                               <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Buscando anúncios...
+                                Buscando produto...
                               </>
                             ) : (
                               <>
                                 <Zap className="w-4 h-4 mr-2" />
-                                🔍 Buscar Anúncios
+                                🔍 Buscar e Importar
                               </>
                             )}
                           </Button>
-                          
+
                           <div className="mt-3 p-2 bg-purple-900/30 rounded-lg border border-purple-700/50">
                             <p className="text-xs text-purple-300 flex items-center gap-2">
                               <span className="text-base">✨</span>
-                              <span><strong>Novo fluxo em 2 etapas:</strong><br/>
-                              1️⃣ Busca mostra lista de anúncios<br/>
-                              2️⃣ Você escolhe qual importar!</span>
+                              <span>IA busca o produto na internet e importa automaticamente!</span>
                             </p>
                           </div>
                           </div>
