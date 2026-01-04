@@ -205,19 +205,33 @@ export default function MyWinningsPage() {
 
             console.log('📦 Resposta completa:', response);
 
-            if (response?.data?.success) {
+            // ✅ Verifica sucesso corretamente
+            if (response?.data?.success === true) {
+                console.log('✅ PIX gerado com sucesso');
                 setPixData(response.data);
                 toast.success("QR Code gerado com sucesso!");
+                
+                // Log de sucesso
+                await base44.entities.SystemLog.create({
+                    step: 'PIX_GENERATION_SUCCESS',
+                    status: 'success',
+                    message: 'PIX gerado com sucesso',
+                    component_name: 'MyWinnings',
+                    entity_id: selectedAuction.id,
+                    payload: { auction_id: selectedAuction.id, billing_id: response.data.billing_id },
+                    user_agent: navigator.userAgent,
+                    url: window.location.href
+                }).catch(() => {});
             } else {
+                console.error('❌ Resposta indica falha:', response);
                 const errorMsg = response?.data?.error || response?.error || "Erro ao gerar QR Code";
-                console.error('❌ Erro AbacatePay:', errorMsg);
                 toast.error(errorMsg);
 
                 // Log do erro no SystemLog
                 await base44.entities.SystemLog.create({
-                    step: 'PIX_GENERATION_FRONTEND_ERROR',
+                    step: 'PIX_GENERATION_BACKEND_ERROR',
                     status: 'error',
-                    message: 'Falha ao gerar PIX no frontend',
+                    message: 'Backend indicou falha na geração do PIX',
                     component_name: 'MyWinnings',
                     error_details: { response },
                     payload: { auction_id: selectedAuction.id, name, email },
@@ -231,9 +245,9 @@ export default function MyWinningsPage() {
 
             // Log da exceção no SystemLog
             await base44.entities.SystemLog.create({
-                step: 'PIX_GENERATION_FRONTEND_EXCEPTION',
+                step: 'PIX_GENERATION_API_EXCEPTION',
                 status: 'error',
-                message: error.message || 'Exceção durante geração de PIX',
+                message: error.message || 'Exceção durante chamada de API',
                 component_name: 'MyWinnings',
                 error_details: {
                     stack: error.stack,
