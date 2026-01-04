@@ -55,11 +55,12 @@ Retorne APENAS JSON.`,
 - description: descrição completa
 - price_range: faixa de preço em R$ (ex: "R$ 100-150")
 - specifications: objeto com especificações técnicas
-- images: lista de URLs COMPLETAS de imagens de produto (até 8)
+- images: lista de URLs COMPLETAS de imagens de produto em ALTA RESOLUÇÃO (busque até 12 imagens diferentes, incluindo variações de ângulo e cor)
 - gtin: código de barras se encontrar
 
+🎯 PRIORIDADE MÁXIMA: Encontrar o MÁXIMO de imagens possível do produto.
 Priorize sites como Amazon, Mercado Livre, Magazine Luiza.
-IMPORTANTE: URLs de imagens devem ser completas (começar com http/https).
+IMPORTANTE: URLs de imagens devem ser completas (começar com http/https) e de ALTA QUALIDADE.
 Retorne APENAS JSON.`,
       add_context_from_internet: true,
       response_json_schema: {
@@ -80,7 +81,7 @@ Retorne APENAS JSON.`,
     // BAIXAR E HOSPEDAR IMAGENS NO BASE44
     const imageUrlsToDownload = [imageUrl, ...(webSearch.images || [])]
       .filter(url => url && typeof url === 'string' && url.startsWith('http') && !url.includes('...'))
-      .slice(0, 8);
+      .slice(0, 12);
 
     console.log(`📥 Baixando ${imageUrlsToDownload.length} imagens...`);
 
@@ -104,8 +105,8 @@ Retorne APENAS JSON.`,
         
         const blob = await imgResponse.blob();
         
-        // Aceita imagens maiores que 1KB
-        if (blob.size < 1000) {
+        // Aceita qualquer imagem acima de 500 bytes
+        if (blob.size < 500) {
           console.log(`⚠️ Muito pequena (${blob.size} bytes)`);
           continue;
         }
@@ -126,7 +127,7 @@ Retorne APENAS JSON.`,
             uploadedUrls.push(signedResult.signed_url);
             console.log(`✅ Hospedada (${uploadedUrls.length}/${imageUrlsToDownload.length})`);
             
-            if (uploadedUrls.length >= 6) break;
+            if (uploadedUrls.length >= 8) break;
           }
         }
         
