@@ -402,6 +402,7 @@ export default function Home() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     
+    // Só processa se realmente tiver o parâmetro payment=success
     if (urlParams.get('payment') === 'success') {
       const auctionId = urlParams.get('auction_id');
       if (auctionId) {
@@ -412,8 +413,6 @@ export default function Home() {
         setTimeout(() => {
           setShowTrackButton(true);
         }, 5000);
-        
-        return;
       }
     }
   }, []);
