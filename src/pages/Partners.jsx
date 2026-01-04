@@ -329,7 +329,6 @@ export default function PartnersPage() {
   };
 
   const handleLoginClick = () => {
-    sessionStorage.setItem('loginFromPartners', 'true');
     setShowLoginModal(true);
   };
 
