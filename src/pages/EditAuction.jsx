@@ -315,6 +315,9 @@ export default function EditAuction() {
             
             setIsSaving(false);
             
+            // 🆕 LIMPA FLAGS DE REDIRECIONAMENTO
+            sessionStorage.removeItem('loginFromPartners');
+            
             if (isReactivating) {
                 alert("✅ Leilão REATIVADO com sucesso! Status: ATIVO. (Você será redirecionado para a sala do leilão)");
                 navigate(createPageUrl("AuctionRoom") + `?id=${auctionId}`, { replace: true });
