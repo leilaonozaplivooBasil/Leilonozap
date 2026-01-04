@@ -1163,7 +1163,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <StatCard
             icon={BarChart}
             label="Comissões Geradas"
-            value={`R$ ${(user.total_commissions_generated || 0).toFixed(2)}`}
+            value={`R$ ${(user.commission_balance || 0).toFixed(2)}`}
             onClick={() => setViewingCommissionsFor(user)}
           />
       </div>
@@ -1331,7 +1331,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             <CardHeader>
               <CardTitle className="text-white">Extrato de Comissões</CardTitle>
               <CardDescription className="text-gray-400">
-                Total histórico gerado: R$ {(user.total_commissions_generated || 0).toFixed(2)}
+                Total acumulado: R$ {(user.commission_balance || 0).toFixed(2)}
               </CardDescription>
             </CardHeader>
             <CardContent>
