@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
     // Cria solicitação (NÃO deduz do saldo ainda - só na aprovação)
     console.log('📝 Criando solicitação de saque...');
     const withdrawal = await base44.asServiceRole.entities.WithdrawalRequest.create({
-      influencer_id: user.id,
+      influencer_id: currentUser.id,
       amount: amount,
       status: 'pending',
       pix_key: pix_key,
