@@ -437,6 +437,10 @@ export default function EditAuction() {
             await Auction.delete(auctionId);
             
             setIsDeleting(false);
+            
+            // 🆕 LIMPA FLAGS DE REDIRECIONAMENTO
+            sessionStorage.removeItem('loginFromPartners');
+            
             alert("✅ Leilão excluído com sucesso!");
             
             navigate(createPageUrl("Home"), { replace: true });
