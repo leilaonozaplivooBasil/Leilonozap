@@ -315,9 +315,6 @@ export default function EditAuction() {
             
             setIsSaving(false);
             
-            // 🆕 LIMPA FLAGS DE REDIRECIONAMENTO
-            sessionStorage.removeItem('loginFromPartners');
-            
             if (isReactivating) {
                 alert("✅ Leilão REATIVADO com sucesso! Status: ATIVO. (Você será redirecionado para a sala do leilão)");
                 navigate(createPageUrl("AuctionRoom") + `?id=${auctionId}`, { replace: true });
@@ -402,10 +399,6 @@ export default function EditAuction() {
             console.log(`✅ Leilão reativado com sucesso!`);
             
             setIsReactivating(false);
-            
-            // 🆕 LIMPA FLAGS DE REDIRECIONAMENTO
-            sessionStorage.removeItem('loginFromPartners');
-            
             alert(`✅ Leilão reativado!\n\n- ${deletedCount} mensagens removidas\n- Status: ATIVO\n- Histórico de lances mantido\n- Termina: ${new Date(utcEndTimeString).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
             
             // Redireciona para a sala do leilão
@@ -437,10 +430,6 @@ export default function EditAuction() {
             await Auction.delete(auctionId);
             
             setIsDeleting(false);
-            
-            // 🆕 LIMPA FLAGS DE REDIRECIONAMENTO
-            sessionStorage.removeItem('loginFromPartners');
-            
             alert("✅ Leilão excluído com sucesso!");
             
             navigate(createPageUrl("Home"), { replace: true });
