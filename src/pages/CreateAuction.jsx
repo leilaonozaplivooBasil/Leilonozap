@@ -990,18 +990,18 @@ export default function CreateAuction() {
 
                           <Button 
                             onClick={searchByName} 
-                            disabled={isSearchingName || !productName.trim()}
+                            disabled={isSearchingResults || !productName.trim()}
                             className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                           >
-                            {isSearchingName ? (
+                            {isSearchingResults ? (
                               <>
                                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Buscando na internet...
+                                Buscando anúncios...
                               </>
                             ) : (
                               <>
                                 <Zap className="w-4 h-4 mr-2" />
-                                🌐 Buscar na Internet
+                                🔍 Buscar Anúncios
                               </>
                             )}
                           </Button>
