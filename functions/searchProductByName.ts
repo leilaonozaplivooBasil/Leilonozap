@@ -126,25 +126,32 @@ Se só encontrar acessórios ou páginas de busca: found = false`,
                     continue;
                 }
                 
-                // Converte Blob → File (compatível com UploadFile em Deno)
+                // Converte Blob → ArrayBuffer → File
                 const arrayBuffer = await blob.arrayBuffer();
                 
-                // Cria File object com nome único
                 const fileName = `product_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
                 const file = new File([arrayBuffer], fileName, { 
                     type: blob.type || 'image/jpeg' 
                 });
                 
-                console.log(`📤 Enviando arquivo: ${fileName} (${blob.size} bytes)`);
+                console.log(`📤 Upload ${fileName} (${blob.size} bytes)`);
                 
-                // Upload para Base44
-                const uploadResult = await base44.integrations.Core.UploadFile({ file });
+                // Upload para storage privado
+                const uploadResult = await base44.asServiceRole.integrations.Core.UploadPrivateFile({ file });
                 
-                if (uploadResult?.file_url) {
-                    uploadedUrls.push(uploadResult.file_url);
-                    console.log(`✅ Salva: ${uploadResult.file_url}`);
+                if (uploadResult?.file_uri) {
+                    // Cria signed URL de 1 ano
+                    const signedResult = await base44.asServiceRole.integrations.Core.CreateFileSignedUrl({
+                        file_uri: uploadResult.file_uri,
+                        expires_in: 31536000 // 365 dias
+                    });
                     
-                    if (uploadedUrls.length >= 6) break; // Máximo 6 imagens
+                    if (signedResult?.signed_url) {
+                        uploadedUrls.push(signedResult.signed_url);
+                        console.log(`✅ Hospedada com sucesso`);
+                        
+                        if (uploadedUrls.length >= 6) break;
+                    }
                 }
                 
             } catch (err) {
