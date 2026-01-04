@@ -56,44 +56,62 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🔥 MÉTODO HÍBRIDO: Fetch + Screenshot IA
-        console.log('🤖 Tentando extrair via Screenshot IA...');
+        // 🤖 USA IA PARA TÍTULO E DESCRIÇÃO + REGEX PARA IMAGENS
+        console.log('🤖 IA extraindo título e descrição...');
 
-        const screenshotResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Analise o SCREENSHOT desta página de produto e extraia:
+        const extractionResult = await base44.integrations.Core.InvokeLLM({
+            prompt: `Acesse esta URL e extraia os dados do produto:
+        ${productUrl}
 
-        1. Título EXATO do produto (sem HTML, apenas texto)
-        2. Descrição detalhada com especificações (6-10 linhas em português)
-        3. TODAS as URLs das imagens do produto que você conseguir ver na página
+        RETORNE em português brasileiro:
+        1. Título EXATO do produto (texto limpo, sem HTML)
+        2. Descrição detalhada com especificações técnicas (6-10 linhas)
 
-        ATENÇÃO ESPECIAL para as imagens do Mercado Livre:
-        - Procure com ATENÇÃO por URLs que começam com: https://http2.mlstatic.com/D_NQ_NP_
-        - São URLs GRANDES (terminam com _O.jpg ou _O.webp)
-        - Veja na lateral esquerda e na área principal
-        - Retorne pelo menos 5-8 URLs diferentes se disponível
-        - NÃO retorne miniaturas pequenas
-
-        URL da página: ${productUrl}
-
-        Retorne JSON estruturado.`,
-            file_urls: [productUrl],
+        IMPORTANTE: Seja preciso e completo na descrição.`,
+            add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
                     title: { type: "string" },
-                    description: { type: "string" },
-                    imageUrls: {
-                        type: "array",
-                        items: { type: "string" }
-                    }
+                    description: { type: "string" }
                 },
-                required: ["title", "description", "imageUrls"]
+                required: ["title", "description"]
             }
         });
 
-        let { title, description, imageUrls } = screenshotResult;
+        let { title, description } = extractionResult;
+        console.log(`🤖 IA: título=${!!title}, desc=${!!description}`);
 
-        console.log(`🤖 Screenshot IA retornou: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
+        // 📸 EXTRAI IMAGENS VIA REGEX DIRETO DO HTML (mais confiável)
+        let imageUrls = [];
+        console.log('📸 Buscando HTML para extrair imagens...');
+
+        try {
+            const htmlResp = await fetch(productUrl, {
+                headers: {
+                    "User-Agent": getRandomUA(),
+                    "Accept": "text/html",
+                    "Accept-Language": "pt-BR,pt;q=0.9"
+                },
+                signal: AbortSignal.timeout(12000)
+            });
+
+            if (htmlResp.ok) {
+                const html = await htmlResp.text();
+                console.log(`✅ HTML: ${html.length} chars`);
+
+                if (marketplace === 'mercadolivre') {
+                    const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_\d+-[A-Z]{3}\d+_[A-Z]\.(?:jpg|webp)/gi;
+                    const matches = html.match(regex) || [];
+                    imageUrls = [...new Set(matches)]
+                        .map(u => u.replace(/_[VSWT]\./, '_O.'))
+                        .slice(0, 10);
+                    console.log(`📸 Regex extraiu ${imageUrls.length} URLs de imagem`);
+                }
+            }
+        } catch (e) {
+            console.log('⚠️ Erro ao buscar HTML para imagens:', e.message);
+        }
 
         // LIMPA URLs
         imageUrls = (imageUrls || [])
