@@ -104,7 +104,8 @@ Retorne APENAS JSON.`,
         
         const blob = await imgResponse.blob();
         
-        if (blob.size < 5000) {
+        // Aceita imagens maiores que 1KB
+        if (blob.size < 1000) {
           console.log(`⚠️ Muito pequena (${blob.size} bytes)`);
           continue;
         }
