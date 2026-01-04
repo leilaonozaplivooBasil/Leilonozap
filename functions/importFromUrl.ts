@@ -60,24 +60,48 @@ Deno.serve(async (req) => {
             }, { status: 500 });
         }
 
-        // EXTRAI COM IA
+        // DETECTA MARKETPLACE
+        const url = productUrl.toLowerCase();
+        const isMercadoLivre = url.includes('mercadolivre') || url.includes('mercadolibre');
+        
+        console.log(`🏪 Marketplace: ${isMercadoLivre ? 'Mercado Livre' : 'Genérico'}`);
+        
+        // EXTRAI IMAGENS COM REGEX (PRIORITÁRIO)
+        let extractedImages = [];
+        
+        if (isMercadoLivre) {
+            console.log('🔍 Usando regex Mercado Livre...');
+            const regex = /https:\/\/http2\.mlstatic\.com\/D_NQ_NP_[A-Za-z0-9_-]+\.(?:jpg|webp)/gi;
+            const matches = html.match(regex) || [];
+            extractedImages = [...new Set(matches)].filter(u => !u.includes('-O.jpg') && !u.includes('-I.jpg'));
+            console.log(`📸 Regex encontrou: ${extractedImages.length} URLs`);
+        } else if (url.includes('amazon')) {
+            const regex = /https:\/\/m\.media-amazon\.com\/images\/I\/[A-Za-z0-9+_-]+\.(?:jpg|png)/gi;
+            extractedImages = [...new Set(html.match(regex) || [])];
+            console.log(`📸 Amazon regex: ${extractedImages.length} URLs`);
+        } else if (url.includes('shopee')) {
+            const regex = /https:\/\/cf\.shopee\.com\.br\/file\/[A-Za-z0-9_-]+/gi;
+            extractedImages = [...new Set(html.match(regex) || [])];
+            console.log(`📸 Shopee regex: ${extractedImages.length} URLs`);
+        }
+        
+        // EXTRAI DADOS COM IA (título, descrição, preço)
         const snippet = html.substring(0, 15000);
         
         const aiResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `EXTRAÇÃO COMPLETA DO HTML:
-
-RETORNE:
-1. title: Título exato do produto
-2. description: Descrição com especificações
-3. imageUrls: 8-12 URLs COMPLETAS de imagens GRANDES
-4. price: Preço (número)
-5. brand: Marca
-6. model: Modelo
+            prompt: `EXTRAÇÃO DO HTML DO PRODUTO:
 
 HTML:
 ${snippet}
 
-CRÍTICO: imageUrls deve ser um array com URLs diretas (.jpg, .png, .webp)`,
+RETORNE JSON:
+1. title: Título completo do produto
+2. description: Descrição detalhada com especificações técnicas
+3. price: Preço numérico (apenas números, ex: 2999.90)
+4. brand: Marca do produto (se identificável)
+5. model: Modelo específico (se identificável)
+
+⚠️ NÃO precisa extrair URLs de imagens, isso já foi feito.`,
             response_json_schema: {
                 type: "object",
                 properties: {
@@ -85,32 +109,36 @@ CRÍTICO: imageUrls deve ser um array com URLs diretas (.jpg, .png, .webp)`,
                     description: { type: "string" },
                     price: { type: "number" },
                     brand: { type: "string" },
-                    model: { type: "string" },
-                    imageUrls: { 
-                        type: "array", 
-                        items: { type: "string" },
-                        minItems: 1
-                    }
+                    model: { type: "string" }
                 },
-                required: ["title", "description", "imageUrls"]
+                required: ["title", "description"]
             }
         });
+        
+        // PRIORIZA IMAGENS DO REGEX
+        let finalImageUrls = extractedImages.length > 0 ? extractedImages : [];
+        
+        console.log(`📊 Imagens para validar: ${finalImageUrls.length}`);
 
-        const { title, description, imageUrls, price, brand, model } = aiResult;
+        const { title, description, price, brand, model } = aiResult;
 
-        console.log(`✅ ${title} | ${imageUrls?.length || 0} imagens`);
+        console.log(`✅ Título: ${title}`);
+        console.log(`📸 Imagens a validar: ${finalImageUrls.length}`);
 
-        // VALIDA IMAGENS
+        // VALIDA IMAGENS (limitado para não travar)
         const validUrls = [];
-        for (const url of imageUrls || []) {
+        for (const url of finalImageUrls.slice(0, 12)) {
+            if (validUrls.length >= 8) break;
+            
             if (await validateImageUrl(url)) {
                 validUrls.push(url);
-                console.log(`✅ ${url.substring(0, 60)}`);
+                console.log(`✅ [${validUrls.length}] Válida: ${url.substring(0, 70)}`);
+            } else {
+                console.log(`❌ Inválida: ${url.substring(0, 70)}`);
             }
-            if (validUrls.length >= 8) break;
         }
 
-        console.log(`✅ ${validUrls.length} imagens validadas`);
+        console.log(`✅ FINAL: ${validUrls.length} imagens validadas de ${finalImageUrls.length} extraídas`);
 
         return Response.json({
             title,
