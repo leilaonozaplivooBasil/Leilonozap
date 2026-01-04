@@ -81,6 +81,7 @@ export default function CreateAuction() {
   const [manualCoverIndex, setManualCoverIndex] = useState(0);
   const [showManualUpload, setShowManualUpload] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [debugError, setDebugError] = useState(null);
 
   // ESTADOS DO LABORATÓRIO DE TESTES
   const [testAuctions, setTestAuctions] = useState([]);
@@ -330,11 +331,15 @@ export default function CreateAuction() {
 
     setIsSearchingName(true);
     setManualStep(1);
+    setDebugError(null);
 
     try {
+      console.log('🚀 [NOME] Iniciando busca para:', productName);
       const response = await searchProductByName({ productName: productName.trim() });
 
-      console.log('📦 Resposta:', response);
+      console.log('📦 [NOME] Resposta RAW:', response);
+      console.log('📦 [NOME] Status:', response?.status);
+      console.log('📦 [NOME] Data:', response?.data);
 
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro na busca');
@@ -382,8 +387,18 @@ export default function CreateAuction() {
       setProductName("");
       
     } catch (error) {
-      console.error("❌ Erro ao buscar por nome:", error);
-      toast.error(`Erro: ${error.message}`);
+      console.error("❌ [NOME] ERRO COMPLETO:", error);
+      console.error("❌ [NOME] Stack:", error.stack);
+      console.error("❌ [NOME] Message:", error.message);
+      
+      setDebugError({
+        type: 'searchByName',
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      
+      toast.error(`❌ Erro na busca: ${error.message}`);
       setManualStep(0);
     } finally {
       setIsSearchingName(false);
@@ -399,11 +414,15 @@ export default function CreateAuction() {
 
     setIsSearchingGtin(true);
     setManualStep(1);
+    setDebugError(null);
 
     try {
+      console.log('🚀 [GTIN] Iniciando busca para:', gtinCode);
       const response = await searchProductByGTIN({ gtin: gtinCode.trim() });
 
-      console.log('📦 GTIN Response:', response);
+      console.log('📦 [GTIN] Resposta RAW:', response);
+      console.log('📦 [GTIN] Status:', response?.status);
+      console.log('📦 [GTIN] Data:', response?.data);
 
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro GTIN');
@@ -451,8 +470,18 @@ export default function CreateAuction() {
       setGtinCode("");
       
     } catch (error) {
-      console.error("❌ Erro ao buscar GTIN:", error);
-      toast.error(`Erro ao buscar produto: ${error.message}`);
+      console.error("❌ [GTIN] ERRO COMPLETO:", error);
+      console.error("❌ [GTIN] Stack:", error.stack);
+      console.error("❌ [GTIN] Message:", error.message);
+      
+      setDebugError({
+        type: 'searchByGTIN',
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      
+      toast.error(`❌ Erro na busca GTIN: ${error.message}`);
       setManualStep(0);
     } finally {
       setIsSearchingGtin(false);
@@ -467,11 +496,17 @@ export default function CreateAuction() {
     }
     setIsProcessing(true);
     setManualStep(1);
+    setDebugError(null);
     
     try {
+      console.log('🚀 [URL] Iniciando extração para:', productUrl);
       toast.info("🤖 IA analisando o produto...");
       
       const response = await extractDataFromUrl({ productUrl });
+
+      console.log('📦 [URL] Resposta RAW:', response);
+      console.log('📦 [URL] Status:', response?.status);
+      console.log('📦 [URL] Data:', response?.data);
 
       if (!response || !response.data) {
           throw new Error("Falha na extração");
@@ -524,8 +559,18 @@ export default function CreateAuction() {
       }
 
     } catch (error) {
-      console.error("Erro ao extrair dados:", error);
-      toast.error("Erro ao extrair dados: " + (error.message || "Verifique a URL"));
+      console.error("❌ [URL] ERRO COMPLETO:", error);
+      console.error("❌ [URL] Stack:", error.stack);
+      console.error("❌ [URL] Message:", error.message);
+      
+      setDebugError({
+        type: 'extractDataFromUrl',
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      });
+      
+      toast.error("❌ Erro ao extrair: " + (error.message || "Verifique a URL"));
       setManualStep(0);
     }
     
@@ -795,6 +840,31 @@ export default function CreateAuction() {
                         Use o importador automático ou preencha os campos abaixo e selecione uma **duração curta (1, 5 ou 15 minutos)** para testar rapidamente o ciclo de vida de um leilão.
                     </AlertDescription>
                 </Alert>
+
+                {debugError && (
+                  <Alert className="bg-red-900/50 border-red-700">
+                    <AlertCircle className="h-5 w-5 text-red-400" />
+                    <AlertTitle className="text-red-300 font-bold">🔍 Erro Detectado na Importação</AlertTitle>
+                    <AlertDescription className="text-red-400">
+                      <div className="space-y-2 mt-2">
+                        <div><strong>Tipo:</strong> {debugError.type}</div>
+                        <div><strong>Mensagem:</strong> {debugError.message}</div>
+                        <div className="text-xs bg-black/30 p-2 rounded mt-2 overflow-auto max-h-32">
+                          <strong>Stack:</strong><br/>
+                          {debugError.stack}
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setDebugError(null)}
+                          className="mt-2 border-red-600 text-red-400"
+                        >
+                          Fechar
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
 
                 <Card className="bg-gray-800 border border-gray-700">
                   <CardHeader>
