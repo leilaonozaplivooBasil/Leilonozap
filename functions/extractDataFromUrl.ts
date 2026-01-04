@@ -161,14 +161,27 @@ Retorne JSON estruturado.`,
 
                 const blob = await imgResponse.blob();
 
-                // Re-hospeda no Base44
-                const uploadResult = await base44.integrations.Core.UploadFile({ 
-                    file: blob 
+                // Cria FormData para upload correto
+                const formData = new FormData();
+                formData.append('file', blob, `image-${Date.now()}-${rehostedUrls.length}.jpg`);
+
+                // Re-hospeda no Base44 usando fetch direto
+                const uploadResponse = await fetch(`${base44.baseUrl}/integrations/Core/UploadFile`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${base44.token}`,
+                    },
+                    body: formData
                 });
 
-                if (uploadResult?.file_url) {
-                    rehostedUrls.push(uploadResult.file_url);
-                    console.log(`✅ Re-hospedada: ${uploadResult.file_url.substring(0, 60)}`);
+                if (uploadResponse.ok) {
+                    const uploadData = await uploadResponse.json();
+                    if (uploadData?.file_url) {
+                        rehostedUrls.push(uploadData.file_url);
+                        console.log(`✅ Re-hospedada: ${uploadData.file_url.substring(0, 60)}`);
+                    }
+                } else {
+                    console.log(`❌ Upload falhou: ${uploadResponse.status}`);
                 }
             } catch (error) {
                 console.log(`❌ Erro: ${url.substring(0, 60)} - ${error.message}`);
