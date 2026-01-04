@@ -844,29 +844,44 @@ const DashboardContent = ({ user, isAdmin }) => {
   };
 
   const handleWithdrawalSubmit = async () => {
+    console.log('🔍 [SAQUE] Botão clicado!');
+    console.log('📊 [SAQUE] Valor digitado:', withdrawalAmount);
+    console.log('💰 [SAQUE] Saldo disponível:', user.commission_balance);
+    
     const amount = parseFloat(withdrawalAmount);
+    console.log('💵 [SAQUE] Valor convertido:', amount);
     
     if (!amount || amount <= 0) {
+      console.log('❌ [SAQUE] Valor inválido');
+      alert('Valor inválido');
       toast.error('Valor inválido');
       return;
     }
 
     if (amount < 30) {
+      console.log('❌ [SAQUE] Valor menor que mínimo');
+      alert('Saque mínimo é de R$ 30,00');
       toast.error('Saque mínimo é de R$ 30,00');
       return;
     }
 
     if (amount > user.commission_balance) {
+      console.log('❌ [SAQUE] Saldo insuficiente');
+      alert('Saldo indisponível');
       toast.error('Saldo indisponível');
       return;
     }
 
-    if (!pixKey) {
+    if (!pixKey || pixKey.trim() === '') {
+      console.log('❌ [SAQUE] Chave PIX não informada');
+      alert('Informe a chave PIX');
       toast.error('Informe a chave PIX');
       return;
     }
 
+    console.log('✅ [SAQUE] Validações OK, processando...');
     setIsProcessingWithdrawal(true);
+    
     try {
       const response = await requestWithdrawal({
         amount,
@@ -874,22 +889,30 @@ const DashboardContent = ({ user, isAdmin }) => {
         pix_key_type: pixKeyType
       });
 
+      console.log('📥 [SAQUE] Resposta:', response);
+
       if (response?.data?.success) {
+        alert('Saque solicitado com sucesso! Aguarde aprovação.');
         toast.success('Saque solicitado com sucesso! Aguarde aprovação.');
         setShowWithdrawalModal(false);
         setWithdrawalAmount('');
         setPixKey('');
         
-        // Atualiza dados
         await delay(2000);
         await fetchRealMetrics();
       } else {
-        toast.error(response?.data?.error || 'Erro ao solicitar saque');
+        const errorMsg = response?.data?.error || 'Erro ao solicitar saque';
+        console.error('❌ [SAQUE] Erro:', errorMsg);
+        alert(errorMsg);
+        toast.error(errorMsg);
       }
     } catch (error) {
+      console.error('❌ [SAQUE] Exceção:', error);
+      alert('Erro: ' + error.message);
       toast.error('Erro: ' + error.message);
     } finally {
       setIsProcessingWithdrawal(false);
+      console.log('✅ [SAQUE] Processo finalizado');
     }
   };
 
