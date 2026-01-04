@@ -57,7 +57,14 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Cria solicitação (NÃO deduz do saldo ainda - só na aprovação)
+    // 🔥 DEDUZ O SALDO IMEDIATAMENTE (bloqueia o valor)
+    console.log('💰 Deduzindo saldo...');
+    await base44.asServiceRole.entities.AppUser.update(currentUser.id, {
+      valora_pay_balance: (currentUser.valora_pay_balance || 0) - amount,
+      commission_balance: (currentUser.commission_balance || 0) - amount
+    });
+
+    // Cria solicitação
     console.log('📝 Criando solicitação de saque...');
     const withdrawal = await base44.asServiceRole.entities.WithdrawalRequest.create({
       influencer_id: currentUser.id,
