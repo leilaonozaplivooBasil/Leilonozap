@@ -33,6 +33,7 @@ export default function Layout({ children, currentPageName }) {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const hasInitializedRef = useRef(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
