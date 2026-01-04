@@ -351,20 +351,26 @@ export default function CreateAuction() {
 
     try {
         console.log('🔍 Buscando produto:', productName);
-        const response = await base44.functions.invoke('searchProductByName', { 
-          productName: productName.trim() 
-        });
+        let response;
+        
+        try {
+          response = await base44.functions.invoke('searchProductByName', { 
+            productName: productName.trim() 
+          });
+        } catch (axiosError) {
+          // Axios lança erro para status !== 2xx
+          if (axiosError.response?.status === 404) {
+            const errorMsg = axiosError.response.data?.error || "Produto não encontrado";
+            const suggestion = axiosError.response.data?.suggestion || "Tente com marca e modelo completos";
+            toast.error(`${errorMsg}. ${suggestion}`);
+            setManualStep(0);
+            setIsSearchingName(false);
+            return;
+          }
+          throw axiosError;
+        }
 
         console.log('📦 Resposta:', response);
-
-      if (response.status === 404) {
-        const errorMsg = response.data?.error || "Produto não encontrado";
-        const suggestion = response.data?.suggestion || "";
-        toast.error(`${errorMsg}. ${suggestion}`);
-        setManualStep(0);
-        setIsSearchingName(false);
-        return;
-      }
 
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro na busca');
