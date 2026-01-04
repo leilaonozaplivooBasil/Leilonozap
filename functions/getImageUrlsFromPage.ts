@@ -11,25 +11,28 @@ Deno.serve(async (req) => {
         
         console.log('🤖 Usando IA para extrair imagens de:', productUrl);
         
-        // 🆕 USA IA COM ACESSO À INTERNET - PROMPT MELHORADO
+        // 🆕 PROMPT OTIMIZADO - PEDE MÚLTIPLOS ÂNGULOS
         const aiResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta página de produto: ${productUrl}
+            prompt: `Acesse: ${productUrl}
 
-Encontre e retorne URLs de imagens DO PRODUTO que estejam no HTML da página.
+Extraia URLs de TODAS as imagens do produto (diferentes ângulos, cores, detalhes).
 
-REGRAS CRÍTICAS:
-✅ URLs devem começar com: http2.mlstatic.com, images-amazon, ou similar
-✅ APENAS versões GRANDES: terminam com -F.jpg, -O.jpg, -F.webp, _large.jpg
-✅ Retorne NO MÍNIMO 6 URLs DIFERENTES (não duplicadas!)
-✅ Fotos principais do produto, não miniaturas, não logos
+IMPORTANTE:
+1. Busque imagens em ALTA RESOLUÇÃO (-F.jpg, -O.jpg, -F.webp, _large.jpg)
+2. Se encontrar galeria/carousel, pegue TODAS as fotos
+3. Retorne NO MÍNIMO 8 URLs DIFERENTES
+4. Inclua diferentes ângulos: frente, verso, lateral, detalhe
+5. Se houver variantes de cor, inclua todas
 
-❌ NÃO retorne URLs duplicadas
-❌ NÃO use miniaturas: -I.jpg, _thumb, _small
-❌ NÃO use imagens de UI ou propaganda
+❌ NÃO DUPLIQUE URLs
+❌ NÃO use miniaturas (-I.jpg, _thumb)
 
-Exemplo correto: https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB78901234_052024-F.webp
+Exemplos de domínios válidos:
+- http2.mlstatic.com/D_NQ_NP_2X_...
+- images-amazon.com/images/I/...
+- a-static.mlcdn.com.br/...
 
-IMPORTANTE: Cada URL deve ser DIFERENTE das outras!`,
+Retorne o MÁXIMO de URLs diferentes que encontrar!`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -37,8 +40,8 @@ IMPORTANTE: Cada URL deve ser DIFERENTE das outras!`,
                     image_urls: {
                         type: "array",
                         items: { type: "string" },
-                        minItems: 6,
-                        description: "Array com 6+ URLs DIFERENTES de imagens grandes"
+                        minItems: 8,
+                        description: "8+ URLs ÚNICAS de imagens em alta resolução"
                     }
                 },
                 required: ["image_urls"]
@@ -49,14 +52,23 @@ IMPORTANTE: Cada URL deve ser DIFERENTE das outras!`,
         
         const imageUrls = aiResponse?.image_urls || [];
         
-        // Remove duplicatas usando Set e valida URLs
-        const uniqueUrls = [...new Set(imageUrls)];
-        
-        const validUrls = uniqueUrls
+        // REMOÇÃO AGRESSIVA DE DUPLICATAS
+        const seenUrls = new Set();
+        const validUrls = imageUrls
             .filter(url => url && typeof url === 'string' && url.startsWith('http'))
-            .map(url => url.split('?')[0].trim()) // Remove query params
-            .filter((url, index, arr) => arr.indexOf(url) === index) // Remove duplicatas novamente
-            .slice(0, 10); // Pega até 10 imagens diferentes
+            .map(url => {
+                // Normaliza: remove query params, trailing slash, espaços
+                return url.split('?')[0].split('#')[0].trim().replace(/\/+$/, '');
+            })
+            .filter(url => {
+                if (url.length < 20) return false;
+                // Remove duplicatas EXATAS
+                const baseUrl = url.toLowerCase();
+                if (seenUrls.has(baseUrl)) return false;
+                seenUrls.add(baseUrl);
+                return true;
+            })
+            .slice(0, 10);
         
         console.log(`✅ ${validUrls.length} URLs extraídas pela IA`);
         
