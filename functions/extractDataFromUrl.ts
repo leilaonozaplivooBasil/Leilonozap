@@ -143,14 +143,22 @@ Se houver preço parcelado E à vista, use o À VISTA.`,
         }
 
         console.log(`✅ ${rehostedUrls.length} imagens re-hospedadas`);
+        console.log(`📤 [BACKEND] RETORNANDO PARA FRONTEND:`);
+        console.log(`   title: ${title || 'Produto'}`);
+        console.log(`   price: ${price || null}`);
+        console.log(`   imageUrls (${rehostedUrls.length}):`, rehostedUrls);
 
-        return Response.json({
+        const finalResponse = {
             title: (title || 'Produto').substring(0, 200),
             description: (description || 'Produto importado').substring(0, 500),
             price: price || null,
             imageUrls: rehostedUrls,
             marketplace: marketplace
-        });
+        };
+
+        console.log(`🚀 [BACKEND] JSON FINAL:`, JSON.stringify(finalResponse));
+
+        return Response.json(finalResponse);
 
     } catch (error) {
         console.error('❌', error);
