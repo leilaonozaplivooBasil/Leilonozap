@@ -56,26 +56,27 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🤖 USA IA PARA EXTRAIR TUDO DE UMA VEZ
-        console.log('🤖 IA extraindo título, descrição e imagens...');
+        // 🔥 MÉTODO HÍBRIDO: Fetch + Screenshot IA
+        console.log('🤖 Tentando extrair via Screenshot IA...');
 
-        const extractionResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta URL e extraia os dados completos do produto:
-        ${productUrl}
+        const screenshotResult = await base44.integrations.Core.InvokeLLM({
+            prompt: `Analise o SCREENSHOT desta página de produto e extraia:
 
-        RETORNE em português brasileiro:
-        1. Título do produto (texto limpo, sem HTML)
-        2. Descrição detalhada com especificações técnicas (6-10 linhas)
-        3. URLs diretas das imagens do produto (TODAS as imagens disponíveis)
+        1. Título EXATO do produto (sem HTML, apenas texto)
+        2. Descrição detalhada com especificações (6-10 linhas em português)
+        3. TODAS as URLs das imagens do produto que você conseguir ver na página
 
-        IMPORTANTE para Mercado Livre:
-        - As URLs devem começar com https://http2.mlstatic.com/D_NQ_NP_
-        - Use URLs GRANDES/ORIGINAIS que terminam com _O.jpg ou _O.webp
-        - NÃO use miniaturas (_V, _S, _T)
-        - Retorne pelo menos 5-8 URLs se disponível
+        ATENÇÃO ESPECIAL para as imagens do Mercado Livre:
+        - Procure com ATENÇÃO por URLs que começam com: https://http2.mlstatic.com/D_NQ_NP_
+        - São URLs GRANDES (terminam com _O.jpg ou _O.webp)
+        - Veja na lateral esquerda e na área principal
+        - Retorne pelo menos 5-8 URLs diferentes se disponível
+        - NÃO retorne miniaturas pequenas
+
+        URL da página: ${productUrl}
 
         Retorne JSON estruturado.`,
-            add_context_from_internet: true,
+            file_urls: [productUrl],
             response_json_schema: {
                 type: "object",
                 properties: {
@@ -90,9 +91,9 @@ Deno.serve(async (req) => {
             }
         });
 
-        let { title, description, imageUrls } = extractionResult;
+        let { title, description, imageUrls } = screenshotResult;
 
-        console.log(`🤖 IA retornou: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
+        console.log(`🤖 Screenshot IA retornou: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
         // LIMPA URLs
         imageUrls = (imageUrls || [])
