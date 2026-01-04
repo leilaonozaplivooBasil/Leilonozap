@@ -1373,7 +1373,7 @@ export default function CreateAuction() {
                     )}
 
                     {/* 🆕 ETAPA 2: DADOS EXTRAÍDOS + URLs DE IMAGENS */}
-                    {manualStep === 2 && importedData && (
+                    {manualStep === 2 && (
                       <div className="space-y-4">
                         <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
                           <h4 className="font-bold text-green-300 mb-3 flex items-center gap-2">
