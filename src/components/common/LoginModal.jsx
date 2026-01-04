@@ -419,11 +419,6 @@ Equipe Leilão NoZap 🎯
             <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm mb-2`}>Ainda não tem conta?</p>
             <Button 
               onClick={() => {
-                // Preserva o contexto de Partners se existir
-                const fromPartners = sessionStorage.getItem('loginFromPartners');
-                if (fromPartners === 'true') {
-                  sessionStorage.setItem('registerFromPartners', 'true');
-                }
                 onClose();
                 navigate(createPageUrl("Register"));
               }}
