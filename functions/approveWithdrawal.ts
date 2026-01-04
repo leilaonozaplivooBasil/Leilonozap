@@ -35,9 +35,10 @@ Deno.serve(async (req) => {
 
     const influencer = users[0];
 
-    // Deduz do saldo na aprovação
+    // Deduz do saldo na aprovação (ambos os saldos)
     await base44.asServiceRole.entities.AppUser.update(withdrawal.influencer_id, {
-      commission_balance: (influencer.commission_balance || 0) - withdrawal.amount
+      commission_balance: (influencer.commission_balance || 0) - withdrawal.amount,
+      valora_pay_balance: (influencer.valora_pay_balance || 0) - withdrawal.amount
     });
 
     // Atualiza status
