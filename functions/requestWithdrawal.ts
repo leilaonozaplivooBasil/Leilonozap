@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       message: `Saque de R$ ${amount} solicitado com sucesso`,
       component_name: 'requestWithdrawal',
       entity_id: withdrawal.id,
-      payload: { influencer_id: user.id, amount, pix_key_type }
+      payload: { influencer_id: currentUser.id, amount, pix_key_type }
     }).catch(err => console.log('⚠️ Erro ao criar log:', err));
 
     console.log('✅ Processo completo');
