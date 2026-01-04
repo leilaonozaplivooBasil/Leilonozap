@@ -137,10 +137,9 @@ Retorne APENAS JSON.`,
     console.log(`📊 RESULTADO: ${uploadedUrls.length} imagens hospedadas`);
 
     if (uploadedUrls.length === 0) {
-      return Response.json({
-        success: false,
-        message: 'Não foi possível baixar as imagens do produto'
-      });
+      // Fallback: retorna apenas a imagem original se nenhuma foi baixada
+      uploadedUrls.push(imageUrl);
+      console.log(`⚠️ FALLBACK: usando apenas imagem original`);
     }
 
     // PASSO 3: VERIFICAR PRODUTOS SIMILARES
