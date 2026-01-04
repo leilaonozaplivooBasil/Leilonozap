@@ -96,23 +96,20 @@ Se só encontrar acessórios ou nada: found = false`,
             }, { status: 404 });
         }
 
-        console.log(`📸 Validando ${imageUrls.length} imagens...`);
+        console.log(`📸 ${imageUrls.length} URLs recebidas da IA`);
 
-        // Valida cada imagem
-        const validUrls = [];
-        for (const url of imageUrls) {
-            if (validUrls.length >= 6) break;
-            
-            console.log(`🔍 Testando: ${url.substring(0, 60)}...`);
-            if (await validateImageUrl(url)) {
-                validUrls.push(url);
-                console.log(`✅ Válida (${validUrls.length})`);
-            } else {
-                console.log(`❌ Inválida`);
-            }
-        }
+        // Filtra apenas URLs válidas (não truncadas, com formato correto)
+        const cleanUrls = imageUrls
+            .filter(url => url && typeof url === 'string' && url.startsWith('http'))
+            .filter(url => {
+                // Remove URLs incompletas ou suspeitas
+                return !url.includes('...') && url.length > 40;
+            })
+            .slice(0, 6);
 
-        if (validUrls.length === 0) {
+        console.log(`🔍 ${cleanUrls.length} URLs filtradas e limpas`);
+
+        if (cleanUrls.length === 0) {
             return Response.json({
                 error: "Nenhuma imagem válida encontrada",
                 suggestion: "Use o importador por URL ou upload manual",
@@ -121,13 +118,13 @@ Se só encontrar acessórios ou nada: found = false`,
             }, { status: 404 });
         }
 
-        console.log(`✅ SUCESSO: ${result.title} com ${validUrls.length} imagens validadas`);
+        console.log(`✅ SUCESSO: ${result.title} com ${cleanUrls.length} imagens`);
 
         return Response.json({
             found: true,
             title: result.title,
             description: result.description || 'Produto encontrado',
-            imageUrls: validUrls,
+            imageUrls: cleanUrls,
             source: result.productUrl?.includes('mercadolivre') ? 'Mercado Livre' :
                     result.productUrl?.includes('amazon') ? 'Amazon' :
                     result.productUrl?.includes('shopee') ? 'Shopee' : 'Internet'
