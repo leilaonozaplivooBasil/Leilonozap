@@ -307,7 +307,43 @@ export default function ArquitetoFloatingButton({ currentUser }) {
 
           {/* Input */}
           <div className="p-4 bg-gray-900 rounded-b-2xl border-t border-gray-700">
+            {/* Preview de imagens anexadas */}
+            {attachedImages.length > 0 && (
+              <div className="mb-3 flex gap-2 flex-wrap">
+                {attachedImages.map((url, idx) => (
+                  <div key={idx} className="relative group">
+                    <img 
+                      src={url} 
+                      alt={`Anexo ${idx + 1}`}
+                      className="w-16 h-16 object-cover rounded-lg border-2 border-purple-500"
+                    />
+                    <button
+                      onClick={() => setAttachedImages(attachedImages.filter((_, i) => i !== idx))}
+                      className="absolute -top-2 -right-2 w-5 h-5 bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            
             <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading || isSending}
+                variant="ghost"
+                className="text-gray-400 hover:text-white hover:bg-gray-800 h-[60px] px-3"
+                title="Anexar imagens"
+              >
+                {isUploading ? (
+                  <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Paperclip className="w-5 h-5" />
+                )}
+              </Button>
+              
               <textarea
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
@@ -317,13 +353,13 @@ export default function ArquitetoFloatingButton({ currentUser }) {
                     sendMessage();
                   }
                 }}
-                placeholder="Pergunte sobre otimizações, bugs ou análise de código..."
-                disabled={isSending}
+                placeholder="Descreva o problema ou anexe screenshots..."
+                disabled={isSending || isUploading}
                 className="flex-1 bg-gray-800 text-white px-4 py-2 rounded-xl border border-gray-700 focus:outline-none focus:border-purple-500 text-sm resize-none min-h-[60px] max-h-[120px]"
               />
               <Button
                 onClick={sendMessage}
-                disabled={isSending || !inputMessage.trim()}
+                disabled={isSending || isUploading || (!inputMessage.trim() && attachedImages.length === 0)}
                 className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-[60px]"
               >
                 {isSending ? (
@@ -333,8 +369,23 @@ export default function ArquitetoFloatingButton({ currentUser }) {
                 )}
               </Button>
             </div>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) {
+                  handleImageUpload(e.target.files);
+                }
+                e.target.value = '';
+              }}
+            />
+            
             <p className="text-xs text-gray-500 mt-2">
-              💡 Enter = enviar | Shift+Enter = nova linha
+              💡 Enter = enviar | 📎 Anexe screenshots de bugs
             </p>
           </div>
         </div>
