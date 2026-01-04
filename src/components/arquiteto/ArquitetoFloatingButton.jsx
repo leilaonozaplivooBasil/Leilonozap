@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
-import { Bot, X, Send, Sparkles } from 'lucide-react';
+import { Bot, X, Send, Sparkles, Trash2, Copy, CheckCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
 
 export default function ArquitetoFloatingButton({ currentUser }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -10,6 +11,7 @@ export default function ArquitetoFloatingButton({ currentUser }) {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
   const chatRef = useRef(null);
 
   // Só mostra para admin
@@ -57,17 +59,50 @@ export default function ArquitetoFloatingButton({ currentUser }) {
     if (!inputMessage.trim() || !conversationId || isSending) return;
 
     setIsSending(true);
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
+
     try {
       const conversation = await base44.agents.getConversation(conversationId);
       await base44.agents.addMessage(conversation, {
         role: 'user',
-        content: inputMessage
+        content: userMessage
       });
-      setInputMessage('');
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error);
+      console.error('Erro ao enviar:', error);
+      toast.error('Erro ao enviar mensagem');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const clearConversation = async () => {
+    if (!confirm('🗑️ Limpar toda a conversa?')) return;
+    
+    try {
+      const conversation = await base44.agents.createConversation({
+        agent_name: 'arquiteto_base44',
+        metadata: {
+          name: 'Nova Sessão',
+          description: 'Análise e otimização'
+        }
+      });
+      setConversationId(conversation.id);
+      setMessages([]);
+      toast.success('✅ Conversa reiniciada!');
+    } catch (error) {
+      toast.error('Erro ao reiniciar');
+    }
+  };
+
+  const copyToClipboard = async (text, id) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      toast.success('📋 Copiado!');
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      toast.error('Erro ao copiar');
     }
   };
 
@@ -93,7 +128,7 @@ export default function ArquitetoFloatingButton({ currentUser }) {
 
       {/* Modal Chat */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-[999] w-[400px] h-[600px] bg-gray-900 rounded-2xl shadow-2xl border-2 border-purple-500/50 flex flex-col">
+        <div className="fixed bottom-6 right-6 z-[999] w-[450px] h-[700px] bg-gray-900 rounded-2xl shadow-2xl border-2 border-purple-500/50 flex flex-col">
           {/* Header */}
           <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-4 rounded-t-2xl flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -101,27 +136,69 @@ export default function ArquitetoFloatingButton({ currentUser }) {
                 <Bot className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h3 className="font-bold text-white">Arquiteto IA</h3>
-                <p className="text-xs text-purple-200">Assistente de Desenvolvimento</p>
+                <h3 className="font-bold text-white">Arquiteto Base44</h3>
+                <p className="text-xs text-purple-200">Guardião & Otimizador Master</p>
               </div>
             </div>
-            <Button
-              onClick={() => setIsOpen(false)}
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-            >
-              <X className="w-5 h-5" />
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={clearConversation}
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              <Button
+                onClick={() => setIsOpen(false)}
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Chat Messages */}
           <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-800">
             {messages.length === 0 ? (
-              <div className="text-center text-gray-400 py-8">
-                <Bot className="w-12 h-12 mx-auto mb-3 text-purple-400" />
-                <p className="font-semibold mb-1">Olá! Sou o Arquiteto IA</p>
-                <p className="text-sm">Como posso ajudar na construção?</p>
+              <div className="text-center text-gray-400 py-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500/20 to-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <Sparkles className="w-8 h-8 text-purple-400" />
+                </div>
+                <p className="font-bold text-white mb-1">Arquiteto Base44 Online</p>
+                <p className="text-xs mb-4">Pergunte sobre otimizações, bugs ou análise de código</p>
+                
+                {/* Quick Actions */}
+                <div className="space-y-2 text-left mt-6">
+                  <button
+                    onClick={() => setInputMessage('Analise o sistema de lances em tempo real e identifique possíveis melhorias de performance e confiabilidade')}
+                    className="w-full text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <div className="text-lg mb-1">🔍</div>
+                    <div className="text-xs font-bold text-white">Análise de Performance</div>
+                    <div className="text-xs text-gray-400">Identificar gargalos</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => setInputMessage('Me dê o prompt perfeito para adicionar notificações em tempo real quando alguém der lance em um leilão que estou participando')}
+                    className="w-full text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <div className="text-lg mb-1">✨</div>
+                    <div className="text-xs font-bold text-white">Engenharia de Prompt</div>
+                    <div className="text-xs text-gray-400">Comando otimizado</div>
+                  </button>
+                  
+                  <button
+                    onClick={() => setInputMessage('Analise os logs do sistema e identifique erros recorrentes ou padrões de falha que precisam ser corrigidos')}
+                    className="w-full text-left p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                  >
+                    <div className="text-lg mb-1">🛡️</div>
+                    <div className="text-xs font-bold text-white">Detecção de Bugs</div>
+                    <div className="text-xs text-gray-400">Encontrar problemas</div>
+                  </button>
+                </div>
               </div>
             ) : (
               messages.map((msg, idx) => (
@@ -135,33 +212,50 @@ export default function ArquitetoFloatingButton({ currentUser }) {
                     </div>
                   )}
                   <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                    className={`max-w-[80%] rounded-2xl px-4 py-3 relative group ${
                       msg.role === 'user'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-700 text-gray-100'
+                        ? 'bg-gradient-to-br from-purple-600 to-blue-600 text-white'
+                        : 'bg-gray-700 border border-purple-500/20 text-gray-100'
                     }`}
                   >
                     {msg.role === 'assistant' ? (
-                      <ReactMarkdown
-                        className="prose prose-sm prose-invert max-w-none"
-                        components={{
-                          code: ({ inline, children }) =>
-                            inline ? (
-                              <code className="bg-gray-800 px-1 py-0.5 rounded text-purple-400">
-                                {children}
-                              </code>
-                            ) : (
-                              <pre className="bg-gray-900 p-2 rounded overflow-x-auto">
-                                <code className="text-green-400">{children}</code>
-                              </pre>
-                            ),
-                          p: ({ children }) => <p className="mb-2">{children}</p>,
-                        }}
-                      >
-                        {msg.content}
-                      </ReactMarkdown>
+                      <>
+                        <ReactMarkdown
+                          className="text-sm prose prose-invert prose-purple max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                          components={{
+                            code: ({ inline, children }) =>
+                              inline ? (
+                                <code className="px-1.5 py-0.5 rounded bg-purple-900/50 text-purple-200 text-xs font-mono">
+                                  {children}
+                                </code>
+                              ) : (
+                                <pre className="bg-gray-900 rounded-lg p-2 overflow-x-auto my-2 border border-gray-700">
+                                  <code className="text-xs text-gray-300">{children}</code>
+                                </pre>
+                              ),
+                            p: ({ children }) => <p className="my-1 leading-relaxed text-xs">{children}</p>,
+                            ul: ({ children }) => <ul className="my-1 ml-3 list-disc space-y-0.5 text-xs">{children}</ul>,
+                            ol: ({ children }) => <ol className="my-1 ml-3 list-decimal space-y-0.5 text-xs">{children}</ol>,
+                            strong: ({ children }) => <strong className="text-purple-300 font-bold">{children}</strong>,
+                          }}
+                        >
+                          {msg.content}
+                        </ReactMarkdown>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute -top-2 -right-2 w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-600 hover:bg-gray-500"
+                          onClick={() => copyToClipboard(msg.content, idx)}
+                        >
+                          {copiedId === idx ? (
+                            <CheckCircle className="w-3 h-3 text-green-400" />
+                          ) : (
+                            <Copy className="w-3 h-3 text-gray-300" />
+                          )}
+                        </Button>
+                      </>
                     ) : (
-                      <p className="text-sm">{msg.content}</p>
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                     )}
                   </div>
                   {msg.role === 'user' && (
@@ -179,23 +273,34 @@ export default function ArquitetoFloatingButton({ currentUser }) {
           {/* Input */}
           <div className="p-4 bg-gray-900 rounded-b-2xl border-t border-gray-700">
             <div className="flex gap-2">
-              <input
-                type="text"
+              <textarea
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                placeholder="Digite seu comando..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder="Pergunte sobre otimizações, bugs ou análise de código..."
                 disabled={isSending}
-                className="flex-1 bg-gray-800 text-white px-4 py-2 rounded-xl border border-gray-700 focus:outline-none focus:border-purple-500 text-sm"
+                className="flex-1 bg-gray-800 text-white px-4 py-2 rounded-xl border border-gray-700 focus:outline-none focus:border-purple-500 text-sm resize-none min-h-[60px] max-h-[120px]"
               />
               <Button
                 onClick={sendMessage}
                 disabled={isSending || !inputMessage.trim()}
-                className="bg-purple-600 hover:bg-purple-700"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 h-[60px]"
               >
-                <Send className="w-4 h-4" />
+                {isSending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
               </Button>
             </div>
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Enter = enviar | Shift+Enter = nova linha
+            </p>
           </div>
         </div>
       )}
