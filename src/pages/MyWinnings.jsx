@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { createAbacatePayPix } from '@/functions/createAbacatePayPix';
 import { checkAbacatePayPix } from '@/functions/checkAbacatePayPix';
 import { stripeCheckout } from '@/functions/stripeCheckout';
+import { mercadopagoCheckout } from '@/functions/mercadopagoCheckout';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
@@ -327,22 +328,77 @@ export default function MyWinningsPage() {
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <Button
-                                    onClick={() => setPaymentMethod('card')}
-                                    className={`h-24 flex flex-col gap-2 ${isSaiDeBaixo ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                                >
-                                    <span className="text-3xl">💳</span>
-                                    <span className="font-bold">Cartão</span>
-                                </Button>
+                               <Button
+                                   onClick={() => setPaymentMethod('mercadopago')}
+                                   className={`h-24 flex flex-col gap-2 ${isSaiDeBaixo ? 'bg-blue-500 hover:bg-blue-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+                               >
+                                   <span className="text-3xl">💙</span>
+                                   <span className="font-bold text-sm">Mercado Pago</span>
+                                   <span className="text-[10px] opacity-80">PIX, Cartão, Boleto</span>
+                               </Button>
 
-                                <Button
-                                    onClick={() => setPaymentMethod('pix')}
-                                    className={`h-24 flex flex-col gap-2 ${isSaiDeBaixo ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
-                                >
-                                    <span className="text-3xl">📱</span>
-                                    <span className="font-bold">PIX</span>
-                                </Button>
+                               <Button
+                                   onClick={() => setPaymentMethod('card')}
+                                   className={`h-24 flex flex-col gap-2 ${isSaiDeBaixo ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-600 hover:bg-purple-700'}`}
+                               >
+                                   <span className="text-3xl">💳</span>
+                                   <span className="font-bold text-sm">Cartão Int.</span>
+                               </Button>
+
+                               <Button
+                                   onClick={() => setPaymentMethod('pix')}
+                                   className={`h-24 flex flex-col gap-2 col-span-2 ${isSaiDeBaixo ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
+                               >
+                                   <span className="text-3xl">📱</span>
+                                   <span className="font-bold">PIX Direto</span>
+                               </Button>
                             </div>
+                        </div>
+                    )}
+
+                    {selectedAuction && paymentMethod === 'mercadopago' && (
+                        <div className="space-y-4 py-4">
+                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
+                                <p className="text-sm text-blue-300 text-center">
+                                    💙 Você será redirecionado para o Mercado Pago para finalizar o pagamento com segurança
+                                </p>
+                            </div>
+                            <Button
+                                onClick={async () => {
+                                    setIsProcessing(true);
+                                    try {
+                                        toast.info("Redirecionando para o Mercado Pago...");
+                                        
+                                        const response = await mercadopagoCheckout({
+                                            auction_id: selectedAuction.id,
+                                            user_id: currentUser.id
+                                        });
+
+                                        console.log('📦 Resposta Mercado Pago:', response);
+
+                                        if (response?.data?.init_point) {
+                                            window.location.href = response.data.init_point;
+                                        } else {
+                                            const errorMsg = response?.data?.error || "Erro ao criar pagamento";
+                                            console.error('❌ Erro Mercado Pago:', errorMsg);
+                                            toast.error(errorMsg);
+                                        }
+                                    } catch (error) {
+                                        console.error('❌ Erro:', error);
+                                        toast.error("Erro ao processar: " + error.message);
+                                    } finally {
+                                        setIsProcessing(false);
+                                    }
+                                }}
+                                disabled={isProcessing}
+                                className="w-full h-16 bg-blue-500 hover:bg-blue-600 text-lg font-bold"
+                            >
+                                {isProcessing ? (
+                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                ) : (
+                                    <>💙 Ir para Mercado Pago</>
+                                )}
+                            </Button>
                         </div>
                     )}
 
@@ -351,12 +407,12 @@ export default function MyWinningsPage() {
                             <Button
                                 onClick={handleConfirmCard}
                                 disabled={isProcessing}
-                                className="w-full h-16 bg-blue-600 hover:bg-blue-700 text-lg font-bold"
+                                className="w-full h-16 bg-purple-600 hover:bg-purple-700 text-lg font-bold"
                             >
                                 {isProcessing ? (
                                     <Loader2 className="w-6 h-6 animate-spin" />
                                 ) : (
-                                    <>💳 Pagar com Cartão</>
+                                    <>💳 Pagar com Cartão Internacional</>
                                 )}
                             </Button>
                         </div>
