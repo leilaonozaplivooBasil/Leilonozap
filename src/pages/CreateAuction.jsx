@@ -532,13 +532,20 @@ export default function CreateAuction() {
       toast.info("🤖 IA analisando produto e extraindo imagens...");
       
       const response = await extractDataFromUrl({ productUrl });
-      console.log('📦 [URL] Resposta dados básicos:', response);
+      
+      console.log('📦 [URL] RESPOSTA COMPLETA DO BACKEND:', JSON.stringify(response, null, 2));
+      console.log('📦 [URL] response.data:', response.data);
 
       if (!response || !response.data) {
           throw new Error("Falha na extração");
       }
       
       const responseData = response.data;
+      
+      console.log('🔍 [URL] responseData COMPLETO:', responseData);
+      console.log('🔍 [URL] responseData.imageUrls:', responseData.imageUrls);
+      console.log('🔍 [URL] responseData.title:', responseData.title);
+      console.log('🔍 [URL] responseData.price:', responseData.price);
       
       if (responseData.error) {
         toast.error(responseData.error);
@@ -551,6 +558,14 @@ export default function CreateAuction() {
       }
       
       const { title, description, price, imageUrls, marketplace } = responseData;
+      
+      console.log('🎯 [URL] VARIÁVEIS EXTRAÍDAS:');
+      console.log('   title:', title);
+      console.log('   description:', description);
+      console.log('   price:', price);
+      console.log('   imageUrls (tipo):', typeof imageUrls);
+      console.log('   imageUrls (length):', imageUrls?.length);
+      console.log('   imageUrls (conteúdo):', imageUrls);
       
       if (!title || !description) {
         throw new Error("Dados incompletos");
