@@ -388,11 +388,11 @@ export default function InfluencersDashboard() {
                               </p>
                               <div className={`mt-2 px-3 py-1 rounded-full text-xs font-semibold inline-block ${
                                 request.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                                request.status === 'approved' ? 'bg-green-500/20 text-green-400' :
+                                request.status === 'completed' || request.status === 'approved' ? 'bg-green-500/20 text-green-400' :
                                 'bg-red-500/20 text-red-400'
                               }`}>
                                 {request.status === 'pending' ? '⏳ Pendente' :
-                                 request.status === 'approved' ? '✅ Aprovado' :
+                                 request.status === 'completed' || request.status === 'approved' ? '✅ Aprovado' :
                                  '❌ Rejeitado'}
                               </div>
                             </div>
