@@ -1143,11 +1143,11 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          icon={DollarSign}
-          label="Saldo em Dinheiro"
-          value={`R$ ${(user.valora_pay_balance || 0).toFixed(2)}`}
-          onClick={() => setIsAuctionSelectionModalOpen(true)}
-        />
+            icon={DollarSign}
+            label="Saldo Disponível"
+            value={`R$ ${(user.valora_pay_balance || 0).toFixed(2)}`}
+            onClick={() => setIsAuctionSelectionModalOpen(true)}
+          />
         <StatCard
           icon={Users}
           label="Clientes Indicados"
@@ -1161,11 +1161,11 @@ const DashboardContent = ({ user, isAdmin }) => {
           isLoading={realMetrics.networkBidsCount === null}
         />
         <StatCard
-          icon={BarChart}
-          label="Comissões Geradas"
-          value={`R$ ${(user.commission_balance || 0).toFixed(2)}`}
-          onClick={() => setViewingCommissionsFor(user)}
-        />
+            icon={BarChart}
+            label="Comissões Geradas"
+            value={`R$ ${(user.total_commissions_generated || 0).toFixed(2)}`}
+            onClick={() => setViewingCommissionsFor(user)}
+          />
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
