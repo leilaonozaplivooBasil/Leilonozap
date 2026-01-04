@@ -14,40 +14,41 @@ Deno.serve(async (req) => {
         console.log(`🔍 Buscando resultados para: ${productName}`);
 
         const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `🔍 BUSQUE "${productName}" NO GOOGLE SHOPPING / MERCADO LIVRE
+            prompt: `🔍 BUSCA REAL NO GOOGLE SHOPPING: "${productName}"
 
-        🎯 OBJETIVO: Encontrar 6-8 anúncios REAIS de sites BRASILEIROS
+        ⚠️ ATENÇÃO: Você DEVE usar seu acesso à internet via add_context_from_internet=true para buscar produtos REAIS.
 
-        📋 PARA CADA ANÚNCIO:
-        1. title: Título completo
-        2. price: Preço numérico (ex: 2999.90)
-        3. marketplace: "Mercado Livre", "Amazon", "Shopee", "Magazine Luiza", etc
-        4. productUrl: URL COMPLETA começando com https://
-        5. condition: "Novo", "Usado", ou "Recondicionado"
-        6. thumbnailUrl: URL DIRETA da imagem do produto (formato: https://...jpg ou .webp ou .png)
-        7. rating: Avaliação 0-5
-        8. seller: Nome da loja
+        📌 INSTRUÇÕES CRÍTICAS:
+        1. Acesse Google Shopping ou Google Search
+        2. Busque por "${productName}" + "mercado livre brasil" ou "amazon brasil"
+        3. COPIE as URLs REAIS dos anúncios que você ENCONTROU
+        4. NÃO invente URLs
+        5. NÃO retorne URLs que você não VERIFICOU que existem
 
-        🖼️ THUMBNAILS - SUPER IMPORTANTE:
-        - DEVE ser URL DIRETA da imagem (não página HTML)
-        - Formatos válidos: .jpg, .jpeg, .png, .webp
-        - MERCADO LIVRE: Use URLs tipo https://http2.mlstatic.com/D_NQ_NP_...jpg
-        - AMAZON: Use URLs tipo https://m.media-amazon.com/images/I/...jpg
-        - SHOPEE: Use URLs tipo https://cf.shopee.com.br/file/...
-        - NÃO retorne URLs de páginas ou SVGs
+        📋 PARA CADA ANÚNCIO REAL ENCONTRADO:
+        - title: Título exato que você VIU no anúncio
+        - price: Preço que você VIU (número)
+        - marketplace: Site onde encontrou (Mercado Livre, Amazon, Shopee, Magazine Luiza)
+        - productUrl: URL EXATA que você COPIOU do Google (começando com https://produto.mercadolivre.com.br/ ou https://www.amazon.com.br/ ou similar)
+        - condition: "Novo", "Usado", ou "Recondicionado" (se identificável)
+        - thumbnailUrl: URL da imagem que você VIU (formato https://http2.mlstatic.com/... para ML ou https://m.media-amazon.com/... para Amazon)
+        - rating: Avaliação se houver
+        - seller: Nome do vendedor se identificável
 
-        ⚠️ REGRAS:
-        ✅ VARIE marketplaces, preços e vendedores
-        ✅ URLs devem ser REAIS (não invente)
-        ✅ Cada anúncio deve ser DIFERENTE
-        ❌ NÃO repita o mesmo produto
-        ❌ NÃO use URLs inválidas/quebradas
+        🎯 EXEMPLOS DE URLs VÁLIDAS:
+        ✅ https://produto.mercadolivre.com.br/MLB-XXXXXXXXX-titulo-do-produto
+        ✅ https://www.amazon.com.br/dp/XXXXXXXXX
+        ✅ https://shopee.com.br/product/XXXXXXXXX
+        ❌ https://mercadolivre.com.br/produto-xyz (URL genérica - ERRADO)
+        ❌ https://loja.com/produto123 (URL inventada - ERRADO)
 
-        🔍 PRIORIZE:
-        1. Mercado Livre Brasil
-        2. Amazon Brasil
-        3. Shopee Brasil
-        4. Magazine Luiza`,
+        ⚠️ SE VOCÊ NÃO CONSEGUIR ACESSAR A INTERNET:
+        - Retorne array vazio: {"results": []}
+        - NÃO invente dados
+
+        🔍 RETORNE 5-8 ANÚNCIOS REAIS E DIFERENTES
+        ✅ Varie marketplaces, preços e vendedores
+        ✅ Use apenas URLs que você REALMENTE ENCONTROU`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
