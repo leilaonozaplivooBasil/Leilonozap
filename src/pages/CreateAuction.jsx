@@ -1422,18 +1422,20 @@ export default function CreateAuction() {
                             <ImageIcon className="w-4 h-4" />
                             3️⃣ Escolha a imagem de capa:
                           </h4>
-
+                          <span className="text-xs text-green-400 bg-green-900/40 px-3 py-1 rounded-full">
+                            {downloadedImages.length} imagem{downloadedImages.length !== 1 ? 'ns' : ''} encontrada{downloadedImages.length !== 1 ? 's' : ''}
+                          </span>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
                           {downloadedImages.map((img, index) => (
                             <div
                               key={index}
                               className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 ${
-                                  coverIndex === index ? 'border-green-500 ring-2 ring-green-500/30' : 'border-gray-700 hover:border-green-600'
+                                  coverIndex === index ? 'border-green-500 ring-2 ring-green-500/30 scale-105' : 'border-gray-700 hover:border-green-600'
                               }`}
-                              onClick={() => selectCover(index)}
+                              onClick={() => setCoverIndex(index)}
                             >
-                              <div className="w-full h-24 bg-gray-900 flex items-center justify-center">
+                              <div className="w-full h-28 bg-gray-900 flex items-center justify-center">
                                 <img 
                                   src={img} 
                                   alt={`Imagem ${index + 1}`} 
@@ -1461,6 +1463,7 @@ export default function CreateAuction() {
 
                                       if (newImages.length === 0) {
                                           setManualStep(3);
+                                          setCoverIndex(0);
                                           return;
                                       }
 
@@ -1478,13 +1481,25 @@ export default function CreateAuction() {
                                 {index + 1}
                               </div>
                               {coverIndex === index && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-green-500/30 text-white font-bold pointer-events-none">
-                                    CAPA
+                                <div className="absolute inset-0 flex items-center justify-center bg-green-500/40 backdrop-blur-[2px] text-white font-bold text-sm pointer-events-none">
+                                    ✅ CAPA
+                                </div>
+                              )}
+                              {coverIndex !== index && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium pointer-events-none">
+                                  Clique para selecionar
                                 </div>
                               )}
                             </div>
                           ))}
                         </div>
+                        <Button 
+                          onClick={() => setManualStep(6)} 
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          ✅ Confirmar Capa (Imagem {coverIndex + 1})
+                        </Button>
                       </div>
                     )}
 
