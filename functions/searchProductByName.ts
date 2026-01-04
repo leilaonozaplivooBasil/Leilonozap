@@ -86,7 +86,7 @@ Se só encontrar acessórios ou páginas de busca: found = false`,
 
         const imageUrls = (result.imageUrls || [])
             .filter(url => url && typeof url === 'string' && url.startsWith('http') && !url.includes('...'))
-            .slice(0, 6);
+            .slice(0, 8);
 
         if (imageUrls.length === 0) {
             return Response.json({
@@ -97,13 +97,68 @@ Se só encontrar acessórios ou páginas de busca: found = false`,
             }, { status: 404 });
         }
 
-        console.log(`✅ ${result.title}: ${imageUrls.length} imagens`);
+        console.log(`📥 Baixando ${imageUrls.length} imagens para Base44...`);
+
+        // BAIXAR E HOSPEDAR IMAGENS NO BASE44
+        const uploadedUrls = [];
+
+        for (const url of imageUrls) {
+            try {
+                console.log(`🔄 Baixando: ${url.substring(0, 60)}...`);
+                
+                const imgResponse = await fetch(url, { 
+                    signal: AbortSignal.timeout(8000),
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!imgResponse.ok) {
+                    console.log(`❌ HTTP ${imgResponse.status}`);
+                    continue;
+                }
+                
+                const blob = await imgResponse.blob();
+                
+                // Rejeita thumbnails/ícones (< 5KB)
+                if (blob.size < 5000) {
+                    console.log(`⚠️ Muito pequena (${blob.size} bytes), pulando`);
+                    continue;
+                }
+                
+                // Upload para Base44
+                const uploadResult = await base44.integrations.Core.UploadFile({ file: blob });
+                
+                if (uploadResult?.file_url) {
+                    uploadedUrls.push(uploadResult.file_url);
+                    console.log(`✅ Salva: ${uploadResult.file_url}`);
+                    
+                    if (uploadedUrls.length >= 6) break; // Máximo 6 imagens
+                }
+                
+            } catch (err) {
+                console.log(`❌ Falhou: ${err.message}`);
+            }
+        }
+
+        console.log(`📊 RESULTADO: ${uploadedUrls.length}/${imageUrls.length} imagens baixadas`);
+
+        if (uploadedUrls.length === 0) {
+            return Response.json({
+                error: "Imagens não puderam ser baixadas",
+                suggestion: "Use o importador por URL com link direto do produto",
+                title: result.title,
+                description: result.description
+            }, { status: 404 });
+        }
+
+        console.log(`✅ ${result.title}: ${uploadedUrls.length} imagens hospedadas`);
 
         return Response.json({
             found: true,
             title: result.title,
             description: result.description || 'Produto encontrado',
-            imageUrls: imageUrls,
+            imageUrls: uploadedUrls,
             source: 'Internet'
         }, { status: 200 });
 
