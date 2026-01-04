@@ -56,23 +56,25 @@ Deno.serve(async (req) => {
 
         console.log(`🏪 ${marketplace}`);
 
-        // 🆕 USA IA COM SCREENSHOT (contorna bloqueios)
-        console.log('📸 Capturando screenshot da página...');
+        // 🔥 NOVA ESTRATÉGIA: Usa IA para extrair TUDO com contexto da web
+        console.log('🤖 IA extraindo com contexto web...');
         
-        const screenshotResult = await base44.integrations.Core.InvokeLLM({
-            prompt: `Analise esta página do Mercado Livre e extraia:
+        const extractionResult = await base44.integrations.Core.InvokeLLM({
+            prompt: `Acesse esta URL e extraia os dados completos do produto:
+${productUrl}
 
-1. TÍTULO exato do produto (sem HTML, apenas texto)
-2. DESCRIÇÃO completa com especificações técnicas (6-10 linhas em português)
-3. TODAS as URLs das imagens do produto que você conseguir ver
+RETORNE:
+1. Título do produto (texto limpo, sem HTML)
+2. Descrição com especificações (6-10 linhas em português brasileiro)
+3. URLs das imagens do produto (máximo possível, pelo menos 5)
 
-IMPORTANTE para as imagens:
-- Busque por URLs que começam com https://http2.mlstatic.com/D_NQ_NP_
-- São URLs grandes/originais, não miniaturas
-- Retorne pelo menos 5-10 URLs se disponível
+Para as imagens do Mercado Livre:
+- Procure por URLs que começam com https://http2.mlstatic.com/D_NQ_NP_
+- Prefira as versões maiores/originais (terminam com _O.jpg ou _O.webp)
+- Evite miniaturas (que terminam com _V, _S, _T)
 
-Retorne tudo em português do Brasil.`,
-            file_urls: [productUrl],
+Retorne JSON estruturado.`,
+            add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
@@ -87,9 +89,9 @@ Retorne tudo em português do Brasil.`,
             }
         });
 
-        let { title, description, imageUrls } = screenshotResult;
+        let { title, description, imageUrls } = extractionResult;
         
-        console.log(`🤖 IA: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
+        console.log(`🤖 IA retornou: título=${!!title}, desc=${!!description}, imgs=${imageUrls?.length || 0}`);
 
         // LIMPA E VALIDA URLs
         imageUrls = (imageUrls || [])
