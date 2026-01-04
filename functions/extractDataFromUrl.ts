@@ -76,33 +76,49 @@ Deno.serve(async (req) => {
                 console.log('🔍 Buscando via API do Mercado Livre...');
 
                 const apiResp = await fetch(`https://api.mercadolibre.com/items/${productId}`, {
+                    headers: {
+                        "User-Agent": getRandomUA()
+                    },
                     signal: AbortSignal.timeout(10000)
                 });
 
+                console.log(`📡 API Status: ${apiResp.status}`);
+
                 if (apiResp.ok) {
                     const data = await apiResp.json();
+
+                    console.log(`📦 API response keys:`, Object.keys(data));
+                    console.log(`📸 Pictures array length:`, data.pictures?.length || 0);
 
                     title = data.title || '';
 
                     // Extrai imagens da API
                     const rawImages = (data.pictures || [])
-                        .map(p => p.secure_url || p.url)
-                        .filter(u => u && u.includes('http2.mlstatic.com'));
+                        .map(p => {
+                            console.log(`🖼️ Picture object:`, JSON.stringify(p).substring(0, 200));
+                            return p.secure_url || p.url;
+                        })
+                        .filter(u => u && typeof u === 'string' && u.length > 0);
 
-                    console.log(`✅ API ML retornou ${rawImages.length} URLs de imagem`);
-                    console.log('📸 Primeiras URLs:', rawImages.slice(0, 3));
+                    console.log(`✅ API ML retornou ${rawImages.length} URLs`);
+                    if (rawImages.length > 0) {
+                        console.log('📸 Primeira URL completa:', rawImages[0]);
+                    }
 
                     // Converte para versão ORIGINAL (_O)
                     imageUrls = rawImages
                         .map(u => {
-                            // Remove query params
                             const cleanUrl = u.split('?')[0];
-                            // Garante versão ORIGINAL
-                            return cleanUrl.replace(/_[VSWT]\./, '_O.');
+                            // Substitui tamanho por _O (original)
+                            const match = cleanUrl.match(/(.*_)([VSWT])(\.(?:jpg|webp|png))$/i);
+                            if (match) {
+                                return match[1] + 'O' + match[3];
+                            }
+                            return cleanUrl;
                         })
                         .slice(0, 10);
 
-                    console.log(`✅ ${imageUrls.length} URLs processadas para versão original`);
+                    console.log(`✅ ${imageUrls.length} URLs em versão original`);
 
                     // Busca descrição completa se disponível
                     try {
