@@ -339,6 +339,12 @@ export default function CreateAuction() {
       return;
     }
 
+    const words = productName.trim().split(' ');
+    if (words.length === 1) {
+      toast.warning("Seja mais específico: adicione marca e modelo (ex: Samsung Galaxy S23 Ultra)");
+      return;
+    }
+
     setIsSearchingName(true);
     setManualStep(1);
     setDebugError(null);
@@ -351,6 +357,15 @@ export default function CreateAuction() {
 
         console.log('📦 Resposta:', response);
 
+      if (response.status === 404) {
+        const errorMsg = response.data?.error || "Produto não encontrado";
+        const suggestion = response.data?.suggestion || "";
+        toast.error(`${errorMsg}. ${suggestion}`);
+        setManualStep(0);
+        setIsSearchingName(false);
+        return;
+      }
+
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro na busca');
       }
@@ -358,7 +373,7 @@ export default function CreateAuction() {
       const data = response.data;
 
       if (!data?.found) {
-        toast.error(`❌ Produto "${productName}" não encontrado`);
+        toast.error(`Produto não encontrado. Tente com nome mais completo (marca + modelo + especificação)`);
         setManualStep(0);
         setIsSearchingName(false);
         return;
@@ -399,7 +414,7 @@ export default function CreateAuction() {
         timestamp: new Date().toISOString()
       });
       
-      toast.error(`❌ Erro: ${error.message}`);
+      toast.error(`Erro na busca: ${error.message}. Tente outro método de importação.`);
       setManualStep(0);
     } finally {
       setIsSearchingName(false);
@@ -436,7 +451,7 @@ export default function CreateAuction() {
       console.log('🔍 [GTIN] RESPOSTA COMPLETA DO BACKEND:', JSON.stringify(data, null, 2));
 
       if (!data?.found) {
-        toast.error(`❌ GTIN ${gtinCode} não encontrado`);
+        toast.error(`GTIN não encontrado. Verifique o código ou use busca por nome/URL`);
         setManualStep(0);
         setIsSearchingGtin(false);
         return;
@@ -484,7 +499,7 @@ export default function CreateAuction() {
         timestamp: new Date().toISOString()
       });
       
-      toast.error(`❌ Erro na busca GTIN: ${error.message}`);
+      toast.error(`Erro no código de barras. Tente busca por nome ou URL direta.`);
       setManualStep(0);
     } finally {
       setIsSearchingGtin(false);
@@ -572,7 +587,7 @@ export default function CreateAuction() {
         timestamp: new Date().toISOString()
       });
       
-      toast.error("❌ Erro ao extrair: " + (error.message || "Verifique a URL"));
+      toast.error("Erro ao extrair dados da URL. Site pode ter bloqueado o acesso - use outro método.");
       setManualStep(0);
     }
     
