@@ -1,9 +1,24 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+  const base44 = createClientFromRequest(req);
+  let rawBody;
+  
   try {
-    const base44 = createClientFromRequest(req);
-    const body = await req.json();
+    rawBody = await req.text();
+    console.log('📥 Webhook AbacatePay - Body bruto:', rawBody);
+    
+    if (!rawBody || rawBody.trim() === '') {
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'ABACATEPAY_WEBHOOK_EMPTY_BODY',
+        status: 'error',
+        message: 'Webhook recebido com body vazio',
+        component_name: 'abacatepayWebhook'
+      }).catch(() => {});
+      return Response.json({ error: 'Empty body' }, { status: 400 });
+    }
+
+    const body = JSON.parse(rawBody);
 
     // Log webhook recebido
     await base44.asServiceRole.entities.SystemLog.create({
@@ -77,23 +92,20 @@ Deno.serve(async (req) => {
     return Response.json({ success: true });
 
   } catch (error) {
-    console.error('Erro no webhook AbacatePay:', error);
+    console.error('❌ Erro no webhook:', error);
     
-    // Log de erro
-    try {
-      const base44 = createClientFromRequest(req);
-      await base44.asServiceRole.entities.SystemLog.create({
-        step: 'ABACATEPAY_WEBHOOK_ERROR',
-        status: 'error',
-        message: 'Erro ao processar webhook',
-        component_name: 'abacatepayWebhook',
-        error_details: {
-          message: error.message,
-          stack: error.stack
-        }
-      });
-    } catch {}
-
+    await base44.asServiceRole.entities.SystemLog.create({
+      step: 'ABACATEPAY_WEBHOOK_ERROR',
+      status: 'error',
+      message: error.message || 'Erro ao processar webhook',
+      component_name: 'abacatepayWebhook',
+      error_details: {
+        message: error.message,
+        stack: error.stack,
+        rawBody: rawBody || 'N/A'
+      }
+    }).catch(() => {});
+    
     return Response.json({ error: error.message }, { status: 500 });
   }
 });

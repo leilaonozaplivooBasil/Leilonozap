@@ -34,7 +34,9 @@ Deno.serve(async (req) => {
       }, { status: response.status });
     }
 
-    const isPaid = result.data.status === 'COMPLETED' || result.data.status === 'PAID';
+    const isPaid = result.data?.status === 'COMPLETED' || result.data?.status === 'PAID' || result.data?.status === 'paid';
+
+    console.log('💰 Status do PIX:', result.data?.status, 'isPaid:', isPaid);
 
     // Se foi pago, atualiza o leilão
     if (isPaid && auction_id) {
@@ -54,14 +56,23 @@ Deno.serve(async (req) => {
         });
       }
 
-      console.log('Pagamento confirmado e atualizado!');
+      await base44.asServiceRole.entities.SystemLog.create({
+        step: 'CHECK_PIX_PAYMENT_CONFIRMED',
+        status: 'success',
+        message: 'Pagamento PIX confirmado manualmente',
+        component_name: 'checkAbacatePayPix',
+        entity_id: payments[0].id,
+        payload: { billing_id, auction_id }
+      }).catch(() => {});
+
+      console.log('✅ Pagamento confirmado e atualizado!');
     }
 
     return Response.json({
       success: true,
-      status: result.data.status,
+      status: result.data?.status,
       is_paid: isPaid,
-      expires_at: result.data.expiresAt
+      expires_at: result.data?.expiresAt
     });
 
   } catch (error) {
