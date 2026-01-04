@@ -52,20 +52,34 @@ export default function ProductResultsModal({ isOpen, onClose, results, searchTe
               <div className="p-4">
                 <div className="flex gap-4">
                   {/* THUMBNAIL */}
-                  <div className="w-28 h-28 flex-shrink-0 bg-gray-900 rounded-lg overflow-hidden border border-gray-700">
-                    {result.thumbnailUrl ? (
-                      <img 
-                        src={result.thumbnailUrl} 
-                        alt={result.title}
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.parentElement.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 text-xs">📦</div>';
-                        }}
-                      />
+                  <div className="w-28 h-28 flex-shrink-0 bg-gray-900 rounded-lg overflow-hidden border border-gray-700 relative">
+                    {result.thumbnailUrl && result.thumbnailUrl.startsWith('http') ? (
+                      <>
+                        <img 
+                          src={result.thumbnailUrl} 
+                          alt={result.title}
+                          className="w-full h-full object-contain"
+                          onError={(e) => {
+                            console.warn('❌ Falha ao carregar thumbnail:', result.thumbnailUrl);
+                            e.target.style.display = 'none';
+                            const parent = e.target.parentElement;
+                            parent.innerHTML = `
+                              <div class="flex flex-col items-center justify-center h-full text-gray-500 text-center p-2">
+                                <div class="text-3xl mb-1">🏪</div>
+                                <div class="text-xs">${result.marketplace}</div>
+                              </div>
+                            `;
+                          }}
+                        />
+                        {/* Indicador de carregamento */}
+                        <div className="absolute inset-0 flex items-center justify-center bg-gray-800 animate-pulse">
+                          <div className="text-2xl">⏳</div>
+                        </div>
+                      </>
                     ) : (
-                      <div className="flex items-center justify-center h-full text-gray-500 text-4xl">
-                        📦
+                      <div className="flex flex-col items-center justify-center h-full text-gray-500 text-center p-2">
+                        <div className="text-3xl mb-1">🏪</div>
+                        <div className="text-xs">{result.marketplace}</div>
                       </div>
                     )}
                   </div>

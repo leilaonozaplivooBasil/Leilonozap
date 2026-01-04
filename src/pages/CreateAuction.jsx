@@ -374,19 +374,29 @@ export default function CreateAuction() {
     setManualStep(1);
     setIsSearchingName(true);
 
+    const diagnosticData = {
+      url: productUrl,
+      timestamp: new Date().toISOString(),
+      steps: []
+    };
+
     try {
       console.log('📥 ETAPA 2: Importando produto de:', productUrl);
-      toast.info("🤖 Importando produto...");
+      toast.info("🤖 Extraindo dados do anúncio...");
+      diagnosticData.steps.push({ step: 'inicio', status: 'ok' });
 
       const response = await importFromUrl({ productUrl });
+      diagnosticData.steps.push({ step: 'requisicao', status: response?.status || 'erro', data: response?.data });
 
       if (!response || response.status !== 200) {
+        diagnosticData.steps.push({ step: 'erro_status', status: response?.status });
         throw new Error(response?.data?.error || 'Erro na importação');
       }
 
       const data = response.data;
 
       if (data.error) {
+        diagnosticData.steps.push({ step: 'erro_backend', error: data.error });
         toast.error(data.error);
         setManualStep(0);
         setIsSearchingName(false);
@@ -394,8 +404,20 @@ export default function CreateAuction() {
       }
 
       const { title, description, imageUrls, price } = data;
+      diagnosticData.steps.push({ 
+        step: 'dados_extraidos', 
+        title, 
+        imageCount: imageUrls?.length || 0,
+        imageUrls: imageUrls?.slice(0, 3) // primeiras 3 para debug
+      });
 
-      console.log(`✅ Importado: ${title} | ${imageUrls?.length || 0} imagens`);
+      console.log('📊 DIAGNÓSTICO IMPORTAÇÃO:');
+      console.log(`   Título: ${title}`);
+      console.log(`   Imagens retornadas: ${imageUrls?.length || 0}`);
+      console.log(`   Tipo imageUrls: ${typeof imageUrls}, isArray: ${Array.isArray(imageUrls)}`);
+      if (imageUrls && imageUrls.length > 0) {
+        console.log(`   Primeira URL: ${imageUrls[0]}`);
+      }
 
       setExtractedData({ title, description });
       setFormData(prev => ({ 
@@ -406,13 +428,34 @@ export default function CreateAuction() {
         source_url: productUrl
       }));
 
-      const validUrls = (imageUrls || []).filter(url => url && typeof url === 'string');
+      const validUrls = (imageUrls || []).filter(url => url && typeof url === 'string' && url.trim().length > 0);
+      diagnosticData.steps.push({ step: 'validacao_urls', validCount: validUrls.length });
 
       if (validUrls.length === 0) {
-        toast.warning("Produto importado mas sem imagens. Use upload manual.");
+        console.error('❌ FALHA CRÍTICA: Nenhuma imagem extraída!');
+        console.error('Diagnóstico completo:', JSON.stringify(diagnosticData, null, 2));
+        
+        // POPUP DE DIAGNÓSTICO
+        toast.error(
+          `⚠️ Produto importado mas SEM IMAGENS!\n\n` +
+          `📦 Título: ${title.substring(0, 40)}...\n` +
+          `🔗 URL: ${productUrl.substring(0, 40)}...\n` +
+          `❌ Imagens encontradas: 0\n\n` +
+          `💡 Solução: Use "Upload Manual de Imagens"`,
+          { duration: 8000 }
+        );
+        
+        setDebugError({
+          type: 'importacao_sem_imagens',
+          message: `Importado "${title}" mas backend não retornou imagens`,
+          diagnostic: diagnosticData,
+          timestamp: new Date().toISOString()
+        });
+        
         setManualStep(0);
       } else {
-        toast.success(`✅ ${validUrls.length} imagens importadas!`);
+        console.log(`✅ SUCESSO: ${validUrls.length} imagens validadas`);
+        toast.success(`✅ Importado com ${validUrls.length} imagens!`);
         setDownloadedImages(validUrls);
         setCoverIndex(0);
         setManualStep(5);
@@ -421,8 +464,17 @@ export default function CreateAuction() {
       setProductName("");
       
     } catch (error) {
-      console.error("❌ Erro ao importar:", error);
-      toast.error(`❌ Erro: ${error.message}`);
+      console.error("❌ ERRO CRÍTICO:", error);
+      diagnosticData.steps.push({ step: 'erro_catch', error: error.message, stack: error.stack });
+      
+      setDebugError({
+        type: 'importacao_erro',
+        message: error.message,
+        diagnostic: diagnosticData,
+        timestamp: new Date().toISOString()
+      });
+      
+      toast.error(`❌ Falha na importação: ${error.message}`);
       setManualStep(0);
     } finally {
       setIsSearchingName(false);

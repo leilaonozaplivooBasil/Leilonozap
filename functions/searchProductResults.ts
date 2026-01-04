@@ -14,41 +14,40 @@ Deno.serve(async (req) => {
         console.log(`🔍 Buscando resultados para: ${productName}`);
 
         const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `BUSQUE NO GOOGLE SHOPPING: "${productName}"
+            prompt: `🔍 BUSQUE "${productName}" NO GOOGLE SHOPPING / MERCADO LIVRE
 
-        🎯 OBJETIVO: Encontrar 6-8 anúncios REAIS e DIFERENTES do produto
+        🎯 OBJETIVO: Encontrar 6-8 anúncios REAIS de sites BRASILEIROS
 
-        📋 PARA CADA ANÚNCIO ENCONTRADO:
-        1. title: Título exato do anúncio
-        2. price: Preço em número (extraia apenas números, ex: 2999.90)
-        3. marketplace: Site (Mercado Livre, Amazon, Shopee, Magazine Luiza, etc)
-        4. productUrl: URL COMPLETA e REAL do anúncio (começando com https://)
-        5. condition: Estado ("Novo", "Usado", ou "Recondicionado")
-        6. thumbnailUrl: URL da imagem do produto
-        7. rating: Nota 0-5 se houver avaliações
-        8. seller: Nome do vendedor/loja
+        📋 PARA CADA ANÚNCIO:
+        1. title: Título completo
+        2. price: Preço numérico (ex: 2999.90)
+        3. marketplace: "Mercado Livre", "Amazon", "Shopee", "Magazine Luiza", etc
+        4. productUrl: URL COMPLETA começando com https://
+        5. condition: "Novo", "Usado", ou "Recondicionado"
+        6. thumbnailUrl: URL DIRETA da imagem do produto (formato: https://...jpg ou .webp ou .png)
+        7. rating: Avaliação 0-5
+        8. seller: Nome da loja
 
-        ⚠️ REGRAS CRÍTICAS:
-        - URLs devem ser REAIS e ACESSÍVEIS (teste antes de retornar)
-        - VARIE os marketplaces (Mercado Livre, Amazon, Shopee, etc)
-        - VARIE os preços (do mais barato ao mais caro)
-        - VARIE os vendedores
-        - NÃO retorne o mesmo anúncio repetido
-        - NÃO invente URLs, use apenas anúncios que você REALMENTE ENCONTROU
+        🖼️ THUMBNAILS - SUPER IMPORTANTE:
+        - DEVE ser URL DIRETA da imagem (não página HTML)
+        - Formatos válidos: .jpg, .jpeg, .png, .webp
+        - MERCADO LIVRE: Use URLs tipo https://http2.mlstatic.com/D_NQ_NP_...jpg
+        - AMAZON: Use URLs tipo https://m.media-amazon.com/images/I/...jpg
+        - SHOPEE: Use URLs tipo https://cf.shopee.com.br/file/...
+        - NÃO retorne URLs de páginas ou SVGs
 
-        🔍 BUSQUE EM:
-        - Google Shopping
-        - Mercado Livre Brasil
-        - Amazon Brasil
-        - Shopee Brasil
-        - Magazine Luiza
-        - Casas Bahia
+        ⚠️ REGRAS:
+        ✅ VARIE marketplaces, preços e vendedores
+        ✅ URLs devem ser REAIS (não invente)
+        ✅ Cada anúncio deve ser DIFERENTE
+        ❌ NÃO repita o mesmo produto
+        ❌ NÃO use URLs inválidas/quebradas
 
-        ✅ RETORNE APENAS ANÚNCIOS COM:
-        - URL válida e acessível
-        - Foto do produto
-        - Preço visível
-        - Marketplace confiável`,
+        🔍 PRIORIZE:
+        1. Mercado Livre Brasil
+        2. Amazon Brasil
+        3. Shopee Brasil
+        4. Magazine Luiza`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
