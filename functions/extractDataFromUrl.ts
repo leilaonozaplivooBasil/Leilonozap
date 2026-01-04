@@ -159,11 +159,17 @@ Retorne JSON estruturado.`,
                     continue;
                 }
 
-                const blob = await imgResponse.blob();
+                const arrayBuffer = await imgResponse.arrayBuffer();
+                const uint8Array = new Uint8Array(arrayBuffer);
+                
+                // Cria File object do blob
+                const file = new File([uint8Array], `image-${Date.now()}-${rehostedUrls.length}.jpg`, {
+                    type: imgResponse.headers.get('content-type') || 'image/jpeg'
+                });
                 
                 // Re-hospeda no Base44
                 const uploadResult = await base44.integrations.Core.UploadFile({ 
-                    file: blob 
+                    file: file 
                 });
 
                 if (uploadResult?.file_url) {
