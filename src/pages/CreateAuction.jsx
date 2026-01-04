@@ -2355,11 +2355,14 @@ export default function CreateAuction() {
                                   src={url} 
                                   alt={`Preview ${index + 1}`} 
                                   className="max-w-full max-h-full object-contain"
-                                  crossOrigin="anonymous"
                                   loading="eager"
+                                  onLoad={(e) => {
+                                    console.log(`✅ Imagem ${index + 1} carregada:`, url.substring(0, 60));
+                                  }}
                                   onError={(e) => {
+                                    console.error(`❌ ERRO ao carregar imagem ${index + 1}:`, url);
                                     e.target.style.display = 'none';
-                                    e.target.parentElement.innerHTML = `<div class="text-xs text-gray-400">❌ Erro</div>`;
+                                    e.target.parentElement.innerHTML = `<div class="text-xs text-red-400">❌ Erro ao carregar</div>`;
                                   }}
                                 />
                                 <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1 rounded">
