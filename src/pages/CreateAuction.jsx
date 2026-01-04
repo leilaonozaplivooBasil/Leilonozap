@@ -95,6 +95,11 @@ export default function CreateAuction() {
   const [isProcessingTest, setIsProcessingTest] = useState(false);
   const [isResettingTestValora, setIsResettingTestValora] = useState(false);
 
+  // 🆕 ESTADOS PARA FLUXO DE 2 ETAPAS
+  const [showResultsModal, setShowResultsModal] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearchingResults, setIsSearchingResults] = useState(false);
+
   // CORREÇÃO DEFINITIVA: Lógica de autenticação robusta, igual à do Layout.
   const loadCurrentUser = useCallback(async () => {
     let userFound = null;
