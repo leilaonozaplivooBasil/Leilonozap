@@ -40,40 +40,37 @@ export default function ImageAnalyzer({ onAnalysisComplete }) {
     setIsAnalyzing(true);
 
     try {
-      // Converter File para base64 para envio
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          const response = await base44.functions.invoke('analyzeProductImage', {
-            imageFile: selectedImage
-          });
+      // Primeiro fazer upload da imagem
+      const uploadResult = await base44.integrations.Core.UploadFile({ file: selectedImage });
+      
+      if (!uploadResult?.file_url) {
+        throw new Error('Falha ao fazer upload da imagem');
+      }
 
-          if (response.data.success) {
-            setAnalysisResult(response.data.analysis);
-            toast.success('✅ Imagem analisada com sucesso!');
-            
-            // Passar dados para o componente pai
-            if (onAnalysisComplete) {
-              onAnalysisComplete({
-                ...response.data.analysis,
-                imageUrl: response.data.imageUrl
-              });
-            }
-          } else {
-            throw new Error(response.data.error || 'Erro na análise');
-          }
-        } catch (error) {
-          console.error('Erro na análise:', error);
-          toast.error('Erro ao analisar imagem: ' + error.message);
-        } finally {
-          setIsAnalyzing(false);
+      // Agora enviar URL para analise
+      const response = await base44.functions.invoke('analyzeProductImage', {
+        imageUrl: uploadResult.file_url
+      });
+
+      if (response.data?.success) {
+        setAnalysisResult(response.data.analysis);
+        toast.success('✅ Imagem analisada com sucesso!');
+        
+        // Passar dados para o componente pai
+        if (onAnalysisComplete) {
+          onAnalysisComplete({
+            ...response.data.analysis,
+            imageUrl: response.data.imageUrl
+          });
         }
-      };
-      reader.readAsDataURL(selectedImage);
+      } else {
+        throw new Error(response.data?.error || 'Erro na analise');
+      }
 
     } catch (error) {
-      console.error('Erro:', error);
-      toast.error('Erro ao processar imagem');
+      console.error('Erro na analise:', error);
+      toast.error('Erro ao analisar imagem: ' + error.message);
+    } finally {
       setIsAnalyzing(false);
     }
   };

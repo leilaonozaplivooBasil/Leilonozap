@@ -10,47 +10,15 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Não autenticado' }, { status: 401 });
     }
 
-    // Log do payload bruto para debug
-    const bodyText = await req.text();
-    console.log('📥 Payload recebido (primeiros 200 chars):', bodyText.substring(0, 200));
+    const { imageUrl } = await req.json();
     
-    let parsedBody;
-    try {
-      parsedBody = JSON.parse(bodyText);
-    } catch (parseError) {
-      console.error('❌ Erro ao parsear JSON:', parseError.message);
-      await base44.asServiceRole.entities.SystemLog.create({
-        step: 'IMAGE_ANALYSIS_PARSE_ERROR',
-        status: 'error',
-        message: 'Payload JSON inválido recebido',
-        component_name: 'analyzeProductImage',
-        error_details: {
-          parseError: parseError.message,
-          receivedData: bodyText.substring(0, 500)
-        }
-      }).catch(() => {});
-      
-      return Response.json({ error: 'Dados inválidos recebidos' }, { status: 400 });
-    }
-    
-    const { imageFile } = parsedBody;
-    
-    if (!imageFile) {
-      return Response.json({ error: 'Imagem não fornecida' }, { status: 400 });
+    if (!imageUrl) {
+      return Response.json({ error: 'URL da imagem nao fornecida' }, { status: 400 });
     }
 
-    console.log('📸 Analisando imagem do produto...');
+    console.log('📸 Analisando imagem:', imageUrl);
 
-    // 1. Upload da imagem
-    const uploadResult = await base44.integrations.Core.UploadFile({ file: imageFile });
-    
-    if (!uploadResult?.file_url) {
-      return Response.json({ error: 'Falha no upload da imagem' }, { status: 500 });
-    }
-
-    console.log('✅ Imagem hospedada:', uploadResult.file_url);
-
-    // 2. Analisar imagem com IA (visão)
+    // Analisar imagem com IA (visao)
     const analysis = await base44.integrations.Core.InvokeLLM({
       prompt: `Analise esta imagem de produto e extraia as seguintes informações:
 
@@ -73,9 +41,9 @@ Deno.serve(async (req) => {
 4. **Preço estimado de mercado** (valor em reais, pesquise mentalmente)
 5. **Estado do produto** (novo, usado, com avarias, etc)
 
-Seja PRECISO e DETALHADO. Use conhecimento de mercado para estimar preços realistas.`,
+Seja PRECISO e DETALHADO. Use conhecimento de mercado para estimar precos realistas.`,
       add_context_from_internet: true,
-      file_urls: [uploadResult.file_url],
+      file_urls: [imageUrl],
       response_json_schema: {
         type: "object",
         properties: {
@@ -98,7 +66,7 @@ Seja PRECISO e DETALHADO. Use conhecimento de mercado para estimar preços reali
       }
     });
 
-    console.log('🧠 Análise completa:', analysis);
+    console.log('🧠 Analise completa:', analysis);
 
     // Log de sucesso
     await base44.asServiceRole.entities.SystemLog.create({
@@ -107,19 +75,19 @@ Seja PRECISO e DETALHADO. Use conhecimento de mercado para estimar preços reali
       message: 'Imagem analisada com sucesso',
       component_name: 'analyzeProductImage',
       payload: {
-        imageUrl: uploadResult.file_url,
+        imageUrl: imageUrl,
         analysis: analysis
       }
     }).catch(() => {});
 
     return Response.json({
       success: true,
-      imageUrl: uploadResult.file_url,
+      imageUrl: imageUrl,
       analysis: analysis
     }, { status: 200 });
 
   } catch (error) {
-    console.error('❌ Erro ao analisar imagem:', error);
+    console.error('Erro ao analisar imagem:', error);
 
     // Log de erro
     try {
@@ -127,7 +95,7 @@ Seja PRECISO e DETALHADO. Use conhecimento de mercado para estimar preços reali
       await base44.asServiceRole.entities.SystemLog.create({
         step: 'IMAGE_ANALYSIS_FAILED',
         status: 'error',
-        message: 'Falha na análise de imagem',
+        message: 'Falha na analise de imagem',
         component_name: 'analyzeProductImage',
         error_details: {
           message: error.message,
