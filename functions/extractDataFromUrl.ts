@@ -59,46 +59,54 @@ Extraia:
         
         console.log('✅ ETAPA 1:', basicDataResult);
         
-        console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
+        console.log('🖼️ ETAPA 2: Baixando HTML direto para análise precisa...');
         
+        // 🆕 BAIXA O HTML DIRETAMENTE DA PÁGINA
+        let pageHtml = null;
+        try {
+            console.log(`📥 Fazendo fetch de: ${productUrl}`);
+            const fetchResponse = await fetch(productUrl, {
+                headers: {
+                    'User-Agent': getRandomUA(),
+                    'Accept': 'text/html,application/xhtml+xml',
+                    'Accept-Language': 'pt-BR,pt;q=0.9'
+                }
+            });
+            
+            if (fetchResponse.ok) {
+                pageHtml = await fetchResponse.text();
+                console.log(`✅ HTML baixado! ${pageHtml.length} caracteres`);
+            } else {
+                console.warn(`⚠️ Fetch falhou (${fetchResponse.status}), usando modo internet...`);
+            }
+        } catch (fetchError) {
+            console.warn(`⚠️ Erro no fetch: ${fetchError.message}`);
+        }
+        
+        // 🆕 ANALISA COM IA (usando HTML direto ou modo internet)
         const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE ESTA URL E EXTRAIA AS IMAGENS PRINCIPAIS DO PRODUTO: ${productUrl}
+            prompt: pageHtml 
+                ? `ANALISE O HTML ABAIXO E EXTRAIA URLS DE IMAGENS:
 
-🎯 OBJETIVO: Encontre entre 3 e 6 URLs de imagens em ALTA RESOLUÇÃO da GALERIA PRINCIPAL do produto.
+${pageHtml.substring(0, 100000)}
 
-⚠️ INSTRUÇÕES CRÍTICAS:
+EXTRAIA ENTRE 3 E 6 URLs DE IMAGENS DO PRODUTO.
 
-1. PROCURE NO HTML POR:
-   - Tags <img> da galeria principal de fotos
-   - Atributos: data-zoom, data-src, src
-   - Carrossel/slider de imagens do produto
-   - Miniaturas (thumbnails) com links para imagens grandes
+PROCURE:
+- Tags <img> com src, data-src, data-zoom
+- URLs tipo mlstatic.com, media-amazon, etc
+- Galeria principal (não banners/logos)
 
-2. FORMATO DAS URLs (Mercado Livre):
-   ✅ PEGUE URLs que tenham padrões como:
-   - https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXXX_XXXXXX-F.webp
-   - https://http2.mlstatic.com/D_Q_NP_2X_XXXXXX-MLAXXXXXXXXXX_XXXXXX-R.webp
-   
-   ❌ EVITE URLs de miniaturas pequenas (_O.jpg, _S.jpg)
-   ❌ EVITE logos ou banners
+CADA URL DEVE TER CÓDIGO ÚNICO!
 
-3. CÓDIGOS DIFERENTES = IMAGENS DIFERENTES:
-   - Cada imagem tem um código único (ex: 865332, 927992, 708740)
-   - NÃO pegue a mesma imagem com extensões diferentes (.jpg vs .webp)
+EXEMPLO:
+["https://http2.mlstatic.com/D_NQ_NP_2X_865332-MLA96868279679_102025-F.webp",
+ "https://http2.mlstatic.com/D_Q_NP_2X_927992-MLU79387305003_092024-R.webp"]`
+                : `ACESSE: ${productUrl}
 
-4. PRIORIDADE:
-   - Primeira imagem = imagem de CAPA (principal)
-   - Demais = ângulos diferentes, detalhes, variações
-
-🔍 EXEMPLO DO QUE VOCÊ DEVE RETORNAR:
-[
-  "https://http2.mlstatic.com/D_NQ_NP_2X_865332-MLA96868279679_102025-F.webp",
-  "https://http2.mlstatic.com/D_Q_NP_2X_927992-MLU79387305003_092024-R.webp",
-  "https://http2.mlstatic.com/D_Q_NP_2X_708740-MLA80779729796_112024-R.webp"
-]
-
-COPIE AS URLs EXATAS DO CÓDIGO HTML DA PÁGINA!`,
-            add_context_from_internet: true,
+EXTRAIA 3-6 URLs DE IMAGENS DO PRODUTO.
+COPIE URLs EXATAS do HTML (códigos únicos)!`,
+            add_context_from_internet: !pageHtml,
             response_json_schema: {
                 type: "object",
                 properties: {
@@ -113,7 +121,7 @@ COPIE AS URLs EXATAS DO CÓDIGO HTML DA PÁGINA!`,
             }
         });
         
-        console.log('✅ ETAPA 2:', imagesResult);
+        console.log('✅ ETAPA 2 - URLs:', imagesResult.image_urls);
         
         const extractionResult = {
             ...basicDataResult,
