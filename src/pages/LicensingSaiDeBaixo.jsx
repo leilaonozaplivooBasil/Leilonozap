@@ -139,7 +139,7 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
             <JourneyAnimation />
 
             <div className="mb-16 mt-20">
-              <EarningsSimulator />
+              <EarningsSimulator theme="saidebaixo" />
             </div>
 
             <div ref={cardsRef} className="mt-16 max-w-2xl mx-auto">
