@@ -326,6 +326,12 @@ export default function PartnersPage() {
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
     setShowLoginModal(false);
+    
+    // 🔥 REDIRECIONA PARA INVESTOR DASHBOARD
+    console.log('✅ Login Partners bem-sucedido, redirecionando...');
+    setTimeout(() => {
+      navigate(createPageUrl("InvestorDashboard"));
+    }, 500);
   };
 
   const handleLoginClick = () => {
