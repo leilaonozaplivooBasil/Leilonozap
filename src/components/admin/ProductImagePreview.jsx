@@ -19,16 +19,22 @@ export default function ProductImagePreview({ imageUrls }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {validImages.map((url, index) => (
           <div 
-            key={`img-${index}-${url.substring(url.length - 15)}`}
-            className="relative w-full h-24 bg-gray-800 rounded overflow-hidden border border-gray-600"
+            key={url}
+            className="relative w-full h-24 rounded overflow-hidden border border-gray-600"
+            style={{ backgroundColor: '#1f2937' }}
           >
-            {/* IMAGEM - z-10 para ficar embaixo do badge */}
             <img 
               src={url} 
               alt={`Produto ${index + 1}`} 
-              className="absolute inset-0 w-full h-full object-cover z-10"
-              onLoad={() => {
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block'
+              }}
+              onLoad={(e) => {
                 console.log(`✅ PREVIEW IMAGEM ${index + 1} CARREGADA!`);
+                e.target.style.opacity = '1';
               }}
               onError={(e) => {
                 console.error(`❌ PREVIEW ERRO ${index + 1}:`, url);
@@ -36,8 +42,10 @@ export default function ProductImagePreview({ imageUrls }) {
               }}
             />
             
-            {/* BADGE - z-20 para ficar em cima da imagem */}
-            <div className="absolute top-1 right-1 bg-black/80 text-white text-xs px-2 py-1 rounded font-bold z-20">
+            <div 
+              className="absolute top-1 right-1 bg-black/80 text-white text-xs px-2 py-1 rounded font-bold"
+              style={{ pointerEvents: 'none' }}
+            >
               {index === 0 ? 'Capa' : index + 1}
             </div>
           </div>
