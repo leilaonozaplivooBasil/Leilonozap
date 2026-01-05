@@ -75,7 +75,7 @@ INSTRUÇÕES:
 3. COPIE as URLs completas dos atributos src ou data-src
 4. Para Mercado Livre: URLs geralmente têm formato https://http2.mlstatic.com/D_NQ_NP_2X_CODIGO-MLBXXXXXXX-XXXXX-F.webp
 5. Para Amazon: URLs geralmente têm formato https://m.media-amazon.com/images/I/CODIGO._AC_XXXX_.jpg
-6. Retorne NO MÍNIMO 4 URLs REAIS diferentes (se houver)
+6. Retorne ENTRE 3 E 6 URLs REAIS diferentes
 
 EXEMPLO DO QUE VOCÊ DEVE FAZER:
 ❌ ERRADO: "https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB12345678-F.jpg" (inventado)
