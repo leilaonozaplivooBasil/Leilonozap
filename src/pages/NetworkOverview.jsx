@@ -208,6 +208,7 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
 
 function NetworkTree({ users, onPromote, onEdit }) {
   const [expandedUsers, setExpandedUsers] = useState(new Set());
+  const [expandAll, setExpandAll] = useState(false);
 
   const toggleExpand = (userId) => {
     setExpandedUsers(prev => {
@@ -221,57 +222,130 @@ function NetworkTree({ users, onPromote, onEdit }) {
     });
   };
 
-  const buildTree = (userId = null, level = 0) => {
-    const children = users.filter(u => u.referred_by_id === userId);
-    
-    if (level === 0 && children.length === 0) {
-      return null;
+  const toggleExpandAll = () => {
+    if (expandAll) {
+      setExpandedUsers(new Set());
+    } else {
+      const allUserIds = new Set(users.map(u => u.id));
+      setExpandedUsers(allUserIds);
     }
-
-    return children.map(user => {
-      const userChildren = buildTree(user.id, level + 1);
-      const isExpanded = expandedUsers.has(user.id);
-
-      return (
-        <UserCard
-          key={user.id}
-          user={user}
-          level={level}
-          onPromote={onPromote}
-          onEdit={onEdit}
-          isExpanded={isExpanded}
-          onToggle={() => toggleExpand(user.id)}
-          allUsers={users}
-        >
-          {userChildren}
-        </UserCard>
-      );
-    });
+    setExpandAll(!expandAll);
   };
 
-  const rootUsers = users.filter(u => !u.referred_by_id || u.referred_by_id === null);
+  // Renderiza um usuário e seus filhos recursivamente
+  const renderNode = (user, level = 0) => {
+    const children = users.filter(u => u.referred_by_id === user.id);
+    const isExpanded = expandedUsers.has(user.id);
+    const hasChildren = children.length > 0;
 
-  return (
-    <div className="flex flex-wrap gap-8 justify-center p-6">
-      {rootUsers.map(user => {
-        const userChildren = buildTree(user.id, 1);
-        const isExpanded = expandedUsers.has(user.id);
-
-        return (
+    return (
+      <div key={user.id} className="flex flex-col items-center">
+        {/* Card do usuário */}
+        <div className="relative">
           <UserCard
-            key={user.id}
             user={user}
-            level={0}
+            level={level}
             onPromote={onPromote}
             onEdit={onEdit}
             isExpanded={isExpanded}
             onToggle={() => toggleExpand(user.id)}
             allUsers={users}
-          >
-            {userChildren}
-          </UserCard>
-        );
-      })}
+          />
+        </div>
+
+        {/* Linha conectora para filhos */}
+        {hasChildren && isExpanded && (
+          <div className="flex flex-col items-center w-full">
+            {/* Linha vertical descendente */}
+            <div className="w-0.5 h-8 bg-gradient-to-b from-green-500/50 to-green-500/20"></div>
+            
+            {/* Container dos filhos */}
+            <div className="relative flex gap-6 justify-center items-start">
+              {/* Linha horizontal conectando os filhos */}
+              {children.length > 1 && (
+                <div 
+                  className="absolute top-0 h-0.5 bg-gradient-to-r from-green-500/20 via-green-500/50 to-green-500/20"
+                  style={{
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: `calc(100% - ${100 / children.length}%)`
+                  }}
+                ></div>
+              )}
+              
+              {/* Renderiza cada filho */}
+              {children.map((child, idx) => (
+                <div key={child.id} className="relative flex flex-col items-center">
+                  {/* Linha vertical para cada filho */}
+                  <div className="w-0.5 h-8 bg-gradient-to-b from-green-500/50 to-green-500/20 mb-4"></div>
+                  
+                  {/* Renderiza o filho recursivamente */}
+                  {renderNode(child, level + 1)}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Encontra usuários raiz (sem indicador)
+  const rootUsers = users.filter(u => !u.referred_by_id || u.referred_by_id === null);
+
+  // Organiza os usuários raiz por hierarquia (quem tem mais indicados primeiro)
+  const sortedRoots = [...rootUsers].sort((a, b) => {
+    const aCount = users.filter(u => u.referred_by_id === a.id).length;
+    const bCount = users.filter(u => u.referred_by_id === b.id).length;
+    return bCount - aCount;
+  });
+
+  return (
+    <div className="relative">
+      {/* Controles de expansão */}
+      <div className="flex justify-center mb-6">
+        <Button
+          onClick={toggleExpandAll}
+          variant="outline"
+          className="border-green-500 text-green-400 hover:bg-green-500/10"
+          size="sm"
+        >
+          {expandAll ? (
+            <>
+              <ChevronDown className="w-4 h-4 mr-2" />
+              Recolher Todos
+            </>
+          ) : (
+            <>
+              <ChevronRight className="w-4 h-4 mr-2" />
+              Expandir Todos
+            </>
+          )}
+        </Button>
+      </div>
+
+      {/* Árvore hierárquica */}
+      <div className="flex flex-wrap gap-16 justify-center p-6">
+        {sortedRoots.map(rootUser => (
+          <div key={rootUser.id} className="flex flex-col items-center">
+            {renderNode(rootUser, 0)}
+          </div>
+        ))}
+      </div>
+
+      {/* Legenda */}
+      <div className="mt-8 flex justify-center">
+        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span className="text-xs text-gray-400">= Conexão de indicação</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Award className="w-4 h-4 text-yellow-400" />
+            <span className="text-xs text-gray-400">= Nível de carreira</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
