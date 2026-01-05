@@ -129,8 +129,6 @@ Deno.serve(async (req) => {
             }, { status: 404 });
         }
 
-        // Pega a primeira imagem de alta resolução
-        const imageUrl = matches[0][0].split('?')[0]; // Remove query params
         console.log(`🎯 URL da imagem principal: ${imageUrl}`);
 
         // ETAPA 3: Baixar a imagem
