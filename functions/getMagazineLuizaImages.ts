@@ -23,18 +23,18 @@ Deno.serve(async (req) => {
         const html = await response.text();
         console.log(`✅ HTML baixado: ${html.length} chars`);
 
-        // BUSCA TODAS AS URLs QUE TERMINAM COM .jpg ou .jpeg
-        const regex = /https?:\/\/[a-zA-Z0-9\-._~:/?#\[\]@!$&'()*+,;=%]+\.(?:jpg|jpeg)/gi;
+        // BUSCA TODAS AS URLs QUE TERMINAM COM .jpg ou .jpeg (REGEX MAIS FLEXÍVEL)
+        const regex = /https?:\/\/[^\s"'<>]+\.(?:jpg|jpeg)/gi;
         const allMatches = [...html.matchAll(regex)];
 
         console.log(`\n📸 TOTAL DE URLs .jpg/.jpeg: ${allMatches.length}\n`);
 
         // FILTRA APENAS DO MLCDN (imagens de produto do Magazine Luiza)
         const productImages = allMatches
-            .map(m => m[0])
-            .filter(url => url.includes('mlcdn.com.br'))
-            .filter(url => !url.includes('logo') && !url.includes('icon'))
-            .map(url => url.split('?')[0]); // Remove query strings
+            .map(m => m[0].split('?')[0].split('"')[0].split("'")[0]) // Limpa tudo
+            .filter(url => url.includes('mlcdn.com.br') || url.includes('magazineluiza.com.br'))
+            .filter(url => !url.includes('logo') && !url.includes('icon') && !url.includes('sprite'))
+            .filter(url => url.includes('/420x420/') || url.includes('/1000x1000/')); // Apenas imagens de produto
 
         // REMOVE DUPLICATAS
         const uniqueImages = [...new Set(productImages)];
