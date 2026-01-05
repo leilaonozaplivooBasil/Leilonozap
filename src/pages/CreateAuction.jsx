@@ -1408,6 +1408,34 @@ export default function CreateAuction() {
                       </div>
                     )}
 
+                    {/* 🆕 ETAPA 5: PREVIEW DAS IMAGENS IMPORTADAS */}
+                    {manualStep === 5 && downloadedImages.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
+                          <h4 className="font-bold text-green-300 mb-3 flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4" />
+                            ✅ Produto Importado com Sucesso!
+                          </h4>
+                          <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
+                            <div><span className="text-green-400 font-semibold">Título:</span> {importedData?.title || extractedData?.title || formData.title}</div>
+                            {importedData?.price && (
+                              <div><span className="text-green-400 font-semibold">Preço:</span> R$ {importedData.price.toFixed(2)}</div>
+                            )}
+                          </div>
+                        </div>
+
+                        <ProductImagePreview imageUrls={downloadedImages} />
+
+                        <Button 
+                          onClick={applyToForm}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-base py-3"
+                        >
+                          <Upload className="w-5 h-5 mr-2" />
+                          🚀 Aplicar no Formulário
+                        </Button>
+                      </div>
+                    )}
+
                     {/* 🆕 ETAPA 2: DADOS EXTRAÍDOS + URLs DE IMAGENS */}
                     {manualStep === 2 && (
                       <div className="space-y-4">
