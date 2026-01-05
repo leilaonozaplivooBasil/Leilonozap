@@ -186,80 +186,123 @@ export default function Layout({ children, currentPageName }) {
         const isLoggedIn = sessionStorage.getItem('isLoggedIn');
 
         if (savedUserJSON && isLoggedIn) {
-          const userFromStorage = JSON.parse(savedUserJSON);
-        try {
-          const usersInDB = await AppUser.filter({ id: userFromStorage.id });
-          if (usersInDB.length > 0) {
-            const freshUser = usersInDB[0];
-
-            if (freshUser.email === 'luizsantanna@tttcorporate.com') {
-              freshUser.role = 'admin';
+          try {
+            const userFromStorage = JSON.parse(savedUserJSON);
+            
+            // 🛡️ PROTEÇÃO: Valida se userFromStorage existe e tem ID
+            if (!userFromStorage || !userFromStorage.id) {
+              console.warn("⚠️ Dados de usuário inválidos no localStorage");
+              localStorage.removeItem('currentUser');
+              sessionStorage.removeItem('isLoggedIn');
+              setIsLoading(false);
+              return;
             }
 
-            localStorage.setItem('currentUser', JSON.stringify(freshUser));
-            setCurrentUser(freshUser);
-            userFound = true;
-            console.log("✅ Usuário admin carregado:", freshUser.full_name, "Role:", freshUser.role);
+            try {
+              const usersInDB = await AppUser.filter({ id: userFromStorage.id });
+              if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
+                const freshUser = usersInDB[0];
 
-            // Registra lead de influenciador se houver código
-            const influencerCode = sessionStorage.getItem('influencerCode');
-            if (influencerCode && !sessionStorage.getItem('influencer_lead_registered')) {
-              try {
-                await base44.functions.invoke('registerInfluencerLead', { 
-                  influencer_code: influencerCode 
-                });
-                sessionStorage.setItem('influencer_lead_registered', 'true');
-                console.log('✅ Lead de influenciador registrado');
-              } catch (error) {
-                console.error('Erro ao registrar lead:', error);
-              }
-            }
-          }
-        } catch (error) {
-          console.log("Erro ao validar AppUser, usando localStorage.", error);
-          if (userFromStorage.email === 'luizsantanna@tttcorporate.com') {
-            userFromStorage.role = 'admin';
-          }
-          setCurrentUser(userFromStorage);
-          userFound = true;
-        }
-      }
-
-      if (!userFound) {
-        try {
-            const platformUser = await User.me();
-            if (platformUser && platformUser.email) {
-                const usersInDB = await AppUser.filter({ id: platformUser.id });
-                let finalUser = platformUser;
-                if (usersInDB.length > 0) {
-                  finalUser = usersInDB[0];
+                if (freshUser && freshUser.email === 'luizsantanna@tttcorporate.com') {
+                  freshUser.role = 'admin';
                 }
 
-                if (finalUser.email === 'luizsantanna@tttcorporate.com') {
-                    finalUser.role = 'admin';
-                }
-                localStorage.setItem('currentUser', JSON.stringify(finalUser));
-                sessionStorage.setItem('isLoggedIn', 'true');
-                setCurrentUser(finalUser);
+                localStorage.setItem('currentUser', JSON.stringify(freshUser));
+                setCurrentUser(freshUser);
                 userFound = true;
-                console.log("✅ Usuário da plataforma carregado:", finalUser.full_name, "Role:", finalUser.role);
-            }
-        } catch (error) {
-            console.log("Nenhum usuário da plataforma logado");
-        }
-      }
+                console.log("✅ Usuário carregado:", freshUser?.full_name || 'Sem nome', "Role:", freshUser?.role || 'user');
 
-      if (!userFound) {
+                // Registra lead de influenciador se houver código
+                try {
+                  const influencerCode = sessionStorage.getItem('influencerCode');
+                  if (influencerCode && !sessionStorage.getItem('influencer_lead_registered')) {
+                    await base44.functions.invoke('registerInfluencerLead', { 
+                      influencer_code: influencerCode 
+                    });
+                    sessionStorage.setItem('influencer_lead_registered', 'true');
+                    console.log('✅ Lead de influenciador registrado');
+                  }
+                } catch (influencerError) {
+                  // Erro de influenciador não deve quebrar a aplicação
+                  console.debug('Registro de influenciador falhou (não crítico)');
+                }
+              } else {
+                // Usuário não encontrado no banco, usa localStorage
+                console.log("⚠️ Usuário não encontrado no banco, usando localStorage");
+                if (userFromStorage.email === 'luizsantanna@tttcorporate.com') {
+                  userFromStorage.role = 'admin';
+                }
+                setCurrentUser(userFromStorage);
+                userFound = true;
+              }
+            } catch (dbError) {
+              // Erro ao buscar no banco, usa localStorage
+              console.log("⚠️ Erro ao buscar no banco, usando localStorage");
+              if (userFromStorage.email === 'luizsantanna@tttcorporate.com') {
+                userFromStorage.role = 'admin';
+              }
+              setCurrentUser(userFromStorage);
+              userFound = true;
+            }
+          } catch (parseError) {
+            // Erro ao fazer parse do JSON, limpa localStorage
+            console.warn("⚠️ Erro ao fazer parse do localStorage, limpando dados");
+            localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('isLoggedIn');
+          }
+        }
+
+        if (!userFound) {
+          try {
+              const platformUser = await User.me();
+              if (platformUser && platformUser.email) {
+                  try {
+                    const usersInDB = await AppUser.filter({ id: platformUser.id });
+                    let finalUser = platformUser;
+                    if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
+                      finalUser = usersInDB[0];
+                    }
+
+                    if (finalUser.email === 'luizsantanna@tttcorporate.com') {
+                        finalUser.role = 'admin';
+                    }
+                    localStorage.setItem('currentUser', JSON.stringify(finalUser));
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                    setCurrentUser(finalUser);
+                    userFound = true;
+                    console.log("✅ Usuário da plataforma carregado:", finalUser?.full_name || 'Sem nome');
+                  } catch (dbError) {
+                    // Erro ao buscar no banco, usa dados da plataforma
+                    console.log("⚠️ Erro ao buscar AppUser, usando dados da plataforma");
+                    if (platformUser.email === 'luizsantanna@tttcorporate.com') {
+                        platformUser.role = 'admin';
+                    }
+                    localStorage.setItem('currentUser', JSON.stringify(platformUser));
+                    sessionStorage.setItem('isLoggedIn', 'true');
+                    setCurrentUser(platformUser);
+                    userFound = true;
+                  }
+              }
+          } catch (platformError) {
+              console.log("ℹ️ Nenhum usuário da plataforma logado");
+          }
+        }
+
+        if (!userFound) {
+          setCurrentUser(null);
+          localStorage.removeItem('currentUser');
+          sessionStorage.removeItem('isLoggedIn');
+        }
+
+      } catch (error) {
+        console.error('❌ Erro no initApp:', error);
+        // 🛡️ CRÍTICO: NUNCA DEIXA O APP QUEBRAR
         setCurrentUser(null);
         localStorage.removeItem('currentUser');
         sessionStorage.removeItem('isLoggedIn');
-      }
-
-      setIsLoading(false);
-      } catch (error) {
-      console.error('❌ Erro fatal no initApp:', error);
-      setIsLoading(false);
-      // Não seta currentUser para evitar tela branca
+      } finally {
+        // 🛡️ SEMPRE desliga o loading, mesmo com erro
+        setIsLoading(false);
       }
       };
 
