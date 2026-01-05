@@ -47,17 +47,19 @@ export default function WalletDeposit() {
   const handleDeposit = async (pkg) => {
     setIsProcessing(true);
     try {
-      toast.info("Redirecionando para Mercado Pago...");
+      toast.info("Redirecionando para pagamento seguro...");
       
-      const response = await base44.functions.invoke('mercadopagoDeposit', {
-        amount: pkg.amount,
+      const response = await createDepositIntent({
         deposit_package_id: pkg.id
       });
 
-      if (response?.data?.init_point) {
-        window.location.href = response.data.init_point;
+      if (response?.payment_data?.checkout_url) {
+        window.location.href = response.payment_data.checkout_url;
+      } else if (response?.payment_data?.pix_key) {
+        toast.success("PIX gerado! (implementar modal)");
+        setIsProcessing(false);
       } else {
-        toast.error(response?.data?.error || "Erro ao criar pagamento");
+        toast.error("Erro ao criar sessão de pagamento");
         setIsProcessing(false);
       }
     } catch (error) {
@@ -76,18 +78,11 @@ export default function WalletDeposit() {
 
     setIsProcessing(true);
     try {
-      toast.info("Redirecionando para Mercado Pago...");
+      toast.info("Redirecionando para pagamento seguro...");
       
-      const response = await base44.functions.invoke('mercadopagoDeposit', {
-        amount: amount
-      });
-
-      if (response?.data?.init_point) {
-        window.location.href = response.data.init_point;
-      } else {
-        toast.error(response?.data?.error || "Erro ao criar pagamento");
-        setIsProcessing(false);
-      }
+      // Para valor customizado, precisa criar um pacote temporário ou usar função diferente
+      toast.info("Funcionalidade de valor customizado em desenvolvimento");
+      setIsProcessing(false);
     } catch (error) {
       console.error("Erro ao processar pagamento:", error);
       toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
