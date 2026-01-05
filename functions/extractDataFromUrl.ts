@@ -62,18 +62,26 @@ Extraia:
         console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
         
         const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse: ${productUrl}
+            prompt: `ACESSE ESTE LINK E COPIE AS URLs EXATAS DAS IMAGENS: ${productUrl}
 
-MISSÃO: Encontre TODAS as URLs de imagens do produto em ALTA RESOLUÇÃO.
+⚠️ CRÍTICO: COPIE AS URLs REAIS QUE ESTÃO NO HTML DA PÁGINA!
+❌ NÃO INVENTE URLs de exemplo (123456, etc)
+❌ NÃO modifique os códigos das URLs
+✅ COPIE EXATAMENTE como estão no código HTML
 
-INSTRUÇÕES PARA MERCADO LIVRE:
-1. Procure elementos <img> com class="ui-pdp-image" ou similar
-2. Busque URLs que contenham: http2.mlstatic.com, mlstatic.com
-3. Priorize URLs terminadas em: -F.jpg, -O.jpg, .jpg, .webp
-4. IGNORE miniaturas (-I.jpg, -W.jpg, thumb)
-5. Retorne NO MÍNIMO 4 URLs diferentes
+INSTRUÇÕES:
+1. Acesse a página e encontre o código HTML
+2. Procure por tags <img> do produto
+3. COPIE as URLs completas dos atributos src ou data-src
+4. Para Mercado Livre: URLs geralmente têm formato https://http2.mlstatic.com/D_NQ_NP_2X_CODIGO-MLBXXXXXXX-XXXXX-F.webp
+5. Para Amazon: URLs geralmente têm formato https://m.media-amazon.com/images/I/CODIGO._AC_XXXX_.jpg
+6. Retorne NO MÍNIMO 4 URLs REAIS diferentes (se houver)
 
-Exemplo válido: https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB12345678-F.jpg`,
+EXEMPLO DO QUE VOCÊ DEVE FAZER:
+❌ ERRADO: "https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB12345678-F.jpg" (inventado)
+✅ CORRETO: "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp" (copiado do HTML real)
+
+COPIE AS URLs EXATAS QUE VOCÊ VÊ NO CÓDIGO FONTE DA PÁGINA!`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
