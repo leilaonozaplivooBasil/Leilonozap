@@ -20,25 +20,29 @@ export default function ProductImagePreview({ imageUrls }) {
         {validImages.map((url, index) => (
           <div 
             key={index}
-            className="relative w-full h-24 bg-gray-800 rounded border border-gray-600 flex items-center justify-center overflow-hidden"
+            className="relative w-full h-24 bg-gray-800 rounded border border-gray-600 overflow-hidden"
           >
+            {/* IMAGEM COM POSITION ABSOLUTE PARA GARANTIR QUE PREENCHA */}
             <img 
               src={url} 
               alt={`Produto ${index + 1}`} 
-              className="w-full h-full object-cover"
+              className="absolute inset-0 w-full h-full object-cover"
               loading="eager"
               crossOrigin="anonymous"
               onLoad={() => {
-                console.log(`✅ IMAGEM ${index + 1} RENDERIZADA!`);
+                console.log(`✅ PREVIEW IMAGEM ${index + 1} CARREGADA!`);
               }}
               onError={(e) => {
-                console.error(`❌ ERRO IMAGEM ${index + 1}:`, url);
+                console.error(`❌ PREVIEW ERRO ${index + 1}:`, url);
                 e.target.style.display = 'none';
-                e.target.parentElement.innerHTML = '<div class="text-red-400 text-xs">❌ Erro</div>';
+                if (e.target.parentElement) {
+                  e.target.parentElement.innerHTML = '<div class="absolute inset-0 flex items-center justify-center text-red-400 text-xs">❌ Erro</div>';
+                }
               }}
             />
             
-            <div className="absolute top-1 right-1 bg-black/90 text-white text-xs px-2 py-1 rounded font-bold">
+            {/* BADGE COM Z-INDEX MAIOR */}
+            <div className="absolute top-1 right-1 bg-black/90 text-white text-xs px-2 py-1 rounded font-bold z-10">
               {index === 0 ? 'Capa' : index + 1}
             </div>
           </div>
