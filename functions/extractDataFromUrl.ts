@@ -77,25 +77,26 @@ Extraia:
                 const pageHtml = await fetchResponse.text();
                 console.log(`✅ HTML baixado: ${pageHtml.length} chars`);
                 
-                // 🔥 REGEX PARA MERCADO LIVRE (TODOS OS FORMATOS)
+                // 🔥 EXTRAÇÃO PARA MERCADO LIVRE
                 if (marketplace === 'mercadolivre') {
-                    // Busca TODAS as URLs do mlstatic.com (qualquer formato)
-                    const mlRegex = /https?:\/\/http2\.mlstatic\.com\/D_[^"'\s]+\.(?:webp|jpg|jpeg|png)/gi;
+                    // Padrão específico: D_NQ_NP ou D_Q_NP com 2X_ (imagens de produto)
+                    const mlRegex = /https?:\/\/http2\.mlstatic\.com\/D_[NQ]+_NP_2X_\d+-[A-Z0-9_-]+\.(?:webp|jpg)/gi;
                     const matches = [...pageHtml.matchAll(mlRegex)];
                     
-                    console.log(`🔍 REGEX encontrou ${matches.length} URLs de imagens do mlstatic`);
+                    console.log(`🔍 REGEX encontrou ${matches.length} URLs candidatas`);
                     
-                    // Remove duplicatas mantendo ordem
+                    // Remove duplicatas por código
                     const seen = new Set();
                     imageUrls = matches
-                        .map(m => m[0].split('?')[0]) // Remove query params
+                        .map(m => m[0].split('?')[0])
                         .filter(url => {
-                            // Extrai código único (ex: 865332)
                             const codeMatch = url.match(/2X_(\d+)-/);
-                            const code = codeMatch ? codeMatch[1] : url;
+                            if (!codeMatch) return false;
                             
-                            // Ignora miniaturas muito pequenas
-                            if (url.includes('_O.') || url.includes('_S.')) return false;
+                            const code = codeMatch[1];
+                            
+                            // Ignora miniaturas
+                            if (url.includes('_O.') || url.includes('_S.') || url.includes('_V.')) return false;
                             
                             if (seen.has(code)) return false;
                             seen.add(code);
@@ -103,10 +104,10 @@ Extraia:
                         })
                         .slice(0, 6);
                     
-                    console.log(`✅ REGEX filtrado: ${imageUrls.length} imagens ÚNICAS`);
+                    console.log(`✅ ${imageUrls.length} imagens VÁLIDAS com códigos únicos`);
                     imageUrls.forEach((url, i) => {
-                        const codeMatch = url.match(/2X_(\d+)-/);
-                        console.log(`  ${i + 1}. Código ${codeMatch ? codeMatch[1] : '?'}: ${url}`);
+                        const code = url.match(/2X_(\d+)-/)?.[1];
+                        console.log(`  ${i + 1}. [${code}] ${url}`);
                     });
                 }
                 
