@@ -48,8 +48,10 @@ RETORNE apenas URLs de arquivos de imagem reais.`,
             }
         });
 
-        const imageUrls = result.image_urls || [];
-        const descriptions = result.descriptions || [];
+        console.log('📦 RESPOSTA DA IA:', JSON.stringify(result, null, 2));
+
+        const imageUrls = result?.image_urls || [];
+        const descriptions = result?.descriptions || [];
 
         console.log(`\n✅ ENCONTRADAS ${imageUrls.length} IMAGENS:\n`);
         
@@ -61,10 +63,11 @@ RETORNE apenas URLs de arquivos de imagem reais.`,
         });
 
         return Response.json({
-            success: true,
+            success: imageUrls.length > 0,
             total: imageUrls.length,
             image_urls: imageUrls,
-            descriptions: descriptions
+            descriptions: descriptions,
+            raw_response: result
         });
 
     } catch (error) {
