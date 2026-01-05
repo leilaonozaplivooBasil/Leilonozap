@@ -13,21 +13,30 @@ Deno.serve(async (req) => {
         console.log(`🔍 Magazine Luiza (IA): ${productUrl}`);
 
         const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE: ${productUrl}
+            prompt: `ACESSE esta página: ${productUrl}
 
-PASSO 1: AGUARDE a página carregar completamente
-PASSO 2: LOCALIZE as miniaturas de fotos do produto (geralmente 3-10 miniaturas clicáveis)
-PASSO 3: COPIE a URL de CADA miniatura do código HTML
+⚠️⚠️⚠️ INSTRUÇÕES CRÍTICAS - LEIA COM ATENÇÃO ⚠️⚠️⚠️
 
-⚠️ REGRAS CRÍTICAS:
-- COPIE URLs que existem no HTML (não invente padrões)
-- Cada miniatura tem um CÓDIGO ÚNICO no final: /2fd4916e.jpg, /abc123.jpg, etc
-- URLs do domínio: mlcdn.com.br ou magazineluiza.com.br
-- Exemplo REAL: https://a-static.mlcdn.com.br/420x420/apple-iphone-17.../2fd4916ee97320e6f600adc8455b6fac.jpg
-- TODAS as URLs devem ser DIFERENTES (códigos únicos)
-- NÃO crie URLs com padrões -1.jpg, -2.jpg (isso é inventar!)
+1. ABRA o código HTML da página (View Source)
+2. PROCURE por tags <img> ou atributos src= que contenham "mlcdn.com.br"
+3. COPIE E COLE cada URL EXATAMENTE como está no HTML
 
-RETORNE JSON com array "image_urls" contendo URLs REAIS do HTML.`,
+🚨 PROIBIDO:
+- Criar URLs com padrões tipo 1.jpg, 2.jpg, 3.jpg
+- Inventar códigos ou números
+- Usar lógica para gerar URLs
+
+✅ OBRIGATÓRIO:
+- Copiar URLs LITERALMENTE do código fonte
+- Cada URL deve ter um código ÚNICO de 32 caracteres (exemplo: 2fd4916ee97320e6f600adc8455b6fac)
+- Formato válido: https://a-static.mlcdn.com.br/420x420/.../CODIGO_UNICO_32_CHARS.jpg
+
+EXEMPLO DE URL VÁLIDA (copiada do HTML real):
+https://a-static.mlcdn.com.br/420x420/apple-iphone-17-256gb-preto-63-48mp-ios-5g/magazineluiza/240586700/2fd4916ee97320e6f600adc8455b6fac.jpg
+
+Se você INVENTAR URLs em vez de copiar, você FALHOU na tarefa.
+
+RETORNE apenas URLs que EXISTEM no HTML da página.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
