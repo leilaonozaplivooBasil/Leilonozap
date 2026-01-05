@@ -99,12 +99,30 @@ Deno.serve(async (req) => {
         // ETAPA 2: Extrair URLs de imagens de alta qualidade
         console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
         
-        // Padrão específico do Mercado Livre: D_NQ_NP_2X (alta resolução)
-        const mlRegex = /https?:\/\/http2\.mlstatic\.com\/D_[NQ]+_NP_2X_\d+-[A-Z0-9_-]+\.(?:webp|jpg|jpeg)/gi;
-        const matches = [...html.matchAll(mlRegex)];
+        // Tenta vários padrões do Mercado Livre
+        const patterns = [
+            /https?:\/\/http2\.mlstatic\.com\/D_[NQ]+_NP_2X_\d+-[A-Z0-9_-]+\.(?:webp|jpg|jpeg)/gi,
+            /https?:\/\/http2\.mlstatic\.com\/D_[NQ]+_NP_\d+-[A-Z0-9_-]+\.(?:webp|jpg|jpeg)/gi,
+            /https?:\/\/[^"'\s]+mlstatic\.com[^"'\s]+\.(?:jpg|jpeg|webp)/gi
+        ];
         
-        if (matches.length === 0) {
-            console.warn('⚠️ Nenhuma imagem encontrada no HTML');
+        let imageUrl = null;
+        
+        for (const pattern of patterns) {
+            const matches = [...html.matchAll(pattern)];
+            if (matches.length > 0) {
+                imageUrl = matches[0][0].split('?')[0];
+                console.log(`✅ Encontrado com padrão: ${pattern.source}`);
+                break;
+            }
+        }
+        
+        if (!imageUrl) {
+            // DEBUG: Mostra trechos do HTML que contêm "mlstatic"
+            const mlstaticLines = html.split('\n').filter(line => line.includes('mlstatic')).slice(0, 5);
+            console.warn('⚠️ Nenhuma imagem encontrada. Exemplos do HTML:');
+            mlstaticLines.forEach(line => console.log(line.substring(0, 200)));
+            
             return Response.json({ 
                 success: false, 
                 error: "Nenhuma imagem de produto encontrada"
