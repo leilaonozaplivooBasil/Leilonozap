@@ -125,56 +125,17 @@ Exemplo válido: https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB12345678-F.jpg`
             });
         }
 
-        console.log(`🔍 Processando ${imageUrls.length} imagens...`);
-
-        // 🔥 BAIXA E RE-HOSPEDA IMAGENS
-        const rehostedUrls = [];
-        for (const url of imageUrls.slice(0, 8)) {
-            try {
-                console.log(`📥 Baixando: ${url.substring(0, 60)}...`);
-
-                const imgResponse = await fetch(url, {
-                    headers: {
-                        "User-Agent": getRandomUA(),
-                        "Referer": productUrl,
-                        "Accept": "image/webp,image/apng,image/*,*/*;q=0.8"
-                    },
-                    signal: AbortSignal.timeout(10000)
-                });
-
-                if (!imgResponse.ok) {
-                    console.log(`❌ HTTP ${imgResponse.status}`);
-                    continue;
-                }
-
-                const blob = await imgResponse.blob();
-                
-                // Cria File object (UploadFile esperado pela integração)
-                const file = new File([blob], `product-img-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
-
-                // Usa SDK corretamente
-                const uploadData = await base44.asServiceRole.integrations.Core.UploadFile({ file });
-
-                if (uploadData?.file_url) {
-                    rehostedUrls.push(uploadData.file_url);
-                    console.log(`✅ Re-hospedada!`);
-                }
-            } catch (error) {
-                console.log(`❌ Erro: ${error.message}`);
-            }
-        }
-
-        console.log(`✅ ${rehostedUrls.length} imagens re-hospedadas`);
-        console.log(`📤 [BACKEND] RETORNANDO PARA FRONTEND:`);
+        console.log(`✅ ${imageUrls.length} URLs originais encontradas`);
+        console.log(`📤 [BACKEND] RETORNANDO URLs ORIGINAIS (SEM DOWNLOAD):`);
         console.log(`   title: ${title || 'Produto'}`);
         console.log(`   price: ${price || null}`);
-        console.log(`   imageUrls (${rehostedUrls.length}):`, rehostedUrls);
+        console.log(`   imageUrls (${imageUrls.length}):`, imageUrls);
 
         const finalResponse = {
             title: (title || 'Produto').substring(0, 200),
             description: (description || 'Produto importado').substring(0, 500),
             price: price || null,
-            imageUrls: rehostedUrls,
+            imageUrls: imageUrls, // URLs ORIGINAIS
             marketplace: marketplace
         };
 
