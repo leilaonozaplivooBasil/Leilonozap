@@ -369,9 +369,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 key={index}
                 src={img}
                 alt={`${auction.title} - imagem ${index + 1}`}
-                className={`absolute top-0 left-0 w-full h-full object-contain transition-opacity duration-300 ease-in-out ${
+                className={`absolute top-0 left-0 w-full h-full object-contain transition-opacity duration-300 ease-in-out max-w-full ${
                   index === currentImageIndex ? 'opacity-100' : 'opacity-0'
                 }`}
+                style={{ maxHeight: '100%', height: 'auto' }}
                 onError={(e) => {
                   e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
                   e.target.classList.add('p-4');
@@ -447,10 +448,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               onClick={handleShare}
               onMouseDown={(e) => e.stopPropagation()} 
               onTouchStart={(e) => e.stopPropagation()}
-              className="h-8 px-3 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all duration-300 flex items-center backdrop-blur-sm cursor-pointer active:scale-95"
+              className="min-h-[44px] min-w-[44px] h-10 px-3 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
             >
-              <Share2 className="w-3 h-3" />
-              <span className="text-xs font-semibold">Compartilhar</span>
+              <Share2 className="w-4 h-4" />
+              <span className="text-xs font-semibold hidden sm:inline">Compartilhar</span>
             </button>
 
             {/* Botão EDITAR - SÓ ADMIN */}
@@ -475,18 +476,18 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
         </div>
         
-        <CardContent className="p-4">
-          <h3 className={`font-bold text-lg ${textColor} mb-2 line-clamp-1`}>
+        <CardContent className="p-4 sm:p-5">
+          <h3 className={`font-bold text-base sm:text-lg ${textColor} mb-2 line-clamp-2 break-words`}>
             {displayTitle}
           </h3>
 
           {/* 🌎 COUNTDOWN COM FUSO HORÁRIO CORRETO */}
           <div className="flex items-center justify-between mb-3">
             <div>
-              <p className={`text-xs ${secondaryTextColor} mb-1`}>
+              <p className={`text-xs sm:text-sm ${secondaryTextColor} mb-1`}>
                 {isActive ? 'Lance atual' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
               </p>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-xl sm:text-2xl font-bold text-green-600 break-words">
                 R$ {currentPrice.toFixed(2)}
               </p>
             </div>
