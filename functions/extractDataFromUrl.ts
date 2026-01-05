@@ -172,19 +172,13 @@ NÃO INVENTE! COPIE do código fonte!`,
         
         console.log('✅ ETAPA 2 - URLs finais:', imageUrls);
         
-        const extractionResult = {
-            ...basicDataResult,
-            image_urls: imageUrls
-        };
-
         let { title, description, price } = basicDataResult;
-        let { image_urls } = extractionResult;
         
-        console.log(`✅ IA retornou: ${image_urls?.length || 0} URLs de imagens`);
+        console.log(`✅ URLs extraídas: ${imageUrls?.length || 0} URLs de imagens`);
         
         // LIMPA URLs (remove duplicatas e URLs inválidas)
         const urlSet = new Set();
-        const imageUrls = (image_urls || [])
+        const cleanedUrls = (imageUrls || [])
             .filter(u => u && typeof u === 'string' && u.startsWith('http'))
             .map(u => u.split('?')[0].trim().replace(/\/+$/, ''))
             .filter(u => {
@@ -193,10 +187,10 @@ NÃO INVENTE! COPIE do código fonte!`,
                 return true;
             });
 
-        console.log(`✅ ${imageUrls.length} URLs únicas prontas para download`);
+        console.log(`✅ ${cleanedUrls.length} URLs únicas prontas para download`);
 
         // Se não encontrou imagens, retorna sem imagens
-        if (imageUrls.length === 0) {
+        if (cleanedUrls.length === 0) {
             console.log('❌ Nenhuma imagem encontrada. Retornando sem imagens.');
             return Response.json({
                 title: (title || 'Produto').substring(0, 200),
@@ -208,17 +202,17 @@ NÃO INVENTE! COPIE do código fonte!`,
             });
         }
 
-        console.log(`✅ ${imageUrls.length} URLs originais encontradas`);
+        console.log(`✅ ${cleanedUrls.length} URLs originais encontradas`);
         console.log(`📤 [BACKEND] RETORNANDO URLs ORIGINAIS (SEM DOWNLOAD):`);
         console.log(`   title: ${title || 'Produto'}`);
         console.log(`   price: ${price || null}`);
-        console.log(`   imageUrls (${imageUrls.length}):`, imageUrls);
+        console.log(`   imageUrls (${cleanedUrls.length}):`, cleanedUrls);
 
         const finalResponse = {
             title: (title || 'Produto').substring(0, 200),
             description: (description || 'Produto importado').substring(0, 500),
             price: price || null,
-            imageUrls: imageUrls, // URLs ORIGINAIS
+            imageUrls: cleanedUrls, // URLs ORIGINAIS
             marketplace: marketplace
         };
 
