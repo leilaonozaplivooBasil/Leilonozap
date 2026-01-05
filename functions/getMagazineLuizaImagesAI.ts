@@ -15,16 +15,17 @@ Deno.serve(async (req) => {
         const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
             prompt: `ACESSE esta página do Magazine Luiza: ${productUrl}
 
-EXTRAIA as URLs DAS IMAGENS DO PRODUTO.
+EXTRAIA TODAS AS URLs DAS IMAGENS DO PRODUTO (cada miniatura tem uma URL diferente).
 
 IMPORTANTE:
-- Busque URLs que terminam com .jpg ou .jpeg
-- URLs do domínio: mlcdn.com.br ou magazineluiza.com.br
-- Exemplo: https://a-static.mlcdn.com.br/420x420/apple-iphone-17-256gb-preto-63-48mp-ios-5g/magazineluiza/240586700/2fd4916ee97320e6f600adc8455b6fac.jpg
-- COPIE URLs EXATAS da página (mínimo 3, máximo 10)
-- NÃO invente URLs
+- Cada foto do produto tem um código DIFERENTE no final
+- Exemplo: https://a-static.mlcdn.com.br/420x420/.../CODIGO1.jpg
+- Exemplo: https://a-static.mlcdn.com.br/420x420/.../CODIGO2.jpg
+- URLs terminam com .jpg ou .jpeg
+- COPIE URLs DIFERENTES de CADA miniatura visível (mínimo 3, máximo 10)
+- NÃO REPITA a mesma URL
 
-RETORNE em JSON com array "image_urls".`,
+RETORNE em JSON com array "image_urls" contendo URLs ÚNICAS.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
