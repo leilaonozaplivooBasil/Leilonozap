@@ -62,26 +62,33 @@ Extraia:
         console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
         
         const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE ESTE LINK E COPIE AS URLs EXATAS DAS IMAGENS: ${productUrl}
+            prompt: `ACESSE ESTE LINK E ENCONTRE AS IMAGENS DO PRODUTO: ${productUrl}
 
-⚠️ CRÍTICO: COPIE AS URLs REAIS QUE ESTÃO NO HTML DA PÁGINA!
-❌ NÃO INVENTE URLs de exemplo (123456, etc)
-❌ NÃO modifique os códigos das URLs
-✅ COPIE EXATAMENTE como estão no código HTML
+🎯 MISSÃO: Encontre ENTRE 3 E 6 IMAGENS DIFERENTES do produto (ângulos diferentes, cores, detalhes).
 
-INSTRUÇÕES:
-1. Acesse a página e encontre o código HTML
-2. Procure por tags <img> do produto
-3. COPIE as URLs completas dos atributos src ou data-src
-4. Para Mercado Livre: URLs geralmente têm formato https://http2.mlstatic.com/D_NQ_NP_2X_CODIGO-MLBXXXXXXX-XXXXX-F.webp
-5. Para Amazon: URLs geralmente têm formato https://m.media-amazon.com/images/I/CODIGO._AC_XXXX_.jpg
-6. Retorne ENTRE 3 E 6 URLs REAIS diferentes
+⚠️ REGRAS OBRIGATÓRIAS:
+1. COPIE as URLs EXATAS que estão no HTML da página (atributos src, data-src, data-zoom)
+2. Cada URL deve ter um CÓDIGO DIFERENTE (não mude só a extensão!)
+3. ❌ NÃO invente URLs (como 123456, 123457...)
+4. ❌ NÃO pegue a mesma URL com extensões diferentes (.jpg, .png, .webp da MESMA imagem)
+5. ✅ Busque imagens de ÂNGULOS DIFERENTES do produto
 
-EXEMPLO DO QUE VOCÊ DEVE FAZER:
-❌ ERRADO: "https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB12345678-F.jpg" (inventado)
-✅ CORRETO: "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp" (copiado do HTML real)
+EXEMPLOS:
+❌ ERRADO (mesma imagem, extensões diferentes):
+  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp
+  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.jpg  ← mesmo código!
 
-COPIE AS URLs EXATAS QUE VOCÊ VÊ NO CÓDIGO FONTE DA PÁGINA!`,
+✅ CORRETO (imagens diferentes, códigos diferentes):
+  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp  ← código 804684
+  https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp  ← código 708740
+  https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp  ← código 925942
+
+🔍 ONDE PROCURAR:
+- Galeria de imagens do produto
+- Miniaturas (thumbnails) que mostram diferentes ângulos
+- Carrossel de fotos
+
+COPIE AS URLs REAIS DE IMAGENS DIFERENTES!`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
