@@ -1028,7 +1028,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Painel do Influenciador</h1>
+          <h1 className={`text-3xl font-bold mb-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Painel do Influenciador</h1>
           <p className="text-gray-400">
             Seja bem-vindo, <strong className="text-white">{shortName}</strong>! 
             <strong className={isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}>Influenciador</strong> {isSaiDeBaixo ? 'Sai de Baixo' : 'da Leilão NoZap'} 👋
@@ -1202,7 +1202,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-gray-800 border-gray-700">
+        <TabsList className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
           <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
           <TabsTrigger value="meus-clientes">Meus Clientes ({myClients.length})</TabsTrigger>
           <TabsTrigger value="comissoes">Comissões</TabsTrigger>
@@ -1211,10 +1211,10 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsList>
 
         <TabsContent value="visao-geral" className="space-y-6">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
-              <CardTitle className="text-white">Seu Link de Indicação</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Link de Indicação</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
                 Compartilhe este link para indicar novos clientes
               </CardDescription>
             </CardHeader>
@@ -1223,31 +1223,31 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <Input
                   value={referralLink}
                   readOnly
-                  className="bg-gray-700 border-gray-600 text-white font-mono text-sm"
+                  className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'}
                 />
                 <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700">
                   <Copy className="w-4 h-4 mr-2" />
                   Copiar
                 </Button>
               </div>
-              <Alert className={isSaiDeBaixo ? 'bg-red-900/20 border-red-500/30' : 'bg-green-900/20 border-green-500/30'}>
-                <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`} />
-                <AlertDescription className="text-gray-300">
+              <Alert className={isSaiDeBaixo ? 'bg-red-50 border-red-300' : 'bg-green-900/20 border-green-500/30'}>
+                <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`} />
+                <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>
                   Quando alguém usar seu link, será automaticamente seu indicado!
                 </AlertDescription>
               </Alert>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
-              <CardTitle className="text-white mb-3">Seu Plano de Carreira</CardTitle>
+              <CardTitle className={`mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Seu Plano de Carreira</CardTitle>
               <div className="space-y-1">
-                <CardDescription className="text-gray-400">
-                  Nível atual: <strong className="text-white">{highestLevelName}</strong>
+                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  Nível atual: <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>{highestLevelName}</strong>
                 </CardDescription>
-                <CardDescription className="text-gray-400">
-                  ⭐ Função Principal: <strong className={isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}>{primaryLevelName}</strong>
+                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  ⭐ Função Principal: <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>{primaryLevelName}</strong>
                 </CardDescription>
               </div>
             </CardHeader>
@@ -1256,36 +1256,36 @@ const DashboardContent = ({ user, isAdmin }) => {
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
-              <CardTitle className="text-white">Como Funciona o Sistema</CardTitle>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Como Funciona o Sistema</CardTitle>
             </CardHeader>
-            <CardContent className="text-gray-300 space-y-4">
+            <CardContent className={`space-y-4 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500'}`}>
                   <span className="text-white font-bold">1</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-1">Compartilhe seu Link</h4>
-                  <p className="text-sm text-gray-400">Envie seu link de indicação para amigos e familiares.</p>
+                  <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Compartilhe seu Link</h4>
+                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Envie seu link de indicação para amigos e familiares.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500'}`}>
                   <span className="text-white font-bold">2</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-1">Eles Se Cadastram</h4>
-                  <p className="text-sm text-gray-400">Quando usam seu link, são automaticamente seus indicados.</p>
+                  <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Eles Se Cadastram</h4>
+                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Quando usam seu link, são automaticamente seus indicados.</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500'}`}>
                   <span className="text-white font-bold">3</span>
                 </div>
                 <div>
-                  <h4 className="font-semibold text-white mb-1">Você Ganha 3% em R$</h4>
-                  <p className="text-sm text-gray-400">A cada arremate deles, você recebe 3% em dinheiro real!</p>
+                  <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Você Ganha 3% em R$</h4>
+                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>A cada arremate deles, você recebe 3% em dinheiro real!</p>
                 </div>
               </div>
             </CardContent>
@@ -1293,17 +1293,17 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="meus-clientes" className="space-y-6">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="text-white">Clientes Indicados</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Clientes Indicados</CardTitle>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <Input
                     placeholder="Buscar cliente..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-gray-700 border-gray-600 text-white"
+                    className={isSaiDeBaixo ? 'pl-10 bg-gray-100 border-gray-300 text-gray-900' : 'pl-10 bg-gray-700 border-gray-600 text-white'}
                   />
                 </div>
               </div>
@@ -1316,11 +1316,11 @@ const DashboardContent = ({ user, isAdmin }) => {
               ) : filteredClients.length > 0 ? (
                 <Table>
                   <TableHeader>
-                    <TableRow className="border-gray-700">
-                      <TableHead className="text-gray-400">Nome</TableHead>
-                      <TableHead className="text-gray-400">Email</TableHead>
-                      <TableHead className="text-gray-400">Indicado Por</TableHead>
-                      <TableHead className="text-gray-400">Data de Cadastro</TableHead>
+                    <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                      <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Nome</TableHead>
+                      <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Email</TableHead>
+                      <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Indicado Por</TableHead>
+                      <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data de Cadastro</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1330,17 +1330,17 @@ const DashboardContent = ({ user, isAdmin }) => {
                         : null;
                       
                       return (
-                        <TableRow key={client.id} className="border-gray-700">
-                          <TableCell className="text-white">{client.full_name}</TableCell>
-                          <TableCell className="text-gray-400">{client.email}</TableCell>
-                          <TableCell className="text-gray-400">
+                        <TableRow key={client.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                          <TableCell className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>{client.full_name}</TableCell>
+                          <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>{client.email}</TableCell>
+                          <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
                             {referrer ? (
-                              <span className="text-green-400">👤 {referrer.full_name}</span>
+                              <span className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>👤 {referrer.full_name}</span>
                             ) : (
-                              <span className="text-gray-500">Sem indicação</span>
+                              <span className={isSaiDeBaixo ? 'text-gray-400' : 'text-gray-500'}>Sem indicação</span>
                             )}
                           </TableCell>
-                          <TableCell className="text-gray-400">
+                          <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
                             {new Date(client.created_date).toLocaleDateString('pt-BR')}
                           </TableCell>
                         </TableRow>
@@ -1360,17 +1360,17 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="comissoes" className="space-y-6">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
-              <CardTitle className="text-white">Extrato de Comissões</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Extrato de Comissões</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
                 Total acumulado: R$ {(user.commission_balance || 0).toFixed(2)}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Button
                 onClick={() => setViewingCommissionsFor(user)}
-                className="bg-green-600 hover:bg-green-700"
+                className={isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
               >
                 Ver Detalhes
               </Button>
@@ -1379,10 +1379,10 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="saques" className="space-y-6">
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
-              <CardTitle className="text-white">Histórico de Saques</CardTitle>
-              <CardDescription className="text-gray-400">
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Histórico de Saques</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
                 Acompanhe suas solicitações de saque
               </CardDescription>
             </CardHeader>
@@ -2023,7 +2023,11 @@ export default function LicensingPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+      <div className={`min-h-screen ${
+        isSaiDeBaixo 
+          ? 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' 
+          : 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'
+      }`}>
         {/* Hero Section */}
         <div className="relative overflow-hidden py-20 px-6">
           <div className={`absolute inset-0 bg-gradient-to-r ${
@@ -2049,38 +2053,38 @@ export default function LicensingPage() {
               {/* TÍTULO DINÂMICO */}
               {userLevel === 'guest' || userLevel === 'usuario' ? (
                 <>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-6 text-white">
+                  <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
                     Torne-se um Influenciador
                   </h1>
-                  <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}>3% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
+                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>3% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
                   </p>
-                  <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Construa um negócio sólido com o sistema de alavancagem da Leilão NoZap!
+                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                    Construa um negócio sólido com o sistema de alavancagem {isSaiDeBaixo ? 'do Sai de Baixo' : 'da Leilão NoZap'}!
                   </p>
                 </>
               ) : userLevel === 'licenciado_aplicativo' ? (
                 <>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-6 text-white">
+                  <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
                     Você já é um Influenciador!
                   </h1>
-                  <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className="text-green-400">Você ganha 3% em dinheiro real!</strong>
+                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                    Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Você ganha 3% em dinheiro real!</strong>
                   </p>
-                  <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Continue crescendo sua rede e <strong className="text-yellow-400">aumente seus ganhos</strong> com o sistema de alavancagem!
+                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                    Continue crescendo sua rede e <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>aumente seus ganhos</strong> com o sistema de alavancagem!
                   </p>
                 </>
               ) : (
                 <>
-                  <h1 className="text-3xl md:text-4xl font-bold mb-6 text-white">
+                  <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
                     Parabéns! Você é {userLevel === 'licenciado_catalogo' ? 'Influenciador Master' : 'um Influenciador'} 🎉
                   </h1>
-                  <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
+                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
                     Você já evoluiu no sistema! Continue crescendo seu sistema de alavancagem e maximizando seus ganhos.
                   </p>
-                  <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Ganhe <strong className="text-yellow-400">comissões em dinheiro real (R$)</strong> + bônus do seu sistema de alavancagem!
+                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                    Ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>comissões em dinheiro real (R$)</strong> + bônus do seu sistema de alavancagem!
                   </p>
                 </>
               )}
@@ -2144,12 +2148,12 @@ export default function LicensingPage() {
           )}
         </div>
 
-        <div className="py-20 px-6 bg-gray-800/50">
+        <div className={`py-20 px-6 ${isSaiDeBaixo ? 'bg-gray-100/50' : 'bg-gray-800/50'}`}>
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-4xl font-bold text-center mb-4">
+            <h2 className={`text-4xl font-bold text-center mb-4 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
               Construa Seu Sistema de Alavancagem
             </h2>
-            <p className="text-gray-400 text-center mb-12">
+            <p className={`text-center mb-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
               Veja como nossos influenciadores estão crescendo
             </p>
           </div>
