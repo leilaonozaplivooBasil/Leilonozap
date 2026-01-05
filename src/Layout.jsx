@@ -929,7 +929,6 @@ export default function Layout({ children, currentPageName }) {
         {/* 🤖 ARQUITETO IA FLUTUANTE - SEMPRE VISÍVEL PARA ADMIN */}
         <ArquitetoFloatingButton currentUser={currentUser} />
       </div>
-    </ErrorBoundary>
       
       <style>{`
         @keyframes fadeInScale {
@@ -989,6 +988,6 @@ export default function Layout({ children, currentPageName }) {
           animation: pulse-subtle 2s ease-in-out infinite;
         }
       `}</style>
-      </>
-      );
-      }
+    </ErrorBoundary>
+  );
+}
