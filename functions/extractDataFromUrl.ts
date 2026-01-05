@@ -61,53 +61,63 @@ Extraia:
         
         console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
         
-        const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE ESTE LINK E ENCONTRE AS IMAGENS DO PRODUTO: ${productUrl}
+🚨🚨🚨 ATENÇÃO EXTREMA - INSTRUÇÕES OBRIGATÓRIAS 🚨🚨🚨
 
-🚨 AVISO CRÍTICO - LEIA ANTES DE PROCESSAR:
-Você DEVE retornar exatamente 6 URLs de imagens REAIS que você encontrou na página.
-Se não houver 6 imagens diferentes, REPITA as que existem até ter 6 (melhor repetir que inventar).
+VOCÊ VAI SER PENALIZADO SE INVENTAR URLs!
 
-⚠️ PROIBIDO:
-❌ URLs inventadas (123456, 654321, 789012, etc)
-❌ Modificar códigos das URLs que você encontrou
-❌ Criar URLs de exemplo ou placeholder
+REGRA ABSOLUTA #1:
+❌❌❌ NUNCA, EM HIPÓTESE ALGUMA, INVENTE URLs DE IMAGENS! ❌❌❌
+❌❌❌ CÓDIGOS COMO 123456, 654321, 789012 SÃO PROIBIDOS! ❌❌❌
 
-✅ PERMITIDO:
-✅ COPIAR URLs que você viu no HTML da página
-✅ REPETIR a mesma URL se não tiver 6 diferentes
-✅ Usar diferentes formatos da MESMA imagem (.webp, .jpg, .png) se necessário
+REGRA ABSOLUTA #2:
+✅ Se você encontrou apenas 3 URLs reais, RETORNE AS 3 REPETIDAS:
+   [url1, url2, url3, url1, url2, url3]
 
-PROCESSO:
-1. Acesse a página do produto
-2. Encontre TODAS as URLs de imagens do produto no HTML
-3. Extraia as URLs REAIS (podem estar em src, data-src, data-zoom, etc)
-4. Se encontrou menos de 6, REPITA as existentes
-5. Retorne EXATAMENTE 6 URLs
+✅ Se você encontrou apenas 2 URLs reais, RETORNE AS 2 REPETIDAS:
+   [url1, url2, url1, url2, url1, url2]
 
-EXEMPLO REAL DO MERCADO LIVRE:
-Se você encontrou estas 3 URLs reais:
-  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp
-  https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp
-  https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp
+✅ Se você encontrou apenas 1 URL real, REPITA ELA 6 VEZES:
+   [url1, url1, url1, url1, url1, url1]
 
-✅ RETORNE ASSIM (repetindo as existentes):
-[
-  "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
-  "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
-  "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp",
-  "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
-  "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
-  "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp"
-]
+EXEMPLO PRÁTICO - MERCADO LIVRE:
+Você acessa a página e encontra APENAS estas 3 URLs reais no HTML:
+  • https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp
+  • https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp
+  • https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp
 
-❌ NUNCA FAÇA ISSO:
-[
-  "https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLA12345678901_112024-F.webp",  ← INVENTADO!
-  "https://http2.mlstatic.com/D_NQ_NP_2X_654321-MLA12345678902_112024-F.webp"   ← INVENTADO!
-]
+✅✅✅ CORRETO - REPITA AS 3 EXISTENTES:
+{
+  "image_urls": [
+    "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
+    "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
+    "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp",
+    "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
+    "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
+    "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp"
+  ]
+}
 
-COPIE APENAS URLs QUE VOCÊ VIU NO CÓDIGO HTML REAL DA PÁGINA!`,
+❌❌❌ ERRADO - INVENTAR URLs:
+{
+  "image_urls": [
+    "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
+    "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
+    "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp",
+    "https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLA12345678901_112024-F.webp",  ← FALSO!
+    "https://http2.mlstatic.com/D_NQ_NP_2X_654321-MLA12345678902_112024-F.webp",  ← FALSO!
+    "https://http2.mlstatic.com/D_NQ_NP_2X_789012-MLA12345678903_112024-F.webp"   ← FALSO!
+  ]
+}
+
+⚠️ COMO ENCONTRAR URLs REAIS:
+1. Procure por <img> tags no HTML
+2. Procure por data-src, data-zoom, src attributes
+3. Procure na galeria de imagens, thumbnails, carousel
+4. COPIE EXATAMENTE o que você viu
+
+SE NÃO ENCONTROU 6 IMAGENS DIFERENTES:
+→ REPITA as URLs reais que você encontrou
+→ NUNCA invente novas URLs`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
