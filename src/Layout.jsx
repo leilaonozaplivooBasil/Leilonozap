@@ -955,6 +955,6 @@ export default function Layout({ children, currentPageName }) {
           animation: pulse-subtle 2s ease-in-out infinite;
         }
       `}</style>
-      </ErrorBoundary>
+      </>
       );
       }
