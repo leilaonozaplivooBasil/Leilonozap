@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LogIn, X, UserPlus, AlertCircle, Mail, Eye, EyeOff } from 'lucide-react';
 
-export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
+export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, theme }) {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +22,8 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
   const [isResetting, setIsResetting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
+  // Usa prop theme se fornecido, senão verifica sessionStorage
+  const isSaiDeBaixo = theme === 'saidebaixo' || sessionStorage.getItem('saiDeBaixoContext') === 'true';
 
   const handleLogin = async () => {
     // ✅ VALIDAÇÕES

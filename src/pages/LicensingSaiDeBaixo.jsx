@@ -1337,6 +1337,7 @@ export default function LicensingSaiDeBaixoPage() {
             setShowLoginModal(false);
             setShowLicenseeRegisterModal(true);
           }}
+          theme="saidebaixo"
         />
       )}
     </>
