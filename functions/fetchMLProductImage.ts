@@ -79,17 +79,28 @@ Deno.serve(async (req) => {
         console.log('🤖 ETAPA 1: Usando IA para acessar página renderizada...');
         
         const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE: ${productUrl}
+            prompt: `ACESSE ESTA PÁGINA DO PRODUTO: ${productUrl}
 
-🎯 OBJETIVO: Extrair a URL da IMAGEM PRINCIPAL do produto
+🎯 MISSÃO: Encontrar a URL da IMAGEM PRINCIPAL do produto (foto grande)
 
-⚠️ INSTRUÇÕES:
-- A página carrega imagens via JavaScript
-- Procure no HTML renderizado por URLs de imagens que contenham "mlstatic.com"
-- Copie a URL COMPLETA da primeira imagem de produto (alta resolução)
-- Formato esperado: https://http2.mlstatic.com/D_NQ_NP_CODIGO.jpg
+📋 INSTRUÇÕES CRÍTICAS:
+1. Procure pela MAIOR imagem do produto na página
+2. NÃO retorne URLs de fontes (.woff, .woff2, .ttf)
+3. NÃO retorne URLs de ícones ou logos pequenos
+4. A URL deve terminar com .jpg, .jpeg, .png ou .webp
+5. A URL deve conter "mlstatic.com"
+6. Procure por tags <img> com class="ui-pdp-image" ou similar
+7. Formato válido: https://http2.mlstatic.com/D_NQ_NP_2X_XXXX-XXX.jpg
 
-RETORNE apenas a URL da imagem principal.`,
+❌ EXEMPLOS ERRADOS (NÃO RETORNE):
+- https://http2.mlstatic.com/ui/webfonts/v3.0.0/... ❌
+- URLs com /icons/ ❌
+- URLs com /fonts/ ❌
+
+✅ EXEMPLO CORRETO:
+- https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB789.jpg ✅
+
+RETORNE APENAS A URL DA FOTO DO PRODUTO.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
