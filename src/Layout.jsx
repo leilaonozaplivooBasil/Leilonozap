@@ -471,7 +471,7 @@ export default function Layout({ children, currentPageName }) {
 
   const saiDeBaixoMenuItems = [
     { title: "Leilões", pageName: "SaiDeBaixo" },
-    { title: "Sistema de Alavancagem", pageName: "Licensing" },
+    { title: "Sistema de Alavancagem", pageName: "LicensingSaiDeBaixo" },
   ];
 
   const saiDeBaixoLoggedItems = [];
