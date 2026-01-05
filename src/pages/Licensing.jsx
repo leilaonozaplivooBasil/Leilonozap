@@ -34,10 +34,10 @@ import UserPasswordModal from '../components/admin/UserPasswordModal';
 import EarningsSimulator from '../components/licensing/EarningsSimulator';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
 
-const StatCard = ({ icon: Icon, label, value, onClick, isLoading }) => (
+const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) => (
     <Card
         onClick={onClick}
-        className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? 'cursor-pointer hover:border-green-500/60 hover:bg-gray-700/50' : ''}`}
+        className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer ${isSaiDeBaixo ? 'hover:border-red-500/60' : 'hover:border-green-500/60'} hover:bg-gray-700/50` : ''}`}
     >
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle>
@@ -125,7 +125,11 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
                         </p>
                         <button
                             onClick={onLoginClick}
-                            className="px-8 py-4 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-green-500/50 transition-all duration-300 transform hover:scale-105 flex items-center gap-3"
+                            className={`px-8 py-4 bg-gradient-to-r text-white font-bold text-lg rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-3 ${
+                              sessionStorage.getItem('saiDeBaixoContext') === 'true'
+                                ? 'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50'
+                                : 'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:shadow-green-500/50'
+                            }`}
                         >
                             <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                                 <LogIn className="w-5 h-5" />
@@ -194,7 +198,11 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
                         <div className="pt-2">
                             <Button
                                 size="lg"
-                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-base py-6 rounded-lg shadow-lg hover:shadow-green-500/50 transition-all"
+                                className={`w-full text-white font-bold text-base py-6 rounded-lg shadow-lg transition-all ${
+                                  sessionStorage.getItem('saiDeBaixoContext') === 'true'
+                                    ? 'bg-red-600 hover:bg-red-700 hover:shadow-red-500/50'
+                                    : 'bg-green-600 hover:bg-green-700 hover:shadow-green-500/50'
+                                }`}
                                 onClick={handleRegisterClick}
                             >
                                 <Smartphone className="w-5 h-5 mr-2" />
@@ -215,8 +223,12 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
                             onMouseEnter={() => setHoveredBenefit(index)}
                             onMouseLeave={() => setHoveredBenefit(null)}
                         >
-                            <div className="flex h-20 w-20 items-center justify-center rounded-xl bg-gray-800 border-2 border-green-500/30 mb-4 transform group-hover:scale-110 group-hover:border-green-400 transition-all shadow-lg cursor-pointer">
-                                <item.icon className="h-10 w-10 text-green-400" />
+                            <div className={`flex h-20 w-20 items-center justify-center rounded-xl bg-gray-800 border-2 mb-4 transform group-hover:scale-110 transition-all shadow-lg cursor-pointer ${
+                              sessionStorage.getItem('saiDeBaixoContext') === 'true'
+                                ? 'border-red-500/30 group-hover:border-red-400'
+                                : 'border-green-500/30 group-hover:border-green-400'
+                            }`}>
+                                <item.icon className={`h-10 w-10 ${sessionStorage.getItem('saiDeBaixoContext') === 'true' ? 'text-red-400' : 'text-green-400'}`} />
                             </div>
                             <p className="font-semibold text-white text-base">{item.text}</p>
                         </div>
@@ -234,16 +246,26 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
                         className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none"
                         style={{ perspective: '1000px' }}
                     >
-                        <div className="bg-gray-800 border-2 border-green-500/50 rounded-2xl p-6 shadow-2xl max-w-sm mx-4"
-                             style={{ 
-                                 boxShadow: '0 0 60px rgba(34, 197, 94, 0.4), 0 20px 80px rgba(0,0,0,0.8)'
-                             }}
+                        <div className={`bg-gray-800 border-2 rounded-2xl p-6 shadow-2xl max-w-sm mx-4 ${
+                          sessionStorage.getItem('saiDeBaixoContext') === 'true'
+                            ? 'border-red-500/50'
+                            : 'border-green-500/50'
+                        }`}
+                            style={{ 
+                                boxShadow: sessionStorage.getItem('saiDeBaixoContext') === 'true'
+                                  ? '0 0 60px rgba(239, 68, 68, 0.4), 0 20px 80px rgba(0,0,0,0.8)'
+                                  : '0 0 60px rgba(34, 197, 94, 0.4), 0 20px 80px rgba(0,0,0,0.8)'
+                            }}
                         >
-                            <div className="flex items-start gap-4">
-                                <div className="p-3 bg-green-500/20 rounded-xl flex-shrink-0 border border-green-500/30">
-                                    {React.createElement(benefits[hoveredBenefit].icon, {
-                                        className: "w-8 h-8 text-green-400"
-                                    })}
+                           <div className="flex items-start gap-4">
+                               <div className={`p-3 rounded-xl flex-shrink-0 border ${
+                                 sessionStorage.getItem('saiDeBaixoContext') === 'true'
+                                   ? 'bg-red-500/20 border-red-500/30'
+                                   : 'bg-green-500/20 border-green-500/30'
+                               }`}>
+                                   {React.createElement(benefits[hoveredBenefit].icon, {
+                                       className: `w-8 h-8 ${sessionStorage.getItem('saiDeBaixoContext') === 'true' ? 'text-red-400' : 'text-green-400'}`
+                                   })}
                                 </div>
                                 <div>
                                     <h4 className="font-bold text-white text-lg mb-2">
@@ -308,7 +330,10 @@ const DashboardContent = ({ user, isAdmin }) => {
   const isFetchingRef = useRef(false);
   const lastFetchTimeRef = useRef(0);
 
-  const referralLink = `https://leilaonozap.app${createPageUrl('Home')}?ref=${user.referral_code}`;
+  const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
+  const referralLink = isSaiDeBaixo 
+    ? `https://leilaonozap.app${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}`
+    : `https://leilaonozap.app${createPageUrl('Home')}?ref=${user.referral_code}`;
 
   const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
   const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
@@ -1006,7 +1031,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           <h1 className="text-3xl font-bold text-white mb-2">Painel do Influenciador</h1>
           <p className="text-gray-400">
             Seja bem-vindo, <strong className="text-white">{shortName}</strong>! 
-            <strong className="text-green-400">Influenciador</strong> da Leilão NoZap 👋
+            <strong className={isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}>Influenciador</strong> {isSaiDeBaixo ? 'Sai de Baixo' : 'da Leilão NoZap'} 👋
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -1047,7 +1072,11 @@ const DashboardContent = ({ user, isAdmin }) => {
         </div>
       </div>
 
-      <Card ref={walletCardRef} className="mb-8 bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30 backdrop-blur-sm overflow-hidden">
+      <Card ref={walletCardRef} className={`mb-8 bg-gradient-to-br backdrop-blur-sm overflow-hidden ${
+        isSaiDeBaixo 
+          ? 'from-red-900/30 to-red-800/20 border-red-500/30' 
+          : 'from-green-900/30 to-green-800/20 border-green-500/30'
+      }`}>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex-1">
@@ -1071,7 +1100,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               <div className="flex gap-3">
                 <Button
                   onClick={() => setIsAuctionSelectionModalOpen(true)}
-                  className="bg-green-600 hover:bg-green-700"
+                  className={isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
                 >
                   <Zap className="w-4 h-4 mr-2" />
                   Usar Saldo em Leilões
@@ -1147,24 +1176,28 @@ const DashboardContent = ({ user, isAdmin }) => {
             label="Saldo Disponível"
             value={`R$ ${(user.valora_pay_balance || 0).toFixed(2)}`}
             onClick={() => setIsAuctionSelectionModalOpen(true)}
+            isSaiDeBaixo={isSaiDeBaixo}
           />
         <StatCard
           icon={Users}
           label="Clientes Indicados"
           value={realMetrics.indicatedCount !== null ? realMetrics.indicatedCount : '...'}
           isLoading={realMetrics.indicatedCount === null}
+          isSaiDeBaixo={isSaiDeBaixo}
         />
         <StatCard
           icon={TrendingUp}
           label="Arremates do Sistema de Alavancagem"
           value={realMetrics.networkBidsCount !== null ? realMetrics.networkBidsCount : '...'}
           isLoading={realMetrics.networkBidsCount === null}
+          isSaiDeBaixo={isSaiDeBaixo}
         />
         <StatCard
             icon={BarChart}
             label="Comissões Geradas"
             value={`R$ ${(user.commission_balance || 0).toFixed(2)}`}
             onClick={() => setViewingCommissionsFor(user)}
+            isSaiDeBaixo={isSaiDeBaixo}
           />
       </div>
 
@@ -1197,8 +1230,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                   Copiar
                 </Button>
               </div>
-              <Alert className="bg-green-900/20 border-green-500/30">
-                <Info className="w-4 h-4 text-green-400" />
+              <Alert className={isSaiDeBaixo ? 'bg-red-900/20 border-red-500/30' : 'bg-green-900/20 border-green-500/30'}>
+                <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`} />
                 <AlertDescription className="text-gray-300">
                   Quando alguém usar seu link, será automaticamente seu indicado!
                 </AlertDescription>
@@ -1214,7 +1247,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   Nível atual: <strong className="text-white">{highestLevelName}</strong>
                 </CardDescription>
                 <CardDescription className="text-gray-400">
-                  ⭐ Função Principal: <strong className="text-green-400">{primaryLevelName}</strong>
+                  ⭐ Função Principal: <strong className={isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}>{primaryLevelName}</strong>
                 </CardDescription>
               </div>
             </CardHeader>
@@ -1858,6 +1891,9 @@ export default function LicensingPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showLicenseeRegisterModal, setShowLicenseeRegisterModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  
+  // 🆕 DETECTA CONTEXTO SAI DE BAIXO
+  const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
 
   const fetchWithRetryInLicensingPage = async (fetchFunction, maxRetries = 3, delayMs = 1000) => {
     for (let i = 0; i < maxRetries; i++) {
@@ -1990,16 +2026,24 @@ export default function LicensingPage() {
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
         {/* Hero Section */}
         <div className="relative overflow-hidden py-20 px-6">
-          <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-blue-500/10"></div>
+          <div className={`absolute inset-0 bg-gradient-to-r ${
+            isSaiDeBaixo 
+              ? 'from-red-500/10 to-orange-500/10' 
+              : 'from-green-500/10 to-blue-500/10'
+          }`}></div>
           <div className="relative max-w-6xl mx-auto text-center">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
             >
-              <div className="inline-flex items-center gap-3 mb-6 bg-green-500/10 px-6 py-3 rounded-full border border-green-500/30">
-                <TrendingUp className="w-6 h-6 text-green-400" />
-                <span className="text-green-400 font-semibold">Programa de Influenciadores</span>
+              <div className={`inline-flex items-center gap-3 mb-6 px-6 py-3 rounded-full border ${
+                isSaiDeBaixo 
+                  ? 'bg-red-500/10 border-red-500/30' 
+                  : 'bg-green-500/10 border-green-500/30'
+              }`}>
+                <TrendingUp className={`w-6 h-6 ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`} />
+                <span className={`font-semibold ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`}>Programa de Influenciadores</span>
               </div>
               
               {/* TÍTULO DINÂMICO */}
@@ -2009,7 +2053,7 @@ export default function LicensingPage() {
                     Torne-se um Influenciador
                   </h1>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
-                    Indique amigos e ganhe <strong className="text-green-400">3% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
+                    Indique amigos e ganhe <strong className={isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}>3% em dinheiro real (R$)</strong> em cada arremate que eles fizerem!
                   </p>
                   <p className="text-lg text-gray-300 max-w-3xl mx-auto mb-8">
                     Construa um negócio sólido com o sistema de alavancagem da Leilão NoZap!
