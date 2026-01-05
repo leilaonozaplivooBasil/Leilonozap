@@ -171,17 +171,53 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
 
       console.log(`[LOGIN] Login bem-sucedido para: ${user.full_name}, Role: ${user.role}`);
       
+      // 🆕 LOGGING NO SYSTEMLOG
+      try {
+        await base44.entities.SystemLog.create({
+          step: 'User_Login_Success',
+          status: 'success',
+          message: `Login bem-sucedido: ${user.full_name}`,
+          component_name: 'LoginModal',
+          payload: { user_id: user.id, email: user.email }
+        });
+      } catch (logErr) {
+        console.debug('Log não enviado (não crítico)');
+      }
+      
       setTimeout(() => {
         try {
           if (onSuccess) onSuccess(user);
           onClose();
         } catch (err) {
           console.error("Erro no callback:", err);
+          // 🆕 LOGA ERRO NO CALLBACK
+          base44.entities.SystemLog.create({
+            step: 'Login_Callback_Error',
+            status: 'error',
+            message: `Erro ao executar callback de sucesso: ${err.message}`,
+            component_name: 'LoginModal',
+            error_details: { message: err.message, stack: err.stack }
+          }).catch(() => {});
         }
       }, 500);
 
     } catch (error) {
       console.error("[LOGIN] Erro no login:", error);
+      
+      // 🆕 LOGA ERRO NO SYSTEMLOG
+      try {
+        await base44.entities.SystemLog.create({
+          step: 'User_Login_Failed',
+          status: 'error',
+          message: `Falha no login: ${error.message}`,
+          component_name: 'LoginModal',
+          error_details: { message: error.message, stack: error.stack },
+          payload: { email }
+        });
+      } catch (logErr) {
+        console.debug('Log não enviado (não crítico)');
+      }
+      
       const errorMsg = error?.message || "Erro desconhecido";
       setErrorMessage("❌ Erro ao fazer login: " + errorMsg);
       setIsLogging(false);
