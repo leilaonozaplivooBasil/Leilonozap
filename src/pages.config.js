@@ -18,6 +18,7 @@ import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
 import LandingSaiDeBaixo from './pages/LandingSaiDeBaixo';
 import Licensing from './pages/Licensing';
+import LicensingSaiDeBaixo from './pages/LicensingSaiDeBaixo';
 import LicensorCRM from './pages/LicensorCRM';
 import LiveShop from './pages/LiveShop';
 import LiveShopControl from './pages/LiveShopControl';
@@ -50,7 +51,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
-import LicensingSaiDeBaixo from './pages/LicensingSaiDeBaixo';
 import __Layout from './Layout.jsx';
 
 
@@ -75,6 +75,7 @@ export const PAGES = {
     "Landing": Landing,
     "LandingSaiDeBaixo": LandingSaiDeBaixo,
     "Licensing": Licensing,
+    "LicensingSaiDeBaixo": LicensingSaiDeBaixo,
     "LicensorCRM": LicensorCRM,
     "LiveShop": LiveShop,
     "LiveShopControl": LiveShopControl,
@@ -107,7 +108,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
-    "LicensingSaiDeBaixo": LicensingSaiDeBaixo,
 }
 
 export const pagesConfig = {

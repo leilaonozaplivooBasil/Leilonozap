@@ -430,21 +430,14 @@ export default function MyWinningsPage() {
                                             user_id: currentUser.id
                                         });
 
-                                        console.log('📦 Resposta completa:', response);
-                                        console.log('📦 response.data:', response?.data);
-                                        console.log('📦 response.data.init_point:', response?.data?.init_point);
+                                        console.log('📦 Resposta:', response);
 
-                                        // ✅ CORREÇÃO: A resposta vem em response.data
-                                        const checkoutData = response?.data;
-
-                                        if (checkoutData?.init_point) {
-                                            console.log('✅ Redirecionando para:', checkoutData.init_point);
-                                            window.location.href = checkoutData.init_point;
+                                        if (response?.init_point) {
+                                            window.location.href = response.init_point;
+                                        } else if (response?.error) {
+                                            toast.error(response.error);
                                         } else {
-                                            const errorMsg = checkoutData?.error || "Erro: init_point não retornado";
-                                            console.error('❌ Erro Mercado Pago:', errorMsg);
-                                            console.error('❌ Dados recebidos:', checkoutData);
-                                            toast.error(errorMsg);
+                                            toast.error("Erro ao criar pagamento");
                                         }
                                     } catch (error) {
                                         console.error('❌ Exceção:', error);
