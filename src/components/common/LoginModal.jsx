@@ -381,8 +381,8 @@ Equipe Leilão NoZap 🎯
   }
 
   return (
-    <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-4 animate-in fade-in-0`}>
-      <Card className={`w-full max-w-md ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} relative`}>
+    <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-4 sm:p-6 animate-in fade-in-0 overflow-y-auto`}>
+      <Card className={`w-full max-w-md ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} relative my-auto`}>
         <Button 
           variant="ghost" 
           size="icon" 
@@ -400,7 +400,7 @@ Equipe Leilão NoZap 🎯
           </CardTitle>
         </CardHeader>
         
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-5 sm:space-y-4">
           {errorMessage && (
             <div className={`${isSaiDeBaixo ? 'bg-red-100 border-2 border-red-300' : 'bg-red-900/20 border border-red-500/50'} rounded-lg p-3 flex items-start gap-3`}>
               <AlertCircle className={`w-5 h-5 ${isSaiDeBaixo ? 'text-red-700' : 'text-red-400'} flex-shrink-0 mt-0.5`} />
@@ -409,7 +409,7 @@ Equipe Leilão NoZap 🎯
           )}
           
           <div>
-            <Label htmlFor="email" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>E-mail</Label>
+            <Label htmlFor="email" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail</Label>
             <Input 
               id="email" 
               type="email" 
@@ -417,13 +417,13 @@ Equipe Leilão NoZap 🎯
               onChange={(e) => setEmail(e.target.value)} 
               onKeyPress={handleKeyPress}
               placeholder="seu@email.com" 
-              className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+              className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
               disabled={isLogging}
             />
           </div>
           
           <div>
-            <Label htmlFor="password" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Senha</Label>
+            <Label htmlFor="password" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Senha</Label>
             <div className="relative">
               <Input 
                 id="password" 
@@ -432,16 +432,16 @@ Equipe Leilão NoZap 🎯
                 onChange={(e) => setPassword(e.target.value)} 
                 onKeyPress={handleKeyPress}
                 placeholder="Sua senha" 
-                className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 pr-10' : 'bg-gray-700 border-gray-600 text-white pr-10'}
+                className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 pr-12' : 'bg-gray-700 border-gray-600 text-white pr-12'} h-12 text-base`}
                 disabled={isLogging}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className={`absolute right-3 top-3 ${isSaiDeBaixo ? 'text-gray-500 hover:text-gray-700' : 'text-gray-400 hover:text-gray-200'}`}
+                className={`absolute right-2 top-1/2 -translate-y-1/2 p-2 ${isSaiDeBaixo ? 'text-gray-500 hover:text-gray-700' : 'text-gray-400 hover:text-gray-200'}`}
                 disabled={isLogging}
               >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
               </button>
             </div>
           </div>
@@ -451,44 +451,44 @@ Equipe Leilão NoZap 🎯
               setShowForgotPassword(true);
               setErrorMessage('');
             }}
-            className={`${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'} text-sm hover:underline`}
+            className={`${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'} text-sm hover:underline min-h-[44px] flex items-center py-2`}
             disabled={isLogging}
           >
             Esqueci minha senha
           </button>
         </CardContent>
         
-        <CardFooter className="flex flex-col gap-3">
+        <CardFooter className="flex flex-col gap-4 sm:gap-3">
           <Button 
             onClick={handleLogin} 
             disabled={isLogging || !email || !password}
-            className={`w-full ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+            className={`w-full h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
           >
             {isLogging ? (
               <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                 Entrando...
               </>
             ) : (
               <>
-                <LogIn className="w-4 h-4 mr-2" />
+                <LogIn className="w-5 h-5 mr-2" />
                 Entrar
               </>
             )}
           </Button>
           
-          <div className="text-center">
-            <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm mb-2`}>Ainda não tem conta?</p>
+          <div className="text-center w-full">
+            <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm mb-3`}>Ainda não tem conta?</p>
             <Button 
               onClick={() => {
                 onClose();
                 navigate(createPageUrl("Register"));
               }}
               variant="outline"
-              className={isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}
+              className={`w-full h-12 text-base ${isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}`}
               disabled={isLogging}
             >
-              <UserPlus className="w-4 h-4 mr-2" />
+              <UserPlus className="w-5 h-5 mr-2" />
               Criar Conta
             </Button>
           </div>
