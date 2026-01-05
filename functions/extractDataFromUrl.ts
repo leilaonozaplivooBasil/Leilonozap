@@ -62,33 +62,42 @@ Extraia:
         console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
         
         const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE ESTE LINK E ENCONTRE AS IMAGENS DO PRODUTO: ${productUrl}
+            prompt: `ACESSE ESTA URL E EXTRAIA AS IMAGENS PRINCIPAIS DO PRODUTO: ${productUrl}
 
-🎯 MISSÃO: Encontre ENTRE 3 E 6 IMAGENS DIFERENTES do produto (ângulos diferentes, cores, detalhes).
+🎯 OBJETIVO: Encontre entre 3 e 6 URLs de imagens em ALTA RESOLUÇÃO da GALERIA PRINCIPAL do produto.
 
-⚠️ REGRAS OBRIGATÓRIAS:
-1. COPIE as URLs EXATAS que estão no HTML da página (atributos src, data-src, data-zoom)
-2. Cada URL deve ter um CÓDIGO DIFERENTE (não mude só a extensão!)
-3. ❌ NÃO invente URLs (como 123456, 123457...)
-4. ❌ NÃO pegue a mesma URL com extensões diferentes (.jpg, .png, .webp da MESMA imagem)
-5. ✅ Busque imagens de ÂNGULOS DIFERENTES do produto
+⚠️ INSTRUÇÕES CRÍTICAS:
 
-EXEMPLOS:
-❌ ERRADO (mesma imagem, extensões diferentes):
-  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp
-  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.jpg  ← mesmo código!
+1. PROCURE NO HTML POR:
+   - Tags <img> da galeria principal de fotos
+   - Atributos: data-zoom, data-src, src
+   - Carrossel/slider de imagens do produto
+   - Miniaturas (thumbnails) com links para imagens grandes
 
-✅ CORRETO (imagens diferentes, códigos diferentes):
-  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp  ← código 804684
-  https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp  ← código 708740
-  https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp  ← código 925942
+2. FORMATO DAS URLs (Mercado Livre):
+   ✅ PEGUE URLs que tenham padrões como:
+   - https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXXX_XXXXXX-F.webp
+   - https://http2.mlstatic.com/D_Q_NP_2X_XXXXXX-MLAXXXXXXXXXX_XXXXXX-R.webp
+   
+   ❌ EVITE URLs de miniaturas pequenas (_O.jpg, _S.jpg)
+   ❌ EVITE logos ou banners
 
-🔍 ONDE PROCURAR:
-- Galeria de imagens do produto
-- Miniaturas (thumbnails) que mostram diferentes ângulos
-- Carrossel de fotos
+3. CÓDIGOS DIFERENTES = IMAGENS DIFERENTES:
+   - Cada imagem tem um código único (ex: 865332, 927992, 708740)
+   - NÃO pegue a mesma imagem com extensões diferentes (.jpg vs .webp)
 
-COPIE AS URLs REAIS DE IMAGENS DIFERENTES!`,
+4. PRIORIDADE:
+   - Primeira imagem = imagem de CAPA (principal)
+   - Demais = ângulos diferentes, detalhes, variações
+
+🔍 EXEMPLO DO QUE VOCÊ DEVE RETORNAR:
+[
+  "https://http2.mlstatic.com/D_NQ_NP_2X_865332-MLA96868279679_102025-F.webp",
+  "https://http2.mlstatic.com/D_Q_NP_2X_927992-MLU79387305003_092024-R.webp",
+  "https://http2.mlstatic.com/D_Q_NP_2X_708740-MLA80779729796_112024-R.webp"
+]
+
+COPIE AS URLs EXATAS DO CÓDIGO HTML DA PÁGINA!`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
