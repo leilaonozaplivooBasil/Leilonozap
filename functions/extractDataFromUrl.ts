@@ -77,19 +77,25 @@ Extraia:
                 const pageHtml = await fetchResponse.text();
                 console.log(`✅ HTML baixado: ${pageHtml.length} chars`);
                 
-                // 🔥 REGEX PARA MERCADO LIVRE
+                // 🔥 REGEX PARA MERCADO LIVRE (TODOS OS FORMATOS)
                 if (marketplace === 'mercadolivre') {
-                    const mlRegex = /https?:\/\/http2\.mlstatic\.com\/[^"'\s]+?(?:_F\.webp|_R\.webp|_F\.jpg|_R\.jpg)/gi;
+                    // Busca TODAS as URLs do mlstatic.com (qualquer formato)
+                    const mlRegex = /https?:\/\/http2\.mlstatic\.com\/D_[^"'\s]+\.(?:webp|jpg|jpeg|png)/gi;
                     const matches = [...pageHtml.matchAll(mlRegex)];
+                    
+                    console.log(`🔍 REGEX encontrou ${matches.length} URLs de imagens do mlstatic`);
                     
                     // Remove duplicatas mantendo ordem
                     const seen = new Set();
                     imageUrls = matches
-                        .map(m => m[0])
+                        .map(m => m[0].split('?')[0]) // Remove query params
                         .filter(url => {
                             // Extrai código único (ex: 865332)
                             const codeMatch = url.match(/2X_(\d+)-/);
                             const code = codeMatch ? codeMatch[1] : url;
+                            
+                            // Ignora miniaturas muito pequenas
+                            if (url.includes('_O.') || url.includes('_S.')) return false;
                             
                             if (seen.has(code)) return false;
                             seen.add(code);
@@ -97,9 +103,10 @@ Extraia:
                         })
                         .slice(0, 6);
                     
-                    console.log(`📸 REGEX encontrou ${imageUrls.length} imagens ÚNICAS`);
+                    console.log(`✅ REGEX filtrado: ${imageUrls.length} imagens ÚNICAS`);
                     imageUrls.forEach((url, i) => {
-                        console.log(`  ${i + 1}. ${url}`);
+                        const codeMatch = url.match(/2X_(\d+)-/);
+                        console.log(`  ${i + 1}. Código ${codeMatch ? codeMatch[1] : '?'}: ${url}`);
                     });
                 }
                 
