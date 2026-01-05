@@ -59,69 +59,110 @@ Extraia:
         
         console.log('✅ ETAPA 1:', basicDataResult);
         
-        console.log('🖼️ ETAPA 2: Baixando HTML direto para análise precisa...');
+        console.log('🖼️ ETAPA 2: Baixando HTML e extraindo URLs com REGEX...');
         
-        // 🆕 BAIXA O HTML DIRETAMENTE DA PÁGINA
-        let pageHtml = null;
+        // 🔥 BAIXA HTML DIRETO
+        let imageUrls = [];
         try {
-            console.log(`📥 Fazendo fetch de: ${productUrl}`);
+            console.log(`📥 Fetch: ${productUrl}`);
             const fetchResponse = await fetch(productUrl, {
                 headers: {
                     'User-Agent': getRandomUA(),
-                    'Accept': 'text/html,application/xhtml+xml',
-                    'Accept-Language': 'pt-BR,pt;q=0.9'
+                    'Accept': 'text/html',
+                    'Accept-Language': 'pt-BR'
                 }
             });
             
             if (fetchResponse.ok) {
-                pageHtml = await fetchResponse.text();
-                console.log(`✅ HTML baixado! ${pageHtml.length} caracteres`);
+                const pageHtml = await fetchResponse.text();
+                console.log(`✅ HTML baixado: ${pageHtml.length} chars`);
+                
+                // 🔥 REGEX PARA MERCADO LIVRE
+                if (marketplace === 'mercadolivre') {
+                    const mlRegex = /https?:\/\/http2\.mlstatic\.com\/[^"'\s]+?(?:_F\.webp|_R\.webp|_F\.jpg|_R\.jpg)/gi;
+                    const matches = [...pageHtml.matchAll(mlRegex)];
+                    
+                    // Remove duplicatas mantendo ordem
+                    const seen = new Set();
+                    imageUrls = matches
+                        .map(m => m[0])
+                        .filter(url => {
+                            // Extrai código único (ex: 865332)
+                            const codeMatch = url.match(/2X_(\d+)-/);
+                            const code = codeMatch ? codeMatch[1] : url;
+                            
+                            if (seen.has(code)) return false;
+                            seen.add(code);
+                            return true;
+                        })
+                        .slice(0, 6);
+                    
+                    console.log(`📸 REGEX encontrou ${imageUrls.length} imagens ÚNICAS`);
+                    imageUrls.forEach((url, i) => {
+                        console.log(`  ${i + 1}. ${url}`);
+                    });
+                }
+                
+                // Se REGEX não encontrou imagens suficientes, tenta outros padrões
+                if (imageUrls.length < 3) {
+                    console.log(`⚠️ REGEX retornou ${imageUrls.length} imagens, tentando padrões alternativos...`);
+                    
+                    // Padrão genérico para qualquer marketplace
+                    const genericRegex = /https?:\/\/[^"'\s]+?\.(?:jpg|jpeg|png|webp)/gi;
+                    const allMatches = [...pageHtml.matchAll(genericRegex)];
+                    
+                    imageUrls = allMatches
+                        .map(m => m[0])
+                        .filter(url => {
+                            // Filtra apenas URLs de produto (não CDN de UI, logos, etc)
+                            return !url.includes('logo') && 
+                                   !url.includes('icon') && 
+                                   !url.includes('btn') &&
+                                   !url.includes('sprite') &&
+                                   url.length > 40; // URLs de produto geralmente são longas
+                        })
+                        .slice(0, 6);
+                    
+                    console.log(`📸 Padrão genérico encontrou ${imageUrls.length} imagens`);
+                }
             } else {
-                console.warn(`⚠️ Fetch falhou (${fetchResponse.status}), usando modo internet...`);
+                console.warn(`⚠️ Fetch retornou ${fetchResponse.status}`);
             }
         } catch (fetchError) {
             console.warn(`⚠️ Erro no fetch: ${fetchError.message}`);
         }
         
-        // 🆕 ANALISA COM IA (usando HTML direto ou modo internet)
-        const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: pageHtml 
-                ? `ANALISE O HTML ABAIXO E EXTRAIA URLS DE IMAGENS:
-
-${pageHtml.substring(0, 100000)}
-
-EXTRAIA ENTRE 3 E 6 URLs DE IMAGENS DO PRODUTO.
-
-PROCURE:
-- Tags <img> com src, data-src, data-zoom
-- URLs tipo mlstatic.com, media-amazon, etc
-- Galeria principal (não banners/logos)
-
-CADA URL DEVE TER CÓDIGO ÚNICO!
-
-EXEMPLO:
-["https://http2.mlstatic.com/D_NQ_NP_2X_865332-MLA96868279679_102025-F.webp",
- "https://http2.mlstatic.com/D_Q_NP_2X_927992-MLU79387305003_092024-R.webp"]`
-                : `ACESSE: ${productUrl}
+        // 🆕 SE REGEX NÃO ENCONTROU NADA, USA IA COMO FALLBACK
+        if (imageUrls.length === 0) {
+            console.log(`🤖 REGEX falhou, tentando com IA...`);
+            
+            const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                prompt: `ACESSE: ${productUrl}
 
 EXTRAIA 3-6 URLs DE IMAGENS DO PRODUTO.
-COPIE URLs EXATAS do HTML (códigos únicos)!`,
-            add_context_from_internet: !pageHtml,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    image_urls: { 
-                        type: "array", 
-                        items: { type: "string" },
-                        minItems: 3,
-                        maxItems: 6
+
+⚠️ COPIE URLs REAIS DO HTML:
+- Mercado Livre: https://http2.mlstatic.com/D_NQ_NP_2X_CODIGO-MLB...
+- Amazon: https://m.media-amazon.com/images/I/CODIGO...
+
+NÃO INVENTE! COPIE do código fonte!`,
+                add_context_from_internet: true,
+                response_json_schema: {
+                    type: "object",
+                    properties: {
+                        image_urls: { 
+                            type: "array", 
+                            items: { type: "string" }
+                        }
                     }
-                },
-                required: ["image_urls"]
-            }
-        });
+                }
+            });
+            
+            imageUrls = imagesResult.image_urls || [];
+            console.log(`🤖 IA retornou ${imageUrls.length} URLs`);
+        }
         
-        console.log('✅ ETAPA 2 - URLs:', imagesResult.image_urls);
+        console.log('✅ ETAPA 2 - URLs finais:', imageUrls);
         
         const extractionResult = {
             ...basicDataResult,
