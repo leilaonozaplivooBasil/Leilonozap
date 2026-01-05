@@ -13,19 +13,21 @@ Deno.serve(async (req) => {
         console.log(`🔍 Magazine Luiza (IA): ${productUrl}`);
 
         const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE esta página do Magazine Luiza: ${productUrl}
+            prompt: `ACESSE: ${productUrl}
 
-EXTRAIA TODAS AS URLs DAS IMAGENS DO PRODUTO (cada miniatura tem uma URL diferente).
+PASSO 1: AGUARDE a página carregar completamente
+PASSO 2: LOCALIZE as miniaturas de fotos do produto (geralmente 3-10 miniaturas clicáveis)
+PASSO 3: COPIE a URL de CADA miniatura do código HTML
 
-IMPORTANTE:
-- Cada foto do produto tem um código DIFERENTE no final
-- Exemplo: https://a-static.mlcdn.com.br/420x420/.../CODIGO1.jpg
-- Exemplo: https://a-static.mlcdn.com.br/420x420/.../CODIGO2.jpg
-- URLs terminam com .jpg ou .jpeg
-- COPIE URLs DIFERENTES de CADA miniatura visível (mínimo 3, máximo 10)
-- NÃO REPITA a mesma URL
+⚠️ REGRAS CRÍTICAS:
+- COPIE URLs que existem no HTML (não invente padrões)
+- Cada miniatura tem um CÓDIGO ÚNICO no final: /2fd4916e.jpg, /abc123.jpg, etc
+- URLs do domínio: mlcdn.com.br ou magazineluiza.com.br
+- Exemplo REAL: https://a-static.mlcdn.com.br/420x420/apple-iphone-17.../2fd4916ee97320e6f600adc8455b6fac.jpg
+- TODAS as URLs devem ser DIFERENTES (códigos únicos)
+- NÃO crie URLs com padrões -1.jpg, -2.jpg (isso é inventar!)
 
-RETORNE em JSON com array "image_urls" contendo URLs ÚNICAS.`,
+RETORNE JSON com array "image_urls" contendo URLs REAIS do HTML.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
