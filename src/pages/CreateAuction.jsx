@@ -15,9 +15,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle, Sparkles, CheckCircle, Download } from "lucide-react";
+import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle, Sparkles, CheckCircle, Copy } from "lucide-react";
 import { createPageUrl } from "@/utils";
-import { downloadImage } from "@/functions/downloadImage";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { createTestAuction } from "@/functions/createTestAuction";
 import { simulateTestBids } from "@/functions/simulateTestBids";
@@ -93,8 +93,6 @@ export default function CreateAuction() {
   
   // 🆕 ESTADOS PARA URLs DE IMAGENS EXTRAÍDAS
   const [extractedImageUrls, setExtractedImageUrls] = useState(['', '', '', '', '', '']);
-  const [isDownloadingImages, setIsDownloadingImages] = useState(false);
-  const [selectedCoverIndex, setSelectedCoverIndex] = useState(0);
 
   // ESTADOS DO LABORATÓRIO DE TESTES
   const [testAuctions, setTestAuctions] = useState([]);
@@ -518,7 +516,7 @@ export default function CreateAuction() {
     }
   };
 
-  // ETAPA 1: EXTRAIR TUDO  
+  // ETAPA 1: EXTRAIR DADOS + URLs DAS IMAGENS (SEM BAIXAR)
   const extractAllData = async () => {
     if (!productUrl) {
       toast.error("Cole a URL do produto primeiro!");
@@ -529,93 +527,38 @@ export default function CreateAuction() {
     setDebugError(null);
     
     try {
-      console.log('🚀 [URL] Iniciando extração COMPLETA para:', productUrl);
-      toast.info("🤖 IA analisando produto e extraindo imagens...");
+      console.log('🚀 [URL] Iniciando extração para:', productUrl);
+      toast.info("🤖 IA extraindo dados e URLs de imagens...");
       
       const response = await extractDataFromUrl({ productUrl });
       
-      console.log('📦 [URL] RESPOSTA COMPLETA DO BACKEND:', JSON.stringify(response, null, 2));
-      console.log('📦 [URL] response.data:', response.data);
-
       if (!response || !response.data) {
           throw new Error("Falha na extração");
       }
       
-      const responseData = response.data;
+      const { title, description, price, imageUrls } = response.data;
       
-      console.log('🔍 [URL] responseData COMPLETO:', responseData);
-      console.log('🔍 [URL] responseData.imageUrls:', responseData.imageUrls);
-      console.log('🔍 [URL] responseData.title:', responseData.title);
-      console.log('🔍 [URL] responseData.price:', responseData.price);
-      
-      if (responseData.error) {
-        toast.error(responseData.error);
-        if (responseData.suggestion) {
-          alert(`❌ ${responseData.error}\n\n💡 ${responseData.suggestion}`);
-        }
-        setManualStep(0);
-        setIsProcessing(false);
-        return;
-      }
-      
-      const { title, description, price, imageUrls, marketplace } = responseData;
-      
-      console.log('🎯 [URL] VARIÁVEIS EXTRAÍDAS:');
-      console.log('   title:', title);
-      console.log('   description:', description);
-      console.log('   price:', price);
-      console.log('   imageUrls (tipo):', typeof imageUrls);
-      console.log('   imageUrls (length):', imageUrls?.length);
-      console.log('   imageUrls (conteúdo):', imageUrls);
+      console.log('✅ Dados extraídos:', { title, price, imageCount: imageUrls?.length });
       
       if (!title || !description) {
         throw new Error("Dados incompletos");
       }
       
-      setImportedData({ title, description, price });
+      setExtractedData({ title, description });
       
-      // 🔥 IMAGENS JÁ HOSPEDADAS - APLICA DIRETO NO FORMULÁRIO
-      console.log(`✅ Backend retornou ${imageUrls?.length || 0} imagens!`);
-      console.log('📸 URLs recebidas:', imageUrls);
-      
+      // 📸 MOSTRA URLs EXTRAÍDAS (SEM BAIXAR)
       if (imageUrls && imageUrls.length > 0) {
-        // Prepara array com até 5 imagens
-        const finalImages = imageUrls.slice(0, 5);
-        while (finalImages.length < 5) {
-          finalImages.push("");
-        }
-        
-        console.log('🚀 APLICANDO NO FORMULÁRIO:');
-        console.log('   Título:', title);
-        console.log('   Preço:', price);
-        console.log('   Imagens:', finalImages);
-        
-        // Aplica tudo de uma vez
-        setFormData(prev => ({
-          ...prev,
-          title: title || prev.title,
-          description: description || prev.description,
-          starting_price: price ? price.toString() : prev.starting_price,
-          image_urls: finalImages,
-          source_url: productUrl
-        }));
-        
-        console.log('✅ formData.image_urls atualizado!');
-        
-        // Limpa tudo
-        setProductUrl("");
-        setManualStep(0);
-        setImportedData(null);
-        
-        toast.success(`✅ Produto + ${imageUrls.length} imagens aplicadas!`);
+        setExtractedImageUrls(imageUrls.slice(0, 6));
+        setManualStep(2); // Vai para tela de URLs
+        toast.success(`✅ ${imageUrls.length} URLs de imagens encontradas!`);
       } else {
-        toast.warning("⚠️ Produto sem imagens. Use upload manual.");
+        toast.warning("⚠️ Nenhuma imagem encontrada. Use upload manual.");
         
-        // Aplica só os dados textuais
+        // Aplica só dados textuais
         setFormData(prev => ({
           ...prev,
-          title: title || prev.title,
-          description: description || prev.description,
+          title,
+          description,
           starting_price: price ? price.toString() : prev.starting_price,
           source_url: productUrl
         }));
@@ -625,7 +568,7 @@ export default function CreateAuction() {
       }
       
     } catch (error) {
-      console.error("❌ [URL] ERRO:", error);
+      console.error("❌ Erro:", error);
       
       setDebugError({
         type: 'extractDataFromUrl',
@@ -641,54 +584,7 @@ export default function CreateAuction() {
     setIsProcessing(false);
   };
 
-  // 🆕 FUNÇÃO PARA BAIXAR IMAGENS DAS URLs
-  const downloadImagesFromUrls = async () => {
-    const validUrls = extractedImageUrls.filter(u => u.trim());
-    if (validUrls.length === 0) {
-      toast.error("❌ Adicione pelo menos 1 URL de imagem!");
-      return;
-    }
 
-    setIsDownloadingImages(true);
-    toast.info("⬇️ Baixando imagens...");
-
-    try {
-      const downloaded = [];
-      for (let i = 0; i < extractedImageUrls.length; i++) {
-        const url = extractedImageUrls[i];
-        if (!url.trim()) continue;
-
-        try {
-          console.log(`⬇️ Baixando imagem ${i + 1}:`, url);
-          const response = await downloadImage({ imageUrl: url });
-
-          if (response?.data?.uploaded_url) {
-            downloaded.push(response.data.uploaded_url);
-            console.log(`✅ Imagem ${i + 1} baixada!`);
-          }
-        } catch (error) {
-          console.error(`❌ Erro ao baixar imagem ${i + 1}:`, error);
-        }
-      }
-
-      if (downloaded.length === 0) {
-        toast.error("❌ Nenhuma imagem foi baixada com sucesso");
-        setIsDownloadingImages(false);
-        return;
-      }
-
-      setDownloadedImages(downloaded);
-      setSelectedCoverIndex(0);
-      setManualStep(3);
-      toast.success(`✅ ${downloaded.length} imagem(ns) baixada(s)!`);
-
-    } catch (error) {
-      console.error("❌ Erro ao baixar imagens:", error);
-      toast.error("Erro ao baixar imagens");
-    } finally {
-      setIsDownloadingImages(false);
-    }
-  };
   
   const visualizeImages = async () => {
     const validUrls = imageUrls.filter(url => url && url.trim().startsWith('http'));
@@ -1436,84 +1332,86 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* 🆕 ETAPA 2: DADOS EXTRAÍDOS + URLs DE IMAGENS */}
+                    {/* 🆕 ETAPA 2: URLs DAS IMAGENS EXTRAÍDAS (SEM PREVIEW) */}
                     {manualStep === 2 && (
                       <div className="space-y-4">
                         <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
                           <h4 className="font-bold text-green-300 mb-3 flex items-center gap-2">
                             <CheckCircle className="w-4 h-4" />
-                            1️⃣ Dados Extraídos com Sucesso!
+                            ✅ Dados Extraídos com Sucesso!
                           </h4>
                           <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
-                            <div><span className="text-green-400 font-semibold">Título:</span> {importedData.title || '❌ Não encontrado'}</div>
-                            <div><span className="text-green-400 font-semibold">Preço:</span> {importedData.price ? `R$ ${importedData.price.toFixed(2)}` : '❌ Não encontrado'}</div>
-                            <div><span className="text-green-400 font-semibold">Descrição:</span> {importedData.description ? `${importedData.description.substring(0, 100)}...` : '❌ Não encontrada'}</div>
+                            <div><span className="text-green-400 font-semibold">Título:</span> {extractedData.title}</div>
+                            <div><span className="text-green-400 font-semibold">Descrição:</span> {extractedData.description.substring(0, 100)}...</div>
                           </div>
                         </div>
 
-                        <div className="bg-purple-900/30 p-4 rounded-lg border border-purple-700">
-                          <h4 className="font-bold text-purple-300 mb-3 flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4" />
-                            2️⃣ URLs das Imagens Extraídas
+                        <div className="bg-blue-900/30 p-4 rounded-lg border border-blue-700">
+                          <h4 className="font-bold text-blue-300 mb-3 flex items-center gap-2">
+                            <LinkIcon className="w-4 h-4" />
+                            📸 URLs das Imagens Encontradas
                           </h4>
-                          <p className="text-xs text-purple-400 mb-3">
-                            ✨ URLs extraídas automaticamente! Revise abaixo, edite se necessário ou preencha manualmente as vazias.
-                          </p>
                           
-                          <div className="space-y-3">
-                            {extractedImageUrls.map((url, index) => (
-                              <div key={index} className="flex items-center gap-3">
-                                <span className="text-xs text-gray-400 w-8 font-mono">{index + 1}:</span>
-                                <input
-                                  type="text"
-                                  value={url}
-                                  onChange={(e) => {
-                                    const newUrls = [...extractedImageUrls];
-                                    newUrls[index] = e.target.value;
-                                    setExtractedImageUrls(newUrls);
-                                  }}
-                                  placeholder="Cole a URL da imagem aqui..."
-                                  className="flex-1 bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
-                                />
-                                {url && url.trim() && (
-                                  <div className="w-14 h-14 bg-gray-900 rounded border border-gray-600 flex items-center justify-center overflow-hidden flex-shrink-0">
-                                    <img 
-                                      src={url} 
-                                      alt={`Preview ${index + 1}`}
-                                      className="max-w-full max-h-full object-contain"
-                                      crossOrigin="anonymous"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = '<div class="text-xs text-red-400">❌</div>';
-                                      }}
-                                    />
-                                  </div>
-                                )}
+                          <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
+                            {extractedImageUrls.filter(u => u.trim()).map((url, index) => (
+                              <div key={index} className="bg-gray-800 rounded p-3 border border-gray-700">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs font-bold text-blue-400">
+                                    {index === 0 ? '🏆 CAPA' : `Imagem ${index + 1}`}
+                                  </span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(url);
+                                      toast.success('✅ URL copiada!');
+                                    }}
+                                    className="h-6 text-xs border-gray-600"
+                                  >
+                                    <Copy className="w-3 h-3 mr-1" />
+                                    Copiar
+                                  </Button>
+                                </div>
+                                <p className="text-xs text-gray-400 break-all font-mono bg-black/30 p-2 rounded">
+                                  {url}
+                                </p>
                               </div>
                             ))}
                           </div>
 
                           <Button 
-                            onClick={downloadImagesFromUrls}
-                            disabled={isDownloadingImages || !extractedImageUrls.some(u => u.trim())}
-                            className="w-full mt-4 bg-purple-600 hover:bg-purple-700 text-white font-bold"
+                            onClick={() => {
+                              // APLICA URLs DIRETO NO FORMULÁRIO
+                              const validUrls = extractedImageUrls.filter(u => u.trim());
+                              const finalImages = validUrls.slice(0, 5);
+                              while (finalImages.length < 5) {
+                                finalImages.push("");
+                              }
+                              
+                              setFormData(prev => ({
+                                ...prev,
+                                title: extractedData.title,
+                                description: extractedData.description,
+                                image_urls: finalImages,
+                                source_url: productUrl
+                              }));
+                              
+                              // Limpa estados
+                              setProductUrl("");
+                              setExtractedImageUrls(['', '', '', '', '', '']);
+                              setExtractedData({ title: "", description: "" });
+                              setManualStep(0);
+                              
+                              toast.success(`✅ Produto + ${validUrls.length} URLs aplicados!`);
+                            }}
+                            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
                           >
-                            {isDownloadingImages ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Baixando Imagens...
-                              </>
-                            ) : (
-                              <>
-                                <Download className="w-4 h-4 mr-2" />
-                                ⬇️ Baixar Imagens das URLs
-                              </>
-                            )}
+                            <CheckCircle className="w-4 h-4 mr-2" />
+                            🚀 Aplicar no Formulário
                           </Button>
 
-                          <p className="text-xs text-purple-300 mt-3 flex items-center gap-2">
-                            <AlertCircle className="w-4 h-4" />
-                            <span>O sistema vai baixar as imagens das URLs acima e hospedar no servidor</span>
+                          <p className="text-xs text-gray-400 mt-3 text-center">
+                            💡 As URLs serão usadas diretamente no leilão (sem download)
                           </p>
                         </div>
                       </div>
