@@ -28,6 +28,7 @@ import { resetTestValora } from "@/functions/resetTestValora";
 import { toast } from "sonner";
 import { addSeconds } from 'date-fns';
 import ImageAnalyzer from "../components/admin/ImageAnalyzer";
+import ProductImagePreview from "../components/admin/ProductImagePreview";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -2361,38 +2362,7 @@ export default function CreateAuction() {
                       </div>
                     </div>
                     <div className="space-y-4">
-                      <div className="bg-gray-900/50 rounded-lg p-6 text-center text-gray-500 border border-gray-700 h-full">
-                        {formData.image_urls.filter(url => url).length > 0 ? (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {formData.image_urls.filter(url => url).map((url, index) => (
-                              <div key={`${url}-${index}`} className="relative w-full h-24 bg-gray-800 rounded overflow-hidden flex items-center justify-center border border-gray-700">
-                                <img 
-                                  key={url}
-                                  src={url} 
-                                  alt={`Preview ${index + 1}`} 
-                                  className="w-full h-full object-cover absolute inset-0"
-                                  loading="eager"
-                                  onLoad={(e) => {
-                                    console.log(`✅ Imagem ${index + 1} VISÍVEL:`, url);
-                                  }}
-                                  onError={(e) => {
-                                    console.error(`❌ ERRO ao carregar imagem ${index + 1}:`, url);
-                                    e.target.src = 'https://via.placeholder.com/150?text=Erro+Imagem';
-                                  }}
-                                />
-                                <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1 rounded">
-                                  {index === 0 ? 'Capa' : index + 1}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full">
-                            <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                            <p className="text-sm"> As imagens aparecerão aqui </p>
-                          </div>
-                        )}
-                      </div>
+                      <ProductImagePreview imageUrls={formData.image_urls} />
                     </div>
                   </div>
                   <Card className="bg-gray-800 border border-gray-700">
