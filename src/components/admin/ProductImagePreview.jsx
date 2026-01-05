@@ -27,14 +27,17 @@ export default function ProductImagePreview({ imageUrls }) {
               src={url} 
               alt={`Produto ${index + 1}`} 
               style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
                 width: '100%',
                 height: '100%',
                 objectFit: 'cover',
-                display: 'block'
+                display: 'block',
+                zIndex: 1
               }}
               onLoad={(e) => {
                 console.log(`✅ PREVIEW IMAGEM ${index + 1} CARREGADA!`);
-                e.target.style.opacity = '1';
               }}
               onError={(e) => {
                 console.error(`❌ PREVIEW ERRO ${index + 1}:`, url);
@@ -44,7 +47,7 @@ export default function ProductImagePreview({ imageUrls }) {
             
             <div 
               className="absolute top-1 right-1 bg-black/80 text-white text-xs px-2 py-1 rounded font-bold"
-              style={{ pointerEvents: 'none' }}
+              style={{ pointerEvents: 'none', zIndex: 10 }}
             >
               {index === 0 ? 'Capa' : index + 1}
             </div>
