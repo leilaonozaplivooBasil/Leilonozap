@@ -32,10 +32,12 @@ const defaultPhases = [
     }
 ];
 
-export default function JourneyAnimation({ customPhases, journeyTitle }) {
+export default function JourneyAnimation({ customPhases, journeyTitle, theme = 'nozap' }) {
     const phases = customPhases || defaultPhases;
     const [currentPhase, setCurrentPhase] = useState(0);
     const audioContextRef = useRef(null);
+    
+    const isSaiDeBaixo = theme === 'saidebaixo';
 
     const playCoinSound = () => {
         if (!audioContextRef.current) {
@@ -137,7 +139,11 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
     return (
         <div className="py-12 px-4">
             {/* TÍTULO */}
-            <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent">
+            <h2 className={`text-2xl md:text-3xl font-bold text-center mb-8 ${
+                isSaiDeBaixo 
+                    ? 'bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent' 
+                    : 'bg-gradient-to-r from-green-400 to-green-600 bg-clip-text text-transparent'
+            }`}>
                 {journeyTitle || "Sistema automático de ganhos recorrentes ✨"}
             </h2>
 
@@ -145,11 +151,11 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
             <div className="max-w-4xl mx-auto mb-12">
                 <div className="relative">
                     {/* Linha de fundo - passa pelo centro dos círculos - ATRÁS (z-0) */}
-                    <div className="absolute top-8 left-0 right-0 h-1 bg-gray-700" style={{ left: '32px', right: '32px', zIndex: 0 }} />
+                    <div className={`absolute top-8 left-0 right-0 h-1 ${isSaiDeBaixo ? 'bg-gray-300' : 'bg-gray-700'}`} style={{ left: '32px', right: '32px', zIndex: 0 }} />
                     
-                    {/* Linha de progresso verde - ATRÁS (z-0) */}
+                    {/* Linha de progresso - ATRÁS (z-0) */}
                     <motion.div 
-                        className="absolute top-8 h-1 bg-green-500"
+                        className={`absolute top-8 h-1 ${isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500'}`}
                         style={{ left: '32px', zIndex: 0 }}
                         initial={{ width: '0%' }}
                         animate={{ 
@@ -166,8 +172,12 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
                                 <motion.div 
                                     className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center text-2xl transition-all duration-500 relative ${
                                         index <= currentPhase 
-                                            ? 'bg-green-500 shadow-lg shadow-green-500/50' 
-                                            : 'bg-gray-700'
+                                            ? isSaiDeBaixo 
+                                                ? 'bg-red-600 shadow-lg shadow-red-600/50' 
+                                                : 'bg-green-500 shadow-lg shadow-green-500/50'
+                                            : isSaiDeBaixo
+                                                ? 'bg-gray-300'
+                                                : 'bg-gray-700'
                                     }`}
                                     style={{ zIndex: 20 }}
                                     animate={{
@@ -181,7 +191,9 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
                                 {/* Texto abaixo */}
                                 <div className="mt-4 text-center">
                                     <p className={`text-sm font-bold ${
-                                        index <= currentPhase ? 'text-green-400' : 'text-gray-500'
+                                        index <= currentPhase 
+                                            ? isSaiDeBaixo ? 'text-red-600' : 'text-green-400' 
+                                            : isSaiDeBaixo ? 'text-gray-600' : 'text-gray-500'
                                     }`}>
                                         {phase.description}
                                     </p>
@@ -193,7 +205,9 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
             </div>
 
             {/* ANIMAÇÃO DO BONECO */}
-            <div className="max-w-3xl mx-auto bg-gray-800/30 rounded-2xl p-8 relative overflow-hidden">
+            <div className={`max-w-3xl mx-auto rounded-2xl p-8 relative overflow-hidden ${
+                isSaiDeBaixo ? 'bg-gray-100 border-2 border-gray-300' : 'bg-gray-800/30'
+            }`}>
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentPhase}
@@ -206,10 +220,14 @@ export default function JourneyAnimation({ customPhases, journeyTitle }) {
                         <div className="text-6xl mb-4">
                             {phases[currentPhase].icon}
                         </div>
-                        <h3 className={`text-2xl font-bold ${phases[currentPhase].color} mb-4`}>
+                        <h3 className={`text-2xl font-bold mb-4 ${
+                            isSaiDeBaixo 
+                                ? currentPhase === 0 ? 'text-gray-700' : 'text-red-600'
+                                : phases[currentPhase].color
+                        }`}>
                             {phases[currentPhase].description}
                         </h3>
-                        <p className="text-gray-400 text-base">
+                        <p className={`text-base ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
                             {phases[currentPhase].title}
                         </p>
 

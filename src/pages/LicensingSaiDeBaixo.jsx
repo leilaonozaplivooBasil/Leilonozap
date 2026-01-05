@@ -136,7 +136,7 @@ const LandingContent = ({ onRegisterClick, onLoginClick }) => {
                 </div>
             </div>
 
-            <JourneyAnimation />
+            <JourneyAnimation theme="saidebaixo" />
 
             <div className="mb-16 mt-20">
               <EarningsSimulator theme="saidebaixo" />
