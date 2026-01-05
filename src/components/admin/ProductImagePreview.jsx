@@ -1,93 +1,79 @@
 import React from 'react';
+import { Copy, ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function ProductImagePreview({ imageUrls }) {
   const validImages = imageUrls.filter(url => url && url.trim());
   
-  console.log('🖼️ PREVIEW - Total válidas:', validImages.length, validImages);
-  
+  const copyToClipboard = (url) => {
+    navigator.clipboard.writeText(url);
+    alert('✅ URL copiada!');
+  };
+
+  const copyAll = () => {
+    const allUrls = validImages.join(',\n');
+    navigator.clipboard.writeText(allUrls);
+    alert(`✅ ${validImages.length} URLs copiadas!`);
+  };
+
   if (validImages.length === 0) {
     return (
-      <div style={{
-        backgroundColor: 'rgba(17, 24, 39, 0.5)',
-        borderRadius: '8px',
-        padding: '24px',
-        textAlign: 'center',
-        color: '#9ca3af',
-        border: '1px solid #374151'
-      }}>
-        <p>📸 As imagens aparecerão aqui</p>
+      <div className="bg-gray-900/50 rounded-lg p-6 text-center text-gray-500 border border-gray-700">
+        <p>📸 As URLs das imagens aparecerão aqui após importação</p>
       </div>
     );
   }
 
   return (
-    <div style={{
-      backgroundColor: 'rgba(17, 24, 39, 0.5)',
-      borderRadius: '8px',
-      padding: '16px',
-      border: '1px solid #374151'
-    }}>
-      <h3 style={{ color: 'white', fontSize: '14px', marginBottom: '12px', fontWeight: 'bold' }}>
-        ✅ Preview das Imagens ({validImages.length})
-      </h3>
+    <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-white text-sm font-bold">
+          ✅ {validImages.length} {validImages.length === 1 ? 'Imagem Importada' : 'Imagens Importadas'}
+        </h3>
+        <Button 
+          onClick={copyAll}
+          size="sm"
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <Copy className="w-4 h-4 mr-2" />
+          Copiar Todas
+        </Button>
+      </div>
       
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, 1fr)',
-        gap: '12px'
-      }}>
+      <div className="space-y-2 max-h-64 overflow-y-auto">
         {validImages.map((url, index) => (
           <div 
             key={index}
-            style={{
-              width: '100%',
-              height: '140px',
-              backgroundColor: '#1f2937',
-              borderRadius: '8px',
-              border: '2px solid #4b5563',
-              overflow: 'hidden',
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
+            className="bg-gray-800 rounded-lg p-3 border border-gray-700"
           >
-            {/* IMAGEM DIRETA SEM ABSTRAÇÕES */}
-            <img 
-              src={url}
-              alt={`Produto ${index + 1}`}
-              style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
-                objectFit: 'contain',
-                display: 'block'
-              }}
-              onLoad={(e) => {
-                console.log(`✅ IMG ${index + 1} LOADED - Dimensões:`, e.target.naturalWidth, 'x', e.target.naturalHeight);
-                // FORÇA VISIBILIDADE
-                e.target.style.opacity = '1';
-                e.target.style.visibility = 'visible';
-              }}
-              onError={(e) => {
-                console.error(`❌ IMG ${index + 1} ERROR:`, url);
-              }}
-            />
-            
-            {/* BADGE */}
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              backgroundColor: 'rgba(0,0,0,0.9)',
-              color: 'white',
-              fontSize: '11px',
-              padding: '4px 8px',
-              borderRadius: '6px',
-              fontWeight: 'bold',
-              zIndex: 100
-            }}>
-              {index === 0 ? '🏆 CAPA' : `#${index + 1}`}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-white font-bold text-sm">
+                {index === 0 ? '🏆 CAPA' : `#${index + 1}`}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => copyToClipboard(url)}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2"
+                >
+                  <Copy className="w-3 h-3 mr-1" />
+                  Copiar
+                </Button>
+                <Button
+                  onClick={() => window.open(url, '_blank')}
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2"
+                >
+                  <ExternalLink className="w-3 h-3 mr-1" />
+                  Abrir
+                </Button>
+              </div>
             </div>
+            <p className="text-xs text-gray-400 break-all font-mono">
+              {url}
+            </p>
           </div>
         ))}
       </div>
