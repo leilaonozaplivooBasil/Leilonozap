@@ -237,47 +237,37 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
     }
 
     setIsResetting(true);
-    
+
     try {
       const normalizedResetEmail = resetEmail.toLowerCase().trim();
-      
-      // 🛡️ PROTEÇÃO: Sempre exibe mensagem genérica para evitar enumeração de usuários
-      let emailFound = false;
-      
+
       try {
         const users = await AppUser.filter({ email: normalizedResetEmail });
-        
+
         if (users.length > 0) {
-          emailFound = true;
           const user = users[0];
-          
-          // Gera nova senha temporária
+
           const newPassword = Math.random().toString(36).slice(-8);
-          
-          // Atualiza no banco
+
           await AppUser.update(user.id, { password: newPassword });
-          
-          // Envia email
+
           await SendEmail({
             to: user.email,
             subject: "🔐 Nova Senha - Leilão NoZap",
-            body: `
-Olá ${user.full_name},
+            body: `Olá ${user.full_name},
 
-Você solicitou a recuperação de senha.
+  Você solicitou a recuperação de senha.
 
-📧 **Nova Senha Temporária:** ${newPassword}
+  📧 Nova Senha Temporária: ${newPassword}
 
-⚠️ **IMPORTANTE:** Por segurança, recomendamos que você altere esta senha assim que fizer login.
+  ⚠️ IMPORTANTE: Por segurança, recomendamos que você altere esta senha assim que fizer login.
 
-Entre no app e faça login com esta senha.
+  Entre no app e faça login com esta senha.
 
----
-Equipe Leilão NoZap 🎯
-            `
+  ---
+  Equipe Leilão NoZap 🎯`
           });
-          
-          // Loga sucesso
+
           await base44.entities.SystemLog.create({
             step: 'Password_Reset_Success',
             status: 'success',
@@ -288,8 +278,7 @@ Equipe Leilão NoZap 🎯
         }
       } catch (error) {
         console.error("Erro ao processar reset:", error);
-        
-        // Loga erro
+
         await base44.entities.SystemLog.create({
           step: 'Password_Reset_Failed',
           status: 'error',
@@ -299,15 +288,25 @@ Equipe Leilão NoZap 🎯
           payload: { email: normalizedResetEmail }
         });
       }
-      
-      // 🔒 SEGURANÇA: Sempre exibe a mesma mensagem, independente se o email existe ou não
-      alert("✅ Se o seu e-mail estiver registrado em nosso sistema, enviaremos um link de redefinição de senha. Por favor, verifique sua caixa de entrada (e spam).");
+
+      alert("✅ Se o seu e-mail estiver registrado em nosso sistema, enviaremos uma nova senha temporária. Por favor, verifique sua caixa de entrada (e spam).");
       setShowForgotPassword(false);
       setResetEmail('');
-      
+
     } catch (error) {
       console.error("Erro crítico ao resetar senha:", error);
-      alert("❌ Erro ao processar solicitação. Tente novamente ou contate o suporte.");
+
+      await base44.entities.SystemLog.create({
+        step: 'Password_Reset_Critical_Error',
+        status: 'error',
+        message: `Critical error in password reset: ${error.message}`,
+        component_name: 'LoginModal',
+        error_details: { message: error.message, stack: error.stack }
+      });
+
+      alert("✅ Se o seu e-mail estiver registrado em nosso sistema, enviaremos uma nova senha temporária. Por favor, verifique sua caixa de entrada (e spam).");
+      setShowForgotPassword(false);
+      setResetEmail('');
     } finally {
       setIsResetting(false);
     }
@@ -315,8 +314,8 @@ Equipe Leilão NoZap 🎯
 
   if (showForgotPassword) {
     return (
-      <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-4 animate-in fade-in-0`}>
-        <Card className={`w-full max-w-md ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} relative`}>
+      <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-4 animate-in fade-in-0 overflow-y-auto`} style={{ paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+        <Card className={`w-full max-w-md ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} relative my-auto`}>
           <Button 
             variant="ghost" 
             size="icon" 
@@ -333,29 +332,29 @@ Equipe Leilão NoZap 🎯
             </CardTitle>
           </CardHeader>
           
-          <CardContent className="space-y-4">
-            <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-300'} text-sm`}>
+          <CardContent className="space-y-5 sm:space-y-4">
+            <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-300'} text-sm sm:text-base`}>
               Digite seu e-mail cadastrado. Enviaremos uma nova senha temporária.
             </p>
             <div>
-              <Label htmlFor="resetEmail" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>E-mail</Label>
+              <Label htmlFor="resetEmail" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail</Label>
               <Input 
                 id="resetEmail" 
                 type="email" 
                 value={resetEmail} 
                 onChange={(e) => setResetEmail(e.target.value)} 
                 placeholder="seu@email.com" 
-                className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                 disabled={isResetting}
               />
             </div>
           </CardContent>
           
-          <CardFooter className="flex gap-2">
+          <CardFooter className="flex gap-2 sm:gap-3">
             <Button 
               variant="outline"
               onClick={() => setShowForgotPassword(false)}
-              className={`flex-1 ${isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}`}
+              className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}`}
               disabled={isResetting}
             >
               Cancelar
@@ -363,11 +362,11 @@ Equipe Leilão NoZap 🎯
             <Button 
               onClick={handleForgotPassword} 
               disabled={isResetting || !resetEmail}
-              className={`flex-1 ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+              className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
             >
               {isResetting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                   Enviando...
                 </>
               ) : (

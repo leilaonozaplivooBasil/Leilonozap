@@ -117,7 +117,7 @@ export default function Register() {
           </CardHeader>
           
           <CardContent>
-            <form onSubmit={handleRegister} className="space-y-6">
+            <form onSubmit={handleRegister} className="space-y-5 sm:space-y-6">
               {errorMessage && (
                 <div className={`${isSaiDeBaixo ? 'bg-red-100 border-2 border-red-300' : 'bg-red-900/20 border border-red-500/50'} rounded-lg p-3 flex items-start gap-3`}>
                   <AlertCircle className={`w-5 h-5 ${isSaiDeBaixo ? 'text-red-700' : 'text-red-400'} flex-shrink-0 mt-0.5`} />
@@ -125,197 +125,166 @@ export default function Register() {
                 </div>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 <div>
-                  <Label htmlFor="fullName" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Nome Completo *</Label>
+                  <Label htmlFor="fullName" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Nome Completo *</Label>
                   <Input 
                     id="fullName" 
                     type="text" 
                     value={fullName} 
                     onChange={(e) => setFullName(e.target.value)} 
                     placeholder="Seu nome completo" 
-                    className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isRegistering}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="email" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>E-mail *</Label>
+                  <Label htmlFor="email" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail *</Label>
                   <Input 
                     id="email" 
                     type="email" 
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)} 
                     placeholder="seu@email.com" 
-                    className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isRegistering}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="phone" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Telefone *</Label>
+                  <Label htmlFor="phone" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Telefone *</Label>
                   <Input 
                     id="phone" 
                     type="tel" 
                     value={phone} 
                     onChange={(e) => setPhone(e.target.value)} 
                     placeholder="(XX) XXXXX-XXXX" 
-                    className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isRegistering}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="cpf" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>CPF *</Label>
+                  <Label htmlFor="cpf" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>CPF *</Label>
                   <Input 
                     id="cpf" 
                     type="text" 
                     value={cpf} 
                     onChange={(e) => setCpf(e.target.value)} 
                     placeholder="000.000.000-00" 
-                    className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isRegistering}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <Label htmlFor="password" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Senha *</Label>
+                  <Label htmlFor="password" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Senha *</Label>
                   <Input 
                     id="password" 
                     type="password" 
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
                     placeholder="Mínimo 6 caracteres" 
-                    className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isRegistering}
                   />
                 </div>
               </div>
 
-              <div className={`${isSaiDeBaixo ? 'bg-gray-50' : 'bg-gray-900/30'} p-6 rounded-lg space-y-4`}>
-                <h3 className={`font-semibold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} text-lg mb-2`}>Endereço de Entrega</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <div className="md:col-span-3">
-                    <Label htmlFor="addressStreet" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Rua *</Label>
-                    <Input 
-                      id="addressStreet" 
-                      type="text" 
-                      value={addressStreet} 
-                      onChange={(e) => setAddressStreet(e.target.value)} 
-                      placeholder="Nome da rua" 
-                      className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
-                      disabled={isRegistering}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="addressNumber" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Nº *</Label>
-                    <Input 
-                      id="addressNumber" 
-                      type="text" 
-                      value={addressNumber} 
-                      onChange={(e) => setAddressNumber(e.target.value)} 
-                      placeholder="123" 
-                      className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
-                      disabled={isRegistering}
-                    />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+                <div>
+                  <Label htmlFor="fullName" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Nome Completo *</Label>
+                  <Input 
+                    id="fullName" 
+                    type="text" 
+                    value={fullName} 
+                    onChange={(e) => setFullName(e.target.value)} 
+                    placeholder="Seu nome completo" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isRegistering}
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="addressComplement" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Complemento</Label>
-                    <Input 
-                      id="addressComplement" 
-                      type="text" 
-                      value={addressComplement} 
-                      onChange={(e) => setAddressComplement(e.target.value)} 
-                      placeholder="Apto, bloco (opcional)" 
-                      className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
-                      disabled={isRegistering}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="addressNeighborhood" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Bairro *</Label>
-                    <Input 
-                      id="addressNeighborhood" 
-                      type="text" 
-                      value={addressNeighborhood} 
-                      onChange={(e) => setAddressNeighborhood(e.target.value)} 
-                      placeholder="Seu bairro" 
-                      className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
-                      disabled={isRegistering}
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="email" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail *</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => setEmail(e.target.value)} 
+                    placeholder="seu@email.com" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isRegistering}
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div>
-                    <Label htmlFor="addressCity" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Cidade *</Label>
-                    <Input 
-                      id="addressCity" 
-                      type="text" 
-                      value={addressCity} 
-                      onChange={(e) => setAddressCity(e.target.value)} 
-                      placeholder="Sua cidade" 
-                      className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
-                      disabled={isRegistering}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="addressState" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>UF *</Label>
-                    <Input 
-                      id="addressState" 
-                      type="text" 
-                      value={addressState} 
-                      onChange={(e) => setAddressState(e.target.value)} 
-                      placeholder="SP" 
-                      maxLength={2}
-                      className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
-                      disabled={isRegistering}
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="addressZipCode" className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>CEP *</Label>
-                    <Input 
-                      id="addressZipCode" 
-                      type="text" 
-                      value={addressZipCode} 
-                      onChange={(e) => setAddressZipCode(e.target.value)} 
-                      placeholder="00000-000" 
-                      className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
-                      disabled={isRegistering}
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="phone" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Telefone *</Label>
+                  <Input 
+                    id="phone" 
+                    type="tel" 
+                    value={phone} 
+                    onChange={(e) => setPhone(e.target.value)} 
+                    placeholder="(XX) XXXXX-XXXX" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isRegistering}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="cpf" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>CPF *</Label>
+                  <Input 
+                    id="cpf" 
+                    type="text" 
+                    value={cpf} 
+                    onChange={(e) => setCpf(e.target.value)} 
+                    placeholder="000.000.000-00" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isRegistering}
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <Label htmlFor="password" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Senha *</Label>
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    placeholder="Mínimo 6 caracteres" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isRegistering}
+                  />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 sm:gap-4">
                 <Button 
                   type="submit"
                   disabled={isRegistering || !fullName || !email || !phone || !cpf || !password || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode}
-                  className={`w-full ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+                  className={`w-full h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
                 >
                   {isRegistering ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                       Registrando...
                     </>
                   ) : (
                     <>
-                      <UserPlus className="w-4 h-4 mr-2" />
+                      <UserPlus className="w-5 h-5 mr-2" />
                       Criar Conta
                     </>
                   )}
                 </Button>
-                
+
                 <div className="text-center">
                   <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm mb-2`}>Já tem uma conta?</p>
                   <Button 
                     type="button"
                     onClick={() => navigate(createPageUrl("Home"))}
                     variant="outline"
-                    className={isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}
+                    className={`h-12 text-base ${isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}`}
                     disabled={isRegistering}
                   >
                     Fazer Login
