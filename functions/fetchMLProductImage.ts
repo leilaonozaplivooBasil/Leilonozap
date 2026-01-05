@@ -75,61 +75,42 @@ Deno.serve(async (req) => {
 
         console.log(`🔍 Buscando imagem de: ${productUrl}`);
 
-        // ETAPA 1: Buscar HTML da página
-        console.log('📥 ETAPA 1: Baixando HTML...');
+        // ETAPA 1: Usar IA para acessar página RENDERIZADA (com JavaScript)
+        console.log('🤖 ETAPA 1: Usando IA para acessar página renderizada...');
         
-        const pageResponse = await fetchWithRetry(productUrl, {
-            headers: {
-                'User-Agent': getRandomUA(),
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Cache-Control': 'max-age=0'
+        const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: `ACESSE: ${productUrl}
+
+🎯 OBJETIVO: Extrair a URL da IMAGEM PRINCIPAL do produto
+
+⚠️ INSTRUÇÕES:
+- A página carrega imagens via JavaScript
+- Procure no HTML renderizado por URLs de imagens que contenham "mlstatic.com"
+- Copie a URL COMPLETA da primeira imagem de produto (alta resolução)
+- Formato esperado: https://http2.mlstatic.com/D_NQ_NP_CODIGO.jpg
+
+RETORNE apenas a URL da imagem principal.`,
+            add_context_from_internet: true,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    image_url: { type: "string" }
+                },
+                required: ["image_url"]
             }
         });
 
-        const html = await pageResponse.text();
-        console.log(`✅ HTML baixado: ${html.length} chars`);
-
-        // ETAPA 2: Extrair URLs de imagens de alta qualidade
-        console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
+        const imageUrl = aiResult?.image_url;
         
-        // Tenta vários padrões do Mercado Livre
-        const patterns = [
-            /https?:\/\/http2\.mlstatic\.com\/D_[NQ]+_NP_2X_\d+-[A-Z0-9_-]+\.(?:webp|jpg|jpeg)/gi,
-            /https?:\/\/http2\.mlstatic\.com\/D_[NQ]+_NP_\d+-[A-Z0-9_-]+\.(?:webp|jpg|jpeg)/gi,
-            /https?:\/\/[^"'\s]+mlstatic\.com[^"'\s]+\.(?:jpg|jpeg|webp)/gi
-        ];
-        
-        let imageUrl = null;
-        
-        for (const pattern of patterns) {
-            const matches = [...html.matchAll(pattern)];
-            if (matches.length > 0) {
-                imageUrl = matches[0][0].split('?')[0];
-                console.log(`✅ Encontrado com padrão: ${pattern.source}`);
-                break;
-            }
-        }
-        
-        if (!imageUrl) {
-            // DEBUG: Mostra trechos do HTML que contêm "mlstatic"
-            const mlstaticLines = html.split('\n').filter(line => line.includes('mlstatic')).slice(0, 5);
-            console.warn('⚠️ Nenhuma imagem encontrada. Exemplos do HTML:');
-            mlstaticLines.forEach(line => console.log(line.substring(0, 200)));
-            
+        if (!imageUrl || !imageUrl.startsWith('http')) {
+            console.error('❌ IA não retornou URL válida:', aiResult);
             return Response.json({ 
                 success: false, 
-                error: "Nenhuma imagem de produto encontrada"
+                error: "URL da imagem não encontrada"
             }, { status: 404 });
         }
 
-        console.log(`🎯 URL da imagem principal: ${imageUrl}`);
+        console.log(`🎯 URL extraída pela IA: ${imageUrl}`);
 
         // ETAPA 3: Baixar a imagem
         console.log('⬇️ ETAPA 3: Baixando imagem...');
