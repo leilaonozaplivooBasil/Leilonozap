@@ -64,31 +64,50 @@ Extraia:
         const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
             prompt: `ACESSE ESTE LINK E ENCONTRE AS IMAGENS DO PRODUTO: ${productUrl}
 
-🎯 MISSÃO: Encontre EXATAMENTE 6 IMAGENS DIFERENTES do produto (ângulos, detalhes, contextos).
+🚨 AVISO CRÍTICO - LEIA ANTES DE PROCESSAR:
+Você DEVE retornar exatamente 6 URLs de imagens REAIS que você encontrou na página.
+Se não houver 6 imagens diferentes, REPITA as que existem até ter 6 (melhor repetir que inventar).
 
-⚠️ REGRAS OBRIGATÓRIAS:
-1. COPIE as URLs EXATAS que estão no HTML da página (atributos src, data-src, data-zoom)
-2. Cada URL deve ter um CÓDIGO DIFERENTE (não mude só a extensão!)
-3. ❌ NÃO invente URLs (como 123456, 123457...)
-4. ❌ NÃO pegue a mesma URL com extensões diferentes (.jpg, .png, .webp da MESMA imagem)
-5. ✅ Busque imagens de ÂNGULOS DIFERENTES do produto
+⚠️ PROIBIDO:
+❌ URLs inventadas (123456, 654321, 789012, etc)
+❌ Modificar códigos das URLs que você encontrou
+❌ Criar URLs de exemplo ou placeholder
 
-EXEMPLOS:
-❌ ERRADO (mesma imagem, extensões diferentes):
+✅ PERMITIDO:
+✅ COPIAR URLs que você viu no HTML da página
+✅ REPETIR a mesma URL se não tiver 6 diferentes
+✅ Usar diferentes formatos da MESMA imagem (.webp, .jpg, .png) se necessário
+
+PROCESSO:
+1. Acesse a página do produto
+2. Encontre TODAS as URLs de imagens do produto no HTML
+3. Extraia as URLs REAIS (podem estar em src, data-src, data-zoom, etc)
+4. Se encontrou menos de 6, REPITA as existentes
+5. Retorne EXATAMENTE 6 URLs
+
+EXEMPLO REAL DO MERCADO LIVRE:
+Se você encontrou estas 3 URLs reais:
   https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp
-  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.jpg  ← mesmo código!
+  https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp
+  https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp
 
-✅ CORRETO (imagens diferentes, códigos diferentes):
-  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp  ← código 804684
-  https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp  ← código 708740
-  https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp  ← código 925942
+✅ RETORNE ASSIM (repetindo as existentes):
+[
+  "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
+  "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
+  "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp",
+  "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
+  "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
+  "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp"
+]
 
-🔍 ONDE PROCURAR:
-- Galeria de imagens do produto
-- Miniaturas (thumbnails) que mostram diferentes ângulos
-- Carrossel de fotos
+❌ NUNCA FAÇA ISSO:
+[
+  "https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLA12345678901_112024-F.webp",  ← INVENTADO!
+  "https://http2.mlstatic.com/D_NQ_NP_2X_654321-MLA12345678902_112024-F.webp"   ← INVENTADO!
+]
 
-COPIE AS URLs REAIS DE IMAGENS DIFERENTES!`,
+COPIE APENAS URLs QUE VOCÊ VIU NO CÓDIGO HTML REAL DA PÁGINA!`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
