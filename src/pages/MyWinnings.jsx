@@ -425,22 +425,29 @@ export default function MyWinningsPage() {
                                     try {
                                         toast.info("Redirecionando para o Mercado Pago...");
                                         
-                                        const { data } = await base44.functions.invoke('mercadopagoCheckout', {
+                                        const response = await base44.functions.invoke('mercadopagoCheckout', {
                                             auction_id: selectedAuction.id,
                                             user_id: currentUser.id
                                         });
 
-                                        console.log('📦 Resposta Mercado Pago:', data);
+                                        console.log('📦 Resposta completa:', response);
+                                        console.log('📦 response.data:', response?.data);
+                                        console.log('📦 response.data.init_point:', response?.data?.init_point);
 
-                                        if (data?.init_point) {
-                                            window.location.href = data.init_point;
+                                        // ✅ CORREÇÃO: A resposta vem em response.data
+                                        const checkoutData = response?.data;
+
+                                        if (checkoutData?.init_point) {
+                                            console.log('✅ Redirecionando para:', checkoutData.init_point);
+                                            window.location.href = checkoutData.init_point;
                                         } else {
-                                            const errorMsg = data?.error || "Erro ao criar pagamento";
+                                            const errorMsg = checkoutData?.error || "Erro: init_point não retornado";
                                             console.error('❌ Erro Mercado Pago:', errorMsg);
+                                            console.error('❌ Dados recebidos:', checkoutData);
                                             toast.error(errorMsg);
                                         }
                                     } catch (error) {
-                                        console.error('❌ Erro:', error);
+                                        console.error('❌ Exceção:', error);
                                         toast.error("Erro ao processar: " + error.message);
                                     } finally {
                                         setIsProcessing(false);
