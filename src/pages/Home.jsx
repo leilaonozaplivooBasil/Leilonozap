@@ -127,8 +127,9 @@ export default function Home() {
   }, []);
 
   const filterAuctions = useCallback(() => {
+    // 🛡️ PROTEÇÃO CRÍTICA: Sempre valida se auctions é array
     if (!Array.isArray(auctions)) {
-      console.warn("Tentativa de filtrar auctions que não é um array:", auctions);
+      console.warn("⚠️ auctions não é array, usando array vazio");
       setFilteredAuctions([]);
       return;
     }
@@ -136,8 +137,9 @@ export default function Home() {
     let filtered;
 
     if (showFavoritesOnly) {
-      console.log('🔍 [NoZap] Filtrando apenas favoritos:', favoriteAuctions.length);
-      filtered = favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
+      console.log('🔍 [NoZap] Filtrando apenas favoritos:', favoriteAuctions?.length || 0);
+      // 🛡️ PROTEÇÃO: Valida favoriteAuctions também
+      filtered = Array.isArray(favoriteAuctions) && favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
     } else {
       // Filtra apenas leilões do NoZap (exclui Sai de Baixo e planos de investimento)
       let nozapOnly = auctions.filter((auction) => 
@@ -338,21 +340,25 @@ export default function Home() {
         const age = Date.now() - parseInt(cacheTime);
         if (age < 5000) {
           console.log("⚡ Cache instantâneo!");
-          setAuctions(JSON.parse(cachedData));
-          setIsLoading(false);
+          const parsedData = JSON.parse(cachedData);
+          // 🛡️ PROTEÇÃO: Valida se é array válido
+          if (Array.isArray(parsedData)) {
+            setAuctions(parsedData);
+            setIsLoading(false);
 
-          if (age > 2000) {
-            setTimeout(() => {
-              Auction.list("-created_date", 50).then((data) => {
-                if (Array.isArray(data)) {
-                  sessionStorage.setItem('auctions_cache', JSON.stringify(data));
-                  sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-                  setAuctions(data);
-                }
-              }).catch(() => {});
-            }, 100);
+            if (age > 2000) {
+              setTimeout(() => {
+                Auction.list("-created_date", 50).then((data) => {
+                  if (Array.isArray(data)) {
+                    sessionStorage.setItem('auctions_cache', JSON.stringify(data));
+                    sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+                    setAuctions(data);
+                  }
+                }).catch(() => {});
+              }, 100);
+            }
+            return;
           }
-          return;
         }
       }
 
@@ -364,23 +370,47 @@ export default function Home() {
       const data = await Auction.list("-created_date", 50);
       clearTimeout(timeoutId);
 
-      if (Array.isArray(data)) {
+      // 🛡️ PROTEÇÃO: Validação robusta dos dados
+      if (Array.isArray(data) && data.length >= 0) {
         setAuctions(data);
         sessionStorage.setItem('auctions_cache', JSON.stringify(data));
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
         console.log(`⚡ ${data.length} leilões`);
         setRetryCount(0);
       } else {
-        throw new Error('Dados inválidos');
+        console.warn('⚠️ Dados não são array válido, usando array vazio');
+        setAuctions([]);
       }
 
     } catch (error) {
       console.error("❌ Erro:", error);
+      
+      // 🆕 LOGA NO SYSTEMLOG
+      try {
+        await base44.entities.SystemLog.create({
+          step: 'FETCH_HOME_AUCTIONS',
+          status: 'error',
+          message: `Failed to load auctions: ${error.message}`,
+          component_name: 'Home',
+          error_details: { message: error.message, stack: error.stack },
+          user_agent: navigator.userAgent,
+          is_mobile: /Mobi|Android/i.test(navigator.userAgent)
+        });
+      } catch (logErr) {
+        console.debug('Logging falhou (não crítico)');
+      }
 
       const oldCache = sessionStorage.getItem('auctions_cache');
       if (oldCache) {
-        setAuctions(JSON.parse(oldCache));
-        setLoadError(null);
+        try {
+          const parsedCache = JSON.parse(oldCache);
+          if (Array.isArray(parsedCache)) {
+            setAuctions(parsedCache);
+            setLoadError(null);
+          }
+        } catch (e) {
+          setAuctions([]);
+        }
       } else if (retryCount < 2) {
         setTimeout(() => {
           setRetryCount((prev) => prev + 1);
@@ -388,6 +418,7 @@ export default function Home() {
         }, 1500);
       } else {
         setLoadError("Erro de conexão. Tente novamente.");
+        setAuctions([]); // 🛡️ Garante array vazio ao invés de undefined
       }
     } finally {
       setIsLoading(false);
@@ -836,10 +867,10 @@ export default function Home() {
           }
 
             {isLoading ?
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {Array(6).fill(0).map((_, i) =>
-            <div key={i} className="bg-gray-800 rounded-2xl p-6 animate-pulse">
-                    <div className="w-full h-48 bg-gray-700 rounded-xl mb-4"></div>
+            <div key={i} className="bg-gray-800 rounded-2xl p-4 sm:p-6 animate-pulse">
+                    <div className="w-full aspect-square bg-gray-700 rounded-xl mb-4"></div>
                     <div className="h-6 bg-gray-700 rounded mb-2"></div>
                     <div className="h-4 bg-gray-700 rounded w-2/3"></div>
                   </div>
@@ -863,17 +894,24 @@ export default function Home() {
             }
               </div> :
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredAuctions.map((auction) =>
-            <AuctionCard
-              key={auction.id}
-              auction={auction}
-              isAdmin={currentUser?.role === 'admin'}
-              showFavoriteButton={true}
-              userId={currentUser?.id}
-              favoriteContext="nozap" />
-
-            )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {filteredAuctions.map((auction) => {
+                  // 🛡️ PROTEÇÃO: Valida se auction tem dados mínimos necessários
+                  if (!auction || !auction.id) {
+                    console.warn('⚠️ Auction inválido detectado:', auction);
+                    return null;
+                  }
+                  return (
+                    <AuctionCard
+                      key={auction.id}
+                      auction={auction}
+                      isAdmin={currentUser?.role === 'admin'}
+                      showFavoriteButton={true}
+                      userId={currentUser?.id}
+                      favoriteContext="nozap"
+                    />
+                  );
+                })}
               </div>
           }
         </div>
