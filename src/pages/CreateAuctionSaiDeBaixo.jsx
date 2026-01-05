@@ -633,7 +633,7 @@ export default function CreateAuctionSaiDeBaixo() {
                           
                           const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).slice(0, 6);
                           if (files.length === 0) {
-                            alert("Nenhuma imagem válida encontrada");
+                            toast.error("Nenhuma imagem válida encontrada");
                             return;
                           }
                           
@@ -642,21 +642,21 @@ export default function CreateAuctionSaiDeBaixo() {
                           
                           try {
                             for (const file of files) {
-                              const { UploadFile } = await import("@/integrations/Core");
-                              const result = await UploadFile({ file });
+                              const uploadResult = await base44.integrations.Core.UploadFile({ file });
                               
-                              if (result?.file_url) {
-                                uploadedUrls.push(result.file_url);
+                              if (uploadResult?.file_url) {
+                                uploadedUrls.push(uploadResult.file_url);
                               }
                             }
                             
                             if (uploadedUrls.length > 0) {
                               setManualUploadImages(uploadedUrls);
                               setManualCoverIndex(0);
-                              alert(`✅ ${uploadedUrls.length} imagem(ns) enviada(s)!`);
+                              toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada(s)!`);
                             }
                           } catch (error) {
-                            alert("❌ Erro ao enviar imagens: " + error.message);
+                            console.error("Erro no upload:", error);
+                            toast.error("❌ Erro ao enviar imagens: " + error.message);
                           } finally {
                             setIsUploading(false);
                           }
@@ -693,21 +693,21 @@ export default function CreateAuctionSaiDeBaixo() {
                           
                           try {
                             for (const file of files) {
-                              const { UploadFile } = await import("@/integrations/Core");
-                              const result = await UploadFile({ file });
+                              const uploadResult = await base44.integrations.Core.UploadFile({ file });
                               
-                              if (result?.file_url) {
-                                uploadedUrls.push(result.file_url);
+                              if (uploadResult?.file_url) {
+                                uploadedUrls.push(uploadResult.file_url);
                               }
                             }
                             
                             if (uploadedUrls.length > 0) {
                               setManualUploadImages(uploadedUrls);
                               setManualCoverIndex(0);
-                              alert(`✅ ${uploadedUrls.length} imagem(ns) enviada(s)!`);
+                              toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada(s)!`);
                             }
                           } catch (error) {
-                            alert("❌ Erro ao enviar imagens: " + error.message);
+                            console.error("Erro no upload:", error);
+                            toast.error("❌ Erro ao enviar imagens: " + error.message);
                           } finally {
                             setIsUploading(false);
                             e.target.value = '';
@@ -788,6 +788,11 @@ export default function CreateAuctionSaiDeBaixo() {
                         <Button
                           type="button"
                           onClick={() => {
+                            if (!manualUploadImages || manualUploadImages.length === 0) {
+                              toast.error("Nenhuma imagem para aplicar");
+                              return;
+                            }
+                            
                             let finalImages = [];
                             finalImages.push(manualUploadImages[manualCoverIndex]);
                             manualUploadImages.forEach((img, i) => {
@@ -808,12 +813,12 @@ export default function CreateAuctionSaiDeBaixo() {
                             setManualCoverIndex(0);
                             setShowManualUpload(false);
                             
-                            alert("✅ Imagens aplicadas no formulário!");
+                            toast.success("✅ Imagens aplicadas no formulário!");
                           }}
                           className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                         >
                           <Upload className="w-4 h-4 mr-2" />
-                          Aplicar
+                          Aplicar no Formulário
                         </Button>
                       </div>
                     </div>
