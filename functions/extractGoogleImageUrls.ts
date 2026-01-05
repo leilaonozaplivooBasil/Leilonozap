@@ -13,20 +13,24 @@ Deno.serve(async (req) => {
         console.log(`🔍 Acessando Google: ${googleSearchUrl}`);
 
         const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE esta busca do Google: ${googleSearchUrl}
+            prompt: `ACESSE: ${googleSearchUrl}
 
-IDENTIFIQUE e EXTRAIA as URLs das imagens de produtos que aparecem nos resultados.
+🎯 OBJETIVO: Extrair URLs de IMAGENS (.jpg, .png, .webp) dos produtos exibidos
 
-⚠️ INSTRUÇÕES:
-- Procure por imagens de produtos nos resultados
-- Copie as URLs DIRETAS das imagens (não links de sites)
-- URLs podem ser de diversos domínios (mlcdn.com.br, shoptime.com.br, etc)
-- Ignore logos e ícones
-- Foque nas imagens principais dos produtos
+⚠️ REGRAS OBRIGATÓRIAS:
+- COPIE URLs que terminam com .jpg, .jpeg, .png ou .webp
+- NÃO retorne links HTML (index.html, pagina.html)
+- URLs devem ser de ARQUIVOS DE IMAGEM, não páginas
+- Exemplo VÁLIDO: https://a-static.mlcdn.com.br/420x420/produto/abc123.jpg
+- Exemplo INVÁLIDO: https://assets.mlcdn.com.br/conteudoproduto/23/238608300/index.html
 
-RETORNE JSON com:
-- image_urls: array com URLs das imagens encontradas
-- descriptions: breve descrição do que cada imagem mostra`,
+FORMATOS ACEITOS:
+✅ .jpg
+✅ .jpeg
+✅ .png
+✅ .webp
+
+RETORNE apenas URLs de arquivos de imagem reais.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
