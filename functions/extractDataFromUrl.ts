@@ -166,10 +166,11 @@ NÃO INVENTE! COPIE do código fonte!`,
         
         const extractionResult = {
             ...basicDataResult,
-            image_urls: imagesResult.image_urls || []
+            image_urls: imageUrls
         };
 
-        let { title, description, price, image_urls } = extractionResult;
+        let { title, description, price } = basicDataResult;
+        let { image_urls } = extractionResult;
         
         console.log(`✅ IA retornou: ${image_urls?.length || 0} URLs de imagens`);
         
