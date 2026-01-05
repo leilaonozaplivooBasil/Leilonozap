@@ -19,36 +19,26 @@ export default function ProductImagePreview({ imageUrls }) {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {validImages.map((url, index) => (
           <div 
-            key={url}
-            className="relative w-full h-24 rounded overflow-hidden border border-gray-600"
-            style={{ backgroundColor: '#1f2937' }}
+            key={index}
+            className="relative w-full h-24 bg-gray-800 rounded border border-gray-600 flex items-center justify-center overflow-hidden"
           >
             <img 
               src={url} 
               alt={`Produto ${index + 1}`} 
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-                zIndex: 1
-              }}
-              onLoad={(e) => {
-                console.log(`✅ PREVIEW IMAGEM ${index + 1} CARREGADA!`);
+              className="w-full h-full object-cover"
+              loading="eager"
+              crossOrigin="anonymous"
+              onLoad={() => {
+                console.log(`✅ IMAGEM ${index + 1} RENDERIZADA!`);
               }}
               onError={(e) => {
-                console.error(`❌ PREVIEW ERRO ${index + 1}:`, url);
-                e.target.src = 'https://via.placeholder.com/150?text=Erro';
+                console.error(`❌ ERRO IMAGEM ${index + 1}:`, url);
+                e.target.style.display = 'none';
+                e.target.parentElement.innerHTML = '<div class="text-red-400 text-xs">❌ Erro</div>';
               }}
             />
             
-            <div 
-              className="absolute top-1 right-1 bg-black/80 text-white text-xs px-2 py-1 rounded font-bold"
-              style={{ pointerEvents: 'none', zIndex: 10 }}
-            >
+            <div className="absolute top-1 right-1 bg-black/90 text-white text-xs px-2 py-1 rounded font-bold">
               {index === 0 ? 'Capa' : index + 1}
             </div>
           </div>
