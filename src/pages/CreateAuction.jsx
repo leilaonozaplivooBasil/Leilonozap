@@ -2370,18 +2370,15 @@ export default function CreateAuction() {
                                   key={url}
                                   src={url} 
                                   alt={`Preview ${index + 1}`} 
-                                  className="max-w-full max-h-full object-contain"
+                                  className="w-full h-full object-cover absolute inset-0"
                                   loading="eager"
                                   onLoad={(e) => {
-                                    console.log(`✅ Imagem ${index + 1} RENDERIZADA:`, url);
-                                    e.target.style.opacity = '1';
+                                    console.log(`✅ Imagem ${index + 1} VISÍVEL:`, url);
                                   }}
                                   onError={(e) => {
                                     console.error(`❌ ERRO ao carregar imagem ${index + 1}:`, url);
-                                    e.target.style.display = 'none';
-                                    e.target.parentElement.innerHTML = `<div class="text-xs text-red-400">❌ Falha</div>`;
+                                    e.target.src = 'https://via.placeholder.com/150?text=Erro+Imagem';
                                   }}
-                                  style={{ opacity: 0, transition: 'opacity 0.3s' }}
                                 />
                                 <div className="absolute top-1 right-1 bg-black/70 text-white text-xs px-1 rounded">
                                   {index === 0 ? 'Capa' : index + 1}
