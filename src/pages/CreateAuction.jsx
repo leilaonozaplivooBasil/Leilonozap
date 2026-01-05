@@ -1320,7 +1320,36 @@ export default function CreateAuction() {
                           </div>
                         </div>
 
-                        <ProductImagePreview imageUrls={downloadedImages} />
+                        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                          <h4 className="font-bold text-white mb-3 flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4" />
+                            📸 Imagens ({downloadedImages.length})
+                          </h4>
+                          <div className="grid grid-cols-2 gap-3">
+                            {downloadedImages.map((img, index) => (
+                              <div key={index} className="relative border-2 border-gray-700 rounded-lg overflow-hidden">
+                                <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
+                                  <img 
+                                    src={img} 
+                                    alt={`Imagem ${index + 1}`}
+                                    className="max-w-full max-h-full object-contain"
+                                    loading="eager"
+                                    onError={(e) => {
+                                      console.error(`❌ Erro ao carregar imagem ${index + 1}`);
+                                      e.target.style.display = 'none';
+                                      if (e.target.parentElement) {
+                                        e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs">❌ Erro ao carregar</div>`;
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
+                                  {index === 0 ? '🏆 CAPA' : `#${index + 1}`}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
 
                         <Button 
                           onClick={applyToForm}
