@@ -1,9 +1,21 @@
-import React from 'react';
-import { Copy, ExternalLink, CheckCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Copy, ExternalLink, CheckCircle, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export default function ProductImagePreview({ imageUrls }) {
+export default function ProductImagePreview({ imageUrls, onReorder }) {
   const validImages = imageUrls.filter(url => url && url.trim());
+  const [coverIndex, setCoverIndex] = useState(0);
+
+  const handleSetCover = (index) => {
+    if (index === 0) return; // Já é capa
+    
+    const newImages = [...validImages];
+    const [selectedImage] = newImages.splice(index, 1);
+    newImages.unshift(selectedImage);
+    
+    setCoverIndex(0);
+    if (onReorder) onReorder(newImages);
+  };
   
   const copyToClipboard = (url) => {
     navigator.clipboard.writeText(url);
@@ -25,65 +37,80 @@ export default function ProductImagePreview({ imageUrls }) {
   }
 
   return (
-    <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-bold flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-green-500" />
-          {validImages.length} {validImages.length === 1 ? 'Imagem Importada' : 'Imagens Importadas'}
+    <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-white font-semibold flex items-center gap-2 text-sm">
+          <CheckCircle className="w-4 h-4 text-green-500" />
+          {validImages.length} {validImages.length === 1 ? 'Imagem' : 'Imagens'}
         </h3>
         <Button 
           onClick={copyAll}
           size="sm"
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-green-600 hover:bg-green-700 h-7 text-xs"
         >
-          <Copy className="w-4 h-4 mr-2" />
+          <Copy className="w-3 h-3 mr-1" />
           Copiar Todas
         </Button>
       </div>
       
-      <div className="space-y-3 max-h-[600px] overflow-y-auto">
+      <div className="space-y-2 max-h-[500px] overflow-y-auto">
         {validImages.map((url, index) => (
           <div 
             key={index}
-            className="bg-gray-800 rounded-lg border-2 border-gray-700 p-3"
+            className={`bg-gray-800 rounded-lg border-2 p-2 transition-all ${
+              index === 0 ? 'border-yellow-500/50' : 'border-gray-700'
+            }`}
           >
-            {/* HEADER */}
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-white font-bold">
-                {index === 0 ? '🏆 IMAGEM DE CAPA' : `📸 Imagem #${index + 1}`}
-              </span>
-              <div className="flex gap-2">
+            {/* HEADER COMPACTO */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                {index === 0 ? (
+                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                ) : (
+                  <Button
+                    onClick={() => handleSetCover(index)}
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-xs text-gray-400 hover:text-yellow-500"
+                  >
+                    <Star className="w-3 h-3 mr-1" />
+                    Definir Capa
+                  </Button>
+                )}
+                <span className="text-white text-xs font-medium">
+                  {index === 0 ? 'CAPA' : `#${index + 1}`}
+                </span>
+              </div>
+              <div className="flex gap-1">
                 <Button
                   onClick={() => copyToClipboard(url)}
                   size="sm"
-                  className="bg-blue-600 hover:bg-blue-700 h-8"
+                  className="bg-blue-600 hover:bg-blue-700 h-6 px-2 text-xs"
                 >
-                  <Copy className="w-3 h-3 mr-1" />
-                  Copiar
+                  <Copy className="w-3 h-3" />
                 </Button>
                 <Button
                   onClick={() => window.open(url, '_blank')}
                   size="sm"
-                  className="bg-purple-600 hover:bg-purple-700 h-8"
+                  className="bg-purple-600 hover:bg-purple-700 h-6 px-2 text-xs"
                 >
-                  <ExternalLink className="w-3 h-3 mr-1" />
-                  Abrir
+                  <ExternalLink className="w-3 h-3" />
                 </Button>
               </div>
             </div>
 
-            {/* PREVIEW DA IMAGEM */}
+            {/* PREVIEW MENOR */}
             <div style={{
               width: '100%',
-              height: '240px',
+              height: '120px',
               backgroundColor: '#000',
-              borderRadius: '8px',
-              marginBottom: '12px',
+              borderRadius: '6px',
+              marginBottom: '8px',
               overflow: 'hidden',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '2px solid #374151'
+              border: '1px solid #374151'
             }}>
               <img
                 src={url}
@@ -101,14 +128,14 @@ export default function ProductImagePreview({ imageUrls }) {
                 }}
                 onError={(e) => {
                   console.error(`❌ FALHA #${index + 1}:`, url);
-                  e.target.outerHTML = '<div style="color: #ef4444; padding: 20px; text-align: center;">❌ Erro ao carregar imagem</div>';
+                  e.target.outerHTML = '<div style="color: #ef4444; padding: 10px; text-align: center; font-size: 11px;">❌ Erro</div>';
                 }}
               />
             </div>
 
-            {/* URL */}
-            <div className="bg-gray-900 rounded p-2 border border-gray-700">
-              <p className="text-xs text-gray-400 break-all font-mono">
+            {/* URL COMPACTA */}
+            <div className="bg-gray-900 rounded px-2 py-1 border border-gray-700">
+              <p className="text-[10px] text-gray-500 break-all font-mono leading-tight">
                 {url}
               </p>
             </div>

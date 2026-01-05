@@ -64,7 +64,7 @@ Extraia:
         const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
             prompt: `ACESSE ESTE LINK E ENCONTRE AS IMAGENS DO PRODUTO: ${productUrl}
 
-🎯 MISSÃO: Encontre ENTRE 3 E 6 IMAGENS DIFERENTES do produto (ângulos diferentes, cores, detalhes).
+🎯 MISSÃO: Encontre EXATAMENTE 6 IMAGENS DIFERENTES do produto (ângulos, detalhes, contextos).
 
 ⚠️ REGRAS OBRIGATÓRIAS:
 1. COPIE as URLs EXATAS que estão no HTML da página (atributos src, data-src, data-zoom)
@@ -96,7 +96,7 @@ COPIE AS URLs REAIS DE IMAGENS DIFERENTES!`,
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        minItems: 3,
+                        minItems: 6,
                         maxItems: 6
                     }
                 },
