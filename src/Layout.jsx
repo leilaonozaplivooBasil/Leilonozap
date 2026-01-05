@@ -8,6 +8,7 @@ import TermsModal from "@/components/common/TermsModal";
 import GlobalMonitor from "@/components/system/GlobalMonitor";
 import LoginModal from "@/components/common/LoginModal";
 import ArquitetoFloatingButton from "@/components/arquiteto/ArquitetoFloatingButton";
+import ErrorBoundary from "@/components/system/ErrorBoundary";
 
       import { Button } from "@/components/ui/button";
       import { base44 } from '@/api/base44Client';
@@ -120,6 +121,38 @@ export default function Layout({ children, currentPageName }) {
     updateOrCreateMeta('name', 'twitter:title', 'Leilão NoZap - Leilões Online com Lances em Tempo Real');
     updateOrCreateMeta('name', 'twitter:description', 'Arremate produtos com até 90% de desconto! Leilões diários online com sistema seguro e transparente.');
     updateOrCreateMeta('name', 'twitter:image', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png');
+  }, []);
+
+  // Captura erros globais não tratados
+  useEffect(() => {
+    const handleError = (event) => {
+      console.error('🚨 Erro global capturado:', event.error || event.reason);
+      
+      try {
+        base44.entities.SystemLog.create({
+          step: 'Global_UncaughtError',
+          status: 'error',
+          message: `Uncaught error: ${event.message || (event.error && event.error.message) || event.reason}`,
+          component_name: 'GlobalErrorHandler',
+          error_details: {
+            message: event.message || (event.error && event.error.message) || event.reason,
+            stack: (event.error && event.error.stack) || (event.reason && event.reason.stack)
+          },
+          url: window.location.href,
+          user_agent: navigator.userAgent
+        }).catch(() => {});
+      } catch (e) {
+        // Falha silenciosa
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleError);
+
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleError);
+    };
   }, []);
 
   useEffect(() => {
@@ -490,7 +523,7 @@ export default function Layout({ children, currentPageName }) {
   const isLojistaPage = currentPageName === 'LojistaDashboard';
 
   return (
-    <>
+    <ErrorBoundary>
       <GlobalMonitor />
       
       <div className="min-h-screen bg-gray-900">
@@ -896,6 +929,7 @@ export default function Layout({ children, currentPageName }) {
         {/* 🤖 ARQUITETO IA FLUTUANTE - SEMPRE VISÍVEL PARA ADMIN */}
         <ArquitetoFloatingButton currentUser={currentUser} />
       </div>
+    </ErrorBoundary>
       
       <style>{`
         @keyframes fadeInScale {
