@@ -237,29 +237,31 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister }) {
     }
 
     setIsResetting(true);
+    
     try {
       const normalizedResetEmail = resetEmail.toLowerCase().trim();
-      const users = await AppUser.filter({ email: normalizedResetEmail });
       
-      if (users.length === 0) {
-        alert("❌ E-mail não encontrado no sistema.");
-        setIsResetting(false);
-        return;
-      }
-
-      const user = users[0];
+      // 🛡️ PROTEÇÃO: Sempre exibe mensagem genérica para evitar enumeração de usuários
+      let emailFound = false;
       
-      // Gera nova senha temporária
-      const newPassword = Math.random().toString(36).slice(-8);
-      
-      // Atualiza no banco
-      await AppUser.update(user.id, { password: newPassword });
-      
-      // Envia email
-      await SendEmail({
-        to: user.email,
-        subject: "🔐 Nova Senha - Leilão NoZap",
-        body: `
+      try {
+        const users = await AppUser.filter({ email: normalizedResetEmail });
+        
+        if (users.length > 0) {
+          emailFound = true;
+          const user = users[0];
+          
+          // Gera nova senha temporária
+          const newPassword = Math.random().toString(36).slice(-8);
+          
+          // Atualiza no banco
+          await AppUser.update(user.id, { password: newPassword });
+          
+          // Envia email
+          await SendEmail({
+            to: user.email,
+            subject: "🔐 Nova Senha - Leilão NoZap",
+            body: `
 Olá ${user.full_name},
 
 Você solicitou a recuperação de senha.
@@ -272,16 +274,40 @@ Entre no app e faça login com esta senha.
 
 ---
 Equipe Leilão NoZap 🎯
-        `
-      });
+            `
+          });
+          
+          // Loga sucesso
+          await base44.entities.SystemLog.create({
+            step: 'Password_Reset_Success',
+            status: 'success',
+            message: 'Password reset email sent successfully',
+            component_name: 'LoginModal',
+            payload: { email: normalizedResetEmail }
+          });
+        }
+      } catch (error) {
+        console.error("Erro ao processar reset:", error);
+        
+        // Loga erro
+        await base44.entities.SystemLog.create({
+          step: 'Password_Reset_Failed',
+          status: 'error',
+          message: `Password reset failed: ${error.message}`,
+          component_name: 'LoginModal',
+          error_details: { message: error.message, stack: error.stack },
+          payload: { email: normalizedResetEmail }
+        });
+      }
       
-      alert("✅ Nova senha enviada para seu e-mail!");
+      // 🔒 SEGURANÇA: Sempre exibe a mesma mensagem, independente se o email existe ou não
+      alert("✅ Se o seu e-mail estiver registrado em nosso sistema, enviaremos um link de redefinição de senha. Por favor, verifique sua caixa de entrada (e spam).");
       setShowForgotPassword(false);
       setResetEmail('');
       
     } catch (error) {
-      console.error("Erro ao resetar senha:", error);
-      alert("❌ Erro ao enviar e-mail. Tente novamente ou contate o suporte.");
+      console.error("Erro crítico ao resetar senha:", error);
+      alert("❌ Erro ao processar solicitação. Tente novamente ou contate o suporte.");
     } finally {
       setIsResetting(false);
     }

@@ -210,8 +210,9 @@ export default function Layout({ children, currentPageName }) {
 
         // 🆕 PROTEÇÃO: Remove flags de redirecionamento ao inicializar
         sessionStorage.removeItem('loginFromPartners');
-        
+
         try {
+        // 🛡️ PROTEÇÃO CRÍTICA: Envolve TUDO em try-catch para evitar crashes
         let userFound = false;
 
         const savedUserJSON = localStorage.getItem('currentUser');
@@ -333,6 +334,22 @@ export default function Layout({ children, currentPageName }) {
       } catch (error) {
         // 🛡️ CRÍTICO: SILENCIOSAMENTE TRATA QUALQUER ERRO
         console.debug("Init catch");
+
+        // 🆕 LOGA ERRO NO SYSTEMLOG
+        try {
+          await base44.entities.SystemLog.create({
+            step: 'Layout_Init_Critical_Error',
+            status: 'error',
+            message: `Critical error during app initialization: ${error.message}`,
+            component_name: 'Layout',
+            error_details: { message: error.message, stack: error.stack },
+            url: window.location.href,
+            user_agent: navigator.userAgent
+          });
+        } catch (logErr) {
+          console.debug('Logging falhou (não crítico)');
+        }
+
         try {
           setCurrentUser(null);
           localStorage.removeItem('currentUser');
@@ -346,7 +363,8 @@ export default function Layout({ children, currentPageName }) {
           setIsLoading(false);
         } catch (e) {
           // Força desligar loading mesmo se setState falhar
-          window.location.reload();
+          console.error('Failed to set loading state, forcing reload');
+          setTimeout(() => window.location.reload(), 100);
         }
       }
       };
