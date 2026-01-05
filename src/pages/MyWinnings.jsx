@@ -423,26 +423,19 @@ export default function MyWinningsPage() {
                                 onClick={async () => {
                                     setIsProcessing(true);
                                     try {
-                                        toast.info("Redirecionando para o Mercado Pago...");
-                                        
-                                        const response = await base44.functions.invoke('mercadopagoCheckout', {
+                                        const result = await base44.functions.invoke('mercadopagoCheckout', {
                                             auction_id: selectedAuction.id,
                                             user_id: currentUser.id
                                         });
 
-                                        console.log('📦 Resposta:', response);
-
-                                        if (response?.init_point) {
-                                            window.location.href = response.init_point;
-                                        } else if (response?.error) {
-                                            toast.error(response.error);
+                                        if (result?.success && result?.init_point) {
+                                            window.location.href = result.init_point;
                                         } else {
-                                            toast.error("Erro ao criar pagamento");
+                                            toast.error(result?.error || "Erro ao criar pagamento");
+                                            setIsProcessing(false);
                                         }
                                     } catch (error) {
-                                        console.error('❌ Exceção:', error);
-                                        toast.error("Erro ao processar: " + error.message);
-                                    } finally {
+                                        toast.error("Erro: " + error.message);
                                         setIsProcessing(false);
                                     }
                                 }}
