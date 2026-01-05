@@ -4,7 +4,6 @@ import { useLocation } from 'react-router-dom';
 import { createAbacatePayPix } from '@/functions/createAbacatePayPix';
 import { checkAbacatePayPix } from '@/functions/checkAbacatePayPix';
 import { stripeCheckout } from '@/functions/stripeCheckout';
-import { mercadopagoCheckout } from '@/functions/mercadopagoCheckout';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
@@ -426,17 +425,17 @@ export default function MyWinningsPage() {
                                     try {
                                         toast.info("Redirecionando para o Mercado Pago...");
                                         
-                                        const response = await mercadopagoCheckout({
+                                        const { data } = await base44.functions.invoke('mercadopagoCheckout', {
                                             auction_id: selectedAuction.id,
                                             user_id: currentUser.id
                                         });
 
-                                        console.log('📦 Resposta Mercado Pago:', response);
+                                        console.log('📦 Resposta Mercado Pago:', data);
 
-                                        if (response?.data?.init_point) {
-                                            window.location.href = response.data.init_point;
+                                        if (data?.init_point) {
+                                            window.location.href = data.init_point;
                                         } else {
-                                            const errorMsg = response?.data?.error || "Erro ao criar pagamento";
+                                            const errorMsg = data?.error || "Erro ao criar pagamento";
                                             console.error('❌ Erro Mercado Pago:', errorMsg);
                                             toast.error(errorMsg);
                                         }
