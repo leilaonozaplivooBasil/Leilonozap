@@ -112,7 +112,7 @@ RETORNE apenas a URL da imagem principal.`,
 
         console.log(`🎯 URL extraída pela IA: ${imageUrl}`);
 
-        // ETAPA 3: Baixar a imagem
+        // ETAPA 2: Baixar a imagem
         console.log('⬇️ ETAPA 3: Baixando imagem...');
         
         const imageResponse = await fetchWithRetry(imageUrl, {
