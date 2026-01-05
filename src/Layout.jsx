@@ -7,7 +7,6 @@ import WelcomeModal from "@/components/common/WelcomeModal";
 import TermsModal from "@/components/common/TermsModal";
 import GlobalMonitor from "@/components/system/GlobalMonitor";
 import LoginModal from "@/components/common/LoginModal";
-import ErrorBoundary from "@/components/system/ErrorBoundary";
 import ArquitetoFloatingButton from "@/components/arquiteto/ArquitetoFloatingButton";
 
       import { Button } from "@/components/ui/button";
@@ -246,9 +245,13 @@ export default function Layout({ children, currentPageName }) {
             }
           } catch (parseError) {
             // Erro ao fazer parse do JSON, limpa localStorage
-            console.warn("⚠️ Erro ao fazer parse do localStorage, limpando dados");
-            localStorage.removeItem('currentUser');
-            sessionStorage.removeItem('isLoggedIn');
+            console.debug("Limpando cache");
+            try {
+              localStorage.removeItem('currentUser');
+              sessionStorage.removeItem('isLoggedIn');
+            } catch (e) {
+              // Ignora erro de storage
+            }
           }
         }
 
@@ -295,14 +298,23 @@ export default function Layout({ children, currentPageName }) {
         }
 
       } catch (error) {
-        console.error('❌ Erro no initApp:', error);
-        // 🛡️ CRÍTICO: NUNCA DEIXA O APP QUEBRAR
-        setCurrentUser(null);
-        localStorage.removeItem('currentUser');
-        sessionStorage.removeItem('isLoggedIn');
+        // 🛡️ CRÍTICO: SILENCIOSAMENTE TRATA QUALQUER ERRO
+        console.debug("Init catch");
+        try {
+          setCurrentUser(null);
+          localStorage.removeItem('currentUser');
+          sessionStorage.removeItem('isLoggedIn');
+        } catch (e) {
+          // Ignora completamente
+        }
       } finally {
-        // 🛡️ SEMPRE desliga o loading, mesmo com erro
-        setIsLoading(false);
+        // 🛡️ SEMPRE desliga o loading
+        try {
+          setIsLoading(false);
+        } catch (e) {
+          // Força desligar loading mesmo se setState falhar
+          window.location.reload();
+        }
       }
       };
 
@@ -478,7 +490,7 @@ export default function Layout({ children, currentPageName }) {
   const isLojistaPage = currentPageName === 'LojistaDashboard';
 
   return (
-    <ErrorBoundary>
+    <>
       <GlobalMonitor />
       
       <div className="min-h-screen bg-gray-900">
