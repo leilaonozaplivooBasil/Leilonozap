@@ -208,7 +208,6 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
 
 function NetworkTree({ users, onPromote, onEdit }) {
   const [expandedUsers, setExpandedUsers] = useState(new Set());
-  const [expandAll, setExpandAll] = useState(false);
 
   const toggleExpand = (userId) => {
     setExpandedUsers(prev => {
@@ -222,127 +221,170 @@ function NetworkTree({ users, onPromote, onEdit }) {
     });
   };
 
-  const toggleExpandAll = () => {
-    if (expandAll) {
-      setExpandedUsers(new Set());
-    } else {
-      const allUserIds = new Set(users.map(u => u.id));
-      setExpandedUsers(allUserIds);
-    }
-    setExpandAll(!expandAll);
-  };
-
-  // Renderiza um usuário e seus filhos recursivamente
-  const renderNode = (user, level = 0) => {
+  // Renderiza um usuário com seus filhos em cascata vertical
+  const renderUserCascade = (user, level = 0) => {
     const children = users.filter(u => u.referred_by_id === user.id);
     const isExpanded = expandedUsers.has(user.id);
     const hasChildren = children.length > 0;
+    
+    const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
+    const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
+    const primaryLevelConfig = CAREER_LEVELS.find(l => l.id === primaryLevel) || CAREER_LEVELS[0];
+    
+    const getInitials = (fullName) => {
+      if (!fullName || fullName.trim() === '') return '??';
+      const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
+      if (nameParts.length === 1) return nameParts[0].substring(0, 2).toUpperCase();
+      return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+    };
 
     return (
-      <div key={user.id} className="flex flex-col items-center">
-        {/* Card do usuário */}
-        <div className="relative">
-          <UserCard
-            user={user}
-            level={level}
-            onPromote={onPromote}
-            onEdit={onEdit}
-            isExpanded={isExpanded}
-            onToggle={() => toggleExpand(user.id)}
-            allUsers={users}
-          />
-        </div>
-
-        {/* Linha conectora para filhos */}
-        {hasChildren && isExpanded && (
-          <div className="flex flex-col items-center w-full">
-            {/* Linha vertical descendente */}
-            <div className="w-0.5 h-8 bg-gradient-to-b from-green-500/50 to-green-500/20"></div>
-            
-            {/* Container dos filhos */}
-            <div className="relative flex gap-6 justify-center items-start">
-              {/* Linha horizontal conectando os filhos */}
-              {children.length > 1 && (
-                <div 
-                  className="absolute top-0 h-0.5 bg-gradient-to-r from-green-500/20 via-green-500/50 to-green-500/20"
-                  style={{
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: `calc(100% - ${100 / children.length}%)`
-                  }}
-                ></div>
-              )}
-              
-              {/* Renderiza cada filho */}
-              {children.map((child, idx) => (
-                <div key={child.id} className="relative flex flex-col items-center">
-                  {/* Linha vertical para cada filho */}
-                  <div className="w-0.5 h-8 bg-gradient-to-b from-green-500/50 to-green-500/20 mb-4"></div>
-                  
-                  {/* Renderiza o filho recursivamente */}
-                  {renderNode(child, level + 1)}
-                </div>
-              ))}
+      <div key={user.id} className="relative">
+        {/* Card compacto do usuário */}
+        <div 
+          className={`flex items-center gap-3 p-3 rounded-lg border-2 ${primaryLevelConfig.borderColor} bg-gray-800/80 hover:bg-gray-800 transition-all cursor-pointer group`}
+          style={{ marginLeft: `${level * 40}px` }}
+        >
+          {/* Linha conectora visual */}
+          {level > 0 && (
+            <>
+              <div className="absolute left-0 top-1/2 w-8 h-0.5 bg-gradient-to-r from-green-500/50 to-green-500/20" 
+                   style={{ transform: 'translateX(-100%)' }}></div>
+              <div className="absolute left-0 top-0 w-0.5 h-1/2 bg-gradient-to-b from-green-500/20 to-green-500/50" 
+                   style={{ transform: 'translateX(-40px)' }}></div>
+            </>
+          )}
+          
+          {/* Avatar */}
+          <div className={`w-10 h-10 rounded-full ${primaryLevelConfig.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
+            {getInitials(user.full_name)}
+          </div>
+          
+          {/* Info principal */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h4 className="text-white font-semibold text-sm truncate">{user.full_name}</h4>
+              <Badge className={`${primaryLevelConfig.color} text-white text-[10px] px-2 py-0.5`}>
+                {primaryLevelConfig.name}
+              </Badge>
             </div>
+            <p className="text-xs text-gray-400 truncate">{user.email}</p>
+          </div>
+          
+          {/* Stats rápidas */}
+          <div className="flex items-center gap-3 text-xs">
+            <div className="text-center">
+              <div className="text-gray-400">Indicados</div>
+              <div className="text-white font-bold">{user.indicated_clients_count || 0}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-gray-400">Valora</div>
+              <div className="text-green-400 font-bold">V$ {(user.valora_pay_balance || 0).toFixed(0)}</div>
+            </div>
+          </div>
+          
+          {/* Botões de ação */}
+          <div className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              className="bg-green-600 hover:bg-green-700 h-8 px-3 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPromote(user);
+              }}
+            >
+              <Award className="w-3 h-3" />
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="border-blue-500 text-blue-400 hover:bg-blue-500/10 h-8 px-3 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(user);
+              }}
+            >
+              <Pencil className="w-3 h-3" />
+            </Button>
+            
+            {/* Botão expandir/recolher */}
+            {hasChildren && (
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand(user.id);
+                }}
+                className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-700"
+              >
+                {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+              </button>
+            )}
+          </div>
+        </div>
+        
+        {/* Filhos (indicados por este usuário) */}
+        {hasChildren && isExpanded && (
+          <div className="mt-2 space-y-2">
+            {children.map(child => renderUserCascade(child, level + 1))}
           </div>
         )}
       </div>
     );
   };
 
-  // Encontra usuários raiz (sem indicador)
+  // Usuários raiz (sem indicador)
   const rootUsers = users.filter(u => !u.referred_by_id || u.referred_by_id === null);
-
-  // Organiza os usuários raiz por hierarquia (quem tem mais indicados primeiro)
+  
+  // Ordena por quantidade de indicados
   const sortedRoots = [...rootUsers].sort((a, b) => {
     const aCount = users.filter(u => u.referred_by_id === a.id).length;
     const bCount = users.filter(u => u.referred_by_id === b.id).length;
     return bCount - aCount;
   });
 
+  // Expandir todos automaticamente no início
+  React.useEffect(() => {
+    const allUserIds = new Set(users.map(u => u.id));
+    setExpandedUsers(allUserIds);
+  }, [users]);
+
   return (
-    <div className="relative">
-      {/* Controles de expansão */}
-      <div className="flex justify-center mb-6">
-        <Button
-          onClick={toggleExpandAll}
-          variant="outline"
-          className="border-green-500 text-green-400 hover:bg-green-500/10"
-          size="sm"
-        >
-          {expandAll ? (
-            <>
-              <ChevronDown className="w-4 h-4 mr-2" />
-              Recolher Todos
-            </>
-          ) : (
-            <>
-              <ChevronRight className="w-4 h-4 mr-2" />
-              Expandir Todos
-            </>
-          )}
-        </Button>
-      </div>
-
-      {/* Árvore hierárquica */}
-      <div className="flex flex-wrap gap-16 justify-center p-6">
-        {sortedRoots.map(rootUser => (
-          <div key={rootUser.id} className="flex flex-col items-center">
-            {renderNode(rootUser, 0)}
-          </div>
-        ))}
-      </div>
-
+    <div className="space-y-4 p-4">
       {/* Legenda */}
-      <div className="mt-8 flex justify-center">
-        <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 flex items-center gap-4">
+      <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 mb-6">
+        <div className="flex items-center gap-6 text-xs text-gray-400">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            <span className="text-xs text-gray-400">= Conexão de indicação</span>
+            <span>Linha verde = indicação direta</span>
           </div>
           <div className="flex items-center gap-2">
-            <Award className="w-4 h-4 text-yellow-400" />
-            <span className="text-xs text-gray-400">= Nível de carreira</span>
+            <div className="w-6 h-0.5 bg-gradient-to-r from-green-500 to-transparent"></div>
+            <span>Indentação = nível hierárquico</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Árvore em cascata */}
+      <div className="space-y-3">
+        {sortedRoots.map(rootUser => renderUserCascade(rootUser, 0))}
+      </div>
+      
+      {/* Estatísticas gerais */}
+      <div className="mt-8 bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-lg p-4">
+        <div className="grid grid-cols-3 gap-4 text-center">
+          <div>
+            <div className="text-2xl font-bold text-white">{users.length}</div>
+            <div className="text-xs text-gray-400">Total no Sistema</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-green-400">{rootUsers.length}</div>
+            <div className="text-xs text-gray-400">Licenciados Raiz</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-blue-400">
+              {users.reduce((sum, u) => sum + (u.indicated_clients_count || 0), 0)}
+            </div>
+            <div className="text-xs text-gray-400">Total de Indicações</div>
           </div>
         </div>
       </div>
