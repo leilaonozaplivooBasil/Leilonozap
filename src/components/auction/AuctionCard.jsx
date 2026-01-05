@@ -394,13 +394,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
           {/* Ícone de Play/Pause */}
           {isHovering && images.length > 1 && (
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 rounded-full w-10 h-10 flex items-center justify-center pointer-events-none transition-opacity duration-200">
-              {isPaused ? (
-                <Play className="w-5 h-5 text-white fill-white" />
-              ) : (
-                <Pause className="w-5 h-5 text-white fill-white" />
-              )}
-            </div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 rounded-full w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
+            {isPaused ? (
+              <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
+            ) : (
+              <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
+            )}
+          </div>
           )}
           
           {images.length > 1 && (
@@ -418,21 +418,21 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             </div>
           )}
           
-          <div className="absolute top-3 left-3 z-10 pointer-events-none flex flex-col gap-2">
-            <Badge className="bg-black/80 text-white">
-              {categoryEmojis[auction.category] || '📦'} {auction.category?.replace('_', ' ')}
+          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10 pointer-events-none flex flex-col gap-1 sm:gap-2">
+          <Badge className="bg-black/80 text-white text-xs sm:text-sm">
+            {categoryEmojis[auction.category] || '📦'} {auction.category?.replace('_', ' ')}
+          </Badge>
+
+          {/* 🆕 SÓ MOSTRA BADGE SE FOR DE FÁBRICA */}
+          {auction.product_source === 'factory_new' && (
+            <Badge className="bg-green-600 text-white font-bold text-xs sm:text-sm">
+              ✨ NOVO - Com Garantia
             </Badge>
-            
-            {/* 🆕 SÓ MOSTRA BADGE SE FOR DE FÁBRICA */}
-            {auction.product_source === 'factory_new' && (
-              <Badge className="bg-green-600 text-white font-bold">
-                ✨ NOVO - Com Garantia
-              </Badge>
-            )}
+          )}
           </div>
 
           {/* 🆕 BOTÕES DE AÇÃO (TOP RIGHT) */}
-          <div className="absolute top-3 right-3 z-20 flex gap-2">
+          <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20 flex gap-1 sm:gap-2">
             {/* 🆕 BOTÃO FAVORITAR */}
             {showFavoriteButton && userId && (
               <FavoriteButton 
@@ -448,9 +448,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               onClick={handleShare}
               onMouseDown={(e) => e.stopPropagation()} 
               onTouchStart={(e) => e.stopPropagation()}
-              className="min-h-[44px] min-w-[44px] h-10 px-3 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
+              className="min-h-[44px] min-w-[44px] h-9 sm:h-10 px-2 sm:px-3 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="text-xs font-semibold hidden sm:inline">Compartilhar</span>
             </button>
 
@@ -460,9 +460,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 to={createPageUrl("EditAuction") + `?id=${auction.id}`} 
                 onClick={(e) => e.stopPropagation()}
               >
-                <Button size="sm" className="h-8 gap-1 shadow-md bg-gray-700/80 hover:bg-gray-600 text-white rounded-lg transition-all duration-300 flex items-center backdrop-blur-sm">
-                  <Edit className="w-3 h-3" />
-                  <span className="text-xs font-semibold">Editar</span>
+                <Button size="sm" className="min-h-[40px] sm:h-9 px-2 sm:px-3 gap-1 shadow-md bg-gray-700/80 hover:bg-gray-600 text-white rounded-lg transition-all duration-300 flex items-center backdrop-blur-sm">
+                  <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="text-xs font-semibold hidden sm:inline">Editar</span>
                 </Button>
               </Link>
             )}
@@ -476,29 +476,29 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
         </div>
         
-        <CardContent className="p-4 sm:p-5">
-          <h3 className={`font-bold text-base sm:text-lg ${textColor} mb-2 line-clamp-2 break-words`}>
+        <CardContent className="p-3 sm:p-4 md:p-5">
+          <h3 className={`font-bold text-sm sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere`}>
             {displayTitle}
           </h3>
 
           {/* 🌎 COUNTDOWN COM FUSO HORÁRIO CORRETO */}
-          <div className="flex items-center justify-between mb-3">
-            <div>
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="min-w-0 flex-1">
               <p className={`text-xs sm:text-sm ${secondaryTextColor} mb-1`}>
                 {isActive ? 'Lance atual' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
               </p>
-              <p className="text-xl sm:text-2xl font-bold text-green-600 break-words">
+              <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 break-words">
                 R$ {currentPrice.toFixed(2)}
               </p>
             </div>
 
             {isActive && timeRemaining && timeRemaining.text !== "Encerrado" && (
-              <div className="text-right">
+              <div className="text-right flex-shrink-0">
                 <div className={`flex items-center gap-1 ${secondaryTextColor} mb-1`}>
                   <Clock className="w-3 h-3" />
-                  <span className="text-xs">Termina em</span>
+                  <span className="text-xs">Termina</span>
                 </div>
-                <div className={`font-mono text-xl font-bold ${timeRemaining.isUrgent ? 'text-red-600 animate-pulse' : variant === 'sai_de_baixo' ? 'text-gray-900' : 'text-gray-200'}`}>
+                <div className={`font-mono text-sm sm:text-lg md:text-xl font-bold ${timeRemaining.isUrgent ? 'text-red-600 animate-pulse' : variant === 'sai_de_baixo' ? 'text-gray-900' : 'text-gray-200'}`}>
                   {timeRemaining.text}
                 </div>
               </div>
@@ -544,7 +544,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           )}
 
           {isActive ? (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {/* O link "Mais Informações" vai para uma página diferente do clique no card */}
               <Link 
                 to={createPageUrl("AuctionDetails") + `?id=${auction.id}`} 
@@ -553,7 +553,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               > 
                 <Button 
                   variant="outline" 
-                  className="w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+                  className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
                 >
                   <Info className="w-4 h-4 mr-2" />
                   Mais Informações
@@ -566,12 +566,12 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   e.stopPropagation(); // Impede que o clique no botão ative o clique do card
                   setShowComparai(true);
                 }}
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold"
+                className="w-full min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm sm:text-base"
               >
                 <img 
                   src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
                   alt="Comparai"
-                  className="w-5 h-5 mr-2"
+                  className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
                 />
                 Comparar Preços
               </Button>
@@ -586,22 +586,22 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 className="block"
               >
                 <Button className={variant === "sai_de_baixo"
-                  ? "w-full bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300"
-                  : "w-full bg-gradient-to-r from-amber-500 via-orange-600 to-red-600 text-white font-bold shadow-lg shadow-orange-500/20 transition-all duration-300 transform hover:scale-105 hover:shadow-orange-500/40"}>
-                  <Flame className="w-5 h-5 mr-2 animate-fire" />
+                  ? "w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300 text-sm sm:text-base"
+                  : "w-full min-h-[48px] bg-gradient-to-r from-amber-500 via-orange-600 to-red-600 text-white font-bold shadow-lg shadow-orange-500/20 transition-all duration-300 transform hover:scale-105 hover:shadow-orange-500/40 text-sm sm:text-base"}>
+                  <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-fire" />
                   Entrar e Dar Lance
                 </Button>
               </Link>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {/* O link "Ver Detalhes do Lote" vai para uma página diferente do clique no card */}
               <Link 
                 to={createPageUrl("AuctionDetails") + `?id=${auction.id}`} 
                 onClick={(e) => e.stopPropagation()} 
                 className="block"
               >
-                <Button variant="outline" className="w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900">
+                <Button variant="outline" className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base">
                   <Info className="w-4 h-4 mr-2" />
                   Ver Detalhes do Lote
                 </Button>
@@ -612,7 +612,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 onClick={(e) => e.stopPropagation()} 
                 className="block"
               >
-                <Button variant="outline" className="w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900">
+                <Button variant="outline" className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base">
                   <Search className="w-4 h-4 mr-2" />
                   Ver Leilões Ativos
                 </Button>
