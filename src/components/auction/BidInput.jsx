@@ -47,8 +47,8 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
   };
 
   return (
-    <div className="p-4 bg-gray-800 border-t border-gray-700">
-      <div className="flex gap-2 justify-center items-center mb-3">
+    <div className="p-3 sm:p-4 bg-gray-800 border-t border-gray-700" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      <div className="flex gap-2 justify-center items-center mb-3 flex-wrap">
         {quickBids.map((amount) => (
           <Button
             key={amount}
@@ -56,10 +56,10 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             size="sm"
             onClick={() => handleSubmit(amount)}
             disabled={isLoading}
-            className="items-center gap-1 bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500"
+            className="items-center gap-1 bg-gray-700 border-gray-600 text-gray-200 hover:bg-gray-600 hover:border-gray-500 min-h-[44px] px-3 sm:px-4"
           >
-            <Zap className="w-3 h-3" />
-            R$ {amount.toFixed(2)}
+            <Zap className="w-4 h-4" />
+            <span className="text-xs sm:text-sm">R$ {amount.toFixed(2)}</span>
           </Button>
         ))}
         
@@ -67,7 +67,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
           <Button
             onClick={onBuyNow}
             disabled={isLoading}
-            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold px-4 py-2 text-sm whitespace-nowrap shadow-lg animate-pulse-glow"
+            className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold px-3 sm:px-4 min-h-[44px] text-sm whitespace-nowrap shadow-lg animate-pulse-glow"
           >
             🔥 ARREMATE
           </Button>
@@ -82,29 +82,29 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
             value={bidAmount}
             onChange={(e) => setBidAmount(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={`Lance mínimo: R$ ${(currentPrice + increment).toFixed(2)}`}
-            className="bg-gray-900 border-gray-700 text-gray-100 placeholder-gray-400 pr-16 rounded-full focus:border-green-500 h-12"
+            placeholder={`Mín: R$ ${(currentPrice + increment).toFixed(2)}`}
+            className="bg-gray-900 border-gray-700 text-gray-100 placeholder-gray-400 pr-12 sm:pr-16 rounded-full focus:border-green-500 h-12 sm:h-14 text-base sm:text-lg"
             min={currentPrice + increment}
             disabled={isLoading}
           />
-          <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">
+          <div className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-sm text-gray-400">
             R$
           </div>
         </div>
         <Button
           onClick={() => handleSubmit()}
           disabled={isLoading || !bidAmount || parseFloat(bidAmount) <= currentPrice}
-          className="bg-green-600 hover:bg-green-700 rounded-full w-12 h-12 p-0 flex-shrink-0"
+          className="bg-green-600 hover:bg-green-700 rounded-full min-w-[48px] min-h-[48px] sm:w-14 sm:h-14 p-0 flex-shrink-0"
         >
           {isLoading ? (
             <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
           ) : (
-            <Send className="w-5 h-5" />
+            <Send className="w-5 h-5 sm:w-6 sm:h-6" />
           )}
         </Button>
       </div>
 
-      <p className="text-xs text-center text-gray-500 mt-2">
+      <p className="text-xs sm:text-sm text-center text-gray-500 mt-2">
         Incremento mínimo: + R$ {increment.toFixed(2)}
       </p>
       

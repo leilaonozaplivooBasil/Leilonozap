@@ -128,7 +128,7 @@ export default function AuctionDetails() {
           </nav>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 pb-24 lg:pb-0">
+        <div className="grid lg:grid-cols-2 gap-4 sm:gap-8 pb-24 lg:pb-0">
           {/* Coluna da Esquerda - Imagens */}
           <div className="space-y-4">
             {/* Imagem Principal */}
@@ -222,7 +222,7 @@ export default function AuctionDetails() {
                 </Badge>
                 {isActive && <Badge className="bg-green-100 text-green-800">ATIVO</Badge>}
               </div>
-              <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 break-words">
                 {auction.title}
               </h1>
             </div>
@@ -285,7 +285,7 @@ export default function AuctionDetails() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line break-words overflow-wrap-anywhere">
                   {auction.description}
                 </p>
               </CardContent>

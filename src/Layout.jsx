@@ -549,7 +549,7 @@ export default function Layout({ children, currentPageName }) {
           isSaiDeBaixoPage 
             ? 'bg-black border-gray-800' 
             : 'bg-gray-800 border-gray-700'
-        }`}>
+        }`} style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
               

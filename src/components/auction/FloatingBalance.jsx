@@ -37,11 +37,11 @@ export default function FloatingBalance({ balance }) {
       <style>{`
         .floating-balance-amulet {
           position: fixed;
-          z-index: 1000;
+          z-index: 50;
           animation: enter-amulet 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
         
-        /* 📱 MOBILE - Posiciona ACIMA do Leiloeiro e Comparai */
+        /* 📱 MOBILE - Posiciona no topo, não sobrepõe conteúdo */
         @media (max-width: 1023px) {
           .floating-balance-amulet {
             top: 80px;
