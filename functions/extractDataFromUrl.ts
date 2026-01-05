@@ -89,7 +89,8 @@ COPIE AS URLs EXATAS QUE VOCÊ VÊ NO CÓDIGO FONTE DA PÁGINA!`,
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        minItems: 1
+                        minItems: 3,
+                        maxItems: 6
                     }
                 },
                 required: ["image_urls"]
