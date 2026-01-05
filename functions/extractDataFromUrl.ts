@@ -61,63 +61,34 @@ Extraia:
         
         console.log('🖼️ ETAPA 2: Extraindo URLs de imagens...');
         
-🚨🚨🚨 ATENÇÃO EXTREMA - INSTRUÇÕES OBRIGATÓRIAS 🚨🚨🚨
+        const imagesResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: `ACESSE ESTE LINK E ENCONTRE AS IMAGENS DO PRODUTO: ${productUrl}
 
-VOCÊ VAI SER PENALIZADO SE INVENTAR URLs!
+🎯 MISSÃO: Encontre ENTRE 3 E 6 IMAGENS DIFERENTES do produto (ângulos diferentes, cores, detalhes).
 
-REGRA ABSOLUTA #1:
-❌❌❌ NUNCA, EM HIPÓTESE ALGUMA, INVENTE URLs DE IMAGENS! ❌❌❌
-❌❌❌ CÓDIGOS COMO 123456, 654321, 789012 SÃO PROIBIDOS! ❌❌❌
+⚠️ REGRAS OBRIGATÓRIAS:
+1. COPIE as URLs EXATAS que estão no HTML da página (atributos src, data-src, data-zoom)
+2. Cada URL deve ter um CÓDIGO DIFERENTE (não mude só a extensão!)
+3. ❌ NÃO invente URLs (como 123456, 123457...)
+4. ❌ NÃO pegue a mesma URL com extensões diferentes (.jpg, .png, .webp da MESMA imagem)
+5. ✅ Busque imagens de ÂNGULOS DIFERENTES do produto
 
-REGRA ABSOLUTA #2:
-✅ Se você encontrou apenas 3 URLs reais, RETORNE AS 3 REPETIDAS:
-   [url1, url2, url3, url1, url2, url3]
+EXEMPLOS:
+❌ ERRADO (mesma imagem, extensões diferentes):
+  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp
+  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.jpg  ← mesmo código!
 
-✅ Se você encontrou apenas 2 URLs reais, RETORNE AS 2 REPETIDAS:
-   [url1, url2, url1, url2, url1, url2]
+✅ CORRETO (imagens diferentes, códigos diferentes):
+  https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp  ← código 804684
+  https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp  ← código 708740
+  https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp  ← código 925942
 
-✅ Se você encontrou apenas 1 URL real, REPITA ELA 6 VEZES:
-   [url1, url1, url1, url1, url1, url1]
+🔍 ONDE PROCURAR:
+- Galeria de imagens do produto
+- Miniaturas (thumbnails) que mostram diferentes ângulos
+- Carrossel de fotos
 
-EXEMPLO PRÁTICO - MERCADO LIVRE:
-Você acessa a página e encontra APENAS estas 3 URLs reais no HTML:
-  • https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp
-  • https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp
-  • https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp
-
-✅✅✅ CORRETO - REPITA AS 3 EXISTENTES:
-{
-  "image_urls": [
-    "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
-    "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
-    "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp",
-    "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
-    "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
-    "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp"
-  ]
-}
-
-❌❌❌ ERRADO - INVENTAR URLs:
-{
-  "image_urls": [
-    "https://http2.mlstatic.com/D_NQ_NP_2X_804684-MLA99701306942_122025-F.webp",
-    "https://http2.mlstatic.com/D_NQ_NP_2X_708740-MLA80779729796_112024-F.webp",
-    "https://http2.mlstatic.com/D_NQ_NP_2X_925942-MLA80779729812_112024-F.webp",
-    "https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLA12345678901_112024-F.webp",  ← FALSO!
-    "https://http2.mlstatic.com/D_NQ_NP_2X_654321-MLA12345678902_112024-F.webp",  ← FALSO!
-    "https://http2.mlstatic.com/D_NQ_NP_2X_789012-MLA12345678903_112024-F.webp"   ← FALSO!
-  ]
-}
-
-⚠️ COMO ENCONTRAR URLs REAIS:
-1. Procure por <img> tags no HTML
-2. Procure por data-src, data-zoom, src attributes
-3. Procure na galeria de imagens, thumbnails, carousel
-4. COPIE EXATAMENTE o que você viu
-
-SE NÃO ENCONTROU 6 IMAGENS DIFERENTES:
-→ REPITA as URLs reais que você encontrou
-→ NUNCA invente novas URLs`,
+COPIE AS URLs REAIS DE IMAGENS DIFERENTES!`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -125,7 +96,7 @@ SE NÃO ENCONTROU 6 IMAGENS DIFERENTES:
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        minItems: 6,
+                        minItems: 3,
                         maxItems: 6
                     }
                 },

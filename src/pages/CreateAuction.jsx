@@ -1320,10 +1320,7 @@ export default function CreateAuction() {
                           </div>
                         </div>
 
-                        <ProductImagePreview 
-                          imageUrls={downloadedImages}
-                          onReorder={(newImages) => setDownloadedImages(newImages)}
-                        />
+                        <ProductImagePreview imageUrls={downloadedImages} />
 
                         <Button 
                           onClick={applyToForm}
@@ -2291,14 +2288,7 @@ export default function CreateAuction() {
                       </div>
                     </div>
                     <div className="space-y-4">
-                      <ProductImagePreview 
-                        imageUrls={formData.image_urls}
-                        onReorder={(newImages) => {
-                          const finalImages = [...newImages];
-                          while (finalImages.length < 5) finalImages.push("");
-                          setFormData(prev => ({ ...prev, image_urls: finalImages.slice(0, 5) }));
-                        }}
-                      />
+                      <ProductImagePreview imageUrls={formData.image_urls} />
                     </div>
                   </div>
                   <Card className="bg-gray-800 border border-gray-700">
