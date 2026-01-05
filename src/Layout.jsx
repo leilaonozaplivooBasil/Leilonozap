@@ -522,7 +522,7 @@ export default function Layout({ children, currentPageName }) {
 
   // 🎨 DETECÇÃO DE PÁGINAS SAI DE BAIXO
   const isSaiDeBaixoContext = sessionStorage.getItem('saiDeBaixoContext') === 'true';
-  const isSaiDeBaixoPage = currentPageName === 'SaiDeBaixo' || currentPageName === 'LiveShop' || currentPageName === 'CreateAuctionSaiDeBaixo' || currentPageName === 'LandingSaiDeBaixo' || currentPageName === 'Influencers' || currentPageName === 'InfluencerRanking' || isSaiDeBaixoContext;
+  const isSaiDeBaixoPage = currentPageName === 'SaiDeBaixo' || currentPageName === 'LiveShop' || currentPageName === 'CreateAuctionSaiDeBaixo' || currentPageName === 'LandingSaiDeBaixo' || currentPageName === 'Influencers' || currentPageName === 'InfluencerRanking' || currentPageName === 'LicensingSaiDeBaixo' || isSaiDeBaixoContext;
 
   // 🔥 MENU FINAL: Público + (se logado: logged items) OU Sai de Baixo Menu
   const finalMenuItems = isSaiDeBaixoPage 
