@@ -79,28 +79,42 @@ Deno.serve(async (req) => {
         console.log('🤖 ETAPA 1: Usando IA para acessar página renderizada...');
         
         const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `ACESSE ESTA PÁGINA DO PRODUTO: ${productUrl}
+            prompt: `ACESSE ESTA PÁGINA DO MERCADO LIVRE: ${productUrl}
 
-🎯 MISSÃO: Encontrar a URL da IMAGEM PRINCIPAL do produto (foto grande)
+🎯 OBJETIVO: Extrair APENAS a URL da IMAGEM PRINCIPAL do produto à venda
 
-📋 INSTRUÇÕES CRÍTICAS:
-1. Procure pela MAIOR imagem do produto na página
-2. NÃO retorne URLs de fontes (.woff, .woff2, .ttf)
-3. NÃO retorne URLs de ícones ou logos pequenos
-4. A URL deve terminar com .jpg, .jpeg, .png ou .webp
-5. A URL deve conter "mlstatic.com"
-6. Procure por tags <img> com class="ui-pdp-image" ou similar
-7. Formato válido: https://http2.mlstatic.com/D_NQ_NP_2X_XXXX-XXX.jpg
+⚠️ REGRAS CRÍTICAS - LEIA COM ATENÇÃO:
 
-❌ EXEMPLOS ERRADOS (NÃO RETORNE):
-- https://http2.mlstatic.com/ui/webfonts/v3.0.0/... ❌
-- URLs com /icons/ ❌
-- URLs com /fonts/ ❌
+1️⃣ LOCALIZAÇÃO DA IMAGEM CORRETA:
+   - A imagem PRINCIPAL está na ÁREA CENTRAL/ESQUERDA da página
+   - É a MAIOR foto exibida, geralmente no topo à esquerda
+   - Está dentro de uma galeria de fotos do produto
+   - Procure por <img> com classes como "ui-pdp-image" ou dentro de <div> com "ui-pdp-gallery"
 
-✅ EXEMPLO CORRETO:
-- https://http2.mlstatic.com/D_NQ_NP_2X_123456-MLB789.jpg ✅
+2️⃣ NÃO RETORNE ESTAS IMAGENS:
+   ❌ Anúncios e banners publicitários
+   ❌ Produtos relacionados ou sugeridos (lado direito ou rodapé)
+   ❌ Logos de marcas (Apple, Samsung, etc)
+   ❌ Ícones pequenos (entrega, pagamento, etc)
+   ❌ Miniaturas da galeria (thumbnails)
+   ❌ Imagens de categorias
 
-RETORNE APENAS A URL DA FOTO DO PRODUTO.`,
+3️⃣ FORMATO VÁLIDO:
+   ✅ https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLB.webp
+   ✅ https://http2.mlstatic.com/D_NQ_NP_XXXXXX-MLB.jpg
+   ❌ https://http2.mlstatic.com/ui/webfonts/... (fonte)
+   ❌ URLs sem extensão de imagem
+
+4️⃣ COMO IDENTIFICAR A IMAGEM CERTA:
+   - É a foto DESTACADA do produto à venda
+   - Aparece na descrição do produto (título, preço abaixo dela)
+   - É a maior imagem visível na tela
+   - Geralmente tem dimensões 500x500 ou maiores
+
+🔍 EXEMPLO PRÁTICO:
+Se a página vende "iPhone 17 Pro Max Azul", a imagem correta mostra ESTE PRODUTO, não outros iPhones ou ferramentas.
+
+RETORNE APENAS a URL da foto PRINCIPAL do produto À VENDA.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -113,6 +127,7 @@ RETORNE APENAS A URL DA FOTO DO PRODUTO.`,
 
         const imageUrl = aiResult?.image_url;
         
+        // 🔍 VALIDAÇÃO RIGOROSA DA URL
         if (!imageUrl || !imageUrl.startsWith('http')) {
             console.error('❌ IA não retornou URL válida:', aiResult);
             return Response.json({ 
@@ -121,10 +136,31 @@ RETORNE APENAS A URL DA FOTO DO PRODUTO.`,
             }, { status: 404 });
         }
 
+        // ❌ REJEITA URLs DE FONTES
+        if (imageUrl.includes('/webfonts/') || imageUrl.includes('.woff') || imageUrl.includes('/fonts/')) {
+            console.error('❌ IA retornou URL de fonte ao invés de imagem:', imageUrl);
+            return Response.json({ 
+                success: false, 
+                error: "URL inválida - fonte detectada ao invés de imagem"
+            }, { status: 400 });
+        }
+
+        // ❌ VERIFICA SE TERMINA COM EXTENSÃO DE IMAGEM
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+        const hasValidExtension = imageExtensions.some(ext => imageUrl.toLowerCase().includes(ext));
+        
+        if (!hasValidExtension) {
+            console.error('❌ URL não termina com extensão de imagem válida:', imageUrl);
+            return Response.json({ 
+                success: false, 
+                error: "URL não é uma imagem válida (sem .jpg, .png, .webp)"
+            }, { status: 400 });
+        }
+
         console.log(`🎯 URL extraída pela IA: ${imageUrl}`);
 
         // ETAPA 2: Baixar a imagem
-        console.log('⬇️ ETAPA 3: Baixando imagem...');
+        console.log('⬇️ ETAPA 2: Baixando imagem...');
         
         const imageResponse = await fetchWithRetry(imageUrl, {
             headers: {
@@ -144,8 +180,8 @@ RETORNE APENAS A URL DA FOTO DO PRODUTO.`,
         
         console.log(`✅ Imagem baixada: ${imageBuffer.byteLength} bytes (${contentType})`);
 
-        // ETAPA 4: Converter para Base64
-        console.log('🔄 ETAPA 4: Convertendo para Base64...');
+        // ETAPA 3: Converter para Base64
+        console.log('🔄 ETAPA 3: Convertendo para Base64...');
         
         const base64Image = arrayBufferToBase64(imageBuffer);
         const imageBase64 = `data:${contentType};base64,${base64Image}`;
