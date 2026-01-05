@@ -81,22 +81,15 @@ Deno.serve(async (req) => {
         const aiResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
             prompt: `ACESSE: ${productUrl}
 
-🎯 OBJETIVO: Extrair a URL da IMAGEM PRINCIPAL do produto (FOTO DO PRODUTO)
+🎯 OBJETIVO: Extrair a URL da IMAGEM PRINCIPAL do produto
 
-⚠️ REGRAS OBRIGATÓRIAS:
-- APENAS URLs que terminam com: .jpg, .jpeg, .png ou .webp
-- NÃO retorne arquivos .woff, .woff2, .ttf, .svg, .css, .js
-- NÃO retorne fontes, ícones ou recursos do site
-- DEVE conter "mlstatic.com" E terminar com extensão de imagem
-- Formato válido: https://http2.mlstatic.com/D_NQ_NP_XXXXXX.jpg
+⚠️ INSTRUÇÕES:
+- A página carrega imagens via JavaScript
+- Procure no HTML renderizado por URLs de imagens que contenham "mlstatic.com"
+- Copie a URL COMPLETA da primeira imagem de produto (alta resolução)
+- Formato esperado: https://http2.mlstatic.com/D_NQ_NP_CODIGO.jpg
 
-EXEMPLO DE URL VÁLIDA:
-https://http2.mlstatic.com/D_NQ_NP_123456-MLA12345678901_012024-F.jpg
-
-EXEMPLO DE URL INVÁLIDA (NÃO RETORNAR):
-https://http2.mlstatic.com/ui/webfonts/v3.0.0/proxima-nova/proximanova-regular.woff2
-
-RETORNE apenas a URL da FOTO do produto.`,
+RETORNE apenas a URL da imagem principal.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -109,15 +102,11 @@ RETORNE apenas a URL da FOTO do produto.`,
 
         const imageUrl = aiResult?.image_url;
         
-        // Validação rigorosa da URL
-        const validExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
-        const hasValidExtension = validExtensions.some(ext => imageUrl?.toLowerCase().includes(ext));
-        
-        if (!imageUrl || !imageUrl.startsWith('http') || !hasValidExtension) {
-            console.error('❌ IA retornou URL inválida:', aiResult);
+        if (!imageUrl || !imageUrl.startsWith('http')) {
+            console.error('❌ IA não retornou URL válida:', aiResult);
             return Response.json({ 
                 success: false, 
-                error: "URL da imagem inválida (deve ser .jpg, .jpeg, .png ou .webp)"
+                error: "URL da imagem não encontrada"
             }, { status: 404 });
         }
 
