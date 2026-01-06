@@ -108,8 +108,9 @@ export default function CheckoutPage() {
     const handleAddressSubmit = async (e) => {
         e.preventDefault();
         
-        console.log('🔥 SUBMIT ENDEREÇO');
+        console.log('🔥🔥🔥 BOTÃO CLICADO - SUBMIT ENDEREÇO');
         console.log('📦 FormData:', formData);
+        console.log('🚦 isProcessing:', isProcessing);
         
         // Validações
         if (!formData.cpf || formData.cpf.length < 11) {
@@ -552,6 +553,10 @@ export default function CheckoutPage() {
                                     <Button
                                         type="submit"
                                         disabled={isProcessing}
+                                        onClick={(e) => {
+                                            console.log('🎯 BOTÃO CLICADO DIRETAMENTE');
+                                            console.log('🔍 Disabled?', isProcessing);
+                                        }}
                                         className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-6 text-lg"
                                     >
                                         {isProcessing ? (
