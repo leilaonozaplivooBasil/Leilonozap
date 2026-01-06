@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const { order_id } = await req.json();
+        const { order_id, payment_method, installments = 1 } = await req.json();
         
         if (!order_id) {
             return Response.json({ error: 'order_id obrigatório' }, { status: 400 });
@@ -29,22 +29,17 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Você não é o vencedor deste leilão' }, { status: 403 });
         }
 
-        // Verifica se já tem pagamento criado
+        // Verifica se já tem pagamento APROVADO
         const existingPayments = await base44.asServiceRole.entities.MercadoPagoPayment.filter({ 
             order_id: order_id,
-            status: { $in: ['CREATED', 'PENDING', 'APPROVED'] }
+            status: 'APPROVED'
         });
         
         if (existingPayments && existingPayments.length > 0) {
-            const payment = existingPayments[0];
             return Response.json({
                 success: true,
-                payment_id: payment.id,
-                provider_payment_id: payment.provider_payment_id,
-                status: payment.status,
-                amount: payment.amount,
-                qr_code: payment.qr_code,
-                qr_code_base64: payment.qr_code_base64
+                already_paid: true,
+                payment: existingPayments[0]
             });
         }
 
@@ -54,45 +49,44 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Mercado Pago não configurado' }, { status: 500 });
         }
 
-        // Cria preferência de pagamento no Mercado Pago
         const amount = auction.current_price || auction.starting_price;
         
-        const preferenceData = {
-            items: [{
-                title: auction.title,
-                quantity: 1,
-                unit_price: amount,
-                currency_id: 'BRL'
-            }],
+        // Se não especificar método, retorna apenas os dados para o checkout
+        if (!payment_method) {
+            return Response.json({
+                success: true,
+                amount: amount,
+                order_details: {
+                    title: auction.title,
+                    description: auction.description,
+                    image: auction.image_urls?.[0] || null
+                }
+            });
+        }
+
+        // Cria pagamento via Checkout API (PIX ou Card)
+        const paymentData = {
+            transaction_amount: amount,
+            description: auction.title,
+            payment_method_id: payment_method,
+            installments: installments,
             payer: {
                 email: user.email,
-                name: user.full_name
+                first_name: user.full_name?.split(' ')[0] || 'Comprador',
+                last_name: user.full_name?.split(' ').slice(1).join(' ') || 'NoZap'
             },
             external_reference: order_id,
-            notification_url: 'https://leilaonozap.app/api/webhooks/mercadopago',
-            back_urls: {
-                success: `https://leilaonozap.app/payment/success?order_id=${order_id}`,
-                failure: `https://leilaonozap.app/payment/error?order_id=${order_id}`,
-                pending: `https://leilaonozap.app/payment/pending?order_id=${order_id}`
-            },
-            auto_return: 'approved',
-            payment_methods: {
-                excluded_payment_types: [
-                    { id: 'ticket' }, // Remove boleto
-                    { id: 'atm' },
-                    { id: 'bank_transfer' }
-                ],
-                installments: 12
-            }
+            notification_url: 'https://leilaonozap.app/api/webhooks/mercadopago'
         };
 
-        const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+        const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Idempotency-Key': order_id
             },
-            body: JSON.stringify(preferenceData)
+            body: JSON.stringify(paymentData)
         });
 
         if (!mpResponse.ok) {
@@ -107,30 +101,31 @@ Deno.serve(async (req) => {
         const payment = await base44.asServiceRole.entities.MercadoPagoPayment.create({
             order_id: order_id,
             provider: 'mercadopago',
-            provider_order_id: mpData.id,
-            status: 'CREATED',
+            provider_payment_id: mpData.id,
+            status: mpData.status?.toUpperCase() || 'PENDING',
             amount: amount,
+            payment_method: payment_method,
+            installments: installments,
             external_reference: order_id,
-            metadata: {
-                preference_id: mpData.id,
-                init_point: mpData.init_point,
-                sandbox_init_point: mpData.sandbox_init_point
-            },
             payer_email: user.email,
-            payer_name: user.full_name
+            payer_name: user.full_name,
+            qr_code: mpData.point_of_interaction?.transaction_data?.qr_code || null,
+            qr_code_base64: mpData.point_of_interaction?.transaction_data?.qr_code_base64 || null,
+            ticket_url: mpData.point_of_interaction?.transaction_data?.ticket_url || null,
+            status_detail: mpData.status_detail || null,
+            metadata: mpData
         });
 
         return Response.json({
             success: true,
             payment_id: payment.id,
-            preference_id: mpData.id,
-            init_point: mpData.init_point,
-            sandbox_init_point: mpData.sandbox_init_point,
+            provider_payment_id: mpData.id,
+            status: mpData.status?.toUpperCase(),
             amount: amount,
-            order_details: {
-                title: auction.title,
-                image: auction.image_urls?.[0] || null
-            }
+            qr_code: payment.qr_code,
+            qr_code_base64: payment.qr_code_base64,
+            ticket_url: payment.ticket_url,
+            payment_method: payment_method
         });
 
     } catch (error) {
