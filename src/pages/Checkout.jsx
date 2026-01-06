@@ -181,7 +181,27 @@ export default function CheckoutPage() {
 
     const handleCreatePixPayment = async () => {
         try {
+            console.log('🔥 INICIANDO PIX');
             setIsProcessing(true);
+            
+            console.log('📦 Payload:', {
+                order_id: orderId,
+                payment_method: 'pix',
+                installments: 1,
+                payer_data: {
+                    cpf: user.cpf,
+                    phone: user.phone,
+                    address: {
+                        street: user.address_street,
+                        number: user.address_number,
+                        complement: user.address_complement,
+                        neighborhood: user.address_neighborhood,
+                        city: user.address_city,
+                        state: user.address_state,
+                        zip_code: user.address_zip_code
+                    }
+                }
+            });
             
             const response = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
@@ -202,20 +222,28 @@ export default function CheckoutPage() {
                 }
             });
 
+            console.log('📨 Resposta completa:', response);
+            console.log('📨 Tipo da resposta:', typeof response);
+
             const data = response?.data || response;
+            console.log('📊 Data extraído:', data);
 
             if (data?.success) {
+                console.log('✅ Sucesso! QR Code:', data.qr_code ? 'presente' : 'ausente');
                 setPayment(data);
                 toast.success('QR Code gerado! Escaneie para pagar');
                 startPaymentPolling();
             } else {
-                toast.error('Erro ao gerar PIX');
+                console.error('❌ Falha:', data);
+                toast.error(data?.error || 'Erro ao gerar PIX');
             }
 
         } catch (err) {
-            console.error('Erro ao criar PIX:', err);
+            console.error('💥 ERRO:', err);
+            console.error('💥 Erro completo:', JSON.stringify(err, null, 2));
             toast.error(err.message || 'Erro ao processar PIX');
         } finally {
+            console.log('🏁 Finalizando PIX');
             setIsProcessing(false);
         }
     };
