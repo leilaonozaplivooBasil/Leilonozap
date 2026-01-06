@@ -269,7 +269,48 @@ export default function MyWinningsPage() {
                 )}
             </div>
 
-
+            {/* DEBUG MODAL */}
+            {showDebug && (
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4" onClick={() => setShowDebug(false)}>
+                    <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-bold text-white">🔍 Debug de Pagamento</h3>
+                            <Button onClick={() => setShowDebug(false)} variant="ghost" className="text-white">✕</Button>
+                        </div>
+                        
+                        <div className="space-y-2">
+                            {debugLogs.length === 0 ? (
+                                <p className="text-gray-400">Aguardando logs...</p>
+                            ) : (
+                                debugLogs.map((log, idx) => (
+                                    <div 
+                                        key={idx} 
+                                        className={`p-3 rounded ${
+                                            log.type === 'error' ? 'bg-red-900/50 text-red-200' :
+                                            log.type === 'warning' ? 'bg-yellow-900/50 text-yellow-200' :
+                                            'bg-green-900/50 text-green-200'
+                                        }`}
+                                    >
+                                        <span className="text-xs opacity-70">[{log.time}]</span> {log.message}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                        
+                        {debugLogs.length > 0 && (
+                            <Button 
+                                onClick={() => {
+                                    navigator.clipboard.writeText(JSON.stringify(debugLogs, null, 2));
+                                    toast.success('Logs copiados!');
+                                }}
+                                className="mt-4 w-full bg-blue-600 hover:bg-blue-700"
+                            >
+                                📋 Copiar Logs
+                            </Button>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
