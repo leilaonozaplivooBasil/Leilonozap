@@ -186,7 +186,9 @@ Deno.serve(async (req) => {
     let base44;
     
     try {
+        console.log('🟦 CHECKPOINT 1: Função iniciada');
         base44 = createClientFromRequest(req);
+        console.log('🟦 CHECKPOINT 2: Base44 client criado');
         
         let user = null;
         try {
@@ -195,17 +197,24 @@ Deno.serve(async (req) => {
             console.log('Sem autenticação, usando serviceRole');
         }
 
+        console.log('🟦 CHECKPOINT 3: Parseando body...');
         const body = await req.json();
+        console.log('🟦 CHECKPOINT 4: Body =', JSON.stringify(body));
+        
         const { auctionId: reqAuctionId, forceRefresh, title: bodyTitle, imageUrl: bodyImageUrl, forceGoogleShopping } = body;
         auctionId = reqAuctionId || 'no-id';
+        console.log('🟦 CHECKPOINT 5: auctionId =', auctionId);
 
         if (!auctionId || auctionId === 'no-id') {
             return Response.json({ error: "auctionId é obrigatório", errorCode: "INVALID_DATA" }, { status: 400 });
         }
 
+        console.log('🟦 CHECKPOINT 6: Buscando auction...');
         const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
+        console.log('🟦 CHECKPOINT 7: Auctions =', auctions?.length || 0);
         
         if (!auctions || auctions.length === 0) {
+            console.log('❌ CHECKPOINT 8: Auction não encontrado!');
             return Response.json({ error: "Leilão não encontrado", errorCode: "AUCTION_NOT_FOUND" }, { status: 404 });
         }
         
@@ -490,10 +499,12 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
-        console.error('❌ ERRO FATAL:', error);
-        console.error('Stack trace:', error.stack);
-        console.error('Error name:', error.name);
-        console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+        console.error('❌ CHECKPOINT ERROR: ERRO CAPTURADO');
+        console.error('❌ Error:', error);
+        console.error('❌ Message:', error?.message);
+        console.error('❌ Stack:', error?.stack);
+        console.error('❌ Name:', error?.name);
+        console.error('❌ Details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
         // Se for erro da IA ou rate limit, retorna mensagem específica
         if (error.message?.includes('rate') || error.message?.includes('limit')) {
