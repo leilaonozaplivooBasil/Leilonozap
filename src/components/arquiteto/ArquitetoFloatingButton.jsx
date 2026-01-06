@@ -14,6 +14,9 @@ export default function ArquitetoFloatingButton({ currentUser }) {
   const [copiedId, setCopiedId] = useState(null);
   const [attachedImages, setAttachedImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
+  const [hasNewErrors, setHasNewErrors] = useState(false);
+  const [lastCheckedTime, setLastCheckedTime] = useState(Date.now());
   const chatRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -21,6 +24,51 @@ export default function ArquitetoFloatingButton({ currentUser }) {
   if (!currentUser || currentUser.role !== 'admin') {
     return null;
   }
+
+  // Monitorar erros em tempo real
+  useEffect(() => {
+    const checkErrors = async () => {
+      try {
+        const logs = await base44.entities.SystemLog.filter(
+          { status: 'error', created_date: { $gte: new Date(lastCheckedTime).toISOString() } },
+          '-created_date',
+          50
+        );
+        
+        if (logs.length > 0) {
+          setErrorCount(prev => prev + logs.length);
+          setHasNewErrors(true);
+          
+          // Auto-abrir com resumo se houver muitos erros
+          if (logs.length >= 3 && !isOpen) {
+            const errorSummary = logs.map((log, idx) => 
+              `${idx + 1}. **${log.step}**: ${log.message}`
+            ).join('\n\n');
+            
+            setTimeout(() => {
+              setInputMessage(`🚨 ALERTA: ${logs.length} erros detectados:\n\n${errorSummary}\n\nAnalise e sugira correções urgentes.`);
+            }, 100);
+          }
+        }
+        
+        setLastCheckedTime(Date.now());
+      } catch (error) {
+        console.error('Erro ao monitorar logs:', error);
+      }
+    };
+
+    const interval = setInterval(checkErrors, 5000); // Verifica a cada 5 segundos
+    checkErrors(); // Verifica imediatamente
+
+    return () => clearInterval(interval);
+  }, [lastCheckedTime, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setHasNewErrors(false);
+      setErrorCount(0);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (isOpen && !conversationId) {
@@ -148,14 +196,27 @@ export default function ArquitetoFloatingButton({ currentUser }) {
         <button
           onClick={() => setIsOpen(true)}
           className="fixed bottom-6 right-6 z-[999] group"
-          title="Arquiteto IA - Assistente"
+          title={hasNewErrors ? `🚨 ${errorCount} erro(s) detectado(s)!` : "Arquiteto IA - Assistente"}
         >
           <div className="relative">
-            <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 rounded-full shadow-2xl shadow-purple-500/50 flex items-center justify-center transition-all duration-300 group-hover:scale-110 border-2 border-purple-400/50 animate-pulse">
+            <div className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all duration-300 group-hover:scale-110 border-2 ${
+              hasNewErrors 
+                ? 'bg-gradient-to-br from-red-500 to-red-700 hover:from-red-600 hover:to-red-800 border-red-400/50 shadow-red-500/50 animate-error-pulse' 
+                : 'bg-gradient-to-br from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 border-purple-400/50 shadow-purple-500/50 animate-pulse'
+            }`}>
               <Bot className="w-8 h-8 text-white" />
             </div>
             <div className="absolute -top-1 -right-1">
-              <Sparkles className="w-5 h-5 text-yellow-400 animate-spin" />
+              {hasNewErrors ? (
+                <div className="relative">
+                  <div className="w-7 h-7 bg-red-600 rounded-full flex items-center justify-center border-2 border-white animate-bounce">
+                    <span className="text-white text-xs font-bold">{errorCount > 99 ? '99+' : errorCount}</span>
+                  </div>
+                  <div className="absolute inset-0 bg-red-600 rounded-full animate-ping opacity-75"></div>
+                </div>
+              ) : (
+                <Sparkles className="w-5 h-5 text-yellow-400 animate-spin" />
+              )}
             </div>
           </div>
         </button>
@@ -430,8 +491,21 @@ export default function ArquitetoFloatingButton({ currentUser }) {
           0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); }
           50% { box-shadow: 0 0 40px rgba(168, 85, 247, 0.8), 0 0 60px rgba(168, 85, 247, 0.4); }
         }
+        @keyframes error-pulse {
+          0%, 100% { 
+            box-shadow: 0 0 30px rgba(239, 68, 68, 0.8), 0 0 60px rgba(239, 68, 68, 0.4);
+            transform: scale(1);
+          }
+          50% { 
+            box-shadow: 0 0 50px rgba(239, 68, 68, 1), 0 0 80px rgba(239, 68, 68, 0.6), 0 0 100px rgba(239, 68, 68, 0.3);
+            transform: scale(1.05);
+          }
+        }
         .animate-pulse {
           animation: pulse 2s ease-in-out infinite;
+        }
+        .animate-error-pulse {
+          animation: error-pulse 1s ease-in-out infinite;
         }
       `}</style>
     </>
