@@ -233,9 +233,16 @@ export default function CheckoutPage() {
     const handleCardPayment = async (e) => {
         e.preventDefault();
         
+        console.log('🔥 INICIANDO PAGAMENTO CARTÃO');
+        console.log('📦 CardData:', cardData);
+        console.log('👤 User:', user);
+        console.log('🆔 Order ID:', orderId);
+        
         try {
             setIsProcessing(true);
             toast.info('Processando pagamento...');
+            
+            console.log('📞 Chamando createMercadoPagoOrder...');
             
             const response = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
@@ -263,9 +270,14 @@ export default function CheckoutPage() {
                 }
             });
 
+            console.log('📨 Resposta:', response);
+            
             const data = response?.data || response;
+            console.log('📊 Data:', data);
 
             if (data?.success) {
+                console.log('✅ Success! Status:', data.status);
+                
                 if (data.status === 'APPROVED') {
                     toast.success('Pagamento aprovado!');
                     navigate(`/PaymentSuccess?order_id=${orderId}`);
@@ -274,16 +286,21 @@ export default function CheckoutPage() {
                     toast.info('Pagamento em análise...');
                     startPaymentPolling();
                 } else {
+                    console.error('❌ Status não aprovado:', data.status);
                     throw new Error('Pagamento não foi aprovado');
                 }
             } else {
+                console.error('❌ Success=false ou ausente');
                 throw new Error(data?.error || 'Erro ao processar cartão');
             }
 
         } catch (err) {
-            console.error('Erro cartão:', err);
+            console.error('💥 ERRO COMPLETO:', err);
+            console.error('💥 Erro message:', err.message);
+            console.error('💥 Erro response:', err.response);
             toast.error(err.response?.data?.error || err.message || 'Erro ao processar pagamento');
         } finally {
+            console.log('🏁 Finalizando...');
             setIsProcessing(false);
         }
     };
