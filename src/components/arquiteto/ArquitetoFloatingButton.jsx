@@ -57,10 +57,10 @@ export default function ArquitetoFloatingButton({ currentUser }) {
       }
     };
 
-    const interval = setInterval(checkErrors, 5000); // Verifica a cada 5 segundos
-    checkErrors(); // Verifica imediatamente
-
-    return () => clearInterval(interval);
+    // 🔇 DESABILITADO TEMPORARIAMENTE - RATE LIMIT
+    // const interval = setInterval(checkErrors, 5000);
+    // checkErrors();
+    // return () => clearInterval(interval);
   }, [lastCheckedTime, isOpen]);
 
   useEffect(() => {
