@@ -153,11 +153,16 @@ export default function MyWinningsPage() {
 
             toast.info("Criando link de pagamento...");
             
-            const response = await mercadopagoCheckout({
+            const result = await mercadopagoCheckout({
                 auction_id: auction.id
             });
 
-            console.log('Resposta Mercado Pago:', response);
+            console.log('🔵 Resposta raw:', result);
+            
+            // Parse da resposta (vem como Response do Deno)
+            const response = result?.data || result;
+            
+            console.log('🔵 Resposta parseada:', response);
 
             if (response?.success && response?.preference_id) {
                 // Log sucesso criação preferência
