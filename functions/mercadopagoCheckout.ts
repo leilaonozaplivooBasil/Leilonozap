@@ -54,6 +54,9 @@ Deno.serve(async (req) => {
       notification_url: `${req.headers.get('origin')}/api/mercadopagoWebhook`
     };
 
+    console.log('🔵 Chamando API Mercado Pago...');
+    console.log('🔵 Preferência:', JSON.stringify(preference, null, 2));
+    
     const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
@@ -63,13 +66,19 @@ Deno.serve(async (req) => {
       body: JSON.stringify(preference)
     });
 
+    console.log('🔵 Status resposta:', response.status);
+
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Erro Mercado Pago:', errorData);
-      return Response.json({ error: 'Erro ao criar preferência de pagamento' }, { status: 500 });
+      console.error('❌ Erro Mercado Pago:', errorData);
+      return Response.json({ 
+        error: 'Erro ao criar preferência de pagamento', 
+        details: errorData 
+      }, { status: 500 });
     }
 
     const data = await response.json();
+    console.log('✅ Resposta Mercado Pago:', JSON.stringify(data, null, 2));
 
     // Registra pagamento pendente
     await base44.asServiceRole.entities.Payment.create({
