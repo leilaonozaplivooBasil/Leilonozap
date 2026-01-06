@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { mercadopagoCheckout } from '@/functions/mercadopagoCheckout';
+
 import { toast } from 'sonner';
 
 
@@ -31,7 +31,7 @@ const statusConfigSaiDeBaixo = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-100 text-red-700 border-red-300" },
 };
 
-const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo, isProcessing }) => {
+const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => {
     const statusConfig = isSaiDeBaixo ? statusConfigSaiDeBaixo : statusConfigNozap;
     const config = statusConfig[auction.order_status] || statusConfig.awaiting_payment;
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
@@ -57,25 +57,7 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo, isPro
                     {config.text}
                 </Badge>
                 <div className="flex flex-col sm:flex-row gap-2 w-full">
-                    {auction.order_status === 'awaiting_payment' && (
-                        <Button 
-                            onClick={() => onPayClick(auction)}
-                            disabled={isProcessing}
-                            className="flex-1 bg-green-600 hover:bg-green-700"
-                        >
-                            {isProcessing ? (
-                                <>
-                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                                    Processando...
-                                </>
-                            ) : (
-                                <>
-                                    <CreditCard className="w-4 h-4 mr-2" />
-                                    Pagar com Mercado Pago
-                                </>
-                            )}
-                        </Button>
-                    )}
+
                     <Button 
                         onClick={() => onTrackClick(auction)}
                         variant="outline"
@@ -145,69 +127,7 @@ export default function MyWinningsPage() {
     };
 
     const handlePayClick = async (auction) => {
-        setDebugLogs([]);
-        setShowDebug(true);
-        
-        addDebugLog('✅ CHECKPOINT 1: Função iniciada', 'success');
-        
-        if (isProcessing) {
-            addDebugLog('⏸️ Já processando, abortando', 'warning');
-            return;
-        }
-        
-        addDebugLog('✅ CHECKPOINT 2: auction = ' + JSON.stringify(auction), 'success');
-        addDebugLog('✅ CHECKPOINT 3: auction.id = ' + auction?.id, 'success');
-        
-        setIsProcessing(true);
-        addDebugLog('✅ CHECKPOINT 4: isProcessing definido', 'success');
-        
-        toast.info("Criando link de pagamento...");
-        addDebugLog('✅ CHECKPOINT 5: Toast exibido', 'success');
-        
-        try {
-            addDebugLog('✅ CHECKPOINT 6: Entrando no try', 'success');
-            addDebugLog('✅ CHECKPOINT 7: mercadopagoCheckout tipo = ' + typeof mercadopagoCheckout, 'success');
-            
-            if (!auction?.id) {
-                throw new Error('ID do leilão não encontrado');
-            }
-            
-            addDebugLog('✅ CHECKPOINT 8: Chamando API...', 'success');
-            
-            const result = await mercadopagoCheckout({ auction_id: auction.id });
-            
-            addDebugLog('✅ CHECKPOINT 9: Resposta recebida!', 'success');
-            addDebugLog('✅ CHECKPOINT 10: result = ' + JSON.stringify(result), 'success');
-            
-            const data = result?.data || result;
-            addDebugLog('✅ CHECKPOINT 11: data = ' + JSON.stringify(data), 'success');
-
-            if (data?.error) {
-                addDebugLog('❌ CHECKPOINT 12: Erro: ' + data.error, 'error');
-                toast.error(data.error);
-                setIsProcessing(false);
-                return;
-            }
-
-            if (data?.checkout_url) {
-                addDebugLog('✅ CHECKPOINT 13: URL = ' + data.checkout_url, 'success');
-                toast.success("Redirecionando...");
-                setTimeout(() => {
-                    addDebugLog('✅ CHECKPOINT 14: Redirecionando agora!', 'success');
-                    window.location.href = data.checkout_url;
-                }, 800);
-            } else {
-                addDebugLog('❌ CHECKPOINT 15: checkout_url ausente', 'error');
-                toast.error("Link não encontrado");
-                setIsProcessing(false);
-            }
-        } catch (error) {
-            addDebugLog('❌ CHECKPOINT 16: ERRO CAPTURADO', 'error');
-            addDebugLog('❌ Erro: ' + (error?.message || 'Desconhecido'), 'error');
-            addDebugLog('❌ Stack: ' + (error?.stack || 'N/A'), 'error');
-            toast.error(error.message || "Erro ao processar");
-            setIsProcessing(false);
-        }
+        toast.info("Sistema de pagamento em manutenção");
     };
 
 
@@ -269,48 +189,7 @@ export default function MyWinningsPage() {
                 )}
             </div>
 
-            {/* DEBUG MODAL */}
-            {showDebug && (
-                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4" onClick={() => setShowDebug(false)}>
-                    <div className="bg-gray-800 rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-white">🔍 Debug de Pagamento</h3>
-                            <Button onClick={() => setShowDebug(false)} variant="ghost" className="text-white">✕</Button>
-                        </div>
-                        
-                        <div className="space-y-2">
-                            {debugLogs.length === 0 ? (
-                                <p className="text-gray-400">Aguardando logs...</p>
-                            ) : (
-                                debugLogs.map((log, idx) => (
-                                    <div 
-                                        key={idx} 
-                                        className={`p-3 rounded ${
-                                            log.type === 'error' ? 'bg-red-900/50 text-red-200' :
-                                            log.type === 'warning' ? 'bg-yellow-900/50 text-yellow-200' :
-                                            'bg-green-900/50 text-green-200'
-                                        }`}
-                                    >
-                                        <span className="text-xs opacity-70">[{log.time}]</span> {log.message}
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                        
-                        {debugLogs.length > 0 && (
-                            <Button 
-                                onClick={() => {
-                                    navigator.clipboard.writeText(JSON.stringify(debugLogs, null, 2));
-                                    toast.success('Logs copiados!');
-                                }}
-                                className="mt-4 w-full bg-blue-600 hover:bg-blue-700"
-                            >
-                                📋 Copiar Logs
-                            </Button>
-                        )}
-                    </div>
-                </div>
-            )}
+
         </div>
     );
 }
