@@ -259,23 +259,9 @@ export default function CheckoutPage() {
 
     useEffect(() => {
         if (paymentMethod === 'card' && mpLoaded && auction) {
-            console.log('🔄 Preparando Card Brick...', { 
-                mpLoaded, 
-                hasAuction: !!auction,
-                amount: auction?.current_price,
-                sdkLoaded: !!window.MercadoPago
-            });
-            
-            // Delay para garantir que o container está renderizado no DOM
             const timer = setTimeout(() => {
-                const container = document.getElementById('cardPaymentBrick_container');
-                if (container) {
-                    console.log('✅ Container encontrado, inicializando Brick...');
-                    initCardBrick();
-                } else {
-                    console.error('❌ Container não encontrado no DOM');
-                }
-            }, 200);
+                initCardBrick();
+            }, 100);
 
             return () => clearTimeout(timer);
         }
