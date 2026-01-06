@@ -384,27 +384,10 @@ export default function MyWinningsPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                               <Button
-                                   onClick={() => setPaymentMethod('mercadopago')}
-                                   className={`h-24 flex flex-col gap-2 ${isSaiDeBaixo ? 'bg-blue-500 hover:bg-blue-600' : 'bg-blue-500 hover:bg-blue-600'}`}
-                               >
-                                   <span className="text-3xl">💙</span>
-                                   <span className="font-bold text-sm">Mercado Pago</span>
-                                   <span className="text-[10px] opacity-80">PIX, Cartão, Boleto</span>
-                               </Button>
-
-                               <Button
-                                   onClick={() => setPaymentMethod('card')}
-                                   className={`h-24 flex flex-col gap-2 ${isSaiDeBaixo ? 'bg-purple-600 hover:bg-purple-700' : 'bg-purple-600 hover:bg-purple-700'}`}
-                               >
-                                   <span className="text-3xl">💳</span>
-                                   <span className="font-bold text-sm">Cartão Int.</span>
-                               </Button>
-
+                            <div className="space-y-3">
                                <Button
                                    onClick={() => setPaymentMethod('pix')}
-                                   className={`h-24 flex flex-col gap-2 col-span-2 ${isSaiDeBaixo ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
+                                   className={`h-24 w-full flex flex-col gap-2 ${isSaiDeBaixo ? 'bg-green-600 hover:bg-green-700' : 'bg-green-600 hover:bg-green-700'}`}
                                >
                                    <span className="text-3xl">📱</span>
                                    <span className="font-bold">PIX Direto</span>
@@ -413,63 +396,7 @@ export default function MyWinningsPage() {
                         </div>
                     )}
 
-                    {selectedAuction && paymentMethod === 'mercadopago' && (
-                        <div className="space-y-4 py-4">
-                            <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4 mb-4">
-                                <p className="text-sm text-blue-300 text-center">
-                                    💙 Você será redirecionado para o Mercado Pago para finalizar o pagamento com segurança
-                                </p>
-                            </div>
-                            <Button
-                                onClick={async () => {
-                                    setIsProcessing(true);
-                                    try {
-                                        const result = await base44.functions.invoke('mercadopagoCheckout', {
-                                            auction_id: selectedAuction.id,
-                                            user_id: currentUser.id
-                                        });
 
-                                        if (result?.data?.success && result?.data?.init_point) {
-                                            window.location.href = result.data.init_point;
-                                        } else if (result?.success && result?.init_point) {
-                                            window.location.href = result.init_point;
-                                        } else {
-                                            console.error('❌ Resposta inesperada:', result);
-                                            toast.error(result?.data?.error || result?.error || "Erro ao criar pagamento");
-                                            setIsProcessing(false);
-                                        }
-                                    } catch (error) {
-                                        toast.error("Erro: " + error.message);
-                                        setIsProcessing(false);
-                                    }
-                                }}
-                                disabled={isProcessing}
-                                className="w-full h-16 bg-blue-500 hover:bg-blue-600 text-lg font-bold"
-                            >
-                                {isProcessing ? (
-                                    <Loader2 className="w-6 h-6 animate-spin" />
-                                ) : (
-                                    <>💙 Ir para Mercado Pago</>
-                                )}
-                            </Button>
-                        </div>
-                    )}
-
-                    {selectedAuction && paymentMethod === 'card' && (
-                        <div className="space-y-4 py-4">
-                            <Button
-                                onClick={handleConfirmCard}
-                                disabled={isProcessing}
-                                className="w-full h-16 bg-purple-600 hover:bg-purple-700 text-lg font-bold"
-                            >
-                                {isProcessing ? (
-                                    <Loader2 className="w-6 h-6 animate-spin" />
-                                ) : (
-                                    <>💳 Pagar com Cartão Internacional</>
-                                )}
-                            </Button>
-                        </div>
-                    )}
 
                     {selectedAuction && paymentMethod === 'pix' && !pixData && (
                         <div className="space-y-4 py-4">
