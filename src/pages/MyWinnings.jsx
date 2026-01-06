@@ -141,6 +141,16 @@ export default function MyWinningsPage() {
         
         setIsProcessing(true);
         try {
+            // Log início
+            await base44.entities.SystemLog.create({
+                step: 'MERCADOPAGO_PAYMENT_INIT',
+                status: 'info',
+                message: `Iniciando pagamento Mercado Pago para leilão ${auction.id}`,
+                component_name: 'MyWinnings',
+                entity_id: auction.id,
+                payload: { auction_title: auction.title, amount: auction.current_price }
+            });
+
             toast.info("Criando link de pagamento...");
             
             const response = await mercadopagoCheckout({
@@ -150,6 +160,16 @@ export default function MyWinningsPage() {
             console.log('Resposta Mercado Pago:', response);
 
             if (response?.success && response?.preference_id) {
+                // Log sucesso criação preferência
+                await base44.entities.SystemLog.create({
+                    step: 'MERCADOPAGO_PREFERENCE_CREATED',
+                    status: 'success',
+                    message: `Preferência criada: ${response.preference_id}`,
+                    component_name: 'MyWinnings',
+                    entity_id: auction.id,
+                    payload: { preference_id: response.preference_id }
+                });
+
                 // Carrega SDK do Mercado Pago dinamicamente
                 if (!window.MercadoPago) {
                     const script = document.createElement('script');
@@ -173,12 +193,33 @@ export default function MyWinningsPage() {
                     autoOpen: true
                 });
 
+                toast.success("Abrindo checkout...");
                 setIsProcessing(false);
             } else {
+                // Log erro resposta
+                await base44.entities.SystemLog.create({
+                    step: 'MERCADOPAGO_INVALID_RESPONSE',
+                    status: 'error',
+                    message: 'Resposta inválida do backend',
+                    component_name: 'MyWinnings',
+                    entity_id: auction.id,
+                    error_details: { response }
+                });
+
                 toast.error("Erro ao criar link de pagamento");
                 setIsProcessing(false);
             }
         } catch (error) {
+            // Log erro crítico
+            await base44.entities.SystemLog.create({
+                step: 'MERCADOPAGO_PAYMENT_ERROR',
+                status: 'error',
+                message: `Erro crítico no pagamento: ${error.message}`,
+                component_name: 'MyWinnings',
+                entity_id: auction.id,
+                error_details: { message: error.message, stack: error.stack }
+            });
+
             console.error("Erro no pagamento:", error);
             toast.error(`Erro: ${error.message}`);
             setIsProcessing(false);
