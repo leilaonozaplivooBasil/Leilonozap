@@ -130,19 +130,31 @@ export default function CheckoutPage() {
     };
 
     const initCardBrick = async () => {
-        if (!mpLoaded || !window.MercadoPago) return;
+        if (!mpLoaded || !window.MercadoPago) {
+            console.error('SDK não carregado');
+            toast.error('Aguarde o carregamento...');
+            return;
+        }
 
-        const mp = new window.MercadoPago('TEST-83a4ca72-cc00-49db-b677-4802ea8ce642');
-        const bricksBuilder = mp.bricks();
+        try {
+            console.log('Inicializando Card Brick...');
+            const mp = new window.MercadoPago('TEST-83a4ca72-cc00-49db-b677-4802ea8ce642');
+            const bricksBuilder = mp.bricks();
 
-        const renderCardPaymentBrick = async () => {
             const settings = {
                 initialization: {
                     amount: auction.current_price,
                 },
+                customization: {
+                    visual: {
+                        style: {
+                            theme: 'dark'
+                        }
+                    }
+                },
                 callbacks: {
                     onReady: () => {
-                        console.log('Card Brick pronto');
+                        console.log('✅ Card Brick pronto');
                     },
                     onSubmit: async (formData) => {
                         setIsProcessing(true);
@@ -171,9 +183,10 @@ export default function CheckoutPage() {
                         } finally {
                             setIsProcessing(false);
                         }
+                        return Promise.resolve();
                     },
                     onError: (error) => {
-                        console.error('Erro Brick:', error);
+                        console.error('❌ Erro Brick:', error);
                         toast.error('Erro no formulário de pagamento');
                     },
                 },
@@ -184,14 +197,21 @@ export default function CheckoutPage() {
                 'cardPaymentBrick_container',
                 settings
             );
-        };
-
-        await renderCardPaymentBrick();
+            
+            console.log('✅ Card Brick criado');
+        } catch (error) {
+            console.error('❌ Erro ao criar Brick:', error);
+            toast.error('Erro ao carregar formulário de cartão');
+        }
     };
 
     useEffect(() => {
         if (paymentMethod === 'card' && mpLoaded && auction) {
-            initCardBrick();
+            console.log('🔄 Iniciando Card Brick...', { mpLoaded, auction: !!auction });
+            // Delay para garantir que o container está renderizado
+            setTimeout(() => {
+                initCardBrick();
+            }, 100);
         }
     }, [paymentMethod, mpLoaded, auction]);
 
