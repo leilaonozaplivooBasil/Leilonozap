@@ -157,7 +157,7 @@ export default function CheckoutPage() {
         }
 
         try {
-            console.log('🔧 Inicializando MercadoPago SDK com chave pública...');
+            console.log('🔧 Inicializando MercadoPago SDK...');
             const mp = new window.MercadoPago('TEST-83a4ca72-cc00-49db-b677-4802ea8ce642', {
                 locale: 'pt-BR'
             });
@@ -165,32 +165,44 @@ export default function CheckoutPage() {
             console.log('🔧 Criando Bricks Builder...');
             const bricksBuilder = mp.bricks();
 
-            const settings = {
-                initialization: {
-                    amount: auction.current_price,
-                },
-                locale: 'pt-BR',
-                customization: {
-                    visual: {
-                        style: {
-                            theme: 'default'
-                        }
-                    }
-                },
-                callbacks: {
-                    onReady: () => {
-                        console.log('✅ Card Brick renderizado com sucesso!');
+            const renderCardPaymentBrick = async () => {
+                const settings = {
+                    initialization: {
+                        amount: auction.current_price,
                     },
-                    onSubmit: (formData) => {
-                        return new Promise(async (resolve, reject) => {
-                            setIsProcessing(true);
-                            try {
-                                console.log('📤 Enviando pagamento...', {
-                                    amount: formData.transaction_amount,
-                                    payment_method: formData.payment_method_id
-                                });
+                    callbacks: {
+                        onReady: () => {
+                            console.log('✅ Card Brick pronto!');
+                        },
+                        onSubmit: (formData, additionalData) => {
+                            return new Promise((resolve, reject) => {
+                                setIsProcessing(true);
+                                
+                                const submitData = {
+                                    type: "online",
+                                    total_amount: String(formData.transaction_amount),
+                                    external_reference: `auction_${auction.id}_${Date.now()}`,
+                                    processing_mode: "automatic",
+                                    transactions: {
+                                        payments: [
+                                            {
+                                                amount: String(formData.transaction_amount),
+                                                payment_method: {
+                                                    id: formData.payment_method_id,
+                                                    type: additionalData?.paymentTypeId || 'credit_card',
+                                                    token: formData.token,
+                                                    installments: formData.installments,
+                                                },
+                                            },
+                                        ],
+                                    },
+                                    payer: {
+                                        email: formData.payer.email,
+                                        identification: formData.payer.identification,
+                                    },
+                                };
 
-                                const response = await processCardPayment({
+                                processCardPayment({
                                     auction_id: auction.id,
                                     transaction_amount: formData.transaction_amount,
                                     token: formData.token,
@@ -200,42 +212,48 @@ export default function CheckoutPage() {
                                         email: formData.payer.email,
                                         identification: formData.payer.identification
                                     }
-                                });
+                                })
+                                    .then((response) => {
+                                        if (response.data.success) {
+                                            toast.success('Pagamento processado!');
+                                            navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                                            resolve();
+                                        } else {
+                                            toast.error(response.data.error || 'Erro ao processar pagamento');
+                                            reject();
+                                        }
+                                    })
+                                    .catch((error) => {
+                                        console.error('❌ Erro:', error);
+                                        toast.error('Erro ao processar pagamento');
+                                        reject();
+                                    })
+                                    .finally(() => {
+                                        setIsProcessing(false);
+                                    });
+                            });
+                        },
+                        onError: (error) => {
+                            console.error('❌ Erro Brick:', error);
+                        },
+                    },
+                };
 
-                                if (response.data.success) {
-                                    toast.success('Pagamento processado!');
-                                    navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
-                                    resolve();
-                                } else {
-                                    toast.error(response.data.error || 'Erro ao processar pagamento');
-                                    reject();
-                                }
-                            } catch (error) {
-                                console.error('❌ Erro no pagamento:', error);
-                                toast.error('Erro ao processar pagamento');
-                                reject();
-                            } finally {
-                                setIsProcessing(false);
-                            }
-                        });
-                    },
-                    onError: (error) => {
-                        console.error('❌ Erro no Brick:', error);
-                    },
-                },
+                console.log('🔧 Criando Card Payment Brick...');
+                window.cardPaymentBrickController = await bricksBuilder.create(
+                    'cardPayment',
+                    'cardPaymentBrick_container',
+                    settings
+                );
+                brickControllerRef.current = window.cardPaymentBrickController;
+                console.log('✅ Card Brick criado!');
             };
 
-            console.log('🔧 Criando Card Payment Brick no container...');
-            brickControllerRef.current = await bricksBuilder.create(
-                'cardPayment',
-                'cardPaymentBrick_container',
-                settings
-            );
+            await renderCardPaymentBrick();
             
-            console.log('✅ Card Brick criado e montado com sucesso!');
         } catch (error) {
-            console.error('❌ Erro crítico ao criar Brick:', error);
-            toast.error('Erro ao carregar formulário de cartão. Tente recarregar a página.');
+            console.error('❌ Erro crítico:', error);
+            toast.error('Erro ao carregar formulário. Verifique o console.');
         }
     };
 
