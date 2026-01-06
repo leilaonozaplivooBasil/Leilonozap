@@ -14,11 +14,11 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'MP_ACCESS_TOKEN não configurado' }, { status: 500 });
         }
 
-        // Dados EXATOS que vieram do Brick do usuário
+        // 🔥 DADOS EXATOS DO ÚLTIMO TESTE DO USUÁRIO (2026-01-06 23:00)
         const orderData = {
             type: "online",
             processing_mode: "automatic",
-            total_amount: "2.00",
+            total_amount: "3.00",
             external_reference: `test_real_${Date.now()}`,
             payer: {
                 email: "luizsantanna@tttcorporate.com",
@@ -30,11 +30,11 @@ Deno.serve(async (req) => {
             transactions: {
                 payments: [
                     {
-                        amount: "2.00",
+                        amount: "3.00",
                         payment_method: {
                             id: "master",
                             type: "credit_card",
-                            token: "da5beba6ee44b279a3b0c10579c6697b",
+                            token: "f6156914a057f3e5b7d1628436c2e30e",
                             installments: 1
                         }
                     }
