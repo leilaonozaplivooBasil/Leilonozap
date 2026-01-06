@@ -130,29 +130,36 @@ export default function CheckoutPage() {
     const handleAddressSubmit = async (e) => {
         e.preventDefault();
         
+        console.log('🚀 Iniciando submit do formulário', formData);
+        
         // Valida campos obrigatórios
         if (!formData.cpf || !formData.phone || !formData.address_zip_code || !formData.address_street || !formData.address_city || !formData.address_state) {
+            console.error('❌ Campos obrigatórios faltando');
             toast.error('Preencha todos os campos obrigatórios');
             return;
         }
         
         try {
             setIsProcessing(true);
+            console.log('✅ Atualizando usuário...', user.id);
             
             // Atualiza dados do usuário
             await base44.entities.AppUser.update(user.id, formData);
+            
+            console.log('✅ Dados salvos no banco');
             
             // Atualiza localStorage
             const updatedUser = { ...user, ...formData };
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             setUser(updatedUser);
             
+            console.log('✅ Avançando para pagamento');
             toast.success('Dados salvos!');
             setStep('payment');
             
         } catch (err) {
-            console.error('Erro ao salvar dados:', err);
-            toast.error('Erro ao salvar dados');
+            console.error('❌ Erro ao salvar dados:', err);
+            toast.error(err.message || 'Erro ao salvar dados');
         } finally {
             setIsProcessing(false);
         }
