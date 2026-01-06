@@ -32,6 +32,12 @@ import RotatingBanner from '../components/banner/RotatingBanner';
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
 export default function Home() {
+  // 🔥 TODOS OS HOOKS NO TOPO - NUNCA APÓS CONDICIONAIS OU RETURNS
+  const navigate = useNavigate();
+  const scrollerRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
+  const location = useLocation();
+
   const [auctions, setAuctions] = useState([]);
   const [filteredAuctions, setFilteredAuctions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,27 +51,7 @@ export default function Home() {
   const [retryCount, setRetryCount] = useState(0);
   const [favoriteAuctions, setFavoriteAuctions] = useState([]);
   const [banners, setBanners] = useState([]);
-
-  const [userRegion, setUserRegion] = useState(null); // Estado do usuário (ex: "RJ")
-
-
-  const navigate = useNavigate();
-  const scrollerRef = useRef(null);
-  const retryTimeoutRef = useRef(null);
-  const location = useLocation();
-
-  useEffect(() => {
-    if (currentUser) {
-      console.log("🔍 [HOME] Usuário atual:", {
-        name: currentUser.full_name,
-        email: currentUser.email,
-        role: currentUser.role,
-        isLicensee: currentUser.role === 'licensee'
-      });
-    } else {
-      console.log("🔍 [HOME] Nenhum usuário logado");
-    }
-  }, [currentUser]);
+  const [userRegion, setUserRegion] = useState(null);
 
   const { refresh: refreshAuctions } = useRealtimeSync({
     entityName: 'Auction',
@@ -524,10 +510,25 @@ export default function Home() {
   { value: "outros", label: "Outros", icon: Package }],
   []);
 
-  const handleAcceptWelcome = async () => {
+  const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
-  };
+  }, []);
 
+  // 🔥 LOG DE DEBUG - EXECUTADO APÓS TODOS OS HOOKS
+  useEffect(() => {
+    if (currentUser) {
+      console.log("🔍 [HOME] Usuário atual:", {
+        name: currentUser.full_name,
+        email: currentUser.email,
+        role: currentUser.role,
+        isLicensee: currentUser.role === 'licensee'
+      });
+    } else {
+      console.log("🔍 [HOME] Nenhum usuário logado");
+    }
+  }, [currentUser]);
+
+  // 🛡️ EARLY RETURN APENAS APÓS TODOS OS HOOKS
   if (showWelcomeModal) {
     return <WelcomeModal onAccept={handleAcceptWelcome} />;
   }
