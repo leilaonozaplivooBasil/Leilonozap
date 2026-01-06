@@ -2163,6 +2163,12 @@ export default function CreateAuction() {
                             setFormData(prev => ({ ...prev, supplier_logo_url: "", comparai_mode: "google_shopping" }));
                             setSupplierLogoPreview("");
                           }
+                          // ATUALIZA PARTNER_STORE SE SELECIONAR SAI DE BAIXO
+                          if (value === 'sai_de_baixo') {
+                            setFormData(prev => ({ ...prev, partner_store: 'sai_de_baixo' }));
+                          } else if (formData.partner_store === 'sai_de_baixo') {
+                            setFormData(prev => ({ ...prev, partner_store: 'nozap' }));
+                          }
                         }}>
                           <SelectTrigger className="mt-1 bg-gray-900 border-gray-600 text-gray-100">
                             <SelectValue />
@@ -2180,11 +2186,19 @@ export default function CreateAuction() {
                                 <span>🔥 Arremate/Devolução (sem garantia)</span>
                               </div>
                             </SelectItem>
+                            <SelectItem value="sai_de_baixo">
+                              <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                                <span>✨ Sai de Baixo</span>
+                              </div>
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-gray-500 mt-1">
                           {formData.product_source === 'factory_new' 
                             ? '✅ Produto novo, lacrado, com garantia do fabricante' 
+                            : formData.product_source === 'sai_de_baixo'
+                            ? '✨ Produto da loja Sai de Baixo - aparece apenas na aba Sai de Baixo'
                             : '📦 Produto de arremate ou devolução em até 7 dias, testado e funcional'}
                         </p>
                       </div>
