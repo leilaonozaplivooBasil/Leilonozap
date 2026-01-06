@@ -138,7 +138,7 @@ export default function CheckoutPage() {
             setIsProcessing(true);
             toast.info('Gerando QR Code PIX...');
             
-            const { data } = await base44.functions.invoke('createMercadoPagoOrder', {
+            const response = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
                 payment_method: 'pix',
                 payer_data: {
@@ -156,6 +156,8 @@ export default function CheckoutPage() {
                 }
             });
 
+            const data = response?.data || response;
+
             if (data?.success) {
                 setPayment(data);
                 setStep('pix_qr');
@@ -167,7 +169,7 @@ export default function CheckoutPage() {
 
         } catch (err) {
             console.error('Erro PIX:', err);
-            toast.error(err.message || 'Erro ao processar PIX');
+            toast.error(err.response?.data?.error || err.message || 'Erro ao processar PIX');
         } finally {
             setIsProcessing(false);
         }
@@ -180,7 +182,7 @@ export default function CheckoutPage() {
             setIsProcessing(true);
             toast.info('Processando pagamento...');
             
-            const { data } = await base44.functions.invoke('createMercadoPagoOrder', {
+            const response = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
                 payment_method: 'credit_card',
                 installments: parseInt(cardData.installments),
@@ -206,13 +208,18 @@ export default function CheckoutPage() {
                 }
             });
 
+            const data = response?.data || response;
+
             if (data?.success) {
                 if (data.status === 'APPROVED') {
+                    toast.success('Pagamento aprovado!');
                     navigate(`/PaymentSuccess?order_id=${orderId}`);
-                } else {
+                } else if (data.status === 'PENDING' || data.status === 'IN_PROCESS') {
                     setPayment(data);
                     toast.info('Pagamento em análise...');
                     startPaymentPolling();
+                } else {
+                    throw new Error('Pagamento não foi aprovado');
                 }
             } else {
                 throw new Error(data?.error || 'Erro ao processar cartão');
@@ -220,7 +227,7 @@ export default function CheckoutPage() {
 
         } catch (err) {
             console.error('Erro cartão:', err);
-            toast.error(err.message || 'Erro ao processar pagamento');
+            toast.error(err.response?.data?.error || err.message || 'Erro ao processar pagamento');
         } finally {
             setIsProcessing(false);
         }
@@ -229,20 +236,28 @@ export default function CheckoutPage() {
     const startPaymentPolling = () => {
         const interval = setInterval(async () => {
             try {
-                const { data } = await base44.functions.invoke('checkPaymentStatus', {
+                const response = await base44.functions.invoke('checkPaymentStatus', {
                     order_id: orderId
                 });
 
+                const data = response?.data || response;
+
                 if (data?.payment?.status === 'APPROVED') {
                     clearInterval(interval);
-                    navigate(`/PaymentSuccess?order_id=${orderId}`);
+                    toast.success('Pagamento confirmado!');
+                    setTimeout(() => {
+                        navigate(`/PaymentSuccess?order_id=${orderId}`);
+                    }, 1000);
                 }
             } catch (err) {
                 console.error('Erro polling:', err);
             }
         }, 3000);
 
-        setTimeout(() => clearInterval(interval), 600000);
+        setTimeout(() => {
+            clearInterval(interval);
+            toast.warning('Ainda não recebemos confirmação. Verifique em "Meus Arremates".');
+        }, 300000);
     };
 
     const copyPixCode = () => {
