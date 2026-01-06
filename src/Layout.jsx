@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import ShareAppModal from "@/components/common/ShareAppModal";
-import ShareSaiDeBaixoModal from "@/components/common/ShareSaiDeBaixoModal";
 import WelcomeModal from "@/components/common/WelcomeModal";
 import TermsModal from "@/components/common/TermsModal";
 import GlobalMonitor from "@/components/system/GlobalMonitor";
@@ -373,15 +372,7 @@ export default function Layout({ children, currentPageName }) {
     setMobileMenuOpen(false);
   }, [location]);
 
-  // Define contexto Sai de Baixo no sessionStorage
-  useEffect(() => {
-    const isSaiDeBaixo = currentPageName === 'SaiDeBaixo' || currentPageName === 'LiveShop' || currentPageName === 'CreateAuctionSaiDeBaixo' || currentPageName === 'LandingSaiDeBaixo' || currentPageName === 'Influencers' || currentPageName === 'InfluencerRanking';
-    if (isSaiDeBaixo) {
-      sessionStorage.setItem('saiDeBaixoContext', 'true');
-    } else if (currentPageName !== 'MyWinnings' && currentPageName !== 'Profile' && currentPageName !== 'Ranking') {
-      sessionStorage.removeItem('saiDeBaixoContext');
-    }
-  }, [currentPageName]);
+
 
   const shouldShowLoading = isLoading;
 
@@ -455,12 +446,7 @@ export default function Layout({ children, currentPageName }) {
 
   const noZapLoggedItems = [];
 
-  const saiDeBaixoMenuItems = [
-    { title: "Leilões", pageName: "SaiDeBaixo" },
-    { title: "Sistema de Alavancagem", pageName: "LicensingSaiDeBaixo" },
-  ];
 
-  const saiDeBaixoLoggedItems = [];
 
   const loggedMenuItems = [
     { title: "Meus Arremates", pageName: "MyWinnings" },
@@ -506,23 +492,13 @@ export default function Layout({ children, currentPageName }) {
   const isAdmin = isLoggedIn && currentUser.role === 'admin';
   const isLicensee = isLoggedIn && currentUser.role === 'licensee';
 
-  // 🎨 DETECÇÃO DE PÁGINAS SAI DE BAIXO
-  const isSaiDeBaixoContext = sessionStorage.getItem('saiDeBaixoContext') === 'true';
-  const isSaiDeBaixoPage = currentPageName === 'SaiDeBaixo' || currentPageName === 'LiveShop' || currentPageName === 'CreateAuctionSaiDeBaixo' || currentPageName === 'LandingSaiDeBaixo' || currentPageName === 'Influencers' || currentPageName === 'InfluencerRanking' || currentPageName === 'LicensingSaiDeBaixo' || isSaiDeBaixoContext;
-
-  // 🔥 MENU FINAL: Público + (se logado: logged items) OU Sai de Baixo Menu
-  const finalMenuItems = isSaiDeBaixoPage 
-    ? [
-        ...saiDeBaixoMenuItems,
-        ...(isLoggedIn ? saiDeBaixoLoggedItems : []),
-        ...(isLoggedIn ? loggedMenuItems : [])
-      ]
-    : [
-        { title: "Leilões", pageName: "Home" },
-        ...(isLoggedIn ? noZapLoggedItems : []),
-        { title: "Sistema de Alavancagem", pageName: "Licensing" },
-        ...(isLoggedIn ? loggedMenuItems : [])
-      ];
+  // 🔥 MENU FINAL
+  const finalMenuItems = [
+    { title: "Leilões", pageName: "Home" },
+    ...(isLoggedIn ? noZapLoggedItems : []),
+    { title: "Sistema de Alavancagem", pageName: "Licensing" },
+    ...(isLoggedIn ? loggedMenuItems : [])
+  ];
 
   // Páginas que devem mostrar layout simplificado (só logo)
   const isLojistaPage = currentPageName === 'LojistaDashboard';
@@ -532,11 +508,7 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
       
       <div className="min-h-screen bg-gray-900">
-        <nav className={`shadow-lg border-b ${
-          isSaiDeBaixoPage 
-            ? 'bg-black border-gray-800' 
-            : 'bg-gray-800 border-gray-700'
-        }`} style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <nav className="shadow-lg border-b bg-gray-800 border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
               
@@ -561,8 +533,8 @@ export default function Layout({ children, currentPageName }) {
                     to={createPageUrl(item.pageName)}
                     className={`text-sm font-semibold transition-colors ${
                       currentPageName === item.pageName
-                        ? (isSaiDeBaixoPage ? "text-red-500" : "text-green-400")
-                        : (isSaiDeBaixoPage ? "text-white/90 hover:text-white" : "text-gray-300 hover:text-white")
+                        ? "text-green-400"
+                        : "text-gray-300 hover:text-white"
                     }`}
                   >
                     {item.title}
@@ -572,36 +544,19 @@ export default function Layout({ children, currentPageName }) {
                 {/* COMPARTILHAR - SEMPRE VISÍVEL */}
                 <button
                   onClick={() => setShowShareModal(true)}
-                  className={`flex items-center gap-2 text-sm font-semibold transition-colors ${
-                    isSaiDeBaixoPage 
-                      ? 'text-white/90 hover:text-white' 
-                      : 'text-gray-300 hover:text-white'
-                  }`}
+                  className="flex items-center gap-2 text-sm font-semibold transition-colors text-gray-300 hover:text-white"
                 >
                   <Share2 className="h-4 w-4" />
                   Compartilhar
                 </button>
 
-                {/* CRIAR LEILÃO - SÓ ADMIN E CONTEXTO */}
-                {isAdmin && isSaiDeBaixoPage && (
-                  <Link
-                    to={createPageUrl("CreateAuctionSaiDeBaixo")}
-                    className="flex items-center gap-2 text-sm font-semibold text-white/90 hover:text-white transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Criar Leilão
-                  </Link>
-                )}
+
 
                 {/* PAINEL DE CONTROLE - SÓ ADMIN */}
                 {isAdmin && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className={`flex items-center gap-2 text-sm font-semibold ${
-                        isSaiDeBaixoPage 
-                          ? 'text-white/90 hover:text-white hover:bg-red-700' 
-                          : 'text-purple-400 hover:text-purple-300'
-                      }`}>
+                      <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300">
                         <Settings className="h-4 w-4" />
                         Painel de Controle
                       </Button>
@@ -647,11 +602,7 @@ export default function Layout({ children, currentPageName }) {
                 {!isLoggedIn && (
                   <Button
                     onClick={() => setShowLoginModal(true)}
-                    className={`flex items-center gap-2 text-sm font-semibold ${
-                      isSaiDeBaixoPage 
-                        ? 'bg-white text-red-600 hover:bg-gray-100' 
-                        : 'bg-green-600 hover:bg-green-700 text-white'
-                    }`}
+                    className="flex items-center gap-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white"
                   >
                     <UserIcon className="h-4 w-4" />
                     Entrar
@@ -662,11 +613,7 @@ export default function Layout({ children, currentPageName }) {
                 {isLoggedIn && (
                   <button
                     onClick={handleLogout}
-                    className={`flex items-center gap-2 text-sm font-semibold transition-colors ml-2 ${
-                      isSaiDeBaixoPage 
-                        ? 'text-white/90 hover:text-white' 
-                        : 'text-red-400 hover:text-red-300'
-                    }`}
+                    className="flex items-center gap-2 text-sm font-semibold transition-colors ml-2 text-red-400 hover:text-red-300"
                   >
                     <LogOut className="h-4 w-4" />
                     Sair
@@ -681,9 +628,7 @@ export default function Layout({ children, currentPageName }) {
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(true)}
-                  className={`inline-flex items-center justify-center rounded-md p-2.5 ${
-                    isSaiDeBaixoPage ? 'text-white hover:text-white/90' : 'text-gray-400 hover:text-white'
-                  }`}
+                  className="inline-flex items-center justify-center rounded-md p-2.5 text-gray-400 hover:text-white"
                 >
                   <Menu className="h-6 w-6" />
                   </button>
@@ -703,26 +648,16 @@ export default function Layout({ children, currentPageName }) {
             />
             
             {/* Menu Lateral */}
-            <div className={`fixed inset-y-0 right-0 w-[85%] max-w-sm z-[101] shadow-2xl animate-in slide-in-from-right duration-300 ${
-              isSaiDeBaixoPage ? 'bg-white' : 'bg-gray-900'
-            }`}>
+            <div className="fixed inset-y-0 right-0 w-[85%] max-w-sm z-[101] shadow-2xl animate-in slide-in-from-right duration-300 bg-gray-900">
               <div className="flex flex-col h-full">
                 {/* Header */}
-                <div className={`flex items-center justify-between p-4 ${
-                  isSaiDeBaixoPage ? 'border-b border-gray-200' : 'border-b border-gray-700'
-                }`}>
-                  <h2 className={`text-xl font-bold ${
-                    isSaiDeBaixoPage ? 'text-gray-900' : 'text-white'
-                  }`}>Menu</h2>
+                <div className="flex items-center justify-between p-4 border-b border-gray-700">
+                  <h2 className="text-xl font-bold text-white">Menu</h2>
                   <button
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`p-2 rounded-lg transition-colors ${
-                      isSaiDeBaixoPage ? 'hover:bg-gray-100' : 'hover:bg-gray-800'
-                    }`}
+                    className="p-2 rounded-lg transition-colors hover:bg-gray-800"
                   >
-                    <svg className={`w-6 h-6 ${
-                      isSaiDeBaixoPage ? 'text-gray-600' : 'text-gray-400'
-                    }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </button>
@@ -739,8 +674,8 @@ export default function Layout({ children, currentPageName }) {
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
                         currentPageName === item.pageName
-                          ? (isSaiDeBaixoPage ? "bg-red-50 text-red-600 border-l-4 border-red-500" : "bg-green-600/20 text-green-400 border-l-4 border-green-500")
-                          : (isSaiDeBaixoPage ? "text-gray-700 hover:bg-red-50 hover:text-red-600 hover:translate-x-1" : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1")
+                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
                       }`}
                     >
                       {item.title}
@@ -753,50 +688,24 @@ export default function Layout({ children, currentPageName }) {
                       setMobileMenuOpen(false);
                       setShowShareModal(true);
                       }}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 ${
-                      isSaiDeBaixoPage 
-                        ? "text-gray-700 hover:bg-gray-50 hover:text-gray-900" 
-                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                      }`}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
                   >
                     <Share2 className="h-5 w-5" />
                     Compartilhar
                   </button>
               
-                  {/* CRIAR LEILÃO MOBILE - SÓ ADMIN E CONTEXTO SAI DE BAIXO */}
-                  {isAdmin && isSaiDeBaixoPage && (
-                    <Link
-                      to={createPageUrl("CreateAuctionSaiDeBaixo")}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-2 ${
-                        isSaiDeBaixoPage 
-                          ? "text-red-600 hover:bg-red-50 hover:text-red-700 border-t border-gray-200" 
-                          : "text-red-400 hover:bg-red-600/20 hover:text-red-300 border-t border-gray-700"
-                      }`}
-                    >
-                      <Plus className="h-5 w-5" />
-                      Criar Leilão Sai de Baixo
-                    </Link>
-                  )}
+
 
                   {/* PAINEL MOBILE - SÓ ADMIN */}
                   {isAdmin && (
-                    <div className={`pt-3 mt-2 ${
-                      isSaiDeBaixoPage ? 'border-t border-gray-200' : 'border-t border-gray-700'
-                    }`}>
-                      <p className={`font-bold text-xs uppercase tracking-wider px-4 mb-2 ${
-                        isSaiDeBaixoPage ? 'text-purple-600' : 'text-purple-400'
-                      }`}>Painel de Controle</p>
+                    <div className="pt-3 mt-2 border-t border-gray-700">
+                      <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-purple-400">Painel de Controle</p>
                       {adminMenuItems.map((item) => (
                         item.isCategory ? (
                           <div key={item.title}>
                             <button
                               onClick={() => setExpandedCategory(expandedCategory === item.title ? null : item.title)}
-                              className={`w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${
-                                isSaiDeBaixoPage 
-                                  ? "text-gray-700 hover:bg-gray-50 hover:text-gray-900" 
-                                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                              }`}
+                              className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
                             >
                               <span>{item.title}</span>
                               <svg 
@@ -815,11 +724,7 @@ export default function Layout({ children, currentPageName }) {
                                     key={subItem.pageName}
                                     to={createPageUrl(subItem.pageName)}
                                     onClick={() => setMobileMenuOpen(false)}
-                                    className={`flex items-center gap-3 px-6 py-2 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${
-                                      isSaiDeBaixoPage 
-                                        ? "text-gray-700 hover:bg-gray-50 hover:text-gray-900" 
-                                        : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                                    }`}
+                                    className="flex items-center gap-3 px-6 py-2 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
                                   >
                                     {subItem.title}
                                   </Link>
@@ -835,9 +740,7 @@ export default function Layout({ children, currentPageName }) {
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${
                               item.highlight 
                                 ? "bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 hover:from-purple-600/40 hover:to-blue-600/40" 
-                                : isSaiDeBaixoPage 
-                                  ? "text-gray-700 hover:bg-gray-50 hover:text-gray-900" 
-                                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                                : "text-gray-300 hover:bg-gray-800 hover:text-white"
                             }`}
                           >
                             {item.title}
@@ -854,11 +757,7 @@ export default function Layout({ children, currentPageName }) {
                         setMobileMenuOpen(false);
                         setShowLoginModal(true);
                       }}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-4 ${
-                        isSaiDeBaixoPage 
-                          ? "text-red-600 hover:bg-red-50 hover:text-red-700 border-t border-gray-200" 
-                          : "text-green-400 hover:bg-green-600/20 hover:text-green-300 border-t border-gray-700"
-                      }`}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-4 text-green-400 hover:bg-green-600/20 hover:text-green-300 border-t border-gray-700"
                     >
                       <UserIcon className="h-5 w-5" />
                       Entrar na Conta
@@ -872,11 +771,7 @@ export default function Layout({ children, currentPageName }) {
                         setMobileMenuOpen(false);
                         handleLogout();
                         }}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-4 ${
-                        isSaiDeBaixoPage 
-                          ? "text-red-600 hover:bg-red-50 hover:text-red-700 border-t border-gray-200" 
-                          : "text-red-400 hover:bg-red-600/20 hover:text-red-300 border-t border-gray-700"
-                        }`}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-4 text-red-400 hover:bg-red-600/20 hover:text-red-300 border-t border-gray-700"
                     >
                       <LogOut className="h-5 w-5" />
                       Sair da Conta
@@ -915,8 +810,7 @@ export default function Layout({ children, currentPageName }) {
 
         {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
-        {showShareModal && isSaiDeBaixoPage && <ShareSaiDeBaixoModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} />}
-        {showShareModal && !isSaiDeBaixoPage && <ShareAppModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} />}
+        {showShareModal && <ShareAppModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} />}
         {showLoginModal && (
           <LoginModal 
             onClose={() => setShowLoginModal(false)} 
