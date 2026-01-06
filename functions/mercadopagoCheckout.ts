@@ -34,6 +34,36 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Mercado Pago não configurado' }, { status: 500 });
     }
 
+    // ✅ VERIFICA SE JÁ EXISTE PAGAMENTO PENDENTE
+    const existingPayments = await base44.asServiceRole.entities.Payment.filter({
+      auction_id: auction_id,
+      payment_method: 'mercadopago',
+      status: 'pending'
+    });
+
+    // Se já existe, busca a preferência existente no Mercado Pago
+    if (existingPayments.length > 0) {
+      const existingPayment = existingPayments[0];
+      const preferenceId = existingPayment.transaction_id;
+      
+      // Busca a preferência existente
+      const prefResponse = await fetch(`https://api.mercadopago.com/checkout/preferences/${preferenceId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      if (prefResponse.ok) {
+        const prefData = await prefResponse.json();
+        console.log('✅ Reutilizando pagamento existente:', preferenceId);
+        return Response.json({
+          success: true,
+          preference_id: preferenceId,
+          checkout_url: prefData.init_point
+        });
+      }
+    }
+
     const origin = req.headers.get('origin') || 'https://leilaonozap.app';
     
     const preference = {
