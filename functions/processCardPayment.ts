@@ -12,13 +12,17 @@ Deno.serve(async (req) => {
         const { 
             auction_id, 
             transaction_amount, 
-            token, 
+            token,
             payment_method_id, 
             installments,
-            payer 
+            payer,
+            issuer_id,
+            card_number,
+            security_code,
+            expiration_date
         } = await req.json();
 
-        if (!auction_id || !transaction_amount || !token) {
+        if (!auction_id || !transaction_amount || !payment_method_id) {
             return Response.json({ error: 'Dados obrigatórios faltando' }, { status: 400 });
         }
 
@@ -30,24 +34,41 @@ Deno.serve(async (req) => {
         const externalReference = `${auction_id}_${Date.now()}`;
         const idempotencyKey = `${auction_id}_${user.id}_${Date.now()}`;
 
-        // Criar order com pagamento (API Orders)
+        // Criar order com pagamento (API Orders) - usando dados do Brick
         const orderData = {
             type: "online",
             processing_mode: "automatic",
             total_amount: String(transaction_amount),
             external_reference: externalReference,
             payer: {
-                email: payer.email
+                email: payer.email,
+                identification: payer.identification
             },
             transactions: {
                 payments: [
                     {
                         amount: String(transaction_amount),
-                        payment_method: {
+                        payment_method: token ? {
+                            // Se tiver token (fluxo antigo)
                             id: payment_method_id,
-                            type: payment_method_id.includes('debit') ? 'debit_card' : 'credit_card',
+                            type: payment_method_id?.includes('debit') ? 'debit_card' : 'credit_card',
                             token: token,
                             installments: Number(installments)
+                        } : {
+                            // Se não tiver token (Brick envia dados diretos)
+                            id: payment_method_id,
+                            type: payment_method_id?.includes('debit') ? 'debit_card' : 'credit_card',
+                            installments: Number(installments),
+                            issuer_id: issuer_id,
+                            card: {
+                                card_number: card_number,
+                                security_code: security_code,
+                                expiration_date: expiration_date,
+                                cardholder: {
+                                    name: payer.cardholder?.name,
+                                    identification: payer.identification
+                                }
+                            }
                         }
                     }
                 ]
