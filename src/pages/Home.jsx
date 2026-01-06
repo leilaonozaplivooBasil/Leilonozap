@@ -127,6 +127,13 @@ export default function Home() {
       // 🛡️ PROTEÇÃO: Valida favoriteAuctions também
       // 🛡️ VALIDAÇÃO: Verifica tipo antes de usar
       filtered = Array.isArray(favoriteAuctions) && favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
+    } else if (activeSourceFilter === "sai_de_baixo") {
+      // Filtra APENAS leilões do Sai de Baixo
+      filtered = auctions.filter((auction) => 
+        auction && 
+        auction.partner_store === 'sai_de_baixo' && 
+        !auction.is_investment_plan
+      );
     } else {
       // Filtra apenas leilões do NoZap (exclui Sai de Baixo e planos de investimento)
       let nozapOnly = auctions.filter((auction) => 
@@ -134,7 +141,7 @@ export default function Home() {
         auction.partner_store !== 'sai_de_baixo' && 
         !auction.is_investment_plan
       );
-      
+
       // 🆕 FILTRO POR REGIÃO: Remove leilões que não são permitidos na região do usuário
       if (userRegion) {
         nozapOnly = nozapOnly.filter((auction) => {
@@ -710,6 +717,30 @@ export default function Home() {
                     <li>⚡ Dê lances em tempo real</li>
                     <li>🎯 Interaja e arremate produtos exclusivos</li>
                     <li>🔥 Emoção de leilão tradicional online</li>
+                  </ul>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => {setActiveSourceFilter("sai_de_baixo");setShowFavoritesOnly(false);}}
+                  className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 text-sm ${
+                  activeSourceFilter === "sai_de_baixo" && !showFavoritesOnly ?
+                  "bg-purple-600 text-white shadow-lg shadow-purple-500/30 scale-105" :
+                  "bg-gray-800 text-gray-300 hover:bg-purple-700 hover:text-white hover:scale-105 border border-gray-700 shadow-lg"}`
+                  }>
+                  ✨ Sai de Baixo
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs bg-gray-800 border-purple-500/50 text-left p-4">
+                <div className="space-y-2">
+                  <p className="font-bold text-purple-400 text-base">✨ PRODUTOS SAI DE BAIXO!</p>
+                  <ul className="space-y-1 text-sm text-gray-200">
+                    <li>✅ Variedade exclusiva</li>
+                    <li>✅ Produtos selecionados</li>
+                    <li>✅ Preços especiais</li>
                   </ul>
                 </div>
               </TooltipContent>
