@@ -6,7 +6,6 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
-import Checkout from './pages/Checkout';
 import CreateAuction from './pages/CreateAuction';
 import CustomerDetails from './pages/CustomerDetails';
 import EditAuction from './pages/EditAuction';
@@ -29,10 +28,7 @@ import NetworkOverview from './pages/NetworkOverview';
 import OrderTracking from './pages/OrderTracking';
 import PDV from './pages/PDV';
 import Partners from './pages/Partners';
-import PaymentError from './pages/PaymentError';
-import PaymentPending from './pages/PaymentPending';
 import PaymentSettings from './pages/PaymentSettings';
-import PaymentSuccess from './pages/PaymentSuccess';
 import PlanCheckout from './pages/PlanCheckout';
 import ProductManagement from './pages/ProductManagement';
 import Profile from './pages/Profile';
@@ -63,7 +59,6 @@ export const PAGES = {
     "AuctionRoom": AuctionRoom,
     "BannerManagement": BannerManagement,
     "CRM": CRM,
-    "Checkout": Checkout,
     "CreateAuction": CreateAuction,
     "CustomerDetails": CustomerDetails,
     "EditAuction": EditAuction,
@@ -86,10 +81,7 @@ export const PAGES = {
     "OrderTracking": OrderTracking,
     "PDV": PDV,
     "Partners": Partners,
-    "PaymentError": PaymentError,
-    "PaymentPending": PaymentPending,
     "PaymentSettings": PaymentSettings,
-    "PaymentSuccess": PaymentSuccess,
     "PlanCheckout": PlanCheckout,
     "ProductManagement": ProductManagement,
     "Profile": Profile,

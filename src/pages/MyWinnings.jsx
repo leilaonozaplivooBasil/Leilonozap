@@ -137,7 +137,7 @@ export default function MyWinningsPage() {
     };
 
     const handlePayClick = (auction) => {
-        navigate(createPageUrl('Checkout') + `?order_id=${auction.id}`);
+        toast.info('Sistema de pagamento em desenvolvimento');
     };
 
 
