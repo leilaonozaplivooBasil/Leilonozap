@@ -287,7 +287,7 @@ export default function InvestorDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         
         {/* Perfil do Parceiro */}
         <Card className="bg-gradient-to-br from-gray-800 via-gray-800 to-green-900/20 backdrop-blur-sm border-2 border-green-500/30 mb-8 shadow-2xl shadow-green-500/10 hover:shadow-green-500/20 transition-all duration-500">
@@ -560,11 +560,11 @@ export default function InvestorDashboard() {
           </div>
         )}
 
-        {/* Modal de Planos */}
+        {/* Modal de Planos - MOBILE OPTIMIZED */}
         <Dialog open={showPlansModal} onOpenChange={setShowPlansModal}>
-          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700 text-white p-4">
+          <DialogContent className="max-w-2xl bg-gray-900 border-gray-700 text-white p-3 sm:p-4 md:p-6 max-h-[95vh] overflow-y-auto">
             <DialogHeader className="mb-3 text-center">
-              <DialogTitle className="text-2xl font-bold text-center">
+              <DialogTitle className="text-xl sm:text-2xl font-bold text-center">
                 {activeInvestments.length > 0 ? 'Contratar ' : 'Escolha Seu '}
                 <span className="text-green-400">Novo Plano</span>
               </DialogTitle>
@@ -598,8 +598,8 @@ export default function InvestorDashboard() {
 
                         return (
                           <Card className="bg-gray-800 backdrop-blur-sm border-2 border-gray-700 w-full max-w-md overflow-hidden">
-                            {/* Imagem do Produto */}
-                            <div className="relative h-64 overflow-hidden bg-gray-900">
+                           {/* Imagem do Produto - ALTURA RESPONSIVA */}
+                           <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden bg-gray-900">
                               {productImages[portfolio.imageKey] ? (
                                 <img 
                                   src={productImages[portfolio.imageKey]} 
@@ -611,48 +611,48 @@ export default function InvestorDashboard() {
                                   <Package className="w-16 h-16 text-gray-600" />
                                 </div>
                               )}
-                              <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-full font-bold shadow-lg">
+                              <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-green-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
                                 RISCO ZERO
                               </div>
                             </div>
 
-                            <CardContent className="p-4">
+                            <CardContent className="p-3 sm:p-4">
                               {/* Título e Descrição */}
-                              <h3 className="text-2xl font-bold text-white mb-2">{portfolio.name}</h3>
-                              <p className="text-gray-400 text-sm mb-4">{portfolio.description}</p>
+                              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{portfolio.name}</h3>
+                              <p className="text-gray-400 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">{portfolio.description}</p>
                               
-                              {/* Cards de Valores */}
-                              <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
-                                  <p className="text-gray-400 text-sm mb-1">Compra Mínima</p>
-                                  <p className="text-2xl font-bold text-white">
+                              {/* Cards de Valores - MOBILE OTIMIZADO */}
+                              <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
+                                <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700">
+                                  <p className="text-gray-400 text-[10px] sm:text-sm mb-1">Compra Mínima</p>
+                                  <p className="text-base sm:text-xl md:text-2xl font-bold text-white leading-tight">
                                     R$ {portfolio.minInvestment.toLocaleString('pt-BR')}
                                   </p>
                                 </div>
-                                <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
-                                  <p className="text-gray-400 text-sm mb-1">Lucro Estimado ({portfolio.expectedReturn}%)</p>
-                                  <p className="text-2xl font-bold text-green-400">
+                                <div className="bg-green-600/10 rounded-lg p-2 sm:p-3 border border-green-500/30">
+                                  <p className="text-gray-400 text-[10px] sm:text-sm mb-1">Lucro Estimado ({portfolio.expectedReturn}%)</p>
+                                  <p className="text-base sm:text-xl md:text-2xl font-bold text-green-400 leading-tight">
                                     R$ {projection.profit.toLocaleString('pt-BR')}
                                   </p>
                                 </div>
                               </div>
 
                               {/* Informações Inferiores */}
-                              <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
-                                <span>⏱️ Retorno em {portfolio.duration} dias</span>
-                                <span>📦 Gestão 100% nossa</span>
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 sm:gap-4 text-xs sm:text-sm text-gray-400 mb-3 sm:mb-4">
+                                <span className="flex items-center gap-1">⏱️ Retorno em {portfolio.duration} dias</span>
+                                <span className="flex items-center gap-1">📦 Gestão 100% nossa</span>
                               </div>
 
-                              {/* Botão */}
+                              {/* Botão - TAMANHO RESPONSIVO */}
                               <Button 
-                                className="w-full bg-green-600 hover:bg-green-700 text-base py-3 font-semibold"
+                                className="w-full bg-green-600 hover:bg-green-700 text-sm sm:text-base py-3 sm:py-4 font-semibold"
                                 onClick={() => {
                                   setSelectedPlan(portfolio);
                                   setPixData(null);
                                 }}
                               >
                                 Comprar Agora
-                                <ArrowRight className="w-5 h-5 ml-2" />
+                                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" />
                               </Button>
                             </CardContent>
                           </Card>
@@ -661,24 +661,24 @@ export default function InvestorDashboard() {
                     </motion.div>
                   </AnimatePresence>
 
-                  {/* Navigation Arrows */}
+                  {/* Navigation Arrows - MAIORES EM MOBILE */}
                   <button
                     onClick={() => setSelectedPlanIndex((prev) => (prev === 0 ? portfolios.length - 1 : prev - 1))}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+                    className="absolute left-0 sm:left-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
 
                   <button
                     onClick={() => setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1))}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-8 h-8 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+                    className="absolute right-0 sm:right-2 top-1/2 -translate-y-1/2 z-10 w-10 h-10 sm:w-12 sm:h-12 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
 
                 {/* Indicators */}
-                <div className="flex justify-center gap-2 mt-2">
+                <div className="flex justify-center gap-2 mt-3 sm:mt-4">
                   {portfolios.map((_, idx) => (
                     <button
                       key={idx}
