@@ -95,9 +95,17 @@ export default function MyWinningsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [debugLogs, setDebugLogs] = useState([]);
+    const [showDebug, setShowDebug] = useState(false);
 
     const location = useLocation();
     const navigate = useNavigate();
+    
+    const addDebugLog = (message, type = 'info') => {
+        const log = { message, type, time: new Date().toLocaleTimeString() };
+        setDebugLogs(prev => [...prev, log]);
+        console.log(message);
+    };
 
     const isSaiDeBaixo = false;
 
