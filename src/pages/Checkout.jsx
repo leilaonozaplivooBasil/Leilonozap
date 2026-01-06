@@ -205,8 +205,7 @@ export default function CheckoutPage() {
             if (data?.success) {
                 setPayment(data);
                 setStep('pix_qr');
-                toast.success('QR Code gerado!');
-                startPaymentPolling();
+                toast.success('QR Code gerado! Pague para confirmar seu pedido.');
             } else {
                 throw new Error(data?.error || 'Erro ao gerar PIX');
             }
@@ -259,8 +258,7 @@ export default function CheckoutPage() {
                     navigate(`/PaymentSuccess?order_id=${orderId}`);
                 } else if (data.status === 'PENDING' || data.status === 'IN_PROCESS') {
                     setPayment(data);
-                    toast.info('Pagamento em análise...');
-                    startPaymentPolling();
+                    toast.info('Pagamento em análise. Você será notificado em breve.');
                 } else {
                     throw new Error('Pagamento não foi aprovado');
                 }
@@ -275,32 +273,7 @@ export default function CheckoutPage() {
         }
     };
 
-    const startPaymentPolling = () => {
-        const interval = setInterval(async () => {
-            try {
-                const response = await base44.functions.invoke('checkPaymentStatus', {
-                    order_id: orderId
-                });
 
-                const data = response?.data || response;
-
-                if (data?.payment?.status === 'APPROVED') {
-                    clearInterval(interval);
-                    toast.success('Pagamento confirmado!');
-                    setTimeout(() => {
-                        navigate(`/PaymentSuccess?order_id=${orderId}`);
-                    }, 1000);
-                }
-            } catch (err) {
-                console.error('Erro polling:', err);
-            }
-        }, 3000);
-
-        setTimeout(() => {
-            clearInterval(interval);
-            toast.warning('Ainda não recebemos confirmação. Verifique em "Meus Arremates".');
-        }, 300000);
-    };
 
     const copyPixCode = () => {
         if (payment?.qr_code) {
@@ -626,9 +599,11 @@ export default function CheckoutPage() {
                                     </div>
                                 </div>
                                 
-                                <p className="text-xs text-gray-500">
-                                    ⏰ Aguardando pagamento...
-                                </p>
+                                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                                    <p className="text-xs text-yellow-300 text-center">
+                                        ⏰ Aguardando pagamento. Após pagar, você será redirecionado automaticamente.
+                                    </p>
+                                </div>
                             </CardContent>
                         </Card>
                     )}
