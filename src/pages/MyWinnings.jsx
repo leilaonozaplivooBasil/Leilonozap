@@ -31,7 +31,7 @@ const statusConfigSaiDeBaixo = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-100 text-red-700 border-red-300" },
 };
 
-const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => {
+const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo, isProcessing }) => {
     const statusConfig = isSaiDeBaixo ? statusConfigSaiDeBaixo : statusConfigNozap;
     const config = statusConfig[auction.order_status] || statusConfig.awaiting_payment;
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
@@ -236,7 +236,8 @@ export default function MyWinningsPage() {
                                 auction={auction} 
                                 onTrackClick={handleTrackClick}
                                 onPayClick={handlePayClick}
-                                isSaiDeBaixo={false} 
+                                isSaiDeBaixo={false}
+                                isProcessing={isProcessing}
                             />
                         ))}
                     </div>
