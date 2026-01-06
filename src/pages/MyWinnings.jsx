@@ -58,6 +58,16 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
                 </Badge>
                 <div className="flex flex-col sm:flex-row gap-2 w-full">
 
+                    {auction.order_status === 'awaiting_payment' && (
+                        <Button 
+                            onClick={() => onPayClick(auction)}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold"
+                        >
+                            <CreditCard className="w-4 h-4 mr-2" />
+                            Pagar Agora
+                        </Button>
+                    )}
+
                     <Button 
                         onClick={() => onTrackClick(auction)}
                         variant="outline"
@@ -126,8 +136,8 @@ export default function MyWinningsPage() {
         navigate(createPageUrl(trackingPage) + `?auction_id=${auction.id}`);
     };
 
-    const handlePayClick = async (auction) => {
-        toast.info("Sistema de pagamento em manutenção");
+    const handlePayClick = (auction) => {
+        navigate(createPageUrl('Checkout') + `/${auction.id}`);
     };
 
 

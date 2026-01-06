@@ -47,6 +47,10 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
+import Checkout from './pages/Checkout';
+import PaymentSuccess from './pages/PaymentSuccess';
+import PaymentError from './pages/PaymentError';
+import PaymentPending from './pages/PaymentPending';
 import __Layout from './Layout.jsx';
 
 
@@ -100,6 +104,10 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
+    "Checkout": Checkout,
+    "PaymentSuccess": PaymentSuccess,
+    "PaymentError": PaymentError,
+    "PaymentPending": PaymentPending,
 }
 
 export const pagesConfig = {
