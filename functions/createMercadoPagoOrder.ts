@@ -69,7 +69,6 @@ Deno.serve(async (req) => {
             transaction_amount: amount,
             description: auction.title,
             payment_method_id: payment_method,
-            installments: installments,
             payer: {
                 email: user.email,
                 first_name: user.full_name?.split(' ')[0] || 'Comprador',
@@ -78,6 +77,11 @@ Deno.serve(async (req) => {
             external_reference: order_id,
             notification_url: 'https://leilaonozap.app/api/webhooks/mercadopago'
         };
+
+        // Para cartão, adiciona installments
+        if (payment_method !== 'pix') {
+            paymentData.installments = installments;
+        }
 
         const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
             method: 'POST',
