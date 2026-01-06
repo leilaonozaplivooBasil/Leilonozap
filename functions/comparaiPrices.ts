@@ -259,7 +259,7 @@ Retorne:
             }
         }
 
-        // 5️⃣ VALIDA RESULTADO
+        // 6️⃣ VALIDA RESULTADO
         if (validResults.length === 0) {
             console.log('❌ Sem resultados válidos');
             return Response.json({
@@ -269,7 +269,7 @@ Retorne:
             }, { status: 404 });
         }
 
-        // 6️⃣ CALCULA ECONOMIA
+        // 7️⃣ CALCULA ECONOMIA
         const prices = validResults.map(c => c.price);
         const minPrice = Math.min(...prices);
         const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
@@ -278,7 +278,7 @@ Retorne:
 
         console.log(`💰 Menor: R$ ${minPrice} | Economia: ${Math.round(savingsPercent)}%`);
 
-        // 7️⃣ VALIDA ECONOMIA
+        // 8️⃣ VALIDA ECONOMIA
         if (Math.abs(savingsPercent) > 93) {
             console.log(`⚠️ Economia irrealista: ${savingsPercent}%`);
             return Response.json({
@@ -288,7 +288,7 @@ Retorne:
             }, { status: 422 });
         }
 
-        // 8️⃣ SALVA CACHE
+        // 9️⃣ SALVA CACHE
         await base44.asServiceRole.entities.Auction.update(auctionId, {
             market_price: minPrice,
             last_comparison_date: new Date().toISOString()
@@ -296,7 +296,7 @@ Retorne:
 
         console.log('✅ Sucesso!');
 
-        // 9️⃣ RETORNA
+        // 🔟 RETORNA
         return Response.json({
             success: true,
             comparison: {
