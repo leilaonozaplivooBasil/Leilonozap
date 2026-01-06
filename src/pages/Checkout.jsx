@@ -231,8 +231,8 @@ export default function CheckoutPage() {
     };
 
     const handleCardPayment = async (e) => {
+        console.log('🎯 FUNÇÃO CHAMADA!');
         e.preventDefault();
-        
         console.log('🔥 INICIANDO PAGAMENTO CARTÃO');
         console.log('📦 CardData:', cardData);
         console.log('👤 User:', user);
