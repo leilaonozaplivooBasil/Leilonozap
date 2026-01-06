@@ -7,7 +7,6 @@ import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CreateAuction from './pages/CreateAuction';
-import CreateAuctionSaiDeBaixo from './pages/CreateAuctionSaiDeBaixo';
 import CustomerDetails from './pages/CustomerDetails';
 import EditAuction from './pages/EditAuction';
 import ErrorReport from './pages/ErrorReport';
@@ -16,9 +15,7 @@ import Influencers from './pages/Influencers';
 import InfluencersDashboard from './pages/InfluencersDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
-import LandingSaiDeBaixo from './pages/LandingSaiDeBaixo';
 import Licensing from './pages/Licensing';
-import LicensingSaiDeBaixo from './pages/LicensingSaiDeBaixo';
 import LicensorCRM from './pages/LicensorCRM';
 import LiveShop from './pages/LiveShop';
 import LiveShopControl from './pages/LiveShopControl';
@@ -29,7 +26,6 @@ import MemoryBackup from './pages/MemoryBackup';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
 import OrderTracking from './pages/OrderTracking';
-import OrderTrackingSaiDeBaixo from './pages/OrderTrackingSaiDeBaixo';
 import PDV from './pages/PDV';
 import Partners from './pages/Partners';
 import PaymentSettings from './pages/PaymentSettings';
@@ -40,7 +36,6 @@ import ProtecaoCriacao from './pages/ProtecaoCriacao';
 import ProtectionDashboard from './pages/ProtectionDashboard';
 import Register from './pages/Register';
 import RegisterBatches from './pages/RegisterBatches';
-import SaiDeBaixo from './pages/SaiDeBaixo';
 import ShippingSettings from './pages/ShippingSettings';
 import StockPosition from './pages/StockPosition';
 import StoreRegistration from './pages/StoreRegistration';
@@ -65,7 +60,6 @@ export const PAGES = {
     "BannerManagement": BannerManagement,
     "CRM": CRM,
     "CreateAuction": CreateAuction,
-    "CreateAuctionSaiDeBaixo": CreateAuctionSaiDeBaixo,
     "CustomerDetails": CustomerDetails,
     "EditAuction": EditAuction,
     "ErrorReport": ErrorReport,
@@ -74,9 +68,7 @@ export const PAGES = {
     "InfluencersDashboard": InfluencersDashboard,
     "InvestorDashboard": InvestorDashboard,
     "Landing": Landing,
-    "LandingSaiDeBaixo": LandingSaiDeBaixo,
     "Licensing": Licensing,
-    "LicensingSaiDeBaixo": LicensingSaiDeBaixo,
     "LicensorCRM": LicensorCRM,
     "LiveShop": LiveShop,
     "LiveShopControl": LiveShopControl,
@@ -87,7 +79,6 @@ export const PAGES = {
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
-    "OrderTrackingSaiDeBaixo": OrderTrackingSaiDeBaixo,
     "PDV": PDV,
     "Partners": Partners,
     "PaymentSettings": PaymentSettings,
@@ -98,7 +89,6 @@ export const PAGES = {
     "ProtectionDashboard": ProtectionDashboard,
     "Register": Register,
     "RegisterBatches": RegisterBatches,
-    "SaiDeBaixo": SaiDeBaixo,
     "ShippingSettings": ShippingSettings,
     "StockPosition": StockPosition,
     "StoreRegistration": StoreRegistration,
