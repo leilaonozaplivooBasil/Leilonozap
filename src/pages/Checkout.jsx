@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Loader2, CheckCircle2, AlertCircle, CreditCard, QrCode, Copy, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function CheckoutPage() {
     const navigate = useNavigate();
@@ -18,7 +21,7 @@ export default function CheckoutPage() {
     const [error, setError] = useState(null);
     const [selectedMethod, setSelectedMethod] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [step, setStep] = useState('address'); // address -> payment
+    const [step, setStep] = useState('address'); // address -> payment -> card (se cartão)
     const [formData, setFormData] = useState({
         cpf: '',
         phone: '',
@@ -29,6 +32,14 @@ export default function CheckoutPage() {
         address_city: '',
         address_state: '',
         address_zip_code: ''
+    });
+    const [cardData, setCardData] = useState({
+        number: '',
+        holder_name: '',
+        expiration_month: '',
+        expiration_year: '',
+        cvv: '',
+        installments: 1
     });
 
     useEffect(() => {
@@ -149,15 +160,24 @@ export default function CheckoutPage() {
 
     const handleSelectMethod = (method) => {
         setSelectedMethod(method);
+        
+        // Se escolher PIX, já gera o pagamento
+        if (method === 'pix') {
+            handleCreatePixPayment();
+        }
+        // Se escolher cartão, vai para formulário de cartão
+        if (method === 'credit_card') {
+            setStep('card');
+        }
     };
 
-    const handleCreatePayment = async (method) => {
+    const handleCreatePixPayment = async () => {
         try {
             setIsProcessing(true);
             
             const response = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
-                payment_method: method,
+                payment_method: 'pix',
                 installments: 1,
                 payer_data: {
                     cpf: user.cpf,
@@ -178,23 +198,74 @@ export default function CheckoutPage() {
 
             if (data?.success) {
                 setPayment(data);
-                
-                // Se for PIX, mostra QR code
-                if (method === 'pix') {
-                    toast.success('QR Code gerado! Escaneie para pagar');
-                    startPaymentPolling();
-                }
-                
-                // Se for cartão, redireciona para sucesso (após processar)
-                if (data.status === 'APPROVED') {
-                    navigate(`/payment/success?order_id=${orderId}`);
-                }
+                toast.success('QR Code gerado! Escaneie para pagar');
+                startPaymentPolling();
             } else {
-                toast.error('Erro ao criar pagamento');
+                toast.error('Erro ao gerar PIX');
             }
 
         } catch (err) {
-            console.error('Erro ao criar pagamento:', err);
+            console.error('Erro ao criar PIX:', err);
+            toast.error(err.message || 'Erro ao processar PIX');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    const handleCardPayment = async (e) => {
+        e.preventDefault();
+        
+        try {
+            setIsProcessing(true);
+            
+            // Valida dados do cartão
+            if (!cardData.number || !cardData.holder_name || !cardData.expiration_month || !cardData.expiration_year || !cardData.cvv) {
+                toast.error('Preencha todos os dados do cartão');
+                return;
+            }
+            
+            const response = await base44.functions.invoke('createMercadoPagoOrder', {
+                order_id: orderId,
+                payment_method: 'credit_card',
+                installments: parseInt(cardData.installments),
+                card_data: {
+                    number: cardData.number.replace(/\s/g, ''),
+                    holder_name: cardData.holder_name,
+                    expiration_month: cardData.expiration_month,
+                    expiration_year: cardData.expiration_year,
+                    security_code: cardData.cvv
+                },
+                payer_data: {
+                    cpf: user.cpf,
+                    phone: user.phone,
+                    address: {
+                        street: user.address_street,
+                        number: user.address_number,
+                        complement: user.address_complement,
+                        neighborhood: user.address_neighborhood,
+                        city: user.address_city,
+                        state: user.address_state,
+                        zip_code: user.address_zip_code
+                    }
+                }
+            });
+
+            const data = response?.data || response;
+
+            if (data?.success) {
+                if (data.status === 'APPROVED' || data.status === 'approved') {
+                    navigate(`/payment/success?order_id=${orderId}`);
+                } else {
+                    setPayment(data);
+                    toast.info('Pagamento em processamento...');
+                    startPaymentPolling();
+                }
+            } else {
+                toast.error('Erro ao processar cartão');
+            }
+
+        } catch (err) {
+            console.error('Erro ao processar cartão:', err);
             toast.error(err.message || 'Erro ao processar pagamento');
         } finally {
             setIsProcessing(false);
@@ -313,7 +384,7 @@ export default function CheckoutPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Dados / Pagamento */}
+                    {/* Dados / Pagamento / Cartão */}
                     {step === 'address' ? (
                         <Card className="bg-gray-800/60 border-gray-700 md:col-span-1">
                             <CardHeader>
@@ -446,6 +517,136 @@ export default function CheckoutPage() {
                                 </form>
                             </CardContent>
                         </Card>
+                    ) : step === 'card' ? (
+                        <Card className="bg-gray-800/60 border-gray-700">
+                            <CardHeader>
+                                <CardTitle className="text-white">Dados do Cartão</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleCardPayment} className="space-y-4">
+                                    <div>
+                                        <Label className="text-gray-400">Número do Cartão</Label>
+                                        <Input
+                                            type="text"
+                                            value={cardData.number}
+                                            onChange={(e) => {
+                                                const value = e.target.value.replace(/\D/g, '').replace(/(\d{4})/g, '$1 ').trim();
+                                                setCardData({...cardData, number: value});
+                                            }}
+                                            placeholder="0000 0000 0000 0000"
+                                            maxLength={19}
+                                            className="bg-gray-900/50 border-gray-700 text-white"
+                                            required
+                                        />
+                                    </div>
+                                    
+                                    <div>
+                                        <Label className="text-gray-400">Nome no Cartão</Label>
+                                        <Input
+                                            type="text"
+                                            value={cardData.holder_name}
+                                            onChange={(e) => setCardData({...cardData, holder_name: e.target.value.toUpperCase()})}
+                                            placeholder="NOME COMO NO CARTÃO"
+                                            className="bg-gray-900/50 border-gray-700 text-white uppercase"
+                                            required
+                                        />
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <Label className="text-gray-400">Mês</Label>
+                                            <Input
+                                                type="text"
+                                                value={cardData.expiration_month}
+                                                onChange={(e) => setCardData({...cardData, expiration_month: e.target.value})}
+                                                placeholder="MM"
+                                                maxLength={2}
+                                                className="bg-gray-900/50 border-gray-700 text-white"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label className="text-gray-400">Ano</Label>
+                                            <Input
+                                                type="text"
+                                                value={cardData.expiration_year}
+                                                onChange={(e) => setCardData({...cardData, expiration_year: e.target.value})}
+                                                placeholder="AA"
+                                                maxLength={2}
+                                                className="bg-gray-900/50 border-gray-700 text-white"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label className="text-gray-400">CVV</Label>
+                                            <Input
+                                                type="text"
+                                                value={cardData.cvv}
+                                                onChange={(e) => setCardData({...cardData, cvv: e.target.value})}
+                                                placeholder="000"
+                                                maxLength={4}
+                                                className="bg-gray-900/50 border-gray-700 text-white"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <Label className="text-gray-400">Parcelas</Label>
+                                        <Select 
+                                            value={cardData.installments.toString()} 
+                                            onValueChange={(value) => setCardData({...cardData, installments: parseInt(value)})}
+                                        >
+                                            <SelectTrigger className="bg-gray-900/50 border-gray-700 text-white">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-gray-900 border-gray-700">
+                                                {[...Array(12)].map((_, i) => {
+                                                    const installment = i + 1;
+                                                    const installmentAmount = amount / installment;
+                                                    return (
+                                                        <SelectItem key={installment} value={installment.toString()} className="text-white">
+                                                            {installment}x de R$ {installmentAmount.toFixed(2)} {installment === 1 ? '(à vista)' : 'sem juros'}
+                                                        </SelectItem>
+                                                    );
+                                                })}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-3 pt-4">
+                                        <Button
+                                            type="submit"
+                                            disabled={isProcessing}
+                                            className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-6 text-lg"
+                                        >
+                                            {isProcessing ? (
+                                                <>
+                                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                    Processando...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    Pagar R$ {amount.toFixed(2)}
+                                                </>
+                                            )}
+                                        </Button>
+                                        
+                                        <Button
+                                            type="button"
+                                            onClick={() => {
+                                                setStep('payment');
+                                                setSelectedMethod(null);
+                                            }}
+                                            variant="ghost"
+                                            className="w-full text-gray-400 hover:text-white"
+                                        >
+                                            Voltar
+                                        </Button>
+                                    </div>
+                                </form>
+                            </CardContent>
+                        </Card>
                     ) : (
                         <Card className="bg-gray-800/60 border-gray-700">
                             <CardHeader>
@@ -526,42 +727,26 @@ export default function CheckoutPage() {
 
                                         {/* Cartão de Crédito */}
                                         <button
-                                            onClick={() => handleSelectMethod('credit_card')}
-                                            className={`w-full border-2 rounded-lg p-4 transition-all ${
-                                                selectedMethod === 'credit_card'
-                                                    ? 'border-blue-500 bg-blue-500/10'
-                                                    : 'border-gray-600 hover:border-gray-500'
-                                            }`}
+                                           onClick={() => handleSelectMethod('credit_card')}
+                                           disabled={isProcessing}
+                                           className={`w-full border-2 rounded-lg p-4 transition-all ${
+                                               selectedMethod === 'credit_card'
+                                                   ? 'border-blue-500 bg-blue-500/10'
+                                                   : 'border-gray-600 hover:border-gray-500'
+                                           }`}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <CreditCard className="w-8 h-8 text-blue-400" />
-                                                <div className="text-left">
-                                                    <p className="text-white font-semibold">Cartão de Crédito</p>
-                                                    <p className="text-xs text-gray-400">Até 12x sem juros</p>
-                                                </div>
-                                                {selectedMethod === 'credit_card' && (
-                                                    <CheckCircle2 className="w-5 h-5 text-blue-400 ml-auto" />
-                                                )}
-                                            </div>
+                                           <div className="flex items-center gap-3">
+                                               <CreditCard className="w-8 h-8 text-blue-400" />
+                                               <div className="text-left">
+                                                   <p className="text-white font-semibold">Cartão de Crédito</p>
+                                                   <p className="text-xs text-gray-400">Até 12x sem juros</p>
+                                               </div>
+                                               {selectedMethod === 'credit_card' && (
+                                                   <CheckCircle2 className="w-5 h-5 text-blue-400 ml-auto" />
+                                               )}
+                                           </div>
                                         </button>
-                                    </div>
-
-                                    <Button
-                                        onClick={() => handleCreatePayment(selectedMethod)}
-                                        disabled={!selectedMethod || isProcessing}
-                                        className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-6 text-lg"
-                                    >
-                                        {isProcessing ? (
-                                            <>
-                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                                Processando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Pagar R$ {amount.toFixed(2)}
-                                            </>
-                                        )}
-                                    </Button>
+                                        </div>
 
                                     <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                                         <div className="flex items-center gap-2 mb-2">

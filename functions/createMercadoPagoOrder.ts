@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const { order_id, payment_method, installments = 1, payer_data } = await req.json();
+        const { order_id, payment_method, installments = 1, payer_data, card_data } = await req.json();
         
         if (!order_id) {
             return Response.json({ error: 'order_id obrigatório' }, { status: 400 });
@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
         const paymentData = {
             transaction_amount: amount,
             description: auction.title,
-            payment_method_id: payment_method,
+            payment_method_id: payment_method === 'credit_card' ? 'master' : payment_method, // Padrão master, mas pode detectar bandeira
             payer: {
                 email: user.email,
                 first_name: user.full_name?.split(' ')[0] || 'Comprador',
@@ -90,9 +90,55 @@ Deno.serve(async (req) => {
             notification_url: 'https://leilaonozap.app/api/webhooks/mercadopago'
         };
 
-        // Para cartão, adiciona installments
-        if (payment_method !== 'pix') {
+        // Para cartão, adiciona dados do cartão e installments
+        if (payment_method === 'credit_card' && card_data) {
             paymentData.installments = installments;
+            paymentData.token = await createCardToken(card_data, MP_ACCESS_TOKEN);
+            
+            if (!paymentData.token) {
+                return Response.json({ error: 'Erro ao processar dados do cartão' }, { status: 400 });
+            }
+            
+            // Detecta bandeira do cartão
+            const firstDigit = card_data.number.charAt(0);
+            if (firstDigit === '4') paymentData.payment_method_id = 'visa';
+            else if (firstDigit === '5') paymentData.payment_method_id = 'master';
+            else if (firstDigit === '3') paymentData.payment_method_id = 'amex';
+            else if (firstDigit === '6') paymentData.payment_method_id = 'elo';
+        }
+
+        // Função auxiliar para criar token do cartão
+        async function createCardToken(cardData, token) {
+            try {
+                const tokenResponse = await fetch('https://api.mercadopago.com/v1/card_tokens', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        card_number: cardData.number,
+                        cardholder: {
+                            name: cardData.holder_name,
+                            identification: {
+                                type: 'CPF',
+                                number: payer_data.cpf.replace(/\D/g, '')
+                            }
+                        },
+                        security_code: cardData.security_code,
+                        expiration_month: parseInt(cardData.expiration_month),
+                        expiration_year: parseInt(`20${cardData.expiration_year}`)
+                    })
+                });
+                
+                if (!tokenResponse.ok) return null;
+                
+                const tokenData = await tokenResponse.json();
+                return tokenData.id;
+            } catch (err) {
+                console.error('Erro ao criar token:', err);
+                return null;
+            }
         }
 
         const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
