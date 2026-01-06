@@ -132,7 +132,7 @@ export default function CheckoutPage() {
     const initCardBrick = async () => {
         if (!mpLoaded || !window.MercadoPago) return;
 
-        const mp = new window.MercadoPago(Deno.env.get('MP_PUBLIC_KEY') || 'TEST-YOUR-PUBLIC-KEY');
+        const mp = new window.MercadoPago('TEST-83a4ca72-cc00-49db-b677-4802ea8ce642');
         const bricksBuilder = mp.bricks();
 
         const renderCardPaymentBrick = async () => {
