@@ -253,8 +253,7 @@ export default function Layout({ children, currentPageName }) {
                     console.log('✅ Lead de influenciador registrado');
                   }
                 } catch (influencerError) {
-                  // Erro de influenciador não deve quebrar a aplicação
-                  console.debug('Registro de influenciador falhou (não crítico)');
+                  console.debug('Influencer registration error:', influencerError.message);
                 }
               } else {
                 // Usuário não encontrado no banco, usa localStorage
@@ -343,7 +342,7 @@ export default function Layout({ children, currentPageName }) {
             user_agent: navigator.userAgent
           });
         } catch (logErr) {
-          console.debug('Logging falhou (não crítico)');
+          console.debug('SystemLog falhou:', logErr.message);
         }
 
         try {

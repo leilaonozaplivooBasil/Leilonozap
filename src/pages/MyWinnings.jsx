@@ -585,7 +585,7 @@ export default function MyWinningsPage() {
                                             toast.info("⏳ Pagamento ainda não identificado. Aguarde alguns instantes e tente novamente.");
                                         }
                                     } catch (error) {
-                                        console.error('❌ Erro ao verificar:', error);
+                                        console.debug('Erro verificação PIX:', error.message);
                                         toast.error("Erro ao verificar pagamento: " + error.message);
                                     } finally {
                                         setIsCheckingPayment(false);

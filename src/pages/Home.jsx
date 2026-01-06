@@ -247,7 +247,9 @@ export default function Home() {
       }
       
       if (error.message?.includes('Rate limit') && retryCount < 2) {
+        // 🆕 BACKOFF EXPONENCIAL: 2s, 4s, 8s
         const delay = Math.pow(2, retryCount + 1) * 2000;
+        console.debug(`⏳ Retry favoritos em ${delay/1000}s`);
         await new Promise(resolve => setTimeout(resolve, delay));
         return loadUserFavorites(userId, retryCount + 1);
       }
@@ -479,7 +481,7 @@ export default function Home() {
               sessionStorage.setItem('banners_cache', JSON.stringify(sortedBanners));
               sessionStorage.setItem('banners_cache_time', Date.now().toString());
             } catch (error) {
-              console.error('Erro ao carregar banners:', error);
+              console.debug('Erro ao carregar banners:', error.message);
             }
           }, 1500);
         }
