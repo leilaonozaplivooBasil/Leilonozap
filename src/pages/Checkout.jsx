@@ -218,16 +218,17 @@ export default function CheckoutPage() {
                         console.log('✅ Brick renderizado!');
                     },
                     onSubmit: (formData, additionalData) => {
-                        return new Promise((resolve, reject) => {
+                        return new Promise(async (resolve, reject) => {
+                            console.log('🎯 onSubmit CHAMADO!');
+                            console.log('📦 formData:', JSON.stringify(formData, null, 2));
+                            console.log('📦 additionalData:', JSON.stringify(additionalData, null, 2));
+                            
                             setIsProcessing(true);
                             
-                            // 🔍 LOG COMPLETO DO QUE O BRICK ENVIA
-                            console.log('📦 DADOS DO BRICK:', JSON.stringify(formData, null, 2));
-                            console.log('📦 ADDITIONAL DATA:', JSON.stringify(additionalData, null, 2));
-                            
-                            console.log('🚀 INICIANDO processCardPayment...');
-                            
-                            processCardPayment({
+                            try {
+                                console.log('🚀 Chamando processCardPayment...');
+                                
+                                const response = await processCardPayment({
                                 auction_id: auction.id,
                                 transaction_amount: formData.transaction_amount,
                                 token: formData.token,
@@ -237,29 +238,27 @@ export default function CheckoutPage() {
                                     email: formData.payer.email,
                                     identification: formData.payer.identification
                                 }
-                            })
-                                .then((response) => {
-                                    console.log('📥 RESPOSTA DO BACKEND:', response);
-                                    if (response.data.success) {
-                                        toast.success('Pagamento processado!');
-                                        navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
-                                        resolve();
-                                    } else {
-                                        const errorMsg = response.data.error || 'Erro ao processar pagamento';
-                                        console.error('❌ FALHA:', errorMsg);
-                                        toast.error(errorMsg);
-                                        reject();
-                                    }
-                                })
-                                .catch((error) => {
-                                    console.error('❌ ERRO AO CHAMAR BACKEND:', error);
-                                    toast.error(`Erro: ${error.message}`);
-                                    reject();
-                                })
-                                .finally(() => {
-                                    console.log('🏁 Finalizando...');
-                                    setIsProcessing(false);
                                 });
+                                
+                                console.log('📥 RESPOSTA:', response);
+                                
+                                if (response.data.success) {
+                                    toast.success('Pagamento aprovado!');
+                                    navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                                    resolve();
+                                } else {
+                                    const errorMsg = response.data.error || 'Pagamento rejeitado';
+                                    console.error('❌ FALHA:', errorMsg, response.data);
+                                    toast.error(errorMsg);
+                                    reject();
+                                }
+                            } catch (error) {
+                                console.error('❌ ERRO CRÍTICO:', error);
+                                toast.error(`Erro: ${error.message}`);
+                                reject();
+                            } finally {
+                                setIsProcessing(false);
+                            }
                         });
                     },
                     onError: (error) => {
