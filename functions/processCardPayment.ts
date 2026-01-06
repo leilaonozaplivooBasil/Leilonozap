@@ -74,7 +74,23 @@ Deno.serve(async (req) => {
             body: JSON.stringify(orderData)
         });
 
-        const order = await response.json();
+        console.log('📊 HTTP Status:', response.status);
+        const responseText = await response.text();
+        console.log('📄 Response Text:', responseText);
+
+        let order;
+        try {
+            order = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+            console.error('❌ Erro ao fazer parse da resposta:', parseError.message);
+            return Response.json({ 
+                success: false, 
+                error: 'Resposta inválida do Mercado Pago',
+                status: response.status,
+                response: responseText
+            }, { status: 500 });
+        }
+
         console.log('📥 Resposta completa MP:', JSON.stringify(order, null, 2));
 
         // 🔍 EXTRAIR STATUS REAL
