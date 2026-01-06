@@ -137,15 +137,38 @@ export default function MyWinningsPage() {
                 auction_id: auction.id
             });
 
-            if (response?.success && response?.checkout_url) {
-                window.location.href = response.checkout_url;
+            if (response?.success && response?.preference_id) {
+                // Carrega SDK do Mercado Pago dinamicamente
+                if (!window.MercadoPago) {
+                    const script = document.createElement('script');
+                    script.src = 'https://sdk.mercadopago.com/js/v2';
+                    script.async = true;
+                    document.body.appendChild(script);
+                    
+                    await new Promise((resolve) => {
+                        script.onload = resolve;
+                    });
+                }
+
+                const mp = new window.MercadoPago(import.meta.env.VITE_MERCADOPAGO_PUBLIC_KEY, {
+                    locale: 'pt-BR'
+                });
+
+                const checkout = mp.checkout({
+                    preference: {
+                        id: response.preference_id
+                    },
+                    autoOpen: true
+                });
+
+                setIsProcessing(false);
             } else {
                 toast.error("Erro ao criar link de pagamento");
+                setIsProcessing(false);
             }
         } catch (error) {
             console.error("Erro no pagamento:", error);
             toast.error(`Erro: ${error.message}`);
-        } finally {
             setIsProcessing(false);
         }
     };
