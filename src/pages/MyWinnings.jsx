@@ -164,6 +164,13 @@ export default function MyWinningsPage() {
             
             console.log('🔵 Resposta parseada:', response);
 
+            // Verifica se houve erro de autorização
+            if (response?.error) {
+                toast.error(response.error);
+                setIsProcessing(false);
+                return;
+            }
+
             if (response?.success && response?.checkout_url) {
                 // Log sucesso criação preferência
                 await base44.entities.SystemLog.create({
