@@ -49,7 +49,7 @@ function advancedTitleCleanup(title) {
 }
 
 // 🚫 DETECTA PROMOÇÕES E DESCONTOS SUSPEITOS
-function isPromotionalPrice(comparison) {
+function isPromotionalPrice(comparison, currentPrice) {
     const { productNameFound, price, store } = comparison;
     
     // Detecta "Leve X Pague Y"
@@ -82,6 +82,25 @@ function isPromotionalPrice(comparison) {
     // Preços anormalmente baixos (possível erro ou promoção falsa)
     if (price < 5) {
         console.log(`🚫 Rejeitado (Preço muito baixo): ${store} - R$ ${price}`);
+        return true;
+    }
+    
+    // 🔥 NOVO: Rejeita preços genéricos/placeholders comuns
+    const genericPrices = [99.99, 199.99, 299.99, 399.99, 499.99, 599.99, 699.99, 799.99, 899.99, 999.99, 9999.99];
+    if (genericPrices.includes(price)) {
+        console.log(`🚫 Rejeitado (Preço genérico placeholder): ${store} - R$ ${price}`);
+        return true;
+    }
+    
+    // 🔥 NOVO: Rejeita preços muito maiores que o lance atual (mais de 50x)
+    if (currentPrice > 0 && price > currentPrice * 50) {
+        console.log(`🚫 Rejeitado (Preço irrealisticamente alto): ${store} - R$ ${price} vs Lance R$ ${currentPrice}`);
+        return true;
+    }
+    
+    // 🔥 NOVO: Rejeita se o preço termina em .99 E é maior que 10x o lance
+    if (currentPrice > 0 && price > currentPrice * 10 && price.toString().endsWith('.99')) {
+        console.log(`🚫 Rejeitado (Preço suspeito .99): ${store} - R$ ${price}`);
         return true;
     }
     
@@ -197,17 +216,20 @@ Deno.serve(async (req) => {
         const searchPrompt = `Busque no Google Shopping Brasil o produto: ${cleanTitle}
 
 REGRAS IMPORTANTES:
-- APENAS produtos NOVOS de lojas confiáveis (Mercado Livre, Magazine Luiza, Amazon, Americanas, Shopee, Casas Bahia, etc)
+- APENAS produtos NOVOS de lojas confiáveis (Mercado Livre, Magazine Luiza, Amazon, Americanas, Shopee, Casas Bahia, Carrefour)
 - IGNORE produtos usados, recondicionados ou "open box"
 - IGNORE promoções "Leve X Pague Y" ou "X por R$"
 - IGNORE kits com múltiplas unidades
 - Preços entre R$ 10 e R$ ${maxPrice.toFixed(2)}
-- Retorne 4-8 comparações válidas
+- PREÇO ATUAL DO LEILÃO: R$ ${currentPrice.toFixed(2)} (use como referência de mercado)
+- ⚠️ CRÍTICO: NÃO invente preços genéricos como R$ 999,99 - busque PREÇOS REAIS
+- ⚠️ CRÍTICO: Se não encontrar, retorne array vazio [] - NÃO invente dados
+- Retorne 3-6 comparações REAIS e VERIFICADAS
 
 RETORNE JSON:
 {
   "comparisons": [
-    {"store": "Nome da Loja", "productNameFound": "Nome Exato do Produto", "price": 999.99, "url": "https://..."}
+    {"store": "Nome da Loja", "productNameFound": "Nome Exato do Produto", "price": 129.90, "url": "https://..."}
   ]
 }`;
 
@@ -244,7 +266,7 @@ RETORNE JSON:
 
                 const validComparisons = (llmResult?.comparisons || [])
                     .filter(c => c.price && c.price >= 10 && c.price <= maxPrice)
-                    .filter(c => !isPromotionalPrice(c));
+                    .filter(c => !isPromotionalPrice(c, currentPrice));
 
                 if (validComparisons.length > 0) {
                     llmResult.comparisons = validComparisons;
@@ -277,6 +299,16 @@ RETORNE JSON:
         const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
         const savings = minPrice - currentPrice;
         const savingsPercent = minPrice > 0 ? (savings / minPrice) * 100 : 0;
+
+        // 🔥 VALIDAÇÃO FINAL: Se economia maior que 95%, provavelmente dados ruins
+        if (savingsPercent > 95 || savingsPercent < -500) {
+            console.log(`❌ ECONOMIA IRREALISTA: ${savingsPercent}% - Rejeitando resultado`);
+            return Response.json({
+                success: false,
+                error: "Comparação retornou dados inconsistentes. Tente novamente.",
+                errorCode: "UNREALISTIC_SAVINGS"
+            }, { status: 422 });
+        }
 
         // Atualiza cache no banco
         await base44.asServiceRole.entities.Auction.update(auctionId, {
