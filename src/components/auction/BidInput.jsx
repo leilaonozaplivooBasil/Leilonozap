@@ -39,12 +39,12 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
     setBidAmount("");
   }, [bidAmount, currentPrice, increment, onSubmitBid]);
 
-  const handleKeyPress = (e) => {
+  const handleKeyPress = React.useCallback((e) => {
     if (e.key === 'Enter' && !isLoading) {
       e.preventDefault();
       handleSubmit();
     }
-  };
+  }, [handleSubmit]);
 
   return (
     <div className="p-3 sm:p-4 bg-gray-800 border-t border-gray-700" style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>

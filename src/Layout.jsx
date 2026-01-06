@@ -41,7 +41,7 @@ export default function Layout({ children, currentPageName }) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState(null);
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = React.useCallback(() => {
     console.log("🚪 INICIANDO LOGOUT...");
     
     localStorage.removeItem('currentUser');
@@ -54,7 +54,7 @@ export default function Layout({ children, currentPageName }) {
     navigate(createPageUrl("Home"), { replace: true });
   }, [navigate]);
 
-  const syncUserData = useCallback(async () => {
+  const syncUserData = React.useCallback(async () => {
     const savedUserJSON = localStorage.getItem('currentUser');
     const isLoggedIn = sessionStorage.getItem('isLoggedIn');
     

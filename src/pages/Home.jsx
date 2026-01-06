@@ -126,10 +126,10 @@ export default function Home() {
     };
   }, []);
 
-  const filterAuctions = useCallback(() => {
+  const filterAuctions = React.useCallback(() => {
     // 🛡️ PROTEÇÃO CRÍTICA: Sempre valida se auctions é array
     if (!Array.isArray(auctions)) {
-      console.warn("⚠️ auctions não é array, usando array vazio");
+      console.warn("⚠️ auctions não é array");
       setFilteredAuctions([]);
       return;
     }
@@ -197,7 +197,7 @@ export default function Home() {
       setFilteredAuctions(filtered);
       }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion]);
 
-  const loadUserFavorites = useCallback(async (userId, retryCount = 0) => {
+  const loadUserFavorites = React.useCallback(async (userId, retryCount = 0) => {
     if (!userId) return;
     
     // Cache de 5 segundos para favoritos
@@ -256,7 +256,7 @@ export default function Home() {
     }
   }, []);
 
-  const loadCurrentUser = useCallback(async (retryCount = 0) => {
+  const loadCurrentUser = React.useCallback(async (retryCount = 0) => {
     try {
       const savedUserJSON = localStorage.getItem('currentUser');
       const isLoggedIn = sessionStorage.getItem('isLoggedIn');
@@ -332,7 +332,7 @@ export default function Home() {
     }
   }, [loadUserFavorites]);
 
-  const loadAuctions = useCallback(async (isRetry = false) => {
+  const loadAuctions = React.useCallback(async (isRetry = false) => {
     try {
       setLoadError(null);
 
@@ -370,6 +370,7 @@ export default function Home() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000);
 
+      // 🚀 OTIMIZAÇÃO: Limit exato - 50 leilões suficientes
       const data = await Auction.list("-created_date", 50);
       clearTimeout(timeoutId);
 
