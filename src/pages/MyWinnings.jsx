@@ -137,52 +137,65 @@ export default function MyWinningsPage() {
     };
 
     const handlePayClick = async (auction) => {
-        if (isProcessing) return;
+        console.log('🟦 CHECKPOINT 1: Função iniciada');
         
-        console.log('🔵 INICIANDO PAGAMENTO:', auction.id);
+        if (isProcessing) {
+            console.log('⏸️ Já está processando, saindo...');
+            return;
+        }
+        
+        console.log('🟦 CHECKPOINT 2: auction =', auction);
+        console.log('🟦 CHECKPOINT 3: auction.id =', auction?.id);
+        
         setIsProcessing(true);
+        console.log('🟦 CHECKPOINT 4: isProcessing = true');
+        
         toast.info("Criando link de pagamento...");
+        console.log('🟦 CHECKPOINT 5: Toast exibido');
         
         try {
-            console.log('🔵 Chamando mercadopagoCheckout...');
+            console.log('🟦 CHECKPOINT 6: Dentro do try');
+            console.log('🟦 CHECKPOINT 7: mercadopagoCheckout existe?', typeof mercadopagoCheckout);
             
-            // Tenta chamar a função
-            let result;
-            try {
-                result = await mercadopagoCheckout({ auction_id: auction.id });
-            } catch (fnError) {
-                console.error('❌ Erro ao chamar função:', fnError);
-                throw new Error('Falha ao conectar com sistema de pagamento');
+            if (!auction?.id) {
+                throw new Error('ID do leilão não encontrado');
             }
             
-            console.log('🔵 Resposta recebida (raw):', JSON.stringify(result));
+            console.log('🟦 CHECKPOINT 8: Chamando mercadopagoCheckout({ auction_id: "' + auction.id + '" })');
             
-            // Extrai dados da resposta (axios retorna .data)
+            const result = await mercadopagoCheckout({ auction_id: auction.id });
+            
+            console.log('🟦 CHECKPOINT 9: Resposta recebida');
+            console.log('🟦 CHECKPOINT 10: result =', result);
+            console.log('🟦 CHECKPOINT 11: result.data =', result?.data);
+            
             const data = result?.data || result;
-            console.log('🔵 Data extraída:', JSON.stringify(data));
+            console.log('🟦 CHECKPOINT 12: data final =', data);
 
             if (data?.error) {
-                console.error('❌ Erro retornado:', data.error);
+                console.log('❌ CHECKPOINT 13: Erro na resposta:', data.error);
                 toast.error(data.error);
                 setIsProcessing(false);
                 return;
             }
 
             if (data?.checkout_url) {
-                console.log('✅ URL de checkout:', data.checkout_url);
-                toast.success("Redirecionando para pagamento...");
+                console.log('✅ CHECKPOINT 14: URL encontrada:', data.checkout_url);
+                toast.success("Redirecionando...");
                 setTimeout(() => {
-                    console.log('🔵 Redirecionando agora...');
+                    console.log('🟦 CHECKPOINT 15: Redirecionando para:', data.checkout_url);
                     window.location.href = data.checkout_url;
                 }, 800);
             } else {
-                console.error('❌ Resposta sem checkout_url:', data);
+                console.log('❌ CHECKPOINT 16: checkout_url não encontrada');
                 toast.error("Link de pagamento não encontrado");
                 setIsProcessing(false);
             }
         } catch (error) {
-            console.error("❌ ERRO CATCH PRINCIPAL:", error);
-            console.error("❌ Stack:", error.stack);
+            console.log('❌ CHECKPOINT 17: ERRO CAPTURADO');
+            console.error("❌ Erro:", error);
+            console.error("❌ Mensagem:", error?.message);
+            console.error("❌ Stack:", error?.stack);
             toast.error(error.message || "Erro ao processar pagamento");
             setIsProcessing(false);
         }
