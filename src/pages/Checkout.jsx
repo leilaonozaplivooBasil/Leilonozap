@@ -25,6 +25,11 @@ export default function CheckoutPage() {
         try {
             setIsLoading(true);
             
+            if (!orderId) {
+                setError('ID do pedido não informado');
+                return;
+            }
+            
             const savedUser = localStorage.getItem('currentUser');
             if (!savedUser) {
                 navigate('/');
@@ -52,22 +57,28 @@ export default function CheckoutPage() {
             setOrder(auction);
 
             // Verifica se já existe pagamento
-            const { data: statusData } = await base44.functions.invoke('checkPaymentStatus', {
-                order_id: orderId
-            });
+            try {
+                const statusResponse = await base44.functions.invoke('checkPaymentStatus', {
+                    order_id: orderId
+                });
 
-            if (statusData?.payment) {
-                setPayment(statusData.payment);
-                
-                if (statusData.payment.status === 'APPROVED') {
-                    navigate(`/payment/success?order_id=${orderId}`);
-                    return;
+                const statusData = statusResponse?.data || statusResponse;
+
+                if (statusData?.payment) {
+                    setPayment(statusData.payment);
+                    
+                    if (statusData.payment.status === 'APPROVED') {
+                        navigate(`/payment/success?order_id=${orderId}`);
+                        return;
+                    }
                 }
+            } catch (statusErr) {
+                console.log('Nenhum pagamento anterior encontrado');
             }
 
         } catch (err) {
             console.error('Erro ao carregar checkout:', err);
-            setError(err.message);
+            setError(err.message || 'Erro ao carregar página');
         } finally {
             setIsLoading(false);
         }
@@ -77,21 +88,23 @@ export default function CheckoutPage() {
         try {
             setIsLoading(true);
             
-            const { data } = await base44.functions.invoke('createMercadoPagoOrder', {
+            const response = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId
             });
+
+            const data = response?.data || response;
 
             if (data?.init_point) {
                 // Redireciona para checkout do Mercado Pago
                 window.location.href = data.init_point;
             } else {
                 toast.error('Erro ao criar pagamento');
+                setIsLoading(false);
             }
 
         } catch (err) {
             console.error('Erro ao criar pagamento:', err);
             toast.error(err.message || 'Erro ao processar pagamento');
-        } finally {
             setIsLoading(false);
         }
     };
