@@ -21,28 +21,38 @@ Deno.serve(async (req) => {
         }
 
         const externalReference = `${auction_id}_${Date.now()}`;
+        const idempotencyKey = `pix_${auction_id}_${user.id}_${Date.now()}`;
 
-        // Criar pagamento PIX
-        const paymentData = {
-            transaction_amount: amount,
-            description: `Arremate Leilão - ${auction_id}`,
-            payment_method_id: 'pix',
-            payer: {
-                email: payer_email,
-                first_name: payer_name
-            },
+        // Criar order com pagamento PIX via API Orders
+        const orderData = {
+            type: "online",
+            processing_mode: "automatic",
+            total_amount: String(amount),
             external_reference: externalReference,
-            notification_url: `${Deno.env.get('BASE44_APP_URL')}/api/mercadoPagoWebhook`
+            payer: {
+                email: payer_email
+            },
+            transactions: {
+                payments: [
+                    {
+                        amount: String(amount),
+                        payment_method: {
+                            id: "pix",
+                            type: "bank_transfer"
+                        }
+                    }
+                ]
+            }
         };
 
-        const response = await fetch('https://api.mercadopago.com/v1/payments', {
+        const response = await fetch('https://api.mercadopago.com/v1/orders', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
-                'X-Idempotency-Key': externalReference
+                'X-Idempotency-Key': idempotencyKey
             },
-            body: JSON.stringify(paymentData)
+            body: JSON.stringify(orderData)
         });
 
         if (!response.ok) {
@@ -51,13 +61,18 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Falha ao criar pagamento PIX' }, { status: 500 });
         }
 
-        const payment = await response.json();
+        const order = await response.json();
+
+        // Extrair dados do pagamento PIX
+        const paymentTransaction = order.transactions?.payments?.[0];
+        const paymentId = paymentTransaction?.id || order.id;
+        const paymentMethod = paymentTransaction?.payment_method || {};
 
         // Salvar no banco
         await base44.entities.MercadoPagoPayment.create({
             auction_id,
             user_id: user.id,
-            payment_id: String(payment.id),
+            payment_id: String(paymentId),
             amount,
             external_reference: externalReference,
             status: 'pending',
@@ -66,10 +81,10 @@ Deno.serve(async (req) => {
 
         return Response.json({
             success: true,
-            payment_id: payment.id,
-            qr_code: payment.point_of_interaction?.transaction_data?.qr_code,
-            qr_code_base64: payment.point_of_interaction?.transaction_data?.qr_code_base64,
-            ticket_url: payment.point_of_interaction?.transaction_data?.ticket_url
+            payment_id: paymentId,
+            qr_code: paymentMethod.qr_code,
+            qr_code_base64: paymentMethod.qr_code_base64,
+            ticket_url: paymentMethod.ticket_url
         });
 
     } catch (error) {
