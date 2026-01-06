@@ -9,7 +9,7 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const { order_id, payment_method, installments = 1 } = await req.json();
+        const { order_id, payment_method, installments = 1, payer_data } = await req.json();
         
         if (!order_id) {
             return Response.json({ error: 'order_id obrigatório' }, { status: 400 });
@@ -72,7 +72,19 @@ Deno.serve(async (req) => {
             payer: {
                 email: user.email,
                 first_name: user.full_name?.split(' ')[0] || 'Comprador',
-                last_name: user.full_name?.split(' ').slice(1).join(' ') || 'NoZap'
+                last_name: user.full_name?.split(' ').slice(1).join(' ') || 'NoZap',
+                identification: payer_data?.cpf ? {
+                    type: 'CPF',
+                    number: payer_data.cpf.replace(/\D/g, '')
+                } : undefined,
+                address: payer_data?.address ? {
+                    zip_code: payer_data.address.zip_code?.replace(/\D/g, ''),
+                    street_name: payer_data.address.street,
+                    street_number: payer_data.address.number,
+                    neighborhood: payer_data.address.neighborhood,
+                    city: payer_data.address.city,
+                    federal_unit: payer_data.address.state
+                } : undefined
             },
             external_reference: order_id,
             notification_url: 'https://leilaonozap.app/api/webhooks/mercadopago'

@@ -18,6 +18,18 @@ export default function CheckoutPage() {
     const [error, setError] = useState(null);
     const [selectedMethod, setSelectedMethod] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [step, setStep] = useState('address'); // address -> payment
+    const [formData, setFormData] = useState({
+        cpf: '',
+        phone: '',
+        address_street: '',
+        address_number: '',
+        address_complement: '',
+        address_neighborhood: '',
+        address_city: '',
+        address_state: '',
+        address_zip_code: ''
+    });
 
     useEffect(() => {
         loadCheckout();
@@ -40,6 +52,24 @@ export default function CheckoutPage() {
             
             const currentUser = JSON.parse(savedUser);
             setUser(currentUser);
+            
+            // Preenche dados existentes no formulário
+            setFormData({
+                cpf: currentUser.cpf || '',
+                phone: currentUser.phone || '',
+                address_street: currentUser.address_street || '',
+                address_number: currentUser.address_number || '',
+                address_complement: currentUser.address_complement || '',
+                address_neighborhood: currentUser.address_neighborhood || '',
+                address_city: currentUser.address_city || '',
+                address_state: currentUser.address_state || '',
+                address_zip_code: currentUser.address_zip_code || ''
+            });
+            
+            // Se já tem todos os dados, pula para pagamento
+            if (currentUser.cpf && currentUser.address_zip_code) {
+                setStep('payment');
+            }
 
             // Busca pedido
             const auctions = await base44.entities.Auction.filter({ id: orderId });
@@ -86,6 +116,37 @@ export default function CheckoutPage() {
         }
     };
 
+    const handleAddressSubmit = async (e) => {
+        e.preventDefault();
+        
+        // Valida campos obrigatórios
+        if (!formData.cpf || !formData.phone || !formData.address_zip_code || !formData.address_street || !formData.address_city || !formData.address_state) {
+            toast.error('Preencha todos os campos obrigatórios');
+            return;
+        }
+        
+        try {
+            setIsProcessing(true);
+            
+            // Atualiza dados do usuário
+            await base44.entities.AppUser.update(user.id, formData);
+            
+            // Atualiza localStorage
+            const updatedUser = { ...user, ...formData };
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+            setUser(updatedUser);
+            
+            toast.success('Dados salvos!');
+            setStep('payment');
+            
+        } catch (err) {
+            console.error('Erro ao salvar dados:', err);
+            toast.error('Erro ao salvar dados');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     const handleSelectMethod = (method) => {
         setSelectedMethod(method);
     };
@@ -97,7 +158,20 @@ export default function CheckoutPage() {
             const response = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
                 payment_method: method,
-                installments: 1
+                installments: 1,
+                payer_data: {
+                    cpf: user.cpf,
+                    phone: user.phone,
+                    address: {
+                        street: user.address_street,
+                        number: user.address_number,
+                        complement: user.address_complement,
+                        neighborhood: user.address_neighborhood,
+                        city: user.address_city,
+                        state: user.address_state,
+                        zip_code: user.address_zip_code
+                    }
+                }
             });
 
             const data = response?.data || response;
@@ -201,7 +275,7 @@ export default function CheckoutPage() {
 
                 <div className="grid md:grid-cols-2 gap-6">
                     {/* Resumo do Pedido */}
-                    <Card className="bg-gray-800/60 border-gray-700">
+                    <Card className={`bg-gray-800/60 border-gray-700 ${step === 'payment' ? 'md:col-span-1' : 'md:col-span-2'}`}>
                         <CardHeader>
                             <CardTitle className="text-white">Resumo do Pedido</CardTitle>
                         </CardHeader>
@@ -239,12 +313,145 @@ export default function CheckoutPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Método de Pagamento */}
-                    <Card className="bg-gray-800/60 border-gray-700">
-                        <CardHeader>
-                            <CardTitle className="text-white">Escolha o Método de Pagamento</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
+                    {/* Dados / Pagamento */}
+                    {step === 'address' ? (
+                        <Card className="bg-gray-800/60 border-gray-700 md:col-span-1">
+                            <CardHeader>
+                                <CardTitle className="text-white">Dados para Pagamento</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <form onSubmit={handleAddressSubmit} className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="col-span-2">
+                                            <label className="text-sm text-gray-400 mb-1 block">CPF *</label>
+                                            <input
+                                                type="text"
+                                                value={formData.cpf}
+                                                onChange={(e) => setFormData({...formData, cpf: e.target.value})}
+                                                placeholder="000.000.000-00"
+                                                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="col-span-2">
+                                            <label className="text-sm text-gray-400 mb-1 block">Telefone *</label>
+                                            <input
+                                                type="tel"
+                                                value={formData.phone}
+                                                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                                placeholder="(00) 00000-0000"
+                                                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="border-t border-gray-700 pt-4">
+                                        <h4 className="text-white font-semibold mb-3">Endereço de Entrega</h4>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-1 block">CEP *</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.address_zip_code}
+                                                    onChange={(e) => setFormData({...formData, address_zip_code: e.target.value})}
+                                                    placeholder="00000-000"
+                                                    className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-3 gap-3">
+                                                <div className="col-span-2">
+                                                    <label className="text-sm text-gray-400 mb-1 block">Rua *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.address_street}
+                                                        onChange={(e) => setFormData({...formData, address_street: e.target.value})}
+                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-gray-400 mb-1 block">Número *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.address_number}
+                                                        onChange={(e) => setFormData({...formData, address_number: e.target.value})}
+                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-1 block">Complemento</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.address_complement}
+                                                    onChange={(e) => setFormData({...formData, address_complement: e.target.value})}
+                                                    placeholder="Apto, bloco, etc"
+                                                    className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-sm text-gray-400 mb-1 block">Bairro *</label>
+                                                <input
+                                                    type="text"
+                                                    value={formData.address_neighborhood}
+                                                    onChange={(e) => setFormData({...formData, address_neighborhood: e.target.value})}
+                                                    className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="text-sm text-gray-400 mb-1 block">Cidade *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.address_city}
+                                                        onChange={(e) => setFormData({...formData, address_city: e.target.value})}
+                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                        required
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-sm text-gray-400 mb-1 block">Estado *</label>
+                                                    <input
+                                                        type="text"
+                                                        value={formData.address_state}
+                                                        onChange={(e) => setFormData({...formData, address_state: e.target.value})}
+                                                        placeholder="SP"
+                                                        maxLength={2}
+                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white uppercase"
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        disabled={isProcessing}
+                                        className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-6 text-lg"
+                                    >
+                                        {isProcessing ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                Salvando...
+                                            </>
+                                        ) : (
+                                            'Continuar para Pagamento'
+                                        )}
+                                    </Button>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="bg-gray-800/60 border-gray-700">
+                            <CardHeader>
+                                <CardTitle className="text-white">Escolha o Método de Pagamento</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
                             
                             {payment?.qr_code ? (
                                 // Mostra QR Code do PIX
@@ -369,6 +576,7 @@ export default function CheckoutPage() {
                             )}
                         </CardContent>
                     </Card>
+                    )}
                 </div>
 
                 <div className="mt-8 text-center">
