@@ -85,17 +85,17 @@ export default function ProductCarousel() {
   const currentProduct = products[currentIndex];
 
   return (
-    <div className="w-full py-12 px-4">
-      <h2 className="text-3xl font-bold text-center mb-2">
+    <div className="w-full py-8 sm:py-12 px-3 sm:px-4">
+      <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">
         Produtos em <span className="text-green-400">Destaque</span>
       </h2>
-      <p className="text-gray-400 text-center mb-12">
+      <p className="text-sm sm:text-base text-gray-400 text-center mb-8 sm:mb-12">
         Invista e lucre com produtos selecionados
       </p>
 
       <div className="relative max-w-5xl mx-auto" style={{ perspective: '2000px' }}>
-        {/* Background Stacked Cards */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        {/* Background Stacked Cards - ESCONDE EM MOBILE */}
+        <div className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none">
           <div 
             className="absolute w-[85%] h-[400px] bg-gray-800/40 rounded-2xl border border-gray-700/50"
             style={{ transform: 'translateZ(-100px) scale(0.9)', filter: 'blur(2px)' }}
@@ -106,8 +106,8 @@ export default function ProductCarousel() {
           />
         </div>
 
-        {/* Main Card Container */}
-        <div className="relative h-[450px] flex items-center justify-center">
+        {/* Main Card Container - ALTURA REDUZIDA MOBILE */}
+        <div className="relative h-[500px] sm:h-[450px] flex items-center justify-center">
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
               key={currentIndex}
@@ -126,59 +126,60 @@ export default function ProductCarousel() {
               onMouseEnter={() => setIsPaused(true)}
               onMouseLeave={() => setIsPaused(false)}
             >
-              <div className="bg-gray-800 rounded-2xl shadow-2xl border-2 border-gray-700 overflow-hidden transform-gpu">
-                <div className="relative h-80 overflow-hidden bg-gray-900">
+              <div className="bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl border-2 border-gray-700 overflow-hidden transform-gpu">
+                {/* IMAGEM RESPONSIVA */}
+                <div className="relative h-48 sm:h-64 md:h-80 overflow-hidden bg-gray-900">
                   <img 
                     src={currentProduct.image_url} 
                     alt={currentProduct.name}
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-full font-bold shadow-lg">
+                  <div className="absolute top-2 sm:top-4 right-2 sm:right-4 bg-green-600 text-white px-2 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold shadow-lg">
                     {currentProduct.category}
                   </div>
                 </div>
                 
-                <div className="p-4">
-                  <h3 className="text-2xl font-bold text-white mb-3">{currentProduct.name}</h3>
+                <div className="p-3 sm:p-4 md:p-6">
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-3">{currentProduct.name}</h3>
                   
-                  <div className="grid grid-cols-2 gap-4 mb-4">
-                    <div className="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
-                      <p className="text-gray-400 text-sm mb-1">Investimento</p>
-                      <p className="text-2xl font-bold text-white">{currentProduct.investment}</p>
+                  <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
+                    <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700">
+                      <p className="text-gray-400 text-xs sm:text-sm mb-1">Investimento</p>
+                      <p className="text-base sm:text-xl md:text-2xl font-bold text-white break-words">{currentProduct.investment}</p>
                     </div>
-                    <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
-                      <p className="text-gray-400 text-sm mb-1">Lucro Estimado (3%)</p>
-                      <p className="text-2xl font-bold text-green-400">{currentProduct.expected_return}</p>
+                    <div className="bg-green-600/10 rounded-lg p-2 sm:p-3 border border-green-500/30">
+                      <p className="text-gray-400 text-xs sm:text-sm mb-1">Lucro Estimado (3%)</p>
+                      <p className="text-base sm:text-xl md:text-2xl font-bold text-green-400 break-words">{currentProduct.expected_return}</p>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm text-gray-400">
-                    <span>⏱️ Retorno em 60 dias</span>
-                    <span>📦 Gestão 100% nossa</span>
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-4 text-xs sm:text-sm text-gray-400">
+                    <span className="flex items-center gap-1">⏱️ Retorno em 60 dias</span>
+                    <span className="flex items-center gap-1">📦 Gestão 100% nossa</span>
                   </div>
                 </div>
               </div>
             </motion.div>
           </AnimatePresence>
 
-          {/* Navigation Arrows */}
+          {/* Navigation Arrows - MAIORES EM MOBILE */}
           <button
             onClick={() => paginate(-1)}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+            className="absolute left-1 sm:left-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 sm:w-14 sm:h-14 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
           </button>
           
           <button
             onClick={() => paginate(1)}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
+            className="absolute right-1 sm:right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 sm:w-14 sm:h-14 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-6 h-6 sm:w-7 sm:h-7" />
           </button>
         </div>
 
         {/* Indicators */}
-        <div className="flex justify-center gap-4 mt-12">
+        <div className="flex justify-center gap-2 sm:gap-4 mt-6 sm:mt-12">
           {products.map((_, index) => (
             <button
               key={index}
@@ -188,7 +189,7 @@ export default function ProductCarousel() {
               }}
               className={`h-2 rounded-full transition-all duration-300 ${
                 index === currentIndex 
-                  ? 'w-8 bg-green-500' 
+                  ? 'w-6 sm:w-8 bg-green-500' 
                   : 'w-2 bg-gray-600 hover:bg-gray-500'
               }`}
             />
