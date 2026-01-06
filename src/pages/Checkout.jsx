@@ -55,7 +55,6 @@ export default function CheckoutPage() {
                     console.log('📦 Carregando SDK Mercado Pago...');
                     const script = document.createElement('script');
                     script.src = 'https://sdk.mercadopago.com/js/v2';
-                    script.async = true;
                     script.onload = () => {
                         console.log('✅ SDK Mercado Pago carregado!');
                         setMpLoaded(true);
@@ -139,121 +138,88 @@ export default function CheckoutPage() {
         }
     };
 
+    const renderCardPaymentBrick = async (bricksBuilder) => {
+        const settings = {
+            initialization: {
+                amount: auction.current_price,
+            },
+            callbacks: {
+                onReady: () => {
+                    console.log('✅ Brick pronto!');
+                },
+                onSubmit: (formData, additionalData) => {
+                    return new Promise((resolve, reject) => {
+                        setIsProcessing(true);
+                        
+                        processCardPayment({
+                            auction_id: auction.id,
+                            transaction_amount: formData.transaction_amount,
+                            token: formData.token,
+                            payment_method_id: formData.payment_method_id,
+                            installments: formData.installments,
+                            payer: {
+                                email: formData.payer.email,
+                                identification: formData.payer.identification
+                            }
+                        })
+                            .then((response) => {
+                                if (response.data.success) {
+                                    toast.success('Pagamento processado!');
+                                    navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                                    resolve();
+                                } else {
+                                    toast.error(response.data.error || 'Erro ao processar pagamento');
+                                    reject();
+                                }
+                            })
+                            .catch((error) => {
+                                console.error('Erro:', error);
+                                toast.error('Erro ao processar pagamento');
+                                reject();
+                            })
+                            .finally(() => {
+                                setIsProcessing(false);
+                            });
+                    });
+                },
+                onError: (error) => {
+                    console.error('Erro Brick:', error);
+                },
+            },
+        };
+
+        window.cardPaymentBrickController = await bricksBuilder.create(
+            'cardPayment',
+            'cardPaymentBrick_container',
+            settings
+        );
+    };
+
     const initCardBrick = async () => {
         if (!window.MercadoPago) {
-            console.error('❌ SDK MercadoPago não carregado');
-            toast.error('Aguarde o carregamento do SDK...');
+            console.error('SDK não carregado');
             return;
         }
 
-        // Destruir brick anterior se existir
         if (brickControllerRef.current) {
             try {
                 brickControllerRef.current.unmount();
-                brickControllerRef.current = null;
-            } catch (e) {
-                console.log('Brick já desmontado');
-            }
+            } catch (e) {}
         }
 
         try {
-            console.log('🔧 Inicializando MercadoPago SDK...');
+            console.log('Inicializando MP...');
             const mp = new window.MercadoPago('TEST-83a4ca72-cc00-49db-b677-4802ea8ce642', {
                 locale: 'pt-BR'
             });
-            
-            console.log('🔧 Criando Bricks Builder...');
             const bricksBuilder = mp.bricks();
-
-            const renderCardPaymentBrick = async () => {
-                const settings = {
-                    initialization: {
-                        amount: auction.current_price,
-                    },
-                    callbacks: {
-                        onReady: () => {
-                            console.log('✅ Card Brick pronto!');
-                        },
-                        onSubmit: (formData, additionalData) => {
-                            return new Promise((resolve, reject) => {
-                                setIsProcessing(true);
-                                
-                                const submitData = {
-                                    type: "online",
-                                    total_amount: String(formData.transaction_amount),
-                                    external_reference: `auction_${auction.id}_${Date.now()}`,
-                                    processing_mode: "automatic",
-                                    transactions: {
-                                        payments: [
-                                            {
-                                                amount: String(formData.transaction_amount),
-                                                payment_method: {
-                                                    id: formData.payment_method_id,
-                                                    type: additionalData?.paymentTypeId || 'credit_card',
-                                                    token: formData.token,
-                                                    installments: formData.installments,
-                                                },
-                                            },
-                                        ],
-                                    },
-                                    payer: {
-                                        email: formData.payer.email,
-                                        identification: formData.payer.identification,
-                                    },
-                                };
-
-                                processCardPayment({
-                                    auction_id: auction.id,
-                                    transaction_amount: formData.transaction_amount,
-                                    token: formData.token,
-                                    payment_method_id: formData.payment_method_id,
-                                    installments: formData.installments,
-                                    payer: {
-                                        email: formData.payer.email,
-                                        identification: formData.payer.identification
-                                    }
-                                })
-                                    .then((response) => {
-                                        if (response.data.success) {
-                                            toast.success('Pagamento processado!');
-                                            navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
-                                            resolve();
-                                        } else {
-                                            toast.error(response.data.error || 'Erro ao processar pagamento');
-                                            reject();
-                                        }
-                                    })
-                                    .catch((error) => {
-                                        console.error('❌ Erro:', error);
-                                        toast.error('Erro ao processar pagamento');
-                                        reject();
-                                    })
-                                    .finally(() => {
-                                        setIsProcessing(false);
-                                    });
-                            });
-                        },
-                        onError: (error) => {
-                            console.error('❌ Erro Brick:', error);
-                        },
-                    },
-                };
-
-                console.log('🔧 Criando Card Payment Brick...');
-                window.cardPaymentBrickController = await bricksBuilder.create(
-                    'cardPayment',
-                    'cardPaymentBrick_container',
-                    settings
-                );
-                brickControllerRef.current = window.cardPaymentBrickController;
-                console.log('✅ Card Brick criado!');
-            };
-
-            await renderCardPaymentBrick();
             
+            await renderCardPaymentBrick(bricksBuilder);
+            brickControllerRef.current = window.cardPaymentBrickController;
+            console.log('✅ Brick criado!');
         } catch (error) {
-            console.error('❌ Erro crítico:', error);
-            toast.error('Erro ao carregar formulário. Verifique o console.');
+            console.error('Erro:', error);
+            toast.error('Erro ao carregar formulário');
         }
     };
 
