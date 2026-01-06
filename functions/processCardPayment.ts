@@ -127,11 +127,13 @@ Deno.serve(async (req) => {
             }, { status: 422 });
         }
 
-        // ✅ PAGAMENTO APROVADO/PROCESSADO
+        // ✅ PAGAMENTO APROVADO/PROCESSADO/EM ANÁLISE
         const isApproved = 
             paymentStatus === 'processed' || 
             paymentStatus === 'approved' ||
-            orderStatus === 'processed';
+            paymentStatus === 'in_review' ||
+            orderStatus === 'processed' ||
+            orderStatus === 'in_review';
 
         // Salvar no banco
         await base44.entities.MercadoPagoPayment.create({

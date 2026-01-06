@@ -251,7 +251,14 @@ export default function CheckoutPage() {
                                 
                                 if (response?.data?.success) {
                                     console.log('✅ [9/10] SUCESSO!');
-                                    toast.success('Pagamento aprovado!');
+                                    
+                                    // Se está em análise, avisar o usuário
+                                    if (response.data.payment_status === 'in_review') {
+                                        toast.success('Pagamento recebido! Em análise pela administradora do cartão.');
+                                    } else {
+                                        toast.success('Pagamento aprovado!');
+                                    }
+                                    
                                     navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
                                     resolve();
                                 } else {
