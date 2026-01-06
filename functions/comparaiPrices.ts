@@ -1,3 +1,4 @@
+// Comparai Prices Function - Updated 2026-01-06
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { searchGoogleShopping } from './searchGoogleShopping.js';
 import { fallbackSmartSearch } from './fallbackSmartSearch.js';
