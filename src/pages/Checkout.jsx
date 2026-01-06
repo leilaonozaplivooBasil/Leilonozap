@@ -18,7 +18,6 @@ export default function CheckoutPage() {
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [pixData, setPixData] = useState(null);
     const [mpLoaded, setMpLoaded] = useState(false);
-    const [mpPublicKey, setMpPublicKey] = useState(null);
     const brickControllerRef = useRef(null);
     const navigate = useNavigate();
 
@@ -50,16 +49,6 @@ export default function CheckoutPage() {
                 }
 
                 setAuction(auctions[0]);
-
-                // Buscar chave pública do Mercado Pago
-                const { data: keyData } = await base44.functions.invoke('getMercadoPagoPublicKey', {});
-                if (keyData.public_key) {
-                    setMpPublicKey(keyData.public_key);
-                    console.log('✅ Chave pública MP carregada');
-                } else {
-                    console.error('❌ Erro ao carregar chave pública MP');
-                    toast.error('Erro ao carregar configurações de pagamento');
-                }
 
                 // Carregar SDK do Mercado Pago
                 if (!window.MercadoPago) {
@@ -196,14 +185,8 @@ export default function CheckoutPage() {
             } catch (e) {}
         }
 
-        if (!mpPublicKey) {
-            toast.error('Chave pública não carregada');
-            return;
-        }
-
         try {
-            console.log('🔑 Usando chave pública:', mpPublicKey);
-            const mp = new window.MercadoPago(mpPublicKey, {
+            const mp = new window.MercadoPago('APP_USR-dc1d3fcf-1ea5-47da-a68e-bae13a93a7aa', {
                 locale: 'pt-BR'
             });
             const bricksBuilder = mp.bricks();
@@ -275,14 +258,14 @@ export default function CheckoutPage() {
     };
 
     useEffect(() => {
-        if (paymentMethod === 'card' && mpLoaded && auction && mpPublicKey) {
+        if (paymentMethod === 'card' && mpLoaded && auction) {
             const timer = setTimeout(() => {
                 initCardBrick();
             }, 100);
 
             return () => clearTimeout(timer);
         }
-    }, [paymentMethod, mpLoaded, auction, mpPublicKey]);
+    }, [paymentMethod, mpLoaded, auction]);
 
     if (isLoading) {
         return (
