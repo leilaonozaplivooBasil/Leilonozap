@@ -21,7 +21,7 @@ export default function CheckoutPage() {
     const [error, setError] = useState(null);
     const [selectedMethod, setSelectedMethod] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [step, setStep] = useState('address'); // address -> payment -> card (se cartão)
+    const [step, setStep] = useState('address');
     const [formData, setFormData] = useState({
         cpf: '',
         phone: '',
@@ -64,7 +64,6 @@ export default function CheckoutPage() {
             const currentUser = JSON.parse(savedUser);
             setUser(currentUser);
             
-            // Preenche dados existentes no formulário
             setFormData({
                 cpf: currentUser.cpf || '',
                 phone: currentUser.phone || '',
@@ -77,12 +76,10 @@ export default function CheckoutPage() {
                 address_zip_code: currentUser.address_zip_code || ''
             });
             
-            // Se já tem todos os dados, pula para pagamento
             if (currentUser.cpf && currentUser.address_zip_code) {
                 setStep('payment');
             }
 
-            // Busca pedido
             const auctions = await base44.entities.Auction.filter({ id: orderId });
             
             if (!auctions || auctions.length === 0) {
@@ -99,7 +96,6 @@ export default function CheckoutPage() {
             
             setOrder(auction);
 
-            // Verifica se já existe pagamento
             try {
                 const statusResponse = await base44.functions.invoke('checkPaymentStatus', {
                     order_id: orderId
@@ -130,35 +126,25 @@ export default function CheckoutPage() {
     const handleAddressSubmit = async (e) => {
         e.preventDefault();
         
-        console.log('🚀 Iniciando submit do formulário', formData);
-        
-        // Valida campos obrigatórios
         if (!formData.cpf || !formData.phone || !formData.address_zip_code || !formData.address_street || !formData.address_city || !formData.address_state) {
-            console.error('❌ Campos obrigatórios faltando');
             toast.error('Preencha todos os campos obrigatórios');
             return;
         }
         
         try {
             setIsProcessing(true);
-            console.log('✅ Atualizando usuário...', user.id);
             
-            // Atualiza dados do usuário
             await base44.entities.AppUser.update(user.id, formData);
             
-            console.log('✅ Dados salvos no banco');
-            
-            // Atualiza localStorage
             const updatedUser = { ...user, ...formData };
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             setUser(updatedUser);
             
-            console.log('✅ Avançando para pagamento');
             toast.success('Dados salvos!');
             setStep('payment');
             
         } catch (err) {
-            console.error('❌ Erro ao salvar dados:', err);
+            console.error('Erro ao salvar dados:', err);
             toast.error(err.message || 'Erro ao salvar dados');
         } finally {
             setIsProcessing(false);
@@ -168,11 +154,9 @@ export default function CheckoutPage() {
     const handleSelectMethod = (method) => {
         setSelectedMethod(method);
         
-        // Se escolher PIX, já gera o pagamento
         if (method === 'pix') {
             handleCreatePixPayment();
         }
-        // Se escolher cartão, vai para formulário de cartão
         if (method === 'credit_card') {
             setStep('card');
         }
@@ -225,7 +209,6 @@ export default function CheckoutPage() {
         try {
             setIsProcessing(true);
             
-            // Valida dados do cartão
             if (!cardData.number || !cardData.holder_name || !cardData.expiration_month || !cardData.expiration_year || !cardData.cvv) {
                 toast.error('Preencha todos os dados do cartão');
                 return;
@@ -297,7 +280,6 @@ export default function CheckoutPage() {
             }
         }, 3000);
 
-        // Para de verificar após 10 minutos
         setTimeout(() => clearInterval(interval), 600000);
     };
 
@@ -352,7 +334,6 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
-                    {/* Resumo do Pedido */}
                     <Card className={`bg-gray-800/60 border-gray-700 ${step === 'payment' ? 'md:col-span-1' : 'md:col-span-2'}`}>
                         <CardHeader>
                             <CardTitle className="text-white">Resumo do Pedido</CardTitle>
@@ -391,7 +372,6 @@ export default function CheckoutPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Dados / Pagamento / Cartão */}
                     {step === 'address' ? (
                         <Card className="bg-gray-800/60 border-gray-700 md:col-span-1">
                             <CardHeader>
@@ -662,7 +642,6 @@ export default function CheckoutPage() {
                             <CardContent className="space-y-6">
                             
                             {payment?.qr_code ? (
-                                // Mostra QR Code do PIX
                                 <div className="text-center py-4">
                                     <Clock className="w-12 h-12 text-yellow-400 animate-pulse mx-auto mb-4" />
                                     <p className="text-white font-semibold mb-2">Escaneie o QR Code</p>
@@ -709,11 +688,10 @@ export default function CheckoutPage() {
                                 </div>
                             ) : (
                                 <>
-                                    {/* Seleção de Método */}
                                     <div className="space-y-3">
-                                        {/* PIX */}
                                         <button
                                             onClick={() => handleSelectMethod('pix')}
+                                            disabled={isProcessing}
                                             className={`w-full border-2 rounded-lg p-4 transition-all ${
                                                 selectedMethod === 'pix'
                                                     ? 'border-green-500 bg-green-500/10'
@@ -726,13 +704,12 @@ export default function CheckoutPage() {
                                                     <p className="text-white font-semibold">PIX</p>
                                                     <p className="text-xs text-gray-400">Aprovação instantânea</p>
                                                 </div>
-                                                {selectedMethod === 'pix' && (
-                                                    <CheckCircle2 className="w-5 h-5 text-green-400 ml-auto" />
+                                                {selectedMethod === 'pix' && isProcessing && (
+                                                    <Loader2 className="w-5 h-5 text-green-400 ml-auto animate-spin" />
                                                 )}
                                             </div>
                                         </button>
 
-                                        {/* Cartão de Crédito */}
                                         <button
                                             onClick={() => handleSelectMethod('credit_card')}
                                             disabled={isProcessing}
@@ -748,9 +725,6 @@ export default function CheckoutPage() {
                                                     <p className="text-white font-semibold">Cartão de Crédito</p>
                                                     <p className="text-xs text-gray-400">Até 12x sem juros</p>
                                                 </div>
-                                                {selectedMethod === 'credit_card' && (
-                                                    <CheckCircle2 className="w-5 h-5 text-blue-400 ml-auto" />
-                                                )}
                                             </div>
                                         </button>
                                     </div>
