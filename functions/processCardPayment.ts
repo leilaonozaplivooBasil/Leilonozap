@@ -72,20 +72,66 @@ Deno.serve(async (req) => {
         });
 
         const order = await response.json();
-        console.log('Resposta MP:', order);
+        console.log('📥 Resposta completa MP:', JSON.stringify(order, null, 2));
 
-        if (!response.ok) {
-            console.error('Erro MP:', order);
+        // 🔍 EXTRAIR STATUS REAL
+        const paymentTransaction = order.transactions?.payments?.[0] || order.data?.transactions?.payments?.[0];
+        const paymentStatus = paymentTransaction?.status;
+        const statusDetail = paymentTransaction?.status_detail || order.data?.status_detail || order.status_detail;
+        const orderStatus = order.data?.status || order.status;
+        const paymentId = paymentTransaction?.id || order.id || order.data?.id;
+
+        console.log('🔍 STATUS ANALYSIS:', {
+            http_status: response.status,
+            order_status: orderStatus,
+            payment_status: paymentStatus,
+            status_detail: statusDetail,
+            has_errors: !!order.errors
+        });
+
+        // ❌ DETECTAR FALHA REAL
+        const isFailed = 
+            !response.ok || 
+            orderStatus === 'failed' || 
+            paymentStatus === 'failed' || 
+            paymentStatus === 'rejected' ||
+            statusDetail?.includes('invalid') ||
+            order.errors;
+
+        if (isFailed) {
+            console.error('❌ PAGAMENTO REJEITADO:', {
+                status: paymentStatus,
+                detail: statusDetail,
+                errors: order.errors
+            });
+
+            // Salvar falha no banco
+            await base44.entities.MercadoPagoPayment.create({
+                auction_id,
+                user_id: user.id,
+                payment_id: String(paymentId),
+                amount: transaction_amount,
+                external_reference: externalReference,
+                status: 'failed',
+                payment_method: payment_method_id
+            });
+
             return Response.json({ 
                 success: false,
-                error: order.message || 'Falha ao processar pagamento' 
+                error: statusDetail || order.errors?.[0]?.message || 'Pagamento rejeitado pelo Mercado Pago',
+                details: {
+                    status: paymentStatus,
+                    status_detail: statusDetail,
+                    errors: order.errors
+                }
             }, { status: 422 });
         }
 
-        // Extrair dados do pagamento
-        const paymentTransaction = order.transactions?.payments?.[0];
-        const paymentId = paymentTransaction?.id || order.id;
-        const paymentStatus = paymentTransaction?.status || order.status;
+        // ✅ PAGAMENTO APROVADO/PROCESSADO
+        const isApproved = 
+            paymentStatus === 'processed' || 
+            paymentStatus === 'approved' ||
+            orderStatus === 'processed';
 
         // Salvar no banco
         await base44.entities.MercadoPagoPayment.create({
@@ -94,23 +140,24 @@ Deno.serve(async (req) => {
             payment_id: String(paymentId),
             amount: transaction_amount,
             external_reference: externalReference,
-            status: paymentStatus === 'processed' ? 'approved' : paymentStatus,
+            status: isApproved ? 'approved' : paymentStatus,
             payment_method: payment_method_id
         });
 
-        // Se aprovado/processado, atualizar leilão
-        if (paymentStatus === 'processed' || order.status === 'processed') {
+        // Se aprovado, atualizar leilão
+        if (isApproved) {
             await base44.entities.Auction.update(auction_id, {
                 order_status: 'paid'
             });
         }
 
         return Response.json({
-            success: true,
-            order_id: order.id,
+            success: isApproved,
+            order_id: order.data?.id || order.id,
             payment_id: paymentId,
-            status: order.status,
-            status_detail: order.status_detail
+            status: orderStatus,
+            payment_status: paymentStatus,
+            status_detail: statusDetail
         });
 
     } catch (error) {
