@@ -30,8 +30,9 @@ Deno.serve(async (req) => {
     });
 
     if (!paymentResponse.ok) {
-      console.error('Erro ao buscar pagamento');
-      return Response.json({ error: 'Erro ao buscar pagamento' }, { status: 500 });
+      const errorText = await paymentResponse.text();
+      console.error('❌ Erro ao buscar pagamento MP:', paymentResponse.status, errorText);
+      return Response.json({ error: 'Erro ao buscar pagamento', details: errorText }, { status: 500 });
     }
 
     const payment = await paymentResponse.json();
