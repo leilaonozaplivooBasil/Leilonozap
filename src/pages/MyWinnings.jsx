@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { mercadopagoCheckout } from '@/functions/mercadopagoCheckout';
+import { toast } from 'sonner';
 
 
 const statusConfigNozap = {
@@ -29,7 +31,7 @@ const statusConfigSaiDeBaixo = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-100 text-red-700 border-red-300" },
 };
 
-const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
+const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => {
     const statusConfig = isSaiDeBaixo ? statusConfigSaiDeBaixo : statusConfigNozap;
     const config = statusConfig[auction.order_status] || statusConfig.awaiting_payment;
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
@@ -55,6 +57,15 @@ const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
                     {config.text}
                 </Badge>
                 <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    {auction.order_status === 'awaiting_payment' && (
+                        <Button 
+                            onClick={() => onPayClick(auction)}
+                            className="flex-1 bg-green-600 hover:bg-green-700"
+                        >
+                            <CreditCard className="w-4 h-4 mr-2" />
+                            Pagar com Mercado Pago
+                        </Button>
+                    )}
                     <Button 
                         onClick={() => onTrackClick(auction)}
                         variant="outline"
@@ -73,6 +84,7 @@ export default function MyWinningsPage() {
     const [winnings, setWinnings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -112,6 +124,30 @@ export default function MyWinningsPage() {
     const handleTrackClick = (auction) => {
         const trackingPage = isSaiDeBaixo ? 'OrderTrackingSaiDeBaixo' : 'OrderTracking';
         navigate(createPageUrl(trackingPage) + `?auction_id=${auction.id}`);
+    };
+
+    const handlePayClick = async (auction) => {
+        if (isProcessing) return;
+        
+        setIsProcessing(true);
+        try {
+            toast.info("Criando link de pagamento...");
+            
+            const response = await mercadopagoCheckout({
+                auction_id: auction.id
+            });
+
+            if (response?.success && response?.checkout_url) {
+                window.location.href = response.checkout_url;
+            } else {
+                toast.error("Erro ao criar link de pagamento");
+            }
+        } catch (error) {
+            console.error("Erro no pagamento:", error);
+            toast.error(`Erro: ${error.message}`);
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
 
@@ -164,6 +200,7 @@ export default function MyWinningsPage() {
                                 key={auction.id} 
                                 auction={auction} 
                                 onTrackClick={handleTrackClick}
+                                onPayClick={handlePayClick}
                                 isSaiDeBaixo={false} 
                             />
                         ))}
