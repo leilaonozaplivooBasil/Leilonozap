@@ -83,7 +83,7 @@ export default function CheckoutPage() {
             }
 
             // Busca pedido
-            const auctions = await base44.entities.Auction.filter({ id: orderId });
+            const auctions = await base44.asServiceRole.entities.Auction.filter({ id: orderId });
             
             if (!auctions || auctions.length === 0) {
                 setError('Pedido não encontrado');
@@ -727,26 +727,26 @@ export default function CheckoutPage() {
 
                                         {/* Cartão de Crédito */}
                                         <button
-                                           onClick={() => handleSelectMethod('credit_card')}
-                                           disabled={isProcessing}
-                                           className={`w-full border-2 rounded-lg p-4 transition-all ${
-                                               selectedMethod === 'credit_card'
-                                                   ? 'border-blue-500 bg-blue-500/10'
-                                                   : 'border-gray-600 hover:border-gray-500'
-                                           }`}
+                                            onClick={() => handleSelectMethod('credit_card')}
+                                            disabled={isProcessing}
+                                            className={`w-full border-2 rounded-lg p-4 transition-all ${
+                                                selectedMethod === 'credit_card'
+                                                    ? 'border-blue-500 bg-blue-500/10'
+                                                    : 'border-gray-600 hover:border-gray-500'
+                                            }`}
                                         >
-                                           <div className="flex items-center gap-3">
-                                               <CreditCard className="w-8 h-8 text-blue-400" />
-                                               <div className="text-left">
-                                                   <p className="text-white font-semibold">Cartão de Crédito</p>
-                                                   <p className="text-xs text-gray-400">Até 12x sem juros</p>
-                                               </div>
-                                               {selectedMethod === 'credit_card' && (
-                                                   <CheckCircle2 className="w-5 h-5 text-blue-400 ml-auto" />
-                                               )}
-                                           </div>
+                                            <div className="flex items-center gap-3">
+                                                <CreditCard className="w-8 h-8 text-blue-400" />
+                                                <div className="text-left">
+                                                    <p className="text-white font-semibold">Cartão de Crédito</p>
+                                                    <p className="text-xs text-gray-400">Até 12x sem juros</p>
+                                                </div>
+                                                {selectedMethod === 'credit_card' && (
+                                                    <CheckCircle2 className="w-5 h-5 text-blue-400 ml-auto" />
+                                                )}
+                                            </div>
                                         </button>
-                                        </div>
+                                    </div>
 
                                     <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
                                         <div className="flex items-center gap-2 mb-2">
