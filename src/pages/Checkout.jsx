@@ -155,10 +155,22 @@ export default function CheckoutPage() {
         try {
             setIsProcessing(true);
             console.log('💾 Salvando no banco...');
+            console.log('👤 User:', user);
+            console.log('🆔 User ID:', user.id);
             
-            await base44.entities.AppUser.update(user.id, formData);
+            // Busca o usuário real pelo email
+            const users = await base44.entities.AppUser.filter({ email: user.email });
             
-            const updatedUser = { ...user, ...formData };
+            if (!users || users.length === 0) {
+                throw new Error('Usuário não encontrado no banco');
+            }
+            
+            const realUser = users[0];
+            console.log('✅ Usuário encontrado:', realUser.id);
+            
+            await base44.entities.AppUser.update(realUser.id, formData);
+            
+            const updatedUser = { ...realUser, ...formData };
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             setUser(updatedUser);
             
