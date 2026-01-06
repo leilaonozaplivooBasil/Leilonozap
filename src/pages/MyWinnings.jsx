@@ -137,7 +137,7 @@ export default function MyWinningsPage() {
     };
 
     const handlePayClick = (auction) => {
-        navigate(createPageUrl('Checkout') + `/${auction.id}`);
+        navigate(createPageUrl('Checkout') + `?order_id=${auction.id}`);
     };
 
 

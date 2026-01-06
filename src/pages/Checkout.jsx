@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CheckCircle2, AlertCircle, CreditCard, Copy } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CheckoutPage() {
-    const { orderId } = useParams();
     const navigate = useNavigate();
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('order_id');
     
     const [isLoading, setIsLoading] = useState(true);
     const [order, setOrder] = useState(null);
