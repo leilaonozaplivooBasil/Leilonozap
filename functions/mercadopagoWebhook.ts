@@ -6,6 +6,65 @@ Deno.serve(async (req) => {
   try {
     console.log('🔔 Webhook recebido do Mercado Pago');
     
+    // ✅ VALIDAÇÃO DE ASSINATURA
+    const webhookSecret = Deno.env.get('MERCADOPAGO_WEBHOOK_SECRET');
+    if (webhookSecret) {
+      const xSignature = req.headers.get('x-signature');
+      const xRequestId = req.headers.get('x-request-id');
+      
+      if (!xSignature || !xRequestId) {
+        console.error('❌ Assinatura não encontrada nos headers');
+        await base44.asServiceRole.entities.SystemLog.create({
+          step: 'MERCADOPAGO_WEBHOOK_SIGNATURE_MISSING',
+          status: 'error',
+          message: 'Webhook rejeitado - assinatura ausente',
+          component_name: 'mercadopagoWebhook'
+        }).catch(() => {});
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      
+      // Valida assinatura do Mercado Pago
+      const url = new URL(req.url);
+      const dataId = url.searchParams.get('id') || url.searchParams.get('data.id');
+      const signatureParts = xSignature.split(',');
+      
+      let ts, hash;
+      for (const part of signatureParts) {
+        const [key, value] = part.split('=');
+        if (key.trim() === 'ts') ts = value;
+        if (key.trim() === 'v1') hash = value;
+      }
+      
+      if (ts && hash) {
+        const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+        const encoder = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+          'raw',
+          encoder.encode(webhookSecret),
+          { name: 'HMAC', hash: 'SHA-256' },
+          false,
+          ['sign']
+        );
+        const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(manifest));
+        const calculatedHash = Array.from(new Uint8Array(signature))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+        
+        if (calculatedHash !== hash) {
+          console.error('❌ Assinatura inválida');
+          await base44.asServiceRole.entities.SystemLog.create({
+            step: 'MERCADOPAGO_WEBHOOK_INVALID_SIGNATURE',
+            status: 'error',
+            message: 'Webhook rejeitado - assinatura inválida',
+            component_name: 'mercadopagoWebhook'
+          }).catch(() => {});
+          return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        console.log('✅ Assinatura validada com sucesso');
+      }
+    }
+    
     const url = new URL(req.url);
     
     // Mercado Pago envia notificações via query params
