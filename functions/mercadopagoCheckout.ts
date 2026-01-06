@@ -3,13 +3,24 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    
+    console.log('🔵 Iniciando mercadopagoCheckout...');
+    
+    let user;
+    try {
+      user = await base44.auth.me();
+      console.log('✅ Usuário autenticado:', user.email);
+    } catch (authError) {
+      console.error('❌ Erro de autenticação:', authError.message);
+      return Response.json({ error: 'Não autenticado. Faça login primeiro.' }, { status: 401 });
+    }
     
     if (!user) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { auction_id } = await req.json();
+    console.log('🔵 Auction ID:', auction_id);
     
     if (!auction_id) {
       return Response.json({ error: 'auction_id é obrigatório' }, { status: 400 });
