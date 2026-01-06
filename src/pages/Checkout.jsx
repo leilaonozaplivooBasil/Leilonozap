@@ -225,19 +225,7 @@ export default function CheckoutPage() {
                             console.log('📦 DADOS DO BRICK:', JSON.stringify(formData, null, 2));
                             console.log('📦 ADDITIONAL DATA:', JSON.stringify(additionalData, null, 2));
                             
-                            // Loga no SystemLog para debug
-                            base44.entities.SystemLog.create({
-                                step: 'Brick_FormData_Received',
-                                status: 'info',
-                                message: 'Dados recebidos do Brick',
-                                component_name: 'Checkout',
-                                payload: {
-                                    formData: formData,
-                                    additionalData: additionalData,
-                                    hasToken: !!formData.token,
-                                    tokenLength: formData.token?.length || 0
-                                }
-                            }).catch(e => console.error('Falha ao logar:', e));
+                            console.log('🚀 INICIANDO processCardPayment...');
                             
                             processCardPayment({
                                 auction_id: auction.id,
@@ -251,23 +239,25 @@ export default function CheckoutPage() {
                                 }
                             })
                                 .then((response) => {
+                                    console.log('📥 RESPOSTA DO BACKEND:', response);
                                     if (response.data.success) {
                                         toast.success('Pagamento processado!');
                                         navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
                                         resolve();
                                     } else {
                                         const errorMsg = response.data.error || 'Erro ao processar pagamento';
-                                        logErrorToArquiteto('PAYMENT_PROCESSING_FAILED', errorMsg, new Error(errorMsg));
+                                        console.error('❌ FALHA:', errorMsg);
                                         toast.error(errorMsg);
                                         reject();
                                     }
                                 })
                                 .catch((error) => {
-                                    logErrorToArquiteto('PAYMENT_REQUEST_FAILED', error.message, error);
-                                    toast.error('Erro ao processar');
+                                    console.error('❌ ERRO AO CHAMAR BACKEND:', error);
+                                    toast.error(`Erro: ${error.message}`);
                                     reject();
                                 })
                                 .finally(() => {
+                                    console.log('🏁 Finalizando...');
                                     setIsProcessing(false);
                                 });
                         });
