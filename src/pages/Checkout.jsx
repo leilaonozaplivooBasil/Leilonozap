@@ -191,6 +191,9 @@ export default function CheckoutPage() {
     const handlePixPayment = async () => {
         try {
             setIsProcessing(true);
+            console.log('🔥 INICIANDO PIX');
+            console.log('📦 Order ID:', orderId);
+            console.log('👤 User CPF:', user.cpf);
             toast.info('Gerando QR Code PIX...');
             
             const response = await base44.functions.invoke('createMercadoPagoOrder', {
@@ -211,19 +214,28 @@ export default function CheckoutPage() {
                 }
             });
 
+            console.log('📨 Resposta completa:', response);
             const data = response?.data || response;
+            console.log('📊 Data extraída:', data);
 
             if (data?.success) {
+                console.log('✅ Success detectado!');
+                console.log('🔑 QR Code presente?', !!data.qr_code);
+                console.log('🔑 QR Code Base64 presente?', !!data.qr_code_base64);
+                
                 setPayment(data);
                 setStep('pix_qr');
                 toast.success('QR Code gerado!');
                 startPaymentPolling();
             } else {
+                console.error('❌ Success não detectado');
                 throw new Error(data?.error || 'Erro ao gerar PIX');
             }
 
         } catch (err) {
-            console.error('Erro PIX:', err);
+            console.error('💥 Erro PIX:', err);
+            console.error('💥 Erro message:', err.message);
+            console.error('💥 Erro response:', err.response);
             toast.error(err.response?.data?.error || err.message || 'Erro ao processar PIX');
         } finally {
             setIsProcessing(false);
