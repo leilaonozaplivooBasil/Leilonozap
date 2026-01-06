@@ -53,11 +53,14 @@ export default function CheckoutPage() {
                 setAuction(auctions[0]);
 
                 // Buscar public key do backend
-                const pkResponse = await getMPPublicKey();
-                if (pkResponse.data?.public_key) {
-                    setMpPublicKey(pkResponse.data.public_key);
-                } else {
-                    throw new Error('Public key não encontrada');
+                try {
+                    const pkResponse = await getMPPublicKey();
+                    if (pkResponse.data?.public_key) {
+                        setMpPublicKey(pkResponse.data.public_key);
+                    }
+                } catch (pkError) {
+                    console.error('Erro ao buscar public key:', pkError);
+                    toast.error('Erro ao carregar configurações de pagamento');
                 }
 
                 // Carregar SDK do Mercado Pago
