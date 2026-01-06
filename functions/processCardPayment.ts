@@ -28,62 +28,73 @@ Deno.serve(async (req) => {
         }
 
         const externalReference = `${auction_id}_${Date.now()}`;
+        const idempotencyKey = `${auction_id}_${user.id}_${Date.now()}`;
 
-        // Criar pagamento com cartão
-        const paymentData = {
-            transaction_amount: Number(transaction_amount),
-            token: token,
-            description: `Arremate Leilão - ${auction_id}`,
-            installments: Number(installments),
-            payment_method_id: payment_method_id,
-            payer: {
-                email: payer.email,
-                identification: {
-                    type: payer.identification.type,
-                    number: payer.identification.number
-                }
-            },
+        // Criar order com pagamento (API Orders)
+        const orderData = {
+            type: "online",
+            processing_mode: "automatic",
+            total_amount: String(transaction_amount),
             external_reference: externalReference,
-            notification_url: `${Deno.env.get('BASE44_APP_URL')}/api/mercadoPagoWebhook`,
-            statement_descriptor: 'LEILAO NOZAP'
+            payer: {
+                email: payer.email
+            },
+            transactions: {
+                payments: [
+                    {
+                        amount: String(transaction_amount),
+                        payment_method: {
+                            id: payment_method_id,
+                            type: payment_method_id.includes('debit') ? 'debit_card' : 'credit_card',
+                            token: token,
+                            installments: Number(installments)
+                        }
+                    }
+                ]
+            }
         };
 
-        console.log('Criando pagamento:', paymentData);
+        console.log('Criando order:', orderData);
 
-        const response = await fetch('https://api.mercadopago.com/v1/payments', {
+        const response = await fetch('https://api.mercadopago.com/v1/orders', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
-                'X-Idempotency-Key': externalReference
+                'X-Idempotency-Key': idempotencyKey
             },
-            body: JSON.stringify(paymentData)
+            body: JSON.stringify(orderData)
         });
 
-        const payment = await response.json();
-        console.log('Resposta MP:', payment);
+        const order = await response.json();
+        console.log('Resposta MP:', order);
 
         if (!response.ok) {
-            console.error('Erro MP:', payment);
+            console.error('Erro MP:', order);
             return Response.json({ 
                 success: false,
-                error: payment.message || 'Falha ao processar pagamento' 
+                error: order.message || 'Falha ao processar pagamento' 
             }, { status: 422 });
         }
+
+        // Extrair dados do pagamento
+        const paymentTransaction = order.transactions?.payments?.[0];
+        const paymentId = paymentTransaction?.id || order.id;
+        const paymentStatus = paymentTransaction?.status || order.status;
 
         // Salvar no banco
         await base44.entities.MercadoPagoPayment.create({
             auction_id,
             user_id: user.id,
-            payment_id: String(payment.id),
+            payment_id: String(paymentId),
             amount: transaction_amount,
             external_reference: externalReference,
-            status: payment.status,
-            payment_method: payment.payment_type_id
+            status: paymentStatus === 'processed' ? 'approved' : paymentStatus,
+            payment_method: payment_method_id
         });
 
-        // Se aprovado, atualizar leilão
-        if (payment.status === 'approved') {
+        // Se aprovado/processado, atualizar leilão
+        if (paymentStatus === 'processed' || order.status === 'processed') {
             await base44.entities.Auction.update(auction_id, {
                 order_status: 'paid'
             });
@@ -91,9 +102,10 @@ Deno.serve(async (req) => {
 
         return Response.json({
             success: true,
-            payment_id: payment.id,
-            status: payment.status,
-            status_detail: payment.status_detail
+            order_id: order.id,
+            payment_id: paymentId,
+            status: order.status,
+            status_detail: order.status_detail
         });
 
     } catch (error) {
