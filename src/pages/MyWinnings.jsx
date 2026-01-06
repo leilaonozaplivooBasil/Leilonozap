@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useLocation } from 'react-router-dom';
-import { createAbacatePayPix } from '@/functions/createAbacatePayPix';
-import { checkAbacatePayPix } from '@/functions/checkAbacatePayPix';
-import { stripeCheckout } from '@/functions/stripeCheckout';
+
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
@@ -13,11 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
-import { Copy } from 'lucide-react';
+
 
 const statusConfigNozap = {
   awaiting_payment: { text: "Aguardando Pagamento", icon: CreditCard, color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30" },
@@ -35,7 +29,7 @@ const statusConfigSaiDeBaixo = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-100 text-red-700 border-red-300" },
 };
 
-const WonAuctionCard = ({ auction, onPayClick, onTrackClick, isSaiDeBaixo }) => {
+const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
     const statusConfig = isSaiDeBaixo ? statusConfigSaiDeBaixo : statusConfigNozap;
     const config = statusConfig[auction.order_status] || statusConfig.awaiting_payment;
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
@@ -61,15 +55,6 @@ const WonAuctionCard = ({ auction, onPayClick, onTrackClick, isSaiDeBaixo }) => 
                     {config.text}
                 </Badge>
                 <div className="flex flex-col sm:flex-row gap-2 w-full">
-                    {auction.order_status === 'awaiting_payment' && (
-                         <Button 
-                            onClick={() => onPayClick(auction)}
-                            className={`flex-1 ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700 shadow-lg shadow-red-500/20' : 'bg-green-600 hover:bg-green-700 shadow-lg shadow-green-500/20'}`}
-                         >
-                            <CreditCard className="w-4 h-4 mr-2" />
-                            Pagar Agora
-                        </Button>
-                    )}
                     <Button 
                         onClick={() => onTrackClick(auction)}
                         variant="outline"
@@ -88,19 +73,7 @@ export default function MyWinningsPage() {
     const [winnings, setWinnings] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [selectedAuction, setSelectedAuction] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [paymentMethod, setPaymentMethod] = useState(null);
-    const [pixFormData, setPixFormData] = useState({
-        name: '',
-        phone: '',
-        email: '',
-        cpf: ''
-    });
-    const [pixData, setPixData] = useState(null);
-    const [isCheckingPayment, setIsCheckingPayment] = useState(false);
-    const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -134,174 +107,14 @@ export default function MyWinningsPage() {
         loadData();
     }, []);
 
-    const handlePayClick = (auction) => {
-        setSelectedAuction(auction);
-        setPaymentMethod(null);
-        setPixData(null);
-        setPixFormData({
-            name: currentUser?.full_name || '',
-            phone: currentUser?.phone || '',
-            email: currentUser?.email || '',
-            cpf: currentUser?.cpf || ''
-        });
-        setShowConfirmModal(true);
-    };
+
 
     const handleTrackClick = (auction) => {
         const trackingPage = isSaiDeBaixo ? 'OrderTrackingSaiDeBaixo' : 'OrderTracking';
         navigate(createPageUrl(trackingPage) + `?auction_id=${auction.id}`);
     };
 
-    const handleConfirmCard = async () => {
-        if (!selectedAuction || !currentUser) return;
 
-        setIsProcessing(true);
-        try {
-            toast.info("Criando sessão de pagamento...");
-
-            const response = await stripeCheckout({
-                auction_id: selectedAuction.id
-            });
-
-            console.log('📦 Resposta Stripe:', response);
-
-            if (response?.success && response?.checkout_url) {
-                window.location.href = response.checkout_url;
-            } else {
-                const errorMsg = response?.error || "Erro desconhecido ao criar checkout";
-                console.error('❌ Erro Stripe:', errorMsg);
-                toast.error(errorMsg);
-            }
-        } catch (error) {
-            console.error("❌ Exceção no checkout:", error);
-            toast.error(`Erro: ${error.message || 'Falha na comunicação'}`);
-        } finally {
-            setIsProcessing(false);
-        }
-    };
-
-    const handleCreatePixQRCode = async () => {
-        if (!selectedAuction) return;
-
-        const { name, phone, email, cpf } = pixFormData;
-        if (!name || !phone || !email || !cpf) {
-            toast.error("Preencha todos os campos");
-            return;
-        }
-
-        setIsProcessing(true);
-        try {
-            toast.info("Gerando QR Code PIX...");
-
-            const response = await createAbacatePayPix({
-                auction_id: selectedAuction.id,
-                user_name: name,
-                user_email: email,
-                user_phone: phone,
-                user_cpf: cpf
-            });
-
-            console.log('📦 Resposta completa createAbacatePayPix:', response);
-            console.log('📦 Tipo da resposta:', typeof response);
-            console.log('📦 response.data:', response?.data);
-
-            // ✅ CORREÇÃO: Tratamento robusto da resposta
-            // A função retorna objeto com .data contendo os dados do PIX
-            const pixResponseData = response?.data || response;
-            
-            if (!pixResponseData) {
-                throw new Error('Resposta vazia do servidor');
-            }
-
-            console.log('📦 pixResponseData extraído:', pixResponseData);
-            console.log('📦 pixResponseData.success:', pixResponseData.success);
-
-            // Verifica se tem os dados essenciais do PIX
-            const hasQRCode = pixResponseData.qr_code_base64;
-            const hasPixCode = pixResponseData.pix_code;
-            const hasBillingId = pixResponseData.billing_id;
-
-            if (pixResponseData.success === true && hasQRCode && hasPixCode && hasBillingId) {
-                console.log('✅ PIX gerado com sucesso - dados validados');
-                
-                setPixData({
-                    billing_id: pixResponseData.billing_id,
-                    qr_code_base64: pixResponseData.qr_code_base64,
-                    pix_code: pixResponseData.pix_code,
-                    expires_at: pixResponseData.expires_at,
-                    amount: selectedAuction.current_price
-                });
-                
-                toast.success("QR Code gerado com sucesso!");
-                
-                // Log de sucesso
-                await base44.entities.SystemLog.create({
-                    step: 'PIX_GENERATION_SUCCESS',
-                    status: 'success',
-                    message: 'PIX gerado com sucesso no frontend',
-                    component_name: 'MyWinnings',
-                    entity_id: selectedAuction.id,
-                    payload: { 
-                        auction_id: selectedAuction.id, 
-                        billing_id: pixResponseData.billing_id,
-                        has_qr_code: !!hasQRCode,
-                        has_pix_code: !!hasPixCode
-                    },
-                    user_agent: navigator.userAgent,
-                    url: window.location.href
-                }).catch(() => {});
-            } else {
-                // Identifica qual dado está faltando
-                const missingData = [];
-                if (!pixResponseData.success) missingData.push('success=false');
-                if (!hasQRCode) missingData.push('qr_code_base64');
-                if (!hasPixCode) missingData.push('pix_code');
-                if (!hasBillingId) missingData.push('billing_id');
-
-                const errorMsg = `Dados incompletos do PIX: ${missingData.join(', ')}`;
-                console.error('❌ Resposta com dados faltando:', errorMsg);
-                console.error('❌ Dados recebidos:', pixResponseData);
-                
-                toast.error("Erro ao gerar QR Code: dados incompletos");
-
-                // Log detalhado do erro
-                await base44.entities.SystemLog.create({
-                    step: 'PIX_GENERATION_FRONTEND_ERROR',
-                    status: 'error',
-                    message: 'Falha ao gerar PIX no frontend - dados incompletos',
-                    component_name: 'MyWinnings',
-                    error_details: { 
-                        missing_fields: missingData,
-                        response_data: pixResponseData,
-                        full_response: response
-                    },
-                    payload: { auction_id: selectedAuction.id, name, email },
-                    user_agent: navigator.userAgent,
-                    url: window.location.href
-                }).catch(() => {});
-            }
-        } catch (error) {
-            console.error("❌ Exceção ao gerar PIX:", error);
-            toast.error(`Erro ao gerar QR Code: ${error.message}`);
-
-            // Log da exceção no SystemLog
-            await base44.entities.SystemLog.create({
-                step: 'PIX_GENERATION_API_EXCEPTION',
-                status: 'error',
-                message: error.message || 'Exceção durante chamada de API',
-                component_name: 'MyWinnings',
-                error_details: {
-                    stack: error.stack,
-                    name: error.name
-                },
-                payload: { auction_id: selectedAuction.id },
-                user_agent: navigator.userAgent,
-                url: window.location.href
-            }).catch(() => {});
-        } finally {
-            setIsProcessing(false);
-        }
-    };
 
     if (isLoading) {
         return <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-white' : 'bg-gray-900'} flex items-center justify-center`}><Loader2 className={`w-12 h-12 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-500'} animate-spin`} /></div>;
@@ -350,9 +163,8 @@ export default function MyWinningsPage() {
                             <WonAuctionCard 
                                 key={auction.id} 
                                 auction={auction} 
-                                onPayClick={handlePayClick}
                                 onTrackClick={handleTrackClick}
-                                isSaiDeBaixo={isSaiDeBaixo} 
+                                isSaiDeBaixo={false} 
                             />
                         ))}
                     </div>
