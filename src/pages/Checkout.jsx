@@ -108,13 +108,53 @@ export default function CheckoutPage() {
     const handleAddressSubmit = async (e) => {
         e.preventDefault();
         
+        console.log('🔥 SUBMIT ENDEREÇO');
+        console.log('📦 FormData:', formData);
+        
+        // Validações
+        if (!formData.cpf || formData.cpf.length < 11) {
+            toast.error('CPF inválido');
+            return;
+        }
+        
+        if (!formData.phone) {
+            toast.error('Telefone obrigatório');
+            return;
+        }
+        
+        if (!formData.address_zip_code) {
+            toast.error('CEP obrigatório');
+            return;
+        }
+        
+        if (!formData.address_street) {
+            toast.error('Rua obrigatória');
+            return;
+        }
+        
         if (!formData.address_number) {
-            toast.error('Número do endereço é obrigatório');
+            toast.error('Número obrigatório');
+            return;
+        }
+        
+        if (!formData.address_neighborhood) {
+            toast.error('Bairro obrigatório');
+            return;
+        }
+        
+        if (!formData.address_city) {
+            toast.error('Cidade obrigatória');
+            return;
+        }
+        
+        if (!formData.address_state || formData.address_state.length !== 2) {
+            toast.error('Estado inválido (use sigla: SP, RJ, etc)');
             return;
         }
         
         try {
             setIsProcessing(true);
+            console.log('💾 Salvando no banco...');
             
             await base44.entities.AppUser.update(user.id, formData);
             
@@ -122,11 +162,14 @@ export default function CheckoutPage() {
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             setUser(updatedUser);
             
-            toast.success('Dados salvos!');
+            console.log('✅ Dados salvos!');
+            toast.success('Endereço salvo!');
+            
+            console.log('🚀 Mudando para payment...');
             setStep('payment');
             
         } catch (err) {
-            console.error('Erro ao salvar dados:', err);
+            console.error('💥 Erro ao salvar:', err);
             toast.error(err.message || 'Erro ao salvar dados');
         } finally {
             setIsProcessing(false);
