@@ -126,27 +126,44 @@ export default function CheckoutPage() {
     const handleAddressSubmit = async (e) => {
         e.preventDefault();
         
+        console.log('🔥 SUBMIT INICIADO');
+        console.log('📋 FormData:', formData);
+        console.log('👤 User ID:', user?.id);
+        
         if (!formData.cpf || !formData.phone || !formData.address_zip_code || !formData.address_street || !formData.address_city || !formData.address_state) {
+            console.error('❌ Campos obrigatórios faltando');
             toast.error('Preencha todos os campos obrigatórios');
             return;
         }
         
+        if (!formData.address_number) {
+            console.error('❌ Número obrigatório');
+            toast.error('Número do endereço é obrigatório');
+            return;
+        }
+        
         try {
+            console.log('⏳ Processando...');
             setIsProcessing(true);
             
+            console.log('💾 Atualizando AppUser...');
             await base44.entities.AppUser.update(user.id, formData);
+            console.log('✅ AppUser atualizado!');
             
             const updatedUser = { ...user, ...formData };
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             setUser(updatedUser);
             
+            console.log('🎉 Avançando para pagamento!');
             toast.success('Dados salvos!');
             setStep('payment');
             
         } catch (err) {
-            console.error('Erro ao salvar dados:', err);
+            console.error('💥 ERRO CRÍTICO:', err);
+            console.error('💥 Erro completo:', JSON.stringify(err, null, 2));
             toast.error(err.message || 'Erro ao salvar dados');
         } finally {
+            console.log('🏁 Finalizando...');
             setIsProcessing(false);
         }
     };
