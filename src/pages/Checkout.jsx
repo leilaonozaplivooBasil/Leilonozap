@@ -1,15 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Loader2, CreditCard, QrCode, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { createPixPayment } from '@/functions/createPixPayment';
 import { checkPixPayment } from '@/functions/checkPixPayment';
+import { processCardPayment } from '@/functions/processCardPayment';
 
 export default function CheckoutPage() {
     const [auction, setAuction] = useState(null);
@@ -18,13 +17,8 @@ export default function CheckoutPage() {
     const [currentUser, setCurrentUser] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [pixData, setPixData] = useState(null);
-    const [cardData, setCardData] = useState({
-        number: '',
-        holder: '',
-        expiration: '',
-        cvv: '',
-        installments: 1
-    });
+    const [mpLoaded, setMpLoaded] = useState(false);
+    const brickControllerRef = useRef(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -55,6 +49,16 @@ export default function CheckoutPage() {
                 }
 
                 setAuction(auctions[0]);
+
+                // Carregar SDK do Mercado Pago
+                if (!window.MercadoPago) {
+                    const script = document.createElement('script');
+                    script.src = 'https://sdk.mercadopago.com/js/v2';
+                    script.onload = () => setMpLoaded(true);
+                    document.body.appendChild(script);
+                } else {
+                    setMpLoaded(true);
+                }
             } catch (error) {
                 console.error('Erro:', error);
                 alert('Erro ao carregar dados');
@@ -64,6 +68,12 @@ export default function CheckoutPage() {
         };
 
         loadData();
+
+        return () => {
+            if (brickControllerRef.current) {
+                brickControllerRef.current.unmount();
+            }
+        };
     }, []);
 
     const handlePixPayment = async () => {
@@ -118,6 +128,72 @@ export default function CheckoutPage() {
             toast.success('Código PIX copiado!');
         }
     };
+
+    const initCardBrick = async () => {
+        if (!mpLoaded || !window.MercadoPago) return;
+
+        const mp = new window.MercadoPago(Deno.env.get('MP_PUBLIC_KEY') || 'TEST-YOUR-PUBLIC-KEY');
+        const bricksBuilder = mp.bricks();
+
+        const renderCardPaymentBrick = async () => {
+            const settings = {
+                initialization: {
+                    amount: auction.current_price,
+                },
+                callbacks: {
+                    onReady: () => {
+                        console.log('Card Brick pronto');
+                    },
+                    onSubmit: async (formData) => {
+                        setIsProcessing(true);
+                        try {
+                            const response = await processCardPayment({
+                                auction_id: auction.id,
+                                transaction_amount: formData.transaction_amount,
+                                token: formData.token,
+                                payment_method_id: formData.payment_method_id,
+                                installments: formData.installments,
+                                payer: {
+                                    email: formData.payer.email,
+                                    identification: formData.payer.identification
+                                }
+                            });
+
+                            if (response.data.success) {
+                                toast.success('Pagamento processado!');
+                                navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                            } else {
+                                toast.error(response.data.error || 'Erro ao processar pagamento');
+                            }
+                        } catch (error) {
+                            console.error('Erro:', error);
+                            toast.error('Erro ao processar pagamento');
+                        } finally {
+                            setIsProcessing(false);
+                        }
+                    },
+                    onError: (error) => {
+                        console.error('Erro Brick:', error);
+                        toast.error('Erro no formulário de pagamento');
+                    },
+                },
+            };
+
+            brickControllerRef.current = await bricksBuilder.create(
+                'cardPayment',
+                'cardPaymentBrick_container',
+                settings
+            );
+        };
+
+        await renderCardPaymentBrick();
+    };
+
+    useEffect(() => {
+        if (paymentMethod === 'card' && mpLoaded && auction) {
+            initCardBrick();
+        }
+    }, [paymentMethod, mpLoaded, auction]);
 
     if (isLoading) {
         return (
@@ -185,6 +261,17 @@ export default function CheckoutPage() {
                                             <div className="text-sm text-gray-400">Pagamento instantâneo</div>
                                         </div>
                                     </button>
+
+                                    <button
+                                        onClick={() => setPaymentMethod('card')}
+                                        className="bg-gray-700/50 hover:bg-gray-700 p-4 rounded-lg flex items-center gap-3 transition-colors"
+                                    >
+                                        <CreditCard className="w-8 h-8 text-blue-400" />
+                                        <div className="text-left">
+                                            <div className="font-semibold text-white">Cartão de Crédito</div>
+                                            <div className="text-sm text-gray-400">Parcelamento em até 12x</div>
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
                         ) : paymentMethod === 'pix' && !pixData ? (
@@ -249,6 +336,30 @@ export default function CheckoutPage() {
                                         <span className="text-sm">Aguardando pagamento...</span>
                                     </div>
                                 </div>
+                            </div>
+                        ) : paymentMethod === 'card' ? (
+                            <div className="space-y-4">
+                                <Button
+                                    onClick={() => {
+                                        setPaymentMethod(null);
+                                        if (brickControllerRef.current) {
+                                            brickControllerRef.current.unmount();
+                                        }
+                                    }}
+                                    variant="ghost"
+                                    className="text-gray-400 hover:text-white mb-4"
+                                >
+                                    ← Voltar
+                                </Button>
+
+                                <div id="cardPaymentBrick_container" className="min-h-[400px]"></div>
+
+                                {isProcessing && (
+                                    <div className="flex items-center justify-center gap-2 text-blue-400 mt-4">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span className="text-sm">Processando pagamento...</span>
+                                    </div>
+                                )}
                             </div>
                         ) : null}
 
