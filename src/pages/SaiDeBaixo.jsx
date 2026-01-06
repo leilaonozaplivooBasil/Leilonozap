@@ -426,29 +426,28 @@ export default function SaiDeBaixo() {
         }
       `}</style>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Section - Centralizado */}
-        <div className="mb-8">
-          <div className="relative overflow-hidden bg-white rounded-2xl p-6 border-2 border-gray-200 shadow-lg">
-            {/* Layout Unificado */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              {/* Esquerda: Logo */}
-              <div className="flex-shrink-0">
+        {/* Hero Section - MOBILE FIRST */}
+        <div className="mb-6 sm:mb-8">
+          <div className="relative overflow-hidden bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 border-2 border-gray-200 shadow-lg">
+            <div className="flex flex-col gap-4">
+              {/* Logo centralizada mobile */}
+              <div className="flex justify-center sm:justify-start">
                 <img 
                   src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/4898f3e09_br-11134210-7r98o-lub0ag42vvxhf2.jpg"
                   alt="Sai de Baixo"
-                  className="h-16 lg:h-20 w-auto"
+                  className="h-14 sm:h-16 md:h-20 w-auto"
                 />
               </div>
 
-              {/* Centro: Título e Stats */}
-              <div className="flex-1 text-center lg:text-left">
-                <h1 className="text-2xl lg:text-4xl font-bold mb-2 text-gray-900">
+              {/* Título responsive */}
+              <div className="text-center sm:text-left">
+                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2 text-gray-900">
                   Leilões Exclusivos
                 </h1>
-                <p className="text-gray-600 text-sm lg:text-base mb-2">
-                  {auctions.length} leilões disponíveis. Entre e dê seu lance!
+                <p className="text-gray-600 text-sm sm:text-base mb-3">
+                  {auctions.length} leilões disponíveis
                 </p>
-                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 lg:gap-4 text-xs lg:text-sm text-gray-600">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
                   <div className="flex items-center gap-1.5">
                     <Eye className="w-4 h-4" />
                     <span>{auctions.length > 0 ? Math.min(auctions.length * 8 + 42, 200) : 50} online</span>

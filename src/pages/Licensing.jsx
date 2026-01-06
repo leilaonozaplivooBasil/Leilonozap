@@ -1025,16 +1025,17 @@ const DashboardContent = ({ user, isAdmin }) => {
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8">
+      <div className="flex flex-col gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className={`text-3xl font-bold mb-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Painel do Influenciador</h1>
-          <p className="text-gray-400">
-            Seja bem-vindo, <strong className="text-white">{shortName}</strong>! 
-            <strong className={isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}>Influenciador</strong> {isSaiDeBaixo ? 'Sai de Baixo' : 'da Leilão NoZap'} 👋
+          <h1 className={`text-2xl sm:text-3xl font-bold mb-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+            Painel do Influenciador
+          </h1>
+          <p className="text-sm sm:text-base text-gray-400">
+            👋 <strong className="text-white">{shortName}</strong>
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {isAdmin && (
             <>
               <Button

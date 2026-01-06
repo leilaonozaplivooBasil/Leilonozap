@@ -322,14 +322,16 @@ export default function MyWinningsPage() {
     }
 
     return (
-        <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-gradient-to-br from-gray-50 to-gray-100' : 'bg-gray-900'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} p-4 sm:p-6 lg:p-8`}>
+        <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-gradient-to-br from-gray-50 to-gray-100' : 'bg-gray-900'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} p-3 sm:p-4 md:p-6 lg:p-8`}>
             <div className="max-w-7xl mx-auto">
-                <div className="mb-8">
-                    <h1 className={`text-3xl font-bold flex items-center gap-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                        <Trophy className={`w-8 h-8 ${isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}`} />
+                <div className="mb-6 sm:mb-8">
+                    <h1 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+                        <Trophy className={`w-6 h-6 sm:w-8 sm:h-8 ${isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}`} />
                         Meus Arremates
                     </h1>
-                    <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} mt-2`}>Aqui estão todos os produtos que você venceu nos leilões.</p>
+                    <p className={`text-sm sm:text-base ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} mt-2`}>
+                      Produtos que você arrematou
+                    </p>
                 </div>
 
 
@@ -344,7 +346,7 @@ export default function MyWinningsPage() {
                         </Link>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                         {winnings.map(auction => (
                             <WonAuctionCard 
                                 key={auction.id} 

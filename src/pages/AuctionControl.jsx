@@ -205,12 +205,12 @@ export default function AuctionControl() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
+    <div className="min-h-screen bg-gray-900 p-3 sm:p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Controle de Leilões</h1>
-            <p className="text-gray-400">Gerencie todos os leilões e pagamentos</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Controle de Leilões</h1>
+            <p className="text-sm sm:text-base text-gray-400">Gerencie todos os leilões</p>
           </div>
           <Button
             onClick={loadData}
@@ -281,15 +281,15 @@ export default function AuctionControl() {
 
               return (
                 <Card key={auction.id} className="bg-gray-800 border-gray-700">
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
+                  <div className="p-4 sm:p-6">
+                    <div className="flex flex-col sm:flex-row items-start gap-4">
+                      <div className="flex-1 w-full">
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-xl font-bold text-white">{auction.title}</h3>
                           {getStatusBadge(auction)}
                         </div>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-4">
                           <div>
                             <p className="text-gray-400 text-sm">Preço Atual</p>
                             <p className="text-green-400 font-bold text-lg">
@@ -332,7 +332,7 @@ export default function AuctionControl() {
                         </div>
                       </div>
 
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 w-full sm:w-auto">
                         <Button
                           onClick={() => navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`)}
                           variant="outline"

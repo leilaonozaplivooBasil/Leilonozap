@@ -381,7 +381,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
   }
 
   return (
-    <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-4 sm:p-6 animate-in fade-in-0 overflow-y-auto`}>
+          <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-3 sm:p-4 md:p-6 animate-in fade-in-0 overflow-y-auto`}>
       <Card className={`w-full max-w-md ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} relative my-auto`}>
         <Button 
           variant="ghost" 
