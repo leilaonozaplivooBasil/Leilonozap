@@ -3,87 +3,59 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    
-    console.log('🔵 Iniciando mercadopagoCheckout...');
-    
-    let user;
-    try {
-      user = await base44.auth.me();
-      console.log('✅ Usuário autenticado:', user.email);
-    } catch (authError) {
-      console.error('❌ Erro de autenticação:', authError.message);
-      return Response.json({ error: 'Não autenticado. Faça login primeiro.' }, { status: 401 });
-    }
+    const user = await base44.auth.me();
     
     if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return Response.json({ error: 'Faça login para continuar' }, { status: 401 });
     }
 
     const { auction_id } = await req.json();
-    console.log('🔵 Auction ID:', auction_id);
     
     if (!auction_id) {
-      return Response.json({ error: 'auction_id é obrigatório' }, { status: 400 });
+      return Response.json({ error: 'ID do leilão não informado' }, { status: 400 });
     }
 
-    // Busca o leilão
     const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id });
+    
     if (auctions.length === 0) {
       return Response.json({ error: 'Leilão não encontrado' }, { status: 404 });
     }
+    
     const auction = auctions[0];
-    
-    console.log('🔵 Leilão encontrado:', auction.title);
-    console.log('🔵 Winner ID do leilão:', auction.winner_id);
-    console.log('🔵 User ID atual:', user.id);
 
-    // Verifica se o usuário é o vencedor
     if (auction.winner_id !== user.id) {
-      console.error('❌ Usuário não é o vencedor!');
-      console.error('❌ Winner esperado:', auction.winner_id);
-      console.error('❌ User atual:', user.id);
-      return Response.json({ 
-        error: 'Você não é o vencedor deste leilão',
-        details: {
-          auction_winner: auction.winner_id,
-          current_user: user.id
-        }
-      }, { status: 403 });
+      return Response.json({ error: 'Você não é o vencedor deste leilão' }, { status: 403 });
     }
-    
-    console.log('✅ Verificação de vencedor OK!');
 
     const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
+    
     if (!accessToken) {
       return Response.json({ error: 'Mercado Pago não configurado' }, { status: 500 });
     }
 
-    // Cria preferência de pagamento
+    const origin = req.headers.get('origin') || 'https://leilaonozap.app';
+    
     const preference = {
       items: [{
         title: auction.title,
         quantity: 1,
-        unit_price: auction.current_price,
+        unit_price: Number(auction.current_price),
         currency_id: 'BRL'
       }],
       payer: {
         email: user.email,
-        name: user.full_name
+        name: user.full_name || user.email.split('@')[0]
       },
       back_urls: {
-        success: `${req.headers.get('origin')}/MyWinnings`,
-        failure: `${req.headers.get('origin')}/MyWinnings`,
-        pending: `${req.headers.get('origin')}/MyWinnings`
+        success: `${origin}/MyWinnings`,
+        failure: `${origin}/MyWinnings`,
+        pending: `${origin}/MyWinnings`
       },
       auto_return: 'approved',
-      external_reference: auction_id,
-      notification_url: `${req.headers.get('origin')}/api/mercadopagoWebhook`
+      external_reference: auction_id
     };
 
-    console.log('🔵 Chamando API Mercado Pago...');
-    console.log('🔵 Preferência:', JSON.stringify(preference, null, 2));
-    
-    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -92,43 +64,34 @@ Deno.serve(async (req) => {
       body: JSON.stringify(preference)
     });
 
-    console.log('🔵 Status resposta:', response.status);
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('❌ Erro Mercado Pago:', errorData);
-      return Response.json({ 
-        error: 'Erro ao criar preferência de pagamento', 
-        details: errorData 
-      }, { status: 500 });
+    if (!mpResponse.ok) {
+      const errorText = await mpResponse.text();
+      console.error('Mercado Pago Error:', errorText);
+      return Response.json({ error: 'Erro ao criar pagamento no Mercado Pago' }, { status: 500 });
     }
 
-    const data = await response.json();
-    console.log('✅ Resposta Mercado Pago:', JSON.stringify(data, null, 2));
+    const mpData = await mpResponse.json();
 
-    // Registra pagamento pendente
     await base44.asServiceRole.entities.Payment.create({
       auction_id: auction.id,
       buyer_id: user.id,
-      buyer_name: user.full_name,
+      buyer_name: user.full_name || user.email,
       buyer_email: user.email,
       amount: auction.current_price,
       payment_method: 'mercadopago',
       status: 'pending',
-      transaction_id: data.id,
+      transaction_id: mpData.id,
       gateway_name: 'Mercado Pago'
     });
-
-    console.log('✅ Preferência criada:', data.id);
     
     return Response.json({
       success: true,
-      preference_id: data.id,
-      checkout_url: data.init_point
+      preference_id: mpData.id,
+      checkout_url: mpData.init_point
     });
 
   } catch (error) {
-    console.error('Erro:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    console.error('Erro mercadopagoCheckout:', error);
+    return Response.json({ error: 'Erro ao processar pagamento' }, { status: 500 });
   }
 });
