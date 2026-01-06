@@ -60,10 +60,20 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
                     {auction.order_status === 'awaiting_payment' && (
                         <Button 
                             onClick={() => onPayClick(auction)}
+                            disabled={isProcessing}
                             className="flex-1 bg-green-600 hover:bg-green-700"
                         >
-                            <CreditCard className="w-4 h-4 mr-2" />
-                            Pagar com Mercado Pago
+                            {isProcessing ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                                    Processando...
+                                </>
+                            ) : (
+                                <>
+                                    <CreditCard className="w-4 h-4 mr-2" />
+                                    Pagar com Mercado Pago
+                                </>
+                            )}
                         </Button>
                     )}
                     <Button 
@@ -136,6 +146,8 @@ export default function MyWinningsPage() {
             const response = await mercadopagoCheckout({
                 auction_id: auction.id
             });
+
+            console.log('Resposta Mercado Pago:', response);
 
             if (response?.success && response?.preference_id) {
                 // Carrega SDK do Mercado Pago dinamicamente
