@@ -115,8 +115,7 @@ export function useRealtimeSync({
         }
       }
     } catch (error) {
-      // Silencia erros de network - normal em segundo plano
-      console.log(`⚠️ [${entityName}] Sincronização offline, tentando novamente...`);
+      console.debug(`[${entityName}] Sync error:`, error.message);
       
       // DETECTA RATE LIMIT (429), Network Error ou TIMEOUT
       const errorMsg = error.message || '';

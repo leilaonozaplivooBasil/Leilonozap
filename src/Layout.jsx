@@ -369,16 +369,7 @@ export default function Layout({ children, currentPageName }) {
       initApp();
   }, []); // Roda apenas UMA VEZ ao montar o componente
 
-  useEffect(() => {
-    if (!currentUser) return;
-    
-    // Sincronização automática desabilitada para evitar rate limit
-    // Se necessário reativar no futuro, descomentar abaixo:
-    // const syncInterval = setInterval(() => {
-    //   syncUserData();
-    // }, 300000);
-    // return () => clearInterval(syncInterval);
-  }, [currentUser]);
+  // ❌ REMOVIDO - Sync desnecessário, já temos cache
 
   useEffect(() => {
     setMobileMenuOpen(false);

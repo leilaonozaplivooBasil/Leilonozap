@@ -640,7 +640,6 @@ export default function AuctionRoom() {
       if (Array.isArray(msgs) && msgs.length > lastMessageCountRef.current) {
         console.log(`✅ [MESSAGE SYNC] ${msgs.length - lastMessageCountRef.current} novas mensagens!`);
         
-        // DETECTAR SE HÁ NOVA MENSAGEM DE LANCE
         const newBidMessages = msgs.filter(m => 
           m.message_type === 'bid' && 
           !messages.some(existingMsg => existingMsg.id === m.id)
@@ -649,14 +648,9 @@ export default function AuctionRoom() {
         setMessages(msgs);
         lastMessageCountRef.current = msgs.length;
         
-        // SE HOUVER LANCE NOVO, FORÇA SYNC IMEDIATO DO PREÇO
         if (newBidMessages.length > 0) {
-          console.log(`💰 [MESSAGE SYNC] ${newBidMessages.length} lance(s) novo(s) detectado(s)! Forçando sync de preço...`);
-          
-          // Chama o sync do leilão IMEDIATAMENTE
-          setTimeout(() => {
-            syncAuctionDataOnly();
-          }, 100);
+          console.log(`💰 [MESSAGE SYNC] ${newBidMessages.length} lance(s) novo(s)!`);
+          setTimeout(syncAuctionDataOnly, 100);
         }
         
         if (chatRef.current) {
@@ -666,11 +660,10 @@ export default function AuctionRoom() {
           });
         }
       }
-      
     } catch (error) {
-      console.error("❌ [MESSAGE SYNC] Erro:", error);
+      console.debug("[MESSAGE SYNC] Erro:", error.message);
     }
-  }, [auctionId, auction, messages]);
+  }, [auctionId, auction, messages, syncAuctionDataOnly]);
 
   useEffect(() => {
     // Se não tem ID, redireciona imediatamente
@@ -902,11 +895,7 @@ export default function AuctionRoom() {
 
       if (bidAmount <= currentPrice) {
         alert(`❌ Lance maior! Atual: R$ ${currentPrice.toFixed(2)}`);
-        setAuction(prev => ({
-          ...prev,
-          current_price: currentPrice,
-          winner_name: freshAuction.winner_name
-        }));
+        setAuction(freshAuction);
         return;
       }
 
@@ -916,6 +905,15 @@ export default function AuctionRoom() {
       }
 
       playSound('bid');
+      
+      // 🆕 DEBOUNCE: Bloqueia novos lances por 2s
+      const debounceKey = `bid_debounce_${currentUser.id}`;
+      const lastBidTime = sessionStorage.getItem(debounceKey);
+      if (lastBidTime && Date.now() - parseInt(lastBidTime) < 2000) {
+        console.log('⏸️ Debounce ativo, aguarde');
+        return;
+      }
+      sessionStorage.setItem(debounceKey, Date.now().toString());
       
       const optimisticMessage = {
         id: 'temp-' + Date.now(),

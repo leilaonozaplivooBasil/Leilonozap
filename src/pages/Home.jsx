@@ -500,19 +500,7 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      Auction.list("-created_date", 50).then((data) => {
-        if (Array.isArray(data)) {
-          sessionStorage.setItem('auctions_cache', JSON.stringify(data));
-          sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-          setAuctions(data);
-        }
-      }).catch(() => {});
-    }, 5000);
-
-    return () => clearInterval(refreshInterval);
-  }, []);
+  // ❌ REMOVIDO - useRealtimeSync já faz isso melhor
 
   useEffect(() => {
     if (auctions.length > 0) {
