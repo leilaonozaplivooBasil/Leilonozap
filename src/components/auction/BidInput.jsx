@@ -20,7 +20,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
     console.log(`🔄 [BID INPUT] Botões atualizados: Preço=${currentPrice}, Botões=[${calculatedBids.join(', ')}]`);
   }, [currentPrice, increment]);
 
-  const handleSubmit = (amount = null) => {
+  const handleSubmit = React.useCallback((amount = null) => {
     const finalAmount = amount || parseFloat(bidAmount);
     if (!finalAmount || isNaN(finalAmount)) return;
 
@@ -37,7 +37,7 @@ export default function BidInput({ currentPrice, increment, onSubmitBid, isLoadi
 
     onSubmitBid(finalAmount);
     setBidAmount("");
-  };
+  }, [bidAmount, currentPrice, increment, onSubmitBid]);
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !isLoading) {
