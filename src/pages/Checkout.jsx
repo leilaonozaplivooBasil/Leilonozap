@@ -138,88 +138,114 @@ export default function CheckoutPage() {
         }
     };
 
-    const renderCardPaymentBrick = async (bricksBuilder) => {
-        const settings = {
-            initialization: {
-                amount: auction.current_price,
-            },
-            callbacks: {
-                onReady: () => {
-                    console.log('✅ Brick pronto!');
-                },
-                onSubmit: (formData, additionalData) => {
-                    return new Promise((resolve, reject) => {
-                        setIsProcessing(true);
-                        
-                        processCardPayment({
-                            auction_id: auction.id,
-                            transaction_amount: formData.transaction_amount,
-                            token: formData.token,
-                            payment_method_id: formData.payment_method_id,
-                            installments: formData.installments,
-                            payer: {
-                                email: formData.payer.email,
-                                identification: formData.payer.identification
-                            }
-                        })
-                            .then((response) => {
-                                if (response.data.success) {
-                                    toast.success('Pagamento processado!');
-                                    navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
-                                    resolve();
-                                } else {
-                                    toast.error(response.data.error || 'Erro ao processar pagamento');
-                                    reject();
-                                }
-                            })
-                            .catch((error) => {
-                                console.error('Erro:', error);
-                                toast.error('Erro ao processar pagamento');
-                                reject();
-                            })
-                            .finally(() => {
-                                setIsProcessing(false);
-                            });
-                    });
-                },
-                onError: (error) => {
-                    console.error('Erro Brick:', error);
-                },
-            },
-        };
-
-        window.cardPaymentBrickController = await bricksBuilder.create(
-            'cardPayment',
-            'cardPaymentBrick_container',
-            settings
-        );
-    };
-
     const initCardBrick = async () => {
+        console.log('🔍 DIAGNÓSTICO COMPLETO:');
+        console.log('1. window.MercadoPago existe?', !!window.MercadoPago);
+        console.log('2. mpLoaded?', mpLoaded);
+        console.log('3. Container existe?', !!document.getElementById('cardPaymentBrick_container'));
+        console.log('4. Auction:', auction);
+
         if (!window.MercadoPago) {
-            console.error('SDK não carregado');
+            console.error('❌ PROBLEMA: SDK não carregado');
+            toast.error('SDK não carregado. Recarregue a página.');
             return;
         }
 
+        const container = document.getElementById('cardPaymentBrick_container');
+        if (!container) {
+            console.error('❌ PROBLEMA: Container não existe no DOM');
+            toast.error('Container não encontrado');
+            return;
+        }
+
+        console.log('✅ Pré-requisitos OK, iniciando...');
+
         if (brickControllerRef.current) {
             try {
+                console.log('🧹 Desmontando Brick anterior...');
                 brickControllerRef.current.unmount();
-            } catch (e) {}
+                brickControllerRef.current = null;
+            } catch (e) {
+                console.log('Brick já estava desmontado');
+            }
         }
 
         try {
-            console.log('Inicializando MP...');
+            console.log('🔧 Criando instância MercadoPago...');
             const mp = new window.MercadoPago('TEST-83a4ca72-cc00-49db-b677-4802ea8ce642', {
                 locale: 'pt-BR'
             });
-            const bricksBuilder = mp.bricks();
             
-            await renderCardPaymentBrick(bricksBuilder);
-            brickControllerRef.current = window.cardPaymentBrickController;
-            console.log('✅ Brick criado!');
+            console.log('🔧 Obtendo Bricks Builder...');
+            const bricksBuilder = mp.bricks();
+
+            console.log('🔧 Configurando settings do Brick...');
+            const settings = {
+                initialization: {
+                    amount: auction.current_price,
+                },
+                callbacks: {
+                    onReady: () => {
+                        console.log('✅✅✅ BRICK RENDERIZADO COM SUCESSO! ✅✅✅');
+                    },
+                    onSubmit: (formData, additionalData) => {
+                        return new Promise((resolve, reject) => {
+                            setIsProcessing(true);
+                            console.log('📤 onSubmit chamado:', formData);
+                            
+                            processCardPayment({
+                                auction_id: auction.id,
+                                transaction_amount: formData.transaction_amount,
+                                token: formData.token,
+                                payment_method_id: formData.payment_method_id,
+                                installments: formData.installments,
+                                payer: {
+                                    email: formData.payer.email,
+                                    identification: formData.payer.identification
+                                }
+                            })
+                                .then((response) => {
+                                    if (response.data.success) {
+                                        toast.success('Pagamento processado!');
+                                        navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                                        resolve();
+                                    } else {
+                                        toast.error(response.data.error || 'Erro');
+                                        reject();
+                                    }
+                                })
+                                .catch((error) => {
+                                    console.error('Erro:', error);
+                                    toast.error('Erro ao processar');
+                                    reject();
+                                })
+                                .finally(() => {
+                                    setIsProcessing(false);
+                                });
+                        });
+                    },
+                    onError: (error) => {
+                        console.error('❌ onError chamado:', error);
+                        toast.error('Erro no formulário');
+                    },
+                },
+            };
+
+            console.log('🚀 CRIANDO BRICK AGORA...');
+            const controller = await bricksBuilder.create(
+                'cardPayment',
+                'cardPaymentBrick_container',
+                settings
+            );
+            
+            window.cardPaymentBrickController = controller;
+            brickControllerRef.current = controller;
+            
+            console.log('✅ Brick controller salvo:', !!controller);
         } catch (error) {
-            console.error('Erro:', error);
-            toast.error('Erro ao carregar formulário');
+            console.error('❌❌❌ ERRO CRÍTICO:', error);
+            console.error('Stack:', error.stack);
+            toast.error(`ERRO: ${error.message}`);
         }
     };
 
@@ -404,17 +430,26 @@ export default function CheckoutPage() {
                                     ← Voltar
                                 </Button>
 
-                                <div 
-                                    id="cardPaymentBrick_container" 
-                                    className="min-h-[500px] w-full"
-                                    style={{ minHeight: '500px' }}
-                                ></div>
-
-                                {isProcessing && (
-                                    <div className="flex items-center justify-center gap-2 text-blue-400 mt-4">
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span className="text-sm">Processando pagamento...</span>
+                                {!mpLoaded ? (
+                                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                                        <Loader2 className="w-8 h-8 animate-spin mb-4" />
+                                        <p>Carregando SDK Mercado Pago...</p>
                                     </div>
+                                ) : (
+                                    <>
+                                        <div 
+                                            id="cardPaymentBrick_container" 
+                                            className="w-full bg-white rounded-lg"
+                                            style={{ minHeight: '500px' }}
+                                        ></div>
+
+                                        {isProcessing && (
+                                            <div className="flex items-center justify-center gap-2 text-blue-400 mt-4">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                <span className="text-sm">Processando pagamento...</span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         ) : null}
