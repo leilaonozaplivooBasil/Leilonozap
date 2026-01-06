@@ -271,7 +271,6 @@ export default function CheckoutPage() {
                             }
                         });
                     },
-                    },
                     onError: (error) => {
                         logErrorToArquiteto('BRICK_FORM_ERROR', 'Erro no formulário do Brick', error);
                         toast.error('Erro no formulário');
