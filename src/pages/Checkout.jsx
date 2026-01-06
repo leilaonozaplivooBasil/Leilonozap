@@ -221,6 +221,24 @@ export default function CheckoutPage() {
                         return new Promise((resolve, reject) => {
                             setIsProcessing(true);
                             
+                            // 🔍 LOG COMPLETO DO QUE O BRICK ENVIA
+                            console.log('📦 DADOS DO BRICK:', JSON.stringify(formData, null, 2));
+                            console.log('📦 ADDITIONAL DATA:', JSON.stringify(additionalData, null, 2));
+                            
+                            // Loga no SystemLog para debug
+                            base44.entities.SystemLog.create({
+                                step: 'Brick_FormData_Received',
+                                status: 'info',
+                                message: 'Dados recebidos do Brick',
+                                component_name: 'Checkout',
+                                payload: {
+                                    formData: formData,
+                                    additionalData: additionalData,
+                                    hasToken: !!formData.token,
+                                    tokenLength: formData.token?.length || 0
+                                }
+                            }).catch(e => console.error('Falha ao logar:', e));
+                            
                             processCardPayment({
                                 auction_id: auction.id,
                                 transaction_amount: formData.transaction_amount,
