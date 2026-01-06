@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
         const payment = await base44.asServiceRole.entities.MercadoPagoPayment.create({
             order_id: order_id,
             provider: 'mercadopago',
-            provider_payment_id: mpData.id,
+            provider_payment_id: String(mpData.id),
             status: mpData.status?.toUpperCase() || 'PENDING',
             amount: amount,
             payment_method: payment_method,
