@@ -670,7 +670,7 @@ export default function AuctionRoom() {
     } catch (error) {
       console.error("❌ [MESSAGE SYNC] Erro:", error);
     }
-  }, [auctionId, auction, messages, syncAuctionDataOnly]);
+  }, [auctionId, auction, messages]);
 
   useEffect(() => {
     // Se não tem ID, redireciona imediatamente

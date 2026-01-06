@@ -428,10 +428,13 @@ export default function MyWinningsPage() {
                                             user_id: currentUser.id
                                         });
 
-                                        if (result?.success && result?.init_point) {
+                                        if (result?.data?.success && result?.data?.init_point) {
+                                            window.location.href = result.data.init_point;
+                                        } else if (result?.success && result?.init_point) {
                                             window.location.href = result.init_point;
                                         } else {
-                                            toast.error(result?.error || "Erro ao criar pagamento");
+                                            console.error('❌ Resposta inesperada:', result);
+                                            toast.error(result?.data?.error || result?.error || "Erro ao criar pagamento");
                                             setIsProcessing(false);
                                         }
                                     } catch (error) {

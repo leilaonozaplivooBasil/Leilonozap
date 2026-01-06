@@ -202,14 +202,11 @@ export default function Layout({ children, currentPageName }) {
     }
 
     const initApp = async () => {
-        if (hasInitializedRef.current) {
-          return;
-        }
+            if (hasInitializedRef.current) {
+              return;
+            }
 
-        hasInitializedRef.current = true;
-
-        // 🆕 PROTEÇÃO: Remove flags de redirecionamento ao inicializar
-        sessionStorage.removeItem('loginFromPartners');
+            hasInitializedRef.current = true;
 
         try {
         // 🛡️ PROTEÇÃO CRÍTICA: Envolve TUDO em try-catch para evitar crashes
