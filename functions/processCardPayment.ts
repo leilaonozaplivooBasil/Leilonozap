@@ -31,6 +31,9 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Credenciais não configuradas' }, { status: 500 });
         }
 
+        // Limpar token de caracteres invisíveis/inválidos
+        const cleanToken = accessToken.trim().replace(/[^\x20-\x7E]/g, '');
+
         const externalReference = `${auction_id}_${Date.now()}`;
         const idempotencyKey = `${auction_id}_${user.id}_${Date.now()}`;
 
@@ -64,7 +67,7 @@ Deno.serve(async (req) => {
         const response = await fetch('https://api.mercadopago.com/v1/orders', {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${accessToken}`,
+                'Authorization': `Bearer ${cleanToken}`,
                 'Content-Type': 'application/json',
                 'X-Idempotency-Key': idempotencyKey
             },
