@@ -108,10 +108,6 @@ export default function CheckoutPage() {
     const handleAddressSubmit = async (e) => {
         e.preventDefault();
         
-        console.log('🔥🔥🔥 BOTÃO CLICADO - SUBMIT ENDEREÇO');
-        console.log('📦 FormData:', formData);
-        console.log('🚦 isProcessing:', isProcessing);
-        
         // Validações
         if (!formData.cpf || formData.cpf.length < 11) {
             toast.error('CPF inválido');
@@ -155,9 +151,6 @@ export default function CheckoutPage() {
         
         try {
             setIsProcessing(true);
-            console.log('💾 Salvando no banco...');
-            console.log('👤 User:', user);
-            console.log('🆔 User ID:', user.id);
             
             // Busca o usuário real pelo email
             const users = await base44.entities.AppUser.filter({ email: user.email });
@@ -167,7 +160,6 @@ export default function CheckoutPage() {
             }
             
             const realUser = users[0];
-            console.log('✅ Usuário encontrado:', realUser.id);
             
             await base44.entities.AppUser.update(realUser.id, formData);
             
@@ -175,14 +167,10 @@ export default function CheckoutPage() {
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             setUser(updatedUser);
             
-            console.log('✅ Dados salvos!');
             toast.success('Endereço salvo!');
-            
-            console.log('🚀 Mudando para payment...');
             setStep('payment');
             
         } catch (err) {
-            console.error('💥 Erro ao salvar:', err);
             toast.error(err.message || 'Erro ao salvar dados');
         } finally {
             setIsProcessing(false);
@@ -192,9 +180,6 @@ export default function CheckoutPage() {
     const handlePixPayment = async () => {
         try {
             setIsProcessing(true);
-            console.log('🔥 INICIANDO PIX');
-            console.log('📦 Order ID:', orderId);
-            console.log('👤 User CPF:', user.cpf);
             toast.info('Gerando QR Code PIX...');
             
             const response = await base44.functions.invoke('createMercadoPagoOrder', {
@@ -215,28 +200,18 @@ export default function CheckoutPage() {
                 }
             });
 
-            console.log('📨 Resposta completa:', response);
             const data = response?.data || response;
-            console.log('📊 Data extraída:', data);
 
             if (data?.success) {
-                console.log('✅ Success detectado!');
-                console.log('🔑 QR Code presente?', !!data.qr_code);
-                console.log('🔑 QR Code Base64 presente?', !!data.qr_code_base64);
-                
                 setPayment(data);
                 setStep('pix_qr');
                 toast.success('QR Code gerado!');
                 startPaymentPolling();
             } else {
-                console.error('❌ Success não detectado');
                 throw new Error(data?.error || 'Erro ao gerar PIX');
             }
 
         } catch (err) {
-            console.error('💥 Erro PIX:', err);
-            console.error('💥 Erro message:', err.message);
-            console.error('💥 Erro response:', err.response);
             toast.error(err.response?.data?.error || err.message || 'Erro ao processar PIX');
         } finally {
             setIsProcessing(false);
@@ -244,18 +219,11 @@ export default function CheckoutPage() {
     };
 
     const handleCardPayment = async (e) => {
-        console.log('🎯 FUNÇÃO CHAMADA!');
         e.preventDefault();
-        console.log('🔥 INICIANDO PAGAMENTO CARTÃO');
-        console.log('📦 CardData:', cardData);
-        console.log('👤 User:', user);
-        console.log('🆔 Order ID:', orderId);
         
         try {
             setIsProcessing(true);
             toast.info('Processando pagamento...');
-            
-            console.log('📞 Chamando createMercadoPagoOrder...');
             
             const response = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
@@ -283,14 +251,9 @@ export default function CheckoutPage() {
                 }
             });
 
-            console.log('📨 Resposta:', response);
-            
             const data = response?.data || response;
-            console.log('📊 Data:', data);
 
             if (data?.success) {
-                console.log('✅ Success! Status:', data.status);
-                
                 if (data.status === 'APPROVED') {
                     toast.success('Pagamento aprovado!');
                     navigate(`/PaymentSuccess?order_id=${orderId}`);
@@ -299,21 +262,15 @@ export default function CheckoutPage() {
                     toast.info('Pagamento em análise...');
                     startPaymentPolling();
                 } else {
-                    console.error('❌ Status não aprovado:', data.status);
                     throw new Error('Pagamento não foi aprovado');
                 }
             } else {
-                console.error('❌ Success=false ou ausente');
                 throw new Error(data?.error || 'Erro ao processar cartão');
             }
 
         } catch (err) {
-            console.error('💥 ERRO COMPLETO:', err);
-            console.error('💥 Erro message:', err.message);
-            console.error('💥 Erro response:', err.response);
             toast.error(err.response?.data?.error || err.message || 'Erro ao processar pagamento');
         } finally {
-            console.log('🏁 Finalizando...');
             setIsProcessing(false);
         }
     };
@@ -553,10 +510,6 @@ export default function CheckoutPage() {
                                     <Button
                                         type="submit"
                                         disabled={isProcessing}
-                                        onClick={(e) => {
-                                            console.log('🎯 BOTÃO CLICADO DIRETAMENTE');
-                                            console.log('🔍 Disabled?', isProcessing);
-                                        }}
                                         className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-6 text-lg"
                                     >
                                         {isProcessing ? (
