@@ -68,9 +68,120 @@ Deno.serve(async (req) => {
             }
         }
 
-        // 3️⃣ LIMPA TÍTULO
+        // 3️⃣ MODO SUPPLIER: Busca no site do fabricante
+        if (auction.comparai_mode === 'supplier' && auction.source_url) {
+            console.log(`🏭 MODO FABRICANTE ATIVADO`);
+            console.log(`📍 URL: ${auction.source_url}`);
+
+            try {
+                const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                    prompt: `Você está extraindo o PREÇO EXATO de um produto direto do fabricante.
+
+        URL DO PRODUTO: ${auction.source_url}
+        NOME DO PRODUTO: ${auction.title}
+        PREÇO DO LEILÃO (referência): R$ ${currentPrice.toFixed(2)}
+
+        ⚠️ REGRAS OBRIGATÓRIAS:
+        - Acesse a URL e extraia o preço REAL que está sendo vendido
+        - Se houver múltiplas variações (voltagem, cor), retorne o preço da mais barata
+        - JAMAIS invente preços - se não conseguir acessar, retorne null
+        - Extraia também o nome EXATO da loja/fabricante do site
+        - Se possível, identifique a logo do fornecedor (procure por <img> com "logo" no alt ou class)
+
+        Retorne EXATAMENTE este formato:
+        {
+        "store": "Nome Exato da Loja/Fabricante",
+        "productNameFound": "Nome do Produto no Site",
+        "price": 99.90,
+        "url": "${auction.source_url}",
+        "logo_url": "URL da logo se encontrada, senão null"
+        }`,
+                    add_context_from_internet: true,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            store: { type: "string" },
+                            productNameFound: { type: "string" },
+                            price: { type: ["number", "null"] },
+                            url: { type: "string" },
+                            logo_url: { type: ["string", "null"] }
+                        },
+                        required: ["store", "price", "url"]
+                    }
+                });
+
+                if (!result || result.price === null || result.price < 10) {
+                    console.log(`❌ Não conseguiu extrair preço válido do fabricante`);
+                    return Response.json({
+                        success: false,
+                        error: "Não foi possível extrair o preço do site do fabricante",
+                        errorCode: "SUPPLIER_EXTRACTION_FAILED"
+                    }, { status: 404 });
+                }
+
+                console.log(`✅ Preço extraído: R$ ${result.price}`);
+                console.log(`🏪 Loja: ${result.store}`);
+
+                const savings = result.price - currentPrice;
+                const savingsPercent = result.price > 0 ? (savings / result.price) * 100 : 0;
+
+                console.log(`💰 Economia: ${Math.round(savingsPercent)}%`);
+
+                // Valida economia
+                if (Math.abs(savingsPercent) > 93) {
+                    console.log(`⚠️ Economia irrealista: ${savingsPercent}%`);
+                    return Response.json({
+                        success: false,
+                        error: "Dados inconsistentes detectados. Por favor, tente novamente.",
+                        errorCode: "UNREALISTIC_DATA"
+                    }, { status: 422 });
+                }
+
+                // Salva cache + logo se encontrada
+                const updateData = {
+                    market_price: result.price,
+                    last_comparison_date: new Date().toISOString()
+                };
+
+                if (result.logo_url) {
+                    updateData.supplier_logo_url = result.logo_url;
+                }
+
+                await base44.asServiceRole.entities.Auction.update(auctionId, updateData);
+
+                console.log('✅ Sucesso modo fabricante!');
+
+                return Response.json({
+                    success: true,
+                    comparison: {
+                        productName: auction.title,
+                        ourPrice: currentPrice,
+                        comparisons: [result],
+                        cheapestMarketPrice: result.price,
+                        averageMarketPrice: result.price,
+                        savings: savings,
+                        savingsPercent: Math.round(savingsPercent),
+                        isFactoryDirect: true,
+                        totalStoresAnalyzed: 1,
+                        searchAttempts: 1,
+                        priceLabel: 'Preço no Fabricante'
+                    },
+                    cached: false
+                });
+
+            } catch (error) {
+                console.error('❌ Erro modo fabricante:', error.message);
+                return Response.json({
+                    success: false,
+                    error: "Erro ao buscar preço no site do fabricante",
+                    details: error.message
+                }, { status: 500 });
+            }
+        }
+
+        // 4️⃣ LIMPA TÍTULO (modo Google Shopping)
         const cleanedTitle = cleanTitle(auction.title);
-        
+
         if (!cleanedTitle || cleanedTitle.length < 4) {
             console.log(`❌ Título inválido: "${cleanedTitle}"`);
             return Response.json({
@@ -80,9 +191,9 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        console.log(`🔎 Busca: "${cleanedTitle}"`);
+        console.log(`🔎 Busca Google Shopping: "${cleanedTitle}"`);
 
-        // 4️⃣ BUSCA NO GOOGLE SHOPPING
+        // 5️⃣ BUSCA NO GOOGLE SHOPPING
         const prompt = `Busque PREÇOS REAIS no Google Shopping Brasil para: ${cleanedTitle}
 
 ⚠️ REGRAS OBRIGATÓRIAS:
