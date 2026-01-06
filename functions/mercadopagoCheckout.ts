@@ -32,11 +32,26 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Leilão não encontrado' }, { status: 404 });
     }
     const auction = auctions[0];
+    
+    console.log('🔵 Leilão encontrado:', auction.title);
+    console.log('🔵 Winner ID do leilão:', auction.winner_id);
+    console.log('🔵 User ID atual:', user.id);
 
     // Verifica se o usuário é o vencedor
     if (auction.winner_id !== user.id) {
-      return Response.json({ error: 'Você não é o vencedor deste leilão' }, { status: 403 });
+      console.error('❌ Usuário não é o vencedor!');
+      console.error('❌ Winner esperado:', auction.winner_id);
+      console.error('❌ User atual:', user.id);
+      return Response.json({ 
+        error: 'Você não é o vencedor deste leilão',
+        details: {
+          auction_winner: auction.winner_id,
+          current_user: user.id
+        }
+      }, { status: 403 });
     }
+    
+    console.log('✅ Verificação de vencedor OK!');
 
     const accessToken = Deno.env.get('MERCADOPAGO_ACCESS_TOKEN');
     if (!accessToken) {
