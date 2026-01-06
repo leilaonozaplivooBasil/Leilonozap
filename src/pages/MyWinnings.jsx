@@ -137,11 +137,18 @@ export default function MyWinningsPage() {
     };
 
     const handlePayClick = async (auction) => {
-        if (isProcessing) return;
+        console.log('🔵 BOTÃO CLICADO! Auction:', auction.id);
+        console.log('🔵 isProcessing:', isProcessing);
+        
+        if (isProcessing) {
+            console.log('⚠️ Já está processando, ignorando clique');
+            return;
+        }
         
         setIsProcessing(true);
+        
         try {
-            // Log início
+            console.log('🔵 Criando log inicial...');
             await base44.entities.SystemLog.create({
                 step: 'MERCADOPAGO_PAYMENT_INIT',
                 status: 'info',
@@ -151,28 +158,34 @@ export default function MyWinningsPage() {
                 payload: { auction_title: auction.title, amount: auction.current_price }
             });
 
+            console.log('🔵 Chamando mercadopagoCheckout...');
             toast.info("Criando link de pagamento...");
             
             const result = await mercadopagoCheckout({
                 auction_id: auction.id
             });
 
-            console.log('🔵 Resposta raw:', result);
+            console.log('🔵 Resultado recebido:', result);
+            console.log('🔵 result.data:', result?.data);
+            console.log('🔵 result.status:', result?.status);
             
-            // Parse da resposta (vem como Response do Deno)
             const response = result?.data || result;
             
-            console.log('🔵 Resposta parseada:', response);
+            console.log('🔵 Response final:', response);
+            console.log('🔵 response.error:', response?.error);
+            console.log('🔵 response.success:', response?.success);
+            console.log('🔵 response.checkout_url:', response?.checkout_url);
 
-            // Verifica se houve erro de autorização
             if (response?.error) {
+                console.error('❌ Erro retornado:', response.error);
                 toast.error(response.error);
                 setIsProcessing(false);
                 return;
             }
 
             if (response?.success && response?.checkout_url) {
-                // Log sucesso criação preferência
+                console.log('✅ Sucesso! Redirecionando para:', response.checkout_url);
+                
                 await base44.entities.SystemLog.create({
                     step: 'MERCADOPAGO_PREFERENCE_CREATED',
                     status: 'success',
@@ -184,7 +197,7 @@ export default function MyWinningsPage() {
 
                 toast.success("Redirecionando para o Mercado Pago...");
                 
-                // Redireciona para o checkout do Mercado Pago
+                console.log('🔵 Executando window.location.href...');
                 window.location.href = response.checkout_url;
             } else {
                 // Log erro resposta
