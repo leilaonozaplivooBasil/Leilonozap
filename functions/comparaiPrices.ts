@@ -1,180 +1,119 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-import Browserbase from 'npm:@browserbasehq/sdk@3.5.3';
 
-// 🧹 LIMPEZA AVANÇADA DE TÍTULOS
-function advancedTitleCleanup(title) {
-    if (!title) return title;
+// 🧹 LIMPEZA PROFUNDA DE TÍTULOS
+function cleanProductTitle(title) {
+    if (!title) return '';
     
-    let cleaned = title;
+    let clean = title;
     
-    // Remove termos de leilão e marketplace
-    cleaned = cleaned.replace(/leil[aã]o\s*(no\s*zap|nozap|valora)?\s*[-:–]?\s*/gi, '');
-    cleaned = cleaned.replace(/\b(nozap|valora|marketplace)\b\s*[-:–]?\s*/gi, '');
+    // Remove termos de leilão
+    clean = clean.replace(/leil[aã]o\s*(no\s*zap|nozap)?/gi, '');
+    clean = clean.replace(/\b(nozap|valora)\b/gi, '');
     
-    // Remove condições de produto
-    cleaned = cleaned.replace(/\b(novo|usado|seminovo|recondicionado|open\s*box)\b\s*/gi, '');
+    // Remove condições
+    clean = clean.replace(/\b(novo|usado|seminovo|recondicionado|open\s*box)\b/gi, '');
     
-    // Remove voltagem e especificações técnicas genéricas
-    cleaned = cleaned.replace(/\b(110v?|127v?|220v?|bivolt|240v?)\b\s*/gi, '');
-    cleaned = cleaned.replace(/\b\d+\s*(watts?|w|volts?|v|amperes?|a)\b\s*/gi, '');
+    // Remove voltagem
+    clean = clean.replace(/\b(110v?|127v?|220v?|bivolt|240v?)\b/gi, '');
     
     // Remove cores no final
-    cleaned = cleaned.replace(/\s+(preto|branco|vermelho|azul|verde|amarelo|cinza|rosa|roxo|laranja|dourado|prateado)$/gi, '');
+    clean = clean.replace(/\s+(preto|branco|vermelho|azul|verde|amarelo|cinza|rosa|roxo|laranja)$/gi, '');
     
-    // Remove kits e acessórios
-    cleaned = cleaned.replace(/\s*[-–]\s*(com|c\/)\s+(maleta|kit|acessórios|brindes?|garantia)\b/gi, '');
-    cleaned = cleaned.replace(/\s*\+\s*(maleta|kit|acessórios|brindes?)\b/gi, '');
+    // Remove códigos
+    clean = clean.replace(/\b[A-Z]{2,}-?\d{2,}\b/g, '');
+    clean = clean.replace(/\bref\.?\s*\d+\b/gi, '');
     
-    // Remove códigos de produto (SKU, modelos genéricos)
-    cleaned = cleaned.replace(/\b[A-Z]{2,}-?\d{2,}\b/g, '');
-    cleaned = cleaned.replace(/\bref\.?\s*\d+\b/gi, '');
-    cleaned = cleaned.replace(/\bcód\.?\s*\d+\b/gi, '');
+    // Limpa caracteres
+    clean = clean.replace(/[-_–—]+/g, ' ');
+    clean = clean.replace(/\s+/g, ' ').trim();
     
-    // Remove medidas genéricas
-    cleaned = cleaned.replace(/\b\d+\s*(cm|mm|m|polegadas?|pol|")\b/gi, '');
+    // Limita palavras
+    const words = clean.split(' ').filter(w => w.length > 2);
+    clean = words.slice(0, 6).join(' ');
     
-    // Remove caracteres especiais extras
-    cleaned = cleaned.replace(/[_\-–—]+/g, ' ');
-    cleaned = cleaned.replace(/\s*[|/\\]\s*/g, ' ');
-    
-    // Remove espaços múltiplos
-    cleaned = cleaned.replace(/\s+/g, ' ').trim();
-    
-    // Limita a 8 palavras mais relevantes
-    const words = cleaned.split(' ').filter(w => w.length > 2);
-    cleaned = words.slice(0, 8).join(' ');
-    
-    console.log(`🧹 Limpeza: "${title}" → "${cleaned}"`);
-    return cleaned;
+    console.log(`🧹 "${title}" → "${clean}"`);
+    return clean;
 }
 
-// 🚫 DETECTA PROMOÇÕES E DESCONTOS SUSPEITOS
-function isPromotionalPrice(comparison, currentPrice) {
-    const { productNameFound, price, store } = comparison;
-    
-    // Detecta "Leve X Pague Y"
-    const leveXPagueY = /leve\s*\d+\s*pague\s*\d+/gi;
-    if (leveXPagueY.test(productNameFound)) {
-        console.log(`🚫 Rejeitado (Leve X Pague Y): ${store} - ${productNameFound}`);
-        return true;
+// 🚫 VALIDA PREÇO
+function isValidPrice(price, currentPrice, productName) {
+    if (!price || price < 5) {
+        console.log(`🚫 Preço muito baixo: R$ ${price}`);
+        return false;
     }
     
-    // Detecta "X por R$" (ex: "3 por R$ 99")
-    const multiBuy = /\d+\s*por\s*r?\$?\s*\d+/gi;
-    if (multiBuy.test(productNameFound)) {
-        console.log(`🚫 Rejeitado (Multi-compra): ${store} - ${productNameFound}`);
-        return true;
+    // Rejeita preços genéricos
+    const badPrices = [99.99, 199.99, 299.99, 399.99, 499.99, 599.99, 699.99, 799.99, 899.99, 999.99, 9999.99];
+    if (badPrices.includes(price)) {
+        console.log(`🚫 Preço genérico: R$ ${price}`);
+        return false;
     }
     
-    // Detecta "kit com X unidades"
-    const kitPattern = /kit\s+(com|de)?\s*\d+\s*(unidades?|peças?|itens?)/gi;
-    if (kitPattern.test(productNameFound)) {
-        console.log(`🚫 Rejeitado (Kit): ${store} - ${productNameFound}`);
-        return true;
-    }
-    
-    // Detecta "combo" no nome do produto
-    if (/combo|pacote|kit\s+completo/gi.test(productNameFound)) {
-        console.log(`🚫 Rejeitado (Combo): ${store} - ${productNameFound}`);
-        return true;
-    }
-    
-    // Preços anormalmente baixos (possível erro ou promoção falsa)
-    if (price < 5) {
-        console.log(`🚫 Rejeitado (Preço muito baixo): ${store} - R$ ${price}`);
-        return true;
-    }
-    
-    // 🔥 NOVO: Rejeita preços genéricos/placeholders comuns
-    const genericPrices = [99.99, 199.99, 299.99, 399.99, 499.99, 599.99, 699.99, 799.99, 899.99, 999.99, 9999.99];
-    if (genericPrices.includes(price)) {
-        console.log(`🚫 Rejeitado (Preço genérico placeholder): ${store} - R$ ${price}`);
-        return true;
-    }
-    
-    // 🔥 NOVO: Rejeita preços muito maiores que o lance atual (mais de 50x)
+    // Rejeita preços muito altos comparado ao lance
     if (currentPrice > 0 && price > currentPrice * 50) {
-        console.log(`🚫 Rejeitado (Preço irrealisticamente alto): ${store} - R$ ${price} vs Lance R$ ${currentPrice}`);
-        return true;
+        console.log(`🚫 Preço muito alto: R$ ${price} vs Lance R$ ${currentPrice}`);
+        return false;
     }
     
-    // 🔥 NOVO: Rejeita se o preço termina em .99 E é maior que 10x o lance
-    if (currentPrice > 0 && price > currentPrice * 10 && price.toString().endsWith('.99')) {
-        console.log(`🚫 Rejeitado (Preço suspeito .99): ${store} - R$ ${price}`);
-        return true;
+    // Rejeita promoções "Leve X Pague Y"
+    if (productName && /leve\s*\d+\s*pague\s*\d+/gi.test(productName)) {
+        console.log(`🚫 Promoção "Leve X Pague Y"`);
+        return false;
     }
     
-    return false;
-}
-
-// 🌐 EXTRAÇÃO VIA HEADLESS BROWSER (opcional, para sites dinâmicos)
-async function fetchWithBrowser(url) {
-    try {
-        const browserbaseApiKey = Deno.env.get('BROWSERBASE_API_KEY');
-        if (!browserbaseApiKey) {
-            console.log('⚠️ BROWSERBASE_API_KEY não configurada, pulando headless browser');
-            return null;
-        }
-        
-        const bb = new Browserbase({ apiKey: browserbaseApiKey });
-        const session = await bb.createSession();
-        
-        const response = await fetch(`https://www.browserbase.com/v1/sessions/${session.id}/navigate`, {
-            method: 'POST',
-            headers: {
-                'x-bb-api-key': browserbaseApiKey,
-                'content-type': 'application/json'
-            },
-            body: JSON.stringify({ url })
-        });
-        
-        if (!response.ok) {
-            console.log('❌ Erro ao navegar com browser:', response.status);
-            return null;
-        }
-        
-        await new Promise(resolve => setTimeout(resolve, 3000)); // Aguarda JS carregar
-        
-        const contentResponse = await fetch(`https://www.browserbase.com/v1/sessions/${session.id}/content`, {
-            headers: { 'x-bb-api-key': browserbaseApiKey }
-        });
-        
-        const content = await contentResponse.text();
-        await bb.deleteSession(session.id);
-        
-        console.log('✅ Conteúdo extraído via headless browser');
-        return content;
-    } catch (error) {
-        console.error('❌ Erro no headless browser:', error.message);
-        return null;
+    // Rejeita kits
+    if (productName && /kit\s+(com|de)?\s*\d+/gi.test(productName)) {
+        console.log(`🚫 Kit múltiplo`);
+        return false;
     }
+    
+    return true;
 }
 
 Deno.serve(async (req) => {
+    console.log('\n🚀 ========== COMPARAI INICIADO ==========');
+    
     try {
         const base44 = createClientFromRequest(req);
-        
         const body = await req.json();
-        const { auctionId, forceRefresh = false, forceGoogleShopping = false } = body;
+        const { auctionId, forceRefresh = false } = body;
+
+        console.log(`📦 AuctionID: ${auctionId}`);
+        console.log(`♻️ ForceRefresh: ${forceRefresh}`);
 
         if (!auctionId) {
-            return Response.json({ error: "auctionId é obrigatório" }, { status: 400 });
+            console.log('❌ AuctionID não fornecido');
+            return Response.json({ 
+                success: false, 
+                error: "auctionId é obrigatório" 
+            }, { status: 400 });
         }
 
+        // Busca leilão
+        console.log('🔍 Buscando leilão...');
         const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
         
         if (!auctions || auctions.length === 0) {
-            return Response.json({ error: "Leilão não encontrado" }, { status: 404 });
+            console.log('❌ Leilão não encontrado');
+            return Response.json({ 
+                success: false, 
+                error: "Leilão não encontrado" 
+            }, { status: 404 });
         }
         
         const auction = auctions[0];
-        
-        // Verifica cache (se não forçar refresh)
+        console.log(`✅ Leilão: ${auction.title}`);
+        console.log(`💰 Preço atual: R$ ${auction.current_price || auction.starting_price}`);
+        console.log(`🏷️ Categoria: ${auction.category}`);
+        console.log(`🔧 Modo: ${auction.comparai_mode}`);
+
+        // Verifica cache
         if (!forceRefresh && auction.market_price && auction.last_comparison_date) {
             const cacheAge = Date.now() - new Date(auction.last_comparison_date).getTime();
-            const cacheLimit = 24 * 60 * 60 * 1000; // 24 horas
+            const cacheLimit = 24 * 60 * 60 * 1000; // 24h
             
             if (cacheAge < cacheLimit) {
+                console.log(`📦 Usando cache (${Math.floor(cacheAge / 1000 / 60)} minutos)`);
                 const currentPrice = auction.current_price || auction.starting_price;
                 const savings = auction.market_price - currentPrice;
                 const savingsPercent = auction.market_price > 0 ? (savings / auction.market_price) * 100 : 0;
@@ -186,9 +125,10 @@ Deno.serve(async (req) => {
                         ourPrice: currentPrice,
                         cheapestMarketPrice: auction.market_price,
                         savings: savings,
-                        savingsPercent: parseFloat(savingsPercent.toFixed(0)),
-                        isFactoryDirect: auction.comparai_mode === 'supplier',
+                        savingsPercent: Math.round(savingsPercent),
+                        isFactoryDirect: false,
                         totalStoresAnalyzed: 5,
+                        priceLabel: 'Menor Preço do Mercado',
                         comparisons: []
                     },
                     cached: true,
@@ -197,48 +137,45 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Limpa título para busca
-        const cleanTitle = advancedTitleCleanup(auction.title);
+        const cleanTitle = cleanProductTitle(auction.title);
         const currentPrice = auction.current_price || auction.starting_price;
-        const category = auction.category || 'outros';
 
-        const MAX_PRICES = {
-            'eletronicos': 15000,
-            'eletrodomesticos': 10000,
-            'moveis_decoracao': 8000,
-            'casa_jardim': 5000,
-            'ferramentas': 5000,
-            'default': 5000
-        };
-        const maxPrice = MAX_PRICES[category] || MAX_PRICES.default;
+        if (!cleanTitle || cleanTitle.length < 3) {
+            console.log('❌ Título muito curto após limpeza');
+            return Response.json({
+                success: false,
+                error: "Título do produto inválido para busca",
+                errorCode: "INVALID_TITLE"
+            }, { status: 400 });
+        }
 
-        // Busca no Google Shopping com IA
-        const searchPrompt = `Busque no Google Shopping Brasil o produto: ${cleanTitle}
+        console.log(`🔎 Buscando no Google Shopping: "${cleanTitle}"`);
+        console.log(`💵 Preço de referência: R$ ${currentPrice.toFixed(2)}`);
 
-REGRAS IMPORTANTES:
-- APENAS produtos NOVOS de lojas confiáveis (Mercado Livre, Magazine Luiza, Amazon, Americanas, Shopee, Casas Bahia, Carrefour)
-- IGNORE produtos usados, recondicionados ou "open box"
-- IGNORE promoções "Leve X Pague Y" ou "X por R$"
-- IGNORE kits com múltiplas unidades
-- Preços entre R$ 10 e R$ ${maxPrice.toFixed(2)}
-- PREÇO ATUAL DO LEILÃO: R$ ${currentPrice.toFixed(2)} (use como referência de mercado)
-- ⚠️ CRÍTICO: NÃO invente preços genéricos como R$ 999,99 - busque PREÇOS REAIS
-- ⚠️ CRÍTICO: Se não encontrar, retorne array vazio [] - NÃO invente dados
-- Retorne 3-6 comparações REAIS e VERIFICADAS
+        // Busca com IA
+        const searchPrompt = `Busque no Google Shopping Brasil: ${cleanTitle}
 
-RETORNE JSON:
+REGRAS CRÍTICAS:
+1. APENAS produtos NOVOS de lojas confiáveis (Mercado Livre, Magazine Luiza, Amazon, Americanas, Casas Bahia, Shopee)
+2. IGNORE promoções "Leve X Pague Y", kits múltiplos, combos
+3. Preços REAIS entre R$ 20 e R$ 5000
+4. Preço de referência do lance: R$ ${currentPrice.toFixed(2)}
+5. Se não encontrar, retorne array vazio []
+6. NÃO invente R$ 999,99 ou preços genéricos
+
+Retorne JSON válido:
 {
   "comparisons": [
-    {"store": "Nome da Loja", "productNameFound": "Nome Exato do Produto", "price": 129.90, "url": "https://..."}
+    {"store": "Loja", "productNameFound": "Nome", "price": 129.90, "url": "https://..."}
   ]
 }`;
 
-        let llmResult;
+        let llmResult = null;
         let attempts = 0;
-        const maxAttempts = 3;
 
-        while (attempts < maxAttempts) {
+        while (attempts < 2 && (!llmResult?.comparisons || llmResult.comparisons.length === 0)) {
             attempts++;
+            console.log(`🔄 Tentativa ${attempts}...`);
             
             try {
                 llmResult = await base44.asServiceRole.integrations.Core.InvokeLLM({
@@ -260,33 +197,42 @@ RETORNE JSON:
                                     required: ["store", "price"]
                                 }
                             }
-                        }
+                        },
+                        required: ["comparisons"]
                     }
                 });
 
-                const validComparisons = (llmResult?.comparisons || [])
-                    .filter(c => c.price && c.price >= 10 && c.price <= maxPrice)
-                    .filter(c => !isPromotionalPrice(c, currentPrice));
+                console.log(`📊 Resultado LLM: ${llmResult?.comparisons?.length || 0} resultados`);
 
-                if (validComparisons.length > 0) {
-                    llmResult.comparisons = validComparisons;
-                    break;
+                if (llmResult?.comparisons) {
+                    // Filtra preços válidos
+                    const validComparisons = llmResult.comparisons.filter(c => 
+                        isValidPrice(c.price, currentPrice, c.productNameFound)
+                    );
+
+                    console.log(`✅ Preços válidos: ${validComparisons.length}`);
+
+                    if (validComparisons.length > 0) {
+                        llmResult.comparisons = validComparisons;
+                        break;
+                    }
                 }
 
-                if (attempts < maxAttempts) {
-                    console.log(`⏳ Tentativa ${attempts} sem resultados válidos, tentando novamente...`);
-                    await new Promise(resolve => setTimeout(resolve, 1500));
+                if (attempts < 2) {
+                    console.log('⏳ Aguardando antes de tentar novamente...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
                 }
 
             } catch (error) {
-                console.error(`❌ Erro na tentativa ${attempts}:`, error.message);
-                if (attempts === maxAttempts) throw error;
+                console.error(`❌ Erro tentativa ${attempts}:`, error.message);
+                if (attempts === 2) throw error;
             }
         }
 
         const comparisons = llmResult?.comparisons || [];
         
         if (comparisons.length === 0) {
+            console.log('❌ Nenhum resultado válido encontrado');
             return Response.json({
                 success: false,
                 error: "Não encontramos preços para comparar no momento.",
@@ -294,15 +240,22 @@ RETORNE JSON:
             }, { status: 404 });
         }
 
+        // Calcula economia
         const prices = comparisons.map(c => c.price);
         const minPrice = Math.min(...prices);
         const avgPrice = prices.reduce((sum, p) => sum + p, 0) / prices.length;
         const savings = minPrice - currentPrice;
         const savingsPercent = minPrice > 0 ? (savings / minPrice) * 100 : 0;
 
-        // 🔥 VALIDAÇÃO FINAL: Se economia maior que 95%, provavelmente dados ruins
-        if (savingsPercent > 95 || savingsPercent < -500) {
-            console.log(`❌ ECONOMIA IRREALISTA: ${savingsPercent}% - Rejeitando resultado`);
+        console.log(`📊 Resultado:`);
+        console.log(`   Lojas: ${comparisons.length}`);
+        console.log(`   Menor: R$ ${minPrice.toFixed(2)}`);
+        console.log(`   Média: R$ ${avgPrice.toFixed(2)}`);
+        console.log(`   Economia: R$ ${savings.toFixed(2)} (${Math.round(savingsPercent)}%)`);
+
+        // Valida economia
+        if (Math.abs(savingsPercent) > 95) {
+            console.log(`⚠️ Economia suspeita: ${savingsPercent}%`);
             return Response.json({
                 success: false,
                 error: "Comparação retornou dados inconsistentes. Tente novamente.",
@@ -310,13 +263,14 @@ RETORNE JSON:
             }, { status: 422 });
         }
 
-        // Atualiza cache no banco
+        // Atualiza cache
+        console.log('💾 Salvando cache...');
         await base44.asServiceRole.entities.Auction.update(auctionId, {
             market_price: minPrice,
             last_comparison_date: new Date().toISOString()
         });
 
-        console.log(`📊 Resultado: ${comparisons.length} lojas | Menor: R$ ${minPrice.toFixed(2)} | Economia: R$ ${savings.toFixed(2)}`);
+        console.log('✅ Comparação concluída com sucesso!');
 
         return Response.json({
             success: true,
@@ -327,7 +281,7 @@ RETORNE JSON:
                 cheapestMarketPrice: minPrice,
                 averageMarketPrice: avgPrice,
                 savings: savings,
-                savingsPercent: parseFloat(savingsPercent.toFixed(0)),
+                savingsPercent: Math.round(savingsPercent),
                 isFactoryDirect: false,
                 totalStoresAnalyzed: comparisons.length,
                 searchAttempts: attempts,
@@ -337,10 +291,13 @@ RETORNE JSON:
         });
 
     } catch (error) {
-        console.error('❌ Erro geral:', error);
+        console.error('💥 ERRO CRÍTICO:', error.message);
+        console.error('Stack:', error.stack);
+        
         return Response.json({
             success: false,
-            error: "Erro ao comparar preços",
+            error: "Erro ao comparar preços: " + error.message,
+            errorCode: "INTERNAL_ERROR",
             details: error.message
         }, { status: 500 });
     }
