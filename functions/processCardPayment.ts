@@ -48,27 +48,11 @@ Deno.serve(async (req) => {
                 payments: [
                     {
                         amount: String(transaction_amount),
-                        payment_method: token ? {
-                            // Se tiver token (fluxo antigo)
+                        payment_method: {
                             id: payment_method_id,
                             type: payment_method_id?.includes('debit') ? 'debit_card' : 'credit_card',
                             token: token,
                             installments: Number(installments)
-                        } : {
-                            // Se não tiver token (Brick envia dados diretos)
-                            id: payment_method_id,
-                            type: payment_method_id?.includes('debit') ? 'debit_card' : 'credit_card',
-                            installments: Number(installments),
-                            issuer_id: issuer_id,
-                            card: {
-                                card_number: card_number,
-                                security_code: security_code,
-                                expiration_date: expiration_date,
-                                cardholder: {
-                                    name: payer.cardholder?.name,
-                                    identification: payer.identification
-                                }
-                            }
                         }
                     }
                 ]

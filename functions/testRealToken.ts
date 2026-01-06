@@ -35,8 +35,7 @@ Deno.serve(async (req) => {
                             id: "master",
                             type: "credit_card",
                             token: "da5beba6ee44b279a3b0c10579c6697b",
-                            installments: 1,
-                            issuer_id: "12518"
+                            installments: 1
                         }
                     }
                 ]
