@@ -111,13 +111,22 @@ Deno.serve(async (req) => {
                 });
 
                 if (!result || result.price === null || result.price < 10) {
-                    console.log(`❌ Não conseguiu extrair preço válido do fabricante`);
-                    return Response.json({
-                        success: false,
-                        error: "Não foi possível extrair o preço do site do fabricante",
-                        errorCode: "SUPPLIER_EXTRACTION_FAILED"
-                    }, { status: 404 });
-                }
+                    console.log(`⚠️ Falha na extração do fabricante, tentando Google Shopping...`);
+
+                    // FALLBACK: tenta Google Shopping
+                    const cleanedTitle = cleanTitle(auction.title);
+
+                    if (!cleanedTitle || cleanedTitle.length < 4) {
+                        return Response.json({
+                            success: false,
+                            error: "Não foi possível comparar preços (título inválido)",
+                            errorCode: "INVALID_TITLE"
+                        }, { status: 400 });
+                    }
+
+                    // Continua para a busca no Google Shopping abaixo
+                    console.log(`🔎 Fallback para Google Shopping: "${cleanedTitle}"`);
+                } else {
 
                 console.log(`✅ Preço extraído: R$ ${result.price}`);
                 console.log(`🏪 Loja: ${result.store}`);
@@ -168,15 +177,12 @@ Deno.serve(async (req) => {
                     },
                     cached: false
                 });
+                }
 
-            } catch (error) {
-                console.error('❌ Erro modo fabricante:', error.message);
-                return Response.json({
-                    success: false,
-                    error: "Erro ao buscar preço no site do fabricante",
-                    details: error.message
-                }, { status: 500 });
-            }
+                } catch (error) {
+                console.error('⚠️ Erro modo fabricante, tentando Google Shopping:', error.message);
+                // FALLBACK: continua para Google Shopping
+                }
         }
 
         // 4️⃣ LIMPA TÍTULO (modo Google Shopping)
