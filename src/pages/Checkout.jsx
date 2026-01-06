@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { createPixPayment } from '@/functions/createPixPayment';
 import { checkPixPayment } from '@/functions/checkPixPayment';
 import { processCardPayment } from '@/functions/processCardPayment';
+import { getMPPublicKey } from '@/functions/getMPPublicKey';
 
 export default function CheckoutPage() {
     const [auction, setAuction] = useState(null);
@@ -18,6 +19,7 @@ export default function CheckoutPage() {
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [pixData, setPixData] = useState(null);
     const [mpLoaded, setMpLoaded] = useState(false);
+    const [mpPublicKey, setMpPublicKey] = useState(null);
     const brickControllerRef = useRef(null);
     const navigate = useNavigate();
 
@@ -49,6 +51,14 @@ export default function CheckoutPage() {
                 }
 
                 setAuction(auctions[0]);
+
+                // Buscar public key do backend
+                const pkResponse = await getMPPublicKey();
+                if (pkResponse.data?.public_key) {
+                    setMpPublicKey(pkResponse.data.public_key);
+                } else {
+                    throw new Error('Public key não encontrada');
+                }
 
                 // Carregar SDK do Mercado Pago
                 if (!window.MercadoPago) {
@@ -185,8 +195,13 @@ export default function CheckoutPage() {
             } catch (e) {}
         }
 
+        if (!mpPublicKey) {
+            toast.error('Chave pública não carregada');
+            return;
+        }
+
         try {
-            const mp = new window.MercadoPago('APP_USR-dc1d3fcf-1ea5-47da-a68e-bae13a93a7aa', {
+            const mp = new window.MercadoPago(mpPublicKey, {
                 locale: 'pt-BR'
             });
             const bricksBuilder = mp.bricks();
@@ -258,14 +273,14 @@ export default function CheckoutPage() {
     };
 
     useEffect(() => {
-        if (paymentMethod === 'card' && mpLoaded && auction) {
+        if (paymentMethod === 'card' && mpLoaded && mpPublicKey && auction) {
             const timer = setTimeout(() => {
                 initCardBrick();
             }, 100);
 
             return () => clearTimeout(timer);
         }
-    }, [paymentMethod, mpLoaded, auction]);
+    }, [paymentMethod, mpLoaded, mpPublicKey, auction]);
 
     if (isLoading) {
         return (

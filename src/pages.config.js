@@ -6,7 +6,6 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
-import Checkout from './pages/Checkout';
 import CreateAuction from './pages/CreateAuction';
 import CustomerDetails from './pages/CustomerDetails';
 import EditAuction from './pages/EditAuction';
@@ -49,6 +48,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
+import Checkout from './pages/Checkout';
 import __Layout from './Layout.jsx';
 
 
@@ -61,7 +61,6 @@ export const PAGES = {
     "AuctionRoom": AuctionRoom,
     "BannerManagement": BannerManagement,
     "CRM": CRM,
-    "Checkout": Checkout,
     "CreateAuction": CreateAuction,
     "CustomerDetails": CustomerDetails,
     "EditAuction": EditAuction,
@@ -104,6 +103,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
+    "Checkout": Checkout,
 }
 
 export const pagesConfig = {
