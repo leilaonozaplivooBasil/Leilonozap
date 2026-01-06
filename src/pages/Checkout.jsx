@@ -83,7 +83,7 @@ export default function CheckoutPage() {
             }
 
             // Busca pedido
-            const auctions = await base44.asServiceRole.entities.Auction.filter({ id: orderId });
+            const auctions = await base44.entities.Auction.filter({ id: orderId });
             
             if (!auctions || auctions.length === 0) {
                 setError('Pedido não encontrado');
