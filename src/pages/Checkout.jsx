@@ -138,60 +138,70 @@ export default function CheckoutPage() {
         }
     };
 
-    const initCardBrick = async () => {
-        console.log('🔍 DIAGNÓSTICO COMPLETO:');
-        console.log('1. window.MercadoPago existe?', !!window.MercadoPago);
-        console.log('2. mpLoaded?', mpLoaded);
-        console.log('3. Container existe?', !!document.getElementById('cardPaymentBrick_container'));
-        console.log('4. Auction:', auction);
+    const logErrorToArquiteto = async (step, message, error) => {
+        try {
+            await base44.entities.SystemLog.create({
+                step: `Checkout_${step}`,
+                status: 'error',
+                message,
+                component_name: 'Checkout',
+                entity_id: auction?.id,
+                error_details: {
+                    message: error?.message || message,
+                    stack: error?.stack,
+                    mpLoaded,
+                    hasContainer: !!document.getElementById('cardPaymentBrick_container'),
+                    auctionPrice: auction?.current_price
+                },
+                url: window.location.href,
+                user_agent: navigator.userAgent,
+                is_mobile: /Mobi|Android/i.test(navigator.userAgent)
+            });
+        } catch (e) {
+            console.error('Falha ao logar erro:', e);
+        }
+    };
 
+    const initCardBrick = async () => {
         if (!window.MercadoPago) {
-            console.error('❌ PROBLEMA: SDK não carregado');
+            const errorMsg = 'SDK MercadoPago não foi carregado';
+            await logErrorToArquiteto('SDK_NOT_LOADED', errorMsg, new Error(errorMsg));
             toast.error('SDK não carregado. Recarregue a página.');
             return;
         }
 
         const container = document.getElementById('cardPaymentBrick_container');
         if (!container) {
-            console.error('❌ PROBLEMA: Container não existe no DOM');
+            const errorMsg = 'Container cardPaymentBrick_container não existe no DOM';
+            await logErrorToArquiteto('CONTAINER_NOT_FOUND', errorMsg, new Error(errorMsg));
             toast.error('Container não encontrado');
             return;
         }
 
-        console.log('✅ Pré-requisitos OK, iniciando...');
-
         if (brickControllerRef.current) {
             try {
-                console.log('🧹 Desmontando Brick anterior...');
                 brickControllerRef.current.unmount();
                 brickControllerRef.current = null;
-            } catch (e) {
-                console.log('Brick já estava desmontado');
-            }
+            } catch (e) {}
         }
 
         try {
-            console.log('🔧 Criando instância MercadoPago...');
             const mp = new window.MercadoPago('TEST-83a4ca72-cc00-49db-b677-4802ea8ce642', {
                 locale: 'pt-BR'
             });
-            
-            console.log('🔧 Obtendo Bricks Builder...');
             const bricksBuilder = mp.bricks();
 
-            console.log('🔧 Configurando settings do Brick...');
             const settings = {
                 initialization: {
                     amount: auction.current_price,
                 },
                 callbacks: {
                     onReady: () => {
-                        console.log('✅✅✅ BRICK RENDERIZADO COM SUCESSO! ✅✅✅');
+                        console.log('✅ Brick renderizado!');
                     },
                     onSubmit: (formData, additionalData) => {
                         return new Promise((resolve, reject) => {
                             setIsProcessing(true);
-                            console.log('📤 onSubmit chamado:', formData);
                             
                             processCardPayment({
                                 auction_id: auction.id,
@@ -210,12 +220,14 @@ export default function CheckoutPage() {
                                         navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
                                         resolve();
                                     } else {
-                                        toast.error(response.data.error || 'Erro');
+                                        const errorMsg = response.data.error || 'Erro ao processar pagamento';
+                                        logErrorToArquiteto('PAYMENT_PROCESSING_FAILED', errorMsg, new Error(errorMsg));
+                                        toast.error(errorMsg);
                                         reject();
                                     }
                                 })
                                 .catch((error) => {
-                                    console.error('Erro:', error);
+                                    logErrorToArquiteto('PAYMENT_REQUEST_FAILED', error.message, error);
                                     toast.error('Erro ao processar');
                                     reject();
                                 })
@@ -225,13 +237,12 @@ export default function CheckoutPage() {
                         });
                     },
                     onError: (error) => {
-                        console.error('❌ onError chamado:', error);
+                        logErrorToArquiteto('BRICK_FORM_ERROR', 'Erro no formulário do Brick', error);
                         toast.error('Erro no formulário');
                     },
                 },
             };
 
-            console.log('🚀 CRIANDO BRICK AGORA...');
             const controller = await bricksBuilder.create(
                 'cardPayment',
                 'cardPaymentBrick_container',
@@ -240,12 +251,9 @@ export default function CheckoutPage() {
             
             window.cardPaymentBrickController = controller;
             brickControllerRef.current = controller;
-            
-            console.log('✅ Brick controller salvo:', !!controller);
         } catch (error) {
-            console.error('❌❌❌ ERRO CRÍTICO:', error);
-            console.error('Stack:', error.stack);
-            toast.error(`ERRO: ${error.message}`);
+            await logErrorToArquiteto('BRICK_CREATION_FAILED', 'Falha ao criar Card Payment Brick', error);
+            toast.error(`Erro: ${error.message}`);
         }
     };
 
