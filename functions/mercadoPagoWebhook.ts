@@ -1,20 +1,24 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
-    // CRÍTICO: Aceitar qualquer método HTTP (POST, OPTIONS para CORS)
+    const startTime = Date.now();
+    
+    console.log(`📥 Webhook chamado: ${req.method} ${req.url}`);
+    
+    // ACEITAR OPTIONS (CORS preflight)
     if (req.method === 'OPTIONS') {
         return new Response(null, {
             status: 200,
             headers: {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, x-signature, x-request-id'
+                'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+                'Access-Control-Allow-Headers': '*'
             }
         });
     }
-
-    // Garantir resposta rápida < 2s
-    const startTime = Date.now();
+    
+    // ACEITAR QUALQUER MÉTODO (POST, GET, etc) - não rejeitar nada
+    // Mercado Pago envia POST, mas vamos aceitar tudo para debug
     let logId = null;
 
     try {
