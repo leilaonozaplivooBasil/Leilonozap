@@ -145,11 +145,21 @@ export default function MyWinningsPage() {
         
         try {
             console.log('🔵 Chamando mercadopagoCheckout...');
-            const result = await mercadopagoCheckout({ auction_id: auction.id });
-            console.log('🔵 Resposta recebida:', result);
             
+            // Tenta chamar a função
+            let result;
+            try {
+                result = await mercadopagoCheckout({ auction_id: auction.id });
+            } catch (fnError) {
+                console.error('❌ Erro ao chamar função:', fnError);
+                throw new Error('Falha ao conectar com sistema de pagamento');
+            }
+            
+            console.log('🔵 Resposta recebida (raw):', JSON.stringify(result));
+            
+            // Extrai dados da resposta (axios retorna .data)
             const data = result?.data || result;
-            console.log('🔵 Data extraída:', data);
+            console.log('🔵 Data extraída:', JSON.stringify(data));
 
             if (data?.error) {
                 console.error('❌ Erro retornado:', data.error);
@@ -160,17 +170,19 @@ export default function MyWinningsPage() {
 
             if (data?.checkout_url) {
                 console.log('✅ URL de checkout:', data.checkout_url);
-                toast.success("Redirecionando...");
+                toast.success("Redirecionando para pagamento...");
                 setTimeout(() => {
+                    console.log('🔵 Redirecionando agora...');
                     window.location.href = data.checkout_url;
-                }, 500);
+                }, 800);
             } else {
-                console.error('❌ Nenhuma checkout_url na resposta:', data);
-                toast.error("Erro ao criar link de pagamento");
+                console.error('❌ Resposta sem checkout_url:', data);
+                toast.error("Link de pagamento não encontrado");
                 setIsProcessing(false);
             }
         } catch (error) {
-            console.error("❌ ERRO COMPLETO:", error);
+            console.error("❌ ERRO CATCH PRINCIPAL:", error);
+            console.error("❌ Stack:", error.stack);
             toast.error(error.message || "Erro ao processar pagamento");
             setIsProcessing(false);
         }
