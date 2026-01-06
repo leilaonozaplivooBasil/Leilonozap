@@ -139,30 +139,38 @@ export default function MyWinningsPage() {
     const handlePayClick = async (auction) => {
         if (isProcessing) return;
         
+        console.log('🔵 INICIANDO PAGAMENTO:', auction.id);
         setIsProcessing(true);
         toast.info("Criando link de pagamento...");
         
         try {
+            console.log('🔵 Chamando mercadopagoCheckout...');
             const result = await mercadopagoCheckout({ auction_id: auction.id });
+            console.log('🔵 Resposta recebida:', result);
+            
             const data = result?.data || result;
+            console.log('🔵 Data extraída:', data);
 
             if (data?.error) {
+                console.error('❌ Erro retornado:', data.error);
                 toast.error(data.error);
                 setIsProcessing(false);
                 return;
             }
 
             if (data?.checkout_url) {
+                console.log('✅ URL de checkout:', data.checkout_url);
                 toast.success("Redirecionando...");
                 setTimeout(() => {
                     window.location.href = data.checkout_url;
                 }, 500);
             } else {
+                console.error('❌ Nenhuma checkout_url na resposta:', data);
                 toast.error("Erro ao criar link de pagamento");
                 setIsProcessing(false);
             }
         } catch (error) {
-            console.error("Erro:", error);
+            console.error("❌ ERRO COMPLETO:", error);
             toast.error(error.message || "Erro ao processar pagamento");
             setIsProcessing(false);
         }
