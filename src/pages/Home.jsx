@@ -715,29 +715,7 @@ export default function Home() {
               </TooltipContent>
             </Tooltip>
 
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <Link to={createPageUrl("SaiDeBaixo")} className="w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px]">
-                  <button className="sai-de-baixo-button flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 text-sm bg-gradient-to-r from-gray-800 to-gray-900 text-white border-2 border-red-600 shadow-lg shadow-red-600/30 hover:shadow-red-600/50 hover:scale-105 w-full">
-                    <span className="text-white font-bold">Sai</span>
-                    <span className="bg-red-600 text-white px-2 py-0.5 rounded font-bold text-xs">de</span>
-                    <span className="text-white font-bold">Baixo</span>
-                    <span className="text-white font-bold">Leilões</span>
-                  </button>
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs bg-gray-800 border-red-500/50 text-left p-4">
-                <div className="space-y-2">
-                  <p className="font-bold text-red-400 text-base">👕 MODA E ESTILO COM PREÇOS INCRÍVEIS!</p>
-                  <ul className="space-y-1 text-sm text-gray-200">
-                    <li>✅ Roupas, calçados e acessórios</li>
-                    <li>✅ Marcas de qualidade com descontos</li>
-                    <li>✅ Produtos de oportunidade da rede Sai de Baixo</li>
-                    <li>💰 Economize muito em moda!</li>
-                  </ul>
-                </div>
-              </TooltipContent>
-            </Tooltip>
+
 
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>

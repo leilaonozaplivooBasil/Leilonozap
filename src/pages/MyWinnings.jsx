@@ -104,8 +104,7 @@ export default function MyWinningsPage() {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // Detecta se está vindo de uma página Sai de Baixo
-    const isSaiDeBaixo = location.state?.fromSaiDeBaixo || sessionStorage.getItem('saiDeBaixoContext') === 'true';
+    const isSaiDeBaixo = false;
 
     useEffect(() => {
         const loadData = async () => {

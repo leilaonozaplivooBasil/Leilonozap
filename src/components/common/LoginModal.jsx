@@ -22,8 +22,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
   const [isResetting, setIsResetting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
-  // Usa prop theme se fornecido, senão verifica sessionStorage
-  const isSaiDeBaixo = theme === 'saidebaixo' || sessionStorage.getItem('saiDeBaixoContext') === 'true';
+  const isSaiDeBaixo = theme === 'saidebaixo';
 
   const handleLogin = async () => {
     // ✅ VALIDAÇÕES
