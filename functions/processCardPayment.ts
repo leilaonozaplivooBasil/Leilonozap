@@ -79,7 +79,8 @@ Deno.serve(async (req) => {
         const paymentStatus = paymentTransaction?.status;
         const statusDetail = paymentTransaction?.status_detail || order.data?.status_detail || order.status_detail;
         const orderStatus = order.data?.status || order.status;
-        const paymentId = paymentTransaction?.id || order.id || order.data?.id;
+        const orderId = order.data?.id || order.id;
+        const paymentId = paymentTransaction?.id || orderId;
 
         console.log('🔍 STATUS ANALYSIS:', {
             http_status: response.status,
@@ -89,27 +90,14 @@ Deno.serve(async (req) => {
             has_errors: !!order.errors
         });
 
-        // ❌ DETECTAR FALHA REAL
-        const isFailed = 
-            !response.ok || 
-            orderStatus === 'failed' || 
-            paymentStatus === 'failed' || 
-            paymentStatus === 'rejected' ||
-            statusDetail?.includes('invalid') ||
-            order.errors;
+        // ❌ DETECTAR FALHA TÉCNICA
+        if (!response.ok || order.errors) {
+            console.error('❌ ERRO TÉCNICO:', order.errors);
 
-        if (isFailed) {
-            console.error('❌ PAGAMENTO REJEITADO:', {
-                status: paymentStatus,
-                detail: statusDetail,
-                errors: order.errors
-            });
-
-            // Salvar falha no banco
             await base44.entities.MercadoPagoPayment.create({
                 auction_id,
                 user_id: user.id,
-                payment_id: String(paymentId),
+                payment_id: String(paymentId || 'unknown'),
                 amount: transaction_amount,
                 external_reference: externalReference,
                 status: 'failed',
@@ -118,22 +106,37 @@ Deno.serve(async (req) => {
 
             return Response.json({ 
                 success: false,
-                error: statusDetail || order.errors?.[0]?.message || 'Pagamento rejeitado pelo Mercado Pago',
-                details: {
-                    status: paymentStatus,
-                    status_detail: statusDetail,
-                    errors: order.errors
-                }
+                state: 'failed',
+                error: order.errors?.[0]?.message || 'Erro técnico ao processar pagamento',
+                message: 'Erro técnico. Tente novamente.'
             }, { status: 422 });
         }
 
-        // ✅ PAGAMENTO APROVADO/PROCESSADO/EM ANÁLISE
-        const isApproved = 
-            paymentStatus === 'processed' || 
-            paymentStatus === 'approved' ||
-            paymentStatus === 'in_review' ||
-            orderStatus === 'processed' ||
-            orderStatus === 'in_review';
+        // 🎯 DETERMINAR ESTADO DO PAGAMENTO
+        let state = 'pending';
+        let message = '';
+        let dbStatus = paymentStatus;
+
+        if (paymentStatus === 'rejected' || orderStatus === 'failed') {
+            state = 'failed';
+            message = 'Pagamento recusado. Verifique os dados do cartão e tente novamente.';
+            dbStatus = 'rejected';
+        } else if (paymentStatus === 'approved' || paymentStatus === 'processed') {
+            state = 'approved';
+            message = 'Pagamento aprovado com sucesso!';
+            dbStatus = 'approved';
+        } else if (['in_review', 'pending', 'action_required', 'processing'].includes(paymentStatus)) {
+            state = 'pending';
+            message = 'Pagamento em análise. Você receberá confirmação em instantes.';
+            dbStatus = 'pending';
+        } else {
+            // Estado desconhecido, tratar como pending
+            state = 'pending';
+            message = 'Pagamento em processamento.';
+            dbStatus = paymentStatus || 'pending';
+        }
+
+        console.log(`🎯 ESTADO FINAL: ${state} (${paymentStatus})`);
 
         // Salvar no banco
         await base44.entities.MercadoPagoPayment.create({
@@ -142,20 +145,22 @@ Deno.serve(async (req) => {
             payment_id: String(paymentId),
             amount: transaction_amount,
             external_reference: externalReference,
-            status: isApproved ? 'approved' : paymentStatus,
+            status: dbStatus,
             payment_method: payment_method_id
         });
 
-        // Se aprovado, atualizar leilão
-        if (isApproved) {
+        // Se aprovado, atualizar leilão imediatamente
+        if (state === 'approved') {
             await base44.entities.Auction.update(auction_id, {
                 order_status: 'paid'
             });
         }
 
         return Response.json({
-            success: isApproved,
-            order_id: order.data?.id || order.id,
+            success: true,
+            state,
+            message,
+            order_id: orderId,
             payment_id: paymentId,
             status: orderStatus,
             payment_status: paymentStatus,

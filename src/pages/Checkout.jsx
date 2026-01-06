@@ -10,6 +10,7 @@ import { createPixPayment } from '@/functions/createPixPayment';
 import { checkPixPayment } from '@/functions/checkPixPayment';
 import { processCardPayment } from '@/functions/processCardPayment';
 import { getMPPublicKey } from '@/functions/getMPPublicKey';
+import { checkOrderStatus } from '@/functions/checkOrderStatus';
 
 export default function CheckoutPage() {
     const [auction, setAuction] = useState(null);
@@ -144,6 +145,54 @@ export default function CheckoutPage() {
         setTimeout(() => clearInterval(interval), 600000);
     };
 
+    const startOrderPolling = (orderId, auctionId, resolve, reject) => {
+        let attempts = 0;
+        const maxAttempts = 20; // 20 tentativas x 3s = 60s total
+
+        const interval = setInterval(async () => {
+            attempts++;
+            console.log(`🔄 Polling tentativa ${attempts}/${maxAttempts}`);
+
+            try {
+                const response = await checkOrderStatus({ order_id: orderId });
+                
+                if (response.data.success) {
+                    const { state } = response.data;
+                    
+                    if (state === 'approved') {
+                        clearInterval(interval);
+                        console.log('✅ Pagamento aprovado via polling!');
+                        toast.success('Pagamento confirmado!');
+                        
+                        // Atualizar leilão
+                        await base44.entities.Auction.update(auctionId, {
+                            order_status: 'paid'
+                        });
+                        
+                        navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auctionId}`);
+                        resolve();
+                    } else if (state === 'failed') {
+                        clearInterval(interval);
+                        console.log('❌ Pagamento rejeitado via polling');
+                        toast.error('Pagamento recusado pela operadora');
+                        reject(new Error('Pagamento recusado'));
+                    }
+                }
+
+                // Timeout após max tentativas
+                if (attempts >= maxAttempts) {
+                    clearInterval(interval);
+                    console.log('⏱️ Timeout do polling');
+                    toast.info('Pagamento ainda em análise. Verifique em "Meus Arremates".');
+                    navigate(createPageUrl('MyWinnings'));
+                    resolve();
+                }
+            } catch (error) {
+                console.error('Erro no polling:', error);
+            }
+        }, 3000);
+    };
+
     const copyPixCode = () => {
         if (pixData?.qr_code_base64) {
             navigator.clipboard.writeText(pixData.qr_code_base64);
@@ -250,17 +299,23 @@ export default function CheckoutPage() {
                                 console.log('📥 [8/10] Resposta recebida:', response);
                                 
                                 if (response?.data?.success) {
-                                    console.log('✅ [9/10] SUCESSO!');
+                                    const { state, message, order_id } = response.data;
+                                    console.log(`✅ [9/10] ${state.toUpperCase()}: ${message}`);
                                     
-                                    // Se está em análise, avisar o usuário
-                                    if (response.data.payment_status === 'in_review') {
-                                        toast.success('Pagamento recebido! Em análise pela administradora do cartão.');
-                                    } else {
-                                        toast.success('Pagamento aprovado!');
+                                    if (state === 'approved') {
+                                        toast.success(message || 'Pagamento aprovado!');
+                                        navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                                        resolve();
+                                    } else if (state === 'pending') {
+                                        toast.success(message || 'Pagamento em análise...');
+                                        
+                                        // Iniciar polling
+                                        console.log('🔄 Iniciando polling...');
+                                        startOrderPolling(order_id, auction.id, resolve, reject);
+                                    } else if (state === 'failed') {
+                                        toast.error(message || 'Pagamento recusado');
+                                        reject(new Error(message));
                                     }
-                                    
-                                    navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
-                                    resolve();
                                 } else {
                                     console.log('❌ [9/10] FALHOU:', response?.data);
                                     const errorMsg = response?.data?.error || 'Pagamento rejeitado';
