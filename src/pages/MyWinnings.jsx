@@ -145,66 +145,67 @@ export default function MyWinningsPage() {
     };
 
     const handlePayClick = async (auction) => {
-        console.log('🟦 CHECKPOINT 1: Função iniciada');
+        setDebugLogs([]);
+        setShowDebug(true);
+        
+        addDebugLog('✅ CHECKPOINT 1: Função iniciada', 'success');
         
         if (isProcessing) {
-            console.log('⏸️ Já está processando, saindo...');
+            addDebugLog('⏸️ Já processando, abortando', 'warning');
             return;
         }
         
-        console.log('🟦 CHECKPOINT 2: auction =', auction);
-        console.log('🟦 CHECKPOINT 3: auction.id =', auction?.id);
+        addDebugLog('✅ CHECKPOINT 2: auction = ' + JSON.stringify(auction), 'success');
+        addDebugLog('✅ CHECKPOINT 3: auction.id = ' + auction?.id, 'success');
         
         setIsProcessing(true);
-        console.log('🟦 CHECKPOINT 4: isProcessing = true');
+        addDebugLog('✅ CHECKPOINT 4: isProcessing definido', 'success');
         
         toast.info("Criando link de pagamento...");
-        console.log('🟦 CHECKPOINT 5: Toast exibido');
+        addDebugLog('✅ CHECKPOINT 5: Toast exibido', 'success');
         
         try {
-            console.log('🟦 CHECKPOINT 6: Dentro do try');
-            console.log('🟦 CHECKPOINT 7: mercadopagoCheckout existe?', typeof mercadopagoCheckout);
+            addDebugLog('✅ CHECKPOINT 6: Entrando no try', 'success');
+            addDebugLog('✅ CHECKPOINT 7: mercadopagoCheckout tipo = ' + typeof mercadopagoCheckout, 'success');
             
             if (!auction?.id) {
                 throw new Error('ID do leilão não encontrado');
             }
             
-            console.log('🟦 CHECKPOINT 8: Chamando mercadopagoCheckout({ auction_id: "' + auction.id + '" })');
+            addDebugLog('✅ CHECKPOINT 8: Chamando API...', 'success');
             
             const result = await mercadopagoCheckout({ auction_id: auction.id });
             
-            console.log('🟦 CHECKPOINT 9: Resposta recebida');
-            console.log('🟦 CHECKPOINT 10: result =', result);
-            console.log('🟦 CHECKPOINT 11: result.data =', result?.data);
+            addDebugLog('✅ CHECKPOINT 9: Resposta recebida!', 'success');
+            addDebugLog('✅ CHECKPOINT 10: result = ' + JSON.stringify(result), 'success');
             
             const data = result?.data || result;
-            console.log('🟦 CHECKPOINT 12: data final =', data);
+            addDebugLog('✅ CHECKPOINT 11: data = ' + JSON.stringify(data), 'success');
 
             if (data?.error) {
-                console.log('❌ CHECKPOINT 13: Erro na resposta:', data.error);
+                addDebugLog('❌ CHECKPOINT 12: Erro: ' + data.error, 'error');
                 toast.error(data.error);
                 setIsProcessing(false);
                 return;
             }
 
             if (data?.checkout_url) {
-                console.log('✅ CHECKPOINT 14: URL encontrada:', data.checkout_url);
+                addDebugLog('✅ CHECKPOINT 13: URL = ' + data.checkout_url, 'success');
                 toast.success("Redirecionando...");
                 setTimeout(() => {
-                    console.log('🟦 CHECKPOINT 15: Redirecionando para:', data.checkout_url);
+                    addDebugLog('✅ CHECKPOINT 14: Redirecionando agora!', 'success');
                     window.location.href = data.checkout_url;
                 }, 800);
             } else {
-                console.log('❌ CHECKPOINT 16: checkout_url não encontrada');
-                toast.error("Link de pagamento não encontrado");
+                addDebugLog('❌ CHECKPOINT 15: checkout_url ausente', 'error');
+                toast.error("Link não encontrado");
                 setIsProcessing(false);
             }
         } catch (error) {
-            console.log('❌ CHECKPOINT 17: ERRO CAPTURADO');
-            console.error("❌ Erro:", error);
-            console.error("❌ Mensagem:", error?.message);
-            console.error("❌ Stack:", error?.stack);
-            toast.error(error.message || "Erro ao processar pagamento");
+            addDebugLog('❌ CHECKPOINT 16: ERRO CAPTURADO', 'error');
+            addDebugLog('❌ Erro: ' + (error?.message || 'Desconhecido'), 'error');
+            addDebugLog('❌ Stack: ' + (error?.stack || 'N/A'), 'error');
+            toast.error(error.message || "Erro ao processar");
             setIsProcessing(false);
         }
     };
