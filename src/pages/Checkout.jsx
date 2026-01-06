@@ -186,7 +186,7 @@ export default function CheckoutPage() {
         }
 
         try {
-            const mp = new window.MercadoPago('TEST-83a4ca72-cc00-49db-b677-4802ea8ce642', {
+            const mp = new window.MercadoPago('APP_USR-dc1d3fcf-1ea5-47da-a68e-bae13a93a7aa', {
                 locale: 'pt-BR'
             });
             const bricksBuilder = mp.bricks();
