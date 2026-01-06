@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 export async function ocrExtractTitle({ base44, imageUrl, productCategory }) {
     console.log(`\n📸 ═══ EXTRAÇÃO DE TÍTULO VIA OCR ═══`);
