@@ -105,10 +105,17 @@ export default function AuctionRoom() {
     try {
       audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
     } catch (e) {
-      console.warn("AudioContext not supported:", e);
+      console.debug("AudioContext not supported:", e.message);
     }
     return () => {
-      if (audioContextRef.current) audioContextRef.current.close();
+      // 🛡️ CLEANUP: Fecha AudioContext ao desmontar
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(e => console.debug('AudioContext close error:', e.message));
+      }
+      // 🛡️ CLEANUP: Cancela AbortController
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
@@ -696,30 +703,13 @@ export default function AuctionRoom() {
     
   }, [auctionId, loadCurrentUser, initialLoadData]);
 
+  // 🔥 CONSOLIDADO: 1 ÚNICO LOOP EM VEZ DE 3 setInterval SEPARADOS
   useEffect(() => {
     if (!auction || auction.status !== 'active') {
       if (auctionSyncIntervalRef.current) {
         clearInterval(auctionSyncIntervalRef.current);
         auctionSyncIntervalRef.current = null;
       }
-      return;
-    }
-    
-    const initialTimeout = setTimeout(syncAuctionDataOnly, 5000); // 5s inicial
-    
-    auctionSyncIntervalRef.current = setInterval(syncAuctionDataOnly, AUCTION_SYNC_INTERVAL);
-    
-    return () => {
-      clearTimeout(initialTimeout);
-      if (auctionSyncIntervalRef.current) {
-        clearInterval(auctionSyncIntervalRef.current);
-        auctionSyncIntervalRef.current = null;
-      }
-    };
-  }, [auction?.status, syncAuctionDataOnly]);
-
-  useEffect(() => {
-    if (!auction || auction.status !== 'active') {
       if (messageSyncIntervalRef.current) {
         clearInterval(messageSyncIntervalRef.current);
         messageSyncIntervalRef.current = null;
@@ -727,18 +717,35 @@ export default function AuctionRoom() {
       return;
     }
     
-    const initialTimeout = setTimeout(syncMessagesOnly, 8000); // 8s inicial
+    let auctionCounter = 0;
+    let messageCounter = 0;
     
-    messageSyncIntervalRef.current = setInterval(syncMessagesOnly, MESSAGE_SYNC_INTERVAL);
+    // LOOP UNIFICADO: 1 setInterval ao invés de 3
+    const unifiedInterval = setInterval(() => {
+      auctionCounter++;
+      messageCounter++;
+      
+      // Sync auction a cada 15s
+      if (auctionCounter >= 15) {
+        syncAuctionDataOnly();
+        auctionCounter = 0;
+      }
+      
+      // Sync messages a cada 30s
+      if (messageCounter >= 30) {
+        syncMessagesOnly();
+        messageCounter = 0;
+      }
+    }, 1000); // 1 tick por segundo
+    
+    // Initial loads
+    setTimeout(syncAuctionDataOnly, 3000);
+    setTimeout(syncMessagesOnly, 5000);
     
     return () => {
-      clearTimeout(initialTimeout);
-      if (messageSyncIntervalRef.current) {
-        clearInterval(messageSyncIntervalRef.current);
-        messageSyncIntervalRef.current = null;
-      }
+      clearInterval(unifiedInterval);
     };
-  }, [auction?.status, syncMessagesOnly]);
+  }, [auction?.status, syncAuctionDataOnly, syncMessagesOnly]);
 
   useEffect(() => {
     if (chatRef.current) {

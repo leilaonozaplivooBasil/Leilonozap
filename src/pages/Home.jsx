@@ -139,6 +139,7 @@ export default function Home() {
     if (showFavoritesOnly) {
       console.log('🔍 [NoZap] Filtrando apenas favoritos:', favoriteAuctions?.length || 0);
       // 🛡️ PROTEÇÃO: Valida favoriteAuctions também
+      // 🛡️ VALIDAÇÃO: Verifica tipo antes de usar
       filtered = Array.isArray(favoriteAuctions) && favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
     } else {
       // Filtra apenas leilões do NoZap (exclui Sai de Baixo e planos de investimento)

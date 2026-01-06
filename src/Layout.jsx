@@ -329,8 +329,7 @@ export default function Layout({ children, currentPageName }) {
         }
 
       } catch (error) {
-        // 🛡️ CRÍTICO: SILENCIOSAMENTE TRATA QUALQUER ERRO
-        console.debug("Init catch");
+        console.debug("Init error:", error.message);
 
         // 🆕 LOGA ERRO NO SYSTEMLOG
         try {
