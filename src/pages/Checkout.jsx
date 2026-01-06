@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2, AlertCircle, CreditCard, QrCode, Copy, Clock } from 'lucide-react';
+import { Loader2, CheckCircle2, AlertCircle, CreditCard, QrCode, Copy, Clock, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -19,9 +19,9 @@ export default function CheckoutPage() {
     const [payment, setPayment] = useState(null);
     const [user, setUser] = useState(null);
     const [error, setError] = useState(null);
-    const [selectedMethod, setSelectedMethod] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false);
     const [step, setStep] = useState('address');
+    const [isProcessing, setIsProcessing] = useState(false);
+    
     const [formData, setFormData] = useState({
         cpf: '',
         phone: '',
@@ -33,6 +33,7 @@ export default function CheckoutPage() {
         address_state: '',
         address_zip_code: ''
     });
+    
     const [cardData, setCardData] = useState({
         number: '',
         holder_name: '',
@@ -44,7 +45,7 @@ export default function CheckoutPage() {
 
     useEffect(() => {
         loadCheckout();
-    }, [orderId]);
+    }, []);
 
     const loadCheckout = async () => {
         try {
@@ -76,7 +77,7 @@ export default function CheckoutPage() {
                 address_zip_code: currentUser.address_zip_code || ''
             });
             
-            if (currentUser.cpf && currentUser.address_zip_code) {
+            if (currentUser.cpf && currentUser.address_zip_code && currentUser.address_number) {
                 setStep('payment');
             }
 
@@ -96,25 +97,6 @@ export default function CheckoutPage() {
             
             setOrder(auction);
 
-            try {
-                const statusResponse = await base44.functions.invoke('checkPaymentStatus', {
-                    order_id: orderId
-                });
-
-                const statusData = statusResponse?.data || statusResponse;
-
-                if (statusData?.payment) {
-                    setPayment(statusData.payment);
-                    
-                    if (statusData.payment.status === 'APPROVED') {
-                        navigate(`/payment/success?order_id=${orderId}`);
-                        return;
-                    }
-                }
-            } catch (statusErr) {
-                console.log('Nenhum pagamento anterior encontrado');
-            }
-
         } catch (err) {
             console.error('Erro ao carregar checkout:', err);
             setError(err.message || 'Erro ao carregar página');
@@ -126,68 +108,39 @@ export default function CheckoutPage() {
     const handleAddressSubmit = async (e) => {
         e.preventDefault();
         
-        console.log('🔥 SUBMIT INICIADO');
-        console.log('📋 FormData:', formData);
-        console.log('👤 User ID:', user?.id);
-        
-        if (!formData.cpf || !formData.phone || !formData.address_zip_code || !formData.address_street || !formData.address_city || !formData.address_state) {
-            console.error('❌ Campos obrigatórios faltando');
-            toast.error('Preencha todos os campos obrigatórios');
-            return;
-        }
-        
         if (!formData.address_number) {
-            console.error('❌ Número obrigatório');
             toast.error('Número do endereço é obrigatório');
             return;
         }
         
         try {
-            console.log('⏳ Processando...');
             setIsProcessing(true);
             
-            console.log('💾 Atualizando AppUser...');
             await base44.entities.AppUser.update(user.id, formData);
-            console.log('✅ AppUser atualizado!');
             
             const updatedUser = { ...user, ...formData };
             localStorage.setItem('currentUser', JSON.stringify(updatedUser));
             setUser(updatedUser);
             
-            console.log('🎉 Avançando para pagamento!');
             toast.success('Dados salvos!');
             setStep('payment');
             
         } catch (err) {
-            console.error('💥 ERRO CRÍTICO:', err);
-            console.error('💥 Erro completo:', JSON.stringify(err, null, 2));
+            console.error('Erro ao salvar dados:', err);
             toast.error(err.message || 'Erro ao salvar dados');
         } finally {
-            console.log('🏁 Finalizando...');
             setIsProcessing(false);
         }
     };
 
-    const handleSelectMethod = (method) => {
-        setSelectedMethod(method);
-        
-        if (method === 'pix') {
-            handleCreatePixPayment();
-        }
-        if (method === 'credit_card') {
-            setStep('card');
-        }
-    };
-
-    const handleCreatePixPayment = async () => {
+    const handlePixPayment = async () => {
         try {
-            console.log('🔥 INICIANDO PIX');
             setIsProcessing(true);
+            toast.info('Gerando QR Code PIX...');
             
-            console.log('📦 Payload:', {
+            const { data } = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
                 payment_method: 'pix',
-                installments: 1,
                 payer_data: {
                     cpf: user.cpf,
                     phone: user.phone,
@@ -202,48 +155,20 @@ export default function CheckoutPage() {
                     }
                 }
             });
-            
-            const response = await base44.functions.invoke('createMercadoPagoOrder', {
-                order_id: orderId,
-                payment_method: 'pix',
-                installments: 1,
-                payer_data: {
-                    cpf: user.cpf,
-                    phone: user.phone,
-                    address: {
-                        street: user.address_street,
-                        number: user.address_number,
-                        complement: user.address_complement,
-                        neighborhood: user.address_neighborhood,
-                        city: user.address_city,
-                        state: user.address_state,
-                        zip_code: user.address_zip_code
-                    }
-                }
-            });
-
-            console.log('📨 Resposta completa:', response);
-            console.log('📨 Tipo da resposta:', typeof response);
-
-            const data = response?.data || response;
-            console.log('📊 Data extraído:', data);
 
             if (data?.success) {
-                console.log('✅ Sucesso! QR Code:', data.qr_code ? 'presente' : 'ausente');
                 setPayment(data);
-                toast.success('QR Code gerado! Escaneie para pagar');
+                setStep('pix_qr');
+                toast.success('QR Code gerado!');
                 startPaymentPolling();
             } else {
-                console.error('❌ Falha:', data);
-                toast.error(data?.error || 'Erro ao gerar PIX');
+                throw new Error(data?.error || 'Erro ao gerar PIX');
             }
 
         } catch (err) {
-            console.error('💥 ERRO:', err);
-            console.error('💥 Erro completo:', JSON.stringify(err, null, 2));
+            console.error('Erro PIX:', err);
             toast.error(err.message || 'Erro ao processar PIX');
         } finally {
-            console.log('🏁 Finalizando PIX');
             setIsProcessing(false);
         }
     };
@@ -253,13 +178,9 @@ export default function CheckoutPage() {
         
         try {
             setIsProcessing(true);
+            toast.info('Processando pagamento...');
             
-            if (!cardData.number || !cardData.holder_name || !cardData.expiration_month || !cardData.expiration_year || !cardData.cvv) {
-                toast.error('Preencha todos os dados do cartão');
-                return;
-            }
-            
-            const response = await base44.functions.invoke('createMercadoPagoOrder', {
+            const { data } = await base44.functions.invoke('createMercadoPagoOrder', {
                 order_id: orderId,
                 payment_method: 'credit_card',
                 installments: parseInt(cardData.installments),
@@ -285,22 +206,20 @@ export default function CheckoutPage() {
                 }
             });
 
-            const data = response?.data || response;
-
             if (data?.success) {
-                if (data.status === 'APPROVED' || data.status === 'approved') {
-                    navigate(`/payment/success?order_id=${orderId}`);
+                if (data.status === 'APPROVED') {
+                    navigate(`/PaymentSuccess?order_id=${orderId}`);
                 } else {
                     setPayment(data);
-                    toast.info('Pagamento em processamento...');
+                    toast.info('Pagamento em análise...');
                     startPaymentPolling();
                 }
             } else {
-                toast.error('Erro ao processar cartão');
+                throw new Error(data?.error || 'Erro ao processar cartão');
             }
 
         } catch (err) {
-            console.error('Erro ao processar cartão:', err);
+            console.error('Erro cartão:', err);
             toast.error(err.message || 'Erro ao processar pagamento');
         } finally {
             setIsProcessing(false);
@@ -310,18 +229,16 @@ export default function CheckoutPage() {
     const startPaymentPolling = () => {
         const interval = setInterval(async () => {
             try {
-                const statusResponse = await base44.functions.invoke('checkPaymentStatus', {
+                const { data } = await base44.functions.invoke('checkPaymentStatus', {
                     order_id: orderId
                 });
 
-                const statusData = statusResponse?.data || statusResponse;
-
-                if (statusData?.payment?.status === 'APPROVED') {
+                if (data?.payment?.status === 'APPROVED') {
                     clearInterval(interval);
-                    navigate(`/payment/success?order_id=${orderId}`);
+                    navigate(`/PaymentSuccess?order_id=${orderId}`);
                 }
             } catch (err) {
-                console.error('Erro ao verificar status:', err);
+                console.error('Erro polling:', err);
             }
         }, 3000);
 
@@ -379,7 +296,8 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-6">
-                    <Card className={`bg-gray-800/60 border-gray-700 ${step === 'payment' ? 'md:col-span-1' : 'md:col-span-2'}`}>
+                    {/* RESUMO DO PEDIDO */}
+                    <Card className="bg-gray-800/60 border-gray-700">
                         <CardHeader>
                             <CardTitle className="text-white">Resumo do Pedido</CardTitle>
                         </CardHeader>
@@ -403,13 +321,8 @@ export default function CheckoutPage() {
                                 )}
                             </div>
 
-                            <div className="border-t border-gray-700 pt-4 space-y-2">
-                                <div className="flex justify-between text-gray-300">
-                                    <span>Valor do Lance:</span>
-                                    <span className="font-semibold">R$ {amount.toFixed(2)}</span>
-                                </div>
-                                
-                                <div className="flex justify-between text-xl font-bold text-green-400 pt-2 border-t border-gray-700">
+                            <div className="border-t border-gray-700 pt-4">
+                                <div className="flex justify-between text-xl font-bold text-green-400">
                                     <span>Total:</span>
                                     <span>R$ {amount.toFixed(2)}</span>
                                 </div>
@@ -417,114 +330,119 @@ export default function CheckoutPage() {
                         </CardContent>
                     </Card>
 
-                    {step === 'address' ? (
-                        <Card className="bg-gray-800/60 border-gray-700 md:col-span-1">
+                    {/* FORMULÁRIO DE ENDEREÇO */}
+                    {step === 'address' && (
+                        <Card className="bg-gray-800/60 border-gray-700">
                             <CardHeader>
                                 <CardTitle className="text-white">Dados para Pagamento</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleAddressSubmit} className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="col-span-2">
-                                            <label className="text-sm text-gray-400 mb-1 block">CPF *</label>
-                                            <input
-                                                type="text"
-                                                value={formData.cpf}
-                                                onChange={(e) => setFormData({...formData, cpf: e.target.value})}
-                                                placeholder="000.000.000-00"
-                                                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
-                                                required
-                                            />
-                                        </div>
-                                        <div className="col-span-2">
-                                            <label className="text-sm text-gray-400 mb-1 block">Telefone *</label>
-                                            <input
-                                                type="tel"
-                                                value={formData.phone}
-                                                onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                                                placeholder="(00) 00000-0000"
-                                                className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
-                                                required
-                                            />
-                                        </div>
+                                    <div>
+                                        <Label className="text-gray-400">CPF *</Label>
+                                        <Input
+                                            type="text"
+                                            value={formData.cpf}
+                                            onChange={(e) => setFormData({...formData, cpf: e.target.value})}
+                                            placeholder="000.000.000-00"
+                                            className="bg-gray-900/50 border-gray-700 text-white"
+                                            required
+                                        />
+                                    </div>
+                                    
+                                    <div>
+                                        <Label className="text-gray-400">Telefone *</Label>
+                                        <Input
+                                            type="tel"
+                                            value={formData.phone}
+                                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                                            placeholder="(00) 00000-0000"
+                                            className="bg-gray-900/50 border-gray-700 text-white"
+                                            required
+                                        />
                                     </div>
 
                                     <div className="border-t border-gray-700 pt-4">
                                         <h4 className="text-white font-semibold mb-3">Endereço de Entrega</h4>
+                                        
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="text-sm text-gray-400 mb-1 block">CEP *</label>
-                                                <input
+                                                <Label className="text-gray-400">CEP *</Label>
+                                                <Input
                                                     type="text"
                                                     value={formData.address_zip_code}
                                                     onChange={(e) => setFormData({...formData, address_zip_code: e.target.value})}
                                                     placeholder="00000-000"
-                                                    className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                    className="bg-gray-900/50 border-gray-700 text-white"
                                                     required
                                                 />
                                             </div>
+                                            
                                             <div className="grid grid-cols-3 gap-3">
                                                 <div className="col-span-2">
-                                                    <label className="text-sm text-gray-400 mb-1 block">Rua *</label>
-                                                    <input
+                                                    <Label className="text-gray-400">Rua *</Label>
+                                                    <Input
                                                         type="text"
                                                         value={formData.address_street}
                                                         onChange={(e) => setFormData({...formData, address_street: e.target.value})}
-                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                        className="bg-gray-900/50 border-gray-700 text-white"
                                                         required
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-sm text-gray-400 mb-1 block">Número *</label>
-                                                    <input
+                                                    <Label className="text-gray-400">Número *</Label>
+                                                    <Input
                                                         type="text"
                                                         value={formData.address_number}
                                                         onChange={(e) => setFormData({...formData, address_number: e.target.value})}
-                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                        className="bg-gray-900/50 border-gray-700 text-white"
                                                         required
                                                     />
                                                 </div>
                                             </div>
+                                            
                                             <div>
-                                                <label className="text-sm text-gray-400 mb-1 block">Complemento</label>
-                                                <input
+                                                <Label className="text-gray-400">Complemento</Label>
+                                                <Input
                                                     type="text"
                                                     value={formData.address_complement}
                                                     onChange={(e) => setFormData({...formData, address_complement: e.target.value})}
                                                     placeholder="Apto, bloco, etc"
-                                                    className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                    className="bg-gray-900/50 border-gray-700 text-white"
                                                 />
                                             </div>
+                                            
                                             <div>
-                                                <label className="text-sm text-gray-400 mb-1 block">Bairro *</label>
-                                                <input
+                                                <Label className="text-gray-400">Bairro *</Label>
+                                                <Input
                                                     type="text"
                                                     value={formData.address_neighborhood}
                                                     onChange={(e) => setFormData({...formData, address_neighborhood: e.target.value})}
-                                                    className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                    className="bg-gray-900/50 border-gray-700 text-white"
                                                     required
                                                 />
                                             </div>
+                                            
                                             <div className="grid grid-cols-2 gap-3">
                                                 <div>
-                                                    <label className="text-sm text-gray-400 mb-1 block">Cidade *</label>
-                                                    <input
+                                                    <Label className="text-gray-400">Cidade *</Label>
+                                                    <Input
                                                         type="text"
                                                         value={formData.address_city}
                                                         onChange={(e) => setFormData({...formData, address_city: e.target.value})}
-                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white"
+                                                        className="bg-gray-900/50 border-gray-700 text-white"
                                                         required
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="text-sm text-gray-400 mb-1 block">Estado *</label>
-                                                    <input
+                                                    <Label className="text-gray-400">Estado *</Label>
+                                                    <Input
                                                         type="text"
                                                         value={formData.address_state}
-                                                        onChange={(e) => setFormData({...formData, address_state: e.target.value})}
+                                                        onChange={(e) => setFormData({...formData, address_state: e.target.value.toUpperCase()})}
                                                         placeholder="SP"
                                                         maxLength={2}
-                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-3 py-2 text-white uppercase"
+                                                        className="bg-gray-900/50 border-gray-700 text-white uppercase"
                                                         required
                                                     />
                                                 </div>
@@ -549,10 +467,131 @@ export default function CheckoutPage() {
                                 </form>
                             </CardContent>
                         </Card>
-                    ) : step === 'card' ? (
+                    )}
+
+                    {/* ESCOLHA DE PAGAMENTO */}
+                    {step === 'payment' && (
                         <Card className="bg-gray-800/60 border-gray-700">
                             <CardHeader>
-                                <CardTitle className="text-white">Dados do Cartão</CardTitle>
+                                <CardTitle className="text-white">Método de Pagamento</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <button
+                                    onClick={handlePixPayment}
+                                    disabled={isProcessing}
+                                    className="w-full border-2 border-gray-600 hover:border-green-500 rounded-lg p-4 transition-all disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <QrCode className="w-8 h-8 text-green-400" />
+                                        <div className="text-left">
+                                            <p className="text-white font-semibold">PIX</p>
+                                            <p className="text-xs text-gray-400">Aprovação instantânea</p>
+                                        </div>
+                                        {isProcessing && (
+                                            <Loader2 className="w-5 h-5 text-green-400 ml-auto animate-spin" />
+                                        )}
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => setStep('card')}
+                                    disabled={isProcessing}
+                                    className="w-full border-2 border-gray-600 hover:border-blue-500 rounded-lg p-4 transition-all disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <CreditCard className="w-8 h-8 text-blue-400" />
+                                        <div className="text-left">
+                                            <p className="text-white font-semibold">Cartão de Crédito</p>
+                                            <p className="text-xs text-gray-400">Até 12x sem juros</p>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                                        <p className="text-xs text-blue-300 font-semibold">Pagamento 100% Seguro</p>
+                                    </div>
+                                    <p className="text-xs text-gray-400">
+                                        Protegido pelo Mercado Pago
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* QR CODE PIX */}
+                    {step === 'pix_qr' && payment?.qr_code && (
+                        <Card className="bg-gray-800/60 border-gray-700">
+                            <CardHeader>
+                                <CardTitle className="text-white flex items-center justify-between">
+                                    Pagar com PIX
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setStep('payment')}
+                                        className="text-gray-400"
+                                    >
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Voltar
+                                    </Button>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="text-center space-y-4">
+                                <Clock className="w-12 h-12 text-yellow-400 animate-pulse mx-auto" />
+                                <p className="text-white font-semibold">Escaneie o QR Code</p>
+                                <p className="text-sm text-gray-400">
+                                    Use o app do seu banco para escanear
+                                </p>
+                                
+                                {payment.qr_code_base64 && (
+                                    <div className="bg-white p-4 rounded-lg inline-block">
+                                        <img 
+                                            src={`data:image/png;base64,${payment.qr_code_base64}`}
+                                            alt="QR Code PIX"
+                                            className="w-64 h-64"
+                                        />
+                                    </div>
+                                )}
+                                
+                                <div className="bg-gray-900/50 rounded-lg p-4">
+                                    <p className="text-xs text-gray-400 mb-2">Ou copie o código:</p>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text" 
+                                            value={payment.qr_code} 
+                                            readOnly
+                                            className="flex-1 bg-gray-800 text-white text-xs p-2 rounded border border-gray-700"
+                                        />
+                                        <Button onClick={copyPixCode} size="sm" variant="outline">
+                                            <Copy className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                </div>
+                                
+                                <p className="text-xs text-gray-500">
+                                    ⏰ Aguardando pagamento...
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* FORMULÁRIO CARTÃO */}
+                    {step === 'card' && (
+                        <Card className="bg-gray-800/60 border-gray-700">
+                            <CardHeader>
+                                <CardTitle className="text-white flex items-center justify-between">
+                                    Cartão de Crédito
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setStep('payment')}
+                                        className="text-gray-400"
+                                    >
+                                        <ChevronLeft className="w-4 h-4 mr-1" />
+                                        Voltar
+                                    </Button>
+                                </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleCardPayment} className="space-y-4">
@@ -578,7 +617,7 @@ export default function CheckoutPage() {
                                             type="text"
                                             value={cardData.holder_name}
                                             onChange={(e) => setCardData({...cardData, holder_name: e.target.value.toUpperCase()})}
-                                            placeholder="NOME COMO NO CARTÃO"
+                                            placeholder="NOME COMPLETO"
                                             className="bg-gray-900/50 border-gray-700 text-white uppercase"
                                             required
                                         />
@@ -646,147 +685,23 @@ export default function CheckoutPage() {
                                         </Select>
                                     </div>
 
-                                    <div className="space-y-3 pt-4">
-                                        <Button
-                                            type="submit"
-                                            disabled={isProcessing}
-                                            className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-6 text-lg"
-                                        >
-                                            {isProcessing ? (
-                                                <>
-                                                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                                    Processando...
-                                                </>
-                                            ) : (
-                                                <>
-                                                    Pagar R$ {amount.toFixed(2)}
-                                                </>
-                                            )}
-                                        </Button>
-                                        
-                                        <Button
-                                            type="button"
-                                            onClick={() => {
-                                                setStep('payment');
-                                                setSelectedMethod(null);
-                                            }}
-                                            variant="ghost"
-                                            className="w-full text-gray-400 hover:text-white"
-                                        >
-                                            Voltar
-                                        </Button>
-                                    </div>
+                                    <Button
+                                        type="submit"
+                                        disabled={isProcessing}
+                                        className="w-full bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold py-6 text-lg"
+                                    >
+                                        {isProcessing ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                                Processando...
+                                            </>
+                                        ) : (
+                                            `Pagar R$ ${amount.toFixed(2)}`
+                                        )}
+                                    </Button>
                                 </form>
                             </CardContent>
                         </Card>
-                    ) : (
-                        <Card className="bg-gray-800/60 border-gray-700">
-                            <CardHeader>
-                                <CardTitle className="text-white">Escolha o Método de Pagamento</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                            
-                            {payment?.qr_code ? (
-                                <div className="text-center py-4">
-                                    <Clock className="w-12 h-12 text-yellow-400 animate-pulse mx-auto mb-4" />
-                                    <p className="text-white font-semibold mb-2">Escaneie o QR Code</p>
-                                    <p className="text-sm text-gray-400 mb-6">
-                                        Use o app do seu banco para escanear e pagar
-                                    </p>
-                                    
-                                    {payment.qr_code_base64 && (
-                                        <div className="bg-white p-4 rounded-lg inline-block mb-4">
-                                            <img 
-                                                src={`data:image/png;base64,${payment.qr_code_base64}`}
-                                                alt="QR Code PIX"
-                                                className="w-64 h-64 mx-auto"
-                                            />
-                                        </div>
-                                    )}
-                                    
-                                    <div className="bg-gray-900/50 rounded-lg p-4 mb-4">
-                                        <p className="text-xs text-gray-400 mb-2">Ou copie o código:</p>
-                                        <div className="flex gap-2">
-                                            <input 
-                                                type="text" 
-                                                value={payment.qr_code} 
-                                                readOnly
-                                                className="flex-1 bg-gray-800 text-white text-xs p-2 rounded border border-gray-700"
-                                            />
-                                            <Button onClick={copyPixCode} size="sm" variant="outline">
-                                                <Copy className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    
-                                    <p className="text-xs text-gray-500">
-                                        ⏰ Aguardando pagamento... (verifica automaticamente)
-                                    </p>
-                                </div>
-                            ) : payment?.status === 'APPROVED' ? (
-                                <div className="text-center py-8">
-                                    <CheckCircle2 className="w-16 h-16 text-green-400 mx-auto mb-4" />
-                                    <p className="text-white font-semibold mb-2">Pagamento Aprovado!</p>
-                                    <Button onClick={() => navigate(`/payment/success?order_id=${orderId}`)}>
-                                        Ver Pedido
-                                    </Button>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="space-y-3">
-                                        <button
-                                            onClick={() => handleSelectMethod('pix')}
-                                            disabled={isProcessing}
-                                            className={`w-full border-2 rounded-lg p-4 transition-all ${
-                                                selectedMethod === 'pix'
-                                                    ? 'border-green-500 bg-green-500/10'
-                                                    : 'border-gray-600 hover:border-gray-500'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <QrCode className="w-8 h-8 text-green-400" />
-                                                <div className="text-left">
-                                                    <p className="text-white font-semibold">PIX</p>
-                                                    <p className="text-xs text-gray-400">Aprovação instantânea</p>
-                                                </div>
-                                                {selectedMethod === 'pix' && isProcessing && (
-                                                    <Loader2 className="w-5 h-5 text-green-400 ml-auto animate-spin" />
-                                                )}
-                                            </div>
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleSelectMethod('credit_card')}
-                                            disabled={isProcessing}
-                                            className={`w-full border-2 rounded-lg p-4 transition-all ${
-                                                selectedMethod === 'credit_card'
-                                                    ? 'border-blue-500 bg-blue-500/10'
-                                                    : 'border-gray-600 hover:border-gray-500'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <CreditCard className="w-8 h-8 text-blue-400" />
-                                                <div className="text-left">
-                                                    <p className="text-white font-semibold">Cartão de Crédito</p>
-                                                    <p className="text-xs text-gray-400">Até 12x sem juros</p>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    </div>
-
-                                    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <CheckCircle2 className="w-4 h-4 text-blue-400" />
-                                            <p className="text-xs text-blue-300 font-semibold">Pagamento 100% Seguro</p>
-                                        </div>
-                                        <p className="text-xs text-gray-400">
-                                            Seus dados são protegidos pelo Mercado Pago
-                                        </p>
-                                    </div>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
                     )}
                 </div>
 
