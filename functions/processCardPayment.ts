@@ -94,15 +94,19 @@ Deno.serve(async (req) => {
         if (!response.ok || order.errors) {
             console.error('❌ ERRO TÉCNICO:', order.errors);
 
-            await base44.entities.MercadoPagoPayment.create({
-                auction_id,
-                user_id: user.id,
-                payment_id: String(paymentId || 'unknown'),
-                amount: transaction_amount,
-                external_reference: externalReference,
-                status: 'failed',
-                payment_method: payment_method_id
-            });
+            try {
+                await base44.asServiceRole.entities.MercadoPagoPayment.create({
+                    auction_id,
+                    user_id: user.id,
+                    payment_id: String(paymentId || 'unknown'),
+                    amount: transaction_amount,
+                    external_reference: externalReference,
+                    status: 'failed',
+                    payment_method: payment_method_id
+                });
+            } catch (dbError) {
+                console.error('Erro ao salvar no banco:', dbError.message);
+            }
 
             return Response.json({ 
                 success: false,
@@ -139,21 +143,25 @@ Deno.serve(async (req) => {
         console.log(`🎯 ESTADO FINAL: ${state} (${paymentStatus})`);
 
         // Salvar no banco
-        await base44.entities.MercadoPagoPayment.create({
-            auction_id,
-            user_id: user.id,
-            payment_id: String(paymentId),
-            amount: transaction_amount,
-            external_reference: externalReference,
-            status: dbStatus,
-            payment_method: payment_method_id
-        });
-
-        // Se aprovado, atualizar leilão imediatamente
-        if (state === 'approved') {
-            await base44.entities.Auction.update(auction_id, {
-                order_status: 'paid'
+        try {
+            await base44.asServiceRole.entities.MercadoPagoPayment.create({
+                auction_id,
+                user_id: user.id,
+                payment_id: String(paymentId),
+                amount: transaction_amount,
+                external_reference: externalReference,
+                status: dbStatus,
+                payment_method: payment_method_id
             });
+
+            // Se aprovado, atualizar leilão imediatamente
+            if (state === 'approved') {
+                await base44.asServiceRole.entities.Auction.update(auction_id, {
+                    order_status: 'paid'
+                });
+            }
+        } catch (dbError) {
+            console.error('Erro ao salvar no banco:', dbError.message);
         }
 
         return Response.json({
