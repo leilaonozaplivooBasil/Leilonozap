@@ -164,42 +164,21 @@ export default function MyWinningsPage() {
             
             console.log('🔵 Resposta parseada:', response);
 
-            if (response?.success && response?.preference_id) {
+            if (response?.success && response?.checkout_url) {
                 // Log sucesso criação preferência
                 await base44.entities.SystemLog.create({
                     step: 'MERCADOPAGO_PREFERENCE_CREATED',
                     status: 'success',
-                    message: `Preferência criada: ${response.preference_id}`,
+                    message: `Preferência criada, redirecionando para checkout`,
                     component_name: 'MyWinnings',
                     entity_id: auction.id,
-                    payload: { preference_id: response.preference_id }
+                    payload: { checkout_url: response.checkout_url }
                 });
 
-                // Carrega SDK do Mercado Pago dinamicamente
-                if (!window.MercadoPago) {
-                    const script = document.createElement('script');
-                    script.src = 'https://sdk.mercadopago.com/js/v2';
-                    script.async = true;
-                    document.body.appendChild(script);
-                    
-                    await new Promise((resolve) => {
-                        script.onload = resolve;
-                    });
-                }
-
-                const mp = new window.MercadoPago(import.meta.env.VITE_MERCADOPAGO_PUBLIC_KEY, {
-                    locale: 'pt-BR'
-                });
-
-                const checkout = mp.checkout({
-                    preference: {
-                        id: response.preference_id
-                    },
-                    autoOpen: true
-                });
-
-                toast.success("Abrindo checkout...");
-                setIsProcessing(false);
+                toast.success("Redirecionando para o Mercado Pago...");
+                
+                // Redireciona para o checkout do Mercado Pago
+                window.location.href = response.checkout_url;
             } else {
                 // Log erro resposta
                 await base44.entities.SystemLog.create({
