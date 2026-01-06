@@ -6,7 +6,7 @@ import WelcomeModal from "@/components/common/WelcomeModal";
 import TermsModal from "@/components/common/TermsModal";
 import GlobalMonitor from "@/components/system/GlobalMonitor";
 import LoginModal from "@/components/common/LoginModal";
-import ArquitetoFloatingButton from "@/components/arquiteto/ArquitetoFloatingButton";
+
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 
       import { Button } from "@/components/ui/button";
@@ -825,8 +825,7 @@ export default function Layout({ children, currentPageName }) {
           />
         )}
 
-        {/* 🤖 ARQUITETO IA FLUTUANTE - SEMPRE VISÍVEL PARA ADMIN */}
-        <ArquitetoFloatingButton currentUser={currentUser} />
+
       </div>
       
       <style>{`
