@@ -44,6 +44,7 @@ import SaiDeBaixo from './pages/SaiDeBaixo';
 import ShippingSettings from './pages/ShippingSettings';
 import StockPosition from './pages/StockPosition';
 import StoreRegistration from './pages/StoreRegistration';
+import StressTest from './pages/StressTest';
 import SystemChecklist from './pages/SystemChecklist';
 import SystemDiagnostics from './pages/SystemDiagnostics';
 import SystemTest from './pages/SystemTest';
@@ -51,7 +52,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
-import StressTest from './pages/StressTest';
 import __Layout from './Layout.jsx';
 
 
@@ -102,6 +102,7 @@ export const PAGES = {
     "ShippingSettings": ShippingSettings,
     "StockPosition": StockPosition,
     "StoreRegistration": StoreRegistration,
+    "StressTest": StressTest,
     "SystemChecklist": SystemChecklist,
     "SystemDiagnostics": SystemDiagnostics,
     "SystemTest": SystemTest,
@@ -109,7 +110,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
-    "StressTest": StressTest,
 }
 
 export const pagesConfig = {

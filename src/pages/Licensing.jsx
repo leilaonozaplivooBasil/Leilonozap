@@ -1098,20 +1098,20 @@ const DashboardContent = ({ user, isAdmin }) => {
                   </p>
                 </div>
               )}
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <Button
                   onClick={() => setIsAuctionSelectionModalOpen(true)}
-                  className={isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}
+                  className={`w-full sm:flex-1 text-sm sm:text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
                 >
                   <Zap className="w-4 h-4 mr-2" />
-                  Usar Saldo em Leilões
+                  Usar em Leilões
                 </Button>
                 <Button
                   onClick={() => setShowWithdrawalModal(true)}
-                  className="bg-gray-700 hover:bg-gray-600 text-white"
+                  className="w-full sm:flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm sm:text-base"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
-                  Sacar Dinheiro
+                  Sacar
                 </Button>
               </div>
             </div>
