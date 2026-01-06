@@ -84,10 +84,12 @@ Deno.serve(async (req) => {
       gateway_name: 'Mercado Pago'
     });
 
+    console.log('✅ Preferência criada:', data.id);
+    
     return Response.json({
       success: true,
-      checkout_url: data.init_point,
-      preference_id: data.id
+      preference_id: data.id,
+      checkout_url: data.init_point
     });
 
   } catch (error) {
