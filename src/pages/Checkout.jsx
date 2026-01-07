@@ -321,7 +321,11 @@ export default function CheckoutPage() {
                                     }
                                 } else {
                                     console.log('❌ [9/10] FALHOU:', response?.data);
-                                    const errorMsg = response?.data?.error || 'Pagamento rejeitado';
+                                    const errorMsg = response?.data?.message || response?.data?.error || 'Pagamento rejeitado';
+                                    const errorDetails = response?.data?.details;
+                                    
+                                    console.error('💥 Detalhes do erro:', errorDetails);
+                                    
                                     toast.error(errorMsg);
                                     reject(new Error(errorMsg));
                                 }

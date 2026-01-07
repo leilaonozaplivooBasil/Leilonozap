@@ -62,7 +62,8 @@ Deno.serve(async (req) => {
             }
         };
 
-        console.log('Criando order:', orderData);
+        console.log('📤 Criando order:', JSON.stringify(orderData, null, 2));
+        console.log('🔑 Token (primeiros 30 chars):', cleanToken.substring(0, 30));
 
         const response = await fetch('https://api.mercadopago.com/v1/orders', {
             method: 'POST',
@@ -75,10 +76,10 @@ Deno.serve(async (req) => {
         });
 
         console.log('📊 HTTP Status:', response.status);
-        console.log('📊 Headers:', Object.fromEntries(response.headers.entries()));
+        console.log('📊 Response Headers:', Object.fromEntries(response.headers.entries()));
         
         const responseText = await response.text();
-        console.log('📄 Response Text (length:', responseText.length, '):', responseText);
+        console.log('📄 Response completo:', responseText);
 
         // Se não há resposta ou resposta vazia, erro crítico
         if (!responseText || responseText.trim() === '') {
@@ -133,7 +134,25 @@ Deno.serve(async (req) => {
 
         // ❌ DETECTAR FALHA TÉCNICA
         if (!response.ok || order.errors) {
-            console.error('❌ ERRO TÉCNICO:', order.errors);
+            console.error('❌ ERRO TÉCNICO MP:', {
+                httpStatus: response.status,
+                errors: order.errors,
+                message: order.message,
+                cause: order.cause
+            });
+
+            // Extrair mensagem de erro mais detalhada
+            let errorMessage = 'Erro ao processar pagamento';
+            let errorDetails = {};
+
+            if (order.errors && Array.isArray(order.errors)) {
+                errorMessage = order.errors[0]?.message || errorMessage;
+                errorDetails = order.errors[0] || {};
+            } else if (order.message) {
+                errorMessage = order.message;
+            }
+
+            console.error('📋 Erro detalhado:', { errorMessage, errorDetails });
 
             try {
                 await base44.asServiceRole.entities.MercadoPagoPayment.create({
@@ -149,11 +168,35 @@ Deno.serve(async (req) => {
                 console.error('Erro ao salvar no banco:', dbError.message);
             }
 
+            // Log no SystemLog para análise
+            try {
+                await base44.asServiceRole.entities.SystemLog.create({
+                    step: 'MERCADOPAGO_ORDER_ERROR',
+                    status: 'error',
+                    message: `Erro ao criar order no MP: ${errorMessage}`,
+                    component_name: 'processCardPayment',
+                    entity_id: auction_id,
+                    error_details: {
+                        httpStatus: response.status,
+                        errorMessage,
+                        errorDetails,
+                        orderData: {
+                            amount: transaction_amount,
+                            payment_method_id,
+                            installments
+                        }
+                    }
+                });
+            } catch (logError) {
+                console.error('Erro ao salvar SystemLog:', logError.message);
+            }
+
             return Response.json({ 
                 success: false,
                 state: 'failed',
-                error: order.errors?.[0]?.message || 'Erro técnico ao processar pagamento',
-                message: 'Erro técnico. Tente novamente.'
+                error: errorMessage,
+                message: errorMessage,
+                details: errorDetails
             }, { status: 422 });
         }
 
