@@ -75,19 +75,36 @@ Deno.serve(async (req) => {
         });
 
         console.log('📊 HTTP Status:', response.status);
+        console.log('📊 Headers:', Object.fromEntries(response.headers.entries()));
+        
         const responseText = await response.text();
-        console.log('📄 Response Text:', responseText);
+        console.log('📄 Response Text (length:', responseText.length, '):', responseText);
+
+        // Se não há resposta ou resposta vazia, erro crítico
+        if (!responseText || responseText.trim() === '') {
+            console.error('❌ ERRO CRÍTICO: Mercado Pago retornou resposta vazia');
+            console.error('🔑 Token usado (primeiros 20 chars):', cleanToken.substring(0, 20));
+            
+            return Response.json({ 
+                success: false,
+                state: 'failed',
+                error: 'Token de acesso inválido ou expirado',
+                message: 'Erro de autenticação com Mercado Pago. Verifique suas credenciais.',
+                status: response.status,
+                hint: 'O token MP_ACCESS_TOKEN pode estar inválido ou expirado'
+            }, { status: 500 });
+        }
 
         let order;
         try {
-            order = responseText ? JSON.parse(responseText) : {};
+            order = JSON.parse(responseText);
         } catch (parseError) {
             console.error('❌ Erro ao fazer parse da resposta:', parseError.message);
             return Response.json({ 
                 success: false, 
                 error: 'Resposta inválida do Mercado Pago',
                 status: response.status,
-                response: responseText
+                response: responseText.substring(0, 500)
             }, { status: 500 });
         }
 
