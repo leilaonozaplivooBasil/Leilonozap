@@ -27,6 +27,7 @@ Deno.serve(async (req) => {
 
         const orderData = {
             type: 'online',
+            external_reference: `auction_${auction_id}_${Date.now()}`,
             total_amount: String(amount),
             transactions: {
                 payments: [{

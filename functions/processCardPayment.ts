@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
 
         const orderData = {
             type: 'online',
+            external_reference: `auction_${auction_id}_${Date.now()}`,
             processing_mode: 'automatic',
             total_amount: String(transaction_amount),
             payer,
