@@ -6,7 +6,19 @@ Deno.serve(async (req) => {
         const user = await base44.auth.me();
         if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const { auction_id, token, payment_method_id, installments, payer, transaction_amount } = await req.json();
+        const body = await req.json();
+        console.log('📥 Received payload:', JSON.stringify(body, null, 2));
+
+        const { auction_id, token, payment_method_id, installments, payer, transaction_amount } = body;
+
+        if (!token || !payment_method_id || !transaction_amount || !payer) {
+            console.error('❌ Missing required fields');
+            return Response.json({ 
+                success: false,
+                error: 'Missing required payment fields',
+                state: 'failed'
+            }, { status: 400 });
+        }
 
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
         if (!accessToken) return Response.json({ error: 'MP_ACCESS_TOKEN missing' }, { status: 500 });
@@ -15,7 +27,10 @@ Deno.serve(async (req) => {
             type: 'online',
             processing_mode: 'automatic',
             total_amount: String(transaction_amount),
-            payer,
+            payer: {
+                email: payer.email,
+                identification: payer.identification
+            },
             transactions: {
                 payments: [{
                     amount: String(transaction_amount),
@@ -23,11 +38,13 @@ Deno.serve(async (req) => {
                         id: payment_method_id,
                         type: 'credit_card',
                         token,
-                        installments
+                        installments: Number(installments) || 1
                     }
                 }]
             }
         };
+
+        console.log('📤 Sending to MP:', JSON.stringify(orderData, null, 2));
 
         const response = await fetch('https://api.mercadopago.com/v1/orders', {
             method: 'POST',
@@ -38,18 +55,30 @@ Deno.serve(async (req) => {
             body: JSON.stringify(orderData)
         });
 
+        const responseText = await response.text();
+        console.log('📥 MP Response status:', response.status);
+        console.log('📥 MP Response body:', responseText);
+
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('MP Error:', errorText);
+            let errorDetails = responseText;
+            try {
+                const errorJson = JSON.parse(responseText);
+                errorDetails = errorJson.message || errorJson.error || responseText;
+                console.error('❌ MP Error details:', JSON.stringify(errorJson, null, 2));
+            } catch (e) {}
+
             return Response.json({ 
                 success: false, 
-                error: 'Payment failed',
+                error: 'Payment rejected by processor',
+                details: errorDetails,
                 state: 'failed'
             }, { status: 422 });
         }
 
-        const order = await response.json();
+        const order = JSON.parse(responseText);
         const payment = order?.transactions?.payments?.[0];
+
+        console.log('✅ Order created:', order.id, 'Payment status:', payment?.status);
 
         return Response.json({
             success: true,
@@ -58,7 +87,7 @@ Deno.serve(async (req) => {
             payment_status: payment?.status
         });
     } catch (error) {
-        console.error('Error:', error);
+        console.error('💥 Exception:', error.message, error.stack);
         return Response.json({ 
             success: false, 
             error: error.message,
