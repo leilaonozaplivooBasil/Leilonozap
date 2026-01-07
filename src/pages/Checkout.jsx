@@ -19,6 +19,7 @@ export default function CheckoutPage() {
     const [currentUser, setCurrentUser] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [pixData, setPixData] = useState(null);
+    const [pixOrderId, setPixOrderId] = useState(null);
     const [mpLoaded, setMpLoaded] = useState(false);
     const [mpPublicKey, setMpPublicKey] = useState(null);
     const brickControllerRef = useRef(null);
@@ -33,336 +34,120 @@ export default function CheckoutPage() {
                     navigate(createPageUrl('Home'));
                     return;
                 }
+
                 setCurrentUser(JSON.parse(savedUser));
 
-                const urlParams = new URLSearchParams(window.location.search);
-                const auctionId = urlParams.get('auction_id');
-
+                const auctionId = new URLSearchParams(window.location.search).get('auction_id');
                 if (!auctionId) {
-                    alert('Leilão não encontrado');
                     navigate(createPageUrl('MyWinnings'));
                     return;
                 }
 
                 const auctions = await base44.entities.Auction.filter({ id: auctionId });
-                if (auctions.length === 0) {
-                    alert('Leilão não encontrado');
+                if (!auctions.length) {
                     navigate(createPageUrl('MyWinnings'));
                     return;
                 }
 
                 setAuction(auctions[0]);
 
-                // Buscar public key do backend
-                try {
-                    const pkResponse = await getMPPublicKey();
-                    if (pkResponse.data?.public_key) {
-                        setMpPublicKey(pkResponse.data.public_key);
-                    }
-                } catch (pkError) {
-                    console.error('Erro ao buscar public key:', pkError);
-                    toast.error('Erro ao carregar configurações de pagamento');
-                }
+                const { data } = await getMPPublicKey();
+                setMpPublicKey(data.public_key);
 
-                // Carregar SDK do Mercado Pago
                 if (!window.MercadoPago) {
-                    console.log('📦 Carregando SDK Mercado Pago...');
                     const script = document.createElement('script');
                     script.src = 'https://sdk.mercadopago.com/js/v2';
-                    script.onload = () => {
-                        console.log('✅ SDK Mercado Pago carregado!');
-                        setMpLoaded(true);
-                    };
-                    script.onerror = () => {
-                        console.error('❌ Erro ao carregar SDK Mercado Pago');
-                        toast.error('Erro ao carregar SDK de pagamento');
-                    };
+                    script.onload = () => setMpLoaded(true);
                     document.body.appendChild(script);
                 } else {
-                    console.log('✅ SDK Mercado Pago já carregado');
                     setMpLoaded(true);
                 }
-            } catch (error) {
-                console.error('Erro:', error);
-                alert('Erro ao carregar dados');
             } finally {
                 setIsLoading(false);
             }
         };
 
         loadData();
-
-        return () => {
-            if (brickControllerRef.current) {
-                brickControllerRef.current.unmount();
-            }
-        };
+        return () => brickControllerRef.current?.unmount();
     }, []);
+
+    const copyPixCode = () => {
+        if (pixData?.qr_code) {
+            navigator.clipboard.writeText(pixData.qr_code);
+            toast.success('Código PIX copiado');
+        }
+    };
+
+    const startPixPolling = (orderId) => {
+        const interval = setInterval(async () => {
+            const res = await checkOrderStatus({ order_id: orderId });
+            if (res.data?.state === 'approved') {
+                clearInterval(interval);
+                toast.success('Pagamento confirmado!');
+                navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+            }
+        }, 5000);
+
+        setTimeout(() => clearInterval(interval), 600000);
+    };
 
     const handlePixPayment = async () => {
         setIsProcessing(true);
         try {
-            const response = await createPixPayment({
+            const res = await createPixPayment({
                 auction_id: auction.id,
-                amount: auction.current_price,
-                payer_email: currentUser.email,
-                payer_name: currentUser.full_name
+                amount: auction.current_price
             });
 
-            if (response.data.success) {
-                setPixData(response.data);
-                toast.success('QR Code PIX gerado!');
-                
-                // Iniciar polling para verificar pagamento
-                startPixPolling(response.data.payment_id);
-            } else {
-                toast.error('Erro ao gerar PIX');
+            if (res.data.success) {
+                setPixData(res.data);
+                setPixOrderId(res.data.order_id);
+                startPixPolling(res.data.order_id);
             }
-        } catch (error) {
-            console.error('Erro:', error);
-            toast.error('Erro ao processar pagamento PIX');
         } finally {
             setIsProcessing(false);
         }
     };
 
-    const startPixPolling = (paymentId) => {
-        const interval = setInterval(async () => {
-            try {
-                const response = await checkPixPayment({ payment_id: paymentId });
-                
-                if (response.data.status === 'approved') {
-                    clearInterval(interval);
-                    toast.success('Pagamento confirmado!');
-                    navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
-                }
-            } catch (error) {
-                console.error('Erro ao verificar pagamento:', error);
-            }
-        }, 3000);
+    const initCardBrick = async () => {
+        if (brickControllerRef.current || !mpPublicKey) return;
 
-        // Limpar após 10 minutos
-        setTimeout(() => clearInterval(interval), 600000);
-    };
+        const mp = new window.MercadoPago(mpPublicKey, { locale: 'pt-BR' });
+        const bricks = mp.bricks();
 
-    const startOrderPolling = (orderId, auctionId, resolve, reject) => {
-        let attempts = 0;
-        const maxAttempts = 20; // 20 tentativas x 3s = 60s total
+        const controller = await bricks.create(
+            'cardPayment',
+            'cardPaymentBrick_container',
+            {
+                initialization: { amount: auction.current_price },
+                callbacks: {
+                    onSubmit: async (formData) => {
+                        if (isProcessing) return;
+                        setIsProcessing(true);
 
-        const interval = setInterval(async () => {
-            attempts++;
-            console.log(`🔄 Polling tentativa ${attempts}/${maxAttempts}`);
-
-            try {
-                const response = await checkOrderStatus({ order_id: orderId });
-                
-                if (response.data.success) {
-                    const { state } = response.data;
-                    
-                    if (state === 'approved') {
-                        clearInterval(interval);
-                        console.log('✅ Pagamento aprovado via polling!');
-                        toast.success('Pagamento confirmado!');
-                        
-                        // Atualizar leilão
-                        await base44.entities.Auction.update(auctionId, {
-                            order_status: 'paid'
+                        const res = await processCardPayment({
+                            auction_id: auction.id,
+                            ...formData
                         });
-                        
-                        navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auctionId}`);
-                        resolve();
-                    } else if (state === 'failed') {
-                        clearInterval(interval);
-                        console.log('❌ Pagamento rejeitado via polling');
-                        toast.error('Pagamento recusado pela operadora');
-                        reject(new Error('Pagamento recusado'));
+
+                        if (res.data?.state === 'approved') {
+                            navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                        }
+
+                        setIsProcessing(false);
                     }
                 }
-
-                // Timeout após max tentativas
-                if (attempts >= maxAttempts) {
-                    clearInterval(interval);
-                    console.log('⏱️ Timeout do polling');
-                    toast.info('Pagamento ainda em análise. Verifique em "Meus Arremates".');
-                    navigate(createPageUrl('MyWinnings'));
-                    resolve();
-                }
-            } catch (error) {
-                console.error('Erro no polling:', error);
             }
-        }, 3000);
-    };
+        );
 
-    const copyPixCode = () => {
-        if (pixData?.qr_code_base64) {
-            navigator.clipboard.writeText(pixData.qr_code_base64);
-            toast.success('Código PIX copiado!');
-        }
-    };
-
-    const logErrorToArquiteto = async (step, message, error) => {
-        try {
-            await base44.entities.SystemLog.create({
-                step: `Checkout_${step}`,
-                status: 'error',
-                message,
-                component_name: 'Checkout',
-                entity_id: auction?.id,
-                error_details: {
-                    message: error?.message || message,
-                    stack: error?.stack,
-                    mpLoaded,
-                    hasContainer: !!document.getElementById('cardPaymentBrick_container'),
-                    auctionPrice: auction?.current_price
-                },
-                url: window.location.href,
-                user_agent: navigator.userAgent,
-                is_mobile: /Mobi|Android/i.test(navigator.userAgent)
-            });
-        } catch (e) {
-            console.error('Falha ao logar erro:', e);
-        }
-    };
-
-    const initCardBrick = async () => {
-        if (!window.MercadoPago) {
-            const errorMsg = 'SDK MercadoPago não foi carregado';
-            await logErrorToArquiteto('SDK_NOT_LOADED', errorMsg, new Error(errorMsg));
-            toast.error('SDK não carregado. Recarregue a página.');
-            return;
-        }
-
-        const container = document.getElementById('cardPaymentBrick_container');
-        if (!container) {
-            const errorMsg = 'Container cardPaymentBrick_container não existe no DOM';
-            await logErrorToArquiteto('CONTAINER_NOT_FOUND', errorMsg, new Error(errorMsg));
-            toast.error('Container não encontrado');
-            return;
-        }
-
-        if (brickControllerRef.current) {
-            try {
-                brickControllerRef.current.unmount();
-                brickControllerRef.current = null;
-            } catch (e) {}
-        }
-
-        if (!mpPublicKey) {
-            toast.error('Chave pública não carregada');
-            return;
-        }
-
-        try {
-            const mp = new window.MercadoPago(mpPublicKey, {
-                locale: 'pt-BR'
-            });
-            const bricksBuilder = mp.bricks();
-
-            const settings = {
-                initialization: {
-                    amount: auction.current_price,
-                },
-                callbacks: {
-                    onReady: () => {
-                        console.log('✅ Brick renderizado!');
-                    },
-                    onSubmit: (formData, additionalData) => {
-                        console.log('🎯 [1/10] onSubmit INICIADO');
-                        
-                        return new Promise(async (resolve, reject) => {
-                            console.log('🎯 [2/10] Promise criada');
-                            console.log('📦 [3/10] formData:', formData);
-                            console.log('📦 [4/10] Token válido:', !!formData.token);
-                            
-                            setIsProcessing(true);
-                            console.log('⏳ [5/10] isProcessing = true');
-                            
-                            try {
-                                console.log('🚀 [6/10] Preparando chamada backend...');
-                                
-                                const payload = {
-                                    auction_id: auction.id,
-                                    transaction_amount: formData.transaction_amount,
-                                    token: formData.token,
-                                    payment_method_id: formData.payment_method_id,
-                                    installments: formData.installments,
-                                    payer: {
-                                        email: formData.payer.email,
-                                        identification: formData.payer.identification
-                                    }
-                                };
-                                
-                                console.log('📤 [7/10] Enviando para backend:', payload);
-                                
-                                const response = await processCardPayment(payload);
-                                
-                                console.log('📥 [8/10] Resposta recebida:', response);
-                                
-                                if (response?.data?.success) {
-                                    const { state, message, order_id } = response.data;
-                                    console.log(`✅ [9/10] ${state.toUpperCase()}: ${message}`);
-                                    
-                                    if (state === 'approved') {
-                                        toast.success(message || 'Pagamento aprovado!');
-                                        navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
-                                        resolve();
-                                    } else if (state === 'pending') {
-                                        toast.success(message || 'Pagamento em análise...');
-                                        
-                                        // Iniciar polling
-                                        console.log('🔄 Iniciando polling...');
-                                        startOrderPolling(order_id, auction.id, resolve, reject);
-                                    } else if (state === 'failed') {
-                                        toast.error(message || 'Pagamento recusado');
-                                        reject(new Error(message));
-                                    }
-                                } else {
-                                    console.log('❌ [9/10] FALHOU:', response?.data);
-                                    const errorMsg = response?.data?.error || 'Pagamento rejeitado';
-                                    toast.error(errorMsg);
-                                    reject(new Error(errorMsg));
-                                }
-                            } catch (error) {
-                                console.error('💥 [9/10] EXCEÇÃO:', error);
-                                console.error('💥 Stack:', error.stack);
-                                toast.error(`Erro: ${error.message}`);
-                                reject(error);
-                            } finally {
-                                console.log('🏁 [10/10] Finalizando...');
-                                setIsProcessing(false);
-                            }
-                        });
-                    },
-                    onError: (error) => {
-                        logErrorToArquiteto('BRICK_FORM_ERROR', 'Erro no formulário do Brick', error);
-                        toast.error('Erro no formulário');
-                    },
-                },
-            };
-
-            const controller = await bricksBuilder.create(
-                'cardPayment',
-                'cardPaymentBrick_container',
-                settings
-            );
-            
-            window.cardPaymentBrickController = controller;
-            brickControllerRef.current = controller;
-        } catch (error) {
-            await logErrorToArquiteto('BRICK_CREATION_FAILED', 'Falha ao criar Card Payment Brick', error);
-            toast.error(`Erro: ${error.message}`);
-        }
+        brickControllerRef.current = controller;
     };
 
     useEffect(() => {
-        if (paymentMethod === 'card' && mpLoaded && mpPublicKey && auction) {
-            const timer = setTimeout(() => {
-                initCardBrick();
-            }, 100);
-
-            return () => clearTimeout(timer);
+        if (paymentMethod === 'card' && mpLoaded && auction) {
+            initCardBrick();
         }
-    }, [paymentMethod, mpLoaded, mpPublicKey, auction]);
+    }, [paymentMethod, mpLoaded, auction]);
 
     if (isLoading) {
         return (
