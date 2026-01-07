@@ -132,18 +132,23 @@ async function processWebhook(base44, type, dataId, body, xSignature, xRequestId
         }
     }
 
-    // PASSO 5: Processar evento
-    if (type === 'order' && dataId) {
+    // PASSO 5: Processar evento (order e payment)
+    if ((type === 'order' || type === 'payment') && dataId) {
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
         
-        console.log(`📦 Buscando order ${dataId}...`);
-        const response = await fetch(`https://api.mercadopago.com/v1/orders/${dataId}`, {
+        // Determinar endpoint baseado no tipo
+        const endpoint = type === 'payment' 
+            ? `https://api.mercadopago.com/v1/payments/${dataId}`
+            : `https://api.mercadopago.com/v1/orders/${dataId}`;
+        
+        console.log(`📦 Buscando ${type} ${dataId}...`);
+        const response = await fetch(endpoint, {
             headers: { 'Authorization': `Bearer ${accessToken}` }
         });
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Erro ao buscar order:', errorText);
+            console.error(`Erro ao buscar ${type}:`, errorText);
             await base44.asServiceRole.entities.WebhookLog.update(logId, {
                 signature_valid: signatureValid,
                 error: `Erro MP: ${response.status}`,
@@ -152,18 +157,28 @@ async function processWebhook(base44, type, dataId, body, xSignature, xRequestId
             return;
         }
 
-        const order = await response.json();
-        console.log('Order recebida:', {
-            id: order.id,
-            status: order.status,
-            external_reference: order.external_reference,
-            total_amount: order.total_amount
+        const resource = await response.json();
+        console.log(`${type} recebido:`, {
+            id: resource.id,
+            status: resource.status,
+            external_reference: resource.external_reference
         });
 
-        const externalReference = order.external_reference;
-        const orderStatus = order.status;
-        const paymentTransaction = order.transactions?.payments?.[0];
-        const paymentStatus = paymentTransaction?.status;
+        // Extrair dados baseado no tipo
+        let externalReference, resourceStatus, paymentStatus;
+        
+        if (type === 'payment') {
+            // Payment direto (PIX)
+            externalReference = resource.external_reference;
+            resourceStatus = resource.status;
+            paymentStatus = resource.status;
+        } else {
+            // Order (cartão)
+            externalReference = resource.external_reference;
+            resourceStatus = resource.status;
+            const paymentTransaction = resource.transactions?.payments?.[0];
+            paymentStatus = paymentTransaction?.status;
+        }
 
         // PASSO 6: Atualizar pedido interno
         if (externalReference) {
@@ -175,18 +190,14 @@ async function processWebhook(base44, type, dataId, body, xSignature, xRequestId
                 const payment = payments[0];
                 
                 const updateData = {
-                    status: paymentStatus === 'processed' ? 'approved' : paymentStatus || orderStatus
+                    status: paymentStatus === 'processed' ? 'approved' : paymentStatus || resourceStatus
                 };
-                
-                if (paymentTransaction?.id) {
-                    updateData.payment_id = String(paymentTransaction.id);
-                }
 
                 await base44.asServiceRole.entities.MercadoPagoPayment.update(payment.id, updateData);
                 console.log('✅ Pagamento atualizado:', updateData);
 
                 // Se processado/aprovado, atualizar leilão
-                if (orderStatus === 'processed' || paymentStatus === 'processed') {
+                if (resourceStatus === 'processed' || paymentStatus === 'processed' || paymentStatus === 'approved') {
                     await base44.asServiceRole.entities.Auction.update(payment.auction_id, {
                         order_status: 'paid'
                     });

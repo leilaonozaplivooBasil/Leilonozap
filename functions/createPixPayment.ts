@@ -66,10 +66,11 @@ Deno.serve(async (req) => {
         // Extrair dados do pagamento PIX
         const paymentTransaction = order.transactions?.payments?.[0];
         const paymentId = paymentTransaction?.id || order.id;
+        const orderId = order.id;
         const paymentMethod = paymentTransaction?.payment_method || {};
 
         // Salvar no banco
-        await base44.entities.MercadoPagoPayment.create({
+        await base44.asServiceRole.entities.MercadoPagoPayment.create({
             auction_id,
             user_id: user.id,
             payment_id: String(paymentId),
@@ -82,6 +83,7 @@ Deno.serve(async (req) => {
         return Response.json({
             success: true,
             payment_id: paymentId,
+            order_id: orderId,
             qr_code: paymentMethod.qr_code,
             qr_code_base64: paymentMethod.qr_code_base64,
             ticket_url: paymentMethod.ticket_url
