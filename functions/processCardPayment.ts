@@ -9,6 +9,10 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
+        const payload = await req.json();
+        
+        console.log('📥 Payload recebido:', JSON.stringify(payload, null, 2));
+        
         const { 
             auction_id, 
             transaction_amount, 
@@ -16,13 +20,16 @@ Deno.serve(async (req) => {
             payment_method_id, 
             installments,
             payer,
-            issuer_id,
-            card_number,
-            security_code,
-            expiration_date
-        } = await req.json();
+            issuer_id
+        } = payload;
 
-        if (!auction_id || !transaction_amount || !payment_method_id) {
+        if (!auction_id || !transaction_amount || !payment_method_id || !token) {
+            console.error('❌ Dados obrigatórios faltando:', {
+                auction_id: !!auction_id,
+                transaction_amount: !!transaction_amount,
+                payment_method_id: !!payment_method_id,
+                token: !!token
+            });
             return Response.json({ error: 'Dados obrigatórios faltando' }, { status: 400 });
         }
 
@@ -38,29 +45,42 @@ Deno.serve(async (req) => {
         const idempotencyKey = `${auction_id}_${user.id}_${Date.now()}`;
 
         // Criar order com pagamento (API Orders) - usando dados do Brick
+        const paymentMethodData = {
+            id: payment_method_id,
+            type: payment_method_id?.includes('debit') ? 'debit_card' : 'credit_card',
+            token: token,
+            installments: Number(installments)
+        };
+
+        // Adicionar issuer_id se fornecido (obrigatório para alguns países)
+        if (issuer_id) {
+            paymentMethodData.issuer_id = String(issuer_id);
+        }
+
         const orderData = {
             type: "online",
             processing_mode: "automatic",
             total_amount: String(transaction_amount),
             external_reference: externalReference,
             payer: {
-                email: payer.email,
-                identification: payer.identification
+                email: payer?.email || user.email
             },
             transactions: {
                 payments: [
                     {
                         amount: String(transaction_amount),
-                        payment_method: {
-                            id: payment_method_id,
-                            type: payment_method_id?.includes('debit') ? 'debit_card' : 'credit_card',
-                            token: token,
-                            installments: Number(installments)
-                        }
+                        payment_method: paymentMethodData
                     }
                 ]
             }
         };
+
+        // Adicionar identification se fornecido
+        if (payer?.identification) {
+            orderData.payer.identification = payer.identification;
+        }
+
+        console.log('📋 Order data completo:', JSON.stringify(orderData, null, 2));
 
         console.log('📤 Criando order:', JSON.stringify(orderData, null, 2));
         console.log('🔑 Token (primeiros 30 chars):', cleanToken.substring(0, 30));
