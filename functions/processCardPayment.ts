@@ -31,11 +31,14 @@ Deno.serve(async (req) => {
 
         console.log('📤 Sending to MP:', JSON.stringify(orderData, null, 2));
 
+        const idempotencyKey = `${auction_id}_${user.id}_${Date.now()}`;
+        
         const response = await fetch('https://api.mercadopago.com/v1/orders', {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'X-Idempotency-Key': idempotencyKey
             },
             body: JSON.stringify(orderData)
         });
