@@ -110,8 +110,13 @@ Deno.serve(async (req) => {
 
         console.log('📥 Resposta completa MP:', JSON.stringify(order, null, 2));
 
-        // 🔍 EXTRAIR STATUS REAL
-        const paymentTransaction = order.transactions?.payments?.[0] || order.data?.transactions?.payments?.[0];
+        // 🔍 EXTRAIR STATUS REAL - fallback seguro para múltiplos formatos de resposta
+        const payments = 
+            order.transactions?.payments || 
+            order.data?.transactions?.payments || 
+            [];
+        
+        const paymentTransaction = payments[0];
         const paymentStatus = paymentTransaction?.status;
         const statusDetail = paymentTransaction?.status_detail || order.data?.status_detail || order.status_detail;
         const orderStatus = order.data?.status || order.status;
@@ -190,12 +195,8 @@ Deno.serve(async (req) => {
                 payment_method: payment_method_id
             });
 
-            // Se aprovado, atualizar leilão imediatamente
-            if (state === 'approved') {
-                await base44.asServiceRole.entities.Auction.update(auction_id, {
-                    order_status: 'paid'
-                });
-            }
+            // NÃO atualizar leilão aqui - deixar para o webhook
+            // Evita race condition entre polling e webhook
         } catch (dbError) {
             console.error('Erro ao salvar no banco:', dbError.message);
         }

@@ -9,12 +9,13 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Não autorizado' }, { status: 401 });
         }
 
-        const url = new URL(req.url);
-        const orderId = url.searchParams.get('order_id');
+        const { order_id } = await req.json();
 
-        if (!orderId) {
+        if (!order_id) {
             return Response.json({ error: 'order_id obrigatório' }, { status: 400 });
         }
+
+        const orderId = order_id;
 
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
         if (!accessToken) {

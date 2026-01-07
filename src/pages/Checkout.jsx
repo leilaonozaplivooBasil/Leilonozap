@@ -113,8 +113,8 @@ export default function CheckoutPage() {
                 setPixData(response.data);
                 toast.success('QR Code PIX gerado!');
                 
-                // Iniciar polling para verificar pagamento
-                startPixPolling(response.data.payment_id);
+                // Iniciar polling para verificar pagamento usando order_id
+                startPixPolling(response.data.order_id, auction.id);
             } else {
                 toast.error('Erro ao gerar PIX');
             }
@@ -126,15 +126,15 @@ export default function CheckoutPage() {
         }
     };
 
-    const startPixPolling = (paymentId) => {
+    const startPixPolling = (orderId, auctionId) => {
         const interval = setInterval(async () => {
             try {
-                const response = await checkPixPayment({ payment_id: paymentId });
+                const response = await checkOrderStatus({ order_id: orderId });
                 
-                if (response.data.status === 'approved') {
+                if (response.data.success && response.data.state === 'approved') {
                     clearInterval(interval);
                     toast.success('Pagamento confirmado!');
-                    navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                    navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auctionId}`);
                 }
             } catch (error) {
                 console.error('Erro ao verificar pagamento:', error);
@@ -163,12 +163,9 @@ export default function CheckoutPage() {
                         clearInterval(interval);
                         console.log('✅ Pagamento aprovado via polling!');
                         toast.success('Pagamento confirmado!');
-                        
-                        // Atualizar leilão
-                        await base44.entities.Auction.update(auctionId, {
-                            order_status: 'paid'
-                        });
-                        
+
+                        // NÃO atualizar leilão - webhook fará isso
+                        // Apenas redirecionar
                         navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auctionId}`);
                         resolve();
                     } else if (state === 'failed') {
@@ -194,8 +191,8 @@ export default function CheckoutPage() {
     };
 
     const copyPixCode = () => {
-        if (pixData?.qr_code_base64) {
-            navigator.clipboard.writeText(pixData.qr_code_base64);
+        if (pixData?.qr_code) {
+            navigator.clipboard.writeText(pixData.qr_code);
             toast.success('Código PIX copiado!');
         }
     };
@@ -225,6 +222,12 @@ export default function CheckoutPage() {
     };
 
     const initCardBrick = async () => {
+        // Proteção: não criar brick duplicado
+        if (brickControllerRef.current) {
+            console.log('⚠️ Brick já existe, ignorando');
+            return;
+        }
+
         if (!window.MercadoPago) {
             const errorMsg = 'SDK MercadoPago não foi carregado';
             await logErrorToArquiteto('SDK_NOT_LOADED', errorMsg, new Error(errorMsg));
@@ -238,13 +241,6 @@ export default function CheckoutPage() {
             await logErrorToArquiteto('CONTAINER_NOT_FOUND', errorMsg, new Error(errorMsg));
             toast.error('Container não encontrado');
             return;
-        }
-
-        if (brickControllerRef.current) {
-            try {
-                brickControllerRef.current.unmount();
-                brickControllerRef.current = null;
-            } catch (e) {}
         }
 
         if (!mpPublicKey) {
@@ -270,6 +266,13 @@ export default function CheckoutPage() {
                         console.log('🎯 [1/10] onSubmit INICIADO');
                         
                         return new Promise(async (resolve, reject) => {
+                            // Bloquear múltiplos submits
+                            if (isProcessing) {
+                                console.log('⚠️ Já está processando, ignorando');
+                                reject(new Error('Pagamento já em processamento'));
+                                return;
+                            }
+                            
                             console.log('🎯 [2/10] Promise criada');
                             console.log('📦 [3/10] formData:', formData);
                             console.log('📦 [4/10] Token válido:', !!formData.token);
