@@ -103,12 +103,7 @@ export default function CheckoutPage() {
                 setPixData(res.data);
                 setPixOrderId(res.data.order_id);
                 startPixPolling(res.data.order_id);
-            } else {
-                toast.error(res.data.error || 'Erro ao gerar PIX');
             }
-        } catch (error) {
-            console.error('Erro PIX:', error);
-            toast.error('Erro ao processar PIX');
         } finally {
             setIsProcessing(false);
         }
@@ -126,34 +121,20 @@ export default function CheckoutPage() {
             {
                 initialization: { amount: auction.current_price },
                 callbacks: {
-                    onReady: () => {
-                        console.log('✅ Card Brick ready');
-                    },
                     onSubmit: async (formData) => {
                         if (isProcessing) return;
                         setIsProcessing(true);
 
-                        try {
-                            const res = await processCardPayment({
-                                auction_id: auction.id,
-                                ...formData
-                            });
+                        const res = await processCardPayment({
+                            auction_id: auction.id,
+                            ...formData
+                        });
 
-                            if (res.data?.state === 'approved') {
-                                navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
-                            } else {
-                                toast.error(res.data?.error || 'Pagamento não aprovado');
-                            }
-                        } catch (error) {
-                            console.error('Card payment error:', error);
-                            toast.error('Erro ao processar pagamento');
-                        } finally {
-                            setIsProcessing(false);
+                        if (res.data?.state === 'approved') {
+                            navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
                         }
-                    },
-                    onError: (error) => {
-                        console.error('Brick error:', error);
-                        toast.error('Erro no formulário de pagamento');
+
+                        setIsProcessing(false);
                     }
                 }
             }
