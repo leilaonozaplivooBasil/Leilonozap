@@ -2,13 +2,28 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
     try {
+        console.log('🎯 createPixPayment called');
+        
         const base44 = createClientFromRequest(req);
         const user = await base44.auth.me();
-        if (!user) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        
+        if (!user) {
+            console.error('❌ No user authenticated');
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        
+        console.log('✅ User authenticated:', user.email);
 
         const { auction_id, amount } = await req.json();
+        console.log('📦 Request data:', { auction_id, amount });
+        
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
-        if (!accessToken) return Response.json({ error: 'MP_ACCESS_TOKEN missing' }, { status: 500 });
+        if (!accessToken) {
+            console.error('❌ MP_ACCESS_TOKEN not configured');
+            return Response.json({ error: 'MP_ACCESS_TOKEN missing' }, { status: 500 });
+        }
+        
+        console.log('✅ Access token present');
 
         const orderData = {
             type: 'online',

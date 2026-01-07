@@ -126,20 +126,34 @@ export default function CheckoutPage() {
             {
                 initialization: { amount: auction.current_price },
                 callbacks: {
+                    onReady: () => {
+                        console.log('✅ Card Brick ready');
+                    },
                     onSubmit: async (formData) => {
                         if (isProcessing) return;
                         setIsProcessing(true);
 
-                        const res = await processCardPayment({
-                            auction_id: auction.id,
-                            ...formData
-                        });
+                        try {
+                            const res = await processCardPayment({
+                                auction_id: auction.id,
+                                ...formData
+                            });
 
-                        if (res.data?.state === 'approved') {
-                            navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                            if (res.data?.state === 'approved') {
+                                navigate(createPageUrl('PaymentSuccess') + `?auction_id=${auction.id}`);
+                            } else {
+                                toast.error(res.data?.error || 'Pagamento não aprovado');
+                            }
+                        } catch (error) {
+                            console.error('Card payment error:', error);
+                            toast.error('Erro ao processar pagamento');
+                        } finally {
+                            setIsProcessing(false);
                         }
-
-                        setIsProcessing(false);
+                    },
+                    onError: (error) => {
+                        console.error('Brick error:', error);
+                        toast.error('Erro no formulário de pagamento');
                     }
                 }
             }
