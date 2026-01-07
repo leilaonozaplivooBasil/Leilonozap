@@ -29,6 +29,8 @@ Deno.serve(async (req) => {
             }
         };
 
+        console.log('📤 Sending to MP:', JSON.stringify(orderData, null, 2));
+
         const response = await fetch('https://api.mercadopago.com/v1/orders', {
             method: 'POST',
             headers: {
@@ -38,10 +40,17 @@ Deno.serve(async (req) => {
             body: JSON.stringify(orderData)
         });
 
+        console.log('📥 MP Response status:', response.status);
+
         if (!response.ok) {
-            const error = await response.text();
-            console.error('MP Error:', error);
-            return Response.json({ success: false, error: 'Payment failed' }, { status: 500 });
+            const errorText = await response.text();
+            console.error('❌ MP Error Response:', errorText);
+            let errorMsg = 'Payment failed';
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMsg = errorJson.message || errorJson.error || errorMsg;
+            } catch (e) {}
+            return Response.json({ success: false, error: errorMsg, details: errorText }, { status: 500 });
         }
 
         const order = await response.json();

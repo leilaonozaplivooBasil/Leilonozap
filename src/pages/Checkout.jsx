@@ -103,7 +103,12 @@ export default function CheckoutPage() {
                 setPixData(res.data);
                 setPixOrderId(res.data.order_id);
                 startPixPolling(res.data.order_id);
+            } else {
+                toast.error(res.data.error || 'Erro ao gerar PIX');
             }
+        } catch (error) {
+            console.error('Erro PIX:', error);
+            toast.error('Erro ao processar PIX');
         } finally {
             setIsProcessing(false);
         }
