@@ -86,17 +86,24 @@ export default function CheckoutPage() {
         const loadMercadoPagoSDK = () => {
             // Verificar se já existe
             if (window.MercadoPago) {
+                console.log('✅ SDK já carregado, inicializando...');
                 initializeMercadoPago();
                 return;
             }
 
+            console.log('📥 Carregando SDK do Mercado Pago...');
+            
             // Carregar SDK
             const script = document.createElement('script');
             script.src = 'https://sdk.mercadopago.com/js/v2';
             script.async = true;
-            script.onload = () => initializeMercadoPago();
-            script.onerror = () => {
-                toast.error('Erro ao carregar Mercado Pago');
+            script.onload = () => {
+                console.log('✅ SDK carregado com sucesso');
+                initializeMercadoPago();
+            };
+            script.onerror = (error) => {
+                console.error('❌ Erro ao carregar SDK:', error);
+                toast.error('Erro ao carregar SDK do Mercado Pago. Verifique sua conexão.');
             };
             document.body.appendChild(script);
         };
@@ -107,8 +114,18 @@ export default function CheckoutPage() {
                 console.log('🔑 Public Key:', publicKey);
                 console.log('🎫 Preference ID:', preferenceId);
                 
+                // Verificar se container existe
+                const container = document.getElementById('walletBrick_container');
+                if (!container) {
+                    throw new Error('Container walletBrick_container não encontrado');
+                }
+                console.log('✅ Container encontrado');
+
+                // Limpar container antes de renderizar
+                container.innerHTML = '';
+                
                 // Inicializar MP com public key recebida do backend
-                const mp = new window.MercadoPago(publicKey, {
+                const mp = new window.MercadoPago(publicKey.trim(), {
                     locale: 'pt-BR'
                 });
 
@@ -119,9 +136,9 @@ export default function CheckoutPage() {
                 const bricksBuilder = mp.bricks();
                 console.log('🧱 Criando Wallet Brick...');
 
-                await bricksBuilder.create('wallet', 'walletBrick_container', {
+                const brick = await bricksBuilder.create('wallet', 'walletBrick_container', {
                     initialization: {
-                        preferenceId: preferenceId
+                        preferenceId: preferenceId.trim()
                     },
                     customization: {
                         texts: {
@@ -130,12 +147,23 @@ export default function CheckoutPage() {
                     }
                 });
 
+                console.log('✅ Wallet Brick criado:', brick);
                 console.log('✅ Botão de pagamento renderizado com sucesso!');
 
             } catch (error) {
                 console.error('❌ Erro detalhado ao inicializar MP:', error);
+                console.error('Tipo do erro:', error.name);
+                console.error('Mensagem:', error.message);
                 console.error('Stack:', error.stack);
-                toast.error(`Erro ao carregar botão: ${error.message}`);
+                
+                // Mostrar erro mais detalhado
+                if (error.message.includes('public_key')) {
+                    toast.error('Chave pública inválida. Verifique as credenciais do Mercado Pago.');
+                } else if (error.message.includes('preference')) {
+                    toast.error('Erro ao carregar preferência de pagamento.');
+                } else {
+                    toast.error(`Erro: ${error.message}`);
+                }
             }
         };
 
@@ -218,8 +246,16 @@ export default function CheckoutPage() {
                             <div id="walletBrick_container" ref={walletContainerRef}></div>
 
                             {(!preferenceId || !publicKey) && (
-                                <div className="flex justify-center py-8">
+                                <div className="flex flex-col items-center justify-center py-8 space-y-3">
                                     <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                                    <p className="text-sm text-gray-400">Carregando opções de pagamento...</p>
+                                </div>
+                            )}
+
+                            {preferenceId && publicKey && (
+                                <div className="text-xs text-gray-500 mt-2">
+                                    <p>Debug: Preference ID carregado</p>
+                                    <p>Debug: Public Key carregado</p>
                                 </div>
                             )}
 
