@@ -26,8 +26,10 @@ Deno.serve(async (req) => {
 
         // Inicializar SDK do Mercado Pago
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
-        if (!accessToken) {
-            return Response.json({ error: 'Credenciais não configuradas' }, { status: 500 });
+        const publicKey = Deno.env.get('MP_PUBLIC_KEY');
+        
+        if (!accessToken || !publicKey) {
+            return Response.json({ error: 'Credenciais do Mercado Pago não configuradas' }, { status: 500 });
         }
 
         const client = new MercadoPagoConfig({ 
@@ -96,6 +98,7 @@ Deno.serve(async (req) => {
         return Response.json({
             success: true,
             preference_id: result.id,
+            public_key: publicKey.trim(),
             init_point: result.init_point,
             sandbox_init_point: result.sandbox_init_point
         });

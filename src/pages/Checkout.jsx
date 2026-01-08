@@ -11,6 +11,7 @@ export default function CheckoutPage() {
     const [auction, setAuction] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [preferenceId, setPreferenceId] = useState(null);
+    const [publicKey, setPublicKey] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const walletContainerRef = useRef(null);
     const mpInstanceRef = useRef(null);
@@ -49,6 +50,7 @@ export default function CheckoutPage() {
                 const response = await createMPPreference({ auction_id: auctionId });
                 if (response.data.success) {
                     setPreferenceId(response.data.preference_id);
+                    setPublicKey(response.data.public_key);
                 } else {
                     toast.error('Erro ao criar preferência de pagamento');
                 }
@@ -66,7 +68,7 @@ export default function CheckoutPage() {
 
     // Carregar SDK do Mercado Pago e renderizar botão
     useEffect(() => {
-        if (!preferenceId) return;
+        if (!preferenceId || !publicKey) return;
 
         const loadMercadoPagoSDK = () => {
             // Verificar se já existe
@@ -88,9 +90,7 @@ export default function CheckoutPage() {
 
         const initializeMercadoPago = async () => {
             try {
-                const publicKey = 'APP_USR-0cd3a441-3c36-4eda-9c25-e41c1b2b0fc7'; // Sua Public Key
-
-                // Inicializar MP
+                // Inicializar MP com public key recebida do backend
                 const mp = new window.MercadoPago(publicKey, {
                     locale: 'pt-BR'
                 });
@@ -130,7 +130,7 @@ export default function CheckoutPage() {
                 }
             }
         };
-    }, [preferenceId]);
+    }, [preferenceId, publicKey]);
 
     if (isLoading) {
         return (
@@ -197,7 +197,7 @@ export default function CheckoutPage() {
                             {/* Container para o Wallet Brick do Mercado Pago */}
                             <div id="walletBrick_container" ref={walletContainerRef}></div>
 
-                            {!preferenceId && (
+                            {(!preferenceId || !publicKey) && (
                                 <div className="flex justify-center py-8">
                                     <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                                 </div>
