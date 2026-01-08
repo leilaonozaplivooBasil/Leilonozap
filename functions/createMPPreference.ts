@@ -114,6 +114,8 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error('❌ Erro ao criar preferência:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error causa:', error.cause);
         return Response.json({ 
             error: error.message,
             details: error.cause || error.stack
