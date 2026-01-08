@@ -27,14 +27,22 @@ Deno.serve(async (req) => {
         // Inicializar SDK do Mercado Pago
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
         const publicKey = Deno.env.get('MP_PUBLIC_KEY');
-        
-        console.log('🔑 Access Token existe:', !!accessToken);
-        console.log('🔑 Public Key existe:', !!publicKey);
-        console.log('🔑 Public Key valor:', publicKey ? `${publicKey.substring(0, 20)}...` : 'null');
-        
+
+        console.log('🔍 DEBUG - Raw Access Token:', accessToken ? `${accessToken.substring(0, 30)}...` : 'NULL');
+        console.log('🔍 DEBUG - Raw Public Key:', publicKey ? `${publicKey.substring(0, 30)}...` : 'NULL');
+        console.log('🔍 DEBUG - Public Key length:', publicKey ? publicKey.length : 0);
+        console.log('🔍 DEBUG - Public Key type:', typeof publicKey);
+
         if (!accessToken || !publicKey) {
             console.error('❌ Credenciais ausentes - accessToken:', !!accessToken, 'publicKey:', !!publicKey);
-            return Response.json({ error: 'Credenciais do Mercado Pago não configuradas' }, { status: 500 });
+            return Response.json({ 
+                success: false,
+                error: 'Credenciais do Mercado Pago não configuradas',
+                debug: {
+                    hasAccessToken: !!accessToken,
+                    hasPublicKey: !!publicKey
+                }
+            }, { status: 500 });
         }
 
         const client = new MercadoPagoConfig({ 
@@ -100,15 +108,20 @@ Deno.serve(async (req) => {
             payment_method: 'pending'
         });
 
+        const trimmedPublicKey = publicKey.trim();
+
+        console.log('🔍 DEBUG - Public Key before return:', trimmedPublicKey ? `${trimmedPublicKey.substring(0, 30)}...` : 'EMPTY');
+        console.log('🔍 DEBUG - Public Key trimmed length:', trimmedPublicKey.length);
+
         const responseData = {
             success: true,
             preference_id: result.id,
-            public_key: publicKey.trim(),
+            public_key: trimmedPublicKey,
             init_point: result.init_point,
             sandbox_init_point: result.sandbox_init_point
         };
 
-        console.log('📤 Retornando resposta:', JSON.stringify(responseData, null, 2));
+        console.log('📤 Retornando resposta completa:', JSON.stringify(responseData, null, 2));
 
         return Response.json(responseData);
 
