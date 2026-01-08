@@ -20,13 +20,14 @@ export default function CheckoutPage() {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const savedUser = localStorage.getItem('currentUser');
-                if (!savedUser) {
+                const savedUserJSON = localStorage.getItem('currentUser');
+                if (!savedUserJSON) {
                     toast.error('Faça login para continuar');
                     navigate(createPageUrl('Home'));
                     return;
                 }
-                setCurrentUser(JSON.parse(savedUser));
+                const savedUser = JSON.parse(savedUserJSON);
+                setCurrentUser(savedUser);
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const auctionId = urlParams.get('auction_id');
@@ -48,7 +49,6 @@ export default function CheckoutPage() {
 
                 // Criar preferência de pagamento
                 console.log('🔄 Criando preferência MP para auction:', auctionId);
-                const savedUser = JSON.parse(savedUserJSON);
                 const response = await createMPPreference({ 
                     auction_id: auctionId,
                     user_data: {
