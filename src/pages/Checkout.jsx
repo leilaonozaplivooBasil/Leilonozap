@@ -83,19 +83,13 @@ export default function CheckoutPage() {
                 const renderPaymentBrick = async () => {
                     const settings = {
                         initialization: {
-                            amount: auction.current_price,
-                            payer: {
-                                email: currentUser.email
-                            }
+                            amount: auction.current_price
                         },
                         customization: {
                             visual: {
                                 style: {
                                     theme: 'dark'
                                 }
-                            },
-                            paymentMethods: {
-                                maxInstallments: 12
                             }
                         },
                         callbacks: {
