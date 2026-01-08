@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Loader2, CreditCard } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { createMPPreference } from '@/functions/createMPPreference';
 
 export default function CheckoutPage() {
     const [auction, setAuction] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isProcessing, setIsProcessing] = useState(false);
+    const [preferenceId, setPreferenceId] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
+    const walletContainerRef = useRef(null);
+    const mpInstanceRef = useRef(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -43,6 +44,15 @@ export default function CheckoutPage() {
                 }
 
                 setAuction(auctions[0]);
+
+                // Criar preferência de pagamento
+                const response = await createMPPreference({ auction_id: auctionId });
+                if (response.data.success) {
+                    setPreferenceId(response.data.preference_id);
+                } else {
+                    toast.error('Erro ao criar preferência de pagamento');
+                }
+
             } catch (error) {
                 console.error('Erro:', error);
                 toast.error('Erro ao carregar dados');
@@ -54,26 +64,73 @@ export default function CheckoutPage() {
         loadData();
     }, []);
 
-    const handlePayment = async () => {
-        if (isProcessing) return;
+    // Carregar SDK do Mercado Pago e renderizar botão
+    useEffect(() => {
+        if (!preferenceId) return;
 
-        setIsProcessing(true);
-        try {
-            const response = await createMPPreference({ auction_id: auction.id });
-
-            if (response.data.success) {
-                // Redirecionar para Checkout Pro do Mercado Pago
-                window.location.href = response.data.init_point;
-            } else {
-                toast.error('Erro ao processar pagamento');
+        const loadMercadoPagoSDK = () => {
+            // Verificar se já existe
+            if (window.MercadoPago) {
+                initializeMercadoPago();
+                return;
             }
-        } catch (error) {
-            console.error('Erro:', error);
-            toast.error('Erro ao processar pagamento');
-        } finally {
-            setIsProcessing(false);
-        }
-    };
+
+            // Carregar SDK
+            const script = document.createElement('script');
+            script.src = 'https://sdk.mercadopago.com/js/v2';
+            script.async = true;
+            script.onload = () => initializeMercadoPago();
+            script.onerror = () => {
+                toast.error('Erro ao carregar Mercado Pago');
+            };
+            document.body.appendChild(script);
+        };
+
+        const initializeMercadoPago = async () => {
+            try {
+                const publicKey = 'APP_USR-0cd3a441-3c36-4eda-9c25-e41c1b2b0fc7'; // Sua Public Key
+
+                // Inicializar MP
+                const mp = new window.MercadoPago(publicKey, {
+                    locale: 'pt-BR'
+                });
+
+                mpInstanceRef.current = mp;
+
+                // Criar Wallet Brick
+                const bricksBuilder = mp.bricks();
+
+                await bricksBuilder.create('wallet', 'walletBrick_container', {
+                    initialization: {
+                        preferenceId: preferenceId
+                    },
+                    customization: {
+                        texts: {
+                            valueProp: 'security_safety'
+                        }
+                    }
+                });
+
+                console.log('✅ Botão de pagamento renderizado');
+
+            } catch (error) {
+                console.error('Erro ao inicializar MP:', error);
+                toast.error('Erro ao carregar botão de pagamento');
+            }
+        };
+
+        loadMercadoPagoSDK();
+
+        // Cleanup
+        return () => {
+            if (mpInstanceRef.current) {
+                const container = document.getElementById('walletBrick_container');
+                if (container) {
+                    container.innerHTML = '';
+                }
+            }
+        };
+    }, [preferenceId]);
 
     if (isLoading) {
         return (
@@ -124,36 +181,29 @@ export default function CheckoutPage() {
                     {/* Método de Pagamento */}
                     <Card className="bg-gray-800 border-gray-700">
                         <CardHeader>
-                            <CardTitle className="text-white">Método de Pagamento</CardTitle>
+                            <CardTitle className="text-white">Finalizar Pagamento</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <p className="text-gray-400 text-sm">
-                                Você será redirecionado para o checkout seguro do Mercado Pago, onde poderá escolher:
+                                Escolha seu método de pagamento preferido:
                             </p>
-                            <ul className="text-gray-300 text-sm space-y-2">
+                            <ul className="text-gray-300 text-sm space-y-2 mb-6">
                                 <li>✓ Cartão de crédito (até 12x)</li>
                                 <li>✓ Cartão de débito</li>
                                 <li>✓ PIX</li>
                                 <li>✓ Boleto bancário</li>
                             </ul>
-                            <Button
-                                onClick={handlePayment}
-                                disabled={isProcessing}
-                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-6 text-lg"
-                            >
-                                {isProcessing ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                                        Processando...
-                                    </>
-                                ) : (
-                                    <>
-                                        <CreditCard className="w-5 h-5 mr-2" />
-                                        Pagar com Mercado Pago
-                                    </>
-                                )}
-                            </Button>
-                            <p className="text-xs text-gray-500 text-center">
+
+                            {/* Container para o Wallet Brick do Mercado Pago */}
+                            <div id="walletBrick_container" ref={walletContainerRef}></div>
+
+                            {!preferenceId && (
+                                <div className="flex justify-center py-8">
+                                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                                </div>
+                            )}
+
+                            <p className="text-xs text-gray-500 text-center mt-4">
                                 Pagamento processado de forma segura pelo Mercado Pago
                             </p>
                         </CardContent>
