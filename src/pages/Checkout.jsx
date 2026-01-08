@@ -49,16 +49,27 @@ export default function CheckoutPage() {
                 // Criar preferência de pagamento
                 console.log('🔄 Criando preferência MP para auction:', auctionId);
                 const response = await createMPPreference({ auction_id: auctionId });
-                console.log('📦 Resposta MP:', response.data);
+                console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
                 
-                if (response.data.success) {
+                if (response?.data?.success) {
                     console.log('✅ Preference ID:', response.data.preference_id);
                     console.log('✅ Public Key:', response.data.public_key);
+                    
+                    if (!response.data.preference_id) {
+                        toast.error('Erro: Preference ID não retornado');
+                        return;
+                    }
+                    
+                    if (!response.data.public_key) {
+                        toast.error('Erro: Public Key não retornada');
+                        return;
+                    }
+                    
                     setPreferenceId(response.data.preference_id);
                     setPublicKey(response.data.public_key);
                 } else {
-                    console.error('❌ Erro na resposta:', response.data);
-                    toast.error('Erro ao criar preferência de pagamento');
+                    console.error('❌ Erro na resposta:', response);
+                    toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
                 }
 
             } catch (error) {
