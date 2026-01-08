@@ -4,13 +4,21 @@ import { MercadoPagoConfig, Preference } from 'npm:mercadopago@2.0.15';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
+        const { auction_id, user_data } = await req.json();
 
+        // Aceita user_data do frontend (domínio customizado) ou tenta pegar via auth.me()
+        let user = user_data;
         if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+            try {
+                user = await base44.auth.me();
+            } catch (authError) {
+                console.log('⚠️ Não foi possível autenticar via base44.auth.me(), usando user_data do payload');
+            }
         }
 
-        const { auction_id } = await req.json();
+        if (!user || !user.email) {
+            return Response.json({ error: 'Dados do usuário não fornecidos' }, { status: 401 });
+        }
 
         if (!auction_id) {
             return Response.json({ error: 'auction_id é obrigatório' }, { status: 400 });

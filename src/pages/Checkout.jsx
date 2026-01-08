@@ -48,7 +48,16 @@ export default function CheckoutPage() {
 
                 // Criar preferência de pagamento
                 console.log('🔄 Criando preferência MP para auction:', auctionId);
-                const response = await createMPPreference({ auction_id: auctionId });
+                const savedUser = JSON.parse(savedUserJSON);
+                const response = await createMPPreference({ 
+                    auction_id: auctionId,
+                    user_data: {
+                        id: savedUser.id,
+                        email: savedUser.email,
+                        full_name: savedUser.full_name,
+                        phone: savedUser.phone
+                    }
+                });
                 console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
                 
                 if (response?.data?.success) {
