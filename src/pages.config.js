@@ -29,8 +29,6 @@ import OrderTracking from './pages/OrderTracking';
 import PDV from './pages/PDV';
 import Partners from './pages/Partners';
 import PaymentSettings from './pages/PaymentSettings';
-import PaymentSuccess from './pages/PaymentSuccess';
-import PlanCheckout from './pages/PlanCheckout';
 import ProductManagement from './pages/ProductManagement';
 import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
@@ -46,7 +44,6 @@ import SystemDiagnostics from './pages/SystemDiagnostics';
 import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
-import WalletDeposit from './pages/WalletDeposit';
 import WalletHistory from './pages/WalletHistory';
 import __Layout from './Layout.jsx';
 
@@ -83,8 +80,6 @@ export const PAGES = {
     "PDV": PDV,
     "Partners": Partners,
     "PaymentSettings": PaymentSettings,
-    "PaymentSuccess": PaymentSuccess,
-    "PlanCheckout": PlanCheckout,
     "ProductManagement": ProductManagement,
     "Profile": Profile,
     "ProtecaoCriacao": ProtecaoCriacao,
@@ -100,7 +95,6 @@ export const PAGES = {
     "SystemTest": SystemTest,
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
-    "WalletDeposit": WalletDeposit,
     "WalletHistory": WalletHistory,
 }
 
