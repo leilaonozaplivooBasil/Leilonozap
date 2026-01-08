@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Loader2, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { createMPPreference } from '@/functions/createMPPreference';
 
 export default function CheckoutPage() {
     const [auction, setAuction] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
 
@@ -51,6 +54,27 @@ export default function CheckoutPage() {
         loadData();
     }, []);
 
+    const handlePayment = async () => {
+        if (isProcessing) return;
+
+        setIsProcessing(true);
+        try {
+            const response = await createMPPreference({ auction_id: auction.id });
+
+            if (response.data.success) {
+                // Redirecionar para Checkout Pro do Mercado Pago
+                window.location.href = response.data.init_point;
+            } else {
+                toast.error('Erro ao processar pagamento');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            toast.error('Erro ao processar pagamento');
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -66,39 +90,75 @@ export default function CheckoutPage() {
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6">Finalizar Pagamento</h1>
 
-                <Card className="bg-gray-800 border-gray-700">
-                    <CardHeader>
-                        <CardTitle className="text-white">Resumo do Pedido</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {auction.image_urls && auction.image_urls[0] && (
-                                <img 
-                                    src={auction.image_urls[0]} 
-                                    alt={auction.title}
-                                    className="w-full h-48 object-cover rounded-lg"
-                                />
-                            )}
-                            <div>
-                                <h3 className="text-xl font-semibold text-white">{auction.title}</h3>
-                                <p className="text-gray-400 mt-2">{auction.description}</p>
-                            </div>
-                            <div className="border-t border-gray-700 pt-4">
-                                <div className="flex justify-between text-lg">
-                                    <span className="text-gray-300">Valor do Arremate:</span>
-                                    <span className="text-green-400 font-bold">
-                                        R$ {auction.current_price.toFixed(2)}
-                                    </span>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Resumo do Pedido */}
+                    <Card className="bg-gray-800 border-gray-700">
+                        <CardHeader>
+                            <CardTitle className="text-white">Resumo do Pedido</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                {auction.image_urls && auction.image_urls[0] && (
+                                    <img 
+                                        src={auction.image_urls[0]} 
+                                        alt={auction.title}
+                                        className="w-full h-48 object-cover rounded-lg"
+                                    />
+                                )}
+                                <div>
+                                    <h3 className="text-xl font-semibold text-white">{auction.title}</h3>
+                                    <p className="text-gray-400 mt-2">{auction.description}</p>
+                                </div>
+                                <div className="border-t border-gray-700 pt-4">
+                                    <div className="flex justify-between text-lg">
+                                        <span className="text-gray-300">Valor do Arremate:</span>
+                                        <span className="text-green-400 font-bold">
+                                            R$ {auction.current_price.toFixed(2)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mt-4">
-                                <p className="text-yellow-300 text-center">
-                                    Sistema de pagamento em manutenção. Entre em contato para finalizar sua compra.
-                                </p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                        </CardContent>
+                    </Card>
+
+                    {/* Método de Pagamento */}
+                    <Card className="bg-gray-800 border-gray-700">
+                        <CardHeader>
+                            <CardTitle className="text-white">Método de Pagamento</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <p className="text-gray-400 text-sm">
+                                Você será redirecionado para o checkout seguro do Mercado Pago, onde poderá escolher:
+                            </p>
+                            <ul className="text-gray-300 text-sm space-y-2">
+                                <li>✓ Cartão de crédito (até 12x)</li>
+                                <li>✓ Cartão de débito</li>
+                                <li>✓ PIX</li>
+                                <li>✓ Boleto bancário</li>
+                            </ul>
+                            <Button
+                                onClick={handlePayment}
+                                disabled={isProcessing}
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-6 text-lg"
+                            >
+                                {isProcessing ? (
+                                    <>
+                                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                                        Processando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CreditCard className="w-5 h-5 mr-2" />
+                                        Pagar com Mercado Pago
+                                    </>
+                                )}
+                            </Button>
+                            <p className="text-xs text-gray-500 text-center">
+                                Pagamento processado de forma segura pelo Mercado Pago
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );
