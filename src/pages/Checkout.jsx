@@ -85,7 +85,12 @@ export default function CheckoutPage() {
 
     // Carregar SDK do Mercado Pago e renderizar botão
     useEffect(() => {
-        console.log('🔍 Verificando dados MP:', { preferenceId, publicKey });
+        console.log('🔍 [SDK Effect] Estado atual:', { 
+            preferenceId: preferenceId ? 'SIM' : 'NÃO', 
+            publicKey: publicKey ? 'SIM' : 'NÃO',
+            prefValue: preferenceId,
+            keyValue: publicKey
+        });
         
         if (!preferenceId || !publicKey) {
             console.log('⏳ Aguardando preferenceId e publicKey...');

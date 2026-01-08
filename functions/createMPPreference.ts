@@ -28,7 +28,12 @@ Deno.serve(async (req) => {
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
         const publicKey = Deno.env.get('MP_PUBLIC_KEY');
         
+        console.log('🔑 Access Token existe:', !!accessToken);
+        console.log('🔑 Public Key existe:', !!publicKey);
+        console.log('🔑 Public Key valor:', publicKey ? `${publicKey.substring(0, 20)}...` : 'null');
+        
         if (!accessToken || !publicKey) {
+            console.error('❌ Credenciais ausentes - accessToken:', !!accessToken, 'publicKey:', !!publicKey);
             return Response.json({ error: 'Credenciais do Mercado Pago não configuradas' }, { status: 500 });
         }
 
@@ -95,13 +100,17 @@ Deno.serve(async (req) => {
             payment_method: 'pending'
         });
 
-        return Response.json({
+        const responseData = {
             success: true,
             preference_id: result.id,
             public_key: publicKey.trim(),
             init_point: result.init_point,
             sandbox_init_point: result.sandbox_init_point
-        });
+        };
+
+        console.log('📤 Retornando resposta:', JSON.stringify(responseData, null, 2));
+
+        return Response.json(responseData);
 
     } catch (error) {
         console.error('❌ Erro ao criar preferência:', error);
