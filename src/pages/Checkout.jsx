@@ -47,11 +47,17 @@ export default function CheckoutPage() {
                 setAuction(auctions[0]);
 
                 // Criar preferência de pagamento
+                console.log('🔄 Criando preferência MP para auction:', auctionId);
                 const response = await createMPPreference({ auction_id: auctionId });
+                console.log('📦 Resposta MP:', response.data);
+                
                 if (response.data.success) {
+                    console.log('✅ Preference ID:', response.data.preference_id);
+                    console.log('✅ Public Key:', response.data.public_key);
                     setPreferenceId(response.data.preference_id);
                     setPublicKey(response.data.public_key);
                 } else {
+                    console.error('❌ Erro na resposta:', response.data);
                     toast.error('Erro ao criar preferência de pagamento');
                 }
 
@@ -68,7 +74,14 @@ export default function CheckoutPage() {
 
     // Carregar SDK do Mercado Pago e renderizar botão
     useEffect(() => {
-        if (!preferenceId || !publicKey) return;
+        console.log('🔍 Verificando dados MP:', { preferenceId, publicKey });
+        
+        if (!preferenceId || !publicKey) {
+            console.log('⏳ Aguardando preferenceId e publicKey...');
+            return;
+        }
+
+        console.log('🚀 Iniciando carregamento do SDK MP');
 
         const loadMercadoPagoSDK = () => {
             // Verificar se já existe
@@ -90,15 +103,21 @@ export default function CheckoutPage() {
 
         const initializeMercadoPago = async () => {
             try {
+                console.log('🔧 Inicializando Mercado Pago SDK...');
+                console.log('🔑 Public Key:', publicKey);
+                console.log('🎫 Preference ID:', preferenceId);
+                
                 // Inicializar MP com public key recebida do backend
                 const mp = new window.MercadoPago(publicKey, {
                     locale: 'pt-BR'
                 });
 
                 mpInstanceRef.current = mp;
+                console.log('✅ SDK MP inicializado');
 
                 // Criar Wallet Brick
                 const bricksBuilder = mp.bricks();
+                console.log('🧱 Criando Wallet Brick...');
 
                 await bricksBuilder.create('wallet', 'walletBrick_container', {
                     initialization: {
@@ -111,11 +130,12 @@ export default function CheckoutPage() {
                     }
                 });
 
-                console.log('✅ Botão de pagamento renderizado');
+                console.log('✅ Botão de pagamento renderizado com sucesso!');
 
             } catch (error) {
-                console.error('Erro ao inicializar MP:', error);
-                toast.error('Erro ao carregar botão de pagamento');
+                console.error('❌ Erro detalhado ao inicializar MP:', error);
+                console.error('Stack:', error.stack);
+                toast.error(`Erro ao carregar botão: ${error.message}`);
             }
         };
 
