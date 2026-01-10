@@ -222,10 +222,9 @@ function CatalogProductCard({ product, currentUser }) {
               }}
               onMouseDown={(e) => e.stopPropagation()} 
               onTouchStart={(e) => e.stopPropagation()}
-              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 min-h-[40px] px-3 h-9 gap-2 shadow-md bg-purple-600/90 hover:bg-purple-500 text-white rounded-lg flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
+              className="min-h-[40px] min-w-[40px] h-9 px-2 gap-1 shadow-md bg-purple-600/90 hover:bg-purple-500 text-white rounded-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
             >
               <Edit className="w-4 h-4" />
-              <span className="text-xs font-semibold">Editar</span>
             </button>
           )}
         </div>
