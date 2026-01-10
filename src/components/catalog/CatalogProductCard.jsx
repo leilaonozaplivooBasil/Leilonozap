@@ -258,7 +258,17 @@ function CatalogProductCard({ product, currentUser }) {
               e.stopPropagation();
               navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
             }}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
+          >
+            💰 Comparar Preços
+          </Button>
+
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
+            }}
+            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold"
           >
             ✅ Entrar e Comprar
           </Button>
