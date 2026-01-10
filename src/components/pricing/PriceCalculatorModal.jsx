@@ -16,9 +16,6 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMargin, setSelectedMargin] = useState(null);
   const [profitPercentage, setProfitPercentage] = useState(null);
-  const [isManualMode, setIsManualMode] = useState(false);
-  const [manualPrice, setManualPrice] = useState('');
-  const [manualDiscount, setManualDiscount] = useState(0);
 
   useEffect(() => {
     loadFormulas();
@@ -104,18 +101,6 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
       setDiscountPercentage(null);
       setSelectedMargin(null);
       setProfitPercentage(null);
-      setIsManualMode(false);
-      return;
-    }
-
-    // 🆕 VERIFICA SE ATINGIU 20% MÍNIMO
-    if (approvedDiscount < 20) {
-      toast.warning(`Desconto de apenas ${approvedDiscount.toFixed(1)}% - ative o modo manual para continuar`);
-      setIsManualMode(true);
-      setCalculatedPrice(null);
-      setDiscountPercentage(null);
-      setSelectedMargin(null);
-      setProfitPercentage(null);
       return;
     }
 
@@ -126,17 +111,13 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
     setDiscountPercentage(approvedDiscount);
     setSelectedMargin(approvedMargin);
     setProfitPercentage(profitOverCost);
-    setIsManualMode(false);
 
     toast.success(`Preço calculado com margem de ${(approvedMargin * 100).toFixed(0)}%`);
   };
 
   const handleSave = async () => {
-    const priceToSave = isManualMode ? parseFloat(manualPrice) : calculatedPrice;
-    const discountToSave = isManualMode ? manualDiscount : discountPercentage;
-
-    if (!priceToSave || priceToSave <= 0) {
-      toast.error(isManualMode ? 'Insira um preço manual válido' : 'Calcule o preço primeiro');
+    if (!calculatedPrice) {
+      toast.error('Calcule o preço primeiro');
       return;
     }
 
@@ -144,17 +125,17 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
     try {
       await base44.entities.Product.update(product.id, {
         market_value: parseFloat(marketValue),
-        calculated_price: priceToSave,
-        discount_percentage: discountToSave,
-        selling_price_retail: priceToSave
+        calculated_price: calculatedPrice,
+        discount_percentage: discountPercentage,
+        selling_price_retail: calculatedPrice
       });
 
-      toast.success(isManualMode ? 'Preço manual salvo com sucesso!' : 'Preço calculado e salvo com sucesso!');
+      toast.success('Preço calculado e salvo com sucesso!');
       if (onSave) onSave();
       onClose();
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast.error('Erro ao salvar o preço');
+      toast.error('Erro ao salvar o preço calculado');
     } finally {
       setIsLoading(false);
     }
@@ -221,55 +202,8 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
             </div>
           </div>
 
-          {/* 🆕 MODO MANUAL - Quando desconto < 20% */}
-          {isManualMode && (
-            <div className="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-4 space-y-3">
-              <div className="flex items-start gap-3">
-                <span className="text-2xl">⚠️</span>
-                <div className="flex-1">
-                  <h3 className="font-bold text-yellow-900 mb-1">Cálculo Automático Indisponível</h3>
-                  <p className="text-sm text-yellow-800 mb-3">
-                    O produto não atinge o desconto mínimo de 20% com as margens disponíveis.
-                    Insira um preço manualmente:
-                  </p>
-                  
-                  <div className="space-y-2">
-                    <div>
-                      <Label className="text-gray-900 font-semibold text-sm">Preço de Venda Manual (R$)</Label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        value={manualPrice}
-                        onChange={(e) => {
-                          const price = parseFloat(e.target.value) || 0;
-                          setManualPrice(e.target.value);
-                          const discount = marketValue > 0 ? ((parseFloat(marketValue) - price) / parseFloat(marketValue)) * 100 : 0;
-                          setManualDiscount(discount);
-                        }}
-                        placeholder="Ex: 450.00"
-                        className="mt-1 bg-white border-gray-300 text-gray-900"
-                      />
-                    </div>
-                    
-                    {manualPrice && parseFloat(manualPrice) > 0 && (
-                      <div className="bg-blue-100 rounded p-2 text-sm">
-                        <span className="font-semibold text-blue-900">Desconto gerado:</span>
-                        <span className="ml-2 text-blue-700 font-bold">
-                          {manualDiscount.toFixed(2)}%
-                        </span>
-                        <span className="ml-2 text-blue-600">
-                          (R$ {(parseFloat(marketValue) - parseFloat(manualPrice)).toFixed(2)} de economia)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Resultado - LAYOUT OTIMIZADO */}
-          {calculatedPrice !== null && !isManualMode && (
+          {calculatedPrice !== null && (
             <div className="space-y-3">
               {/* Cards Principais - 3 COLUNAS */}
               <div className="grid grid-cols-3 gap-3">
@@ -377,10 +311,10 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={(!calculatedPrice && !isManualMode) || (isManualMode && !manualPrice) || isLoading}
+            disabled={!calculatedPrice || isLoading}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {isLoading ? 'Salvando...' : (isManualMode ? 'Salvar Preço Manual' : 'Salvar Preço')}
+            {isLoading ? 'Salvando...' : 'Salvar Preço'}
           </Button>
         </DialogFooter>
       </DialogContent>
