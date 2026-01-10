@@ -1,16 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Eye, Filter, Search, ShoppingCart, Loader2, Star, TrendingUp, Zap, Tag } from "lucide-react";
+import { Filter, Search, ShoppingCart, Loader2, Zap, Tag, ChevronLeft, ChevronRight, Heart, Share2, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import ComparaiButton from "../components/comparai/ComparaiButton";
+import FavoriteButton from "../components/recommendations/FavoriteButton";
 
 const Product = base44.entities.Product;
+const FavoriteProduct = base44.entities.FavoriteProduct || null;
 
 export default function Catalog() {
   const navigate = useNavigate();
