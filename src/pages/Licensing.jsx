@@ -1203,13 +1203,146 @@ const DashboardContent = ({ user, isAdmin }) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-          <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
-          <TabsTrigger value="meus-clientes">Meus Clientes ({myClients.length})</TabsTrigger>
-          <TabsTrigger value="comissoes">Comissões</TabsTrigger>
-          <TabsTrigger value="saques">Histórico de Saques</TabsTrigger>
-          {isAdmin && <TabsTrigger value="admin">Admin</TabsTrigger>}
-        </TabsList>
+         <TabsList className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+           <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
+           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo">🛍️ Catálogo</TabsTrigger>}
+           <TabsTrigger value="meus-links">Meus Links</TabsTrigger>
+           <TabsTrigger value="minhas-vendas">Minhas Vendas</TabsTrigger>
+           {['diretor', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe">Vendas da Equipe</TabsTrigger>}
+           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos">📦 Pedidos</TabsTrigger>}
+           <TabsTrigger value="meus-clientes">👥 Clientes ({myClients.length})</TabsTrigger>
+           <TabsTrigger value="comissoes">💰 Comissões</TabsTrigger>
+           <TabsTrigger value="plano-carreira">🎯 Plano de Carreira</TabsTrigger>
+           {isAdmin && <TabsTrigger value="admin">Admin</TabsTrigger>}
+         </TabsList>
+
+        {/* ABA: MEUS LINKS */}
+        <TabsContent value="meus-links" className="space-y-6">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+            <CardHeader>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Links de Indicação</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                Compartilhe seus links para ganhar comissões
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Link do Influenciador */}
+              <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-gray-50 border-gray-300' : 'bg-gray-700/50 border-gray-600'}`}>
+                <h4 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🎯 Link de Influenciador</h4>
+                <p className={`text-sm mb-3 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Ganhe 3% em cada arremate dos seus indicados</p>
+                <div className="flex gap-2">
+                  <Input value={referralLink} readOnly className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
+                  <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700" size="sm">
+                    <Copy className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Link do Catálogo - Apenas licenciados */}
+              {userLevels.includes('licenciado_catalogo') && (
+                <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
+                  <h4 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-blue-900' : 'text-blue-400'}`}>🛍️ Link do Catálogo</h4>
+                  <p className={`text-sm mb-3 ${isSaiDeBaixo ? 'text-blue-700' : 'text-blue-300'}`}>Ganhe comissão em vendas do seu catálogo ({(user.catalog_commission_rate || 0) * 100}%)</p>
+                  <div className="flex gap-2">
+                    <Input value={`https://leilaonozap.app/Catalog?ref=${user.referral_code}`} readOnly className={isSaiDeBaixo ? 'bg-white border-blue-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
+                    <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.app/Catalog?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700" size="sm">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ABA: MINHAS VENDAS */}
+        <TabsContent value="minhas-vendas" className="space-y-6">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+            <CardHeader>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Minhas Vendas</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                Acompanhe suas vendas de leilão e catálogo
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="leilao" className="w-full">
+                <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
+                  <TabsTrigger value="leilao">Leilão</TabsTrigger>
+                  {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo">Catálogo</TabsTrigger>}
+                </TabsList>
+                <TabsContent value="leilao" className="mt-4">
+                  <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                    Arremates dos indicados: {realMetrics.networkBidsCount || 0}
+                  </p>
+                </TabsContent>
+                {userLevels.includes('licenciado_catalogo') && (
+                  <TabsContent value="catalogo" className="mt-4">
+                    <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                      Vendas do catálogo: R$ {(user.total_catalog_sales || 0).toFixed(2)}
+                    </p>
+                  </TabsContent>
+                )}
+              </Tabs>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ABA: VENDAS DA EQUIPE - Apenas diretores+ */}
+        {['diretor', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && (
+          <TabsContent value="vendas-equipe" className="space-y-6">
+            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+              <CardHeader>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Vendas da Minha Equipe</CardTitle>
+                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  Acompanhe as vendas dos seus licenciados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                  <TrendingUp className="w-12 h-12 mx-auto opacity-50 mb-4" />
+                  <p>Seu sistema de alavancagem está crescendo!</p>
+                  <p className="text-sm mt-2">Bônus por carreira: {user.total_commissions_generated ? `R$ ${user.total_commissions_generated.toFixed(2)}` : 'R$ 0.00'}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* ABA: PEDIDOS - Apenas licenciados de catálogo */}
+        {userLevels.includes('licenciado_catalogo') && (
+          <TabsContent value="pedidos" className="space-y-6">
+            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+              <CardHeader>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Pedidos do Catálogo</CardTitle>
+                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  Acompanhe seus pedidos de venda direta
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-center py-12 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                  <Package className="w-12 h-12 mx-auto opacity-50 mb-4" />
+                  <p>Nenhum pedido ainda</p>
+                  <p className="text-sm mt-2">Comece a vender pelo seu link do catálogo!</p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        {/* ABA: PLANO DE CARREIRA */}
+        <TabsContent value="plano-carreira" className="space-y-6">
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+            <CardHeader>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Plano de Carreira</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                Veja sua evolução no sistema de alavancagem
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CareerPath currentUser={user} />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="visao-geral" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
