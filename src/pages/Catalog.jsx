@@ -22,6 +22,32 @@ export default function Catalog() {
   const [licenseeCode, setLicenseeCode] = useState("");
   const [priceRange, setPriceRange] = useState([0, 50000]);
 
+  const filteredProducts = useMemo(() => {
+    let filtered = products;
+
+    if (searchTerm) {
+      filtered = filtered.filter(p =>
+        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (priceRange) {
+      filtered = filtered.filter(p =>
+        p.price_catalog >= priceRange[0] && p.price_catalog <= priceRange[1]
+      );
+    }
+
+    return filtered;
+  }, [products, searchTerm, priceRange]);
+
+  const featuredProducts = useMemo(() => {
+    return filteredProducts.slice(0, 4);
+  }, [filteredProducts]);
+
+  const regularProducts = useMemo(() => {
+    return filteredProducts.slice(4);
+  }, [filteredProducts]);
+
   useEffect(() => {
     // Captura código do licenciado da URL
     const urlParams = new URLSearchParams(location.search);
