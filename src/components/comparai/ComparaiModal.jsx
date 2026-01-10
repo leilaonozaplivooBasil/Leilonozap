@@ -7,7 +7,7 @@ import { X, Sparkles, ExternalLink, Share2, Edit, Upload, Loader2, RefreshCw } f
 import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
 
-export default function ComparaiModal({ auction, onClose }) {
+export default function ComparaiModal({ auction, isProduct = false, onClose }) {
   // 🔥 VALIDAÇÃO CRÍTICA: Verifica se auction existe
   if (!auction || !auction.id) {
     console.error('❌ ComparaiModal: auction inválido!', auction);
