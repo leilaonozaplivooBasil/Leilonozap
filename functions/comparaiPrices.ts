@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
             return Response.json({ success: false, error: "auctionId ou productId obrigatório" }, { status: 400 });
         }
 
-        let searchTitle, currentPrice, entityId;
+        let searchTitle, currentPrice, entityId, isProduct = false;
 
         // 1️⃣ BUSCA LEILÃO OU PRODUTO
         if (auctionId) {
@@ -56,46 +56,27 @@ Deno.serve(async (req) => {
             currentPrice = product.price_catalog || product.selling_price_retail || 0;
             searchTitle = product.description;
             entityId = productId;
+            isProduct = true;
             console.log(`✅ Título: ${searchTitle}`);
         }
-        
-        console.log(`✅ Título: ${auction.title}`);
+
         console.log(`💰 Preço: R$ ${currentPrice}`);
 
-        // 2️⃣ VERIFICA CACHE
-        if (!forceRefresh && auction.market_price && auction.last_comparison_date) {
-            const cacheAge = Date.now() - new Date(auction.last_comparison_date).getTime();
-            if (cacheAge < 24 * 60 * 60 * 1000) {
-                console.log(`📦 Usando cache`);
-                const savings = auction.market_price - currentPrice;
-                const savingsPercent = auction.market_price > 0 ? (savings / auction.market_price) * 100 : 0;
-                
-                return Response.json({
-                    success: true,
-                    comparison: {
-                        productName: auction.title,
-                        ourPrice: currentPrice,
-                        cheapestMarketPrice: auction.market_price,
-                        savings: savings,
-                        savingsPercent: Math.round(savingsPercent),
-                        isFactoryDirect: false,
-                        totalStoresAnalyzed: 5,
-                        priceLabel: 'Menor Preço do Mercado',
-                        comparisons: []
-                    },
-                    cached: true
-                });
-            }
-        }
+        // 2️⃣ PARA PRODUTOS, SEMPRE USA GOOGLE SHOPPING
+        let useGoogleShopping = forceGoogleShopping || isProduct;
 
-        // 3️⃣ MODO SUPPLIER: Busca no site do fabricante
-        if (auction.comparai_mode === 'supplier' && auction.source_url) {
-            console.log(`🏭 MODO FABRICANTE ATIVADO`);
-            console.log(`📍 URL: ${auction.source_url}`);
+        // 3️⃣ SE NÃO FOR USAR GOOGLE SHOPPING, TENTA SUPPLIER (APENAS AUCTIONS)
+        if (!useGoogleShopping && auctionId) {
+            const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
+            const auction = auctions[0];
 
-            try {
-                const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                    prompt: `Você está extraindo o PREÇO EXATO de um produto direto do fabricante.
+            if (auction.comparai_mode === 'supplier' && auction.source_url) {
+                console.log(`🏭 MODO FABRICANTE ATIVADO`);
+                console.log(`📍 URL: ${auction.source_url}`);
+
+                try {
+                    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                        prompt: `Você está extraindo o PREÇO EXATO de um produto direto do fabricante.
 
         URL DO PRODUTO: ${auction.source_url}
         NOME DO PRODUTO: ${auction.title}
@@ -116,97 +97,85 @@ Deno.serve(async (req) => {
         "url": "${auction.source_url}",
         "logo_url": "URL da logo se encontrada, senão null"
         }`,
-                    add_context_from_internet: true,
-                    response_json_schema: {
-                        type: "object",
-                        properties: {
-                            store: { type: "string" },
-                            productNameFound: { type: "string" },
-                            price: { type: ["number", "null"] },
-                            url: { type: "string" },
-                            logo_url: { type: ["string", "null"] }
-                        },
-                        required: ["store", "price", "url"]
-                    }
-                });
+                        add_context_from_internet: true,
+                        response_json_schema: {
+                            type: "object",
+                            properties: {
+                                store: { type: "string" },
+                                productNameFound: { type: "string" },
+                                price: { type: ["number", "null"] },
+                                url: { type: "string" },
+                                logo_url: { type: ["string", "null"] }
+                            },
+                            required: ["store", "price", "url"]
+                        }
+                    });
 
-                if (!result || result.price === null || result.price < 10) {
-                    console.log(`⚠️ Falha na extração do fabricante, tentando Google Shopping...`);
+                    if (!result || result.price === null || result.price < 10) {
+                        console.log(`⚠️ Falha na extração do fabricante, tentando Google Shopping...`);
+                        useGoogleShopping = true;
+                    } else {
 
-                    // FALLBACK: tenta Google Shopping
-                    const cleanedTitle = cleanTitle(auction.title);
+                    console.log(`✅ Preço extraído: R$ ${result.price}`);
+                    console.log(`🏪 Loja: ${result.store}`);
 
-                    if (!cleanedTitle || cleanedTitle.length < 4) {
+                    const savings = result.price - currentPrice;
+                    const savingsPercent = result.price > 0 ? (savings / result.price) * 100 : 0;
+
+                    console.log(`💰 Economia: ${Math.round(savingsPercent)}%`);
+
+                    // Valida economia
+                    if (Math.abs(savingsPercent) > 93) {
+                        console.log(`⚠️ Economia irrealista: ${savingsPercent}%`);
                         return Response.json({
                             success: false,
-                            error: "Não foi possível comparar preços (título inválido)",
-                            errorCode: "INVALID_TITLE"
-                        }, { status: 400 });
+                            error: "Dados inconsistentes detectados. Por favor, tente novamente.",
+                            errorCode: "UNREALISTIC_DATA"
+                        }, { status: 422 });
                     }
 
-                    // Continua para a busca no Google Shopping abaixo
-                    console.log(`🔎 Fallback para Google Shopping: "${cleanedTitle}"`);
-                } else {
+                    // Salva cache + logo se encontrada
+                    const updateData = {
+                        market_price: result.price,
+                        last_comparison_date: new Date().toISOString()
+                    };
 
-                console.log(`✅ Preço extraído: R$ ${result.price}`);
-                console.log(`🏪 Loja: ${result.store}`);
+                    if (result.logo_url) {
+                        updateData.supplier_logo_url = result.logo_url;
+                    }
 
-                const savings = result.price - currentPrice;
-                const savingsPercent = result.price > 0 ? (savings / result.price) * 100 : 0;
+                    await base44.asServiceRole.entities.Auction.update(auctionId, updateData);
 
-                console.log(`💰 Economia: ${Math.round(savingsPercent)}%`);
+                    console.log('✅ Sucesso modo fabricante!');
 
-                // Valida economia
-                if (Math.abs(savingsPercent) > 93) {
-                    console.log(`⚠️ Economia irrealista: ${savingsPercent}%`);
                     return Response.json({
-                        success: false,
-                        error: "Dados inconsistentes detectados. Por favor, tente novamente.",
-                        errorCode: "UNREALISTIC_DATA"
-                    }, { status: 422 });
-                }
-
-                // Salva cache + logo se encontrada
-                const updateData = {
-                    market_price: result.price,
-                    last_comparison_date: new Date().toISOString()
-                };
-
-                if (result.logo_url) {
-                    updateData.supplier_logo_url = result.logo_url;
-                }
-
-                await base44.asServiceRole.entities.Auction.update(auctionId, updateData);
-
-                console.log('✅ Sucesso modo fabricante!');
-
-                return Response.json({
-                    success: true,
-                    comparison: {
-                        productName: auction.title,
-                        ourPrice: currentPrice,
-                        comparisons: [result],
-                        cheapestMarketPrice: result.price,
-                        averageMarketPrice: result.price,
-                        savings: savings,
-                        savingsPercent: Math.round(savingsPercent),
-                        isFactoryDirect: true,
-                        totalStoresAnalyzed: 1,
-                        searchAttempts: 1,
-                        priceLabel: 'Preço no Fabricante'
-                    },
-                    cached: false
-                });
-                }
+                        success: true,
+                        comparison: {
+                            productName: searchTitle,
+                            ourPrice: currentPrice,
+                            comparisons: [result],
+                            cheapestMarketPrice: result.price,
+                            averageMarketPrice: result.price,
+                            savings: savings,
+                            savingsPercent: Math.round(savingsPercent),
+                            isFactoryDirect: true,
+                            totalStoresAnalyzed: 1,
+                            searchAttempts: 1,
+                            priceLabel: 'Preço no Fabricante'
+                        },
+                        cached: false
+                    });
+                    }
 
                 } catch (error) {
-                console.error('⚠️ Erro modo fabricante, tentando Google Shopping:', error.message);
-                // FALLBACK: continua para Google Shopping
+                    console.error('⚠️ Erro modo fabricante, tentando Google Shopping:', error.message);
+                    useGoogleShopping = true;
                 }
+            }
         }
 
         // 4️⃣ LIMPA TÍTULO (modo Google Shopping)
-        const cleanedTitle = cleanTitle(auction.title);
+        const cleanedTitle = cleanTitle(searchTitle);
 
         if (!cleanedTitle || cleanedTitle.length < 4) {
             console.log(`❌ Título inválido: "${cleanedTitle}"`);
@@ -290,11 +259,13 @@ Deno.serve(async (req) => {
             }, { status: 422 });
         }
 
-        // 9️⃣ SALVA CACHE
-        await base44.asServiceRole.entities.Auction.update(auctionId, {
-            market_price: minPrice,
-            last_comparison_date: new Date().toISOString()
-        });
+        // 9️⃣ SALVA CACHE (apenas para auctions, não para produtos)
+        if (auctionId) {
+            await base44.asServiceRole.entities.Auction.update(auctionId, {
+                market_price: minPrice,
+                last_comparison_date: new Date().toISOString()
+            });
+        }
 
         console.log('✅ Sucesso!');
 
@@ -302,7 +273,7 @@ Deno.serve(async (req) => {
         return Response.json({
             success: true,
             comparison: {
-                productName: auction.title,
+                productName: searchTitle,
                 ourPrice: currentPrice,
                 comparisons: validResults,
                 cheapestMarketPrice: minPrice,
@@ -311,7 +282,7 @@ Deno.serve(async (req) => {
                 savingsPercent: Math.round(savingsPercent),
                 isFactoryDirect: false,
                 totalStoresAnalyzed: validResults.length,
-                searchAttempts: attempts,
+                searchAttempts: 1,
                 priceLabel: 'Menor Preço do Mercado'
             },
             cached: false
