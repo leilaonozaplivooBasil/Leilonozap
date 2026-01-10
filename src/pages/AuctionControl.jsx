@@ -397,6 +397,16 @@ export default function AuctionControl() {
         )}
       </div>
 
+      {/* Modal Adicionar ao Catálogo */}
+      <AddToCatalogModal 
+        isOpen={showCatalogModal} 
+        onClose={() => {
+          setShowCatalogModal(false);
+          setSelectedAuction(null);
+        }}
+        auction={selectedAuction}
+      />
+
       {/* Modal Retomar Leilão */}
       <Dialog open={showResumeModal} onOpenChange={setShowResumeModal}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
