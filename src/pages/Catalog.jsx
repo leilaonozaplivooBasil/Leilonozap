@@ -69,7 +69,12 @@ export default function Catalog() {
     setIsLoading(true);
     try {
       const allProducts = await Product.filter({ catalog_active: true }, "-created_date", 100);
-      setProducts(Array.isArray(allProducts) ? allProducts : []);
+      // Garante que image_urls seja sempre um array
+      const productsWithImages = (Array.isArray(allProducts) ? allProducts : []).map(p => ({
+        ...p,
+        image_urls: Array.isArray(p.image_urls) ? p.image_urls : (p.image_urls ? [p.image_urls] : [])
+      }));
+      setProducts(productsWithImages);
     } catch (error) {
       console.error("Erro ao carregar catálogo:", error);
       toast.error("Erro ao carregar produtos");

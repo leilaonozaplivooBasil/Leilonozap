@@ -1,3 +1,4 @@
+import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import ArquitetoIA from './pages/ArquitetoIA';
@@ -6,6 +7,8 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
+import Catalog from './pages/Catalog';
+import CatalogCheckout from './pages/CatalogCheckout';
 import Checkout from './pages/Checkout';
 import CreateAuction from './pages/CreateAuction';
 import CustomerDetails from './pages/CustomerDetails';
@@ -47,13 +50,11 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import Catalog from './pages/Catalog';
-import CatalogCheckout from './pages/CatalogCheckout';
-import AdminCatalogSales from './pages/AdminCatalogSales';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "AdminCatalogSales": AdminCatalogSales,
     "AdminUsers": AdminUsers,
     "AdminWithdrawals": AdminWithdrawals,
     "ArquitetoIA": ArquitetoIA,
@@ -62,6 +63,8 @@ export const PAGES = {
     "AuctionRoom": AuctionRoom,
     "BannerManagement": BannerManagement,
     "CRM": CRM,
+    "Catalog": Catalog,
+    "CatalogCheckout": CatalogCheckout,
     "Checkout": Checkout,
     "CreateAuction": CreateAuction,
     "CustomerDetails": CustomerDetails,
@@ -103,9 +106,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "Catalog": Catalog,
-    "CatalogCheckout": CatalogCheckout,
-    "AdminCatalogSales": AdminCatalogSales,
 }
 
 export const pagesConfig = {
