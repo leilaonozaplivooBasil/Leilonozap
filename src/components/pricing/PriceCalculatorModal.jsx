@@ -110,7 +110,11 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
             <h3 className="font-semibold text-gray-900 mb-2">Produto</h3>
             <p className="text-gray-700">{product?.description}</p>
             <p className="text-sm text-gray-600 mt-1">
-              Custo Unitário: <span className="font-semibold">R$ {product?.cost_price?.toFixed(2)}</span>
+              Custo Unitário: <span className="font-semibold">R$ {(() => {
+                const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
+                const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
+                return unitCost.toFixed(2);
+              })()}</span>
             </p>
           </div>
 
