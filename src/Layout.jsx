@@ -372,7 +372,68 @@ export default function Layout({ children, currentPageName }) {
     setMobileMenuOpen(false);
   }, [location]);
 
+  // 🔥 DEFININDO MENUS - ANTES DE QUALQUER RETURN CONDICIONAL
+  const publicMenuItems = [
+    { title: "Leilões", pageName: "Home" },
+    { title: "Catálogo", pageName: "Catalog" },
+    { title: "Sistema de Alavancagem", pageName: "Licensing" },
+    { title: "Lucre Conosco", pageName: "Partners" },
+  ];
 
+  const noZapLoggedItems = [];
+
+  const loggedMenuItems = [
+    { title: "Meus Arremates", pageName: "MyWinnings" },
+    { title: "Perfil", pageName: "Profile" },
+  ];
+
+  const adminMenuItems = [
+    { 
+      title: "🤖 Arquiteto IA", 
+      pageName: "ArquitetoIA",
+      highlight: true
+    },
+    { 
+      title: "Leilões", 
+      isCategory: true,
+      items: [
+        { title: "Criar Leilão", pageName: "CreateAuction" },
+        { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
+        { title: "🔴 Live Shop Sai de Baixo", pageName: "LiveShopControl" },
+        { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
+      ]
+    },
+    { 
+      title: "Gestão do Aplicativo", 
+      isCategory: true,
+      items: [
+        { title: "Gestão de Produtos", pageName: "ProductManagement" },
+        { title: "🎨 Gerenciar Banners", pageName: "BannerManagement" },
+        { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
+        { title: "💳 Transações", pageName: "TransactionHistory" },
+      ]
+    },
+    { title: "💰 PDV", pageName: "PDV" },
+    { title: "📊 CRM", pageName: "CRM" },
+    { title: "🏪 Registrar Lojista", pageName: "StoreRegistration" },
+    { title: "👥 Influenciadores", pageName: "InfluencersDashboard" },
+    { title: "Painel de Controle", pageName: "NetworkOverview" },
+    { title: "Gerenciar Senhas", pageName: "AdminUsers" },
+  ];
+
+  const isLoggedIn = currentUser && currentUser.email;
+  const isAdmin = isLoggedIn && currentUser.role === 'admin';
+  const isLicensee = isLoggedIn && currentUser.role === 'licensee';
+
+  const finalMenuItems = [
+    { title: "Leilões", pageName: "Home" },
+    { title: "Catálogo", pageName: "Catalog" },
+    ...(isLoggedIn ? noZapLoggedItems : []),
+    { title: "Sistema de Alavancagem", pageName: "Licensing" },
+    ...(isLoggedIn ? loggedMenuItems : [])
+  ];
+
+  const isLojistaPage = currentPageName === 'LojistaDashboard';
 
   const shouldShowLoading = isLoading;
 
