@@ -535,11 +535,6 @@ export default function Home() {
     }
   }, [currentUser]);
 
-  // 🛡️ EARLY RETURN APENAS APÓS TODOS OS HOOKS
-  if (showWelcomeModal) {
-    return <WelcomeModal onAccept={handleAcceptWelcome} />;
-  }
-
   return (
     <div className="bg-gray-900 text-white min-h-screen">
       <style>{`
