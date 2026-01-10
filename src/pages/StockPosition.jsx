@@ -238,7 +238,17 @@ export default function StockPosition() {
                     <th className="text-left p-3 font-semibold text-white">Produto</th>
                     <th className="text-left p-3 font-semibold text-white">Depósito Empresa</th>
                     <th className="text-left p-3 font-semibold text-white">Nome Depósito</th>
+                    <th className="text-center p-3 font-semibold text-white">Perfeito</th>
+                    <th className="text-center p-3 font-semibold text-white">Bom</th>
+                    <th className="text-center p-3 font-semibold text-white">Oficina</th>
+                    <th className="text-left p-3 font-semibold text-white">Observação</th>
+                    <th className="text-right p-3 font-semibold text-white">Custo Total</th>
+                    <th className="text-right p-3 font-semibold text-white">Custo Unit.</th>
+                    <th className="text-right p-3 font-semibold text-white">Preço Venda</th>
                     <th className="text-right p-3 font-semibold text-white">Estoque Atual</th>
+                    <th className="text-right p-3 font-semibold text-white">Qtd Vendidos</th>
+                    <th className="text-right p-3 font-semibold text-white">Valor Venda</th>
+                    <th className="text-right p-3 font-semibold text-white">Lucro</th>
                     <th className="text-center p-3 font-semibold text-white">Ações</th>
                   </tr>
                 </thead>
@@ -251,8 +261,24 @@ export default function StockPosition() {
                       <td className="p-3 text-blue-600 font-medium">{product.lot || 'N/A'}</td>
                       <td className="p-3 text-gray-900">{product.description}</td>
                       <td className="p-3 text-gray-900">{product.purchase_order || 'Empresa 3'}</td>
-                      <td className="p-3 text-gray-900">Principal</td>
+                      <td className="p-3 text-gray-900">{product.deposit_name || 'Bangu'}</td>
+                      <td className="p-3 text-center text-gray-900">{product.qty_perfeito || 0}</td>
+                      <td className="p-3 text-center text-gray-900">{product.qty_bom || 0}</td>
+                      <td className="p-3 text-center text-gray-900">{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
+                      <td className="p-3 text-gray-900 text-sm">{product.notes || '-'}</td>
+                      <td className="p-3 text-right text-gray-900">R$ {(product.cost_price || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-900">
+                        R$ {(() => {
+                          const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
+                          const unitCost = totalQty > 0 ? (product.cost_price || 0) / totalQty : (product.cost_price || 0);
+                          return unitCost.toFixed(2);
+                        })()}
+                      </td>
+                      <td className="p-3 text-right text-gray-900">R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
                       <td className="p-3 text-right text-gray-900 font-semibold">{(product.quantity || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-gray-900 font-semibold">{(product.quantity_sold || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-blue-600 font-bold">R$ {(product.sold_amount || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-green-600 font-bold">R$ {(product.profit || 0).toFixed(2)}</td>
                       <td className="p-3 text-center">
                         <Button
                           size="sm"
