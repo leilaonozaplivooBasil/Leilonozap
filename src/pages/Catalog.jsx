@@ -163,35 +163,35 @@ export default function Catalog() {
          <div className="bg-gray-800/50 rounded-xl p-6 mb-8 border border-gray-700">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="text-xs font-bold text-gray-600 mb-2 block uppercase">Buscar</label>
+              <label className="text-xs font-bold text-gray-300 mb-2 block uppercase">Buscar</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <Input
                   placeholder="Nome do produto..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white border-gray-300 text-gray-900 rounded-lg"
+                  className="pl-10 bg-gray-700 border-gray-600 text-white rounded-lg"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-600 mb-2 block uppercase">Preço Mín</label>
+              <label className="text-xs font-bold text-gray-300 mb-2 block uppercase">Preço Mín</label>
               <Input
                 type="number"
                 value={priceRange[0]}
                 onChange={(e) => setPriceRange([parseFloat(e.target.value) || 0, priceRange[1]])}
-                className="bg-white border-gray-300 text-gray-900 rounded-lg"
+                className="bg-gray-700 border-gray-600 text-white rounded-lg"
               />
             </div>
 
             <div>
-              <label className="text-xs font-bold text-gray-600 mb-2 block uppercase">Preço Máx</label>
+              <label className="text-xs font-bold text-gray-300 mb-2 block uppercase">Preço Máx</label>
               <Input
                 type="number"
                 value={priceRange[1]}
                 onChange={(e) => setPriceRange([priceRange[0], parseFloat(e.target.value) || 50000])}
-                className="bg-white border-gray-300 text-gray-900 rounded-lg"
+                className="bg-gray-700 border-gray-600 text-white rounded-lg"
               />
             </div>
 
