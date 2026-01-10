@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
-  Download, Save, X, PackagePlus
+  Download, Save, X, PackagePlus, Calculator
 } from 'lucide-react';
+import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +52,8 @@ export default function ProductManagement() {
   const [currentObservation, setCurrentObservation] = useState({ productId: null, text: '' });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 34;
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showCalculator, setShowCalculator] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     lot: '',
@@ -649,28 +652,42 @@ export default function ProductManagement() {
                     <th className="text-right p-3 font-semibold text-white">Qtd Vendidos</th>
                     <th className="text-right p-3 font-semibold text-white">Valor Venda</th>
                     <th className="text-right p-3 font-semibold text-white">Lucro</th>
+                    <th className="text-center p-3 font-semibold text-white">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentProducts.map((product, index) => (
                     <tr 
                       key={product.id} 
-                      className={`border-b border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
-                      onClick={() => handleEdit(product)}
+                      className={`border-b border-gray-100 hover:bg-gray-100 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                     >
-                      <td className="p-3 text-gray-900 font-medium">{product.lot || 'N/A'}</td>
-                      <td className="p-3 text-gray-900">{product.description}</td>
-                      <td className="p-3 text-gray-900">{product.deposit_name || 'Bangu'}</td>
-                      <td className="p-3 text-center text-gray-900">{product.qty_perfeito || 0}</td>
-                      <td className="p-3 text-center text-gray-900">{product.qty_bom || 0}</td>
-                      <td className="p-3 text-center text-gray-900">{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
-                      <td className="p-3 text-gray-900 text-sm">{product.notes || '-'}</td>
-                      <td className="p-3 text-right text-gray-900">R$ {(product.cost_price || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-gray-900">R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-gray-900 font-semibold">{(product.quantity || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-gray-900 font-semibold">{(product.quantity_sold || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-blue-600 font-bold">R$ {(product.sold_amount || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-green-600 font-bold">R$ {(product.profit || 0).toFixed(2)}</td>
+                      <td className="p-3 text-gray-900 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.lot || 'N/A'}</td>
+                      <td className="p-3 text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.description}</td>
+                      <td className="p-3 text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.deposit_name || 'Bangu'}</td>
+                      <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_perfeito || 0}</td>
+                      <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_bom || 0}</td>
+                      <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
+                      <td className="p-3 text-gray-900 text-sm cursor-pointer" onClick={() => handleEdit(product)}>{product.notes || '-'}</td>
+                      <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-900 font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-gray-900 font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-blue-600 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-green-600 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.profit || 0).toFixed(2)}</td>
+                      <td className="p-3 text-center">
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedProduct(product);
+                            setShowCalculator(true);
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <Calculator className="w-4 h-4 mr-1" />
+                          Calcular Preço
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -946,6 +963,20 @@ export default function ProductManagement() {
         )}
 
       </div>
+
+      <PriceCalculatorModal
+        isOpen={showCalculator}
+        onClose={() => {
+          setShowCalculator(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+        onSave={() => {
+          sessionStorage.removeItem('products_cache_v3');
+          sessionStorage.removeItem('products_cache_time_v3');
+          loadData();
+        }}
+      />
     </div>
   );
 }
