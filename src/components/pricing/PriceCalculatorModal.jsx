@@ -132,8 +132,11 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
   };
 
   const handleSave = async () => {
-    if (!calculatedPrice) {
-      toast.error('Calcule o preço primeiro');
+    const priceToSave = isManualMode ? parseFloat(manualPrice) : calculatedPrice;
+    const discountToSave = isManualMode ? manualDiscount : discountPercentage;
+
+    if (!priceToSave || priceToSave <= 0) {
+      toast.error(isManualMode ? 'Insira um preço manual válido' : 'Calcule o preço primeiro');
       return;
     }
 
@@ -141,17 +144,17 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
     try {
       await base44.entities.Product.update(product.id, {
         market_value: parseFloat(marketValue),
-        calculated_price: calculatedPrice,
-        discount_percentage: discountPercentage,
-        selling_price_retail: calculatedPrice
+        calculated_price: priceToSave,
+        discount_percentage: discountToSave,
+        selling_price_retail: priceToSave
       });
 
-      toast.success('Preço calculado e salvo com sucesso!');
+      toast.success(isManualMode ? 'Preço manual salvo com sucesso!' : 'Preço calculado e salvo com sucesso!');
       if (onSave) onSave();
       onClose();
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast.error('Erro ao salvar o preço calculado');
+      toast.error('Erro ao salvar o preço');
     } finally {
       setIsLoading(false);
     }
