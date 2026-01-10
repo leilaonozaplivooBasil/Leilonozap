@@ -124,7 +124,6 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
     setIsLoading(true);
     try {
       await base44.entities.Product.update(product.id, {
-        pricing_formula_id: selectedFormulaId,
         market_value: parseFloat(marketValue),
         calculated_price: calculatedPrice,
         discount_percentage: discountPercentage,
