@@ -20,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CheckCircle, XCircle, RotateCcw, Eye, Filter, Trash2 } from "lucide-react";
+import { CheckCircle, XCircle, RotateCcw, Eye, Filter, Trash2, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import AddToCatalogModal from "@/components/admin/AddToCatalogModal";
 
 const Auction = base44.entities.Auction;
 const Payment = base44.entities.Payment;
