@@ -79,24 +79,6 @@ export default function Catalog() {
     }
   };
 
-  const filteredProducts = useMemo(() => {
-    let filtered = products;
-
-    if (searchTerm) {
-      filtered = filtered.filter(p =>
-        p.description?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (priceRange) {
-      filtered = filtered.filter(p =>
-        p.price_catalog >= priceRange[0] && p.price_catalog <= priceRange[1]
-      );
-    }
-
-    return filtered;
-  }, [products, searchTerm, priceRange]);
-
   const handleBuyNow = (product) => {
     sessionStorage.setItem('selectedProduct', JSON.stringify(product));
     if (licenseeCode) {
@@ -112,15 +94,6 @@ export default function Catalog() {
       </div>
     );
   }
-
-  // Produtos em destaque (com desconto ou promoção)
-  const featuredProducts = useMemo(() => {
-    return filteredProducts.slice(0, 4);
-  }, [filteredProducts]);
-
-  const regularProducts = useMemo(() => {
-    return filteredProducts.slice(4);
-  }, [filteredProducts]);
 
   return (
     <div className="bg-white text-gray-900 min-h-screen">
