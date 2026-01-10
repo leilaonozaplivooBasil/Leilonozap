@@ -242,36 +242,91 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
             </div>
           </div>
 
+          {/* 🚨 MODO MANUAL - Desconto < 20% */}
+          {isManualMode && (
+            <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4">
+              <h3 className="font-bold text-red-900 mb-3 flex items-center gap-2">
+                ⚠️ ATENÇÃO: Desconto Abaixo do Mínimo (20%)
+              </h3>
+              <p className="text-sm text-red-800 mb-4">
+                O desconto calculado ficou abaixo de 20%. Ajuste manualmente o desconto entre 20% e 50%.
+              </p>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <Label className="text-red-900 font-semibold">Desconto Manual (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={manualDiscount}
+                    onChange={(e) => setManualDiscount(e.target.value)}
+                    placeholder="Ex: 25.00"
+                    className="mt-1 bg-white border-red-300 text-gray-900"
+                    min="20"
+                    max="50"
+                  />
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    onClick={applyManualDiscount}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    Aplicar Desconto
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Resultado - LAYOUT OTIMIZADO */}
-          {calculatedPrice !== null && (
+          {calculatedPrice !== null && !isManualMode && (
             <div className="space-y-3">
               {/* Cards Principais - 3 COLUNAS */}
               <div className="grid grid-cols-3 gap-3">
                 {/* Preço Sugerido */}
-                <div className="bg-green-50 border-2 border-green-500 rounded-lg p-3">
+                <div className={`rounded-lg p-3 border-2 ${
+                  discountPercentage < 20 
+                    ? 'bg-red-50 border-red-500' 
+                    : 'bg-green-50 border-green-500'
+                }`}>
                   <div className="text-center">
                     <span className="text-xs font-semibold text-gray-700 block mb-1">💰 Preço de Venda</span>
-                    <span className="text-2xl font-bold text-green-600 block">
+                    <span className={`text-2xl font-bold block ${
+                      discountPercentage < 20 ? 'text-red-600' : 'text-green-600'
+                    }`}>
                       R$ {calculatedPrice.toFixed(2)}
                     </span>
                   </div>
                 </div>
 
                 {/* Desconto */}
-                <div className="bg-orange-50 border-2 border-orange-500 rounded-lg p-3">
+                <div className={`rounded-lg p-3 border-2 ${
+                  discountPercentage < 20 
+                    ? 'bg-red-50 border-red-500' 
+                    : 'bg-orange-50 border-orange-500'
+                }`}>
                   <div className="text-center">
                     <span className="text-xs font-semibold text-gray-700 block mb-1">🏷️ Desconto Cliente</span>
-                    <span className="text-2xl font-bold text-orange-600 block">
+                    <span className={`text-2xl font-bold block ${
+                      discountPercentage < 20 ? 'text-red-600' : 'text-orange-600'
+                    }`}>
                       {discountPercentage.toFixed(2)}%
                     </span>
                   </div>
                 </div>
 
                 {/* LUCRO LÍQUIDO */}
-                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-500 rounded-lg p-3">
+                <div className={`rounded-lg p-3 border-2 ${
+                  discountPercentage < 20 
+                    ? 'bg-red-50 border-red-500' 
+                    : 'bg-gradient-to-r from-blue-50 to-blue-100 border-blue-500'
+                }`}>
                   <div className="text-center">
-                    <span className="text-xs font-semibold text-blue-900 block mb-1">💎 SEU LUCRO</span>
-                    <span className="text-2xl font-black text-blue-600 block">
+                    <span className={`text-xs font-semibold block mb-1 ${
+                      discountPercentage < 20 ? 'text-red-900' : 'text-blue-900'
+                    }`}>💎 SEU LUCRO</span>
+                    <span className={`text-2xl font-black block ${
+                      discountPercentage < 20 ? 'text-red-600' : 'text-blue-600'
+                    }`}>
                       R$ {(() => {
                         const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
                         const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
@@ -279,7 +334,9 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                         return netProfit.toFixed(2);
                       })()}
                     </span>
-                    <span className="text-[10px] text-blue-700 block mt-1">(já descontado 26%)</span>
+                    <span className={`text-[10px] block mt-1 ${
+                      discountPercentage < 20 ? 'text-red-700' : 'text-blue-700'
+                    }`}>(já descontado 26%)</span>
                   </div>
                 </div>
               </div>
