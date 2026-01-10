@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Share2, Info } from "lucide-react";
+import { ShoppingCart, Play, Pause, Share2, Info, Edit } from "lucide-react";
 import FavoriteButton from '../recommendations/FavoriteButton';
 
 function CatalogProductCard({ product, currentUser }) {
@@ -272,6 +272,19 @@ function CatalogProductCard({ product, currentUser }) {
           >
             ✅ Entrar e Comprar
           </Button>
+
+          {currentUser?.role === 'admin' && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(createPageUrl("EditCatalogProduct") + `?id=${product.id}`);
+              }}
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Editar Produto
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
