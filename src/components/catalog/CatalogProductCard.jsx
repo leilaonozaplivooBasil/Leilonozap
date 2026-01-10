@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Share2 } from "lucide-react";
+import { ShoppingCart, Play, Pause, Share2, Info } from "lucide-react";
 import FavoriteButton from '../recommendations/FavoriteButton';
 
 function CatalogProductCard({ product, currentUser }) {
@@ -83,23 +83,34 @@ function CatalogProductCard({ product, currentUser }) {
     e.preventDefault();
     e.stopPropagation();
 
-    const productUrl = `${window.location.origin}/CatalogProductDetails?id=${product.id}`;
+    const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}`;
     const shareMessage = `🛍️ CATÁLOGO NOZAP!
 
 📱 ${product.description}
 💰 R$ ${product.price_catalog?.toFixed(2)}
 
-🛒 Compre agora: ${productUrl}`;
+🛒 Compre agora!`;
+
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     try {
-      if (navigator.share) {
+      if (isIOS && navigator.share && navigator.canShare) {
         await navigator.share({
-          title: `${product.description}`,
+          title: `🛍️ ${product.description}`,
           text: shareMessage,
         });
-      } else {
-        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+        return;
       }
+
+      if (isAndroid) {
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
+        window.open(whatsappUrl, '_blank');
+        return;
+      }
+
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+      
     } catch (err) {
       if (err.name !== 'AbortError') {
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
@@ -110,9 +121,25 @@ function CatalogProductCard({ product, currentUser }) {
   const currentImage = images.length > 0 ? images[currentImageIndex] : null;
   const hasMultipleImages = images && images.length > 1;
 
+  const categoryEmojis = {
+    eletronicos: "📱",
+    eletrodomesticos: "🔌",
+    moveis_decoracao: "🛋️",
+    casa_jardim: "🏡",
+    ferramentas: "🛠️",
+    roupas_acessorios: "👕",
+    esportes_lazer: "⚽",
+    brinquedos_hobbies: "🧸",
+    livros_midia: "📚",
+    veiculos_pecas: "🚗",
+    instrumentos_musicais: "🎸",
+    beleza_cuidado_pessoal: "💅",
+    outros: "🎯"
+  };
+
   return (
     <Card 
-      className="group relative overflow-hidden bg-gray-800/50 backdrop-blur-sm border border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 cursor-pointer"
+      className="group relative overflow-hidden bg-gray-800/50 backdrop-blur-sm border border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 cursor-pointer flex flex-col"
       onClick={handleCardClick}
     >
       <div 
@@ -161,43 +188,44 @@ function CatalogProductCard({ product, currentUser }) {
           </div>
         )}
         
-        {images.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none">
-            {images.map((_, index) => (
-              <div
-                key={index}
-                className={`rounded-full transition-all duration-300 ${
-                  index === currentImageIndex 
-                    ? 'w-2 h-2 bg-white shadow' 
-                    : 'w-1.5 h-1.5 bg-white/60'
-                }`}
-              />
-            ))}
-          </div>
-        )}
-        
-        {/* Botão Comparar no canto superior direito */}
+        {/* Badge de categoria - CANTO SUPERIOR ESQUERDO */}
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+          <Badge className="bg-black/80 text-white text-xs">
+            {categoryEmojis[product.category] || '📦'} Catálogo
+          </Badge>
+        </div>
+
+        {/* Botões de ação - CANTO SUPERIOR DIREITO */}
         <div className="absolute top-2 right-2 z-20 flex gap-2">
-          <button
-            onClick={(e) => { 
-              e.stopPropagation(); 
-              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`); 
-            }}
-            className="min-h-[40px] px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all flex items-center text-xs font-semibold"
-          >
-            💰 Comparar
-          </button>
+          {currentUser && (
+            <FavoriteButton 
+              auctionId={product.id} 
+              userId={currentUser.id} 
+              size="sm"
+            />
+          )}
 
           <button
             onClick={handleShare}
-            className="min-h-[40px] h-9 px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all flex items-center text-xs font-semibold"
+            onMouseDown={(e) => e.stopPropagation()} 
+            onTouchStart={(e) => e.stopPropagation()}
+            className="min-h-[40px] min-w-[40px] h-9 px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
           >
             <Share2 className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Indicadores de imagem - EMBAIXO */}
+        {hasMultipleImages && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+            {images.map((_, idx) => (
+              <div key={idx} className={`rounded-full transition-all ${idx === currentImageIndex ? 'w-2 h-2 bg-white' : 'w-1.5 h-1.5 bg-white/60'}`} />
+            ))}
+          </div>
+        )}
       </div>
       
-      <CardContent className="p-4">
+      <CardContent className="p-4 flex-1 flex flex-col">
         <h3 className="font-bold text-white text-sm line-clamp-2 mb-3">
           {product.description}
         </h3>
@@ -212,26 +240,28 @@ function CatalogProductCard({ product, currentUser }) {
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-2 mt-auto">
           <Button
             onClick={(e) => {
               e.stopPropagation();
               navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
             }}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
+            variant="outline"
+            className="w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+          >
+            <Info className="w-4 h-4 mr-2" />
+            Mais Informações
+          </Button>
+
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
+            }}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
           >
             ✅ Entrar e Comprar
           </Button>
-          <div className="flex gap-2">
-            {currentUser && (
-              <FavoriteButton
-                auctionId={product.id}
-                userId={currentUser.id}
-                size="sm"
-                className="flex-1"
-              />
-            )}
-          </div>
         </div>
       </CardContent>
     </Card>
