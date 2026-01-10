@@ -202,111 +202,36 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
             </div>
           </div>
 
-          {/* Resultado */}
+          {/* Resultado - LAYOUT OTIMIZADO */}
           {calculatedPrice !== null && (
             <div className="space-y-3">
-              {/* Preço Sugerido */}
-              <div className="bg-green-50 border-2 border-green-500 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                    <span className="font-semibold text-gray-700">💰 Preço de Venda Sugerido:</span>
-                  </div>
-                  <span className="text-2xl font-bold text-green-600">
-                    R$ {calculatedPrice.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-
-              {/* Desconto */}
-              <div className="bg-orange-50 border-2 border-orange-500 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrendingDown className="w-5 h-5 text-orange-600" />
-                    <span className="font-semibold text-gray-700">🏷️ Desconto pro Cliente:</span>
-                  </div>
-                  <span className="text-2xl font-bold text-orange-600">
-                    {discountPercentage.toFixed(2)}%
-                  </span>
-                </div>
-              </div>
-
-              {/* LUCRO LÍQUIDO - DESTAQUE */}
-              <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-500 rounded-lg p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg font-bold text-blue-900">💎 SEU LUCRO LÍQUIDO:</span>
-                    </div>
-                    <span className="text-xs text-blue-700">
-                      (Já descontado comissão + imposto)
-                    </span>
-                  </div>
-                  <span className="text-3xl font-black text-blue-600">
-                    R$ {(() => {
-                      const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
-                      const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
-                      const netProfit = (calculatedPrice * 0.74) - unitCost;
-                      return netProfit.toFixed(2);
-                    })()}
-                  </span>
-                </div>
-              </div>
-
-              {/* Breakdown Simplificado */}
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <h4 className="font-semibold text-gray-900 mb-3">📊 Como Chegamos Nesse Preço:</h4>
-                <div className="space-y-2 text-sm">
-                  {/* Linha 1 */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Preço no Mercado:</span>
-                    <span className="font-semibold text-gray-900">R$ {parseFloat(marketValue).toFixed(2)}</span>
-                  </div>
-
-                  {/* Linha 2 */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Seu Custo (por unidade):</span>
-                    <span className="font-semibold text-gray-900">
-                      R$ {(() => {
-                        const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
-                        const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
-                        return unitCost.toFixed(2);
-                      })()}
-                    </span>
-                  </div>
-
-                  <div className="border-t border-gray-300 my-2"></div>
-
-                  {/* Linha 3 */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Margem de Lucro Aplicada:</span>
-                    <span className="font-semibold text-blue-600">
-                      {selectedMargin ? `${(selectedMargin * 100).toFixed(0)}%` : 'N/A'}
-                    </span>
-                  </div>
-
-                  {/* Linha 4 */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Comissão + Imposto (26%):</span>
-                    <span className="font-semibold text-red-600">
-                      - R$ {(calculatedPrice * 0.26).toFixed(2)}
-                    </span>
-                  </div>
-
-                  <div className="border-t-2 border-gray-400 my-2"></div>
-
-                  {/* Total */}
-                  <div className="flex justify-between items-center bg-green-100 p-2 rounded">
-                    <span className="font-bold text-gray-900">✅ Preço Final de Venda:</span>
-                    <span className="text-xl font-black text-green-600">
+              {/* Cards Principais - 3 COLUNAS */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Preço Sugerido */}
+                <div className="bg-green-50 border-2 border-green-500 rounded-lg p-3">
+                  <div className="text-center">
+                    <span className="text-xs font-semibold text-gray-700 block mb-1">💰 Preço de Venda</span>
+                    <span className="text-2xl font-bold text-green-600 block">
                       R$ {calculatedPrice.toFixed(2)}
                     </span>
                   </div>
+                </div>
 
-                  {/* Lucro */}
-                  <div className="flex justify-between items-center bg-blue-100 p-2 rounded">
-                    <span className="font-bold text-gray-900">💰 Seu Lucro Real:</span>
-                    <span className="text-xl font-black text-blue-600">
+                {/* Desconto */}
+                <div className="bg-orange-50 border-2 border-orange-500 rounded-lg p-3">
+                  <div className="text-center">
+                    <span className="text-xs font-semibold text-gray-700 block mb-1">🏷️ Desconto Cliente</span>
+                    <span className="text-2xl font-bold text-orange-600 block">
+                      {discountPercentage.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* LUCRO LÍQUIDO */}
+                <div className="bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-500 rounded-lg p-3">
+                  <div className="text-center">
+                    <span className="text-xs font-semibold text-blue-900 block mb-1">💎 SEU LUCRO</span>
+                    <span className="text-2xl font-black text-blue-600 block">
                       R$ {(() => {
                         const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
                         const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
@@ -314,6 +239,65 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                         return netProfit.toFixed(2);
                       })()}
                     </span>
+                    <span className="text-[10px] text-blue-700 block mt-1">(já descontado 26%)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Breakdown - 2 COLUNAS */}
+              <div className="grid grid-cols-2 gap-3">
+                {/* Coluna Esquerda - Valores Base */}
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">📊 Valores Base</h4>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Preço no Mercado:</span>
+                      <span className="font-semibold text-gray-900">R$ {parseFloat(marketValue).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Seu Custo (unidade):</span>
+                      <span className="font-semibold text-gray-900">
+                        R$ {(() => {
+                          const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
+                          const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
+                          return unitCost.toFixed(2);
+                        })()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between border-t border-gray-300 pt-1.5">
+                      <span className="text-gray-700">Margem Aplicada:</span>
+                      <span className="font-semibold text-blue-600">
+                        {selectedMargin ? `${(selectedMargin * 100).toFixed(0)}%` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-700">Comissão + Imposto:</span>
+                      <span className="font-semibold text-red-600">- R$ {(calculatedPrice * 0.26).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coluna Direita - Resultado Final */}
+                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">✅ Resultado Final</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center bg-green-100 p-2 rounded">
+                      <span className="font-bold text-gray-900 text-xs">Preço de Venda:</span>
+                      <span className="text-lg font-black text-green-600">
+                        R$ {calculatedPrice.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center bg-blue-100 p-2 rounded">
+                      <span className="font-bold text-gray-900 text-xs">Seu Lucro Real:</span>
+                      <span className="text-lg font-black text-blue-600">
+                        R$ {(() => {
+                          const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
+                          const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
+                          const netProfit = (calculatedPrice * 0.74) - unitCost;
+                          return netProfit.toFixed(2);
+                        })()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
