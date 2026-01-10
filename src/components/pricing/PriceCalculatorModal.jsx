@@ -377,10 +377,10 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
           </Button>
           <Button 
             onClick={handleSave} 
-            disabled={!calculatedPrice || isLoading}
+            disabled={(!calculatedPrice && !isManualMode) || (isManualMode && !manualPrice) || isLoading}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {isLoading ? 'Salvando...' : 'Salvar Preço'}
+            {isLoading ? 'Salvando...' : (isManualMode ? 'Salvar Preço Manual' : 'Salvar Preço')}
           </Button>
         </DialogFooter>
       </DialogContent>
