@@ -16,6 +16,9 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
   const [isLoading, setIsLoading] = useState(false);
   const [selectedMargin, setSelectedMargin] = useState(null);
   const [profitPercentage, setProfitPercentage] = useState(null);
+  const [isManualMode, setIsManualMode] = useState(false);
+  const [manualPrice, setManualPrice] = useState('');
+  const [manualDiscount, setManualDiscount] = useState(0);
 
   useEffect(() => {
     loadFormulas();
