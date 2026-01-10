@@ -234,9 +234,15 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                 <h4 className="font-semibold text-gray-900 mb-2">Detalhamento:</h4>
                 <div className="space-y-1 text-sm text-gray-700">
                   <p>• Valor de Mercado: R$ {parseFloat(marketValue).toFixed(2)}</p>
-                  <p>• Base ({selectedFormula.base_percentage}%): R$ {(parseFloat(marketValue) * selectedFormula.base_percentage / 100).toFixed(2)}</p>
-                  <p>• Comissão ({selectedFormula.commission_percentage}%): R$ {(parseFloat(marketValue) * selectedFormula.base_percentage / 100 * selectedFormula.commission_percentage / 100).toFixed(2)}</p>
-                  <p>• Imposto ({selectedFormula.tax_percentage}%): R$ {(parseFloat(marketValue) * selectedFormula.base_percentage / 100 * selectedFormula.tax_percentage / 100).toFixed(2)}</p>
+                  <p>• Custo Unitário: R$ {(() => {
+                    const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
+                    const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
+                    return unitCost.toFixed(2);
+                  })()}</p>
+                  <p>• <strong>Margem Selecionada:</strong> {selectedMargin ? `${(selectedMargin * 100).toFixed(0)}%` : 'N/A'} de lucro</p>
+                  <p>• <strong>Lucro sobre Custo:</strong> {profitPercentage ? `${profitPercentage.toFixed(0)}%` : 'N/A'}</p>
+                  <p>• Base (74% do preço): R$ {(calculatedPrice * 0.74).toFixed(2)}</p>
+                  <p>• Comissão + Imposto (26%): R$ {(calculatedPrice * 0.26).toFixed(2)}</p>
                   <p className="font-semibold text-green-600 pt-2 border-t border-gray-300">
                     • Total: R$ {calculatedPrice.toFixed(2)}
                   </p>
