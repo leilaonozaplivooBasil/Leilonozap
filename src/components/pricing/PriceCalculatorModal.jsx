@@ -196,10 +196,10 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
           <Button
             onClick={calculatePrice}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={!selectedFormulaId || !marketValue}
+            disabled={!marketValue}
           >
             <Calculator className="w-4 h-4 mr-2" />
-            Calcular Preço
+            Calcular Preço Automaticamente
           </Button>
 
           {/* Resultado */}
