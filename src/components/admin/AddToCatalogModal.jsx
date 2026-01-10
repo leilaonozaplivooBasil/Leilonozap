@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,21 +8,26 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Copy } from "lucide-react";
 
 const Product = base44.entities.Product;
 
 export default function AddToCatalogModal({ isOpen, onClose, auction }) {
   const [price, setPrice] = useState("");
-  const [description, setDescription] = useState(auction?.title || "");
   const [isLoading, setIsLoading] = useState(false);
 
+  useEffect(() => {
+    if (isOpen && auction) {
+      // Pré-preenche o preço com o preço atual do leilão
+      setPrice((auction.current_price || auction.starting_price || "").toString());
+    }
+  }, [isOpen, auction]);
+
   const handleAddToCatalog = async () => {
-    if (!price || !description) {
-      toast.error("Preencha todos os campos");
+    if (!price) {
+      toast.error("Digite um preço para o catálogo");
       return;
     }
 
@@ -34,73 +39,75 @@ export default function AddToCatalogModal({ isOpen, onClose, auction }) {
 
     setIsLoading(true);
     try {
-      // Criar produto no catálogo
+      // Cria produto com TODOS os dados do leilão
       await Product.create({
-        description,
-        cost_price: 0,
+        description: auction.title,
+        cost_price: auction.starting_price || 0,
         price_catalog: priceValue,
         catalog_active: true,
-        image_urls: auction?.image_urls || [],
-        linked_auctions: [auction.id]
+        image_urls: auction.image_urls || [],
+        linked_auctions: [auction.id],
+        quantity: 1,
+        status: "ESTOQUE"
       });
 
-      toast.success("✅ Produto adicionado ao catálogo!");
+      toast.success("✅ Anúncio replicado no catálogo!");
       setPrice("");
-      setDescription(auction?.title || "");
       onClose();
     } catch (error) {
       console.error("Erro ao adicionar catálogo:", error);
-      toast.error("Erro ao adicionar produto: " + error.message);
+      toast.error("Erro: " + error.message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!auction) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-            <ShoppingCart className="w-5 h-5" />
-            Adicionar ao Catálogo
+            <Copy className="w-5 h-5" />
+            Replicar no Catálogo
           </DialogTitle>
         </DialogHeader>
 
-        {auction && (
-          <div className="space-y-4">
-            <div className="bg-gray-900 p-4 rounded-lg">
-              <p className="text-gray-400 text-sm mb-1">Leilão Original</p>
-              <p className="text-white font-semibold line-clamp-2">{auction.title}</p>
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">
-                Descrição para Catálogo
-              </label>
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Como o produto deve aparecer no catálogo..."
-                className="bg-gray-900 border-gray-700 text-white h-24"
+        <div className="space-y-4">
+          <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
+            <p className="text-gray-500 text-xs uppercase mb-2 font-semibold">Anúncio a Copiar</p>
+            {auction.image_urls?.[0] && (
+              <img 
+                src={auction.image_urls[0]} 
+                alt={auction.title}
+                className="w-full h-32 object-cover rounded-lg mb-3"
               />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-400 mb-2 block">
-                Preço do Catálogo (R$)
-              </label>
-              <Input
-                type="number"
-                step="0.01"
-                min="0"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                placeholder="0.00"
-                className="bg-gray-900 border-gray-700 text-white"
-              />
-            </div>
+            )}
+            <p className="text-white font-semibold line-clamp-3">{auction.title}</p>
+            <p className="text-gray-400 text-xs mt-2">
+              {auction.image_urls?.length || 0} imagens | Será replicado com todos os dados
+            </p>
           </div>
-        )}
+
+          <div>
+            <label className="text-sm text-gray-400 mb-2 block font-semibold">
+              Preço de Venda no Catálogo (R$)
+            </label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0.00"
+              className="bg-gray-900 border-gray-700 text-white text-lg font-bold"
+            />
+            <p className="text-gray-500 text-xs mt-2">
+              Todos os dados do anúncio (título, descrição, imagens) serão copiados
+            </p>
+          </div>
+        </div>
 
         <DialogFooter>
           <Button
@@ -114,9 +121,9 @@ export default function AddToCatalogModal({ isOpen, onClose, auction }) {
           <Button
             onClick={handleAddToCatalog}
             className="bg-green-600 hover:bg-green-700"
-            disabled={isLoading}
+            disabled={isLoading || !price}
           >
-            {isLoading ? "Adicionando..." : "Adicionar ao Catálogo"}
+            {isLoading ? "Replicando..." : "Replicar no Catálogo"}
           </Button>
         </DialogFooter>
       </DialogContent>
