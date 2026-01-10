@@ -1,421 +1,487 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
-import { Filter, Search, ShoppingCart, Loader2, Zap, Tag, ChevronLeft, ChevronRight, Heart, Share2, Flame } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
-import FavoriteButton from "../components/recommendations/FavoriteButton";
-import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 
 const Product = base44.entities.Product;
-const FavoriteProduct = base44.entities.FavoriteProduct || null;
+const User = { me: () => base44.auth.me() };
+const AppUser = base44.entities.AppUser;
+import { Eye, TrendingUp, Zap, Filter, CheckCircle, Package, Smartphone, Percent, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger } from
+"@/components/ui/tooltip";
+
+import CatalogProductCard from "../components/catalog/CatalogProductCard";
+import WelcomeModal from "../components/common/WelcomeModal";
+import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
+import RotatingBanner from '../components/banner/RotatingBanner';
+
+const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
 export default function Catalog() {
   const navigate = useNavigate();
+  const scrollerRef = useRef(null);
+  const retryTimeoutRef = useRef(null);
   const location = useLocation();
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [licenseeCode, setLicenseeCode] = useState("");
-  const [priceRange, setPriceRange] = useState([0, 50000]);
-  const [carouselIndex, setCarouselIndex] = useState({});
 
-  const filteredProducts = useMemo(() => {
+  const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const [banners, setBanners] = useState([]);
+
+  useEffect(() => {
+    const slider = scrollerRef.current;
+    if (!slider) return;
+
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    const mouseDownHandler = (e) => {
+      isDown = true;
+      slider.classList.add('grabbing');
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+    };
+
+    const mouseLeaveHandler = () => {
+      isDown = false;
+      slider.classList.remove('grabbing');
+    };
+
+    const mouseUpHandler = () => {
+      isDown = false;
+      slider.classList.remove('grabbing');
+    };
+
+    const mouseMoveHandler = (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - slider.offsetLeft;
+      const walk = (x - startX) * 2;
+      slider.scrollLeft = scrollLeft - walk;
+    };
+
+    slider.addEventListener('mousedown', mouseDownHandler);
+    slider.addEventListener('mouseleave', mouseLeaveHandler);
+    slider.addEventListener('mouseup', mouseUpHandler);
+    slider.addEventListener('mousemove', mouseMoveHandler);
+
+    return () => {
+      slider.removeEventListener('mousedown', mouseDownHandler);
+      slider.removeEventListener('mouseleave', mouseLeaveHandler);
+      slider.removeEventListener('mouseup', mouseUpHandler);
+      slider.removeEventListener('mousemove', mouseMoveHandler);
+    };
+  }, []);
+
+  const filterProducts = React.useCallback(() => {
+    if (!Array.isArray(products)) {
+      console.warn("⚠️ products não é array");
+      setFilteredProducts([]);
+      return;
+    }
+
     let filtered = products;
 
     if (searchTerm) {
-      filtered = filtered.filter(p =>
+      filtered = filtered.filter((p) =>
         p.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    if (priceRange) {
-      filtered = filtered.filter(p =>
-        p.price_catalog >= priceRange[0] && p.price_catalog <= priceRange[1]
-      );
-    }
+    setFilteredProducts(filtered);
+  }, [products, searchTerm]);
 
-    return filtered;
-  }, [products, searchTerm, priceRange]);
-
-  const featuredProducts = useMemo(() => {
-    return filteredProducts.slice(0, 4);
-  }, [filteredProducts]);
-
-  const regularProducts = useMemo(() => {
-    return filteredProducts.slice(4);
-  }, [filteredProducts]);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-    if (savedUser && isLoggedIn) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-  }, []);
-
-  useEffect(() => {
-    const urlParams = new URLSearchParams(location.search);
-    const ref = urlParams.get('ref');
-    if (ref) {
-      sessionStorage.setItem('licenseeCode', ref);
-      setLicenseeCode(ref);
-    } else {
-      const saved = sessionStorage.getItem('licenseeCode');
-      setLicenseeCode(saved || '');
-    }
-  }, [location]);
-
-  useEffect(() => {
-    loadCatalogProducts();
-  }, []);
-
-  const loadCatalogProducts = async () => {
-    setIsLoading(true);
+  const loadCurrentUser = React.useCallback(async (retryCount = 0) => {
     try {
-      const allProducts = await Product.filter({ catalog_active: true }, "-created_date", 100);
-      // Garante que image_urls seja sempre um array
-      const productsWithImages = (Array.isArray(allProducts) ? allProducts : []).map(p => ({
-        ...p,
-        image_urls: Array.isArray(p.image_urls) ? p.image_urls : (p.image_urls ? [p.image_urls] : [])
-      }));
-      setProducts(productsWithImages);
+      const savedUserJSON = localStorage.getItem('currentUser');
+      const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+
+      if (savedUserJSON && isLoggedIn) {
+        const userFromStorage = JSON.parse(savedUserJSON);
+
+        const lastValidation = sessionStorage.getItem('lastUserValidation');
+        const now = Date.now();
+
+        if (lastValidation && now - parseInt(lastValidation) < 600000) {
+          setCurrentUser(userFromStorage);
+          console.log("✅ Usuário carregado do cache (menos de 10min).");
+          return;
+        }
+
+        console.log("🔍 Validando usuário no banco de dados...");
+        try {
+          const usersInDB = await AppUser.filter({ id: userFromStorage.id });
+          if (usersInDB.length > 0) {
+            const freshUser = usersInDB[0];
+
+            if (freshUser.email === MASTER_ADMIN_EMAIL) {
+              freshUser.role = 'admin';
+              console.log(`👑 PROTEÇÃO MASTER ATIVADA: '${MASTER_ADMIN_EMAIL}' tem role 'admin' garantida.`);
+            }
+
+            localStorage.setItem('currentUser', JSON.stringify(freshUser));
+            sessionStorage.setItem('lastUserValidation', now.toString());
+            setCurrentUser(freshUser);
+            
+            console.log("✅ Usuário validado no Catalog:", freshUser.full_name, "Role:", freshUser.role);
+            return;
+          }
+        } catch (dbError) {
+          console.error("⚠️ Erro ao validar usuário no DB, usando cache:", dbError);
+          setCurrentUser(userFromStorage);
+          
+          if (dbError.message?.includes('Rate limit') && retryCount < 1) {
+            const delay = 3000;
+            setTimeout(() => loadCurrentUser(retryCount + 1), delay);
+          }
+          return;
+        }
+      }
+
+      const platformUser = await User.me();
+      if (platformUser) {
+        if (platformUser.email === MASTER_ADMIN_EMAIL) {
+          platformUser.role = 'admin';
+          console.log(`👑 PROTEÇÃO MASTER ATIVADA (PLATAFORMA): '${MASTER_ADMIN_EMAIL}' tem role 'admin' garantida.`);
+        }
+        setCurrentUser(platformUser);
+        sessionStorage.setItem('lastUserValidation', Date.now().toString());
+        console.log("✅ Usuário da plataforma carregado:", platformUser.full_name, "Role:", platformUser.role);
+      } else {
+        setCurrentUser(null);
+        console.log("ℹ️ Nenhum usuário logado. Modo visitante.");
+      }
+
     } catch (error) {
-      console.error("Erro ao carregar catálogo:", error);
-      toast.error("Erro ao carregar produtos");
-      setProducts([]);
+      console.log("Usuário não logado, entrando em modo visitante.");
+      setCurrentUser(null);
+    }
+  }, []);
+
+  const loadProducts = React.useCallback(async (isRetry = false) => {
+    try {
+      setLoadError(null);
+
+      const cachedData = sessionStorage.getItem('products_catalog_cache');
+      const cacheTime = sessionStorage.getItem('products_catalog_cache_time');
+
+      if (cachedData && cacheTime && !isRetry) {
+        const age = Date.now() - parseInt(cacheTime);
+        if (age < 5000) {
+          console.log("⚡ Cache instantâneo!");
+          const parsedData = JSON.parse(cachedData);
+          if (Array.isArray(parsedData)) {
+            setProducts(parsedData);
+            setIsLoading(false);
+
+            if (age > 2000) {
+              setTimeout(() => {
+                Product.filter({ catalog_active: true }, "-created_date", 50).then((data) => {
+                  if (Array.isArray(data)) {
+                    sessionStorage.setItem('products_catalog_cache', JSON.stringify(data));
+                    sessionStorage.setItem('products_catalog_cache_time', Date.now().toString());
+                    setProducts(data);
+                  }
+                }).catch(() => {});
+              }, 100);
+            }
+            return;
+          }
+        }
+      }
+
+      console.log("🔍 Carregando produtos do catálogo...");
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const data = await Product.filter({ catalog_active: true }, "-created_date", 50);
+      clearTimeout(timeoutId);
+
+      if (Array.isArray(data) && data.length >= 0) {
+        setProducts(data);
+        sessionStorage.setItem('products_catalog_cache', JSON.stringify(data));
+        sessionStorage.setItem('products_catalog_cache_time', Date.now().toString());
+        console.log(`⚡ ${data.length} produtos`);
+        setRetryCount(0);
+      } else {
+        console.warn('⚠️ Dados não são array válido, usando array vazio');
+        setProducts([]);
+      }
+
+    } catch (error) {
+      console.error("❌ Erro:", error);
+      
+      try {
+        await base44.entities.SystemLog.create({
+          step: 'FETCH_CATALOG_PRODUCTS',
+          status: 'error',
+          message: `Failed to load products: ${error.message}`,
+          component_name: 'Catalog',
+          error_details: { message: error.message, stack: error.stack },
+          user_agent: navigator.userAgent,
+          is_mobile: /Mobi|Android/i.test(navigator.userAgent)
+        });
+      } catch (logErr) {
+        console.debug('Logging falhou (não crítico)');
+      }
+
+      const oldCache = sessionStorage.getItem('products_catalog_cache');
+      if (oldCache) {
+        try {
+          const parsedCache = JSON.parse(oldCache);
+          if (Array.isArray(parsedCache)) {
+            setProducts(parsedCache);
+            setLoadError(null);
+          }
+        } catch (e) {
+          setProducts([]);
+        }
+      } else if (retryCount < 2) {
+        setTimeout(() => {
+          setRetryCount((prev) => prev + 1);
+          loadProducts(true);
+        }, 1500);
+      } else {
+        setLoadError("Erro de conexão. Tente novamente.");
+        setProducts([]);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [retryCount]);
 
-  const handleShare = async (product) => {
-    const productUrl = window.location.href + `?product_id=${product.id}`;
-    const shareText = `🛍️ CATÁLOGO NOZAP!\n\n📱 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n🛒 Compre agora!`;
+  useEffect(() => {
+    
+    const loadInitialData = async () => {
+      setIsLoading(true);
 
-    if (navigator.share) {
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      if (urlParams.get('search')) {
+        setSearchTerm(urlParams.get('search'));
+      }
+
+      await loadProducts();
+      await loadCurrentUser();
+
+      console.log('✅ [Catálogo] Carregando produtos para venda');
+
       try {
-        await navigator.share({
-          title: `Produto: ${product.description}`,
-          text: shareText,
-          url: productUrl
-        });
-      } catch (e) {
-        if (e.name !== "AbortError") {
-          window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+        const cachedBanners = sessionStorage.getItem('banners_cache');
+        const cacheTime = sessionStorage.getItem('banners_cache_time');
+
+        if (cachedBanners && cacheTime && Date.now() - parseInt(cacheTime) < 120000) {
+          setBanners(JSON.parse(cachedBanners));
+          console.log('⚡ Banners do cache');
+        } else {
+          setTimeout(async () => {
+            try {
+              const bannerData = await base44.entities.BannerImage.filter({ is_active: true });
+              const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
+              setBanners(sortedBanners);
+              sessionStorage.setItem('banners_cache', JSON.stringify(sortedBanners));
+              sessionStorage.setItem('banners_cache_time', Date.now().toString());
+            } catch (error) {
+              console.debug('Erro ao carregar banners:', error.message);
+            }
+          }, 1500);
+        }
+      } catch (error) {
+        console.error('Erro ao carregar banners:', error);
+        const cachedBanners = sessionStorage.getItem('banners_cache');
+        if (cachedBanners) {
+          setBanners(JSON.parse(cachedBanners));
         }
       }
-    } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+    };
+
+    loadInitialData();
+
+    return () => {
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (products.length > 0) {
+      filterProducts();
     }
-  };
+  }, [products, searchTerm, filterProducts]);
 
-  const handleImageClick = (productId) => {
-    const product = products.find(p => p.id === productId);
-    if (!product?.image_urls || product.image_urls.length <= 1) return;
-    setCarouselIndex(prev => ({
-      ...prev,
-      [productId]: ((prev[productId] || 0) + 1) % product.image_urls.length
-    }));
-  };
+  const handleAcceptWelcome = useCallback(async () => {
+    setShowWelcomeModal(false);
+  }, []);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <Loader2 className="w-12 h-12 animate-spin text-green-500" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (currentUser) {
+      console.log("🔍 [CATALOG] Usuário atual:", {
+        name: currentUser.full_name,
+        email: currentUser.email,
+        role: currentUser.role,
+        isLicensee: currentUser.role === 'licensee'
+      });
+    } else {
+      console.log("🔍 [CATALOG] Nenhum usuário logado");
+    }
+  }, [currentUser]);
 
   return (
     <div className="bg-gray-900 text-white min-h-screen">
-      {/* HERO BANNER - COMO HOME.JS */}
-      <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white m-6 mt-4">
-        <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+      <style>{`
+        .category-scroller {
+          overflow-x: scroll;
+          cursor: grab;
+          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          scrollbar-width: none;
+        }
+        .category-scroller::-webkit-scrollbar {
+          display: none;
+        }
+        .category-scroller.grabbing {
+            cursor: grabbing;
+        }
+        @keyframes fire {
+          0% { transform: scale(1) rotate(0deg); opacity: 1; }
+          25% { transform: scale(1.05) rotate(2deg); opacity: 0.95; }
+          50% { transform: scale(1) rotate(-1deg); opacity: 1; }
+          75% { transform: scale(1.03) rotate(1deg); opacity: 0.98; }
+          100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+        .animate-fire {
+          animation: fire 1.8s ease-in-out infinite;
+        }
+      `}</style>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Hero Section */}
+        <div className="mb-8">
+          <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
+            <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
 
-        <div className="relative">
-          <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
-            <Flame className="w-9 h-9 text-orange-400" />
-            <span>Catálogo <span className="text-green-400">Especial</span>!</span>
-          </h1>
-          <p className="text-gray-300 mb-4 text-base lg:text-lg">
-            {products.length} produtos incríveis com preços imbatíveis. Compre e economize!
-          </p>
+            <div className="relative lg:pr-80">
+              <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
+                <Flame className="w-9 h-9 text-orange-400 animate-fire" />
+                <span>Catálogo <span className="text-green-400">Especial</span>!</span>
+              </h1>
+              <p className="text-gray-300 mb-4 text-base lg:text-lg">
+                {products.length} produtos incríveis com preços imbatíveis!
+              </p>
+
+              <div className="flex items-center gap-4 text-sm text-gray-400">
+                <div className="flex items-center gap-1.5">
+                  <Package className="w-4 h-4" />
+                  <span>{products.length} em estoque</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* BANNER ROTATIVO */}
+        {banners.length > 0 &&
+        <div className="mb-8">
+            <RotatingBanner banners={banners} />
+          </div>
+        }
+
+        {/* CONTEÚDO PRINCIPAL */}
+        <div className="w-full">
+          {/* Busca */}
+          <div className="mb-8 flex gap-2">
+            <input
+              type="text"
+              placeholder="Buscar produtos..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+            />
+          </div>
+
+          {loadError && retryCount >= 3 &&
+          <div className="mb-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-xl p-6">
+              <div className="flex items-start gap-4">
+                <div className="text-5xl">⚠️</div>
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-yellow-400 mb-2">Conexão Instável</h3>
+                  <p className="text-gray-300 mb-4">{loadError}</p>
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-300">
+                      💡 <strong>Dica:</strong> Verifique sua conexão de internet e tente novamente.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setRetryCount(0);
+                      setIsLoading(true);
+                      setLoadError(null);
+                      loadProducts(true);
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700 font-bold">
+                    🔄 Tentar Novamente
+                  </Button>
+                </div>
+              </div>
+            </div>
+          }
+
+          {isLoading ?
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {Array(6).fill(0).map((_, i) =>
+            <div key={i} className="bg-gray-800 rounded-2xl p-4 sm:p-6 animate-pulse">
+                  <div className="w-full aspect-square bg-gray-700 rounded-xl mb-4"></div>
+                  <div className="h-6 bg-gray-700 rounded mb-2"></div>
+                  <div className="h-4 bg-gray-700 rounded w-2/3"></div>
+                </div>
+            )}
+            </div> :
+          filteredProducts.length === 0 && !loadError ?
+          <div className="text-center py-12 text-gray-400">
+              <div className="text-6xl mb-4">📦</div>
+              <h3 className="text-xl font-semibold mb-2 text-white">
+                Nenhum produto encontrado
+              </h3>
+              <p className="text-gray-500 mb-6">
+                Tente ajustar a busca ou volte mais tarde para novos produtos!
+              </p>
+            </div> :
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {filteredProducts.map((product) => {
+                if (!product || !product.id) {
+                  console.warn('⚠️ Product inválido detectado:', product);
+                  return null;
+                }
+                return (
+                  <CatalogProductCard
+                    key={product.id}
+                    product={product}
+                    currentUser={currentUser}
+                  />
+                );
+              })}
+            </div>
+          }
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-         {/* FILTROS */}
-         <div className="bg-gray-800/50 rounded-xl p-6 mb-8 border border-gray-700">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="text-xs font-bold text-gray-300 mb-2 block uppercase">Buscar</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
-                <Input
-                  placeholder="Nome do produto..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-gray-700 border-gray-600 text-white rounded-lg"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-gray-300 mb-2 block uppercase">Preço Mín</label>
-              <Input
-                type="number"
-                value={priceRange[0]}
-                onChange={(e) => setPriceRange([parseFloat(e.target.value) || 0, priceRange[1]])}
-                className="bg-gray-700 border-gray-600 text-white rounded-lg"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-gray-300 mb-2 block uppercase">Preço Máx</label>
-              <Input
-                type="number"
-                value={priceRange[1]}
-                onChange={(e) => setPriceRange([priceRange[0], parseFloat(e.target.value) || 50000])}
-                className="bg-gray-700 border-gray-600 text-white rounded-lg"
-              />
-            </div>
-
-            <div className="flex items-end">
-              <Button
-                onClick={loadCatalogProducts}
-                className="w-full bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold"
-              >
-                <Filter className="w-4 h-4 mr-2" />
-                Filtrar
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* PRODUTOS EM DESTAQUE */}
-         {featuredProducts.length > 0 && (
-           <div className="mb-12">
-             <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
-               <Zap className="w-6 h-6 text-orange-500" />
-               Destaques da Semana
-             </h2>
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-               {featuredProducts.map((product) => {
-                 const currentIdx = carouselIndex[product.id] || 0;
-                 const currentImage = product.image_urls?.[currentIdx];
-                 const hasMultipleImages = product.image_urls && product.image_urls.length > 1;
-
-                 return (
-                   <div key={product.id} className="bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-gray-700 group flex flex-col">
-                     {/* Imagem com Carrossel */}
-                     <div className="relative h-56 bg-white overflow-hidden cursor-pointer" onClick={() => handleImageClick(product.id)}>
-                       {currentImage ? (
-                         <img
-                           src={currentImage}
-                           alt={product.description}
-                           className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                           onError={(e) => {
-                             e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
-                             e.target.classList.add('p-4');
-                           }}
-                         />
-                       ) : (
-                         <div className="w-full h-full flex items-center justify-center bg-white">
-                           <ShoppingCart className="w-12 h-12 text-gray-400" />
-                         </div>
-                       )}
-
-                       {/* Badges no topo esquerdo */}
-                       <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-                         <Badge className="bg-orange-500 text-white border-0">
-                           <Tag className="w-3 h-3 mr-1" />
-                           OFERTA
-                         </Badge>
-                       </div>
-
-                       {/* Botões de ação no topo direito */}
-                       <div className="absolute top-2 right-2 z-20 flex gap-2">
-                         <button
-                           onClick={(e) => { e.stopPropagation(); navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`); }}
-                           className="min-h-[40px] px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all flex items-center text-xs font-semibold"
-                         >
-                           💰 Comparar
-                         </button>
-                       </div>
-
-                       {/* Indicadores de imagem */}
-                       {hasMultipleImages && (
-                         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                           {product.image_urls.map((_, idx) => (
-                             <div key={idx} className={`rounded-full transition-all ${idx === currentIdx ? 'w-2 h-2 bg-white' : 'w-1.5 h-1.5 bg-white/60'}`} />
-                           ))}
-                         </div>
-                       )}
-                     </div>
-
-                     {/* Conteúdo */}
-                     <div className="p-4 flex-1 flex flex-col">
-                       <h3 className="font-bold text-white line-clamp-2 mb-3 text-sm">
-                         {product.description}
-                       </h3>
-
-                       <div className="mb-4">
-                         <span className="text-3xl font-black text-green-400">
-                           R$ {product.price_catalog?.toFixed(2) || "0.00"}
-                         </span>
-                         {product.quantity && (
-                           <p className="text-xs text-gray-400 mt-1">Estoque: {product.quantity}</p>
-                         )}
-                       </div>
-
-                       {/* Botões */}
-                       <div className="space-y-2 mt-auto">
-                         <Button
-                           onClick={() => navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`)}
-                           className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
-                         >
-                           ✅ Entrar e Comprar
-                         </Button>
-                         <div className="flex gap-2">
-                           {currentUser && (
-                             <FavoriteButton
-                               auctionId={product.id}
-                               userId={currentUser.id}
-                               size="sm"
-                               className="flex-1"
-                             />
-                           )}
-                           <button
-                             onClick={() => handleShare(product)}
-                             className="flex-1 bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-all flex items-center justify-center gap-1"
-                           >
-                             <Share2 className="w-4 h-4" />
-                             <span className="text-xs">Compartilhar</span>
-                           </button>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 );
-               })}
-             </div>
-           </div>
-         )}
-
-        {/* TODOS OS PRODUTOS */}
-         {regularProducts.length > 0 && (
-           <div>
-             <h2 className="text-2xl font-black text-white mb-6">Todos os Produtos</h2>
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-               {regularProducts.map((product) => {
-                 const currentIdx = carouselIndex[product.id] || 0;
-                 const currentImage = product.image_urls?.[currentIdx];
-                 const hasMultipleImages = product.image_urls && product.image_urls.length > 1;
-
-                 return (
-                   <div key={product.id} className="bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-gray-700 group flex flex-col">
-                     <div className="relative h-48 bg-white overflow-hidden cursor-pointer" onClick={() => handleImageClick(product.id)}>
-                       {currentImage ? (
-                         <img
-                           src={currentImage}
-                           alt={product.description}
-                           className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                           onError={(e) => {
-                             e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
-                             e.target.classList.add('p-4');
-                           }}
-                         />
-                       ) : (
-                         <div className="w-full h-full flex items-center justify-center bg-white">
-                           <ShoppingCart className="w-12 h-12 text-gray-400" />
-                         </div>
-                       )}
-
-                       {/* Botão de ação no topo direito */}
-                       <div className="absolute top-2 right-2 z-20">
-                         <button
-                           onClick={(e) => { e.stopPropagation(); navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`); }}
-                           className="min-h-[40px] px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all flex items-center text-xs font-semibold"
-                         >
-                           💰 Comparar
-                         </button>
-                       </div>
-
-                       {/* Indicadores de imagem */}
-                       {hasMultipleImages && (
-                         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
-                           {product.image_urls.map((_, idx) => (
-                             <div key={idx} className={`rounded-full transition-all ${idx === currentIdx ? 'w-2 h-2 bg-white' : 'w-1.5 h-1.5 bg-white/60'}`} />
-                           ))}
-                         </div>
-                       )}
-                     </div>
-
-                     <div className="p-4 flex-1 flex flex-col">
-                       <h3 className="font-bold text-white line-clamp-2 mb-3 text-sm cursor-pointer" onClick={() => navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`)}>
-                         {product.description}
-                       </h3>
-
-                       <div className="mb-4">
-                         <span className="text-2xl font-black text-green-400">
-                           R$ {product.price_catalog?.toFixed(2) || "0.00"}
-                         </span>
-                         {product.quantity && (
-                           <p className="text-xs text-gray-400 mt-1">Estoque: {product.quantity}</p>
-                         )}
-                       </div>
-
-                       <div className="space-y-2 mt-auto">
-                         <Button
-                           onClick={() => navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`)}
-                           className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
-                         >
-                           ✅ Entrar e Comprar
-                         </Button>
-                         <div className="flex gap-2">
-                           {currentUser && (
-                             <FavoriteButton
-                               auctionId={product.id}
-                               userId={currentUser.id}
-                               size="sm"
-                               className="flex-1"
-                             />
-                           )}
-                           <button
-                             onClick={() => handleShare(product)}
-                             className="flex-1 bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-all flex items-center justify-center gap-1"
-                           >
-                             <Share2 className="w-4 h-4" />
-                             <span className="text-xs">Compartilhar</span>
-                           </button>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 );
-               })}
-             </div>
-           </div>
-         )}
-
-        {/* NENHUM PRODUTO */}
-        {filteredProducts.length === 0 && !isLoading && (
-          <div className="text-center py-16">
-            <ShoppingCart className="w-20 h-20 mx-auto mb-4 text-gray-600" />
-            <h3 className="text-xl font-bold text-gray-300 mb-2">Nenhum produto encontrado</h3>
-            <p className="text-gray-500">Tente ajustar os filtros de busca</p>
-          </div>
-        )}
-        </div>
-
-        {/* COMPARAI BUTTON FLUTUANTE */}
-        <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
-        </div>
-        );
-        }
+      <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
+      {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
+    </div>
+  );
+}
