@@ -496,6 +496,7 @@ export default function Layout({ children, currentPageName }) {
   // 🔥 MENU FINAL
   const finalMenuItems = [
     { title: "Leilões", pageName: "Home" },
+    { title: "Catálogo", pageName: "Catalog" },
     ...(isLoggedIn ? noZapLoggedItems : []),
     { title: "Sistema de Alavancagem", pageName: "Licensing" },
     ...(isLoggedIn ? loggedMenuItems : [])
