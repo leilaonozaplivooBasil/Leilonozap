@@ -208,61 +208,105 @@ export default function Catalog() {
         </div>
 
         {/* PRODUTOS EM DESTAQUE */}
-        {featuredProducts.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2">
-              <Zap className="w-6 h-6 text-orange-500" />
-              Destaques da Semana
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {featuredProducts.map((product) => (
-                <div key={product.id} className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-gray-200 group">
-                  {/* Imagem */}
-                  <div className="relative h-56 bg-gray-200 overflow-hidden">
-                    {product.image_urls?.[0] ? (
-                      <img
-                        src={product.image_urls[0]}
-                        alt={product.description}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
-                        <ShoppingCart className="w-12 h-12 text-gray-400" />
-                      </div>
-                    )}
-                    <Badge className="absolute top-3 right-3 bg-orange-500 text-white border-0">
-                      <Tag className="w-3 h-3 mr-1" />
-                      OFERTA
-                    </Badge>
-                  </div>
+         {featuredProducts.length > 0 && (
+           <div className="mb-12">
+             <h2 className="text-2xl font-black text-white mb-6 flex items-center gap-2">
+               <Zap className="w-6 h-6 text-orange-500" />
+               Destaques da Semana
+             </h2>
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+               {featuredProducts.map((product) => {
+                 const currentIdx = carouselIndex[product.id] || 0;
+                 const currentImage = product.image_urls?.[currentIdx];
+                 const hasMultipleImages = product.image_urls && product.image_urls.length > 1;
 
-                  {/* Conteúdo */}
-                  <div className="p-4">
-                    <h3 className="font-bold text-gray-900 line-clamp-2 mb-3 text-sm">
-                      {product.description}
-                    </h3>
+                 return (
+                   <div key={product.id} className="bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-gray-700 group flex flex-col">
+                     {/* Imagem com Carrossel */}
+                     <div className="relative h-56 bg-gray-700 overflow-hidden">
+                       {currentImage ? (
+                         <img
+                           src={currentImage}
+                           alt={product.description}
+                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                         />
+                       ) : (
+                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800">
+                           <ShoppingCart className="w-12 h-12 text-gray-600" />
+                         </div>
+                       )}
+                       <Badge className="absolute top-3 right-3 bg-orange-500 text-white border-0">
+                         <Tag className="w-3 h-3 mr-1" />
+                         OFERTA
+                       </Badge>
 
-                    <div className="mb-4">
-                      <span className="text-3xl font-black text-green-600">
-                        R$ {product.price_catalog?.toFixed(2) || "0.00"}
-                      </span>
-                      {product.quantity && (
-                        <p className="text-xs text-gray-500 mt-1">Estoque: {product.quantity}</p>
-                      )}
-                    </div>
+                       {/* Navegação Carrossel */}
+                       {hasMultipleImages && (
+                         <>
+                           <button
+                             onClick={() => handlePrevImage(product.id)}
+                             className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-1 rounded-full z-10"
+                           >
+                             <ChevronLeft className="w-5 h-5 text-white" />
+                           </button>
+                           <button
+                             onClick={() => handleNextImage(product.id)}
+                             className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-1 rounded-full z-10"
+                           >
+                             <ChevronRight className="w-5 h-5 text-white" />
+                           </button>
+                         </>
+                       )}
+                     </div>
 
-                    <Button
-                      onClick={() => navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
-                    >
-                      Ver Detalhes
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                     {/* Conteúdo */}
+                     <div className="p-4 flex-1 flex flex-col">
+                       <h3 className="font-bold text-white line-clamp-2 mb-3 text-sm">
+                         {product.description}
+                       </h3>
+
+                       <div className="mb-4">
+                         <span className="text-3xl font-black text-green-400">
+                           R$ {product.price_catalog?.toFixed(2) || "0.00"}
+                         </span>
+                         {product.quantity && (
+                           <p className="text-xs text-gray-400 mt-1">Estoque: {product.quantity}</p>
+                         )}
+                       </div>
+
+                       {/* Botões */}
+                       <div className="space-y-2 mt-auto">
+                         <Button
+                           onClick={() => navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`)}
+                           className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
+                         >
+                           ✅ Entrar e Comprar
+                         </Button>
+                         <div className="flex gap-2">
+                           {currentUser && (
+                             <FavoriteButton
+                               auctionId={product.id}
+                               userId={currentUser.id}
+                               size="sm"
+                               className="flex-1"
+                             />
+                           )}
+                           <button
+                             onClick={() => handleShare(product)}
+                             className="flex-1 bg-gray-700 hover:bg-gray-600 text-white p-2 rounded-lg transition-all flex items-center justify-center gap-1"
+                           >
+                             <Share2 className="w-4 h-4" />
+                             <span className="text-xs">Compartilhar</span>
+                           </button>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 );
+               })}
+             </div>
+           </div>
+         )}
 
         {/* TODOS OS PRODUTOS */}
         {regularProducts.length > 0 && (
