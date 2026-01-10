@@ -402,12 +402,15 @@ export default function Catalog() {
         {/* NENHUM PRODUTO */}
         {filteredProducts.length === 0 && !isLoading && (
           <div className="text-center py-16">
-            <ShoppingCart className="w-20 h-20 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-xl font-bold text-gray-600 mb-2">Nenhum produto encontrado</h3>
+            <ShoppingCart className="w-20 h-20 mx-auto mb-4 text-gray-600" />
+            <h3 className="text-xl font-bold text-gray-300 mb-2">Nenhum produto encontrado</h3>
             <p className="text-gray-500">Tente ajustar os filtros de busca</p>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
+        </div>
+
+        {/* COMPARAI BUTTON FLUTUANTE */}
+        <ComparaiButton auctions={filteredProducts} mode="catalog" />
+        </div>
+        );
+        }
