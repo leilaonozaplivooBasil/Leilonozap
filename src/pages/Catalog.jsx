@@ -51,7 +51,14 @@ export default function Catalog() {
   }, [filteredProducts]);
 
   useEffect(() => {
-    // Captura código do licenciado da URL
+    const savedUser = localStorage.getItem('currentUser');
+    const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+    if (savedUser && isLoggedIn) {
+      setCurrentUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const ref = urlParams.get('ref');
     if (ref) {
