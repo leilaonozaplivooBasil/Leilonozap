@@ -287,18 +287,7 @@ function CatalogProductCard({ product, currentUser }) {
             ✅ Entrar e Comprar
           </Button>
 
-          {currentUser?.role === 'admin' && (
-            <Button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(createPageUrl("EditCatalogProduct") + `?id=${product.id}`);
-              }}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold"
-            >
-              <Edit className="w-4 h-4 mr-2" />
-              Editar Produto
-            </Button>
-          )}
+
         </div>
       </CardContent>
     </Card>
