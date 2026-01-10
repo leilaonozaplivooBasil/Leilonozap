@@ -344,16 +344,24 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
               {/* Breakdown - 2 COLUNAS */}
               <div className="grid grid-cols-2 gap-3">
                 {/* Coluna Esquerda - Valores Base */}
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">📊 Valores Base</h4>
+                <div className={`rounded-lg p-3 border ${
+                  discountPercentage < 20 
+                    ? 'bg-red-50 border-red-200' 
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <h4 className={`font-semibold mb-2 text-sm ${
+                    discountPercentage < 20 ? 'text-red-900' : 'text-gray-900'
+                  }`}>📊 Valores Base</h4>
                   <div className="space-y-1.5 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-gray-700">Preço no Mercado:</span>
-                      <span className="font-semibold text-gray-900">R$ {parseFloat(marketValue).toFixed(2)}</span>
+                      <span className={discountPercentage < 20 ? 'text-red-800' : 'text-gray-700'}>Preço no Mercado:</span>
+                      <span className={`font-semibold ${discountPercentage < 20 ? 'text-red-900' : 'text-gray-900'}`}>
+                        R$ {parseFloat(marketValue).toFixed(2)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-700">Seu Custo (unidade):</span>
-                      <span className="font-semibold text-gray-900">
+                      <span className={discountPercentage < 20 ? 'text-red-800' : 'text-gray-700'}>Seu Custo (unidade):</span>
+                      <span className={`font-semibold ${discountPercentage < 20 ? 'text-red-900' : 'text-gray-900'}`}>
                         R$ {(() => {
                           const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
                           const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
@@ -361,32 +369,54 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
                         })()}
                       </span>
                     </div>
-                    <div className="flex justify-between border-t border-gray-300 pt-1.5">
-                      <span className="text-gray-700">Margem Aplicada:</span>
-                      <span className="font-semibold text-blue-600">
+                    <div className={`flex justify-between border-t pt-1.5 ${
+                      discountPercentage < 20 ? 'border-red-300' : 'border-gray-300'
+                    }`}>
+                      <span className={discountPercentage < 20 ? 'text-red-800' : 'text-gray-700'}>Margem Aplicada:</span>
+                      <span className={`font-semibold ${
+                        discountPercentage < 20 ? 'text-red-600' : 'text-blue-600'
+                      }`}>
                         {selectedMargin ? `${(selectedMargin * 100).toFixed(0)}%` : 'N/A'}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-700">Comissão + Imposto:</span>
+                      <span className={discountPercentage < 20 ? 'text-red-800' : 'text-gray-700'}>Comissão + Imposto:</span>
                       <span className="font-semibold text-red-600">- R$ {(calculatedPrice * 0.26).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Coluna Direita - Resultado Final */}
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm">✅ Resultado Final</h4>
+                <div className={`rounded-lg p-3 border ${
+                  discountPercentage < 20 
+                    ? 'bg-red-50 border-red-200' 
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  <h4 className={`font-semibold mb-2 text-sm ${
+                    discountPercentage < 20 ? 'text-red-900' : 'text-gray-900'
+                  }`}>✅ Resultado Final</h4>
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center bg-green-100 p-2 rounded">
-                      <span className="font-bold text-gray-900 text-xs">Preço de Venda:</span>
-                      <span className="text-lg font-black text-green-600">
+                    <div className={`flex justify-between items-center p-2 rounded ${
+                      discountPercentage < 20 ? 'bg-red-100' : 'bg-green-100'
+                    }`}>
+                      <span className={`font-bold text-xs ${
+                        discountPercentage < 20 ? 'text-red-900' : 'text-gray-900'
+                      }`}>Preço de Venda:</span>
+                      <span className={`text-lg font-black ${
+                        discountPercentage < 20 ? 'text-red-600' : 'text-green-600'
+                      }`}>
                         R$ {calculatedPrice.toFixed(2)}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center bg-blue-100 p-2 rounded">
-                      <span className="font-bold text-gray-900 text-xs">Seu Lucro Real:</span>
-                      <span className="text-lg font-black text-blue-600">
+                    <div className={`flex justify-between items-center p-2 rounded ${
+                      discountPercentage < 20 ? 'bg-red-100' : 'bg-blue-100'
+                    }`}>
+                      <span className={`font-bold text-xs ${
+                        discountPercentage < 20 ? 'text-red-900' : 'text-gray-900'
+                      }`}>Seu Lucro Real:</span>
+                      <span className={`text-lg font-black ${
+                        discountPercentage < 20 ? 'text-red-600' : 'text-blue-600'
+                      }`}>
                         R$ {(() => {
                           const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
                           const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
