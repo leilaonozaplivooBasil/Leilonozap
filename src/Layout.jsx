@@ -498,8 +498,6 @@ export default function Layout({ children, currentPageName }) {
     );
   }
 
-
-
   return (
     <ErrorBoundary>
       <GlobalMonitor />
