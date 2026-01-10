@@ -140,6 +140,7 @@ function CatalogProductCard({ product, currentUser }) {
   };
 
   return (
+    <>
     <Card 
       className="group relative overflow-hidden bg-gray-800/50 backdrop-blur-sm border border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 cursor-pointer flex flex-col"
       onClick={handleCardClick}
