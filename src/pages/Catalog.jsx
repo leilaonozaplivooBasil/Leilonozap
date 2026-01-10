@@ -114,21 +114,12 @@ export default function Catalog() {
     }
   };
 
-  const handleNextImage = (productId) => {
+  const handleImageClick = (productId) => {
     const product = products.find(p => p.id === productId);
-    if (!product?.image_urls || product.image_urls.length === 0) return;
+    if (!product?.image_urls || product.image_urls.length <= 1) return;
     setCarouselIndex(prev => ({
       ...prev,
       [productId]: ((prev[productId] || 0) + 1) % product.image_urls.length
-    }));
-  };
-
-  const handlePrevImage = (productId) => {
-    const product = products.find(p => p.id === productId);
-    if (!product?.image_urls || product.image_urls.length === 0) return;
-    setCarouselIndex(prev => ({
-      ...prev,
-      [productId]: ((prev[productId] || 0) - 1 + product.image_urls.length) % product.image_urls.length
     }));
   };
 
