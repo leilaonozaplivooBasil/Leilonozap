@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import ComparaiButton from "../components/comparai/ComparaiButton";
 import FavoriteButton from "../components/recommendations/FavoriteButton";
+import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 
 const Product = base44.entities.Product;
 const FavoriteProduct = base44.entities.FavoriteProduct || null;
