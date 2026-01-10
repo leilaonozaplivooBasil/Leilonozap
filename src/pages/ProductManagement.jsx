@@ -882,7 +882,7 @@ export default function ProductManagement() {
                     </div>
 
                     <div>
-                      <Label className="text-gray-300">Custo Unitário *</Label>
+                      <Label className="text-gray-300">Custo Total *</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -890,6 +890,20 @@ export default function ProductManagement() {
                         onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
                         className="bg-gray-700 text-white"
                         required
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-300">Custo Unitário (calculado)</Label>
+                      <Input
+                        type="text"
+                        value={(() => {
+                          const totalQty = (parseInt(formData.quantity) || 0) + (editingProduct?.quantity_sold || 0);
+                          const unitCost = totalQty > 0 ? (parseFloat(formData.cost_price) || 0) / totalQty : (parseFloat(formData.cost_price) || 0);
+                          return `R$ ${unitCost.toFixed(2)}`;
+                        })()}
+                        className="bg-gray-600 text-white"
+                        disabled
                       />
                     </div>
 
