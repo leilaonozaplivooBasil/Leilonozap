@@ -354,8 +354,8 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
 
           <div className="space-y-6">
             
-            {/* TELA DE ESCOLHA - SUPPLIER SEM URL */}
-            {isSupplierWithoutUrl && !comparisonData && !isLoading && !error && (
+            {/* TELA DE ESCOLHA - SUPPLIER SEM URL (SÓ PARA AUCTIONS) */}
+            {!isProduct && isSupplierWithoutUrl && !comparisonData && !isLoading && !error && (
               <div className="space-y-6 py-4">
                 <div className="text-center">
                   <div className="text-5xl mb-4">🏭</div>
