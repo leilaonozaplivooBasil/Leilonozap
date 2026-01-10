@@ -167,33 +167,15 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
             </p>
           </div>
 
-          {/* Seleção de Fórmula */}
-          <div>
-            <Label htmlFor="formula" className="text-gray-900 font-semibold">Fórmula de Precificação</Label>
-            <select
-              id="formula"
-              value={selectedFormulaId}
-              onChange={(e) => setSelectedFormulaId(e.target.value)}
-              className="w-full mt-2 bg-white border border-gray-300 rounded-md px-4 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Selecione uma fórmula</option>
-              {formulas.map(formula => (
-                <option key={formula.id} value={formula.id}>
-                  {formula.name}
-                </option>
-              ))}
-            </select>
-
-            {selectedFormula && (
-              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <p className="text-sm text-gray-700">
-                  <strong>Fórmula:</strong> {selectedFormula.base_percentage}% do valor de mercado + {selectedFormula.commission_percentage}% comissão + {selectedFormula.tax_percentage}% imposto
-                </p>
-                {selectedFormula.description && (
-                  <p className="text-sm text-gray-600 mt-1">{selectedFormula.description}</p>
-                )}
-              </div>
-            )}
+          {/* Info da Fórmula Automática */}
+          <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4">
+            <h3 className="font-semibold text-blue-900 mb-2">📊 Sistema de Precificação Automática</h3>
+            <div className="text-sm text-gray-700 space-y-1">
+              <p>• <strong>26% fixo:</strong> 20% comissão + 6% imposto</p>
+              <p>• <strong>Margem variável:</strong> 50% até 700% de lucro</p>
+              <p>• <strong>Desconto:</strong> 20% a 50% sobre valor de mercado</p>
+              <p className="text-xs text-gray-600 mt-2">A calculadora encontra automaticamente a melhor margem que mantém competitividade no mercado.</p>
+            </div>
           </div>
 
           {/* Valor de Mercado */}
