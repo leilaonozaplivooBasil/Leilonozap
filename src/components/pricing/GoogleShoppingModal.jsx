@@ -20,40 +20,12 @@ export default function GoogleShoppingModal({ isOpen, onClose, productName }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await base44.integrations.Core.InvokeLLM({
-        prompt: `Busque no Google Shopping os preços REAIS e ATUAIS do produto: "${productName}".
-        
-        IMPORTANTE: Use a busca na internet para encontrar os preços REAIS no Google Shopping Brasil.
-        
-        Retorne uma lista de 6 a 10 resultados REAIS com:
-        - title: Nome completo do produto encontrado
-        - price: Preço em reais (número, ex: 299.90)
-        - store: Nome da loja que está vendendo
-        - url: Link real do Google Shopping para esse produto
-        
-        CRÍTICO: NÃO INVENTE dados. Use apenas informações REAIS que você encontrar na busca.`,
-        add_context_from_internet: true,
-        response_json_schema: {
-          type: "object",
-          properties: {
-            products: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  price: { type: "number" },
-                  store: { type: "string" },
-                  url: { type: "string" }
-                }
-              }
-            }
-          }
-        }
+      const response = await base44.functions.invoke('searchGoogleShopping', {
+        productName: productName
       });
 
-      if (response && response.products && response.products.length > 0) {
-        setResults(response.products);
+      if (response.data && response.data.products && response.data.products.length > 0) {
+        setResults(response.data.products);
       } else {
         setError('Nenhum resultado encontrado. Tente abrir em nova aba.');
       }
