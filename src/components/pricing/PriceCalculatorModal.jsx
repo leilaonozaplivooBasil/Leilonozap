@@ -114,7 +114,45 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
     setSelectedMargin(approvedMargin);
     setProfitPercentage(profitOverCost);
 
-    toast.success(`Preço calculado com margem de ${(approvedMargin * 100).toFixed(0)}%`);
+    // 🚨 Se desconto < 20%, ativa modo manual
+    if (approvedDiscount < 20) {
+      setIsManualMode(true);
+      setManualDiscount(approvedDiscount.toFixed(2));
+      toast.warning('⚠️ Desconto abaixo de 20%! Ajuste manualmente.');
+    } else {
+      setIsManualMode(false);
+      toast.success(`Preço calculado com margem de ${(approvedMargin * 100).toFixed(0)}%`);
+    }
+  };
+
+  const applyManualDiscount = () => {
+    if (!marketValue || !manualDiscount) {
+      toast.error('Insira o valor de mercado e o desconto');
+      return;
+    }
+
+    const marketVal = parseFloat(marketValue);
+    const discount = parseFloat(manualDiscount);
+
+    if (discount < 20 || discount > 50) {
+      toast.error('Desconto deve estar entre 20% e 50%');
+      return;
+    }
+
+    const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
+    const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
+
+    // Calcula preço com o desconto manual
+    const newPrice = marketVal * (1 - discount / 100);
+    const netProfit = (newPrice * 0.74) - unitCost;
+    const margin = ((newPrice * 0.74 - unitCost) / unitCost);
+
+    setCalculatedPrice(newPrice);
+    setDiscountPercentage(discount);
+    setSelectedMargin(margin);
+    setIsManualMode(false);
+
+    toast.success('✅ Preço ajustado com desconto manual!');
   };
 
   const handleSave = async () => {
