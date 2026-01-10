@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Play, Pause, Share2, Info, Edit } from "lucide-react";
 import FavoriteButton from '../recommendations/FavoriteButton';
+import ComparaiModal from '../comparai/ComparaiModal';
 
 function CatalogProductCard({ product, currentUser }) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
