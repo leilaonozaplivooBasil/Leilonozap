@@ -9,11 +9,12 @@ import FavoriteButton from '../recommendations/FavoriteButton';
 import ComparaiModal from '../comparai/ComparaiModal';
 
 function CatalogProductCard({ product, currentUser }) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
-  const intervalRef = useRef(null);
-  const navigate = useNavigate();
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+    const [isHovering, setIsHovering] = useState(false);
+    const [showComparai, setShowComparai] = useState(false);
+    const intervalRef = useRef(null);
+    const navigate = useNavigate();
 
   const images = (product.image_urls && product.image_urls.length > 0)
     ? product.image_urls
