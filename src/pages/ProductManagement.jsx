@@ -646,6 +646,7 @@ export default function ProductManagement() {
                     <th className="text-center p-3 font-semibold text-white">Bom</th>
                     <th className="text-center p-3 font-semibold text-white">Oficina</th>
                     <th className="text-left p-3 font-semibold text-white">Observação</th>
+                    <th className="text-right p-3 font-semibold text-white">Custo Total</th>
                     <th className="text-right p-3 font-semibold text-white">Custo Unit.</th>
                     <th className="text-right p-3 font-semibold text-white">Preço Venda</th>
                     <th className="text-right p-3 font-semibold text-white">Estoque Atual</th>
@@ -669,6 +670,13 @@ export default function ProductManagement() {
                       <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
                       <td className="p-3 text-gray-900 text-sm cursor-pointer" onClick={() => handleEdit(product)}>{product.notes || '-'}</td>
                       <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>
+                        R$ {(() => {
+                          const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
+                          const unitCost = totalQty > 0 ? (product.cost_price || 0) / totalQty : (product.cost_price || 0);
+                          return unitCost.toFixed(2);
+                        })()}
+                      </td>
                       <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
                       <td className="p-3 text-right text-gray-900 font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity || 0).toLocaleString()}</td>
                       <td className="p-3 text-right text-gray-900 font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
