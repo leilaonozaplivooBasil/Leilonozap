@@ -211,10 +211,10 @@ export default function Catalog() {
                     </div>
 
                     <Button
-                      onClick={() => handleBuyNow(product)}
+                      onClick={() => navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`)}
                       className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
                     >
-                      Comprar
+                      Ver Detalhes
                     </Button>
                   </div>
                 </div>
