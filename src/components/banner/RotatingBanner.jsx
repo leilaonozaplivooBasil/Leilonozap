@@ -67,7 +67,7 @@ export default function RotatingBanner({ banners }) {
                   alt={banner.title || 'Banner'}
                   className="w-full h-full object-contain cursor-pointer"
                   loading="eager"
-                  fetchPriority="high"
+                  fetchpriority="high"
                   decoding="sync"
                   style={{ imageRendering: '-webkit-optimize-contrast' }}
                 />
