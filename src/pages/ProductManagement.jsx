@@ -692,8 +692,7 @@ export default function ProductManagement() {
                           }}
                           className="bg-green-600 hover:bg-green-700 text-white"
                         >
-                          <Calculator className="w-4 h-4 mr-1" />
-                          Calcular Preço
+                          <Calculator className="w-4 h-4" />
                         </Button>
                       </td>
                     </tr>
