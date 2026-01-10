@@ -145,9 +145,9 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-white text-gray-900">
+      <DialogContent className="max-w-5xl bg-white text-gray-900 max-h-[95vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
+          <DialogTitle className="flex items-center gap-2 text-xl">
             <Calculator className="w-6 h-6 text-blue-600" />
             Calcular Preço de Venda
           </DialogTitle>
