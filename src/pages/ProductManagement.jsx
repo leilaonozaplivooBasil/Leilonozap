@@ -7,9 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
-  Download, Save, X, PackagePlus, Calculator
+  Download, Save, X, PackagePlus, Calculator, ShoppingCart
 } from 'lucide-react';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
+import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,6 +55,8 @@ export default function ProductManagement() {
   const itemsPerPage = 34;
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showGoogleShopping, setShowGoogleShopping] = useState(false);
+  const [googleShoppingProduct, setGoogleShoppingProduct] = useState(null);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     lot: '',
@@ -683,17 +686,30 @@ export default function ProductManagement() {
                       <td className="p-3 text-right text-blue-600 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
                       <td className="p-3 text-right text-green-600 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.profit || 0).toFixed(2)}</td>
                       <td className="p-3 text-center">
-                        <Button
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedProduct(product);
-                            setShowCalculator(true);
-                          }}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <Calculator className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedProduct(product);
+                              setShowCalculator(true);
+                            }}
+                            className="bg-green-600 hover:bg-green-700 text-white"
+                          >
+                            <Calculator className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setGoogleShoppingProduct(product.description);
+                              setShowGoogleShopping(true);
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            <ShoppingCart className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -983,6 +999,15 @@ export default function ProductManagement() {
           sessionStorage.removeItem('products_cache_time_v3');
           loadData();
         }}
+      />
+
+      <GoogleShoppingModal
+        isOpen={showGoogleShopping}
+        onClose={() => {
+          setShowGoogleShopping(false);
+          setGoogleShoppingProduct(null);
+        }}
+        productName={googleShoppingProduct}
       />
     </div>
   );
