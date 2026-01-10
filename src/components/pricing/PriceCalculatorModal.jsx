@@ -153,54 +153,54 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
-          {/* Produto Info */}
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <h3 className="font-semibold text-gray-900 mb-2">Produto</h3>
-            <p className="text-gray-700">{product?.description}</p>
-            <p className="text-sm text-gray-600 mt-1">
-              Custo Unitário: <span className="font-semibold">R$ {(() => {
-                const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
-                const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
-                return unitCost.toFixed(2);
-              })()}</span>
-            </p>
-          </div>
+        <div className="space-y-4 py-3">
+          {/* Produto Info + Valor de Mercado - LADO A LADO */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Produto Info */}
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-1 text-sm">Produto</h3>
+              <p className="text-gray-700 text-sm">{product?.description}</p>
+              <p className="text-xs text-gray-600 mt-1">
+                Custo Unitário: <span className="font-semibold">R$ {(() => {
+                  const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
+                  const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
+                  return unitCost.toFixed(2);
+                })()}</span>
+              </p>
+            </div>
 
-          {/* Info da Fórmula Automática */}
-          <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4">
-            <h3 className="font-semibold text-blue-900 mb-2">📊 Sistema de Precificação Automática</h3>
-            <div className="text-sm text-gray-700 space-y-1">
-              <p>• <strong>26% fixo:</strong> 20% comissão + 6% imposto</p>
-              <p>• <strong>Margem variável:</strong> 50% até 700% de lucro</p>
-              <p>• <strong>Desconto:</strong> 20% a 50% sobre valor de mercado</p>
-              <p className="text-xs text-gray-600 mt-2">A calculadora encontra automaticamente a melhor margem que mantém competitividade no mercado.</p>
+            {/* Valor de Mercado */}
+            <div>
+              <Label htmlFor="marketValue" className="text-gray-900 font-semibold text-sm">Valor de Mercado (R$)</Label>
+              <Input
+                id="marketValue"
+                type="number"
+                step="0.01"
+                value={marketValue}
+                onChange={(e) => setMarketValue(e.target.value)}
+                placeholder="Ex: 2800.00"
+                className="mt-1 bg-white border-gray-300 text-gray-900"
+              />
+              <Button
+                onClick={calculatePrice}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white mt-2"
+                disabled={!marketValue}
+              >
+                <Calculator className="w-4 h-4 mr-2" />
+                Calcular Preço
+              </Button>
             </div>
           </div>
 
-          {/* Valor de Mercado */}
-          <div>
-            <Label htmlFor="marketValue" className="text-gray-900 font-semibold">Valor de Mercado (R$)</Label>
-            <Input
-              id="marketValue"
-              type="number"
-              step="0.01"
-              value={marketValue}
-              onChange={(e) => setMarketValue(e.target.value)}
-              placeholder="Ex: 2800.00"
-              className="mt-2 bg-white border-gray-300 text-gray-900"
-            />
+          {/* Info da Fórmula Automática - COMPACTA */}
+          <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-3">
+            <h3 className="font-semibold text-blue-900 mb-1 text-sm">📊 Sistema Automático</h3>
+            <div className="text-xs text-gray-700 grid grid-cols-3 gap-2">
+              <p>• <strong>26% fixo:</strong> 20% comissão + 6% imposto</p>
+              <p>• <strong>Margem:</strong> 50% até 700%</p>
+              <p>• <strong>Desconto:</strong> 20% a 50%</p>
+            </div>
           </div>
-
-          {/* Botão Calcular */}
-          <Button
-            onClick={calculatePrice}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-            disabled={!marketValue}
-          >
-            <Calculator className="w-4 h-4 mr-2" />
-            Calcular Preço Automaticamente
-          </Button>
 
           {/* Resultado */}
           {calculatedPrice !== null && (
