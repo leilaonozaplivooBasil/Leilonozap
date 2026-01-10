@@ -197,73 +197,49 @@ Deno.serve(async (req) => {
             }, { status: 400 });
         }
 
-        console.log(`🔎 Busca Google Shopping: "${cleanedTitle}"`);
+        console.log(`🔎 Busca Google Shopping via SerpAPI: "${cleanedTitle}"`);
 
-        // 5️⃣ BUSCA NO GOOGLE SHOPPING
-        const prompt = `Busque PREÇOS REAIS no Google Shopping Brasil para: ${cleanedTitle}
-
-⚠️ REGRAS OBRIGATÓRIAS:
-- APENAS produtos NOVOS de lojas brasileiras REAIS (Mercado Livre, Magazine Luiza, Amazon, Americanas, Casas Bahia)
-- Preço de referência do leilão: R$ ${currentPrice.toFixed(2)}
-- JAMAIS retorne R$ 999,99 ou preços .99 genéricos
-- JAMAIS invente preços - se não encontrar, retorne array vazio []
-- IGNORE promoções múltiplas, kits, combos
-- Preços entre R$ 20 e R$ 2000
-
-Retorne:
-{
-  "comparisons": [
-    {"store": "Nome Real da Loja", "productNameFound": "Nome Real do Produto", "price": 89.90, "url": "https://..."}
-  ]
-}`;
-
-        let validResults = [];
-        let attempts = 0;
-
-        while (attempts < 2 && validResults.length === 0) {
-            attempts++;
-            console.log(`🔄 Tentativa ${attempts}/2`);
-            
-            try {
-                const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                    prompt: prompt,
-                    add_context_from_internet: true,
-                    response_json_schema: {
-                        type: "object",
-                        properties: {
-                            comparisons: {
-                                type: "array",
-                                items: {
-                                    type: "object",
-                                    properties: {
-                                        store: { type: "string" },
-                                        productNameFound: { type: "string" },
-                                        price: { type: "number" },
-                                        url: { type: "string" }
-                                    },
-                                    required: ["store", "price"]
-                                }
-                            }
-                        }
-                    }
-                });
-
-                const comparisons = result?.comparisons || [];
-                console.log(`📊 Recebeu: ${comparisons.length} resultados`);
-
-                // Filtra preços válidos
-                validResults = comparisons.filter(c => isValidPrice(c.price, currentPrice));
-                console.log(`✅ Válidos: ${validResults.length}`);
-
-                if (validResults.length === 0 && attempts < 2) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-
-            } catch (error) {
-                console.error(`❌ Erro: ${error.message}`);
-                if (attempts === 2) throw error;
-            }
+        // 5️⃣ BUSCA NO GOOGLE SHOPPING VIA SERPAPI
+        const serpApiKey = Deno.env.get('SERPAPI_KEY');
+        if (!serpApiKey) {
+            throw new Error('SERPAPI_KEY não configurada');
         }
+
+        const searchUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(cleanedTitle)}&location=Brazil&hl=pt&gl=br&api_key=${serpApiKey}`;
+        
+        console.log('🔍 Chamando SerpAPI...');
+        
+        const response = await fetch(searchUrl);
+        if (!response.ok) {
+            throw new Error(`SerpAPI error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (!data.shopping_results || data.shopping_results.length === 0) {
+            console.log('❌ Sem resultados no Google Shopping');
+            return Response.json({
+                success: false,
+                error: "Não encontramos preços reais para comparar no momento",
+                errorCode: "NO_VALID_RESULTS"
+            }, { status: 404 });
+        }
+
+        // Formata resultados do SerpAPI
+        const validResults = data.shopping_results
+            .slice(0, 10)
+            .map(result => {
+                const price = result.extracted_price || parseFloat(result.price?.replace(/[^\d,]/g, '').replace(',', '.'));
+                return {
+                    store: result.source || 'Loja',
+                    productNameFound: result.title,
+                    price: price,
+                    url: result.product_link || result.link || '#'
+                };
+            })
+            .filter(c => isValidPrice(c.price, currentPrice));
+
+        console.log(`✅ SerpAPI retornou ${validResults.length} produtos válidos`);
 
         // 6️⃣ VALIDA RESULTADO
         if (validResults.length === 0) {
