@@ -20,11 +20,17 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
   }, []);
 
   useEffect(() => {
-    if (product?.market_value) {
-      setMarketValue(product.market_value.toString());
-    }
-    if (product?.pricing_formula_id) {
-      setSelectedFormulaId(product.pricing_formula_id);
+    if (product) {
+      // Calcula valor de mercado como 1400% do custo unitário (14x)
+      const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
+      const unitCost = totalQty > 0 ? (product.cost_price || 0) / totalQty : (product.cost_price || 0);
+      const suggestedMarketValue = unitCost * 14;
+      
+      setMarketValue(product.market_value?.toString() || suggestedMarketValue.toFixed(2));
+      
+      if (product.pricing_formula_id) {
+        setSelectedFormulaId(product.pricing_formula_id);
+      }
     }
   }, [product]);
 
