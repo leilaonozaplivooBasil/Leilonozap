@@ -213,6 +213,21 @@ function CatalogProductCard({ product, currentUser }) {
           >
             <Share2 className="w-4 h-4" />
           </button>
+
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(createPageUrl("EditCatalogProduct") + `?id=${product.id}`);
+              }}
+              onMouseDown={(e) => e.stopPropagation()} 
+              onTouchStart={(e) => e.stopPropagation()}
+              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 min-h-[40px] px-3 h-9 gap-2 shadow-md bg-purple-600/90 hover:bg-purple-500 text-white rounded-lg flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
+            >
+              <Edit className="w-4 h-4" />
+              <span className="text-xs font-semibold">Editar</span>
+            </button>
+          )}
         </div>
 
         {/* Indicadores de imagem - EMBAIXO */}
