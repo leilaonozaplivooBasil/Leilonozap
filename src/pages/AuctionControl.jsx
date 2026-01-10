@@ -345,6 +345,19 @@ export default function AuctionControl() {
                           Ver Leilão
                         </Button>
 
+                        <Button
+                          onClick={() => {
+                            setSelectedAuction(auction);
+                            setShowCatalogModal(true);
+                          }}
+                          variant="outline"
+                          className="border-blue-500 text-blue-400 hover:bg-blue-500/10"
+                          size="sm"
+                        >
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Catálogo
+                        </Button>
+
                         {isEnded && !isPaid && (
                           <Button
                             onClick={() => {
