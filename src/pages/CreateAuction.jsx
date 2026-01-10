@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle, Sparkles, CheckCircle, Copy } from "lucide-react";
+import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle, Sparkles, CheckCircle, Copy, Package } from "lucide-react";
 import { createPageUrl } from "@/utils";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -84,6 +84,10 @@ export default function CreateAuction() {
   const [showManualUpload, setShowManualUpload] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [debugError, setDebugError] = useState(null);
+  
+  // 🆕 ESTADOS PARA CATÁLOGO
+  const [catalogActive, setCatalogActive] = useState(false);
+  const [priceCatalog, setPriceCatalog] = useState('');
 
   // 🆕 ESTADOS PARA IMPORTADOR INTELIGENTE
   const [imageUrlInput, setImageUrlInput] = useState('');
@@ -763,6 +767,12 @@ export default function CreateAuction() {
       return;
     }
 
+    // 🆕 VALIDAÇÃO DO CATÁLOGO
+    if (catalogActive && (!priceCatalog || parseFloat(priceCatalog) <= 0)) {
+      toast.error("Informe o preço do catálogo");
+      return;
+    }
+
     setIsSubmittingBid(true);
 
     try {
@@ -795,7 +805,9 @@ export default function CreateAuction() {
         comparai_mode: formData.comparai_mode || "google_shopping", // 🆕 SALVA MODO COMPARAI
         partner_store: formData.partner_store || 'nozap', // 🆕 MARCA PARCEIRO
         product_id: formData.product_id || null, // 🆕 VINCULA PRODUTO
-        allowed_regions: formData.allowed_regions || [] // 🆕 SALVA REGIÕES PERMITIDAS
+        allowed_regions: formData.allowed_regions || [], // 🆕 SALVA REGIÕES PERMITIDAS
+        catalog_active: catalogActive, // 🆕 CATÁLOGO ATIVO
+        price_catalog: catalogActive ? parseFloat(priceCatalog) : null // 🆕 PREÇO DO CATÁLOGO
       };
       const newAuction = await Auction.create(auctionData);
       
@@ -2360,6 +2372,44 @@ export default function CreateAuction() {
                             className="mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500"
                         />
                         <p className="text-xs text-gray-500 mt-1">Se preenchido, o leilão pode ser encerrado imediatamente por este valor.</p>
+                      </div>
+
+                      {/* 🆕 SEÇÃO CATÁLOGO */}
+                      <div className="md:col-span-3 mt-4 p-4 bg-yellow-900/20 rounded-lg border border-yellow-600/50">
+                        <div className="flex items-center gap-3 mb-4">
+                          <input
+                            type="checkbox"
+                            id="catalog_active"
+                            checked={catalogActive}
+                            onChange={(e) => setCatalogActive(e.target.checked)}
+                            className="w-4 h-4 rounded border-gray-600 text-yellow-600 cursor-pointer"
+                          />
+                          <Label htmlFor="catalog_active" className="text-white cursor-pointer flex items-center gap-2 font-medium">
+                            <Package className="w-4 h-4 text-yellow-400" />
+                            📦 Disponibilizar no Catálogo de Licenciados
+                          </Label>
+                        </div>
+                        
+                        {catalogActive && (
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-gray-300">Preço do Catálogo (R$) *</Label>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                value={priceCatalog}
+                                onChange={(e) => setPriceCatalog(e.target.value)}
+                                placeholder="Ex: 299.90"
+                                className="mt-1 bg-gray-900 border-yellow-600 text-gray-100 placeholder-gray-500 focus:border-yellow-400"
+                                required={catalogActive}
+                              />
+                            </div>
+                            <p className="text-xs text-yellow-300/80">
+                              💡 Este produto ficará disponível para venda direta pelos licenciados através do catálogo.
+                              Os licenciados ganharão comissão de 13% a 20% sobre este valor.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="duration" className="text-sm font-medium text-gray-400"> Duração do Leilão </Label>
