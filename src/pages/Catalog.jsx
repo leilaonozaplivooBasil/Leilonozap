@@ -141,19 +141,20 @@ export default function Catalog() {
   }
 
   return (
-    <div className="bg-white text-gray-900 min-h-screen">
-      {/* HERO BANNER */}
-      <div className="relative h-64 md:h-80 bg-gradient-to-r from-green-600 to-blue-600 overflow-hidden">
-        <div className="absolute inset-0 opacity-20" style={{backgroundImage: 'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")'}}></div>
-        <div className="relative h-full flex items-center justify-center text-center px-4">
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black text-white mb-3 drop-shadow-lg">
-              OFERTAS ESPECIAIS
-            </h1>
-            <p className="text-lg text-white/90 drop-shadow-md">
-              Produtos exclusivos com preços incríveis!
-            </p>
-          </div>
+    <div className="bg-gray-900 text-white min-h-screen">
+      {/* HERO BANNER - COMO HOME.JS */}
+      <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white m-6 mt-4">
+        <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+        <div className="relative">
+          <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
+            <Flame className="w-9 h-9 text-orange-400" />
+            <span>Catálogo <span className="text-green-400">Especial</span>!</span>
+          </h1>
+          <p className="text-gray-300 mb-4 text-base lg:text-lg">
+            {products.length} produtos incríveis com preços imbatíveis. Compre e economize!
+          </p>
         </div>
       </div>
 
