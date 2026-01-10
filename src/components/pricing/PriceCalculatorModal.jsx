@@ -126,6 +126,7 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
     setDiscountPercentage(approvedDiscount);
     setSelectedMargin(approvedMargin);
     setProfitPercentage(profitOverCost);
+    setIsManualMode(false);
 
     toast.success(`Preço calculado com margem de ${(approvedMargin * 100).toFixed(0)}%`);
   };
