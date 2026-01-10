@@ -158,9 +158,9 @@ export default function Catalog() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* FILTROS */}
-        <div className="bg-gray-100 rounded-xl p-6 mb-8 border border-gray-200">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+         {/* FILTROS */}
+         <div className="bg-gray-800/50 rounded-xl p-6 mb-8 border border-gray-700">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-xs font-bold text-gray-600 mb-2 block uppercase">Buscar</label>
