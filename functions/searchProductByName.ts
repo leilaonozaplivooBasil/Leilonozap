@@ -37,71 +37,45 @@ Deno.serve(async (req) => {
           payload: { productName }
         }).catch(() => {});
 
-        // Busca completa em uma chamada só
-        const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `Busque "${productName}" na internet e EXTRAIA O MÁXIMO DE IMAGENS POSSÍVEL.
+        // Busca no Google Shopping via SerpAPI
+        const serpApiKey = Deno.env.get('SERPAPI_KEY');
+        if (!serpApiKey) {
+            throw new Error('SERPAPI_KEY não configurada');
+        }
 
-🎯 PRIORIDADE MÁXIMA: ENCONTRAR PELO MENOS 8-12 IMAGENS DIFERENTES
+        const searchUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(productName)}&location=Brazil&hl=pt&gl=br&api_key=${serpApiKey}`;
+        
+        console.log('🔍 Buscando no Google Shopping:', searchUrl);
+        
+        const response = await fetch(searchUrl);
+        if (!response.ok) {
+            throw new Error(`SerpAPI error: ${response.status}`);
+        }
 
-Busque em MÚLTIPLOS sites:
-- Mercado Livre (várias páginas de produtos)
-- Amazon Brasil (várias listagens)
-- Magazine Luiza
-- Shopee
-- Google Shopping
-
-Para cada site, extraia:
-- Imagem principal do produto
-- Imagens de galeria/carrossel
-- Imagens de variações (cores, ângulos)
-- Miniaturas em alta resolução
-
-OBRIGATÓRIO retornar:
-{
-  "found": true,
-  "title": "Nome exato do produto",
-  "description": "Descrição completa com especificações",
-  "imageUrls": ["url1", "url2", "url3", ...]  // MÍNIMO 8 URLs, MÁXIMO 15
-}
-
-❌ REJEITE acessórios (capa, carregador, cabo, película)
-❌ Se encontrar < 5 imagens, retorne found = false`,
-            add_context_from_internet: true,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    found: { type: "boolean" },
-                    title: { type: "string" },
-                    description: { type: "string" },
-                    imageUrls: { 
-                        type: "array",
-                        items: { type: "string" }
-                    }
-                },
-                required: ["found"]
-            }
-        });
-
-        console.log(`📦 Resultado: found=${result.found}, title="${result.title}", ${result.imageUrls?.length || 0} imgs`);
-
-        if (!result.found || !result.title) {
-            // Log de produto não encontrado
+        const data = await response.json();
+        
+        if (!data.shopping_results || data.shopping_results.length === 0) {
             await base44.asServiceRole.entities.SystemLog.create({
               step: 'PRODUCT_SEARCH_BY_NAME_NOT_FOUND',
               status: 'warning',
-              message: 'Produto não encontrado na busca',
+              message: 'Produto não encontrado no Google Shopping',
               component_name: 'searchProductByName',
               payload: { productName }
             }).catch(() => {});
             
             return Response.json({
-                error: "Produto não encontrado",
-                suggestion: "Tente com marca + modelo (ex: Samsung Galaxy S23)"
+                error: "Produto não encontrado no Google Shopping",
+                suggestion: "Tente com marca + modelo completo"
             }, { status: 404 });
         }
 
+        // Pega o primeiro resultado mais relevante
+        const firstResult = data.shopping_results[0];
+        const productTitle = firstResult.title;
+        const productPrice = firstResult.extracted_price || firstResult.price;
+
         // Valida acessórios no título
-        const lower = result.title.toLowerCase();
+        const lower = productTitle.toLowerCase();
         const accessoryKeywords = [
             'carregador', 'charger', 'cabo', 'cable', 'capa', 'case',
             'película', 'protetor', 'glass', 'adaptador', 'adapter', 'fone'
@@ -113,40 +87,47 @@ OBRIGATÓRIO retornar:
             }, { status: 404 });
         }
 
-        const imageUrls = (result.imageUrls || [])
-            .filter(url => url && typeof url === 'string' && url.startsWith('http') && !url.includes('...'))
-            .slice(0, 12);
+        // Coleta imagens de múltiplos resultados
+        const imageUrls = [];
+        
+        for (const result of data.shopping_results.slice(0, 8)) {
+            if (result.thumbnail) {
+                imageUrls.push(result.thumbnail);
+            }
+        }
 
         if (imageUrls.length === 0) {
             return Response.json({
                 error: "Produto encontrado mas sem imagens válidas",
                 suggestion: "Use o importador por URL com link direto do produto",
-                title: result.title,
-                description: result.description
+                title: productTitle,
+                description: productTitle
             }, { status: 404 });
         }
 
-        console.log(`✅ ${result.title}: ${imageUrls.length} imagens encontradas`);
+        console.log(`✅ ${productTitle}: ${imageUrls.length} imagens encontradas via SerpAPI`);
 
         // Log de sucesso
         await base44.asServiceRole.entities.SystemLog.create({
           step: 'PRODUCT_SEARCH_BY_NAME_SUCCESS',
           status: 'success',
-          message: `Produto encontrado: ${result.title}`,
+          message: `Produto encontrado via Google Shopping: ${productTitle}`,
           component_name: 'searchProductByName',
           payload: { 
             productName,
-            title: result.title,
-            imageCount: imageUrls.length
+            title: productTitle,
+            imageCount: imageUrls.length,
+            price: productPrice
           }
         }).catch(() => {});
 
         return Response.json({
             found: true,
-            title: result.title,
-            description: result.description || 'Produto encontrado',
+            title: productTitle,
+            description: `${productTitle} - Preço de referência: R$ ${productPrice?.toFixed(2) || 'Consulte'}`,
             imageUrls: imageUrls,
-            source: 'Internet'
+            price: productPrice,
+            source: 'Google Shopping'
         }, { status: 200 });
 
     } catch (error) {
