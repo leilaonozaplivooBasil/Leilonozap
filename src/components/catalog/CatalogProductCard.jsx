@@ -272,11 +272,16 @@ function CatalogProductCard({ product, currentUser }) {
           <Button
             onClick={(e) => {
               e.stopPropagation();
-              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
+              setShowComparai(true);
             }}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold"
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold"
           >
-            💰 Comparar Preços
+            <img 
+              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+              alt="Comparai"
+              className="w-4 h-4 mr-2"
+            />
+            Comparar Preços
           </Button>
 
           <Button
