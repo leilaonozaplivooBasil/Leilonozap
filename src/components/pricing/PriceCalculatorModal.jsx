@@ -104,6 +104,18 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
       setDiscountPercentage(null);
       setSelectedMargin(null);
       setProfitPercentage(null);
+      setIsManualMode(false);
+      return;
+    }
+
+    // 🆕 VERIFICA SE ATINGIU 20% MÍNIMO
+    if (approvedDiscount < 20) {
+      toast.warning(`Desconto de apenas ${approvedDiscount.toFixed(1)}% - ative o modo manual para continuar`);
+      setIsManualMode(true);
+      setCalculatedPrice(null);
+      setDiscountPercentage(null);
+      setSelectedMargin(null);
+      setProfitPercentage(null);
       return;
     }
 
