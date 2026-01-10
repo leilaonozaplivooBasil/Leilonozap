@@ -22,22 +22,42 @@ Deno.serve(async (req) => {
     
     try {
         const base44 = createClientFromRequest(req);
-        const { auctionId, forceRefresh = false } = await req.json();
+        const { auctionId, productId, forceRefresh = false, forceGoogleShopping = false } = await req.json();
 
-        if (!auctionId) {
-            return Response.json({ success: false, error: "auctionId obrigatório" }, { status: 400 });
+        if (!auctionId && !productId) {
+            return Response.json({ success: false, error: "auctionId ou productId obrigatório" }, { status: 400 });
         }
 
-        // 1️⃣ BUSCA LEILÃO
-        console.log(`📦 Buscando leilão ${auctionId}...`);
-        const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
-        
-        if (!auctions || auctions.length === 0) {
-            return Response.json({ success: false, error: "Leilão não encontrado" }, { status: 404 });
+        let searchTitle, currentPrice, entityId;
+
+        // 1️⃣ BUSCA LEILÃO OU PRODUTO
+        if (auctionId) {
+            console.log(`📦 Buscando leilão ${auctionId}...`);
+            const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
+            
+            if (!auctions || auctions.length === 0) {
+                return Response.json({ success: false, error: "Leilão não encontrado" }, { status: 404 });
+            }
+            
+            const auction = auctions[0];
+            currentPrice = auction.current_price || auction.starting_price;
+            searchTitle = auction.title;
+            entityId = auctionId;
+            console.log(`✅ Título: ${searchTitle}`);
+        } else {
+            console.log(`📦 Buscando produto ${productId}...`);
+            const products = await base44.asServiceRole.entities.Product.filter({ id: productId });
+            
+            if (!products || products.length === 0) {
+                return Response.json({ success: false, error: "Produto não encontrado" }, { status: 404 });
+            }
+            
+            const product = products[0];
+            currentPrice = product.price_catalog || product.selling_price_retail || 0;
+            searchTitle = product.description;
+            entityId = productId;
+            console.log(`✅ Título: ${searchTitle}`);
         }
-        
-        const auction = auctions[0];
-        const currentPrice = auction.current_price || auction.starting_price;
         
         console.log(`✅ Título: ${auction.title}`);
         console.log(`💰 Preço: R$ ${currentPrice}`);
