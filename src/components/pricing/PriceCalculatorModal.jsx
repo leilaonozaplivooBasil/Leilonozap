@@ -47,13 +47,10 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
   };
 
   const calculatePrice = () => {
-    if (!selectedFormulaId || !marketValue) {
-      toast.error('Selecione uma fórmula e insira o valor de mercado');
+    if (!marketValue) {
+      toast.error('Insira o valor de mercado');
       return;
     }
-
-    const formula = formulas.find(f => f.id === selectedFormulaId);
-    if (!formula) return;
 
     const marketVal = parseFloat(marketValue);
     if (isNaN(marketVal) || marketVal <= 0) {
@@ -61,16 +58,61 @@ export default function PriceCalculatorModal({ isOpen, onClose, product, onSave 
       return;
     }
 
-    // Fórmula: Preço = (Valor Mercado × base%) × (1 + comissão% + imposto%)
-    const baseValue = marketVal * (formula.base_percentage / 100);
-    const multiplier = 1 + (formula.commission_percentage / 100) + (formula.tax_percentage / 100);
-    const finalPrice = baseValue * multiplier;
+    // 📊 NOVA LÓGICA: Tabela de margens
+    const marginTable = [7.0, 6.0, 5.0, 4.0, 3.5, 3.0, 2.5, 2.0, 1.75, 1.5, 0.5];
+    const discountRange = [0.20, 0.50]; // 20% a 50% de desconto
 
-    // Desconto sobre valor de mercado
-    const discount = ((marketVal - finalPrice) / marketVal) * 100;
+    // Calcula custo unitário
+    const totalQty = (product?.quantity || 0) + (product?.quantity_sold || 0);
+    const unitCost = totalQty > 0 ? (product?.cost_price || 0) / totalQty : (product?.cost_price || 0);
 
-    setCalculatedPrice(finalPrice);
-    setDiscountPercentage(discount);
+    if (unitCost <= 0) {
+      toast.error('Custo unitário inválido');
+      return;
+    }
+
+    // Tenta cada margem da tabela
+    let approvedPrice = null;
+    let approvedMargin = null;
+    let approvedDiscount = null;
+
+    for (const M of marginTable) {
+      // Fórmula: Preço_Sugerido = (C × (1 + M)) ÷ 0,74
+      const suggestedPrice = (unitCost * (1 + M)) / 0.74;
+
+      // Verifica se cabe dentro do range de desconto (20% a 50%)
+      for (let K = discountRange[0]; K <= discountRange[1]; K += 0.01) {
+        const priceCap = marketVal * (1 - K);
+        
+        if (suggestedPrice <= priceCap) {
+          approvedPrice = suggestedPrice;
+          approvedMargin = M;
+          approvedDiscount = ((marketVal - suggestedPrice) / marketVal) * 100;
+          break;
+        }
+      }
+
+      if (approvedPrice) break;
+    }
+
+    if (!approvedPrice) {
+      toast.error('Produto não aprovado: não atinge margem mínima de 50% mesmo com 50% de desconto');
+      setCalculatedPrice(null);
+      setDiscountPercentage(null);
+      setSelectedMargin(null);
+      setProfitPercentage(null);
+      return;
+    }
+
+    // Calcula lucro sobre o custo
+    const profitOverCost = ((approvedPrice * 0.74 - unitCost) / unitCost) * 100;
+
+    setCalculatedPrice(approvedPrice);
+    setDiscountPercentage(approvedDiscount);
+    setSelectedMargin(approvedMargin);
+    setProfitPercentage(profitOverCost);
+
+    toast.success(`Preço calculado com margem de ${(approvedMargin * 100).toFixed(0)}%`);
   };
 
   const handleSave = async () => {
