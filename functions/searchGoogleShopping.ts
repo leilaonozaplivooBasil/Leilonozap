@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
         title: result.title || 'Produto sem título',
         price: price,
         store: result.source || 'Loja não informada',
-        url: result.link || '#',
+        url: result.product_link || result.link || googleShoppingUrl,
         image: result.thumbnail || null
       };
     });
