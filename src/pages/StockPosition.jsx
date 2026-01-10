@@ -3,9 +3,10 @@ import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Package, Search } from 'lucide-react';
+import { Package, Search, Calculator } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 
 export default function StockPosition() {
   const [products, setProducts] = useState([]);
@@ -19,6 +20,8 @@ export default function StockPosition() {
   const [viewMode, setViewMode] = useState('currentStock');
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showCalculator, setShowCalculator] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -236,20 +239,34 @@ export default function StockPosition() {
                     <th className="text-left p-3 font-semibold text-white">Depósito Empresa</th>
                     <th className="text-left p-3 font-semibold text-white">Nome Depósito</th>
                     <th className="text-right p-3 font-semibold text-white">Estoque Atual</th>
+                    <th className="text-center p-3 font-semibold text-white">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredProducts.slice(0, 34).map((product, index) => (
                     <tr 
                       key={product.id} 
-                      className={`border-b border-gray-100 hover:bg-blue-50 cursor-pointer transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
-                      onClick={() => navigate(createPageUrl("ProductManagement"))}
+                      className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                     >
                       <td className="p-3 text-blue-600 font-medium">{product.lot || 'N/A'}</td>
                       <td className="p-3 text-gray-900">{product.description}</td>
                       <td className="p-3 text-gray-900">{product.purchase_order || 'Empresa 3'}</td>
                       <td className="p-3 text-gray-900">Principal</td>
                       <td className="p-3 text-right text-gray-900 font-semibold">{(product.quantity || 0).toLocaleString()}</td>
+                      <td className="p-3 text-center">
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedProduct(product);
+                            setShowCalculator(true);
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <Calculator className="w-4 h-4 mr-1" />
+                          Calcular Preço
+                        </Button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -281,6 +298,16 @@ export default function StockPosition() {
         </Card>
 
       </div>
+
+      <PriceCalculatorModal
+        isOpen={showCalculator}
+        onClose={() => {
+          setShowCalculator(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+        onSave={loadData}
+      />
     </div>
   );
 }
