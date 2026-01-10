@@ -18,10 +18,11 @@ export default function Catalog() {
   const location = useLocation();
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeCategory, setActiveCategory] = useState("todos");
+  const [currentUser, setCurrentUser] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [licenseeCode, setLicenseeCode] = useState("");
   const [priceRange, setPriceRange] = useState([0, 50000]);
+  const [carouselIndex, setCarouselIndex] = useState({});
 
   const filteredProducts = useMemo(() => {
     let filtered = products;
