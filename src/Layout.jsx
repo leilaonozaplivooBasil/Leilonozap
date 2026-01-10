@@ -440,6 +440,7 @@ export default function Layout({ children, currentPageName }) {
   // 🔥 DEFININDO MENUS - TUDO LIMPO
   const publicMenuItems = [
     { title: "Leilões", pageName: "Home" },
+    { title: "Catálogo", pageName: "Catalog" },
     { title: "Sistema de Alavancagem", pageName: "Licensing" },
     { title: "Lucre Conosco", pageName: "Partners" },
   ];
