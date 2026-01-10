@@ -93,12 +93,43 @@ export default function Catalog() {
     }
   };
 
-  const handleBuyNow = (product) => {
-    sessionStorage.setItem('selectedProduct', JSON.stringify(product));
-    if (licenseeCode) {
-      sessionStorage.setItem('licenseeCode', licenseeCode);
+  const handleShare = async (product) => {
+    const productUrl = window.location.href + `?product_id=${product.id}`;
+    const shareText = `🛍️ CATÁLOGO NOZAP!\n\n📱 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n🛒 Compre agora!`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `Produto: ${product.description}`,
+          text: shareText,
+          url: productUrl
+        });
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
+        }
+      }
+    } else {
+      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
     }
-    navigate(createPageUrl("CatalogCheckout") + `?product_id=${product.id}`);
+  };
+
+  const handleNextImage = (productId) => {
+    const product = products.find(p => p.id === productId);
+    if (!product?.image_urls || product.image_urls.length === 0) return;
+    setCarouselIndex(prev => ({
+      ...prev,
+      [productId]: ((prev[productId] || 0) + 1) % product.image_urls.length
+    }));
+  };
+
+  const handlePrevImage = (productId) => {
+    const product = products.find(p => p.id === productId);
+    if (!product?.image_urls || product.image_urls.length === 0) return;
+    setCarouselIndex(prev => ({
+      ...prev,
+      [productId]: ((prev[productId] || 0) - 1 + product.image_urls.length) % product.image_urls.length
+    }));
   };
 
   if (isLoading) {
