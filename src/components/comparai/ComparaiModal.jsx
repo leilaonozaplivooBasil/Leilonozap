@@ -74,14 +74,21 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
       
       let response;
       let hadError = false;
-      
+
       try {
         console.log('📞 [COMPARAI] Chamando comparaiPrices...');
-        response = await comparaiPrices({
-          auctionId: localAuction.id,
-          forceRefresh: false,
-          forceGoogleShopping: forceGoogleShopping
-        });
+        const payload = isProduct 
+          ? {
+              productId: localAuction.id,
+              forceRefresh: false,
+              forceGoogleShopping: true
+            }
+          : {
+              auctionId: localAuction.id,
+              forceRefresh: false,
+              forceGoogleShopping: forceGoogleShopping
+            };
+        response = await comparaiPrices(payload);
         console.log('✅ [COMPARAI] Chamada retornou sem exception');
       } catch (callError) {
         console.error('💥 [COMPARAI] EXCEPTION na chamada:', callError);
