@@ -35,6 +35,7 @@ export default function AuctionControl() {
   const [isLoading, setIsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("all");
   const [showResumeModal, setShowResumeModal] = useState(false);
+  const [showCatalogModal, setShowCatalogModal] = useState(false);
   const [selectedAuction, setSelectedAuction] = useState(null);
   const [resumeDuration, setResumeDuration] = useState("24");
   const [customHours, setCustomHours] = useState("");
