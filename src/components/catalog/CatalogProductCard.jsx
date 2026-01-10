@@ -1,0 +1,246 @@
+import React, { useState, useEffect, useRef, memo } from "react";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart, Play, Pause, Share2 } from "lucide-react";
+import FavoriteButton from '../recommendations/FavoriteButton';
+
+function CatalogProductCard({ product, currentUser }) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const intervalRef = useRef(null);
+  const navigate = useNavigate();
+
+  const images = (product.image_urls && product.image_urls.length > 0)
+    ? product.image_urls
+    : [];
+
+  const startCarousel = () => {
+    if (images.length <= 1) return;
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setCurrentImageIndex(prevIndex => (prevIndex + 1) % images.length);
+    }, 1500);
+  };
+
+  const stopCarousel = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovering(true);
+    if (!isPaused) {
+      startCarousel();
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovering(false);
+    stopCarousel();
+    setCurrentImageIndex(0);
+    setIsPaused(false);
+  };
+
+  const handleImageClick = (e) => {
+    e.preventDefault();
+    if (images.length <= 1) return;
+
+    const newPausedState = !isPaused;
+    setIsPaused(newPausedState);
+
+    if (newPausedState) {
+      stopCarousel();
+    } else {
+      startCarousel();
+    }
+  };
+
+  const handleCardClick = (e) => {
+    if (e.target.closest('button') || e.target.closest('a')) {
+      return;
+    }
+
+    if (!product || !product.id) {
+      console.error("❌ Tentativa de abrir produto sem ID!");
+      alert("Erro: Produto inválido");
+      return;
+    }
+    
+    navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
+  };
+
+  useEffect(() => {
+    return () => stopCarousel();
+  }, []);
+
+  const handleShare = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const productUrl = `${window.location.origin}/CatalogProductDetails?id=${product.id}`;
+    const shareMessage = `🛍️ CATÁLOGO NOZAP!
+
+📱 ${product.description}
+💰 R$ ${product.price_catalog?.toFixed(2)}
+
+🛒 Compre agora: ${productUrl}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `${product.description}`,
+          text: shareMessage,
+        });
+      } else {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
+      }
+    }
+  };
+
+  const currentImage = images.length > 0 ? images[currentImageIndex] : null;
+  const hasMultipleImages = images && images.length > 1;
+
+  return (
+    <Card 
+      className="group relative overflow-hidden bg-gray-800/50 backdrop-blur-sm border border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 cursor-pointer"
+      onClick={handleCardClick}
+    >
+      <div 
+        className="relative overflow-hidden w-full aspect-square bg-white"
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleImageClick}
+      >
+        <div className="w-full h-full">
+          {images.map((img, index) => (
+            <img 
+              key={index}
+              src={img}
+              alt={`${product.description} - imagem ${index + 1}`}
+              className={`absolute top-0 left-0 w-full h-full object-contain transition-opacity duration-300 ease-in-out max-w-full ${
+                index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ maxHeight: '100%', height: 'auto' }}
+              onError={(e) => {
+                e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
+                e.target.classList.add('p-4');
+              }}
+            />
+          ))}
+          
+          <div 
+            className={`absolute top-0 left-0 w-full h-full bg-white flex items-center justify-center transition-opacity duration-300 ${
+              images.length > 0 ? 'opacity-0' : 'opacity-100'
+            }`}
+          >
+            <div className="text-center text-gray-500">
+              <div className="text-4xl mb-2">📦</div>
+              <p className="text-sm">Sem Imagem</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Ícone de Play/Pause */}
+        {isHovering && images.length > 1 && (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 rounded-full w-14 h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
+            {isPaused ? (
+              <Play className="w-7 h-7 text-white fill-white" />
+            ) : (
+              <Pause className="w-7 h-7 text-white fill-white" />
+            )}
+          </div>
+        )}
+        
+        {images.length > 1 && (
+          <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none">
+            {images.map((_, index) => (
+              <div
+                key={index}
+                className={`rounded-full transition-all duration-300 ${
+                  index === currentImageIndex 
+                    ? 'w-2 h-2 bg-white shadow' 
+                    : 'w-1.5 h-1.5 bg-white/60'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+        
+        {/* Botão Comparar no canto superior direito */}
+        <div className="absolute top-2 right-2 z-20 flex gap-2">
+          <button
+            onClick={(e) => { 
+              e.stopPropagation(); 
+              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`); 
+            }}
+            className="min-h-[40px] px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all flex items-center text-xs font-semibold"
+          >
+            💰 Comparar
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="min-h-[40px] h-9 px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all flex items-center text-xs font-semibold"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+      
+      <CardContent className="p-4">
+        <h3 className="font-bold text-white text-sm line-clamp-2 mb-3">
+          {product.description}
+        </h3>
+
+        <div className="mb-4">
+          <p className="text-gray-400 text-xs mb-1">Preço</p>
+          <p className="text-2xl font-black text-green-400">
+            R$ {product.price_catalog?.toFixed(2) || "0.00"}
+          </p>
+          {product.quantity && (
+            <p className="text-xs text-gray-400 mt-2">Estoque: {product.quantity}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
+            }}
+            className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg"
+          >
+            ✅ Entrar e Comprar
+          </Button>
+          <div className="flex gap-2">
+            {currentUser && (
+              <FavoriteButton
+                auctionId={product.id}
+                userId={currentUser.id}
+                size="sm"
+                className="flex-1"
+              />
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default memo(CatalogProductCard, (prevProps, nextProps) => {
+  return (
+    prevProps.product.id === nextProps.product.id &&
+    prevProps.currentUser?.id === nextProps.currentUser?.id
+  );
+});
