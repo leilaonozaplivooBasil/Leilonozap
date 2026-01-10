@@ -915,9 +915,7 @@ export default function Home() {
       </div>
 
       <ComparaiFloatingButton auctions={filteredAuctions} mode="home" />
-      </div>
-
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
-      </div>
-      );
-      }
+    </div>
+  );
+}
