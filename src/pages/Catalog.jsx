@@ -410,7 +410,7 @@ export default function Catalog() {
         </div>
 
         {/* COMPARAI BUTTON FLUTUANTE */}
-        <ComparaiButton auctions={filteredProducts} mode="catalog" />
+        <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
         </div>
         );
         }
