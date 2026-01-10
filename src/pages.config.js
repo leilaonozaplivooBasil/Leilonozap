@@ -49,6 +49,7 @@ import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
 import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
+import AdminCatalogSales from './pages/AdminCatalogSales';
 import __Layout from './Layout.jsx';
 
 
@@ -104,6 +105,7 @@ export const PAGES = {
     "WalletHistory": WalletHistory,
     "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
+    "AdminCatalogSales": AdminCatalogSales,
 }
 
 export const pagesConfig = {
