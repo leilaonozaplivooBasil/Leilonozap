@@ -300,21 +300,21 @@ function CatalogProductCard({ product, currentUser }) {
       </CardContent>
     </Card>
 
-    {/* Modal Comparai */}
-    {showComparai && (
-      <ComparaiModal 
-        auction={{
-          id: product.id,
-          title: product.description,
-          current_price: product.price_catalog,
-          starting_price: product.price_catalog,
-          image_urls: product.image_urls,
-          category: product.category
-        }}
-        isProduct={true}
-        onClose={() => setShowComparai(false)} 
-      />
-    )}
+      {/* Modal Comparai */}
+      {showComparai && (
+        <ComparaiModal 
+          auction={{
+            id: product.id,
+            title: product.description,
+            current_price: product.price_catalog,
+            starting_price: product.price_catalog,
+            image_urls: product.image_urls,
+            category: product.category
+          }}
+          isProduct={true}
+          onClose={() => setShowComparai(false)} 
+        />
+      )}
     </>
   );
 }
