@@ -214,39 +214,48 @@ export default function Catalog() {
                  return (
                    <div key={product.id} className="bg-gray-800 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-gray-700 group flex flex-col">
                      {/* Imagem com Carrossel */}
-                     <div className="relative h-56 bg-gray-700 overflow-hidden">
+                     <div className="relative h-56 bg-white overflow-hidden cursor-pointer" onClick={() => handleImageClick(product.id)}>
                        {currentImage ? (
                          <img
                            src={currentImage}
                            alt={product.description}
-                           className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                           className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                           onError={(e) => {
+                             e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
+                             e.target.classList.add('p-4');
+                           }}
                          />
                        ) : (
-                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800">
-                           <ShoppingCart className="w-12 h-12 text-gray-600" />
+                         <div className="w-full h-full flex items-center justify-center bg-white">
+                           <ShoppingCart className="w-12 h-12 text-gray-400" />
                          </div>
                        )}
-                       <Badge className="absolute top-3 right-3 bg-orange-500 text-white border-0">
-                         <Tag className="w-3 h-3 mr-1" />
-                         OFERTA
-                       </Badge>
 
-                       {/* Navegação Carrossel */}
+                       {/* Badges no topo esquerdo */}
+                       <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
+                         <Badge className="bg-orange-500 text-white border-0">
+                           <Tag className="w-3 h-3 mr-1" />
+                           OFERTA
+                         </Badge>
+                       </div>
+
+                       {/* Botões de ação no topo direito */}
+                       <div className="absolute top-2 right-2 z-20 flex gap-2">
+                         <button
+                           onClick={(e) => { e.stopPropagation(); navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`); }}
+                           className="min-h-[40px] px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all flex items-center text-xs font-semibold"
+                         >
+                           💰 Comparar
+                         </button>
+                       </div>
+
+                       {/* Indicadores de imagem */}
                        {hasMultipleImages && (
-                         <>
-                           <button
-                             onClick={() => handlePrevImage(product.id)}
-                             className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-1 rounded-full z-10"
-                           >
-                             <ChevronLeft className="w-5 h-5 text-white" />
-                           </button>
-                           <button
-                             onClick={() => handleNextImage(product.id)}
-                             className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-1 rounded-full z-10"
-                           >
-                             <ChevronRight className="w-5 h-5 text-white" />
-                           </button>
-                         </>
+                         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                           {product.image_urls.map((_, idx) => (
+                             <div key={idx} className={`rounded-full transition-all ${idx === currentIdx ? 'w-2 h-2 bg-white' : 'w-1.5 h-1.5 bg-white/60'}`} />
+                           ))}
+                         </div>
                        )}
                      </div>
 
