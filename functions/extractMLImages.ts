@@ -273,12 +273,14 @@ Deno.serve(async (req) => {
                 
                 if (images.length > 0) {
                     console.log('📸 Imagens encontradas:', images.length);
+                    const finalTitle = productData.title || '';
+                    const description = await generateDescription(base44, finalTitle);
                     return Response.json({
                         found: true,
                         images: [...new Set(images)],
-                        title: productData.title || '',
+                        title: finalTitle,
                         price: productData.price || null,
-                        description: productData.title || '',
+                        description: description,
                         source: 'Mercado Livre'
                     }, { status: 200 });
                 }
