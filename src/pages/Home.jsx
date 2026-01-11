@@ -500,10 +500,9 @@ export default function Home() {
   // ❌ REMOVIDO - useRealtimeSync já faz isso melhor
 
   useEffect(() => {
-    if (auctions.length > 0) {
-      filterAuctions();
-    }
-  }, [auctions, activeCategory, activeSourceFilter, filterAuctions]);
+    // 🚀 OTIMIZAÇÃO: Executa filtro imediatamente sem esperar
+    filterAuctions();
+  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, filterAuctions]);
 
   const categories = useMemo(() => [
   { value: "todos", label: "Todos", icon: Filter },
