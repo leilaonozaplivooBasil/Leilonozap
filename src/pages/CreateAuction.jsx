@@ -127,7 +127,7 @@ export default function CreateAuction() {
   const handleValidationCancel = () => {
     setShowValidationModal(false);
     setValidationData(null);
-    setProductName("");
+    setAuctionUrl("");
   };
 
 
