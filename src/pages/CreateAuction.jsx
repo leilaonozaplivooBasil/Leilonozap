@@ -79,77 +79,36 @@ export default function CreateAuction() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const searchByName = async () => {
-        if (!productName || productName.trim().length < 3) {
-          toast.error("Digite pelo menos 3 caracteres do nome do produto");
-          return;
-        }
-        setIsSearchingName(true);
-        setManualStep(1);
+  const extractFromUrl = async () => {
+    if (!auctionUrl || auctionUrl.trim().length < 10) {
+      toast.error("Cole a URL completa do anúncio do Mercado Livre");
+      return;
+    }
+    
+    setIsLoadingUrl(true);
+    try {
+      const response = await base44.functions.invoke('searchProductByName', { 
+        adUrl: auctionUrl.trim()
+      });
 
-        try {
-            const response = await base44.functions.invoke('searchProductByName', { 
-              productName: productName.trim()
-            });
+      if (!response?.data?.found) {
+        throw new Error(response?.data?.error || 'Erro ao extrair anúncio');
+      }
 
-            if (!response || response.status !== 200 || !response.data?.found) {
-              throw new Error(response?.data?.error || 'Produto não encontrado');
-            }
-
-            const firstData = response.data;
-
-            // Se tem sourceUrl que é um anúncio direto (não lista), extrai as imagens
-            if (firstData.sourceUrl && firstData.isMercadoLivre && firstData.sourceUrl.includes('/p/MLB')) {
-              console.log('🔗 Extraindo imagens do anúncio:', firstData.sourceUrl);
-
-              try {
-                const imageResponse = await base44.functions.invoke('searchProductByName', { 
-                  adUrl: firstData.sourceUrl
-                });
-
-                if (imageResponse?.data?.found && imageResponse.data.imageUrls?.length > 0) {
-                  setValidationData({
-                    title: imageResponse.data.title || firstData.title,
-                    description: imageResponse.data.description || firstData.description || "",
-                    image_urls: imageResponse.data.imageUrls || [],
-                    price: imageResponse.data.price || firstData.price,
-                    source: firstData.source || 'Mercado Livre',
-                    sourceUrl: firstData.sourceUrl
-                  });
-                } else {
-                  throw new Error('Sem imagens');
-                }
-              } catch (imgErr) {
-                console.log('⚠️ Não conseguiu extrair imagens, usando dados iniciais');
-                setValidationData({
-                  title: firstData.title,
-                  description: firstData.description || "",
-                  image_urls: firstData.image_urls || [],
-                  price: firstData.price,
-                  source: firstData.source || 'Mercado Livre',
-                  sourceUrl: firstData.sourceUrl
-                });
-              }
-            } else {
-              setValidationData({
-                title: firstData.title,
-                description: firstData.description || "",
-                image_urls: firstData.image_urls || [],
-                price: firstData.price,
-                source: firstData.source || 'Google Shopping',
-                sourceUrl: firstData.sourceUrl || null
-              });
-            }
-
-            setShowValidationModal(true);
-            setManualStep(0);
-        } catch (error) {
-          toast.error(`Erro na busca: ${error.message}`);
-          setManualStep(0);
-        } finally {
-          setIsSearchingName(false);
-        }
-      };
+      setValidationData({
+        title: response.data.title || "Produto",
+        description: response.data.description || "",
+        image_urls: response.data.imageUrls || [],
+        price: response.data.price,
+        sourceUrl: auctionUrl
+      });
+      setShowValidationModal(true);
+    } catch (error) {
+      toast.error(`Erro: ${error.message}`);
+    } finally {
+      setIsLoadingUrl(false);
+    }
+  };
 
   const handleValidationConfirm = () => {
     if (validationData) {
