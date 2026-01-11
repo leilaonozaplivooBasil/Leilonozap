@@ -112,23 +112,33 @@ Deno.serve(async (req) => {
         console.log('⚠️ API não retornou, tentando via IA...');
         console.log('🌐 URL sendo processada:', productUrl);
         
+        // Gera timestamp único para forçar nova busca
+        const timestamp = Date.now();
+        
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Navegue até: ${productUrl}
+            prompt: `[TIMESTAMP: ${timestamp}] Acesse AGORA esta URL específica do Mercado Livre e extraia os dados:
 
-Extraia desta página do Mercado Livre:
+URL: ${productUrl}
 
-1. O título exato do produto (texto do h1)
-2. O preço atual em reais
-3. Todas as URLs de imagens de alta resolução da galeria do produto (atributo data-zoom ou src das imagens principais)
+INSTRUÇÕES:
+1. Navegue até a URL acima
+2. Extraia o TÍTULO exato do produto (elemento h1 da página)
+3. Extraia o PREÇO atual
+4. Extraia TODAS as URLs de imagens da galeria do produto:
+   - Procure por atributos "data-zoom" ou "src" em imagens
+   - URLs do ML contêm "mlstatic.com" ou "http2.mlstatic.com"
+   - Formato: https://http2.mlstatic.com/D_NQ_NP_...
 
-IMPORTANTE: Extraia APENAS dados desta URL específica. Não use informações de outras páginas.`,
+CRÍTICO: Retorne APENAS dados encontrados nesta URL específica (${productUrl}).
+Não use cache ou dados de outras páginas.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string" },
-                    price: { type: "number" },
-                    image_urls: { type: "array", items: { type: "string" } }
+                    page_url: { type: "string", description: "URL que foi acessada" },
+                    title: { type: "string", description: "Título do produto" },
+                    price: { type: "number", description: "Preço em R$" },
+                    image_urls: { type: "array", items: { type: "string" }, description: "URLs das imagens" }
                 },
                 required: ["title", "image_urls"]
             }
