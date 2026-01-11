@@ -78,17 +78,46 @@ Deno.serve(async (req) => {
         const firstResult = data.shopping_results[0];
         const productTitle = firstResult.title;
         const productPrice = firstResult.extracted_price || firstResult.price;
-        const sourceUrl = firstResult.link || '';
-        const sourceHost = sourceUrl ? new URL(sourceUrl).hostname : '';
         
-        // Identifica se é Mercado Livre
-        const isMercadoLivre = sourceHost.includes('mercadolivre') || sourceHost.includes('mercadolivre.com');
-        const source = isMercadoLivre ? 'Mercado Livre' : (firstResult.source || 'Google Shopping');
+        // 🔍 EXTRAI O LINK CORRETO DO MERCADO LIVRE
+        let sourceUrl = firstResult.link || '';
+        let source = firstResult.source || 'Google Shopping';
+        let isMercadoLivre = false;
+        
+        // Verifica se há redirect_link (link real) vs link (pode ser encriptado)
+        if (firstResult.redirect_link) {
+            sourceUrl = firstResult.redirect_link;
+        }
+        
+        // Detecta se é Mercado Livre pela URL ou pelo título
+        if (sourceUrl) {
+            try {
+                const urlObj = new URL(sourceUrl);
+                const sourceHost = urlObj.hostname;
+                isMercadoLivre = sourceHost.includes('mercadolivre');
+                if (isMercadoLivre) source = 'Mercado Livre';
+            } catch (e) {
+                console.warn('⚠️ Erro ao parsear URL:', sourceUrl);
+            }
+        }
+        
+        // Se ainda não achou link ML, tenta procurar nos resultados
+        if (!isMercadoLivre && data.shopping_results.length > 0) {
+            for (const result of data.shopping_results) {
+                if (result.link && result.link.includes('mercadolivre')) {
+                    sourceUrl = result.link;
+                    isMercadoLivre = true;
+                    source = 'Mercado Livre';
+                    break;
+                }
+            }
+        }
 
         console.log('✅ Produto encontrado:', productTitle);
         console.log('💰 Preço:', productPrice);
         console.log('🌐 Fonte:', source);
-        console.log('🔗 URL:', sourceUrl);
+        console.log('🔗 URL Final:', sourceUrl);
+        console.log('📍 É Mercado Livre?', isMercadoLivre);
 
         // Valida acessórios no título
         const lower = productTitle.toLowerCase();
