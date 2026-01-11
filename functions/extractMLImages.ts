@@ -119,36 +119,40 @@ Deno.serve(async (req) => {
         console.log('📝 URL original:', productUrl);
         console.log('📝 Termo de busca:', searchTerm);
         
-        // Estratégia: Pedir para a IA acessar a URL específica e extrair as imagens
+        // Estratégia: Pedir para a IA acessar a URL específica e extrair as imagens da galeria
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `TAREFA: Acesse esta URL ESPECÍFICA do Mercado Livre e extraia as imagens do produto:
+            prompt: `TAREFA: Acesse esta URL do Mercado Livre e extraia as imagens em ALTA RESOLUÇÃO:
 
 URL: ${productUrl}
 
-INSTRUÇÕES:
-1. Acesse a URL acima (página de produto do Mercado Livre)
-2. Extraia o TÍTULO exato do produto (tag H1)
-3. Extraia o PREÇO em reais (número)
-4. Extraia TODAS as URLs de imagens do produto
-   - Procure por URLs que contenham "mlstatic.com" ou "http2.mlstatic.com"
-   - Busque em elementos <figure>, <img>, ou atributos data-zoom, data-src
-   - Formato típico: https://http2.mlstatic.com/D_NQ_NP_...jpg
+ONDE ENCONTRAR AS IMAGENS (IMPORTANTE!):
+- Procure elementos <figure class="ui-pdp-gallery__figure">
+- Dentro de cada figure, busque o atributo "data-zoom" - ele contém a URL em alta resolução
+- Formato: data-zoom="https://http2.mlstatic.com/D_NQ_NP_2X_..."
+- As imagens estão na galeria principal do produto (carrossel de fotos)
 
-IMPORTANTE: 
-- Acesse a URL ${productUrl} diretamente
-- Extraia dados DESTA página específica
-- NÃO invente URLs - extraia apenas as que existem na página
-- Produto: ${searchTerm}`,
+EXTRAIA:
+1. TÍTULO: texto do H1 da página
+2. PREÇO: valor numérico em reais
+3. IMAGENS: URLs do atributo data-zoom de cada <figure class="ui-pdp-gallery__figure">
+   - Use APENAS URLs que contenham "mlstatic.com"
+   - Prefira URLs com "2X" ou "-F." (alta resolução)
+
+REGRAS:
+- Acesse ${productUrl} diretamente
+- Extraia APENAS imagens DESTA página específica
+- NÃO invente URLs
+- Retorne as URLs exatas encontradas no data-zoom`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string", description: "Título exato do produto na página" },
+                    title: { type: "string", description: "Título exato do H1" },
                     price: { type: "number", description: "Preço em reais" },
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        description: "URLs das imagens encontradas na página (mlstatic.com)"
+                        description: "URLs do data-zoom das figures da galeria"
                     }
                 },
                 required: ["title", "image_urls"]
