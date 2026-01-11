@@ -113,34 +113,79 @@ Deno.serve(async (req) => {
         console.log('  - adUrl:', adUrl);
         console.log('  - !!adUrl:', !!adUrl);
 
-        // 🆕 MODO 1: LISTAR ANÚNCIOS (sem buscar imagens)
-        if (listAdsOnly === true) {
-            console.log('📋 ========== MODO 1 ATIVADO ==========');
-            console.log('📋 Retornando lista de anúncios...');
-            console.log('📋 Shopping results disponíveis:', data.shopping_results.length);
-            
-            const ads = data.shopping_results.slice(0, 5).map((result, idx) => {
-                console.log(`📋 Anúncio ${idx + 1}:`, result.source, '-', result.link?.substring(0, 50));
-                return {
-                    store: result.source || 'Loja Online',
-                    price: result.extracted_price || result.price,
-                    imageCount: '6-10', // Estimativa
-                    link: result.link,
-                    thumbnail: result.thumbnail
-                };
-            });
+        // 🆕 MODO 1: LISTAR ANÚNCIOS (com imagem extraída)
+         if (listAdsOnly === true) {
+             console.log('📋 ========== MODO 1 ATIVADO ==========');
+             console.log('📋 Retornando lista de anúncios COM IMAGENS...');
+             console.log('📋 Shopping results disponíveis:', data.shopping_results.length);
 
-            console.log('✅ Retornando', ads.length, 'anúncios para frontend');
-            console.log('✅ DEBUG - ads array:', JSON.stringify(ads, null, 2));
-            console.log('📦 Estrutura de retorno:', { found: true, title: productTitle, ads: '(array com ' + ads.length + ' itens)' });
+             const ads = [];
+             const topResults = data.shopping_results.slice(0, 10);
 
-            // ⚠️ IMPORTANTE: RETORNAR AQUI E NÃO CONTINUAR!
-            return Response.json({
-                found: true,
-                title: productTitle,
-                ads: ads
-            }, { status: 200 });
-        }
+             for (const result of topResults) {
+                 if (!result.link) continue;
+
+                 let imageUrl = null;
+                 let imageStatus = null;
+
+                 try {
+                     // 1️⃣ Tenta usar a imagem da API
+                     if (result.thumbnail) {
+                         imageUrl = result.thumbnail;
+                         imageStatus = 'api';
+                         console.log(`✅ Imagem API: ${imageUrl.substring(0, 50)}...`);
+                     } else {
+                         // 2️⃣ Tenta extrair og:image ou twitter:image
+                         const metaResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                             prompt: `Acesse ${result.link} e retorne a URL da imagem principal do produto (meta og:image ou primeira imagem visível).`,
+                             add_context_from_internet: true,
+                             response_json_schema: {
+                                 type: "object",
+                                 properties: {
+                                     image_url: { type: "string" }
+                                 }
+                             }
+                         });
+
+                         if (metaResponse?.image_url) {
+                             imageUrl = metaResponse.image_url;
+                             imageStatus = 'scrape';
+                             console.log(`✅ Imagem scrape: ${imageUrl.substring(0, 50)}...`);
+                         } else {
+                             // 3️⃣ Fallback: favicon
+                             const domainUrl = new URL(result.link).hostname;
+                             imageUrl = `https://www.google.com/s2/favicons?domain=${domainUrl}&sz=256`;
+                             imageStatus = 'fallback';
+                             console.log(`⚠️ Fallback (favicon): ${domainUrl}`);
+                         }
+                     }
+                 } catch (err) {
+                     console.log(`⚠️ Erro ao extrair imagem: ${err.message}`);
+                     imageStatus = 'fallback';
+                     const domainUrl = new URL(result.link).hostname;
+                     imageUrl = `https://www.google.com/s2/favicons?domain=${domainUrl}&sz=256`;
+                 }
+
+                 ads.push({
+                     title: result.title || productTitle,
+                     url: result.link,
+                     source: result.source || 'Loja Online',
+                     price: result.extracted_price || result.price || 'Consulte',
+                     snippet: result.snippet || '',
+                     image: imageUrl,
+                     image_status: imageStatus
+                 });
+             }
+
+             console.log('✅ Retornando', ads.length, 'anúncios COM imagens para frontend');
+
+             // ⚠️ IMPORTANTE: RETORNAR AQUI E NÃO CONTINUAR!
+             return Response.json({
+                 found: true,
+                 title: productTitle,
+                 ads: ads.slice(0, 10) // Máximo 10
+             }, { status: 200 });
+         }
 
         // Se chegou aqui, NÃO é modo listAdsOnly
         console.log('⚠️ Não entrou no modo listAdsOnly, continuando...');
