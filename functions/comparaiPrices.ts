@@ -139,9 +139,9 @@ Deno.serve(async (req) => {
 
                     console.log(`💰 Economia: ${Math.round(savingsPercent)}%`);
 
-                    // Valida economia
-                    if (Math.abs(savingsPercent) > 93) {
-                        console.log(`⚠️ Economia irrealista: ${savingsPercent}%`);
+                    // Valida economia - MAIS FLEXÍVEL
+                    if (savingsPercent > 99 || savingsPercent < -500) {
+                        console.log(`⚠️ Economia fora do range: ${savingsPercent}%`);
                         return Response.json({
                             success: false,
                             error: "Dados inconsistentes detectados. Por favor, tente novamente.",
