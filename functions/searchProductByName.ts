@@ -211,13 +211,27 @@ Deno.serve(async (req) => {
              try {
                  console.log('📸 Extraindo imagens do anúncio ML...');
                  const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                     prompt: `Acesse este anúncio do Mercado Livre: ${sourceUrl}\n\nExtraía APENAS URLs diretas de imagens em alta resolução (mínimo 600px) da galeria de fotos do produto. Ignore logotipos, watermarks e imagens pequenas. Retorne um array JSON com no máximo 12 URLs válidas: ["url1", "url2", ...]`,
+                     prompt: `Você PRECISA acessar e analisar este link do Mercado Livre: ${sourceUrl}
+
+TAREFA CRÍTICA:
+1. Encontre todas as imagens da galeria de fotos do produto (seção "Fotos do produto")
+2. Extraia as URLs DIRETAS das imagens em alta resolução
+3. Retorne SOMENTE URLs que são acessíveis (testáveis)
+4. Ordem: primeira imagem, segunda, terceira... até 12 no máximo
+5. Ignore ícones, badges, logotipos da loja
+
+FORMATO DE RESPOSTA - ARRAY JSON COM URLS:
+["https://...", "https://...", ...]
+
+Se não conseguir acessar, retorne um array vazio: []`,
                      add_context_from_internet: true,
                      response_json_schema: {
                          type: "array",
                          items: { type: "string" }
                      }
                  });
+                 
+                 console.log('🔍 Resposta da IA:', JSON.stringify(extractResponse));
                  
                  if (Array.isArray(extractResponse) && extractResponse.length > 0) {
                      // Valida as URLs extraídas
@@ -232,7 +246,7 @@ Deno.serve(async (req) => {
                      console.log('✅ Extraídas', image_urls.length, 'imagens do ML');
                  }
              } catch (err) {
-                 console.log('⚠️ Erro ao extrair imagens, usando thumbnail:', err.message);
+                 console.log('⚠️ Erro ao extrair imagens:', err.message);
                  if (firstResult.thumbnail) {
                      image_urls = [firstResult.thumbnail];
                  }
