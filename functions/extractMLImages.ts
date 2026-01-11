@@ -27,62 +27,40 @@ Deno.serve(async (req) => {
     console.log('🔍 Extraindo imagens do ML:', productUrl);
 
     try {
-        // Extrai o ID do produto da URL
-        // Padrões: /p/MLB12345678 ou MLB-12345678 ou MLA/MLU
-        const mlMatch = productUrl.match(/(MLB|MLA|MLU)[- ]?(\d+)/i);
+        // Extrai o ID do produto da URL - vários padrões possíveis
+        // Padrão 1: /p/MLB12345678 (catálogo)
+        // Padrão 2: MLB-12345678 ou MLB12345678 (item direto)
+        // Padrão 3: item_id=MLB12345678 na query string
+        // Padrão 4: pdp_filters=item_id%3AMLB12345678
         
-        // Extrai nome do produto da URL para busca
+        let productId = null;
+        
+        // Tenta extrair do pdp_filters (formato mais comum em URLs de catálogo)
+        const filtersMatch = productUrl.match(/item_id[=%3A]+([A-Z]{3}\d+)/i);
+        if (filtersMatch) {
+            productId = filtersMatch[1].toUpperCase();
+            console.log('📦 ID extraído de pdp_filters:', productId);
+        }
+        
+        // Se não achou, tenta padrão direto na URL
+        if (!productId) {
+            const mlMatch = productUrl.match(/(MLB|MLA|MLU)[- ]?(\d+)/i);
+            if (mlMatch) {
+                productId = mlMatch[1].toUpperCase() + mlMatch[2];
+                console.log('📦 ID extraído da URL:', productId);
+            }
+        }
+        
+        // Extrai nome do produto da URL para busca fallback
         const urlParts = productUrl.split('/');
         const productSlug = urlParts.find(p => p.includes('-') && !p.includes('MLB') && !p.includes('MLA') && !p.includes('?') && p.length > 10) || '';
         const searchTerm = productSlug.replace(/-/g, ' ').substring(0, 50);
         console.log('📝 Termo de busca:', searchTerm);
         
-        if (mlMatch) {
-            const productId = mlMatch[1].toUpperCase() + mlMatch[2];
-            console.log('📦 Product ID encontrado:', productId);
-            
-            // Tenta API de catálogo primeiro (para produtos /p/)
-            if (productUrl.includes('/p/')) {
-                const catalogId = productId;
-                console.log('📦 Tentando API de catálogo para:', catalogId);
-                
-                // API de catálogo
-                const catalogUrl = `https://api.mercadolibre.com/products/${catalogId}`;
-                const catalogResponse = await fetch(catalogUrl);
-                
-                if (catalogResponse.ok) {
-                    const catalogData = await catalogResponse.json();
-                    console.log('✅ API Catálogo retornou:', catalogData.name);
-                    
-                    const images = [];
-                    if (catalogData.pictures && catalogData.pictures.length > 0) {
-                        for (const pic of catalogData.pictures) {
-                            const imageUrl = pic.url;
-                            if (imageUrl) {
-                                // Converte para resolução máxima
-                                const hdUrl = imageUrl.replace(/-[A-Z]\./, '-F.');
-                                images.push(hdUrl);
-                            }
-                        }
-                    }
-                    
-                    if (images.length > 0) {
-                        console.log('📸 Imagens do catálogo:', images.length);
-                        return Response.json({
-                            found: true,
-                            images: [...new Set(images)], // Remove duplicatas
-                            title: catalogData.name || '',
-                            price: null,
-                            description: catalogData.name || '',
-                            source: 'Mercado Livre'
-                        }, { status: 200 });
-                    }
-                }
-            }
-            
-            // Fallback: API de items
+        // Se temos um ID, busca diretamente na API de items
+        if (productId) {
             const apiUrl = `https://api.mercadolibre.com/items/${productId}`;
-            console.log('📦 Tentando API items:', apiUrl);
+            console.log('📦 Buscando item:', apiUrl);
             const apiResponse = await fetch(apiUrl);
             
             if (apiResponse.ok) {
@@ -94,6 +72,7 @@ Deno.serve(async (req) => {
                     for (const pic of productData.pictures) {
                         const imageUrl = pic.secure_url || pic.url;
                         if (imageUrl) {
+                            // Converte para resolução máxima (-F é a maior)
                             const hdUrl = imageUrl.replace(/-[A-Z]\./, '-F.');
                             images.push(hdUrl);
                         }
@@ -101,7 +80,7 @@ Deno.serve(async (req) => {
                 }
                 
                 if (images.length > 0) {
-                    console.log('📸 Imagens via API Items:', images.length);
+                    console.log('📸 Imagens encontradas:', images.length);
                     return Response.json({
                         found: true,
                         images: [...new Set(images)],
@@ -111,6 +90,8 @@ Deno.serve(async (req) => {
                         source: 'Mercado Livre'
                     }, { status: 200 });
                 }
+            } else {
+                console.log('⚠️ API retornou status:', apiResponse.status);
             }
         }
 
