@@ -90,6 +90,9 @@ export default function CreateAuction() {
   const [catalogActive, setCatalogActive] = useState(false);
   const [priceCatalog, setPriceCatalog] = useState('');
 
+  // 🆕 ESTADOS PARA MODAL DE CONFIRMAÇÃO
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   // 🆕 ESTADOS PARA IMPORTADOR INTELIGENTE
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [isImporting, setIsImporting] = useState(false);
