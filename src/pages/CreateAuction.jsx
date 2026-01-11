@@ -1557,51 +1557,48 @@ export default function CreateAuction() {
                               <div
                                 key={index}
                                 onClick={async () => {
-                                  // ✅ NÃO SELECIONA MAIS - VAI DIRETO CLONAR
+                                  // ✅ SELECIONA O ANÚNCIO E CARREGA GALERIA
                                   setIsLoadingAds(true);
-                                  toast.info('🤖 Clonando anúncio completo...');
-                                  
+                                  toast.info('🤖 Carregando galeria de imagens...');
+
                                   try {
-                                    const response = await base44.functions.invoke('searchProductByName', { 
-                                      productName: productName.trim(),
-                                      adUrl: ad.link
+                                    // 🆕 NOVA FUNÇÃO: Busca APENAS imagens do anúncio selecionado
+                                    const response = await base44.functions.invoke('getOfferDetails', { 
+                                      offerId: ad.product_id || ad.id, // Usa product_id ou id
+                                      offerUrl: ad.url || ad.link
                                     });
 
                                     if (!response || response.status !== 200) {
-                                      throw new Error(response?.data?.error || 'Erro ao clonar anúncio');
-                                    }
-
-                                    const data = response.data;
-                                    
-                                    const clonedTitle = data.title || productPreview.title;
-                                    const clonedDescription = data.description || productPreview.description;
-                                    const clonedPrice = data.price || ad.price;
-                                    
-                                    const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
-
-                                    if (validUrls.length === 0) {
-                                      toast.warning('⚠️ Nenhuma imagem encontrada. Tente outro anúncio.');
+                                      toast.warning('⚠️ Não foi possível carregar este anúncio. Tente outro.');
                                       return;
                                     }
 
-                                    // SALVA DADOS COMPLETOS E VAI PARA ETAPA DE SELEÇÃO
+                                    const data = response.data;
+
+                                    if (!data.found || data.gallery.length === 0) {
+                                      toast.warning('⚠️ Nenhuma imagem encontrada neste anúncio. Tente outro.');
+                                      return;
+                                    }
+
+                                    // 🆕 SALVA DADOS EXCLUSIVAMENTE DO ANÚNCIO SELECIONADO
+                                    setSelectedAd(ad);
                                     setClonedAdData({
-                                      title: clonedTitle,
-                                      description: clonedDescription,
-                                      price: clonedPrice,
-                                      source: ad.link,
-                                      store: ad.store
+                                      title: data.details?.title || ad.title || productName,
+                                      description: data.details?.description || ad.snippet || 'Sem descrição',
+                                      price: data.details?.price || ad.price || 'Consulte',
+                                      source: ad.url || ad.link,
+                                      store: ad.source || ad.store || 'Loja Online'
                                     });
-                                    
-                                    setAdImagePool(validUrls);
-                                    setSelectedImageIndices(validUrls.slice(0, 5).map((_, i) => i));
+
+                                    setAdImagePool(data.gallery);
+                                    setSelectedImageIndices(data.gallery.slice(0, 5).map((_, i) => i));
                                     setManualStep(12);
-                                    
-                                    toast.success(`✅ ${validUrls.length} imagens encontradas! Escolha quais usar.`);
-                                    
+
+                                    toast.success(`✅ ${data.gallery.length} imagens carregadas do anúncio! Escolha quais usar.`);
+
                                   } catch (error) {
                                     console.error('❌ Erro:', error);
-                                    toast.error('Erro ao clonar: ' + error.message);
+                                    toast.error('Erro ao carregar anúncio: ' + error.message);
                                   } finally {
                                     setIsLoadingAds(false);
                                   }

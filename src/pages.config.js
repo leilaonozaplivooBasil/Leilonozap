@@ -12,6 +12,7 @@ import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
 import CreateAuction from './pages/CreateAuction';
+import CreateAuctionV2 from './pages/CreateAuctionV2';
 import CustomerDetails from './pages/CustomerDetails';
 import EditAuction from './pages/EditAuction';
 import EditCatalogProduct from './pages/EditCatalogProduct';
@@ -52,7 +53,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import CreateAuctionV2 from './pages/CreateAuctionV2';
 import __Layout from './Layout.jsx';
 
 
@@ -71,6 +71,7 @@ export const PAGES = {
     "CatalogProductDetails": CatalogProductDetails,
     "Checkout": Checkout,
     "CreateAuction": CreateAuction,
+    "CreateAuctionV2": CreateAuctionV2,
     "CustomerDetails": CustomerDetails,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
@@ -111,7 +112,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "CreateAuctionV2": CreateAuctionV2,
 }
 
 export const pagesConfig = {
