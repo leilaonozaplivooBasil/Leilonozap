@@ -96,23 +96,43 @@ export default function CreateAuction() {
 
       const imageUrls = response.data.imageUrls || [];
       
-      setFormData(prev => ({
-        ...prev,
+      setValidationData({
         title: response.data.title || "Produto",
-        description: response.data.description || ""
-      }));
-
-      const finalImages = imageUrls.slice(0, 5);
-      while (finalImages.length < 5) finalImages.push("");
-      setFormData(prev => ({ ...prev, image_urls: finalImages }));
-
-      setAuctionUrl("");
-      toast.success(`✅ ${imageUrls.length} imagens extraídas com sucesso!`);
+        description: response.data.description || "",
+        image_urls: imageUrls,
+        source: response.data.source || "Mercado Livre"
+      });
+      setShowValidationModal(true);
     } catch (error) {
       toast.error(`Erro: ${error.message}`);
     } finally {
       setIsLoadingUrl(false);
     }
+  };
+
+  const handleValidationConfirm = () => {
+    if (validationData) {
+      const finalImages = validationData.image_urls.slice(0, 5);
+      while (finalImages.length < 5) finalImages.push("");
+      
+      setFormData(prev => ({
+        ...prev,
+        title: validationData.title,
+        description: validationData.description,
+        image_urls: finalImages
+      }));
+      
+      setShowValidationModal(false);
+      setValidationData(null);
+      setAuctionUrl("");
+      toast.success(`✅ ${validationData.image_urls.length} imagens importadas!`);
+    }
+  };
+
+  const handleValidationCancel = () => {
+    setShowValidationModal(false);
+    setValidationData(null);
+    setAuctionUrl("");
   };
 
 
