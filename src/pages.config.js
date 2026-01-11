@@ -11,7 +11,6 @@ import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
-import CreateAuction from './pages/CreateAuction';
 import CustomerDetails from './pages/CustomerDetails';
 import EditAuction from './pages/EditAuction';
 import EditCatalogProduct from './pages/EditCatalogProduct';
@@ -69,7 +68,6 @@ export const PAGES = {
     "CatalogCheckout": CatalogCheckout,
     "CatalogProductDetails": CatalogProductDetails,
     "Checkout": Checkout,
-    "CreateAuction": CreateAuction,
     "CustomerDetails": CustomerDetails,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
