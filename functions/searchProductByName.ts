@@ -204,31 +204,11 @@ Deno.serve(async (req) => {
             }, { status: 200 });
         }
 
-        // MODO PADRÃO: Extrai imagens do anúncio ML e retorna tudo
+        // MODO PADRÃO: Retorna thumbnail do SerpAPI (funciona sempre)
          let image_urls = [];
-         
-         if (isMercadoLivre && sourceUrl) {
-             try {
-                 console.log('📸 Extraindo imagens via IA sem schema JSON...');
-                 const extractText = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                     prompt: `Acesse: ${sourceUrl}\n\nExtraía as 12 URLs diretas de imagens da galeria (padrão mlstatic.com ou similares). Formato: apenas as URLs, uma por linha. Sem explicações.`,
-                     add_context_from_internet: true
-                 });
-                 
-                 if (extractText) {
-                     const urls = extractText.split('\n').filter(u => u.trim().startsWith('http'));
-                     for (const url of urls) {
-                         if (await validateImageUrl(url.trim())) {
-                             image_urls.push(url.trim());
-                             if (image_urls.length >= 12) break;
-                         }
-                     }
-                 }
-                 console.log('✅ Extraídas', image_urls.length, 'imagens do ML');
-                 
-             } catch (err) {
-                 console.log('⚠️ Erro ao extrair imagens:', err.message);
-             }
+         if (firstResult.thumbnail && isMercadoLivre) {
+             image_urls = [firstResult.thumbnail];
+             console.log('✅ Usando thumbnail do SerpAPI como imagem inicial');
          }
 
          return Response.json({
