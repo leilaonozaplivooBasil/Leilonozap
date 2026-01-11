@@ -95,13 +95,12 @@ export default function CreateAuction() {
 
       const imageUrls = response.data.imageUrls || [];
       
-      setValidationData({
+      setSearchResult({
         title: response.data.title || "Produto",
         description: response.data.description || "",
         image_urls: imageUrls,
         source: response.data.source || "Mercado Livre"
       });
-      setShowValidationModal(true);
     } catch (error) {
       toast.error(`Erro: ${error.message}`);
     } finally {
