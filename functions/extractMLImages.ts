@@ -112,30 +112,35 @@ Deno.serve(async (req) => {
         console.log('⚠️ API não retornou, tentando via IA...');
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse ${productUrl} e extraia EXATAMENTE as URLs de imagem do atributo "data-zoom".
+            prompt: `Acesse ${productUrl} e extraia TODAS as URLs de imagem da galeria do produto.
 
-LOCALIZAÇÃO NO HTML:
-Dentro de <div class="ui-pdp-gallery__column">, procure todas as tags:
+TAREFA: Encontrar TODAS as imagens (geralmente 8-12) dentro da galeria.
+
+ONDE PROCURAR:
+Na div <div class="ui-pdp-gallery__column">, cada imagem está em:
 <figure class="ui-pdp-gallery__figure">
-  <img data-zoom="URL_AQUI" ...>
+  <img data-zoom="https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXXX_MMYYYY-F.webp" ...>
 </figure>
 
-COPIE LITERALMENTE cada URL do atributo data-zoom.
+EXTRAIA o valor do atributo "data-zoom" de CADA <img> dentro de CADA <figure>.
 
-Cada URL é ÚNICA e tem este formato:
-https://http2.mlstatic.com/D_NQ_NP_2X_[6digitos]-MLA[id]_[data]-F.webp
-
-Exemplo de URLs REAIS que você deve encontrar nesta página:
+Produto com 10 imagens terá 10 URLs diferentes como:
 - https://http2.mlstatic.com/D_NQ_NP_2X_648933-MLA99498284868_112025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_603199-MLA93967786557_102025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_603199-MLA93967786557_102025-F.webp  
 - https://http2.mlstatic.com/D_NQ_NP_2X_763958-MLA100186854181_122025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_638884-MLA100187109197_122025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_873462-MLA99701308916_122025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_916799-MLA99701665156_122025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_744293-MLA100187069693_122025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_767998-MLA87471204019_072025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_981499-MLA87145785902_072025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_618630-MLA84353238095_052025-F.webp
 
-⛔ PROIBIDO:
-- Inventar URLs
-- Modificar números das URLs
-- Criar sequências (112025, 112026, 112027...)
+Note que CADA URL tem códigos ÚNICOS e DIFERENTES. Extraia TODAS.
 
-Cada imagem tem números DIFERENTES. Copie EXATAMENTE como está no HTML.`,
+Também extraia:
+- Título do produto (tag h1)
+- Preço (número)`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -145,7 +150,7 @@ Cada imagem tem números DIFERENTES. Copie EXATAMENTE como está no HTML.`,
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        description: "URLs EXATAS copiadas do atributo data-zoom"
+                        description: "TODAS as URLs do atributo data-zoom (8-12 imagens)"
                     }
                 },
                 required: ["title", "image_urls"]
