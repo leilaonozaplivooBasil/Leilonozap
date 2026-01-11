@@ -520,7 +520,7 @@ export default function CreateAuction() {
     setProductPreview(null);
   };
 
-  // 🆕 BAIXAR IMAGENS DO ANÚNCIO SELECIONADO
+  // 🆕 CLONAR ANÚNCIO COMPLETO (título, descrição, preço, imagens)
   const downloadImagesFromAd = async () => {
     if (!selectedAd) {
       toast.error('Selecione um anúncio primeiro!');
@@ -528,43 +528,66 @@ export default function CreateAuction() {
     }
 
     setIsLoadingAds(true);
+    toast.info('🤖 Clonando anúncio completo...');
     
     try {
-      console.log('📸 Baixando imagens do anúncio:', selectedAd.store);
+      console.log('🔗 ========== CLONANDO ANÚNCIO ==========');
+      console.log('🏪 Loja:', selectedAd.store);
+      console.log('🔗 URL:', selectedAd.link);
+      console.log('📸 Extraindo: título, descrição, preço E imagens...');
       
-      // Busca imagens HD do anúncio específico
+      // 🔥 BUSCA TODOS OS DADOS DO ANÚNCIO
       const response = await base44.functions.invoke('searchProductByName', { 
         productName: productName.trim(),
-        adUrl: selectedAd.link // 🆕 Baixa imagens deste anúncio específico
+        adUrl: selectedAd.link
       });
 
+      console.log('📦 Resposta do backend:', response);
+
       if (!response || response.status !== 200) {
-        throw new Error('Erro ao baixar imagens');
+        throw new Error(response?.data?.error || 'Erro ao clonar anúncio');
       }
 
       const data = response.data;
       
-      // Aplica dados no formulário
+      console.log('✅ Dados recebidos:', {
+        title: data.title,
+        description: data.description?.substring(0, 50),
+        price: data.price,
+        imageCount: data.imageUrls?.length
+      });
+
+      // 🔥 USA TÍTULO E DESCRIÇÃO DO ANÚNCIO (NÃO DO PREVIEW)
+      const clonedTitle = data.title || productPreview.title;
+      const clonedDescription = data.description || productPreview.description;
+      const clonedPrice = data.price || selectedAd.price;
+      
       setExtractedData({ 
-        title: productPreview.title, 
-        description: productPreview.description 
+        title: clonedTitle, 
+        description: clonedDescription 
       });
       
       setFormData(prev => ({ 
         ...prev, 
-        title: productPreview.title, 
-        description: productPreview.description,
-        starting_price: selectedAd.price ? selectedAd.price.toString() : prev.starting_price
+        title: clonedTitle, 
+        description: clonedDescription,
+        starting_price: clonedPrice ? clonedPrice.toString() : prev.starting_price,
+        source_url: selectedAd.link
       }));
 
       const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
 
+      console.log('📸 URLs de imagens:', validUrls.length);
+      validUrls.forEach((url, i) => {
+        console.log(`  ${i + 1}. ${url.substring(0, 100)}`);
+      });
+
       if (validUrls.length === 0) {
-        toast.warning('⚠️ Nenhuma imagem encontrada neste anúncio. Tente outro.');
+        toast.warning('⚠️ Nenhuma imagem encontrada. Tente outro anúncio.');
         return;
       }
 
-      toast.success(`✅ ${validUrls.length} imagens de ${selectedAd.store}!`);
+      toast.success(`✅ Anúncio clonado! ${validUrls.length} imagens de ${selectedAd.store}`);
       setDownloadedImages(validUrls);
       setCoverIndex(0);
       setManualStep(5);
@@ -576,8 +599,8 @@ export default function CreateAuction() {
       setSelectedAd(null);
       
     } catch (error) {
-      console.error('❌ Erro:', error);
-      toast.error('Erro ao baixar imagens: ' + error.message);
+      console.error('❌ Erro completo:', error);
+      toast.error('Erro ao clonar: ' + error.message);
     } finally {
       setIsLoadingAds(false);
     }

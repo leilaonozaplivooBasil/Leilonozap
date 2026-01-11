@@ -145,100 +145,142 @@ Deno.serve(async (req) => {
         // Se chegou aqui, NÃO é modo listAdsOnly
         console.log('⚠️ Não entrou no modo listAdsOnly, continuando...');
 
-        // 🆕 MODO 2: IMAGENS DE ANÚNCIO ESPECÍFICO
+        // 🆕 MODO 2: CLONAR ANÚNCIO COMPLETO (título, descrição, preço, imagens)
         if (adUrl) {
-            console.log('🔗 ========== MODO 2 ATIVADO ==========');
+            console.log('🔗 ========== MODO 2 ATIVADO (CLONAR ANÚNCIO) ==========');
             console.log('🔗 URL do anúncio:', adUrl);
-            console.log('📸 Extraindo imagens REAIS do anúncio...');
+            console.log('📸 Extraindo TODOS os dados do anúncio...');
             
             const specificImageUrls = [];
             const seenSpecificUrls = new Set();
+            let extractedTitle = productTitle;
+            let extractedDescription = '';
+            let extractedPrice = productPrice;
             
             try {
-                // 🆕 PROMPT MELHORADO para extrair imagens REAIS do produto
+                // 🆕 PROMPT COMPLETO - EXTRAI TUDO DO ANÚNCIO
                 const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                    prompt: `Você é um extrator de imagens de produtos de e-commerce.
+                    prompt: `Você é um clonador de anúncios de e-commerce.
 
-TAREFA: Acesse esta página de produto e extraia APENAS as URLs das imagens DO PRODUTO.
+TAREFA: Acesse esta página de produto e extraia TODOS OS DADOS para clonar o anúncio.
 
 URL: ${adUrl}
 
-REQUISITOS OBRIGATÓRIOS:
-1. APENAS imagens do produto principal (não de acessórios, produtos relacionados ou anúncios)
-2. Resolução mínima: 800x800px (ideal: 1000x1000px ou maior)
-3. Buscar ÂNGULOS DIFERENTES: frente, verso, laterais, detalhes, aberto/fechado
-4. IGNORAR:
-   - Thumbnails pequenas
-   - Ícones de pagamento/frete
-   - Banners promocionais
-   - Produtos relacionados
-   - Imagens de reviews/avaliações
-   - Logos de loja
+DADOS A EXTRAIR:
 
-5. Priorizar imagens no formato:
-   - product-image
-   - gallery-image
-   - zoom-image
-   - main-image
-   - large-image
+1️⃣ TÍTULO:
+   - Título COMPLETO e ORIGINAL do produto
+   - Incluir marca, modelo, características principais
 
-6. Retornar 6 a 12 URLs de imagens DIFERENTES e VARIADAS do produto
+2️⃣ DESCRIÇÃO:
+   - Descrição COMPLETA do anúncio
+   - Incluir especificações técnicas
+   - Características do produto
+   - Conteúdo da embalagem
+   - NO MÍNIMO 200 caracteres
 
-FORMATO DE RESPOSTA:
-Retorne um array com as URLs completas (https://...) das melhores imagens encontradas.`,
+3️⃣ PREÇO:
+   - Preço do produto em R$ (apenas número)
+
+4️⃣ IMAGENS:
+   - URLs de imagens em ALTA RESOLUÇÃO (min 800x800px)
+   - ÂNGULOS DIFERENTES: frente, verso, laterais, detalhes
+   - Ignorar: thumbnails, logos, banners, produtos relacionados
+   - RETORNAR 6 a 12 imagens VARIADAS
+
+FORMATO DE RESPOSTA (JSON):
+{
+  "title": "Título completo do produto",
+  "description": "Descrição detalhada com especificações técnicas...",
+  "price": 1234.56,
+  "image_urls": ["url1", "url2", ...]
+}`,
                     add_context_from_internet: true,
                     response_json_schema: {
                         type: "object",
                         properties: {
+                            title: { 
+                                type: "string",
+                                description: "Título completo e original do produto"
+                            },
+                            description: {
+                                type: "string",
+                                description: "Descrição detalhada com especificações"
+                            },
+                            price: {
+                                type: "number",
+                                description: "Preço em reais"
+                            },
                             image_urls: { 
                                 type: "array", 
                                 items: { type: "string" },
-                                description: "URLs completas das imagens do produto em alta resolução"
+                                description: "URLs das imagens em alta resolução"
                             }
                         }
                     }
                 });
                 
-                console.log('🔍 IA retornou:', extractResponse?.image_urls?.length || 0, 'URLs');
+                console.log('🔍 IA retornou:', JSON.stringify(extractResponse, null, 2));
                 
+                // Extrai dados textuais
+                if (extractResponse?.title) {
+                    extractedTitle = extractResponse.title;
+                    console.log('✅ Título extraído:', extractedTitle);
+                }
+                
+                if (extractResponse?.description) {
+                    extractedDescription = extractResponse.description;
+                    console.log('✅ Descrição extraída:', extractedDescription.substring(0, 100) + '...');
+                }
+                
+                if (extractResponse?.price) {
+                    extractedPrice = extractResponse.price;
+                    console.log('✅ Preço extraído: R$', extractedPrice);
+                }
+                
+                // Extrai e valida imagens
                 if (extractResponse?.image_urls?.length > 0) {
+                    console.log('📸 Validando', extractResponse.image_urls.length, 'imagens...');
+                    
                     for (const url of extractResponse.image_urls) {
                         if (url && !seenSpecificUrls.has(url) && specificImageUrls.length < 12) {
-                            // Validar se é URL válida e se a imagem existe
                             const isValid = await validateImageUrl(url);
                             if (isValid) {
                                 specificImageUrls.push(url);
                                 seenSpecificUrls.add(url);
                                 console.log(`✅ Imagem HD #${specificImageUrls.length}: ${url.substring(0, 80)}...`);
                             } else {
-                                console.log(`❌ URL inválida ou imagem não acessível: ${url.substring(0, 80)}...`);
+                                console.log(`❌ URL inválida: ${url.substring(0, 80)}...`);
                             }
                         }
                     }
                 } else {
-                    console.log('⚠️ IA não retornou image_urls ou array vazio');
+                    console.log('⚠️ IA não retornou image_urls');
                 }
             } catch (err) {
-                console.error('❌ Erro ao extrair imagens com IA:', err.message);
-                console.error('❌ Stack:', err.stack);
+                console.error('❌ Erro ao extrair com IA:', err.message);
             }
 
             if (specificImageUrls.length === 0) {
-                console.log('❌ Nenhuma imagem válida encontrada no anúncio');
+                console.log('❌ Nenhuma imagem válida encontrada');
                 return Response.json({
-                    error: "Nenhuma imagem HD encontrada neste anúncio",
-                    suggestion: "Tente outro anúncio da lista",
-                    details: "A IA não conseguiu extrair imagens válidas desta página"
+                    error: "Nenhuma imagem encontrada neste anúncio",
+                    suggestion: "Tente outro anúncio da lista"
                 }, { status: 404 });
             }
 
-            console.log(`✅ Total: ${specificImageUrls.length} imagens HD do anúncio`);
+            console.log(`✅ ANÚNCIO CLONADO COM SUCESSO!`);
+            console.log(`   📝 Título: ${extractedTitle}`);
+            console.log(`   📄 Descrição: ${extractedDescription.substring(0, 50)}...`);
+            console.log(`   💰 Preço: R$ ${extractedPrice}`);
+            console.log(`   📸 Imagens: ${specificImageUrls.length}`);
 
             return Response.json({
                 found: true,
-                title: productTitle,
+                title: extractedTitle,
+                description: extractedDescription,
                 imageUrls: specificImageUrls,
-                price: productPrice,
+                price: extractedPrice,
                 source: adUrl
             }, { status: 200 });
         }
