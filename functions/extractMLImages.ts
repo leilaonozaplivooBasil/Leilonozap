@@ -114,26 +114,42 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback 2: Usa IA para extrair buscando pelo nome do produto
+        // Fallback 2: Usa IA para extrair da página específica
         console.log('⚠️ APIs não retornaram, tentando via IA...');
-        console.log('📝 Buscando por:', searchTerm);
+        console.log('📝 URL original:', productUrl);
+        console.log('📝 Termo de busca:', searchTerm);
         
+        // Estratégia: Pedir para a IA acessar a URL específica e extrair as imagens
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Busque no Mercado Livre Brasil o produto: "${searchTerm}"
+            prompt: `TAREFA: Acesse esta URL ESPECÍFICA do Mercado Livre e extraia as imagens do produto:
 
-Encontre um anúncio deste produto e extraia:
-1. TÍTULO: nome completo do produto
-2. PREÇO: valor em reais  
-3. IMAGENS: URLs das fotos do produto (domínio mlstatic.com, formato https://http2.mlstatic.com/...)
+URL: ${productUrl}
 
-IMPORTANTE: Busque ESTE produto específico: ${searchTerm}`,
+INSTRUÇÕES:
+1. Acesse a URL acima (página de produto do Mercado Livre)
+2. Extraia o TÍTULO exato do produto (tag H1)
+3. Extraia o PREÇO em reais (número)
+4. Extraia TODAS as URLs de imagens do produto
+   - Procure por URLs que contenham "mlstatic.com" ou "http2.mlstatic.com"
+   - Busque em elementos <figure>, <img>, ou atributos data-zoom, data-src
+   - Formato típico: https://http2.mlstatic.com/D_NQ_NP_...jpg
+
+IMPORTANTE: 
+- Acesse a URL ${productUrl} diretamente
+- Extraia dados DESTA página específica
+- NÃO invente URLs - extraia apenas as que existem na página
+- Produto: ${searchTerm}`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string" },
-                    price: { type: "number" },
-                    image_urls: { type: "array", items: { type: "string" } }
+                    title: { type: "string", description: "Título exato do produto na página" },
+                    price: { type: "number", description: "Preço em reais" },
+                    image_urls: { 
+                        type: "array", 
+                        items: { type: "string" },
+                        description: "URLs das imagens encontradas na página (mlstatic.com)"
+                    }
                 },
                 required: ["title", "image_urls"]
             }
@@ -144,10 +160,10 @@ IMPORTANTE: Busque ESTE produto específico: ${searchTerm}`,
         if (extractResponse?.image_urls?.length > 0) {
             // Remove duplicatas e filtra URLs válidas do ML
             const validImages = [...new Set(extractResponse.image_urls)].filter(url => 
-                url && url.includes('mlstatic.com')
+                url && (url.includes('mlstatic.com') || url.includes('mercadolibre'))
             ).map(url => {
                 // Converte para alta resolução se necessário
-                if (url.includes('-I.') || url.includes('-R.') || url.includes('-V.')) {
+                if (url.includes('-I.') || url.includes('-R.') || url.includes('-V.') || url.includes('-O.')) {
                     return url.replace(/-[A-Z]\./, '-F.');
                 }
                 return url;
@@ -158,16 +174,52 @@ IMPORTANTE: Busque ESTE produto específico: ${searchTerm}`,
                 return Response.json({
                     found: true,
                     images: validImages,
-                    title: extractResponse.title || '',
+                    title: extractResponse.title || searchTerm || '',
                     price: extractResponse.price || null,
-                    description: extractResponse.title || '',
+                    description: extractResponse.title || searchTerm || '',
+                    source: 'Mercado Livre'
+                }, { status: 200 });
+            }
+        }
+
+        // Último fallback: tentar extrair pelo nome do produto
+        console.log('⚠️ Tentando busca genérica pelo nome...');
+        const fallbackResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: `Busque no Mercado Livre Brasil pelo produto "${searchTerm}" e extraia:
+1. Título do produto
+2. Preço
+3. URLs das imagens (formato mlstatic.com)`,
+            add_context_from_internet: true,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    title: { type: "string" },
+                    price: { type: "number" },
+                    image_urls: { type: "array", items: { type: "string" } }
+                }
+            }
+        });
+
+        if (fallbackResponse?.image_urls?.length > 0) {
+            const fallbackImages = [...new Set(fallbackResponse.image_urls)].filter(url => 
+                url && url.includes('mlstatic.com')
+            );
+            
+            if (fallbackImages.length > 0) {
+                console.log('📸 Imagens via fallback:', fallbackImages.length);
+                return Response.json({
+                    found: true,
+                    images: fallbackImages,
+                    title: fallbackResponse.title || searchTerm || '',
+                    price: fallbackResponse.price || null,
+                    description: fallbackResponse.title || searchTerm || '',
                     source: 'Mercado Livre'
                 }, { status: 200 });
             }
         }
 
         return Response.json({
-            error: "Não foi possível extrair imagens deste anúncio",
+            error: "Não foi possível extrair imagens deste anúncio. Tente usar o upload manual de imagens.",
             found: false
         }, { status: 200 });
 
