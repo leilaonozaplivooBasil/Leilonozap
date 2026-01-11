@@ -189,10 +189,14 @@ REGRAS:
         // Último fallback: tentar extrair pelo nome do produto
         console.log('⚠️ Tentando busca genérica pelo nome...');
         const fallbackResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Busque no Mercado Livre Brasil pelo produto "${searchTerm}" e extraia:
-1. Título do produto
-2. Preço
-3. URLs das imagens (formato mlstatic.com)`,
+            prompt: `Acesse a página do Mercado Livre: ${productUrl}
+
+Extraia as imagens da galeria do produto:
+- Procure <figure class="ui-pdp-gallery__figure">
+- Pegue o atributo data-zoom de cada figure
+- As URLs são do formato https://http2.mlstatic.com/D_NQ_NP_...
+
+Retorne título, preço e URLs das imagens.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
