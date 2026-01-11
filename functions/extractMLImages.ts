@@ -191,12 +191,14 @@ Deno.serve(async (req) => {
                     
                     if (uniqueImages.length > 0) {
                         console.log('📸 Imagens via scraping:', uniqueImages.length);
+                        const finalTitle = title || searchTerm || '';
+                        const description = await generateDescription(base44, finalTitle);
                         return Response.json({
                             found: true,
                             images: uniqueImages,
-                            title: title || searchTerm || '',
+                            title: finalTitle,
                             price: price,
-                            description: title || searchTerm || '',
+                            description: description,
                             source: 'Mercado Livre'
                         }, { status: 200 });
                     }
