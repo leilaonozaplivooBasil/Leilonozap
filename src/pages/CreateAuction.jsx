@@ -1474,11 +1474,19 @@ export default function CreateAuction() {
                                       try {
                                         const response = await base44.functions.invoke('extractMLImages', { productUrl });
                                         
-                                        if (!response || response.status !== 200 || !response.data.found) {
-                                          throw new Error(response?.data?.error || 'Não foi possível extrair imagens.');
+                                        console.log('📦 Resposta extractMLImages:', response);
+                                        
+                                        // Verifica se há erro ou se não encontrou
+                                        if (!response || response.status !== 200) {
+                                          throw new Error(response?.data?.error || 'Erro na requisição');
                                         }
                                         
                                         const data = response.data;
+                                        
+                                        if (!data.found || !data.images || data.images.length === 0) {
+                                          throw new Error(data.error || 'Nenhuma imagem encontrada. Use upload manual.');
+                                        }
+                                        
                                         console.log('✅ Imagens ML extraídas:', data.images.length);
                                         
                                         setExtractedData({ 
