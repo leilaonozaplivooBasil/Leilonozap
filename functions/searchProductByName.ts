@@ -473,3 +473,117 @@ URL da página: ${productLink}`,
         }, { status: 500 });
     }
 });
+
+// 🆕 FUNÇÃO ADICIONAL: Buscar detalhes do anúncio selecionado + extrair galeria real
+Deno.serve(async (req) => {
+    try {
+        const base44 = createClientFromRequest(req);
+        await base44.auth.me();
+
+        const { offerId, offerUrl } = await req.json();
+        
+        if (!offerId || !offerUrl) {
+            return Response.json({ 
+                error: "offer_id e url obrigatórios" 
+            }, { status: 400 });
+        }
+
+        console.log('🔍 ========== DETALHES DO ANÚNCIO ==========');
+        console.log('  - offerId:', offerId);
+        console.log('  - offerUrl:', offerUrl.substring(0, 80));
+
+        const serpApiKey = Deno.env.get('SERPAPI_KEY');
+        if (!serpApiKey) {
+            throw new Error('SERPAPI_KEY não configurada');
+        }
+
+        // 1️⃣ BUSCAR DETALHE NA SERPAPI COM google_shopping_product
+        const detailUrl = `https://serpapi.com/search.json?engine=google_shopping_product&product_id=${encodeURIComponent(offerId)}&gl=br&hl=pt&api_key=${serpApiKey}`;
+        
+        console.log('🔗 Buscando detalhe:', detailUrl.substring(0, 100) + '...');
+        
+        const detailResponse = await fetch(detailUrl);
+        const detailData = await detailResponse.json();
+
+        console.log('🔍 Detalhe keys:', Object.keys(detailData));
+        console.log('🔍 product_results?', !!detailData.product_results);
+
+        let galleryImages = [];
+
+        // 2️⃣ TENTAR EXTRAIR DO DETALHE (product_results.media)
+        if (detailData?.product_results?.media) {
+            console.log('✅ Extraindo do detalhe (product_results.media):', detailData.product_results.media.length);
+            galleryImages = detailData.product_results.media
+                .filter(m => m.link || m.image_url || m.url)
+                .map(m => m.link || m.image_url || m.url)
+                .slice(0, 12);
+        }
+
+        // 3️⃣ SE FALTAR: ABRIR A URL E FAZER SCRAPE
+        if (galleryImages.length < 3) {
+            console.log('⚠️ Poucos resultados no detalhe, fazendo scrape da URL...');
+            
+            try {
+                const scrapeResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                    prompt: `Acesse e extraia TODAS as imagens do produto desta URL:
+${offerUrl}
+
+Requisitos:
+- Buscar em tags com class/id: "gallery", "image", "product-image", "carousel"
+- Extrair URLs de <img src> com resolução >= 400px
+- Priorizar og:image, twitter:image
+- Retornar array com máximo 12 imagens ÚNICAS`,
+                    add_context_from_internet: true,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            image_urls: {
+                                type: "array",
+                                items: { type: "string" }
+                            }
+                        }
+                    }
+                });
+
+                if (scrapeResponse?.image_urls?.length > 0) {
+                    console.log('✅ Extraído do scrape:', scrapeResponse.image_urls.length, 'imagens');
+                    galleryImages = scrapeResponse.image_urls.slice(0, 12);
+                }
+            } catch (scrapeErr) {
+                console.log('⚠️ Scrape falhou:', scrapeErr.message);
+            }
+        }
+
+        // 4️⃣ REMOVER DUPLICADAS
+        galleryImages = [...new Set(galleryImages)];
+
+        if (galleryImages.length === 0) {
+            console.log('❌ Nenhuma imagem encontrada');
+            return Response.json({
+                found: false,
+                error: "Não consegui extrair as imagens desse anúncio. Tente outro ou use upload manual.",
+                gallery: []
+            }, { status: 200 });
+        }
+
+        console.log(`✅ ${galleryImages.length} imagens extraídas com sucesso!`);
+
+        return Response.json({
+            found: true,
+            gallery: galleryImages,
+            details: {
+                title: detailData?.product_results?.title || '',
+                description: detailData?.product_results?.description || '',
+                price: detailData?.product_results?.price || ''
+            }
+        }, { status: 200 });
+
+    } catch (error) {
+        console.error('❌ ERRO ao buscar detalhes:', error.message);
+        return Response.json({
+            error: "Erro ao buscar galeria",
+            details: error.message,
+            gallery: []
+        }, { status: 500 });
+    }
+});
