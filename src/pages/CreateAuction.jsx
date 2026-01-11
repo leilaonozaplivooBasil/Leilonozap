@@ -204,7 +204,7 @@ export default function CreateAuction() {
                   <CardContent className="space-y-4">
                     <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
                       <Label htmlFor="auctionUrl" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
-                        <Zap className="w-4 h-4" /> Cole a URL do Anúncio
+                        <Zap className="w-4 h-4" /> Cole a URL do Anúncio do Mercado Livre
                       </Label>
                       <div className="flex gap-2">
                         <Input
@@ -212,7 +212,7 @@ export default function CreateAuction() {
                           value={auctionUrl}
                           onChange={(e) => setAuctionUrl(e.target.value)}
                           onKeyPress={(e) => { if (e.key === 'Enter') extractFromUrl(); }}
-                          placeholder="https://www.mercadolivre.com.br/..."
+                          placeholder="https://www.mercadolivre.com.br/iphone-17-pro-max..."
                           className="bg-gray-900 border-purple-600 text-gray-100"
                           disabled={isLoadingUrl}
                         />
@@ -220,15 +220,8 @@ export default function CreateAuction() {
                           {isLoadingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : "Extrair"}
                         </Button>
                       </div>
+                      {isLoadingUrl && <p className="text-sm text-purple-300 mt-2">Extraindo URLs das imagens...</p>}
                     </div>
-
-                    {adImagePool.length > 0 && !showValidationModal && (
-                      <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
-                          <h4 className="font-bold text-green-300 mb-3">✅ Produto Validado!</h4>
-                          <ProductImagePreview imageUrls={adImagePool} />
-                          <Button onClick={applyToForm} className="w-full mt-4 bg-green-600 hover:bg-green-700">🚀 Aplicar no Formulário</Button>
-                      </div>
-                    )}
 
                   </CardContent>
                 </Card>
