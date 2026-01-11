@@ -23,67 +23,69 @@ Deno.serve(async (req) => {
 
         const { productName, listAdsOnly, adUrl } = await req.json();
 
-        // 🔍 DEBUG: Parâmetros recebidos
-        console.log('🔍 ========== PARÂMETROS RECEBIDOS ==========');
-        console.log('  - productName:', productName);
-        console.log('  - listAdsOnly:', listAdsOnly);
-        console.log('  - adUrl:', adUrl);
+        console.log('🔍 Parâmetros:', { productName, adUrl });
 
-        // Se tiver adUrl, vai direto extrair do anúncio
-        if (adUrl) {
-          console.log('🔗 MODO 2 ATIVADO - Extraindo diretamente do anúncio');
+        // Se tiver adUrl, extrai direto
+        if (adUrl && adUrl.trim()) {
+            console.log('🔗 Extraindo direto da URL:', adUrl);
 
-          let extractedTitle = 'Produto';
-          let extractedDescription = '';
-          let extractedPrice = null;
-          let specificImageUrls = [];
+            try {
+                const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                    prompt: `Você DEVE acessar este anúncio: ${adUrl}
 
-          try {
-              const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                  prompt: `Acesse e clone COMPLETAMENTE o anúncio: ${adUrl}. Extraia: título completo, descrição completa com especificações (mínimo 300 caracteres), preço exato e uma galeria de 8 a 12 imagens em alta resolução (mínimo 800px) com ÂNGULOS DIFERENTES (frente, traseira, laterais, detalhes, etc). Ignore thumbnails e imagens repetidas. RETORNE EM JSON.`,
-                  add_context_from_internet: true,
-                  response_json_schema: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        description: { type: "string" },
-                        price: { type: "number" },
-                        image_urls: { type: "array", items: { type: "string" } }
-                      },
-                      required: ["title", "description", "price", "image_urls"]
-                  }
-              });
+                    Extraia EXATAMENTE:
+                    1. Título completo do produto
+                    2. Descrição completa (mínimo 200 caracteres)
+                    3. Preço exato em reais
+                    4. Lista de 5-12 URLs de IMAGENS REAIS em alta resolução
 
-              if (extractResponse) {
-                  extractedTitle = extractResponse.title || 'Produto';
-                  extractedDescription = extractResponse.description || '';
-                  extractedPrice = extractResponse.price || null;
-                  if (extractResponse.image_urls?.length > 0) {
-                      const validatedUrls = [];
-                      for(const url of extractResponse.image_urls) {
-                          if (await validateImageUrl(url)) {
-                              validatedUrls.push(url);
-                          }
-                      }
-                      specificImageUrls = [...new Set(validatedUrls)];
-                  }
-              }
-          } catch (err) {
-              console.error('❌ Erro ao extrair com IA:', err.message);
-          }
+                    Retorne um JSON válido:
+                    {
+                      "title": "string",
+                      "description": "string", 
+                      "price": número,
+                      "image_urls": ["url1", "url2", ...]
+                    }`,
+                    add_context_from_internet: true,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            title: { type: "string" },
+                            description: { type: "string" },
+                            price: { type: "number" },
+                            image_urls: { type: "array", items: { type: "string" } }
+                        },
+                        required: ["title", "image_urls"]
+                    }
+                });
 
-          if (specificImageUrls.length === 0) {
-              return Response.json({ error: "Nenhuma imagem válida encontrada neste anúncio. Tente novamente." }, { status: 404 });
-          }
+                console.log('✅ Resposta LLM:', extractResponse);
 
-          return Response.json({
-              found: true,
-              title: extractedTitle,
-              description: extractedDescription,
-              imageUrls: specificImageUrls,
-              price: extractedPrice,
-              source: adUrl
-          }, { status: 200 });
+                if (!extractResponse || !extractResponse.title) {
+                    return Response.json({ error: "Não consegui extrair dados do anúncio" }, { status: 400 });
+                }
+
+                const imageUrls = (extractResponse.image_urls || []).filter(url => 
+                    typeof url === 'string' && url.startsWith('http')
+                );
+
+                if (imageUrls.length === 0) {
+                    return Response.json({ error: "Nenhuma imagem encontrada no anúncio" }, { status: 400 });
+                }
+
+                return Response.json({
+                    found: true,
+                    title: extractResponse.title || 'Produto',
+                    description: extractResponse.description || '',
+                    imageUrls: imageUrls,
+                    price: extractResponse.price || null,
+                    source: adUrl
+                }, { status: 200 });
+
+            } catch (llmError) {
+                console.error('❌ Erro na LLM:', llmError.message);
+                return Response.json({ error: `Erro ao processar: ${llmError.message}` }, { status: 500 });
+            }
         }
 
         if (!productName) {
