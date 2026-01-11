@@ -217,37 +217,52 @@ Deno.serve(async (req) => {
                  console.log('📸 Extraindo URLs de imagens da galeria do produto...');
 
                  const urlsResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                     prompt: `Acesse este anúncio: ${sourceUrl}
+                     prompt: `Acesse esta URL: ${sourceUrl}
 
-        Extraia TODAS as URLs diretas das imagens principais do PRODUTO (as imagens grandes da galeria/carousel, não thumbnails de capa).
+        Você precisa extrair APENAS as URLs das IMAGENS DO PRODUTO na galeria/carrossel (as imagens grandes da página).
 
-        Procure por:
-        - URLs em atributos "src" de imagens grandes
-        - URLs em estruturas de galeria/carousel
-        - Padrões como: .jpeg, .jpg, .png, .webp
+        IMPORTANTE:
+        - Procure especificamente por URLs que estejam na galeria/carousel do produto
+        - Ignore logos, ícones, banners e imagens de interface
+        - As URLs geralmente contêm padrões como:
+          * magazineluiza.com.br/a-static/
+          * mlcdn.com.br/
+          * a-static.mlcdn.com.br/
 
-        Ignore imagens de logo, ícones ou banners.
+        RETORNE um JSON com as URLs encontradas:
+        {
+          "images": ["https://...", "https://...", ...]
+        }
 
-        RETORNE APENAS UM ARRAY JSON válido com as URLs:
-        ["https://...", "https://...", ...]
-
-        Se não conseguir acessar ou sem imagens, retorne: []`,
+        Se não conseguir acessar a página ou não houver imagens, retorne:
+        {"images": []}`,
                      add_context_from_internet: true,
                      response_json_schema: {
                          type: "object",
                          properties: {
                              images: { type: "array", items: { type: "string" } }
-                         }
+                         },
+                         required: ["images"]
                      }
                  });
 
-                 console.log('🔍 Resposta IA (URLs):', urlsResponse?.images?.slice(0, 2));
+                 console.log('🔍 Resposta IA (URLs):', urlsResponse?.images?.length, 'imagens encontradas');
 
-                 if (urlsResponse && Array.isArray(urlsResponse.images)) {
+                 if (urlsResponse && Array.isArray(urlsResponse.images) && urlsResponse.images.length > 0) {
+                     // Filtra apenas URLs de alta qualidade (não google shopping)
                      image_urls = urlsResponse.images
-                         .filter(url => typeof url === 'string' && url.startsWith('http'))
+                         .filter(url => {
+                             if (!url || typeof url !== 'string') return false;
+                             // Aceita URLs do site do anúncio ou de CDNs de qualidade
+                             return url.includes('magazineluiza') || 
+                                    url.includes('mlcdn.com') || 
+                                    url.includes('a-static') ||
+                                    (url.startsWith('https://') && !url.includes('encrypted-tbn') && !url.includes('google'));
+                         })
                          .slice(0, 12);
-                     console.log('✅ Extraídas', image_urls.length, 'URLs de imagens');
+                     console.log('✅ Extraídas', image_urls.length, 'URLs de imagens válidas');
+                 } else {
+                     console.log('⚠️ Nenhuma imagem encontrada na resposta');
                  }
              } catch (err) {
                  console.log('⚠️ Erro ao extrair URLs:', err.message);
