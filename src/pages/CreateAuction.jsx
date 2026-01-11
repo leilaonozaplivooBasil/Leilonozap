@@ -2392,7 +2392,7 @@ export default function CreateAuction() {
                       </div>
 
                       {/* 🆕 SEÇÃO CATÁLOGO */}
-                      <div className="md:col-span-3 mt-4 p-4 bg-yellow-900/20 rounded-lg border border-yellow-600/50">
+                      <div className="md:col-span-3 mt-4 p-4 bg-yellow-900/20 rounded-lg border border-yellow-600/50 hidden">
                         <div className="flex items-center gap-3 mb-4">
                           <input
                             type="checkbox"
