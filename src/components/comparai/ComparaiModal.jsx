@@ -198,7 +198,8 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
       const savingsPercent = comparisonData?.savingsPercent || 0;
       const currentPrice = localAuction.current_price || localAuction.starting_price;
       
-      const marketPrice = comparisonData?.cheapestMarketPrice || 0;
+      // 🆕 USA PREÇO MÉDIO (referencePrice) OU AVERAGE
+      const marketPrice = comparisonData?.referencePrice || comparisonData?.averageMarketPrice || comparisonData?.cheapestMarketPrice || 0;
 
       // 📝 MENSAGEM VISUAL
       const shareMessage = `🔨📦 LEILÃO NO🔥ZAP VENCEU!
