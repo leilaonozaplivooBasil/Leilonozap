@@ -116,20 +116,7 @@ export default function CreateAuction() {
 
 
 
-  const applyToForm = () => {
-    const finalImages = adImagePool.slice(0, 5);
-    while (finalImages.length < 5) finalImages.push("");
 
-    setFormData(prev => ({ ...prev, image_urls: finalImages }));
-    
-    resetImporterState();
-    toast.success("✅ Dados aplicados com sucesso no formulário!");
-  };
-
-  const resetImporterState = () => {
-      setAuctionUrl("");
-      setAdImagePool([]);
-  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
