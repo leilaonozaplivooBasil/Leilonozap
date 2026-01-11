@@ -112,39 +112,37 @@ Deno.serve(async (req) => {
         console.log('⚠️ API não retornou, tentando via IA...');
         console.log('🌐 URL sendo processada:', productUrl);
         
-        // Gera timestamp único para forçar nova busca
-        const timestamp = Date.now();
+        // Extrai nome do produto da URL para validação
+        const urlParts = productUrl.split('/');
+        const productSlug = urlParts.find(p => p.includes('-') && !p.includes('MLB') && !p.includes('?')) || '';
+        console.log('📝 Slug do produto:', productSlug);
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `[TIMESTAMP: ${timestamp}] Acesse AGORA esta URL específica do Mercado Livre e extraia os dados:
+            prompt: `Faça uma busca na web por esta URL exata e extraia os dados do produto:
 
-URL: ${productUrl}
+${productUrl}
 
-INSTRUÇÕES:
-1. Navegue até a URL acima
-2. Extraia o TÍTULO exato do produto (elemento h1 da página)
-3. Extraia o PREÇO atual
-4. Extraia TODAS as URLs de imagens da galeria do produto:
-   - Procure por atributos "data-zoom" ou "src" em imagens
-   - URLs do ML contêm "mlstatic.com" ou "http2.mlstatic.com"
-   - Formato: https://http2.mlstatic.com/D_NQ_NP_...
+O produto deve ser relacionado a: "${productSlug.replace(/-/g, ' ')}"
 
-CRÍTICO: Retorne APENAS dados encontrados nesta URL específica (${productUrl}).
-Não use cache ou dados de outras páginas.`,
+Extraia:
+1. TÍTULO: texto do h1 da página
+2. PREÇO: valor numérico em reais  
+3. IMAGENS: URLs contendo "mlstatic.com" encontradas na galeria
+
+Retorne SOMENTE dados desta página específica.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    page_url: { type: "string", description: "URL que foi acessada" },
-                    title: { type: "string", description: "Título do produto" },
-                    price: { type: "number", description: "Preço em R$" },
-                    image_urls: { type: "array", items: { type: "string" }, description: "URLs das imagens" }
+                    title: { type: "string" },
+                    price: { type: "number" },
+                    image_urls: { type: "array", items: { type: "string" } }
                 },
                 required: ["title", "image_urls"]
             }
         });
 
-        console.log('🤖 IA retornou para', productUrl, ':', JSON.stringify(extractResponse));
+        console.log('🤖 IA retornou:', JSON.stringify(extractResponse));
 
         if (extractResponse?.image_urls?.length > 0) {
             // Remove duplicatas e filtra URLs válidas do ML
