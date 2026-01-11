@@ -75,7 +75,110 @@ Deno.serve(async (req) => {
         const catalogId = catalogMatch ? catalogMatch[1].toUpperCase() : null;
         console.log('📦 Catalog ID:', catalogId, '| Item ID:', productId);
 
-        // Tenta API de catálogo primeiro (mais confiável para produtos /p/)
+        // ============================================
+        // MÉTODO 1: Scraping direto do HTML da página
+        // ============================================
+        console.log('🌐 Tentando scraping direto da página...');
+        
+        // Limpa a URL removendo parâmetros de tracking
+        const cleanUrl = productUrl.split('?')[0];
+        
+        try {
+            const pageResponse = await fetch(cleanUrl, { headers: BROWSER_HEADERS });
+            
+            if (pageResponse.ok) {
+                const html = await pageResponse.text();
+                console.log('📄 HTML recebido, tamanho:', html.length);
+                
+                // Verifica se não é página de login/bloqueio
+                if (!html.includes('account-verification-main') && !html.includes('Para continuar, acesse')) {
+                    const images = [];
+                    let title = '';
+                    let price = null;
+                    
+                    // Extrai título do H1
+                    const titleMatch = html.match(/<h1[^>]*class="[^"]*ui-pdp-title[^"]*"[^>]*>([^<]+)<\/h1>/i);
+                    if (titleMatch) {
+                        title = titleMatch[1].trim();
+                        console.log('📝 Título encontrado:', title);
+                    }
+                    
+                    // Extrai preço
+                    const priceMatch = html.match(/class="andes-money-amount__fraction"[^>]*>([0-9.]+)<\/span>/);
+                    if (priceMatch) {
+                        price = parseFloat(priceMatch[1].replace(/\./g, ''));
+                        console.log('💰 Preço encontrado:', price);
+                    }
+                    
+                    // MÉTODO A: Extrai do data-zoom nas figures
+                    const dataZoomMatches = html.matchAll(/data-zoom="([^"]+)"/g);
+                    for (const match of dataZoomMatches) {
+                        if (match[1] && match[1].includes('mlstatic.com')) {
+                            images.push(match[1]);
+                        }
+                    }
+                    
+                    // MÉTODO B: Extrai de src das imagens na galeria
+                    const imgMatches = html.matchAll(/ui-pdp-gallery[^>]*>[\s\S]*?<img[^>]+src="([^"]+mlstatic[^"]+)"/g);
+                    for (const match of imgMatches) {
+                        if (match[1]) {
+                            // Converte para alta resolução
+                            const hdUrl = match[1].replace(/-[A-Z]\./, '-F.');
+                            images.push(hdUrl);
+                        }
+                    }
+                    
+                    // MÉTODO C: Busca todas as imagens mlstatic no HTML
+                    const allImgMatches = html.matchAll(/https?:\/\/[^"'\s]+mlstatic\.com\/D_[^"'\s]+\.(jpg|jpeg|png|webp)/gi);
+                    for (const match of allImgMatches) {
+                        if (match[0]) {
+                            const hdUrl = match[0].replace(/-[A-Z]\./, '-F.');
+                            images.push(hdUrl);
+                        }
+                    }
+                    
+                    // MÉTODO D: Extrai do JSON embutido na página
+                    const jsonMatch = html.match(/"pictures"\s*:\s*\[([\s\S]*?)\]/);
+                    if (jsonMatch) {
+                        const urlMatches = jsonMatch[1].matchAll(/"url"\s*:\s*"([^"]+)"/g);
+                        for (const m of urlMatches) {
+                            if (m[1] && m[1].includes('mlstatic.com')) {
+                                const hdUrl = m[1].replace(/-[A-Z]\./, '-F.');
+                                images.push(hdUrl);
+                            }
+                        }
+                    }
+                    
+                    // Remove duplicatas e filtra imagens válidas
+                    const uniqueImages = [...new Set(images)].filter(url => 
+                        url.includes('mlstatic.com') && 
+                        url.includes('/D_') && 
+                        !url.includes('thumbnail') &&
+                        !url.includes('-I.') // Remove miniaturas
+                    );
+                    
+                    if (uniqueImages.length > 0) {
+                        console.log('📸 Imagens via scraping:', uniqueImages.length);
+                        return Response.json({
+                            found: true,
+                            images: uniqueImages,
+                            title: title || searchTerm || '',
+                            price: price,
+                            description: title || searchTerm || '',
+                            source: 'Mercado Livre'
+                        }, { status: 200 });
+                    }
+                } else {
+                    console.log('⚠️ Página bloqueada/login requerido');
+                }
+            }
+        } catch (scrapeError) {
+            console.log('⚠️ Erro no scraping:', scrapeError.message);
+        }
+
+        // ============================================
+        // MÉTODO 2: APIs do Mercado Livre
+        // ============================================
         if (catalogId) {
             const catalogApiUrl = `https://api.mercadolibre.com/products/${catalogId}`;
             console.log('📦 Buscando catálogo:', catalogApiUrl);
@@ -112,7 +215,6 @@ Deno.serve(async (req) => {
             }
         }
         
-        // Se temos um ID de item, busca diretamente na API de items
         if (productId) {
             const apiUrl = `https://api.mercadolibre.com/items/${productId}`;
             console.log('📦 Buscando item:', apiUrl);
