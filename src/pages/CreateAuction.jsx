@@ -1549,103 +1549,126 @@ export default function CreateAuction() {
                         <div className="bg-blue-900/30 border-2 border-blue-500 rounded-xl p-6">
                           <h3 className="text-xl font-bold text-blue-300 mb-2 flex items-center gap-2">
                             <Sparkles className="w-5 h-5" />
-                            📦 Escolha o anúncio para baixar as fotos
+                            📦 Escolha o anúncio para buscar as imagens
                           </h3>
                           <p className="text-gray-400 text-sm mb-4">
-                            Selecione o anúncio com as melhores imagens para o seu leilão
+                            Selecione o anúncio com as melhores imagens para o seu leilão.
+                            Apenas o anúncio selecionado será usado para extrair fotos e dados.
                           </p>
 
                           {/* LISTA DE ANÚNCIOS */}
-                                 <div className="space-y-3">
-                                   {availableAds.map((ad, index) => {
-                                     const isSelected = selectedAd?.url === ad.url;
+                          <div className="space-y-3">
+                            {availableAds.map((ad, idx) => {
+                              const isSelected = selectedAd?.url === ad.url; // Comparar pela URL para garantir unicidade
 
-                                     return (
-                                     <button
-                                       key={ad.url || index}
-                                       type="button"
-                                       onClick={() => setSelectedAd(ad)}
-                                       className={[
-                                         "w-full text-left p-4 rounded-lg border transition-all duration-200",
-                                         "bg-gray-800/50 hover:bg-blue-900/20",
-                                         isSelected ? "border-green-500 ring-2 ring-green-500/30" : "border-gray-600 hover:border-blue-500"
-                                       ].join(" ")}
-                                     >
-                                <div className="flex items-start gap-4">
-                                  {/* THUMBNAIL */}
-                                  {ad.image && (
-                                    <img 
-                                      src={ad.image} 
-                                      alt={ad.title}
-                                      className="w-20 h-20 object-cover rounded flex-shrink-0 border border-gray-700"
-                                      onError={(e) => { e.target.style.display = 'none'; }}
-                                    />
-                                  )}
+                              return (
+                                <button
+                                  key={ad.url || idx} // Usar ad.url como key para unicidade
+                                  type="button"
+                                  onClick={() => setSelectedAd(ad)} // Apenas seleciona o anúncio no estado
+                                  className={[
+                                    "w-full text-left p-4 rounded-lg border transition-all duration-200",
+                                    "bg-gray-800/50 hover:bg-blue-900/20",
+                                    isSelected ? "border-green-500 ring-2 ring-green-500/30" : "border-gray-600 hover:border-blue-500"
+                                  ].join(" ")}
+                                >
+                                  <div className="flex items-start gap-4">
+                                    {/* THUMBNAIL */}
+                                    {ad.image && ( // Use 'image' do ad, que já vem do backend
+                                      <img
+                                        src={ad.image}
+                                        alt={ad.title}
+                                        className="w-20 h-20 object-cover rounded flex-shrink-0 border border-gray-700"
+                                        onError={(e) => { e.target.style.display = 'none'; }}
+                                      />
+                                    )}
 
-                                  <div className="flex-1">
-                                    <h4 className="font-bold text-white text-lg mb-1">{ad.title}</h4>
-
-                                    <div className="space-y-1 text-sm">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-blue-400 font-semibold">🏪 Loja:</span>
-                                        <span className="text-gray-300">{ad.source}</span>
-                                      </div>
-
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-blue-400 font-semibold">💰 Preço:</span>
-                                        <span className="text-green-400 font-bold">{ad.price}</span>
-                                      </div>
-
-                                      {ad.snippet && (
-                                        <div className="flex items-start gap-2">
-                                          <span className="text-blue-400 font-semibold">Resumo:</span>
-                                          <span className="text-gray-400 text-xs line-clamp-2">{ad.snippet}</span>
+                                    <div className="flex-1">
+                                      <h4 className="font-bold text-white text-lg mb-1">{ad.title}</h4>
+                                      <div className="space-y-1 text-sm">
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-blue-400 font-semibold">🏪 Loja:</span>
+                                          <span className="text-gray-300">{ad.source}</span>
                                         </div>
-                                      )}
 
-                                      {ad.url && (
-                                        <a 
-                                          href={ad.url} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer"
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
-                                        >
-                                          🔗 Ver anúncio original
-                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                          </svg>
-                                        </a>
-                                      )}
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-blue-400 font-semibold">💰 Preço:</span>
+                                          <span className="text-green-400 font-bold">{ad.price}</span>
+                                        </div>
+
+                                        {ad.snippet && (
+                                          <div className="flex items-start gap-2">
+                                            <span className="text-blue-400 font-semibold">Resumo:</span>
+                                            <span className="text-gray-400 text-xs line-clamp-2">{ad.snippet}</span>
+                                          </div>
+                                        )}
+
+                                        {ad.url && (
+                                          <a
+                                            href={ad.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            onClick={(e) => e.stopPropagation()} // Impede a seleção do card ao clicar no link
+                                            className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
+                                          >
+                                            🔗 Ver anúncio original
+                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                          </a>
+                                        )}
+                                      </div>
                                     </div>
+                                    {isSelected && (
+                                      <div className="text-green-400 font-bold flex items-center gap-1 flex-shrink-0">
+                                        <CheckCircle className="w-4 h-4" /> Selecionado
+                                      </div>
+                                    )}
                                   </div>
-                                </div>
-                              </div>
-                            ))}
+                                </button>
+                              );
+                            })}
                           </div>
 
-                          {/* AVISO */}
+                          {/* AVISO / CONFIRMAÇÃO */}
                           <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mt-4">
                             <p className="text-yellow-300 text-sm flex items-center gap-2">
                               <AlertCircle className="w-4 h-4" />
-                              {selectedAd 
-                                ? `✅ Você selecionou: ${selectedAd.store}` 
-                                : '⚠️ Selecione 1 anúncio para prosseguir'}
+                              {selectedAd
+                                ? `✅ Anúncio selecionado: ${selectedAd.title}`
+                                : '⚠️ Selecione 1 anúncio acima para prosseguir.'}
                             </p>
                           </div>
 
-                          {/* BOTÃO VOLTAR */}
-                          <div className="mt-4">
+                          {/* BOTÕES DE AÇÃO */}
+                          <div className="flex gap-3 pt-4">
                             <Button
                               onClick={() => {
                                 setAvailableAds([]);
                                 setSelectedAd(null);
-                                setManualStep(10);
+                                setManualStep(0); // Volta para o início (escolha do método de busca)
                               }}
                               variant="outline"
-                              className="w-full border-gray-500 text-gray-300 hover:bg-gray-700"
+                              className="flex-1 border-gray-500 text-gray-300 hover:bg-gray-700"
                             >
-                              ⬅️ Voltar para Preview
+                              ⬅️ Voltar para Busca
+                            </Button>
+                            <Button
+                              onClick={downloadImagesFromAd}
+                              disabled={!selectedAd || isLoadingAds}
+                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold"
+                            >
+                              {isLoadingAds ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Carregando...
+                                </>
+                              ) : (
+                                <>
+                                  <ImageIcon className="w-4 h-4 mr-2" />
+                                  Usar este anúncio
+                                </>
+                              )}
                             </Button>
                           </div>
                         </div>
