@@ -144,8 +144,7 @@ export default function CreateAuction() {
   };
 
   const resetImporterState = () => {
-      setManualStep(0);
-      setProductName("");
+      setAuctionUrl("");
       setAdImagePool([]);
   }
 
