@@ -78,6 +78,7 @@ export default function CreateAuction() {
   const [adImagePool, setAdImagePool] = useState([]); // 🆕 Pool completo de imagens do anúncio
   const [selectedImageIndices, setSelectedImageIndices] = useState([]); // 🆕 Índices das imagens selecionadas
   const [clonedAdData, setClonedAdData] = useState(null); // 🆕 Dados completos do anúncio clonado
+  const [foundMlAd, setFoundMlAd] = useState(null); // 🆕 Anúncio único encontrado no ML
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
   const [imageUrls, setImageUrls] = useState(["", "", "", "", "", ""]);
@@ -430,7 +431,6 @@ export default function CreateAuction() {
     }
   };
 
-  // 🆕 CONFIRMAR PRODUTO E BUSCAR ANÚNCIOS
   const confirmAndFetchImages = async () => {
     if (!productPreview) return;
 
@@ -438,70 +438,38 @@ export default function CreateAuction() {
     setManualStep(1); // Mostra loading
 
     try {
-      const payload = {
-        productName: productName.trim(),
-        listAdsOnly: true
-      };
-      
-      console.log('🔍 ========== ENVIANDO PARA BACKEND ==========');
-      console.log('🔍 Payload:', payload);
-      console.log('🔍 Produto:', payload.productName);
-      console.log('🔍 Flag listAdsOnly:', payload.listAdsOnly);
-      console.log('🔍 Tipo de listAdsOnly:', typeof payload.listAdsOnly);
-      
-      // Busca lista de anúncios
-      const response = await base44.functions.invoke('searchProductByName', payload);
-
-      // 🔍 DEBUG COMPLETO
-      console.log('📦 ========== RESPOSTA BACKEND ==========');
-      console.log('📦 Response completo:', response);
-      console.log('📦 Response.status:', response?.status);
-      console.log('📦 Response.data:', response?.data);
-      console.log('📦 Response.data.found:', response?.data?.found);
-      console.log('📦 Response.data.ads:', response?.data?.ads);
-      console.log('📦 Response.data.ads.length:', response?.data?.ads?.length);
-      console.log('📦 Response.data.error:', response?.data?.error);
-      console.log('📦 Response.data.debug:', response?.data?.debug);
-
-      if (!response || response.status !== 200) {
-        console.log('❌ Response inválido ou status != 200');
-        throw new Error('Erro ao buscar anúncios');
-      }
-
-      const data = response.data;
-      
-      // 🔍 DEBUG: Por que está caindo aqui?
-      if (!data.ads || data.ads.length === 0) {
-        console.log('⚠️ ========== PROBLEMA DETECTADO ==========');
-        console.log('⚠️ data.ads está vazio!');
-        console.log('⚠️ data.ads:', data.ads);
-        console.log('⚠️ data.found:', data.found);
-        console.log('⚠️ data.error:', data.error);
-        console.log('⚠️ data.debug:', data.debug);
-        console.log('⚠️ Todos os campos de data:', Object.keys(data));
+        const payload = {
+            productName: confirmedProductName, // Usa o nome confirmado
+            mode: 'single_ml_ad'
+        };
         
-        toast.warning('Nenhum anúncio encontrado. Usando dados básicos.');
-        applyPreviewData();
-        return;
-      }
+        console.log('🎯 Buscando anúncio único no Mercado Livre...');
+        const response = await base44.functions.invoke('searchProductByName', payload);
 
-      console.log('✅ ========== SUCESSO ==========');
-      console.log('✅ Anúncios encontrados:', data.ads.length);
-      console.log('✅ Mudando para manualStep=11');
-      
-      setAvailableAds(data.ads);
-      setManualStep(11); // 🆕 Nova etapa: seleção de anúncios
-      toast.success(`✅ ${data.ads.length} anúncios encontrados!`);
-      
+        if (!response || response.status !== 200 || !response.data.found) {
+            throw new Error(response?.data?.error || 'Anúncio do Mercado Livre não encontrado.');
+        }
+
+        const data = response.data;
+
+        console.log('✅ Anúncio do ML encontrado:', data.ml_ad_url);
+        
+        setFoundMlAd({
+            url: data.ml_ad_url,
+            title: data.title,
+            price: data.price,
+            store: data.store
+        });
+        
+        setManualStep(13); // Nova etapa para mostrar o link do ML
+        toast.success(`✅ Anúncio encontrado no Mercado Livre!`);
+        
     } catch (error) {
-      console.error('❌ ========== ERRO CAPTURADO ==========');
-      console.error('❌ Error:', error);
-      console.error('❌ Message:', error.message);
-      console.error('❌ Stack:', error.stack);
-      toast.error('Erro ao buscar anúncios. Usando dados básicos.');
-      applyPreviewData(); // Fallback
+        console.error('❌ Erro ao buscar anúncio do ML:', error);
+        toast.error(error.message || 'Não foi possível encontrar um anúncio no Mercado Livre.');
+        setManualStep(10); // Volta para a tela de preview em caso de erro
     } finally {
-      setIsLoadingAds(false);
+        setIsLoadingAds(false);
     }
   };
 
@@ -533,71 +501,65 @@ export default function CreateAuction() {
     setProductPreview(null);
   };
 
-  // 🆕 CLONAR ANÚNCIO COMPLETO (título, descrição, preço, imagens)
-  const downloadImagesFromAd = async () => {
-    if (!selectedAd) {
-      toast.error('Selecione um anúncio primeiro!');
+  const downloadImagesFromAd = async (adToUse) => {
+    const ad = adToUse || selectedAd;
+    if (!ad) {
+      toast.error('Nenhum anúncio selecionado!');
       return;
     }
 
     setIsLoadingAds(true);
-    toast.info('🤖 Buscando detalhes e galeria do anúncio...');
+    toast.info('🤖 Importando dados e imagens do anúncio...');
     
     try {
-      console.log('🔗 ========== CARREGANDO ANÚNCIO ==========');
-      console.log('🏪 Loja:', selectedAd.source);
-      console.log('🔗 URL:', selectedAd.url);
-      
-      // 🔥 BUSCA TODOS OS DADOS DO ANÚNCIO SELECIONADO
       const response = await base44.functions.invoke('searchProductByName', { 
         productName: confirmedProductName || productName.trim(),
-        adUrl: selectedAd.url || selectedAd.link
+        adUrl: ad.url
       });
 
       if (!response || response.status !== 200) {
-        throw new Error(response?.data?.error || 'Não foi possível carregar este anúncio.');
+        throw new Error(response?.data?.error || 'Não foi possível carregar dados deste anúncio.');
       }
 
       const data = response.data;
-      
-      console.log('✅ Dados recebidos:', {
-        title: data.title,
-        description: data.description?.substring(0, 50),
-        price: data.price,
-        imageCount: data.imageUrls?.length
-      });
-
       const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
 
       if (validUrls.length === 0) {
-        toast.warning('⚠️ Não foi possível carregar este anúncio. Tente outro.');
+        toast.warning('⚠️ Nenhuma imagem encontrada neste anúncio. Tente o upload manual.');
+        setManualStep(0);
         return;
       }
 
-      console.log('📸 Total de imagens encontradas:', validUrls.length);
+      const clonedTitle = data.title || ad.title || confirmedProductName;
+      const clonedDescription = data.description || 'Sem descrição';
+      const clonedPrice = data.price || ad.price;
 
-      const clonedTitle = data.title || selectedAd.title || confirmedProductName;
-      const clonedDescription = data.description || selectedAd.snippet || 'Sem descrição';
-      const clonedPrice = data.price || selectedAd.price;
-
-      // 🆕 SALVA DADOS COMPLETOS E VAI PARA ETAPA DE SELEÇÃO
-      setClonedAdData({
+      // APLICA DIRETAMENTE, SEM SELEÇÃO
+      setExtractedData({ title: clonedTitle, description: clonedDescription });
+      setFormData(prev => ({
+        ...prev,
         title: clonedTitle,
         description: clonedDescription,
-        price: clonedPrice,
-        source: selectedAd.url || selectedAd.link,
-        store: selectedAd.source || selectedAd.store
-      });
-      
-      setAdImagePool(validUrls);
-      setSelectedImageIndices(validUrls.slice(0, 5).map((_, i) => i)); // Seleciona as 5 primeiras por padrão
-      setManualStep(12); // 🆕 Nova etapa: seleção de imagens
-      
-      toast.success(`✅ ${validUrls.length} imagens encontradas! Escolha quais usar.`);
+        starting_price: clonedPrice ? clonedPrice.toString() : prev.starting_price,
+        source_url: ad.url,
+      }));
+      setDownloadedImages(validUrls); // Todas as imagens válidas
+      setCoverIndex(0);
+      setManualStep(5); // Vai para o preview final
+
+      // Limpa estados do fluxo de busca
+      setProductName("");
+      setProductPreview(null);
+      setAvailableAds([]);
+      setSelectedAd(null);
+      setFoundMlAd(null);
+
+      toast.success(`✅ ${validUrls.length} imagens importadas! Revise antes de criar.`);
       
     } catch (error) {
-      console.error('❌ Erro:', error);
-      toast.error('❌ Não foi possível carregar este anúncio. Tente outro.');
+      console.error('❌ Erro na importação final:', error);
+      toast.error(`❌ Erro ao importar: ${error.message}`);
+      setManualStep(0); // Volta ao início em caso de falha
     } finally {
       setIsLoadingAds(false);
     }
@@ -1543,266 +1505,71 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* 🆕 ETAPA 11: SELEÇÃO DE ANÚNCIOS */}
-                    {manualStep === 11 && availableAds.length > 0 && (
-                      <div className="space-y-4">
+                    {/* 🆕 ETAPA 13: EXIBIR LINK ÚNICO DO MERCADO LIVRE */}
+                    {manualStep === 13 && foundMlAd && (
+                        <div className="space-y-4">
                         <div className="bg-blue-900/30 border-2 border-blue-500 rounded-xl p-6">
-                          <h3 className="text-xl font-bold text-blue-300 mb-2 flex items-center gap-2">
-                            <Sparkles className="w-5 h-5" />
-                            📦 Escolha o anúncio para buscar as imagens
-                          </h3>
-                          <p className="text-gray-400 text-sm mb-4">
-                            Selecione o anúncio com as melhores imagens para o seu leilão.
-                            Apenas o anúncio selecionado será usado para extrair fotos e dados.
-                          </p>
-
-                          {/* LISTA DE ANÚNCIOS */}
-                          <div className="space-y-3">
-                            {availableAds.map((ad, idx) => {
-                              const isSelected = selectedAd?.url === ad.url; // Comparar pela URL para garantir unicidade
-
-                              return (
-                                <button
-                                  key={ad.url || idx} // Usar ad.url como key para unicidade
-                                  type="button"
-                                  onClick={() => setSelectedAd(ad)} // Apenas seleciona o anúncio no estado
-                                  className={[
-                                    "w-full text-left p-4 rounded-lg border transition-all duration-200",
-                                    "bg-gray-800/50 hover:bg-blue-900/20",
-                                    isSelected ? "border-green-500 ring-2 ring-green-500/30" : "border-gray-600 hover:border-blue-500"
-                                  ].join(" ")}
-                                >
-                                  <div className="flex items-start gap-4">
-                                    {/* THUMBNAIL */}
-                                    {ad.image && ( // Use 'image' do ad, que já vem do backend
-                                      <img
-                                        src={ad.image}
-                                        alt={ad.title}
-                                        className="w-20 h-20 object-cover rounded flex-shrink-0 border border-gray-700"
-                                        onError={(e) => { e.target.style.display = 'none'; }}
-                                      />
-                                    )}
-
-                                    <div className="flex-1">
-                                      <h4 className="font-bold text-white text-lg mb-1">{ad.title}</h4>
-                                      <div className="space-y-1 text-sm">
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-blue-400 font-semibold">🏪 Loja:</span>
-                                          <span className="text-gray-300">{ad.source}</span>
-                                        </div>
-
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-blue-400 font-semibold">💰 Preço:</span>
-                                          <span className="text-green-400 font-bold">{ad.price}</span>
-                                        </div>
-
-                                        {ad.snippet && (
-                                          <div className="flex items-start gap-2">
-                                            <span className="text-blue-400 font-semibold">Resumo:</span>
-                                            <span className="text-gray-400 text-xs line-clamp-2">{ad.snippet}</span>
-                                          </div>
-                                        )}
-
-                                        {ad.url && (
-                                          <a
-                                            href={ad.url}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            onClick={(e) => e.stopPropagation()} // Impede a seleção do card ao clicar no link
-                                            className="text-blue-400 hover:text-blue-300 text-sm flex items-center gap-1 mt-2"
-                                          >
-                                            🔗 Ver anúncio original
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                            </svg>
-                                          </a>
-                                        )}
-                                      </div>
-                                    </div>
-                                    {isSelected && (
-                                      <div className="text-green-400 font-bold flex items-center gap-1 flex-shrink-0">
-                                        <CheckCircle className="w-4 h-4" /> Selecionado
-                                      </div>
-                                    )}
-                                  </div>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* AVISO / CONFIRMAÇÃO */}
-                          <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mt-4">
-                            <p className="text-yellow-300 text-sm flex items-center gap-2">
-                              <AlertCircle className="w-4 h-4" />
-                              {selectedAd
-                                ? `✅ Anúncio selecionado: ${selectedAd.title}`
-                                : '⚠️ Selecione 1 anúncio acima para prosseguir.'}
+                            <h3 className="text-xl font-bold text-blue-300 mb-2 flex items-center gap-2">
+                            <img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__small.png" alt="Mercado Livre" className="w-6 h-6" />
+                            Anúncio Encontrado no Mercado Livre
+                            </h3>
+                            <p className="text-gray-400 text-sm mb-4">
+                            A IA encontrou o anúncio mais relevante para usar como base.
                             </p>
-                          </div>
 
-                          {/* BOTÕES DE AÇÃO */}
-                          <div className="flex gap-3 pt-4">
-                            <Button
-                              onClick={() => {
-                                setAvailableAds([]);
-                                setSelectedAd(null);
-                                setManualStep(0); // Volta para o início (escolha do método de busca)
-                              }}
-                              variant="outline"
-                              className="flex-1 border-gray-500 text-gray-300 hover:bg-gray-700"
-                            >
-                              ⬅️ Voltar para Busca
-                            </Button>
-                            <Button
-                              onClick={downloadImagesFromAd}
-                              disabled={!selectedAd || isLoadingAds}
-                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                            >
-                              {isLoadingAds ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Carregando...
-                                </>
-                              ) : (
-                                <>
-                                  <ImageIcon className="w-4 h-4 mr-2" />
-                                  Usar este anúncio
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🆕 ETAPA 12: SELEÇÃO DE IMAGENS DO ANÚNCIO */}
-                    {manualStep === 12 && adImagePool.length > 0 && clonedAdData && (
-                      <div className="space-y-4">
-                        <div className="bg-purple-900/30 border-2 border-purple-500 rounded-xl p-6">
-                          <h3 className="text-xl font-bold text-purple-300 mb-2 flex items-center gap-2">
-                            <ImageIcon className="w-5 h-5" />
-                            📸 Escolha as Imagens do Anúncio
-                          </h3>
-                          <p className="text-gray-400 text-sm mb-4">
-                            🏪 Anúncio de <strong className="text-white">{clonedAdData.store}</strong> • {adImagePool.length} imagens disponíveis
-                          </p>
-
-                          {/* GRID DE IMAGENS COM CHECKBOXES */}
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-[500px] overflow-y-auto p-2">
-                            {adImagePool.map((imageUrl, index) => {
-                              const isSelected = selectedImageIndices.includes(index);
-                              
-                              return (
-                                <div
-                                  key={index}
-                                  onClick={() => {
-                                    setSelectedImageIndices(prev => 
-                                      prev.includes(index)
-                                        ? prev.filter(i => i !== index)
-                                        : [...prev, index]
-                                    );
-                                  }}
-                                  className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
-                                    isSelected 
-                                      ? 'border-green-500 ring-2 ring-green-500/50 scale-105' 
-                                      : 'border-gray-600 hover:border-purple-500'
-                                  }`}
-                                >
-                                  {/* CHECKBOX */}
-                                  <div className={`absolute top-2 right-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                                    isSelected 
-                                      ? 'bg-green-500 border-green-500' 
-                                      : 'bg-black/50 border-white/70'
-                                  }`}>
-                                    {isSelected && (
-                                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    )}
-                                  </div>
-
-                                  {/* NÚMERO */}
-                                  <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full font-bold">
-                                    #{index + 1}
-                                  </div>
-
-                                  {/* IMAGEM */}
-                                  <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
-                                    <img 
-                                      src={imageUrl} 
-                                      alt={`Imagem ${index + 1}`}
-                                      className="max-w-full max-h-full object-contain"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = '<div class="text-red-400 text-xs">❌ Erro</div>';
-                                      }}
-                                    />
-                                  </div>
-
-                                  {/* URL (pequena) */}
-                                  <div className="bg-gray-800 p-1.5 border-t border-gray-700">
-                                    <p className="text-[9px] text-gray-500 truncate font-mono">
-                                      {imageUrl}
-                                    </p>
-                                  </div>
-
-                                  {/* Overlay ao passar o mouse */}
-                                  {!isSelected && (
-                                    <div className="absolute inset-0 bg-purple-600/0 group-hover:bg-purple-600/20 transition-all flex items-center justify-center">
-                                      <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-bold">
-                                        Clique para selecionar
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* DESCRIÇÃO DO ANÚNCIO */}
-                          <div className="bg-gray-800/50 rounded-lg border border-gray-600 p-4 mb-4">
-                            <h4 className="font-bold text-white mb-2 flex items-center gap-2">
-                              📝 Descrição do Anúncio
-                            </h4>
-                            <div className="bg-gray-900 rounded p-3 max-h-40 overflow-y-auto">
-                              <p className="text-sm text-gray-300 whitespace-pre-wrap">
-                                {clonedAdData.description}
-                              </p>
+                            <div className="bg-gray-800/50 rounded-lg border border-gray-600 p-4 mb-4">
+                            <h4 className="font-bold text-white mb-2 line-clamp-2">{foundMlAd.title}</h4>
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-400">Preço:</span>
+                                <span className="text-green-400 font-bold">R$ {foundMlAd.price?.toFixed(2)}</span>
                             </div>
-                          </div>
-
-                          {/* CONTADOR */}
-                          <div className="bg-green-900/30 border border-green-600 rounded-lg p-3 mb-4 text-center">
-                            <p className="text-green-300 font-bold">
-                              ✅ {selectedImageIndices.length} {selectedImageIndices.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
-                            </p>
-                          </div>
-
-                          {/* BOTÕES */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <Button
-                              onClick={() => {
-                                setAdImagePool([]);
-                                setSelectedImageIndices([]);
-                                setClonedAdData(null);
-                                setManualStep(11); // Volta para lista de anúncios
-                              }}
-                              variant="outline"
-                              className="border-gray-500 text-gray-300 hover:bg-gray-700"
+                            <div className="flex items-center justify-between text-sm mt-1">
+                                <span className="text-gray-400">Loja:</span>
+                                <span className="text-white font-bold">{foundMlAd.store}</span>
+                            </div>
+                            <a
+                                href={foundMlAd.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 mt-3 break-all"
                             >
-                              ⬅️ Voltar
+                                🔗 {foundMlAd.url}
+                            </a>
+                            </div>
+
+                            <div className="flex gap-3 pt-4">
+                            <Button
+                                onClick={() => {
+                                setFoundMlAd(null);
+                                setManualStep(10); // Volta para o preview do produto
+                                }}
+                                variant="outline"
+                                className="flex-1 border-gray-500 text-gray-300 hover:bg-gray-700"
+                            >
+                                ⬅️ Voltar
                             </Button>
                             <Button
-                              onClick={applySelectedImages}
-                              disabled={selectedImageIndices.length === 0}
-                              className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                                onClick={() => {
+                                  downloadImagesFromAd({ url: foundMlAd.url, source: foundMlAd.store, title: foundMlAd.title });
+                                }}
+                                disabled={isLoadingAds}
+                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold"
                             >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              ✓ Aplicar no Formulário
+                                {isLoadingAds ? (
+                                <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Carregando...
+                                </>
+                                ) : (
+                                <>
+                                    <ImageIcon className="w-4 h-4 mr-2" />
+                                    Usar este anúncio
+                                </>
+                                )}
                             </Button>
-                          </div>
+                            </div>
                         </div>
-                      </div>
+                        </div>
                     )}
 
 

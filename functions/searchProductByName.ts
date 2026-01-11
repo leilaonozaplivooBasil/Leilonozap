@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         await base44.auth.me();
 
-        const { productName, listAdsOnly, adUrl } = await req.json();
+        const { productName, listAdsOnly, adUrl, mode } = await req.json();
         
         // 🔍 DEBUG: Parâmetros recebidos
         console.log('🔍 ========== PARÂMETROS RECEBIDOS ==========');
@@ -92,6 +92,29 @@ Deno.serve(async (req) => {
 
         console.log('✅ Produto encontrado:', productTitle);
         console.log('💰 Preço:', productPrice);
+
+        if (mode === 'single_ml_ad') {
+            console.log('🎯 ========== MODO single_ml_ad ATIVADO ==========');
+            const mlResults = data.shopping_results.filter(r => r.source && r.source.toLowerCase().includes('mercado livre'));
+
+            if (mlResults.length > 0) {
+                const firstMlResult = mlResults[0];
+                console.log('✅ Anúncio do Mercado Livre encontrado:', firstMlResult.link);
+                return Response.json({
+                    found: true,
+                    ml_ad_url: firstMlResult.link,
+                    store: 'Mercado Livre',
+                    price: firstMlResult.extracted_price || firstMlResult.price,
+                    title: firstMlResult.title
+                }, { status: 200 });
+            } else {
+                console.log('⚠️ Nenhum anúncio do Mercado Livre encontrado.');
+                return Response.json({
+                    error: "Nenhum anúncio do Mercado Livre encontrado para este produto.",
+                    found: false
+                }, { status: 404 });
+            }
+        }
 
         // Valida acessórios no título
         const lower = productTitle.toLowerCase();
