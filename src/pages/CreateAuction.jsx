@@ -286,10 +286,10 @@ export default function CreateAuction() {
                               <Button onClick={handleValidationConfirm} className="flex-1 bg-green-600 hover:bg-green-700">✅ Confirmar</Button>
                             </div>
                           </CardContent>
-                        </Card>
-                      </div>
-                    }
-                    </div>
+                          </Card>
+                          </div>
+                          )}
+                          </div>
 
                   </CardContent>
                 </Card>
