@@ -99,25 +99,29 @@ export default function CreateAuction() {
 
             const firstData = response.data;
 
-            // Se tem sourceUrl (anúncio do ML), extrai as imagens usando adUrl
-            if (firstData.sourceUrl && firstData.isMercadoLivre) {
+            // Se tem sourceUrl que é um anúncio direto (não lista), extrai as imagens
+            if (firstData.sourceUrl && firstData.isMercadoLivre && firstData.sourceUrl.includes('/p/MLB')) {
               console.log('🔗 Extraindo imagens do anúncio:', firstData.sourceUrl);
 
-              const imageResponse = await base44.functions.invoke('searchProductByName', { 
-                adUrl: firstData.sourceUrl
-              });
-
-              if (imageResponse?.data?.found && imageResponse.data.imageUrls?.length > 0) {
-                setValidationData({
-                  title: imageResponse.data.title || firstData.title,
-                  description: imageResponse.data.description || firstData.description || "",
-                  image_urls: imageResponse.data.imageUrls || [],
-                  price: imageResponse.data.price || firstData.price,
-                  source: firstData.source || 'Mercado Livre',
-                  sourceUrl: firstData.sourceUrl
+              try {
+                const imageResponse = await base44.functions.invoke('searchProductByName', { 
+                  adUrl: firstData.sourceUrl
                 });
-              } else {
-                // Se não conseguir extrair imagens, usa os dados iniciais
+
+                if (imageResponse?.data?.found && imageResponse.data.imageUrls?.length > 0) {
+                  setValidationData({
+                    title: imageResponse.data.title || firstData.title,
+                    description: imageResponse.data.description || firstData.description || "",
+                    image_urls: imageResponse.data.imageUrls || [],
+                    price: imageResponse.data.price || firstData.price,
+                    source: firstData.source || 'Mercado Livre',
+                    sourceUrl: firstData.sourceUrl
+                  });
+                } else {
+                  throw new Error('Sem imagens');
+                }
+              } catch (imgErr) {
+                console.log('⚠️ Não conseguiu extrair imagens, usando dados iniciais');
                 setValidationData({
                   title: firstData.title,
                   description: firstData.description || "",
@@ -128,7 +132,6 @@ export default function CreateAuction() {
                 });
               }
             } else {
-              // Se não é ML, usa dados iniciais
               setValidationData({
                 title: firstData.title,
                 description: firstData.description || "",
