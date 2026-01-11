@@ -78,7 +78,6 @@ export default function CreateAuction() {
   const [adImagePool, setAdImagePool] = useState([]); // 🆕 Pool completo de imagens do anúncio
   const [selectedImageIndices, setSelectedImageIndices] = useState([]); // 🆕 Índices das imagens selecionadas
   const [clonedAdData, setClonedAdData] = useState(null); // 🆕 Dados completos do anúncio clonado
-  const [foundMlAd, setFoundMlAd] = useState(null); // 🆕 Anúncio único encontrado no ML
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
   const [imageUrls, setImageUrls] = useState(["", "", "", "", "", ""]);
@@ -431,6 +430,7 @@ export default function CreateAuction() {
     }
   };
 
+  // 🆕 CONFIRMAR PRODUTO E BUSCAR ANÚNCIOS
   const confirmAndFetchImages = async () => {
     if (!productPreview) return;
 
@@ -438,38 +438,70 @@ export default function CreateAuction() {
     setManualStep(1); // Mostra loading
 
     try {
-        const payload = {
-            productName: confirmedProductName, // Usa o nome confirmado
-            mode: 'single_ml_ad'
-        };
-        
-        console.log('🎯 Buscando anúncio único no Mercado Livre...');
-        const response = await base44.functions.invoke('searchProductByName', payload);
+      const payload = {
+        productName: productName.trim(),
+        listAdsOnly: true
+      };
+      
+      console.log('🔍 ========== ENVIANDO PARA BACKEND ==========');
+      console.log('🔍 Payload:', payload);
+      console.log('🔍 Produto:', payload.productName);
+      console.log('🔍 Flag listAdsOnly:', payload.listAdsOnly);
+      console.log('🔍 Tipo de listAdsOnly:', typeof payload.listAdsOnly);
+      
+      // Busca lista de anúncios
+      const response = await base44.functions.invoke('searchProductByName', payload);
 
-        if (!response || response.status !== 200 || !response.data.found) {
-            throw new Error(response?.data?.error || 'Anúncio do Mercado Livre não encontrado.');
-        }
+      // 🔍 DEBUG COMPLETO
+      console.log('📦 ========== RESPOSTA BACKEND ==========');
+      console.log('📦 Response completo:', response);
+      console.log('📦 Response.status:', response?.status);
+      console.log('📦 Response.data:', response?.data);
+      console.log('📦 Response.data.found:', response?.data?.found);
+      console.log('📦 Response.data.ads:', response?.data?.ads);
+      console.log('📦 Response.data.ads.length:', response?.data?.ads?.length);
+      console.log('📦 Response.data.error:', response?.data?.error);
+      console.log('📦 Response.data.debug:', response?.data?.debug);
 
-        const data = response.data;
+      if (!response || response.status !== 200) {
+        console.log('❌ Response inválido ou status != 200');
+        throw new Error('Erro ao buscar anúncios');
+      }
 
-        console.log('✅ Anúncio do ML encontrado:', data.ml_ad_url);
+      const data = response.data;
+      
+      // 🔍 DEBUG: Por que está caindo aqui?
+      if (!data.ads || data.ads.length === 0) {
+        console.log('⚠️ ========== PROBLEMA DETECTADO ==========');
+        console.log('⚠️ data.ads está vazio!');
+        console.log('⚠️ data.ads:', data.ads);
+        console.log('⚠️ data.found:', data.found);
+        console.log('⚠️ data.error:', data.error);
+        console.log('⚠️ data.debug:', data.debug);
+        console.log('⚠️ Todos os campos de data:', Object.keys(data));
         
-        setFoundMlAd({
-            url: data.ml_ad_url,
-            title: data.title,
-            price: data.price,
-            store: data.store
-        });
-        
-        setManualStep(13); // Nova etapa para mostrar o link do ML
-        toast.success(`✅ Anúncio encontrado no Mercado Livre!`);
-        
+        toast.warning('Nenhum anúncio encontrado. Usando dados básicos.');
+        applyPreviewData();
+        return;
+      }
+
+      console.log('✅ ========== SUCESSO ==========');
+      console.log('✅ Anúncios encontrados:', data.ads.length);
+      console.log('✅ Mudando para manualStep=11');
+      
+      setAvailableAds(data.ads);
+      setManualStep(11); // 🆕 Nova etapa: seleção de anúncios
+      toast.success(`✅ ${data.ads.length} anúncios encontrados!`);
+      
     } catch (error) {
-        console.error('❌ Erro ao buscar anúncio do ML:', error);
-        toast.error(error.message || 'Não foi possível encontrar um anúncio no Mercado Livre.');
-        setManualStep(10); // Volta para a tela de preview em caso de erro
+      console.error('❌ ========== ERRO CAPTURADO ==========');
+      console.error('❌ Error:', error);
+      console.error('❌ Message:', error.message);
+      console.error('❌ Stack:', error.stack);
+      toast.error('Erro ao buscar anúncios. Usando dados básicos.');
+      applyPreviewData(); // Fallback
     } finally {
-        setIsLoadingAds(false);
+      setIsLoadingAds(false);
     }
   };
 
@@ -501,65 +533,71 @@ export default function CreateAuction() {
     setProductPreview(null);
   };
 
-  const downloadImagesFromAd = async (adToUse) => {
-    const ad = adToUse || selectedAd;
-    if (!ad) {
-      toast.error('Nenhum anúncio selecionado!');
+  // 🆕 CLONAR ANÚNCIO COMPLETO (título, descrição, preço, imagens)
+  const downloadImagesFromAd = async () => {
+    if (!selectedAd) {
+      toast.error('Selecione um anúncio primeiro!');
       return;
     }
 
     setIsLoadingAds(true);
-    toast.info('🤖 Importando dados e imagens do anúncio...');
+    toast.info('🤖 Buscando detalhes e galeria do anúncio...');
     
     try {
+      console.log('🔗 ========== CARREGANDO ANÚNCIO ==========');
+      console.log('🏪 Loja:', selectedAd.source);
+      console.log('🔗 URL:', selectedAd.url);
+      
+      // 🔥 BUSCA TODOS OS DADOS DO ANÚNCIO SELECIONADO
       const response = await base44.functions.invoke('searchProductByName', { 
         productName: confirmedProductName || productName.trim(),
-        adUrl: ad.url
+        adUrl: selectedAd.url || selectedAd.link
       });
 
       if (!response || response.status !== 200) {
-        throw new Error(response?.data?.error || 'Não foi possível carregar dados deste anúncio.');
+        throw new Error(response?.data?.error || 'Não foi possível carregar este anúncio.');
       }
 
       const data = response.data;
+      
+      console.log('✅ Dados recebidos:', {
+        title: data.title,
+        description: data.description?.substring(0, 50),
+        price: data.price,
+        imageCount: data.imageUrls?.length
+      });
+
       const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
 
       if (validUrls.length === 0) {
-        toast.warning('⚠️ Nenhuma imagem encontrada neste anúncio. Tente o upload manual.');
-        setManualStep(0);
+        toast.warning('⚠️ Não foi possível carregar este anúncio. Tente outro.');
         return;
       }
 
-      const clonedTitle = data.title || ad.title || confirmedProductName;
-      const clonedDescription = data.description || 'Sem descrição';
-      const clonedPrice = data.price || ad.price;
+      console.log('📸 Total de imagens encontradas:', validUrls.length);
 
-      // APLICA DIRETAMENTE, SEM SELEÇÃO
-      setExtractedData({ title: clonedTitle, description: clonedDescription });
-      setFormData(prev => ({
-        ...prev,
+      const clonedTitle = data.title || selectedAd.title || confirmedProductName;
+      const clonedDescription = data.description || selectedAd.snippet || 'Sem descrição';
+      const clonedPrice = data.price || selectedAd.price;
+
+      // 🆕 SALVA DADOS COMPLETOS E VAI PARA ETAPA DE SELEÇÃO
+      setClonedAdData({
         title: clonedTitle,
         description: clonedDescription,
-        starting_price: clonedPrice ? clonedPrice.toString() : prev.starting_price,
-        source_url: ad.url,
-      }));
-      setDownloadedImages(validUrls); // Todas as imagens válidas
-      setCoverIndex(0);
-      setManualStep(5); // Vai para o preview final
-
-      // Limpa estados do fluxo de busca
-      setProductName("");
-      setProductPreview(null);
-      setAvailableAds([]);
-      setSelectedAd(null);
-      setFoundMlAd(null);
-
-      toast.success(`✅ ${validUrls.length} imagens importadas! Revise antes de criar.`);
+        price: clonedPrice,
+        source: selectedAd.url || selectedAd.link,
+        store: selectedAd.source || selectedAd.store
+      });
+      
+      setAdImagePool(validUrls);
+      setSelectedImageIndices(validUrls.slice(0, 5).map((_, i) => i)); // Seleciona as 5 primeiras por padrão
+      setManualStep(12); // 🆕 Nova etapa: seleção de imagens
+      
+      toast.success(`✅ ${validUrls.length} imagens encontradas! Escolha quais usar.`);
       
     } catch (error) {
-      console.error('❌ Erro na importação final:', error);
-      toast.error(`❌ Erro ao importar: ${error.message}`);
-      setManualStep(0); // Volta ao início em caso de falha
+      console.error('❌ Erro:', error);
+      toast.error('❌ Não foi possível carregar este anúncio. Tente outro.');
     } finally {
       setIsLoadingAds(false);
     }
@@ -1505,72 +1543,7 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* 🆕 ETAPA 13: EXIBIR LINK ÚNICO DO MERCADO LIVRE */}
-                    {manualStep === 13 && foundMlAd && (
-                        <div className="space-y-4">
-                        <div className="bg-blue-900/30 border-2 border-blue-500 rounded-xl p-6">
-                            <h3 className="text-xl font-bold text-blue-300 mb-2 flex items-center gap-2">
-                            <img src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__small.png" alt="Mercado Livre" className="w-6 h-6" />
-                            Anúncio Encontrado no Mercado Livre
-                            </h3>
-                            <p className="text-gray-400 text-sm mb-4">
-                            A IA encontrou o anúncio mais relevante para usar como base.
-                            </p>
 
-                            <div className="bg-gray-800/50 rounded-lg border border-gray-600 p-4 mb-4">
-                            <h4 className="font-bold text-white mb-2 line-clamp-2">{foundMlAd.title}</h4>
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-400">Preço:</span>
-                                <span className="text-green-400 font-bold">R$ {foundMlAd.price?.toFixed(2)}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm mt-1">
-                                <span className="text-gray-400">Loja:</span>
-                                <span className="text-white font-bold">{foundMlAd.store}</span>
-                            </div>
-                            <a
-                                href={foundMlAd.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-400 hover:text-blue-300 text-xs flex items-center gap-1 mt-3 break-all"
-                            >
-                                🔗 {foundMlAd.url}
-                            </a>
-                            </div>
-
-                            <div className="flex gap-3 pt-4">
-                            <Button
-                                onClick={() => {
-                                setFoundMlAd(null);
-                                setManualStep(10); // Volta para o preview do produto
-                                }}
-                                variant="outline"
-                                className="flex-1 border-gray-500 text-gray-300 hover:bg-gray-700"
-                            >
-                                ⬅️ Voltar
-                            </Button>
-                            <Button
-                                onClick={() => {
-                                  downloadImagesFromAd({ url: foundMlAd.url, source: foundMlAd.store, title: foundMlAd.title });
-                                }}
-                                disabled={isLoadingAds}
-                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold"
-                            >
-                                {isLoadingAds ? (
-                                <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                    Carregando...
-                                </>
-                                ) : (
-                                <>
-                                    <ImageIcon className="w-4 h-4 mr-2" />
-                                    Usar este anúncio
-                                </>
-                                )}
-                            </Button>
-                            </div>
-                        </div>
-                        </div>
-                    )}
 
 
 
