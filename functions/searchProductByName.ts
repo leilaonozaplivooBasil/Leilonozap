@@ -209,47 +209,56 @@ Deno.serve(async (req) => {
          
          if (isMercadoLivre && sourceUrl) {
              try {
-                 console.log('📸 Extraindo imagens do anúncio ML...');
-                 const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                     prompt: `Você PRECISA acessar e analisar este link do Mercado Livre: ${sourceUrl}
-
-TAREFA CRÍTICA:
-1. Encontre todas as imagens da galeria de fotos do produto (seção "Fotos do produto")
-2. Extraia as URLs DIRETAS das imagens em alta resolução
-3. Retorne SOMENTE URLs que são acessíveis (testáveis)
-4. Ordem: primeira imagem, segunda, terceira... até 12 no máximo
-5. Ignore ícones, badges, logotipos da loja
-
-FORMATO DE RESPOSTA - ARRAY JSON COM URLS:
-["https://...", "https://...", ...]
-
-Se não conseguir acessar, retorne um array vazio: []`,
-                     add_context_from_internet: true,
-                     response_json_schema: {
-                         type: "array",
-                         items: { type: "string" }
-                     }
+                 console.log('📸 Extraindo imagens do anúncio ML via fetch...');
+                 
+                 // Tenta fazer fetch da página
+                 const pageResponse = await fetch(sourceUrl, {
+                     headers: {
+                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                     },
+                     signal: AbortSignal.timeout(10000)
                  });
                  
-                 console.log('🔍 Resposta da IA:', JSON.stringify(extractResponse));
+                 if (!pageResponse.ok) {
+                     throw new Error(`Erro ao acessar página: ${pageResponse.status}`);
+                 }
                  
-                 if (Array.isArray(extractResponse) && extractResponse.length > 0) {
-                     // Valida as URLs extraídas
-                     for (const url of extractResponse) {
-                         if (url && typeof url === 'string' && url.startsWith('http')) {
-                             if (await validateImageUrl(url)) {
-                                 image_urls.push(url);
-                             }
+                 const html = await pageResponse.text();
+                 
+                 // Extrai URLs de imagens usando regex (busca por padrões comuns do ML)
+                 const imagePatterns = [
+                     /https:\/\/[a-zA-Z0-9.-]+\.mlstatic\.com\/[^"'<>\s]+\.jpg/gi,
+                     /https:\/\/http2\.mlstatic\.com\/[^"'<>\s]+\.jpg/gi,
+                     /src="(https:\/\/[^"]*\.jpg)"/gi,
+                     /"url":"(https:\/\/[^"]*\.jpg)"/gi
+                 ];
+                 
+                 const extractedUrls = new Set();
+                 
+                 for (const pattern of imagePatterns) {
+                     let match;
+                     while ((match = pattern.exec(html)) !== null) {
+                         const url = match[1] || match[0];
+                         if (url && url.startsWith('http')) {
+                             extractedUrls.add(url);
                          }
                      }
-                     image_urls = [...new Set(image_urls)].slice(0, 12);
-                     console.log('✅ Extraídas', image_urls.length, 'imagens do ML');
                  }
+                 
+                 console.log('🔍 Encontradas', extractedUrls.size, 'URLs de imagem no HTML');
+                 
+                 // Valida as URLs
+                 for (const url of Array.from(extractedUrls).slice(0, 20)) {
+                     if (await validateImageUrl(url)) {
+                         image_urls.push(url);
+                         if (image_urls.length >= 12) break;
+                     }
+                 }
+                 
+                 console.log('✅ Validadas', image_urls.length, 'imagens do ML');
+                 
              } catch (err) {
                  console.log('⚠️ Erro ao extrair imagens:', err.message);
-                 if (firstResult.thumbnail) {
-                     image_urls = [firstResult.thumbnail];
-                 }
              }
          }
 
