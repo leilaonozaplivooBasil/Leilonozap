@@ -252,38 +252,39 @@ Deno.serve(async (req) => {
         }
 
         // ============================================
-        // MÉTODO 3: SerpAPI - Google Shopping com detalhes do produto
+        // MÉTODO 3: SerpAPI - Busca produto e extrai galeria completa
         // ============================================
         console.log('⚠️ APIs do ML bloqueadas, usando SerpAPI...');
         
         const SERPAPI_KEY = Deno.env.get("SERPAPI_KEY");
         if (SERPAPI_KEY && searchTerm) {
-            // Busca específica no Google Shopping para pegar o produto exato
-            const serpUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(searchTerm + ' site:mercadolivre.com.br')}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
-            console.log('🔍 Buscando produto específico no Google Shopping...');
+            // Busca específica no Google Shopping para encontrar o produto exato do ML
+            const serpUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(searchTerm)}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
+            console.log('🔍 Buscando produto no Google Shopping...');
             
             const serpResponse = await fetch(serpUrl);
             if (serpResponse.ok) {
                 const serpData = await serpResponse.json();
                 
                 if (serpData.shopping_results && serpData.shopping_results.length > 0) {
-                    // Procura o resultado do Mercado Livre
+                    // Procura o resultado do Mercado Livre especificamente
                     const mlResult = serpData.shopping_results.find(r => 
                         r.source && r.source.toLowerCase().includes('mercado')
                     );
                     
                     if (mlResult && mlResult.product_id) {
-                        // Busca detalhes do produto para pegar TODAS as imagens da galeria
+                        // Busca detalhes COMPLETOS do produto para pegar TODA a galeria
                         const detailUrl = `https://serpapi.com/search.json?engine=google_product&product_id=${mlResult.product_id}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
-                        console.log('🔍 Buscando galeria do produto:', mlResult.product_id);
+                        console.log('🔍 Buscando galeria completa do produto:', mlResult.product_id);
                         
                         const detailResponse = await fetch(detailUrl);
                         if (detailResponse.ok) {
                             const detailData = await detailResponse.json();
                             const images = [];
                             
-                            // Extrai imagens da galeria de mídia do produto
+                            // 1. Extrai TODAS as imagens da galeria de mídia
                             if (detailData.product_results?.media) {
+                                console.log('📦 Mídia encontrada:', detailData.product_results.media.length, 'itens');
                                 for (const media of detailData.product_results.media) {
                                     if (media.type === 'image' && media.link) {
                                         images.push(media.link);
@@ -291,16 +292,30 @@ Deno.serve(async (req) => {
                                 }
                             }
                             
-                            // Se não encontrou na galeria, pega a thumbnail principal
+                            // 2. Também pega imagens de variantes se existirem
+                            if (detailData.product_results?.images) {
+                                for (const img of detailData.product_results.images) {
+                                    if (typeof img === 'string') {
+                                        images.push(img);
+                                    } else if (img.link) {
+                                        images.push(img.link);
+                                    }
+                                }
+                            }
+                            
+                            // 3. Adiciona thumbnail principal se não tiver nenhuma
                             if (images.length === 0 && mlResult.thumbnail) {
                                 images.push(mlResult.thumbnail);
                             }
                             
-                            if (images.length > 0) {
-                                console.log('📸 Imagens da galeria do produto:', images.length);
+                            // Remove duplicatas mantendo ordem
+                            const uniqueImages = [...new Set(images)];
+                            
+                            if (uniqueImages.length > 0) {
+                                console.log('📸 Total de imagens da galeria:', uniqueImages.length);
                                 return Response.json({
                                     found: true,
-                                    images: [...new Set(images)],
+                                    images: uniqueImages,
                                     title: detailData.product_results?.title || mlResult.title || searchTerm,
                                     price: mlResult.extracted_price || null,
                                     description: detailData.product_results?.title || mlResult.title || searchTerm,
@@ -310,9 +325,9 @@ Deno.serve(async (req) => {
                         }
                     }
                     
-                    // Fallback: usa thumbnail do primeiro resultado ML
+                    // Fallback: usa apenas a thumbnail do resultado ML (1 imagem)
                     if (mlResult && mlResult.thumbnail) {
-                        console.log('📸 Usando thumbnail do resultado ML');
+                        console.log('📸 Usando apenas thumbnail do ML (galeria não disponível)');
                         return Response.json({
                             found: true,
                             images: [mlResult.thumbnail],
@@ -320,35 +335,6 @@ Deno.serve(async (req) => {
                             price: mlResult.extracted_price || null,
                             description: mlResult.title || searchTerm,
                             source: 'Mercado Livre'
-                        }, { status: 200 });
-                    }
-                }
-            }
-            
-            // Último fallback: Google Images limitado a 3 imagens
-            const googleImagesUrl = `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchTerm + ' mercado livre')}&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
-            console.log('🔍 Fallback: Google Images...');
-            
-            const imgResponse = await fetch(googleImagesUrl);
-            if (imgResponse.ok) {
-                const imgData = await imgResponse.json();
-                
-                if (imgData.images_results && imgData.images_results.length > 0) {
-                    // Limita a 3 imagens apenas
-                    const images = imgData.images_results
-                        .slice(0, 3)
-                        .map(img => img.original || img.thumbnail)
-                        .filter(url => url && url.startsWith('http'));
-                    
-                    if (images.length > 0) {
-                        console.log('📸 Imagens via Google Images:', images.length);
-                        return Response.json({
-                            found: true,
-                            images: [...new Set(images)],
-                            title: searchTerm || '',
-                            price: null,
-                            description: searchTerm || '',
-                            source: 'Google Images'
                         }, { status: 200 });
                     }
                 }
