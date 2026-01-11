@@ -209,53 +209,22 @@ Deno.serve(async (req) => {
          
          if (isMercadoLivre && sourceUrl) {
              try {
-                 console.log('📸 Extraindo imagens do anúncio ML via fetch...');
-                 
-                 // Tenta fazer fetch da página
-                 const pageResponse = await fetch(sourceUrl, {
-                     headers: {
-                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                     },
-                     signal: AbortSignal.timeout(10000)
+                 console.log('📸 Extraindo imagens via IA sem schema JSON...');
+                 const extractText = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                     prompt: `Acesse: ${sourceUrl}\n\nExtraía as 12 URLs diretas de imagens da galeria (padrão mlstatic.com ou similares). Formato: apenas as URLs, uma por linha. Sem explicações.`,
+                     add_context_from_internet: true
                  });
                  
-                 if (!pageResponse.ok) {
-                     throw new Error(`Erro ao acessar página: ${pageResponse.status}`);
-                 }
-                 
-                 const html = await pageResponse.text();
-                 
-                 // Extrai URLs de imagens usando regex (busca por padrões comuns do ML)
-                 const imagePatterns = [
-                     /https:\/\/[a-zA-Z0-9.-]+\.mlstatic\.com\/[^"'<>\s]+\.jpg/gi,
-                     /https:\/\/http2\.mlstatic\.com\/[^"'<>\s]+\.jpg/gi,
-                     /src="(https:\/\/[^"]*\.jpg)"/gi,
-                     /"url":"(https:\/\/[^"]*\.jpg)"/gi
-                 ];
-                 
-                 const extractedUrls = new Set();
-                 
-                 for (const pattern of imagePatterns) {
-                     let match;
-                     while ((match = pattern.exec(html)) !== null) {
-                         const url = match[1] || match[0];
-                         if (url && url.startsWith('http')) {
-                             extractedUrls.add(url);
+                 if (extractText) {
+                     const urls = extractText.split('\n').filter(u => u.trim().startsWith('http'));
+                     for (const url of urls) {
+                         if (await validateImageUrl(url.trim())) {
+                             image_urls.push(url.trim());
+                             if (image_urls.length >= 12) break;
                          }
                      }
                  }
-                 
-                 console.log('🔍 Encontradas', extractedUrls.size, 'URLs de imagem no HTML');
-                 
-                 // Valida as URLs
-                 for (const url of Array.from(extractedUrls).slice(0, 20)) {
-                     if (await validateImageUrl(url)) {
-                         image_urls.push(url);
-                         if (image_urls.length >= 12) break;
-                     }
-                 }
-                 
-                 console.log('✅ Validadas', image_urls.length, 'imagens do ML');
+                 console.log('✅ Extraídas', image_urls.length, 'imagens do ML');
                  
              } catch (err) {
                  console.log('⚠️ Erro ao extrair imagens:', err.message);
