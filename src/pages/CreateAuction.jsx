@@ -97,12 +97,14 @@ export default function CreateAuction() {
           throw new Error(response?.data?.error || 'Produto não encontrado');
         }
         
-        // Armazena dados para validação e mostra modal
+        // Armazena dados para validação e mostra modal com FONTE e LINK
         setValidationData({
           title: response.data.title || productName,
           description: response.data.description || "",
           image_urls: response.data.image_urls || [],
-          price: response.data.price
+          price: response.data.price,
+          source: response.data.source || 'Google Shopping',
+          sourceUrl: response.data.sourceUrl || null
         });
         setShowValidationModal(true);
         setManualStep(0); // Volta ao step inicial
