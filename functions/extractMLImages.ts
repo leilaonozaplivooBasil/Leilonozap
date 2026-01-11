@@ -112,33 +112,42 @@ Deno.serve(async (req) => {
         console.log('⚠️ API não retornou, tentando via IA...');
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse ${productUrl} e extraia as URLs das imagens da galeria do produto.
+            prompt: `Acesse esta URL do Mercado Livre e extraia os dados do produto:
+${productUrl}
 
-As URLs do Mercado Livre seguem este padrão exato:
-https://http2.mlstatic.com/D_NQ_NP_XXXXXX-MLAXXXXXXXXXX_MMYYYY-F.webp
+EXTRAIR:
+1. TÍTULO: Nome completo do produto
+2. PREÇO: Valor numérico em R$
+3. IMAGENS: URLs das fotos da galeria do produto
 
-Onde:
-- XXXXXX = código da imagem (6 dígitos)
-- MLAXXXXXXXXXX = ID do item (MLA/MLB/MLU + números)
-- MMYYYY = mês e ano
-- F = alta resolução (ou O para média)
+FORMATO DAS URLS DE IMAGEM DO ML:
+- Começam com: https://http2.mlstatic.com/D_NQ_NP_
+- Terminam com: -F.webp (alta resolução) ou -O.webp (média)
+- Contém códigos como MLB, MLA ou MLU
 
-Exemplos REAIS dessa página que você deve encontrar:
-- https://http2.mlstatic.com/D_NQ_NP_670475-MLA99453294496_112025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_829929-MLU76569640662_062024-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_842236-MLU76569640668_062024-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_982490-MLU76569640672_062024-F.webp
+ONDE ENCONTRAR AS IMAGENS:
+- Dentro de <figure> com class "ui-pdp-gallery__figure"
+- Atributo "data-zoom" das imagens (contém URL HD)
+- Atributo "src" das tags <img> principais
 
-Procure no atributo "data-zoom" das imagens da galeria ou no "src" das figuras.
-COPIE EXATAMENTE as URLs, não invente.`,
+⚠️ IMPORTANTE: 
+- Copie as URLs EXATAS que aparecem no HTML desta página específica
+- NÃO invente URLs - cada produto tem URLs únicas
+- Ignore thumbnails pequenas (terminam em -R.webp ou -I.webp)
+- Ignore vídeos`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string" },
-                    price: { type: "number" },
-                    image_urls: { type: "array", items: { type: "string" } }
-                }
+                    title: { type: "string", description: "Título do produto" },
+                    price: { type: "number", description: "Preço em R$" },
+                    image_urls: { 
+                        type: "array", 
+                        items: { type: "string" },
+                        description: "URLs das imagens HD do produto (terminando em -F.webp ou -O.webp)"
+                    }
+                },
+                required: ["title", "image_urls"]
             }
         });
 
