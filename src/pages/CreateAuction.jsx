@@ -390,18 +390,24 @@ export default function CreateAuction() {
           return;
         }
 
-        // ARMAZENA TUDO (preview + imagens completas)
-        setProductPreview({
-          title: data.title,
-          description: data.description,
-          price: data.price,
-          thumbnailUrl: data.thumbnailUrl,
-          imageCount: data.imageCount || 0,
-          allImages: data.imageUrls || [] // 🔥 Já tem todas as imagens
-        });
-        
-        setManualStep(10); // Mostra preview
-        toast.success("✅ Produto encontrado! Confirme para prosseguir.");
+        // ARMAZENA ANÚNCIOS ENCONTRADOS
+         if (data.ads && data.ads.length > 0) {
+           setAvailableAds(data.ads);
+           setManualStep(11); // Vai direto para seleção de anúncios
+           toast.success(`✅ ${data.ads.length} anúncios encontrados!`);
+         } else {
+           // Se não houver anúncios, mostra preview
+           setProductPreview({
+             title: data.title,
+             description: data.description,
+             price: data.price,
+             thumbnailUrl: data.thumbnailUrl,
+             imageCount: data.imageCount || 0,
+             allImages: data.imageUrls || []
+           });
+           setManualStep(10);
+           toast.success("✅ Produto encontrado! Confirme para prosseguir.");
+         }
       
     } catch (error) {
       console.error("❌ Erro:", error);
