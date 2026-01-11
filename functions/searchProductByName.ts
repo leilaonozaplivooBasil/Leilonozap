@@ -120,39 +120,27 @@ Deno.serve(async (req) => {
         // 🆕 MODO 1: LISTAR ANÚNCIOS (com imagem extraída)
          if (listAdsOnly === true) {
              console.log('📋 ========== MODO 1 ATIVADO ==========');
-             console.log('📋 Retornando lista de anúncios COM LINKS CORRETOS...');
+             console.log('📋 Retornando lista de ANÚNCIOS DO MERCADO LIVRE...');
              const ads = [];
-             const topResults = data.shopping_results.slice(0, 5); // Apenas 5 anúncios
+             const topResults = results.slice(0, 5); // Apenas 5 anúncios
 
              for (const result of topResults) {
                  if (!result.link) continue;
 
-                 // 🔍 Extrai link correto (pode ser redirect_link ou link)
-                 let resultUrl = result.redirect_link || result.link;
-                 let resultHost = '';
-                 try {
-                     const urlObj = new URL(resultUrl);
-                     resultHost = urlObj.hostname;
-                 } catch (e) {
-                     resultHost = 'unknown';
-                 }
-
-                 const isMercado = resultHost.includes('mercadolivre');
-                 const resultSource = isMercado ? 'Mercado Livre' : (result.source || 'Loja Online');
-
-                 let imageUrl = result.thumbnail || `https://www.google.com/s2/favicons?domain=${resultHost}&sz=128`;
+                 // Já é do Mercado Livre
+                 const resultUrl = result.link || '';
 
                  ads.push({
                      title: result.title || productTitle,
                      url: resultUrl,
-                     source: resultSource,
-                     price: result.extracted_price || result.price || 'Consulte',
+                     source: 'Mercado Livre',
+                     price: result.price || 'Consulte',
                      snippet: result.snippet || '',
-                     image: imageUrl,
+                     image: result.thumbnail || '',
                  });
              }
 
-             console.log('✅ Retornando', ads.length, 'anúncios para frontend');
+             console.log('✅ Retornando', ads.length, 'anúncios do Mercado Livre');
              return Response.json({
                  found: true,
                  title: productTitle,
