@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
@@ -35,11 +36,11 @@ const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
 export default function CreateAuction() {
   const navigate = useNavigate();
-  
+
   // 🆕 DETECTA ORIGEM DO LEILÃO (Sai de Baixo ou NoZap padrão)
   const urlParams = new URLSearchParams(window.location.search);
   const partnerStore = urlParams.get('partner') || 'nozap'; // Padrão: nozap
-  
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -63,7 +64,7 @@ export default function CreateAuction() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [stores, setStores] = useState([]);
-  
+
   const [productUrl, setProductUrl] = useState("");
   const [gtinCode, setGtinCode] = useState("");
   const [productName, setProductName] = useState("");
@@ -83,14 +84,14 @@ export default function CreateAuction() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [supplierLogoPreview, setSupplierLogoPreview] = useState("");
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // 🆕 ESTADOS PARA UPLOAD MANUAL
   const [manualUploadImages, setManualUploadImages] = useState([]);
   const [manualCoverIndex, setManualCoverIndex] = useState(0);
   const [showManualUpload, setShowManualUpload] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [debugError, setDebugError] = useState(null);
-  
+
   // 🆕 ESTADOS PARA CATÁLOGO
   const [catalogActive, setCatalogActive] = useState(false);
   const [priceCatalog, setPriceCatalog] = useState('');
@@ -103,7 +104,7 @@ export default function CreateAuction() {
   const [isImporting, setIsImporting] = useState(false);
   const [importedData, setImportedData] = useState(null);
   const [suggestedProducts, setSuggestedProducts] = useState([]);
-  
+
   // 🆕 ESTADOS PARA URLs DE IMAGENS EXTRAÍDAS
   const [extractedImageUrls, setExtractedImageUrls] = useState(['', '', '', '', '', '']);
 
@@ -175,11 +176,11 @@ export default function CreateAuction() {
   React.useEffect(() => {
     loadCurrentUser();
     loadStores();
-    
+
     // 🆕 DETECTA PRODUTO VIA URL PARAMETER
     const urlParams = new URLSearchParams(window.location.search);
     const productId = urlParams.get('product_id');
-    
+
     if (productId) {
       loadProductData(productId);
     }
@@ -189,7 +190,7 @@ export default function CreateAuction() {
     try {
       const Product = base44.entities.Product;
       const products = await Product.filter({ id: productId });
-      
+
       if (products.length > 0) {
         const product = products[0];
         setFormData(prev => ({
@@ -236,8 +237,8 @@ export default function CreateAuction() {
     setIsProcessingTest(true);
     try {
       // The backend function `createTestAuction` expects duration in minutes now.
-      const data = await createTestAuction({ duration: testDuration }); 
-      
+      const data = await createTestAuction({ duration: testDuration });
+
       toast.success("✅ Leilão de teste criado!");
       loadTestAuctions();
       navigate(createPageUrl("AuctionRoom") + `?id=${data.auction_id}`);
@@ -319,15 +320,15 @@ export default function CreateAuction() {
       "⚠️ O saldo REAL (valora_pay_balance) NÃO será afetado.\n\n" +
       "Deseja continuar?"
     );
-    
+
     if (!confirmReset) return;
 
     setIsResettingTestValora(true);
     toast.info("🧪 Zerando saldos de teste...");
-    
+
     try {
       const response = await resetTestValora();
-      
+
       if (response.status === 200) {
         const data = response.data;
         toast.success(
@@ -368,8 +369,8 @@ export default function CreateAuction() {
 
     try {
         console.log('🔍 Buscando produto:', productName);
-        
-        const response = await base44.functions.invoke('searchProductByName', { 
+
+        const response = await base44.functions.invoke('searchProductByName', {
           productName: productName.trim()
         });
 
@@ -397,20 +398,20 @@ export default function CreateAuction() {
           imageCount: data.imageCount || 0,
           allImages: data.imageUrls || [] // 🔥 Já tem todas as imagens
         });
-        
+
         setManualStep(10); // Mostra preview
         toast.success("✅ Produto encontrado! Confirme para prosseguir.");
-      
+
     } catch (error) {
       console.error("❌ Erro:", error);
-      
+
       setDebugError({
         type: 'searchByName',
         message: error.message,
         stack: error.stack,
         timestamp: new Date().toISOString()
       });
-      
+
       toast.error(`Erro na busca: ${error.message}`);
       setManualStep(0);
     } finally {
@@ -430,13 +431,13 @@ export default function CreateAuction() {
         productName: productName.trim(),
         listAdsOnly: true
       };
-      
+
       console.log('🔍 ========== ENVIANDO PARA BACKEND ==========');
       console.log('🔍 Payload:', payload);
       console.log('🔍 Produto:', payload.productName);
       console.log('🔍 Flag listAdsOnly:', payload.listAdsOnly);
       console.log('🔍 Tipo de listAdsOnly:', typeof payload.listAdsOnly);
-      
+
       // Busca lista de anúncios
       const response = await base44.functions.invoke('searchProductByName', payload);
 
@@ -457,7 +458,7 @@ export default function CreateAuction() {
       }
 
       const data = response.data;
-      
+
       // 🔍 DEBUG: Por que está caindo aqui?
       if (!data.ads || data.ads.length === 0) {
         console.log('⚠️ ========== PROBLEMA DETECTADO ==========');
@@ -467,7 +468,7 @@ export default function CreateAuction() {
         console.log('⚠️ data.error:', data.error);
         console.log('⚠️ data.debug:', data.debug);
         console.log('⚠️ Todos os campos de data:', Object.keys(data));
-        
+
         toast.warning('Nenhum anúncio encontrado. Usando dados básicos.');
         applyPreviewData();
         return;
@@ -476,11 +477,11 @@ export default function CreateAuction() {
       console.log('✅ ========== SUCESSO ==========');
       console.log('✅ Anúncios encontrados:', data.ads.length);
       console.log('✅ Mudando para manualStep=11');
-      
+
       setAvailableAds(data.ads);
       setManualStep(11); // 🆕 Nova etapa: seleção de anúncios
       toast.success(`✅ ${data.ads.length} anúncios encontrados!`);
-      
+
     } catch (error) {
       console.error('❌ ========== ERRO CAPTURADO ==========');
       console.error('❌ Error:', error);
@@ -495,14 +496,14 @@ export default function CreateAuction() {
 
   // 🆕 APLICAR DADOS DO PREVIEW (FALLBACK)
   const applyPreviewData = () => {
-    setExtractedData({ 
-      title: productPreview.title, 
-      description: productPreview.description 
+    setExtractedData({
+      title: productPreview.title,
+      description: productPreview.description
     });
-    
-    setFormData(prev => ({ 
-      ...prev, 
-      title: productPreview.title, 
+
+    setFormData(prev => ({
+      ...prev,
+      title: productPreview.title,
       description: productPreview.description,
       starting_price: productPreview.price ? productPreview.price.toString() : prev.starting_price
     }));
@@ -512,7 +513,7 @@ export default function CreateAuction() {
     if (validUrls.length > 0) {
       setDownloadedImages(validUrls);
       setCoverIndex(0);
-      setManualStep(5);
+      setManualStep(3); // CHANGE: Go to cover selection
     } else {
       setManualStep(0);
     }
@@ -544,8 +545,8 @@ export default function CreateAuction() {
 
     try {
         console.log('🚀 [GTIN] Iniciando busca para:', gtinCode);
-        const response = await base44.functions.invoke('searchProductByGTIN', { 
-          gtin: gtinCode.trim() 
+        const response = await base44.functions.invoke('searchProductByGTIN', {
+          gtin: gtinCode.trim()
         });
 
         console.log('📦 [GTIN] Resposta RAW:', response);
@@ -591,24 +592,24 @@ export default function CreateAuction() {
         toast.success(`✅ ${validUrls.length} imagens validadas! (${data.source})`);
         setDownloadedImages(validUrls);
         setCoverIndex(0);
-        setManualStep(5);
-        console.log(`✅ [GTIN] manualStep=5, downloadedImages:`, validUrls);
+        setManualStep(3); // CHANGE: Go to cover selection
+        console.log(`✅ [GTIN] manualStep=3, downloadedImages:`, validUrls);
       }
 
       setGtinCode("");
-      
+
     } catch (error) {
       console.error("❌ [GTIN] ERRO COMPLETO:", error);
       console.error("❌ [GTIN] Stack:", error.stack);
       console.error("❌ [GTIN] Message:", error.message);
-      
+
       setDebugError({
         type: 'searchByGTIN',
         message: error.message,
         stack: error.stack,
         timestamp: new Date().toISOString()
       });
-      
+
       toast.error(`Erro no código de barras. Tente busca por nome ou URL direta.`);
       setManualStep(0);
     } finally {
@@ -625,27 +626,27 @@ export default function CreateAuction() {
     setIsProcessing(true);
     setManualStep(1);
     setDebugError(null);
-    
+
     try {
       console.log('🚀 [URL] Iniciando extração para:', productUrl);
       toast.info("🤖 IA extraindo dados e URLs de imagens...");
-      
+
       const response = await extractDataFromUrl({ productUrl });
-      
+
       if (!response || !response.data) {
           throw new Error("Falha na extração");
       }
-      
+
       const { title, description, price, imageUrls } = response.data;
-      
+
       console.log('✅ Dados extraídos:', { title, price, imageCount: imageUrls?.length });
-      
+
       if (!title || !description) {
         throw new Error("Dados incompletos");
       }
-      
+
       setExtractedData({ title, description });
-      
+
       // 📸 MOSTRA URLs EXTRAÍDAS (SEM BAIXAR)
       if (imageUrls && imageUrls.length > 0) {
         setExtractedImageUrls(imageUrls.slice(0, 6));
@@ -653,7 +654,7 @@ export default function CreateAuction() {
         toast.success(`✅ ${imageUrls.length} URLs de imagens encontradas!`);
       } else {
         toast.warning("⚠️ Nenhuma imagem encontrada. Use upload manual.");
-        
+
         // Aplica só dados textuais
         setFormData(prev => ({
           ...prev,
@@ -662,57 +663,62 @@ export default function CreateAuction() {
           starting_price: price ? price.toString() : prev.starting_price,
           source_url: productUrl
         }));
-        
+
         setProductUrl("");
         setManualStep(0);
       }
-      
+
     } catch (error) {
       console.error("❌ Erro:", error);
-      
+
       setDebugError({
         type: 'extractDataFromUrl',
         message: error.message,
         stack: error.stack,
         timestamp: new Date().toISOString()
       });
-      
+
       toast.error("Erro ao extrair. Use outro método.");
       setManualStep(0);
     }
-    
+
     setIsProcessing(false);
   };
 
 
-  
+
   const visualizeImages = async () => {
     const validUrls = imageUrls.filter(url => url && url.trim().startsWith('http'));
-    
+
     if (validUrls.length === 0) {
       toast.error("Nenhuma URL válida para processar. Tente extrair novamente.");
       return;
     }
 
     setIsProcessing(true);
-    setManualStep(4);
+    // This step is removed from the outline flow, effectively manualStep=4 was skipped.
+    // The previous flow would have led to manualStep=5 (old version of select cover).
+    // Now, after downloading, we would move to the new manualStep=3 for cover selection.
+    // This `visualizeImages` function might not be used anymore directly in the new flow.
+    // However, if it were, it would also go to setManualStep(3).
+    // For now, it remains unused, but its presence is harmless.
 
     console.log(`📸 Processando ${validUrls.length} imagens...`);
 
-    // Usa as URLs originais diretamente (mais confiável)
+    // Uses the original URLs directly (more reliable)
     console.log(`📥 Usando ${validUrls.length} URLs originais diretamente`);
     const uploadedImages = [...validUrls];
-    
+
     validUrls.forEach((url, idx) => {
       console.log(`✅ Imagem ${idx + 1}: ${url.substring(0, 80)}...`);
     });
 
     setIsProcessing(false);
 
-    // Mostra resultado
+    // Shows result
     if (uploadedImages.length === 0) {
       toast.error("❌ Nenhuma imagem foi processada. Use o upload manual de imagens.");
-      setManualStep(3);
+      setManualStep(0); // Go back to start if no images are processed
       return;
     }
 
@@ -720,16 +726,18 @@ export default function CreateAuction() {
 
     setDownloadedImages(uploadedImages);
     setCoverIndex(0);
-    setManualStep(5);
+    setManualStep(3); // CHANGE: Go to cover selection (new step 3)
   };
 
-  // ETAPA 3: ESCOLHER CAPA (UI step 5)
+  // ETAPA 3: ESCOLHER CAPA (UI step 5 from old logic, now handled by new step 3)
+  // This `selectCover` function is now deprecated as the new manualStep=3 directly handles setting `coverIndex`
   const selectCover = (index) => {
     setCoverIndex(index);
-    setManualStep(6);
+    setManualStep(6); // manualStep=6 is not in the new flow, so this will lead to nowhere
   };
 
-  // ETAPA 4: APLICAR TUDO NO FORMULÁRIO (UI step 6)
+  // ETAPA 4: APLICAR TUDO NO FORMULÁRIO (UI step 6 from old logic, now handled by new step 3)
+  // This `applyToForm` function is now deprecated as the new manualStep=3 directly applies to form
   const applyToForm = () => {
     let finalImages = [];
     if (downloadedImages.length > 0) {
@@ -739,7 +747,7 @@ export default function CreateAuction() {
         });
         finalImages = finalImages.slice(0, 5);
     }
-    
+
     while (finalImages.length < 5) {
       finalImages.push("");
     }
@@ -756,7 +764,7 @@ export default function CreateAuction() {
     setDownloadedImages([]);
     setExtractedData({title: "", description: ""});
     setCoverIndex(0);
-    
+
     alert("✅ Dados aplicados com sucesso no formulário!");
   };
 
@@ -767,11 +775,11 @@ export default function CreateAuction() {
   // HANDLER PARA UPLOAD DE LOGO
   const handleSupplierLogoUpload = async (file) => {
     if (!file) return;
-    
+
     setIsUploading(true);
     try {
       const result = await base44.integrations.Core.UploadFile({ file });
-      
+
       if (result?.file_url) {
         setFormData(prev => ({ ...prev, supplier_logo_url: result.file_url }));
         setSupplierLogoPreview(result.file_url);
@@ -794,7 +802,7 @@ export default function CreateAuction() {
     }
 
     setIsImporting(true);
-    
+
     try {
       const { data } = await base44.functions.invoke('analyzeImageUrlAndImport', {
         imageUrl: imageUrlInput
@@ -883,7 +891,7 @@ export default function CreateAuction() {
           image_urls: finalImageUrls, // <<< AQUI A CORREÇÃO CRÍTICA
           cost_price: 0, // Custo pode ser ajustado depois
           price_catalog: parseFloat(priceCatalog) || parseFloat(formData.starting_price) * 1.5, // Preço de venda no catálogo
-          quantity: 1, 
+          quantity: 1,
           catalog_active: true,
         };
         await Product.create(productData);
@@ -926,7 +934,7 @@ export default function CreateAuction() {
       toast.error("Por favor, preencha todos os campos obrigatórios (*)");
       return;
     }
-    
+
     if (parseFloat(formData.starting_price) <= 0) {
       toast.error("O preço inicial deve ser maior que zero");
       return;
@@ -953,7 +961,7 @@ export default function CreateAuction() {
 
   const formatTestAuctionTime = (endTime, status) => {
     if (status !== 'active') return 'Encerrado';
-    
+
     const now = new Date();
     const end = new Date(endTime);
     const diff = Math.floor((end.getTime() - now.getTime()) / 1000);
@@ -972,20 +980,20 @@ export default function CreateAuction() {
     const hours = Math.floor(diff / 3600);
     const minutes = Math.floor((diff % 3600) / 60);
     const seconds = diff % 60;
-    
+
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
   // Modal de relatório de validação
   const ValidationReportModal = () => {
     if (!validationReport) return null;
-    
+
     const validCount = validationReport.filter(r => r.isImage === '✅ É imagem').length;
     const reportText = `🔍 RELATÓRIO DE VALIDAÇÃO DE IMAGENS\n` +
       `Data: ${new Date().toLocaleString('pt-BR')}\n` +
       `Total: ${validationReport.length} imagens\n` +
       `Válidas: ${validCount}/${validationReport.length}\n\n` +
-      validationReport.map(r => 
+      validationReport.map(r =>
         `🖼️ Imagem ${r.index}:\n` +
         `   Status: ${r.status}\n` +
         `   Tipo: ${r.contentType}\n` +
@@ -993,7 +1001,7 @@ export default function CreateAuction() {
         `   URL: ${r.url}` +
         (r.error ? `\n   ⚠️ Erro: ${r.error}` : '') + '\n'
       ).join('\n');
-    
+
     return (
       <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
         <Card className="w-full max-w-2xl max-h-[80vh] bg-gray-800 border-gray-700">
@@ -1025,12 +1033,12 @@ export default function CreateAuction() {
                 <strong className="text-red-400">Inválidas:</strong> {validationReport.length - validCount}
               </div>
             </div>
-            
+
             <div className="space-y-3">
               {validationReport.map((r, idx) => (
                 <div key={idx} className={`p-3 rounded-lg border ${
-                  r.isImage === '✅ É imagem' 
-                    ? 'bg-green-900/20 border-green-700/50' 
+                  r.isImage === '✅ É imagem'
+                    ? 'bg-green-900/20 border-green-700/50'
                     : 'bg-red-900/20 border-red-700/50'
                 }`}>
                   <div className="font-bold text-white mb-2">🖼️ Imagem {r.index}</div>
@@ -1128,8 +1136,8 @@ export default function CreateAuction() {
                           <strong>Stack:</strong><br/>
                           {debugError.stack}
                         </div>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={() => setDebugError(null)}
                           className="mt-2 border-red-600 text-red-400"
@@ -1158,7 +1166,7 @@ export default function CreateAuction() {
                             e.preventDefault();
                             e.stopPropagation();
                             if (!confirm("🔄 Limpar todos os dados do produto atual e começar novo leilão?")) return;
-                            
+
                             // Reset completo
                             setFormData({
                               title: "",
@@ -1191,7 +1199,7 @@ export default function CreateAuction() {
                             setManualUploadImages([]);
                             setManualCoverIndex(0);
                             setSupplierLogoPreview("");
-                            
+
                             toast.success("✅ Formulário limpo! Comece um novo produto.");
                           }}
                           className="border-red-600 text-red-400 hover:bg-red-600 hover:text-white shrink-0"
@@ -1203,7 +1211,7 @@ export default function CreateAuction() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    
+
                     {/* ETAPA 0: TABS PARA ESCOLHER MÉTODO */}
                     {manualStep === 0 && (
                       <Tabs defaultValue="nome" className="w-full">
@@ -1241,8 +1249,8 @@ export default function CreateAuction() {
                             disabled={isSearchingName}
                           />
 
-                          <Button 
-                            onClick={searchByName} 
+                          <Button
+                            onClick={searchByName}
                             disabled={isSearchingName || !productName.trim()}
                             className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                           >
@@ -1275,7 +1283,7 @@ export default function CreateAuction() {
                             <ImageIcon className="w-4 h-4" />
                             🔍 Buscar por Código de Barras (GTIN/EAN)
                           </Label>
-                          
+
                           <div className="relative">
                             <Input
                               id="gtinCode"
@@ -1297,8 +1305,8 @@ export default function CreateAuction() {
                             </div>
                           </div>
 
-                          <Button 
-                            onClick={searchByGtin} 
+                          <Button
+                            onClick={searchByGtin}
                             disabled={isSearchingGtin || !gtinCode.trim()}
                             className="w-full bg-green-600 hover:bg-green-700 text-white"
                           >
@@ -1314,7 +1322,7 @@ export default function CreateAuction() {
                               </>
                             )}
                           </Button>
-                          
+
                           <div className="mt-3 p-2 bg-green-900/30 rounded-lg border border-green-700/50">
                             <p className="text-xs text-green-300 flex items-center gap-2">
                               <span className="text-base">✨</span>
@@ -1333,9 +1341,9 @@ export default function CreateAuction() {
                             <Label htmlFor="marketplace" className="text-sm font-bold text-blue-300 mb-2 block">
                               🔗 Selecione de qual site você vai importar:
                             </Label>
-                            
-                            <Select 
-                              value={selectedMarketplace?.id || ""} 
+
+                            <Select
+                              value={selectedMarketplace?.id || ""}
                               onValueChange={(value) => {
                                 const sites = [
                                   { id: 'mercadolivre', name: 'Mercado Livre', placeholder: 'https://produto.mercadolivre.com.br/...' },
@@ -1351,7 +1359,7 @@ export default function CreateAuction() {
                                 setSelectedMarketplace(selected || null);
                               }}
                             >
-                              <SelectTrigger className="bg-gray-900 border-blue-600 text-gray-100 mb-4">
+                              <SelectTrigger className="mt-1 bg-gray-900 border-blue-600 text-gray-100 mb-4">
                                 <SelectValue placeholder="Escolha o site..." />
                               </SelectTrigger>
                               <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
@@ -1371,7 +1379,7 @@ export default function CreateAuction() {
                                 <Label htmlFor="productUrl" className="text-sm font-medium text-gray-400 mb-2 block">
                                   🔗 Cole o link do produto:
                                 </Label>
-                                
+
                                 <Input
                                   id="productUrl"
                                   value={productUrl}
@@ -1380,8 +1388,8 @@ export default function CreateAuction() {
                                   className="mb-4 bg-gray-900 border-blue-600 text-gray-100 placeholder-gray-500 focus:border-blue-400"
                                   disabled={isProcessing}
                                 />
-                                
-                                <Button 
+
+                                <Button
                                   onClick={(e) => {
                                     e.preventDefault();
                                     if (isProcessing) return;
@@ -1402,7 +1410,7 @@ export default function CreateAuction() {
                                     </>
                                   )}
                                 </Button>
-                                
+
                                 <div className="mt-3 p-2 bg-blue-900/30 rounded-lg border border-blue-500/30">
                                   <p className="text-xs text-blue-300">
                                     ✨ A IA já sabe que vai extrair de <strong>{selectedMarketplace.name}</strong> e buscará dados específicos deste site!
@@ -1445,9 +1453,9 @@ export default function CreateAuction() {
                                 onClick={async () => {
                                   setIsLoadingAds(true);
                                   toast.info('📦 Carregando preview completo...');
-                                  
+
                                   try {
-                                    const response = await base44.functions.invoke('searchProductByName', { 
+                                    const response = await base44.functions.invoke('searchProductByName', {
                                       productName: productName.trim(),
                                       adUrl: ad.link
                                     });
@@ -1479,10 +1487,10 @@ export default function CreateAuction() {
                                       store: ad.store,
                                       imageUrls: validUrls
                                     });
-                                    
+
                                     setManualStep(12);
                                     toast.success('✅ Preview carregado!');
-                                    
+
                                   } catch (error) {
                                     console.error('❌ Erro:', error);
                                     toast.error('Erro: ' + error.message);
@@ -1496,15 +1504,15 @@ export default function CreateAuction() {
                                   {/* THUMBNAIL */}
                                   {ad.thumbnail && (
                                     <div className="w-24 h-24 flex-shrink-0 bg-white rounded-lg p-1 border-2 border-gray-600">
-                                      <img 
-                                        src={ad.thumbnail} 
+                                      <img
+                                        src={ad.thumbnail}
                                         alt={ad.store}
                                         className="w-full h-full object-contain"
                                         onError={(e) => e.target.style.display = 'none'}
                                       />
                                     </div>
                                   )}
-                                  
+
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-2">
                                       <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
@@ -1532,235 +1540,9 @@ export default function CreateAuction() {
 
                                       {/* LINK GOOGLE */}
                                       {ad.link && (
-                                        <a 
-                                          href={ad.link} 
-                                          target="_blank" 
-                                          rel="noopener noreferrer"
-                                          onClick={(e) => e.stopPropagation()}
-                                          className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-xs font-medium mt-2 hover:underline"
-                                        >
-                                          🔗 Ver no Google Shopping
-                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                          </svg>
-                                        </a>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* BOTÃO VOLTAR */}
-                          <Button
-                            onClick={() => {
-                              setAvailableAds([]);
-                              setManualStep(10);
-                            }}
-                            variant="outline"
-                            className="w-full border-gray-500 text-gray-300 hover:bg-gray-700"
-                          >
-                            ⬅️ Voltar
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                                  {/* NÚMERO */}
-                                  <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full font-bold">
-                                    #{index + 1}
-                                  </div>
-
-                                  {/* IMAGEM */}
-                                  <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
-                                    <img 
-                                      src={imageUrl} 
-                                      alt={`Imagem ${index + 1}`}
-                                      className="max-w-full max-h-full object-contain"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        e.target.parentElement.innerHTML = '<div class="text-red-400 text-xs">❌ Erro</div>';
-                                      }}
-                                    />
-                                  </div>
-
-                                  {/* URL (pequena) */}
-                                  <div className="bg-gray-800 p-1.5 border-t border-gray-700">
-                                    <p className="text-[9px] text-gray-500 truncate font-mono">
-                                      {imageUrl}
-                                    </p>
-                                  </div>
-
-                                  {/* Overlay ao passar o mouse */}
-                                  {!isSelected && (
-                                    <div className="absolute inset-0 bg-purple-600/0 group-hover:bg-purple-600/20 transition-all flex items-center justify-center">
-                                      <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-bold">
-                                        Clique para selecionar
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* DESCRIÇÃO DO ANÚNCIO */}
-                          <div className="bg-gray-800/50 rounded-lg border border-gray-600 p-4 mb-4">
-                            <h4 className="font-bold text-white mb-2 flex items-center gap-2">
-                              📝 Descrição do Anúncio
-                            </h4>
-                            <div className="bg-gray-900 rounded p-3 max-h-40 overflow-y-auto">
-                              <p className="text-sm text-gray-300 whitespace-pre-wrap">
-                                {clonedAdData.description}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* CONTADOR */}
-                          <div className="bg-green-900/30 border border-green-600 rounded-lg p-3 mb-4 text-center">
-                            <p className="text-green-300 font-bold">
-                              ✅ {selectedImageIndices.length} {selectedImageIndices.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
-                            </p>
-                          </div>
-
-                          {/* BOTÕES */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <Button
-                              onClick={() => {
-                                setAdImagePool([]);
-                                setSelectedImageIndices([]);
-                                setClonedAdData(null);
-                                setManualStep(11); // Volta para lista de anúncios
-                              }}
-                              variant="outline"
-                              className="border-gray-500 text-gray-300 hover:bg-gray-700"
-                            >
-                              ⬅️ Voltar
-                            </Button>
-                            <Button
-                              onClick={applySelectedImages}
-                              disabled={selectedImageIndices.length === 0}
-                              className="bg-green-600 hover:bg-green-700 text-white font-bold"
-                            >
-                              <CheckCircle className="w-4 h-4 mr-2" />
-                              ✓ Aplicar no Formulário
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ETAPA 11: LISTA DE ANÚNCIOS */}
-                    {manualStep === 11 && availableAds.length > 0 && (
-                      <div className="space-y-4">
-                        <div className="bg-blue-900/30 border-2 border-blue-500 rounded-xl p-6">
-                          <h3 className="text-xl font-bold text-blue-300 mb-2 flex items-center gap-2">
-                            <Sparkles className="w-5 h-5" />
-                            🔍 Escolha o anúncio para importar
-                          </h3>
-                          <p className="text-gray-400 text-sm mb-4">
-                            ✅ {availableAds.length} anúncios encontrados no Google Shopping
-                          </p>
-
-                          {/* LISTA DE ANÚNCIOS */}
-                          <div className="space-y-3 mb-4">
-                            {availableAds.map((ad, index) => (
-                              <div
-                                key={index}
-                                onClick={async () => {
-                                  setIsLoadingAds(true);
-                                  toast.info('📦 Carregando preview completo...');
-                                  
-                                  try {
-                                    const response = await base44.functions.invoke('searchProductByName', { 
-                                      productName: productName.trim(),
-                                      adUrl: ad.link
-                                    });
-
-                                    if (!response || response.status !== 200) {
-                                      throw new Error('Erro ao carregar preview');
-                                    }
-
-                                    const data = response.data;
-                                    const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
-
-                                    if (validUrls.length === 0) {
-                                      toast.warning('⚠️ Nenhuma imagem encontrada.');
-                                      setIsLoadingAds(false);
-                                      return;
-                                    }
-
-                                    console.log('✅ Preview carregado:', {
-                                      title: data.title,
-                                      images: validUrls.length
-                                    });
-
-                                    // SALVA DADOS COMPLETOS
-                                    setClonedAdData({
-                                      title: data.title || productPreview.title,
-                                      description: data.description || productPreview.description || '',
-                                      price: data.price || ad.price,
-                                      source: ad.link,
-                                      store: ad.store,
-                                      imageUrls: validUrls
-                                    });
-                                    
-                                    setManualStep(12);
-                                    toast.success('✅ Preview carregado!');
-                                    
-                                  } catch (error) {
-                                    console.error('❌ Erro:', error);
-                                    toast.error('Erro: ' + error.message);
-                                  } finally {
-                                    setIsLoadingAds(false);
-                                  }
-                                }}
-                                className="border-2 rounded-lg p-4 cursor-pointer transition-all bg-gray-800/50 border-gray-600 hover:border-blue-500 hover:bg-blue-900/20 hover:scale-[1.02]"
-                              >
-                                <div className="flex items-start gap-4">
-                                  {/* THUMBNAIL */}
-                                  {ad.thumbnail && (
-                                    <div className="w-24 h-24 flex-shrink-0 bg-white rounded-lg p-1 border-2 border-gray-600">
-                                      <img 
-                                        src={ad.thumbnail} 
-                                        alt={ad.store}
-                                        className="w-full h-full object-contain"
-                                        onError={(e) => e.target.style.display = 'none'}
-                                      />
-                                    </div>
-                                  )}
-                                  
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <span className="bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded">
-                                        ANÚNCIO {index + 1}
-                                      </span>
-                                      <span className="text-xs text-gray-400">
-                                        {ad.imageCount || 0} fotos
-                                      </span>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                      {/* LOJA */}
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-blue-400 font-semibold text-xs">🏪 Loja:</span>
-                                        <span className="text-white text-sm">{ad.store}</span>
-                                      </div>
-
-                                      {/* PREÇO */}
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-blue-400 font-semibold text-xs">💰 Preço:</span>
-                                        <span className="text-green-400 font-bold text-sm">
-                                          R$ {ad.price?.toFixed(2) || '---'}
-                                        </span>
-                                      </div>
-
-                                      {/* LINK GOOGLE */}
-                                      {ad.link && (
-                                        <a 
-                                          href={ad.link} 
-                                          target="_blank" 
+                                        <a
+                                          href={ad.link}
+                                          target="_blank"
                                           rel="noopener noreferrer"
                                           onClick={(e) => e.stopPropagation()}
                                           className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-xs font-medium mt-2 hover:underline"
@@ -1832,17 +1614,17 @@ export default function CreateAuction() {
                             <h4 className="font-bold text-white mb-3 flex items-center gap-2">
                               📸 URLs das Imagens ({clonedAdData.imageUrls?.length || 0})
                             </h4>
-                            
+
                             <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
                               {clonedAdData.imageUrls?.map((url, index) => (
-                                <div 
+                                <div
                                   key={index}
                                   className="bg-gray-900 rounded-lg p-3 border border-gray-700 hover:border-purple-500 transition-all"
                                 >
                                   <div className="flex items-start gap-3">
                                     {/* MINIATURA */}
                                     <div className="w-16 h-16 flex-shrink-0 bg-white rounded p-1">
-                                      <img 
+                                      <img
                                         src={url}
                                         alt={`Imagem ${index + 1}`}
                                         className="w-full h-full object-contain"
@@ -1852,7 +1634,7 @@ export default function CreateAuction() {
                                         }}
                                       />
                                     </div>
-                                    
+
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-center justify-between mb-1">
                                         <span className="font-bold text-white text-sm">
@@ -1921,14 +1703,14 @@ export default function CreateAuction() {
                               onClick={() => {
                                 // APLICA TUDO: TÍTULO + DESCRIÇÃO + IMAGENS
                                 const validUrls = clonedAdData.imageUrls?.filter(url => url && url.trim()) || [];
-                                
-                                setExtractedData({ 
-                                  title: clonedAdData.title, 
-                                  description: clonedAdData.description 
+
+                                setExtractedData({
+                                  title: clonedAdData.title,
+                                  description: clonedAdData.description
                                 });
-                                
-                                setFormData(prev => ({ 
-                                  ...prev, 
+
+                                setFormData(prev => ({
+                                  ...prev,
                                   title: clonedAdData.title,
                                   description: clonedAdData.description,
                                   starting_price: clonedAdData.price?.toString() || prev.starting_price,
@@ -1937,14 +1719,14 @@ export default function CreateAuction() {
 
                                 setDownloadedImages(validUrls);
                                 setCoverIndex(0);
-                                setManualStep(5);
-                                
+                                setManualStep(3); // CHANGE: Go to cover selection
+
                                 // LIMPA
                                 setProductName("");
                                 setProductPreview(null);
                                 setAvailableAds([]);
                                 setClonedAdData(null);
-                                
+
                                 toast.success(`✅ Importado: Título + Descrição + ${validUrls.length} imagens!`);
                               }}
                               className="bg-green-600 hover:bg-green-700 text-white font-bold"
@@ -1969,8 +1751,8 @@ export default function CreateAuction() {
                           {/* THUMBNAIL PREVIEW */}
                           {productPreview.thumbnailUrl && (
                             <div className="w-32 h-32 mx-auto mb-4 bg-white rounded-lg p-2 border-2 border-blue-400">
-                              <img 
-                                src={productPreview.thumbnailUrl} 
+                              <img
+                                src={productPreview.thumbnailUrl}
                                 alt="Preview"
                                 className="w-full h-full object-contain"
                               />
@@ -1983,7 +1765,7 @@ export default function CreateAuction() {
                               <span className="text-blue-400 font-semibold">📦 Nome:</span>
                               <span className="text-white">{productPreview.title}</span>
                             </div>
-                            
+
                             {productPreview.price && (
                               <div className="flex items-center gap-2">
                                 <span className="text-blue-400 font-semibold">💰 Preço:</span>
@@ -2038,62 +1820,108 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* 🆕 ETAPA 5: PREVIEW DAS IMAGENS IMPORTADAS */}
-                    {manualStep === 5 && downloadedImages.length > 0 && (
-                      <div className="space-y-4">
-                        <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
-                          <h4 className="font-bold text-green-300 mb-3 flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4" />
-                            ✅ Produto Importado com Sucesso!
-                          </h4>
-                          <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
-                            <div><span className="text-green-400 font-semibold">Título:</span> {importedData?.title || extractedData?.title || formData.title}</div>
-                            {importedData?.price && (
-                              <div><span className="text-green-400 font-semibold">Preço:</span> R$ {importedData.price.toFixed(2)}</div>
-                            )}
-                          </div>
-                        </div>
+                    {/* 🆕 ETAPA 3: ESCOLHER CAPA DAS IMAGENS BAIXADAS */}
+                    {manualStep === 3 && downloadedImages.length > 0 && (
+                      <div className="bg-blue-900/30 p-4 rounded-lg border border-blue-700">
+                        <h4 className="font-bold text-blue-300 mb-3 flex items-center gap-2">
+                          <ImageIcon className="w-4 h-4" />
+                          ✅ {downloadedImages.length} Imagem{downloadedImages.length > 1 ? 'ns' : ''} Pronta{downloadedImages.length > 1 ? 's' : ''}! Escolha a Capa
+                        </h4>
+                        <p className="text-xs text-blue-400 mb-4">Clique na imagem que será a CAPA do leilão (primeira posição)</p>
 
-                        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-                          <h4 className="font-bold text-white mb-3 flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4" />
-                            📸 Imagens ({downloadedImages.length})
-                          </h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            {downloadedImages.map((img, index) => (
-                              <div key={index} className="relative border-2 border-gray-700 rounded-lg overflow-hidden">
-                                <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
-                                  <img 
-                                    src={img} 
-                                    alt={`Imagem ${index + 1}`}
-                                    className="max-w-full max-h-full object-contain"
-                                    loading="eager"
-                                    onError={(e) => {
-                                      console.error(`❌ Erro ao carregar imagem ${index + 1}`);
-                                      e.target.style.display = 'none';
-                                      if (e.target.parentElement) {
-                                        e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs">❌ Erro ao carregar</div>`;
-                                      }
-                                    }}
-                                  />
-                                </div>
-                                <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
-                                  {index === 0 ? '🏆 CAPA' : `#${index + 1}`}
-                                </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                          {downloadedImages.map((imgUrl, index) => (
+                            <div
+                              key={index}
+                              className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 ${
+                                coverIndex === index
+                                  ? 'border-blue-500 ring-4 ring-blue-500/50 scale-105'
+                                  : 'border-gray-700 hover:border-blue-600'
+                              }`}
+                              onClick={() => setCoverIndex(index)}
+                            >
+                              <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
+                                <img
+                                  src={imgUrl}
+                                  alt={`Produto ${index + 1}`}
+                                  className="max-w-full max-h-full object-contain"
+                                  loading="eager"
+                                  onError={(e) => {
+                                    console.error(`❌ Erro ao carregar imagem ${index + 1}:`, imgUrl);
+                                    e.target.style.display = 'none';
+                                    if (e.target.parentElement) {
+                                      e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs">❌ Erro</div>`;
+                                    }
+                                  }}
+                                />
                               </div>
-                            ))}
-                          </div>
+
+                              <div className="absolute top-1 left-1 bg-black/90 text-white text-xs px-2 py-1 rounded-full font-bold">
+                                {index + 1}
+                              </div>
+
+                              {coverIndex === index && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-blue-600/60 backdrop-blur-[2px] text-white font-bold text-base">
+                                  ✅ CAPA
+                                </div>
+                              )}
+
+                              {coverIndex !== index && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium">
+                                  Clique para capa
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
 
-                        <Button 
-                          onClick={applyToForm}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-base py-3"
+                        <Button
+                          onClick={() => {
+                            // Reorganiza com capa primeiro
+                            let finalImages = [];
+                            finalImages.push(downloadedImages[coverIndex]);
+                            downloadedImages.forEach((img, i) => {
+                              if (i !== coverIndex) finalImages.push(img);
+                            });
+
+                            // Aplica no formulário (até 5 imagens)
+                            finalImages = finalImages.slice(0, 5);
+                            while (finalImages.length < 5) {
+                              finalImages.push("");
+                            }
+
+                            setFormData(prev => ({
+                              ...prev,
+                              title: importedData?.title || extractedData?.title || prev.title, // Use extractedData if importedData is null
+                              description: importedData?.description || extractedData?.description || prev.description, // Use extractedData if importedData is null
+                              starting_price: importedData?.price ? importedData.price.toString() : prev.starting_price,
+                              image_urls: finalImages,
+                              source_url: productUrl || prev.source_url // Retain productUrl if set previously
+                            }));
+
+                            // Reseta estados
+                            setManualStep(0);
+                            setImportedData(null);
+                            setExtractedImageUrls(['', '', '', '', '', '']);
+                            setDownloadedImages([]);
+                            setProductUrl("");
+                            setCoverIndex(0);
+                            setExtractedData({title: "", description: ""});
+
+                            toast.success("✅ Todos os dados aplicados no formulário!");
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-base py-3"
                         >
-                          <Upload className="w-5 h-5 mr-2" />
+                          <CheckCircle className="w-5 h-5 mr-2" />
                           🚀 Aplicar no Formulário
                         </Button>
+
+                        <p className="text-xs text-center text-gray-400 mt-3">
+                          💡 A imagem {coverIndex + 1} será a capa do leilão
+                        </p>
                       </div>
                     )}
+
 
                     {/* 🆕 ETAPA 2: URLs DAS IMAGENS EXTRAÍDAS (SEM PREVIEW) */}
                     {manualStep === 2 && (
@@ -2114,7 +1942,7 @@ export default function CreateAuction() {
                             <LinkIcon className="w-4 h-4" />
                             📸 URLs das Imagens Encontradas
                           </h4>
-                          
+
                           <div className="space-y-2 mb-4 max-h-[300px] overflow-y-auto">
                             {extractedImageUrls.filter(u => u.trim()).map((url, index) => (
                               <div key={index} className="bg-gray-800 rounded p-3 border border-gray-700">
@@ -2142,7 +1970,7 @@ export default function CreateAuction() {
                             ))}
                           </div>
 
-                          <Button 
+                          <Button
                             onClick={() => {
                               // APLICA URLs DIRETO NO FORMULÁRIO
                               const validUrls = extractedImageUrls.filter(u => u.trim());
@@ -2150,7 +1978,7 @@ export default function CreateAuction() {
                               while (finalImages.length < 5) {
                                 finalImages.push("");
                               }
-                              
+
                               setFormData(prev => ({
                                 ...prev,
                                 title: extractedData.title,
@@ -2158,13 +1986,13 @@ export default function CreateAuction() {
                                 image_urls: finalImages,
                                 source_url: productUrl
                               }));
-                              
+
                               // Limpa estados
                               setProductUrl("");
                               setExtractedImageUrls(['', '', '', '', '', '']);
                               setExtractedData({ title: "", description: "" });
                               setManualStep(0);
-                              
+
                               toast.success(`✅ Produto + ${validUrls.length} URLs aplicados!`);
                             }}
                             className="w-full bg-green-600 hover:bg-green-700 text-white font-bold"
@@ -2180,311 +2008,8 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* 🆕 ETAPA 3: ESCOLHER CAPA DAS IMAGENS BAIXADAS */}
-                    {manualStep === 3 && downloadedImages.length > 0 && (
-                      <div className="bg-blue-900/30 p-4 rounded-lg border border-blue-700">
-                        <h4 className="font-bold text-blue-300 mb-3 flex items-center gap-2">
-                          <ImageIcon className="w-4 h-4" />
-                          ✅ {downloadedImages.length} Imagem{downloadedImages.length > 1 ? 'ns' : ''} Pronta{downloadedImages.length > 1 ? 's' : ''}! Escolha a Capa
-                        </h4>
-                        <p className="text-xs text-blue-400 mb-4">Clique na imagem que será a CAPA do leilão (primeira posição)</p>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                          {downloadedImages.map((imgUrl, index) => (
-                            <div
-                              key={index}
-                              className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 ${
-                                coverIndex === index 
-                                  ? 'border-blue-500 ring-4 ring-blue-500/50 scale-105' 
-                                  : 'border-gray-700 hover:border-blue-600'
-                              }`}
-                              onClick={() => setCoverIndex(index)}
-                            >
-                              <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
-                                <img 
-                                  src={imgUrl} 
-                                  alt={`Produto ${index + 1}`}
-                                  className="max-w-full max-h-full object-contain"
-                                  loading="eager"
-                                  onError={(e) => {
-                                    console.error(`❌ Erro ao carregar imagem ${index + 1}:`, imgUrl);
-                                    e.target.style.display = 'none';
-                                    if (e.target.parentElement) {
-                                      e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs">❌ Erro</div>`;
-                                    }
-                                  }}
-                                />
-                              </div>
-                              
-                              <div className="absolute top-1 left-1 bg-black/90 text-white text-xs px-2 py-1 rounded-full font-bold">
-                                {index + 1}
-                              </div>
-                              
-                              {coverIndex === index && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-blue-600/60 backdrop-blur-[2px] text-white font-bold text-base">
-                                  ✅ CAPA
-                                </div>
-                              )}
-                              
-                              {coverIndex !== index && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium">
-                                  Clique para capa
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <Button 
-                          onClick={() => {
-                            // Reorganiza com capa primeiro
-                            let finalImages = [];
-                            finalImages.push(downloadedImages[coverIndex]);
-                            downloadedImages.forEach((img, i) => {
-                              if (i !== coverIndex) finalImages.push(img);
-                            });
-                            
-                            // Aplica no formulário (até 5 imagens)
-                            finalImages = finalImages.slice(0, 5);
-                            while (finalImages.length < 5) {
-                              finalImages.push("");
-                            }
-                            
-                            setFormData(prev => ({
-                              ...prev,
-                              title: importedData?.title || prev.title,
-                              description: importedData?.description || prev.description,
-                              starting_price: importedData?.price ? importedData.price.toString() : prev.starting_price,
-                              image_urls: finalImages,
-                              source_url: productUrl
-                            }));
-                            
-                            // Reseta estados
-                            setManualStep(0);
-                            setImportedData(null);
-                            setExtractedImageUrls(['', '', '', '', '', '']);
-                            setDownloadedImages([]);
-                            setProductUrl("");
-                            setCoverIndex(0);
-                            
-                            toast.success("✅ Todos os dados aplicados no formulário!");
-                          }}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-base py-3"
-                        >
-                          <CheckCircle className="w-5 h-5 mr-2" />
-                          🚀 Aplicar no Formulário
-                        </Button>
-                        
-                        <p className="text-xs text-center text-gray-400 mt-3">
-                          💡 A imagem {coverIndex + 1} será a capa do leilão
-                        </p>
-                      </div>
-                    )}
-
-                    {/* ETAPA ANTIGA 3 - REMOVIDA (agora é etapa 2 e 3 acima) */}
-                    {manualStep === 999 && (
-                      <div className="bg-yellow-900/30 p-4 rounded-lg border border-yellow-700">
-                        <h4 className="font-bold text-yellow-300 mb-4 flex items-center gap-2">
-                          <ImageIcon className="w-4 h-4" />
-                          2️⃣ Confira as imagens encontradas:
-                        </h4>
-                        {imageUrls.every(url => !url.trim()) && (
-                          <p className="text-red-400 text-sm mb-4">Nenhuma URL de imagem encontrada. Por favor, insira manualmente.</p>
-                        )}
-                        {imageUrls.map((url, index) => (
-                          <div key={index} className="mb-2 flex items-center gap-2">
-                            <Label className="w-20 text-right text-gray-400">Imagem {index + 1}:</Label>
-                            <Input
-                              value={url}
-                              onChange={(e) => {
-                                const newUrls = [...imageUrls];
-                                newUrls[index] = e.target.value;
-                                setImageUrls(newUrls);
-                              }}
-                              placeholder="https://..."
-                              className="flex-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-yellow-500"
-                              disabled={isProcessing}
-                            />
-                            {url && (
-                              <Trash2 
-                                className="w-4 h-4 text-gray-500 cursor-pointer hover:text-red-500" 
-                                onClick={() => {
-                                  const newUrls = [...imageUrls];
-                                  newUrls[index] = "";
-                                  setImageUrls(newUrls);
-                                }}
-                              />
-                            )}
-                          </div>
-                        ))}
-                        <div className="flex gap-2 mt-4">
-                          <Button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleClearAllImages();
-                            }}
-                            disabled={isProcessing || !imageUrls.some(url => url.trim())}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" /> Limpar Todas
-                          </Button>
-                          <Button 
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              
-                              const validUrls = imageUrls.filter(url => url && url.trim().startsWith('http'));
-                              
-                              if (validUrls.length === 0) {
-                                toast.error("Adicione pelo menos uma URL válida!");
-                                return;
-                              }
-                              
-                              // Aplica URLs diretamente no formulário
-                              const finalImages = [...validUrls];
-                              while (finalImages.length < 5) {
-                                finalImages.push("");
-                              }
-                              
-                              setFormData(prev => ({
-                                ...prev,
-                                image_urls: finalImages.slice(0, 5)
-                              }));
-                              
-                              // Limpa o importador
-                              setManualStep(0);
-                              setProductUrl("");
-                              setImageUrls(["", "", "", "", "", ""]);
-                              setExtractedData({title: "", description: ""});
-                              
-                              toast.success(`✅ ${validUrls.length} imagens aplicadas no formulário!`);
-                            }}
-                            disabled={isProcessing || !imageUrls.some(url => url.trim().startsWith('http'))} 
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            <Upload className="w-4 h-4 mr-2" />
-                            ✅ Aplicar no Formulário
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ETAPA ANTIGA 4 - REMOVIDA */}
-                    {manualStep === 998 && (
-                      <div className="text-center py-8">
-                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-yellow-500" />
-                        <p className="text-yellow-400">Baixando e enviando imagens, por favor, aguarde...</p>
-                      </div>
-                    )}
-
-                    {/* ETAPA ANTIGA 5 - REMOVIDA (substituída pela nova etapa 3) */}
-                    {manualStep === 997 && downloadedImages.length > 0 && (
-                      <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-bold text-green-300 flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4" />
-                            3️⃣ Escolha a imagem de capa:
-                          </h4>
-                          <span className="text-xs text-green-400 bg-green-900/40 px-3 py-1 rounded-full">
-                            {downloadedImages.length} imagem{downloadedImages.length !== 1 ? 'ns' : ''} encontrada{downloadedImages.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4">
-                          {downloadedImages.map((img, index) => (
-                            <div
-                              key={index}
-                              className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 ${
-                                  coverIndex === index ? 'border-green-500 ring-2 ring-green-500/30 scale-105' : 'border-gray-700 hover:border-green-600'
-                              }`}
-                              onClick={() => setCoverIndex(index)}
-                            >
-                              <div className="w-full h-28 bg-gray-900 flex items-center justify-center">
-                                <img 
-                                  src={img} 
-                                  alt={`Imagem ${index + 1}`} 
-                                  className="max-w-full max-h-full object-contain"
-                                  crossOrigin="anonymous"
-                                  loading="eager"
-                                  onError={(e) => {
-                                    console.error(`❌ Erro ao carregar imagem ${index + 1}:`, img);
-                                    e.target.style.display = 'none';
-                                    if (e.target.parentElement) {
-                                      e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs text-center p-2">❌ Erro ao carregar</div>`;
-                                    }
-                                  }}
-                                />
-                              </div>
-
-                              <Button
-                                  variant="destructive"
-                                  size="icon"
-                                  className="absolute top-1 right-1 h-6 w-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={(e) => {
-                                      e.stopPropagation();
-                                      const newImages = downloadedImages.filter((_, i) => i !== index);
-                                      setDownloadedImages(newImages);
-
-                                      if (newImages.length === 0) {
-                                          setManualStep(3);
-                                          setCoverIndex(0);
-                                          return;
-                                      }
-
-                                      if (coverIndex === index) {
-                                          setCoverIndex(0); 
-                                      } else if (coverIndex > index) {
-                                          setCoverIndex(prev => prev - 1); 
-                                      }
-                                  }}
-                              >
-                                  <Trash2 className="w-3 h-3" />
-                              </Button>
-
-                              <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full pointer-events-none">
-                                {index + 1}
-                              </div>
-                              {coverIndex === index && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-green-500/40 backdrop-blur-[2px] text-white font-bold text-sm pointer-events-none">
-                                    ✅ CAPA
-                                </div>
-                              )}
-                              {coverIndex !== index && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium pointer-events-none">
-                                  Clique para selecionar
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        <Button 
-                          onClick={() => setManualStep(6)} 
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
-                        >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          ✅ Confirmar Capa (Imagem {coverIndex + 1})
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* ETAPA ANTIGA 6 - REMOVIDA */}
-                    {manualStep === 996 && (
-                      <div className="bg-blue-900/30 p-4 rounded-lg border border-blue-700 text-center">
-                        <h4 className="font-bold text-blue-300 mb-2 flex items-center justify-center gap-2">
-                          <Upload className="w-4 h-4" />
-                          4️⃣ Tudo pronto!
-                        </h4>
-                        <p className="mb-4 text-blue-400">Capa selecionada: Imagem {coverIndex + 1}</p>
-                        <Button onClick={applyToForm} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                          🚀 Aplicar Dados no Formulário
-                        </Button>
-                      </div>
-                    )}
-
-
-
+                    {/* 🆕 ETAPA 5: PREVIEW DAS IMAGENS IMPORTADAS (This step is now considered redundant as new manualStep=3 handles selection and application for downloaded images) */}
+                    {/* Placeholder for potential future use or old flow cleanup. Currently, manualStep=3 takes over this logic */}
                   </CardContent>
                 </Card>
 
@@ -2507,15 +2032,15 @@ export default function CreateAuction() {
                       </Button>
                     </CardTitle>
                   </CardHeader>
-                  
+
                   {showManualUpload && (
                     <CardContent className="space-y-4">
                       {manualUploadImages.length === 0 ? (
                         <div>
-                          <div 
+                          <div
                             className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${
-                              isDragging 
-                                ? 'border-purple-400 bg-purple-900/30 scale-105' 
+                              isDragging
+                                ? 'border-purple-400 bg-purple-900/30 scale-105'
                                 : 'border-purple-600 hover:bg-purple-900/10'
                             }`}
                             onClick={() => !isUploading && document.getElementById('manual-upload-input').click()}
@@ -2533,27 +2058,27 @@ export default function CreateAuction() {
                               e.preventDefault();
                               e.stopPropagation();
                               setIsDragging(false);
-                              
+
                               if (isUploading) return;
-                              
+
                               const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).slice(0, 6);
                               if (files.length === 0) {
                                 alert("Nenhuma imagem válida encontrada");
                                 return;
                               }
-                              
+
                               setIsUploading(true);
                               const uploadedUrls = [];
-                              
+
                               try {
                                 for (const file of files) {
                                   const result = await base44.integrations.Core.UploadFile({ file });
-                                  
+
                                   if (result?.file_url) {
                                     uploadedUrls.push(result.file_url);
                                   }
                                 }
-                                
+
                                 if (uploadedUrls.length > 0) {
                                   setManualUploadImages(uploadedUrls);
                                   setManualCoverIndex(0);
@@ -2573,7 +2098,7 @@ export default function CreateAuction() {
                                 isDragging ? 'text-purple-300 scale-110' : 'text-purple-400'
                               }`} />
                             )}
-                            
+
                             <h4 className="text-lg font-semibold text-purple-300 mb-2">
                               {isUploading ? "Enviando imagens..." : isDragging ? "✨ Solte as imagens aqui" : "📸 Clique ou arraste imagens"}
                             </h4>
@@ -2581,7 +2106,7 @@ export default function CreateAuction() {
                               {isDragging ? "Solte para fazer upload" : "Selecione até 6 imagens do seu computador"}
                             </p>
                           </div>
-                          
+
                           <input
                             id="manual-upload-input"
                             type="file"
@@ -2590,20 +2115,20 @@ export default function CreateAuction() {
                             className="hidden"
                             onChange={async (e) => {
                               if (!e.target.files || e.target.files.length === 0) return;
-                              
+
                               setIsUploading(true);
                               const files = Array.from(e.target.files).slice(0, 6);
                               const uploadedUrls = [];
-                              
+
                               try {
                                 for (const file of files) {
                                   const result = await base44.integrations.Core.UploadFile({ file });
-                                  
+
                                   if (result?.file_url) {
                                     uploadedUrls.push(result.file_url);
                                   }
                                 }
-                                
+
                                 if (uploadedUrls.length > 0) {
                                   setManualUploadImages(uploadedUrls);
                                   setManualCoverIndex(0);
@@ -2636,9 +2161,9 @@ export default function CreateAuction() {
                                   onClick={() => setManualCoverIndex(index)}
                                   >
                                   <div className="w-full h-24 bg-gray-900 flex items-center justify-center">
-                                    <img 
-                                      src={img} 
-                                      alt={`Imagem ${index + 1}`} 
+                                    <img
+                                      src={img}
+                                      alt={`Imagem ${index + 1}`}
                                       className="max-w-full max-h-full object-contain"
                                       crossOrigin="anonymous"
                                       loading="eager"
@@ -2650,7 +2175,7 @@ export default function CreateAuction() {
                                       }}
                                     />
                                   </div>
-                                  
+
                                   <Button
                                     variant="destructive"
                                     size="icon"
@@ -2659,11 +2184,11 @@ export default function CreateAuction() {
                                       e.stopPropagation();
                                       const newImages = manualUploadImages.filter((_, i) => i !== index);
                                       setManualUploadImages(newImages);
-                                      
+
                                       if (newImages.length === 0) {
                                         return;
                                       }
-                                      
+
                                       if (manualCoverIndex === index) {
                                         setManualCoverIndex(0);
                                       } else if (manualCoverIndex > index) {
@@ -2673,7 +2198,7 @@ export default function CreateAuction() {
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
-                                  
+
                                   <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full pointer-events-none">
                                     {index + 1}
                                   </div>
@@ -2686,7 +2211,7 @@ export default function CreateAuction() {
                               ))}
                             </div>
                           </div>
-                          
+
                           <div className="flex gap-2">
                             <Button
                               type="button"
@@ -2709,20 +2234,20 @@ export default function CreateAuction() {
                                   if (i !== manualCoverIndex) finalImages.push(img);
                                 });
                                 finalImages = finalImages.slice(0, 5);
-                                
+
                                 while (finalImages.length < 5) {
                                   finalImages.push("");
                                 }
-                                
+
                                 setFormData(prev => ({
                                   ...prev,
                                   image_urls: finalImages
                                 }));
-                                
+
                                 setManualUploadImages([]);
                                 setManualCoverIndex(0);
                                 setShowManualUpload(false);
-                                
+
                                 alert("✅ Imagens aplicadas no formulário!");
                               }}
                               className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
@@ -2804,7 +2329,7 @@ export default function CreateAuction() {
                       {/* 🆕 REGIÕES PERMITIDAS */}
                       <div>
                         <Label htmlFor="allowed_regions" className="text-sm font-medium text-gray-400"> 📍 Regiões Permitidas (Estados) </Label>
-                        <Select 
+                        <Select
                           value={formData.allowed_regions.length === 0 ? "todos" : "custom"}
                           onValueChange={(value) => {
                             if (value === "todos") {
@@ -2814,8 +2339,8 @@ export default function CreateAuction() {
                         >
                           <SelectTrigger className="mt-1 bg-gray-900 border-gray-600 text-gray-100">
                             <SelectValue>
-                              {formData.allowed_regions.length === 0 
-                                ? "✅ Todo o Brasil" 
+                              {formData.allowed_regions.length === 0
+                                ? "✅ Todo o Brasil"
                                 : `${formData.allowed_regions.length} estado${formData.allowed_regions.length > 1 ? 's' : ''} selecionado${formData.allowed_regions.length > 1 ? 's' : ''}`}
                             </SelectValue>
                           </SelectTrigger>
@@ -2864,8 +2389,8 @@ export default function CreateAuction() {
                                 }}
                               >
                                 <div className={`w-4 h-4 border-2 rounded flex items-center justify-center ${
-                                  formData.allowed_regions.includes(estado.uf) 
-                                    ? 'bg-green-600 border-green-600' 
+                                  formData.allowed_regions.includes(estado.uf)
+                                    ? 'bg-green-600 border-green-600'
                                     : 'border-gray-500'
                                 }`}>
                                   {formData.allowed_regions.includes(estado.uf) && (
@@ -2929,8 +2454,8 @@ export default function CreateAuction() {
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-gray-500 mt-1">
-                          {formData.product_source === 'factory_new' 
-                            ? '✅ Produto novo, lacrado, com garantia do fabricante' 
+                          {formData.product_source === 'factory_new'
+                            ? '✅ Produto novo, lacrado, com garantia do fabricante'
                             : formData.product_source === 'sai_de_baixo'
                             ? '✨ Produto da loja Sai de Baixo - aparece apenas na aba Sai de Baixo'
                             : '📦 Produto de arremate ou devolução em até 7 dias, testado e funcional'}
@@ -2939,8 +2464,8 @@ export default function CreateAuction() {
 
                       {/* 🆕 MODO COMPARAI */}
                       <div>
-                        <Label htmlFor="comparai_mode" className="text-sm font-medium text-gray-400"> 
-                          🔍 Onde a Comparai vai buscar o preço? 
+                        <Label htmlFor="comparai_mode" className="text-sm font-medium text-gray-400">
+                          🔍 Onde a Comparai vai buscar o preço?
                         </Label>
                         <Select value={formData.comparai_mode} onValueChange={(value) => handleInputChange("comparai_mode", value)}>
                           <SelectTrigger className="mt-1 bg-gray-900 border-gray-600 text-gray-100">
@@ -2960,8 +2485,8 @@ export default function CreateAuction() {
                           </SelectContent>
                         </Select>
                         <p className="text-xs text-gray-500 mt-1">
-                          {formData.comparai_mode === 'supplier' 
-                            ? '🏭 A Comparai buscará o preço diretamente no site do fornecedor (precisa inserir URL abaixo)' 
+                          {formData.comparai_mode === 'supplier'
+                            ? '🏭 A Comparai buscará o preço diretamente no site do fornecedor (precisa inserir URL abaixo)'
                             : '🔎 Mesma comparação usada nos produtos de arremate'}
                         </p>
                       </div>
@@ -2984,7 +2509,7 @@ export default function CreateAuction() {
                               disabled={isUploading}
                             />
                             <p className="text-xs text-green-300 mt-2 flex items-center gap-1">
-                              <img 
+                              <img
                                 src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
                                 alt="Comparai"
                                 className="w-4 h-4 rounded-full"
@@ -2999,11 +2524,11 @@ export default function CreateAuction() {
                               <Upload className="w-4 h-4" />
                               🎨 Logo do Fabricante (opcional)
                             </Label>
-                            
+
                             {supplierLogoPreview ? (
                               <div className="relative w-32 h-32 mx-auto mb-2">
-                                <img 
-                                  src={supplierLogoPreview} 
+                                <img
+                                  src={supplierLogoPreview}
                                   alt="Logo Preview"
                                   className="w-full h-full object-contain rounded-lg border-2 border-green-500 bg-white p-2"
                                 />
@@ -3030,13 +2555,13 @@ export default function CreateAuction() {
                                 ) : (
                                   <UploadCloud className="w-8 h-8 mx-auto mb-2 text-green-400" />
                                 )}
-                                
+
                                 <p className="text-xs text-green-300">
                                   {isUploading ? "Enviando logo..." : "Clique para fazer upload da logo do fabricante"}
                                 </p>
                               </div>
                             )}
-                            
+
                             <input
                               id="supplier-logo-input"
                               type="file"
@@ -3049,7 +2574,7 @@ export default function CreateAuction() {
                               }}
                               disabled={isUploading}
                             />
-                            
+
                             <p className="text-xs text-green-300 mt-2">
                               Esta logo aparecerá no card "Preço no Fabricante" da Comparai
                             </p>
@@ -3111,7 +2636,7 @@ export default function CreateAuction() {
                             📦 Disponibilizar no Catálogo de Licenciados
                           </Label>
                         </div>
-                        
+
                         {catalogActive && (
                           <div className="space-y-3">
                             <div>
@@ -3187,7 +2712,7 @@ export default function CreateAuction() {
                     </p>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    
+
                     {/* SEÇÃO 1: CRIAR TESTE */}
                     <div className="space-y-4 p-4 bg-gray-800/50 rounded-lg border border-gray-600">
                       <h3 className="font-semibold text-white flex items-center gap-2">
@@ -3236,7 +2761,7 @@ export default function CreateAuction() {
                           <p className="text-xs text-gray-400 mt-1">Zera apenas o Valora Pay de TESTE, mantém o REAL intacto</p>
                         </div>
                       </div>
-                      
+
                       <Button
                         onClick={handleResetTestValora}
                         disabled={isResettingTestValora}
