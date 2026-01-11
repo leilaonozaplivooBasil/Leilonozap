@@ -42,15 +42,16 @@ Deno.serve(async (req) => {
           payload: { productName }
         }).catch(() => {});
 
-        // Busca no Google Shopping via SerpAPI
+        // Busca no Mercado Livre via Google (mais direto)
         const serpApiKey = Deno.env.get('SERPAPI_KEY');
         if (!serpApiKey) {
             throw new Error('SERPAPI_KEY não configurada');
         }
 
-        const searchUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(productName)}&location=Brazil&hl=pt&gl=br&api_key=${serpApiKey}`;
+        // 🔍 BUSCA FORÇANDO MERCADO LIVRE
+        const searchUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(productName + ' site:mercadolivre.com.br')}&location=Brazil&hl=pt&gl=br&api_key=${serpApiKey}`;
         
-        console.log('🔍 Buscando no Google Shopping:', searchUrl);
+        console.log('🔍 Buscando no Mercado Livre via Google:', searchUrl);
         
         const response = await fetch(searchUrl);
         if (!response.ok) {
@@ -58,6 +59,14 @@ Deno.serve(async (req) => {
         }
 
         const data = await response.json();
+        
+        // Converte organic_results para formato compatível
+        let results = [];
+        if (data.organic_results && data.organic_results.length > 0) {
+            results = data.organic_results.filter(r => r.link && r.link.includes('mercadolivre'));
+        } else if (data.shopping_results) {
+            results = data.shopping_results;
+        }
         
         if (!data.shopping_results || data.shopping_results.length === 0) {
             await base44.asServiceRole.entities.SystemLog.create({
