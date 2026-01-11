@@ -110,37 +110,31 @@ Deno.serve(async (req) => {
 
         // Fallback: Usa IA para extrair direto da página
         console.log('⚠️ API não retornou, tentando via IA...');
+        console.log('🌐 URL sendo processada:', productUrl);
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta URL e extraia as informações do produto:
-${productUrl}
+            prompt: `Navegue até: ${productUrl}
 
-EXTRAIA:
-1. Título do produto (elemento h1)
-2. Preço em reais (número)
-3. URLs de imagem da galeria - procure por:
-   - Atributo "data-zoom" em tags <img> dentro de <figure>
-   - Ou atributo "src" com URLs contendo "mlstatic.com" e alta resolução
-   - URLs terminam em -F.webp ou -O.webp para alta resolução
+Extraia desta página do Mercado Livre:
 
-Retorne SOMENTE dados que você encontrar NESTA página específica.`,
+1. O título exato do produto (texto do h1)
+2. O preço atual em reais
+3. Todas as URLs de imagens de alta resolução da galeria do produto (atributo data-zoom ou src das imagens principais)
+
+IMPORTANTE: Extraia APENAS dados desta URL específica. Não use informações de outras páginas.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string", description: "Título do produto" },
-                    price: { type: "number", description: "Preço em R$" },
-                    image_urls: { 
-                        type: "array", 
-                        items: { type: "string" },
-                        description: "URLs das imagens encontradas"
-                    }
+                    title: { type: "string" },
+                    price: { type: "number" },
+                    image_urls: { type: "array", items: { type: "string" } }
                 },
                 required: ["title", "image_urls"]
             }
         });
 
-        console.log('🤖 IA retornou:', JSON.stringify(extractResponse));
+        console.log('🤖 IA retornou para', productUrl, ':', JSON.stringify(extractResponse));
 
         if (extractResponse?.image_urls?.length > 0) {
             // Remove duplicatas e filtra URLs válidas do ML
