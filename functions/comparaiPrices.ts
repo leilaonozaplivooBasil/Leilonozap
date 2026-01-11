@@ -312,7 +312,7 @@ Deno.serve(async (req) => {
 
         console.log('✅ Sucesso!');
 
-        // 🔟 RETORNA
+        // 🔟 RETORNA - USA PREÇO MÉDIO COMO REFERÊNCIA
         return Response.json({
             success: true,
             comparison: {
@@ -326,7 +326,8 @@ Deno.serve(async (req) => {
                 isFactoryDirect: false,
                 totalStoresAnalyzed: validResults.length,
                 searchAttempts: 1,
-                priceLabel: 'Menor Preço do Mercado'
+                priceLabel: 'Preço Médio do Mercado',
+                referencePrice: referencePrice // 🆕 Preço usado na comparação
             },
             cached: false
         });
