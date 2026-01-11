@@ -87,12 +87,79 @@ Deno.serve(async (req) => {
             }, { status: 404 });
         }
 
-        // Coleta imagens de múltiplos resultados
-        const imageUrls = [];
+        // 🔥 BUSCA IMAGENS DE ALTA QUALIDADE
+        console.log('📸 Iniciando busca de imagens HD...');
         
-        for (const result of data.shopping_results.slice(0, 8)) {
-            if (result.thumbnail) {
-                imageUrls.push(result.thumbnail);
+        const imageUrls = [];
+        const seenUrls = new Set(); // Evita duplicatas exatas
+        
+        // PRIORIDADE: Pega os 5 primeiros resultados do Google Shopping
+        const topResults = data.shopping_results.slice(0, 5);
+        
+        for (const result of topResults) {
+            // Pega link do produto
+            const productLink = result.link;
+            
+            if (!productLink) continue;
+            
+            try {
+                console.log(`🔗 Analisando: ${productLink.substring(0, 50)}...`);
+                
+                // Extrai imagens do produto usando InvokeLLM
+                const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                    prompt: `Analise esta página de produto e extraia APENAS as URLs de imagens do produto em ALTA RESOLUÇÃO.
+
+Requisitos:
+- Resolução MÍNIMA: 800x800px (ideal: 1200x1200px ou maior)
+- Buscar ÂNGULOS DIFERENTES: frente, verso, laterais, detalhes
+- IGNORAR: thumbnails, ícones, logos, banners, imagens pequenas
+- Retornar as 6 MELHORES imagens mais VARIADAS
+
+URL da página: ${productLink}`,
+                    add_context_from_internet: true,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            image_urls: {
+                                type: "array",
+                                items: { type: "string" },
+                                description: "URLs das imagens de alta resolução"
+                            }
+                        }
+                    }
+                });
+                
+                if (extractResponse?.image_urls && Array.isArray(extractResponse.image_urls)) {
+                    for (const url of extractResponse.image_urls) {
+                        if (url && !seenUrls.has(url) && imageUrls.length < 10) {
+                            // Valida se é imagem
+                            const isValid = await validateImageUrl(url);
+                            if (isValid) {
+                                imageUrls.push(url);
+                                seenUrls.add(url);
+                                console.log(`✅ Imagem HD #${imageUrls.length}: ${url.substring(0, 60)}...`);
+                            }
+                        }
+                    }
+                }
+                
+                // Se já temos 6+ imagens, para
+                if (imageUrls.length >= 6) break;
+                
+            } catch (extractError) {
+                console.log(`⚠️ Erro ao extrair de ${productLink.substring(0, 30)}: ${extractError.message}`);
+                continue;
+            }
+        }
+
+        // Se não conseguiu imagens HD, usa thumbnails como fallback
+        if (imageUrls.length === 0) {
+            console.log('⚠️ Nenhuma imagem HD encontrada, usando thumbnails...');
+            for (const result of topResults) {
+                if (result.thumbnail && !seenUrls.has(result.thumbnail)) {
+                    imageUrls.push(result.thumbnail);
+                    seenUrls.add(result.thumbnail);
+                }
             }
         }
 
@@ -105,7 +172,7 @@ Deno.serve(async (req) => {
             }, { status: 404 });
         }
 
-        console.log(`✅ ${productTitle}: ${imageUrls.length} imagens encontradas via SerpAPI`);
+        console.log(`✅ ${productTitle}: ${imageUrls.length} imagens HD coletadas`);
 
         // Log de sucesso
         await base44.asServiceRole.entities.SystemLog.create({
