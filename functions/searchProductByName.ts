@@ -158,65 +158,86 @@ Deno.serve(async (req) => {
             let extractedPrice = productPrice;
             
             try {
-                // 🆕 PROMPT COMPLETO - EXTRAI TUDO DO ANÚNCIO
+                // 🆕 PROMPT AGRESSIVO - FORÇA ÂNGULOS DIFERENTES
                 const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                    prompt: `Você é um clonador de anúncios de e-commerce.
+                    prompt: `Você é um clonador profissional de anúncios de e-commerce.
 
-TAREFA: Acesse esta página de produto e extraia TODOS OS DADOS para clonar o anúncio.
+🎯 TAREFA: Acesse e clone COMPLETAMENTE este anúncio:
+${adUrl}
 
-URL: ${adUrl}
+📋 EXTRAIR OBRIGATORIAMENTE:
 
-DADOS A EXTRAIR:
+1️⃣ TÍTULO COMPLETO:
+   - Marca + Modelo + Características (ex: "Notebook Gamer Acer Nitro V15 Intel Core i5...")
+   - Copie EXATAMENTE como está no anúncio
 
-1️⃣ TÍTULO:
-   - Título COMPLETO e ORIGINAL do produto
-   - Incluir marca, modelo, características principais
+2️⃣ DESCRIÇÃO COMPLETA:
+   - Todo o texto descritivo do anúncio
+   - Especificações técnicas detalhadas
+   - Ficha técnica completa
+   - Conteúdo da caixa/embalagem
+   - MÍNIMO 300 caracteres
 
-2️⃣ DESCRIÇÃO:
-   - Descrição COMPLETA do anúncio
-   - Incluir especificações técnicas
-   - Características do produto
-   - Conteúdo da embalagem
-   - NO MÍNIMO 200 caracteres
+3️⃣ PREÇO EXATO:
+   - Valor numérico em R$ (ex: 4299.90)
 
-3️⃣ PREÇO:
-   - Preço do produto em R$ (apenas número)
+4️⃣ GALERIA DE IMAGENS (CRÍTICO):
+   ⚠️ REGRA OBRIGATÓRIA: BUSCAR ÂNGULOS COMPLETAMENTE DIFERENTES!
+   
+   Procure na GALERIA DE IMAGENS do produto:
+   - ✅ Frente (visão frontal do produto)
+   - ✅ Traseira (parte de trás)
+   - ✅ Lateral direita
+   - ✅ Lateral esquerda
+   - ✅ Superior (vista de cima)
+   - ✅ Detalhes (zoom em partes específicas)
+   - ✅ Aberto/Fechado (se aplicável)
+   - ✅ Em uso (se houver)
+   
+   🚫 IGNORAR COMPLETAMENTE:
+   - Miniaturas/thumbnails pequenas (menos de 500px)
+   - Mesma foto em resoluções diferentes
+   - Ícones, logos, selos
+   - Produtos relacionados/sugeridos
+   - Banners promocionais
+   
+   📏 REQUISITOS:
+   - Resolução MÍNIMA: 800x800px
+   - IDEAL: 1200x1200px ou maior
+   - Formatos: JPG, PNG, WEBP
+   - OBRIGATÓRIO: 8 a 12 imagens de ÂNGULOS DIFERENTES
+   
+   🔍 Onde procurar:
+   - Tags com class/id contendo: "gallery", "zoom", "large", "fullsize", "product-image"
+   - Elementos <img> dentro de carrosséis/sliders
+   - Links de zoom/ampliação
 
-4️⃣ IMAGENS:
-   - URLs de imagens em ALTA RESOLUÇÃO (min 800x800px)
-   - ÂNGULOS DIFERENTES: frente, verso, laterais, detalhes
-   - Ignorar: thumbnails, logos, banners, produtos relacionados
-   - RETORNAR 6 a 12 imagens VARIADAS
+IMPORTANTE: Se o produto tem 10 fotos mas todas são do mesmo ângulo, retorne APENAS 1 e busque outros ângulos!
 
-FORMATO DE RESPOSTA (JSON):
-{
-  "title": "Título completo do produto",
-  "description": "Descrição detalhada com especificações técnicas...",
-  "price": 1234.56,
-  "image_urls": ["url1", "url2", ...]
-}`,
+RETORNE EM JSON:`,
                     add_context_from_internet: true,
                     response_json_schema: {
                         type: "object",
                         properties: {
                             title: { 
                                 type: "string",
-                                description: "Título completo e original do produto"
+                                description: "Título COMPLETO do anúncio original"
                             },
                             description: {
                                 type: "string",
-                                description: "Descrição detalhada com especificações"
+                                description: "Descrição COMPLETA com especificações técnicas (mín 300 chars)"
                             },
                             price: {
                                 type: "number",
-                                description: "Preço em reais"
+                                description: "Preço em R$ (número decimal)"
                             },
                             image_urls: { 
                                 type: "array", 
                                 items: { type: "string" },
-                                description: "URLs das imagens em alta resolução"
+                                description: "URLs de 8-12 imagens em ÂNGULOS DIFERENTES e alta resolução"
                             }
-                        }
+                        },
+                        required: ["title", "description", "price", "image_urls"]
                     }
                 });
                 
