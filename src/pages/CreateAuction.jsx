@@ -1550,12 +1550,57 @@ export default function CreateAuction() {
                             {availableAds.map((ad, index) => (
                               <div
                                 key={index}
-                                onClick={() => setSelectedAd(ad)}
-                                className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
-                                  selectedAd?.link === ad.link
-                                    ? 'bg-green-900/30 border-green-500 ring-2 ring-green-500/50'
-                                    : 'bg-gray-800/50 border-gray-600 hover:border-blue-500'
-                                }`}
+                                onClick={async () => {
+                                  // ✅ NÃO SELECIONA MAIS - VAI DIRETO CLONAR
+                                  setIsLoadingAds(true);
+                                  toast.info('🤖 Clonando anúncio completo...');
+                                  
+                                  try {
+                                    const response = await base44.functions.invoke('searchProductByName', { 
+                                      productName: productName.trim(),
+                                      adUrl: ad.link
+                                    });
+
+                                    if (!response || response.status !== 200) {
+                                      throw new Error(response?.data?.error || 'Erro ao clonar anúncio');
+                                    }
+
+                                    const data = response.data;
+                                    
+                                    const clonedTitle = data.title || productPreview.title;
+                                    const clonedDescription = data.description || productPreview.description;
+                                    const clonedPrice = data.price || ad.price;
+                                    
+                                    const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
+
+                                    if (validUrls.length === 0) {
+                                      toast.warning('⚠️ Nenhuma imagem encontrada. Tente outro anúncio.');
+                                      return;
+                                    }
+
+                                    // SALVA DADOS COMPLETOS E VAI PARA ETAPA DE SELEÇÃO
+                                    setClonedAdData({
+                                      title: clonedTitle,
+                                      description: clonedDescription,
+                                      price: clonedPrice,
+                                      source: ad.link,
+                                      store: ad.store
+                                    });
+                                    
+                                    setAdImagePool(validUrls);
+                                    setSelectedImageIndices(validUrls.slice(0, 5).map((_, i) => i));
+                                    setManualStep(12);
+                                    
+                                    toast.success(`✅ ${validUrls.length} imagens encontradas! Escolha quais usar.`);
+                                    
+                                  } catch (error) {
+                                    console.error('❌ Erro:', error);
+                                    toast.error('Erro ao clonar: ' + error.message);
+                                  } finally {
+                                    setIsLoadingAds(false);
+                                  }
+                                }}
+                                className="border-2 rounded-lg p-4 cursor-pointer transition-all bg-gray-800/50 border-gray-600 hover:border-blue-500 hover:bg-blue-900/20"
                               >
                                 <div className="flex items-start gap-4">
                                   {/* 🆕 THUMBNAIL */}
@@ -1634,32 +1679,18 @@ export default function CreateAuction() {
                             </p>
                           </div>
 
-                          {/* BOTÕES */}
-                          <div className="grid grid-cols-2 gap-3 mt-4">
+                          {/* BOTÃO VOLTAR */}
+                          <div className="mt-4">
                             <Button
                               onClick={() => {
                                 setAvailableAds([]);
                                 setSelectedAd(null);
-                                setManualStep(10); // Volta para confirmação
+                                setManualStep(10);
                               }}
                               variant="outline"
-                              className="border-gray-500 text-gray-300 hover:bg-gray-700"
+                              className="w-full border-gray-500 text-gray-300 hover:bg-gray-700"
                             >
-                              ⬅️ Voltar
-                            </Button>
-                            <Button
-                              onClick={downloadImagesFromAd}
-                              disabled={!selectedAd || isLoadingAds}
-                              className="bg-green-600 hover:bg-green-700 text-white font-bold"
-                            >
-                              {isLoadingAds ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Baixando...
-                                </>
-                              ) : (
-                                <>📥 Baixar Fotos do Selecionado</>
-                              )}
+                              ⬅️ Voltar para Preview
                             </Button>
                           </div>
                         </div>
