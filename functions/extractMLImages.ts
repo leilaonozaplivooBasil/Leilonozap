@@ -29,20 +29,32 @@ Deno.serve(async (req) => {
     try {
         // Usa IA para extrair as imagens WebP do ML
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta URL do Mercado Livre e extraia TODAS as URLs das imagens do produto:
+            prompt: `Acesse esta página do Mercado Livre e extraia as URLs REAIS das imagens do produto:
 ${productUrl}
 
-INSTRUÇÕES CRÍTICAS:
-1. Procure na galeria de imagens do produto (class="ui-pdp-gallery")
-2. Extraia APENAS URLs de imagens WebP do domínio http2.mlstatic.com
-3. Priorize imagens com sufixo -F.webp (alta resolução) ou -O.webp (média resolução)
-4. IGNORE: thumbnails pequenas (-R.webp), vídeos, banners, logos
-5. O padrão é: https://http2.mlstatic.com/D_NQ_NP_XXXXXX-MLAXXXXXXXXXX_XXXXXX-F.webp
+TAREFA: Copie as URLs EXATAS das imagens de alta resolução da galeria do produto.
 
-Também extraia:
-- Título completo do produto
-- Preço (número decimal)
-- Descrição`,
+ONDE PROCURAR:
+- Dentro de <figure class="ui-pdp-gallery__figure">
+- Atributo "src" das tags <img> com class="ui-pdp-image ui-pdp-gallery__figure__image"
+- OU atributo "data-zoom" (contém URL de alta resolução)
+
+FORMATO DAS URLs REAIS DO ML:
+https://http2.mlstatic.com/D_NQ_NP_XXXXXX-MLAXXXXXXXXXX_XXXXXX-F.webp
+https://http2.mlstatic.com/D_NQ_NP_XXXXXX-MLUXXXXXXXXXX_XXXXXX-F.webp
+https://http2.mlstatic.com/D_NQ_NP_XXXXXX-MLBXXXXXXXXXX_XXXXXX-O.webp
+
+EXEMPLOS DE URLs REAIS (NÃO INVENTAR):
+- https://http2.mlstatic.com/D_NQ_NP_670475-MLA99453294496_112025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_829929-MLU76569640662_062024-F.webp
+
+⚠️ CRÍTICO: 
+- Copie as URLs EXATAMENTE como aparecem no HTML
+- NÃO invente URLs genéricas
+- IGNORE thumbnails pequenas (sufixo -R.webp)
+- IGNORE vídeos
+
+Também extraia título, preço e descrição.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -53,7 +65,7 @@ Também extraia:
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        description: "URLs das imagens WebP de alta resolução (-F.webp ou -O.webp)"
+                        description: "URLs EXATAS das imagens WebP copiadas do HTML"
                     }
                 },
                 required: ["title", "image_urls"]
