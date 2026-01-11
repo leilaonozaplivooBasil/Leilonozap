@@ -114,68 +114,19 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback 2: Busca por nome na API de search (sempre funciona sem auth)
-        if (searchTerm) {
-            console.log('🔎 Tentando API de busca com:', searchTerm);
-            const searchUrl = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerm)}&limit=5`;
-            const searchResponse = await fetch(searchUrl);
-            
-            if (searchResponse.ok) {
-                const searchData = await searchResponse.json();
-                if (searchData.results && searchData.results.length > 0) {
-                    // Pega o primeiro resultado
-                    const firstResult = searchData.results[0];
-                    console.log('✅ Busca encontrou:', firstResult.title);
-                    
-                    // Busca detalhes do item encontrado
-                    const itemUrl = `https://api.mercadolibre.com/items/${firstResult.id}`;
-                    const itemResponse = await fetch(itemUrl);
-                    
-                    if (itemResponse.ok) {
-                        const itemData = await itemResponse.json();
-                        const images = [];
-                        
-                        if (itemData.pictures && itemData.pictures.length > 0) {
-                            for (const pic of itemData.pictures) {
-                                const imageUrl = pic.secure_url || pic.url;
-                                if (imageUrl) {
-                                    const hdUrl = imageUrl.replace(/-[A-Z]\./, '-F.');
-                                    images.push(hdUrl);
-                                }
-                            }
-                        }
-                        
-                        if (images.length > 0) {
-                            console.log('📸 Imagens via busca:', images.length);
-                            return Response.json({
-                                found: true,
-                                images: [...new Set(images)],
-                                title: itemData.title || firstResult.title || '',
-                                price: itemData.price || firstResult.price || null,
-                                description: itemData.title || '',
-                                source: 'Mercado Livre'
-                            }, { status: 200 });
-                        }
-                    }
-                }
-            }
-        }
-
-        // Fallback 3: Usa IA para extrair
+        // Fallback 2: Usa IA para extrair buscando pelo nome do produto
         console.log('⚠️ APIs não retornaram, tentando via IA...');
+        console.log('📝 Buscando por:', searchTerm);
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Busque informações sobre este produto do Mercado Livre:
+            prompt: `Busque no Mercado Livre Brasil o produto: "${searchTerm}"
 
-URL: ${productUrl}
-Produto: ${searchTerm}
+Encontre um anúncio deste produto e extraia:
+1. TÍTULO: nome completo do produto
+2. PREÇO: valor em reais  
+3. IMAGENS: URLs das fotos do produto (domínio mlstatic.com, formato https://http2.mlstatic.com/...)
 
-Extraia:
-1. TÍTULO completo do produto
-2. PREÇO em reais
-3. URLs de IMAGENS do produto (formato mlstatic.com)
-
-Retorne dados deste produto específico.`,
+IMPORTANTE: Busque ESTE produto específico: ${searchTerm}`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
