@@ -77,7 +77,9 @@ Deno.serve(async (req) => {
                     found: true,
                     title: extractResponse.title || 'Produto',
                     description: extractResponse.description || '',
-                    imageUrls: imageUrls
+                    imageUrls: imageUrls,
+                    price: extractResponse.price || null,
+                    source: adUrl
                 }, { status: 200 });
 
             } catch (llmError) {
@@ -252,7 +254,11 @@ Deno.serve(async (req) => {
              found: true,
              title: productTitle,
              description: `${productTitle} - Preço de referência: R$ ${productPrice?.toFixed(2) || 'Consulte'}`,
-             imageUrls: image_urls
+             price: productPrice,
+             image_urls: image_urls,
+             source: source,
+             sourceUrl: sourceUrl,
+             isMercadoLivre: isMercadoLivre
          }, { status: 200 });
 
     } catch (error) {
