@@ -397,7 +397,6 @@ export default function Layout({ children, currentPageName }) {
       title: "Leilões", 
       isCategory: true,
       items: [
-        { title: "📥 Importar do Mercado Livre", pageName: "ImportMercadoLivre" },
         { title: "Criar Leilão", pageName: "CreateAuction" },
         { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
         { title: "🔴 Live Shop Sai de Baixo", pageName: "LiveShopControl" },
