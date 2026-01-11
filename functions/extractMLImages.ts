@@ -31,6 +31,12 @@ Deno.serve(async (req) => {
         // Padrões: /p/MLB12345678 ou MLB-12345678 ou MLA/MLU
         const mlMatch = productUrl.match(/(MLB|MLA|MLU)[- ]?(\d+)/i);
         
+        // Extrai nome do produto da URL para busca
+        const urlParts = productUrl.split('/');
+        const productSlug = urlParts.find(p => p.includes('-') && !p.includes('MLB') && !p.includes('MLA') && !p.includes('?') && p.length > 10) || '';
+        const searchTerm = productSlug.replace(/-/g, ' ').substring(0, 50);
+        console.log('📝 Termo de busca:', searchTerm);
+        
         if (mlMatch) {
             const productId = mlMatch[1].toUpperCase() + mlMatch[2];
             console.log('📦 Product ID encontrado:', productId);
@@ -108,28 +114,68 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback: Usa IA para extrair direto da página
-        console.log('⚠️ API não retornou, tentando via IA...');
-        console.log('🌐 URL sendo processada:', productUrl);
-        
-        // Extrai nome do produto da URL para validação
-        const urlParts = productUrl.split('/');
-        const productSlug = urlParts.find(p => p.includes('-') && !p.includes('MLB') && !p.includes('?')) || '';
-        console.log('📝 Slug do produto:', productSlug);
+        // Fallback 2: Busca por nome na API de search (sempre funciona sem auth)
+        if (searchTerm) {
+            console.log('🔎 Tentando API de busca com:', searchTerm);
+            const searchUrl = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerm)}&limit=5`;
+            const searchResponse = await fetch(searchUrl);
+            
+            if (searchResponse.ok) {
+                const searchData = await searchResponse.json();
+                if (searchData.results && searchData.results.length > 0) {
+                    // Pega o primeiro resultado
+                    const firstResult = searchData.results[0];
+                    console.log('✅ Busca encontrou:', firstResult.title);
+                    
+                    // Busca detalhes do item encontrado
+                    const itemUrl = `https://api.mercadolibre.com/items/${firstResult.id}`;
+                    const itemResponse = await fetch(itemUrl);
+                    
+                    if (itemResponse.ok) {
+                        const itemData = await itemResponse.json();
+                        const images = [];
+                        
+                        if (itemData.pictures && itemData.pictures.length > 0) {
+                            for (const pic of itemData.pictures) {
+                                const imageUrl = pic.secure_url || pic.url;
+                                if (imageUrl) {
+                                    const hdUrl = imageUrl.replace(/-[A-Z]\./, '-F.');
+                                    images.push(hdUrl);
+                                }
+                            }
+                        }
+                        
+                        if (images.length > 0) {
+                            console.log('📸 Imagens via busca:', images.length);
+                            return Response.json({
+                                found: true,
+                                images: [...new Set(images)],
+                                title: itemData.title || firstResult.title || '',
+                                price: itemData.price || firstResult.price || null,
+                                description: itemData.title || '',
+                                source: 'Mercado Livre'
+                            }, { status: 200 });
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fallback 3: Usa IA para extrair
+        console.log('⚠️ APIs não retornaram, tentando via IA...');
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Faça uma busca na web por esta URL exata e extraia os dados do produto:
+            prompt: `Busque informações sobre este produto do Mercado Livre:
 
-${productUrl}
-
-O produto deve ser relacionado a: "${productSlug.replace(/-/g, ' ')}"
+URL: ${productUrl}
+Produto: ${searchTerm}
 
 Extraia:
-1. TÍTULO: texto do h1 da página
-2. PREÇO: valor numérico em reais  
-3. IMAGENS: URLs contendo "mlstatic.com" encontradas na galeria
+1. TÍTULO completo do produto
+2. PREÇO em reais
+3. URLs de IMAGENS do produto (formato mlstatic.com)
 
-Retorne SOMENTE dados desta página específica.`,
+Retorne dados deste produto específico.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
