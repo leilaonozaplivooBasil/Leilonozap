@@ -7,7 +7,6 @@ const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 import { extractDataFromUrl } from "@/functions/extractDataFromUrl";
 import { importFromUrl } from "@/functions/importFromUrl";
-import { searchHDProductImages } from "@/functions/searchHDProductImages";
 import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -70,8 +69,7 @@ export default function CreateAuction() {
   const [productName, setProductName] = useState("");
   const [isSearchingGtin, setIsSearchingGtin] = useState(false);
   const [isSearchingName, setIsSearchingName] = useState(false);
-  const [productPreview, setProductPreview] = useState(null); // 🆕 Prévia do produto
-  const [imageDetails, setImageDetails] = useState([]); // 🆕 Detalhes das imagens (fonte, resolução, ângulo)
+  const [productPreview, setProductPreview] = useState(null); // 🆕 Prévia do produto (com imagens já carregadas)
   const [selectedMarketplace, setSelectedMarketplace] = useState(null);
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
@@ -347,7 +345,7 @@ export default function CreateAuction() {
     }));
   };
 
-  // 🔥 BUSCA HD COMPLETA
+  // 🆕 BUSCA COM PRÉVIA (UMA ÚNICA CHAMADA À API)
   const searchByName = async () => {
     if (!productName || productName.trim().length < 3) {
       toast.error("Digite pelo menos 3 caracteres do nome do produto");
@@ -365,55 +363,45 @@ export default function CreateAuction() {
     setDebugError(null);
 
     try {
-        console.log('🔍 [HD] Buscando imagens de alta qualidade:', productName);
-        toast.info("🤖 IA buscando imagens HD de múltiplas fontes...");
+        console.log('🔍 Buscando produto:', productName);
         
-        const response = await searchHDProductImages({ 
+        const response = await base44.functions.invoke('searchProductByName', { 
           productName: productName.trim()
         });
 
-        console.log('📦 [HD] Resposta:', response);
+        console.log('📦 Resposta completa:', response);
 
-        if (!response || !response.data) {
-          throw new Error('Erro na busca de imagens HD');
+        if (!response || response.status !== 200) {
+          throw new Error(response?.data?.error || 'Erro na busca');
         }
 
         const data = response.data;
 
         if (!data?.found) {
-          toast.error(`Produto não encontrado`);
+          toast.error(`Produto não encontrado. Tente com nome mais completo`);
           setManualStep(0);
           setIsSearchingName(false);
           return;
         }
 
-        // ARMAZENA PREVIEW + DETALHES
+        // ARMAZENA TUDO (preview + imagens completas)
         setProductPreview({
           title: data.title,
           description: data.description,
           price: data.price,
           thumbnailUrl: data.thumbnailUrl,
           imageCount: data.imageCount || 0,
-          allImages: data.imageUrls || [],
-          qualityScore: data.quality_score || 0
+          allImages: data.imageUrls || [] // 🔥 Já tem todas as imagens
         });
-
-        // Armazena detalhes das imagens (fonte, resolução, ângulo)
-        setImageDetails(data.imageDetails || []);
         
         setManualStep(10); // Mostra preview
-        
-        if (data.warning) {
-          toast.warning(data.warning);
-        } else {
-          toast.success(`✅ ${data.imageCount} imagens HD encontradas!`);
-        }
+        toast.success("✅ Produto encontrado! Confirme para prosseguir.");
       
     } catch (error) {
       console.error("❌ Erro:", error);
       
       setDebugError({
-        type: 'searchHDImages',
+        type: 'searchByName',
         message: error.message,
         stack: error.stack,
         timestamp: new Date().toISOString()
@@ -426,10 +414,11 @@ export default function CreateAuction() {
     }
   };
 
-  // 🆕 CONFIRMAR E USAR IMAGENS
-  const confirmAndFetchImages = () => {
+  // 🆕 CONFIRMAR E USAR IMAGENS (JÁ FORAM BAIXADAS)
+  const confirmAndFetchImages = async () => {
     if (!productPreview) return;
 
+    // Usa os dados já obtidos (NÃO faz nova chamada à API)
     setExtractedData({ 
       title: productPreview.title, 
       description: productPreview.description 
@@ -448,10 +437,9 @@ export default function CreateAuction() {
       toast.warning(`⚠️ Nenhuma imagem disponível. Use upload manual.`);
       setProductName("");
       setProductPreview(null);
-      setImageDetails([]);
       setManualStep(0);
     } else {
-      toast.success(`✅ ${validUrls.length} imagens aplicadas!`);
+      toast.success(`✅ ${validUrls.length} imagens prontas!`);
       setDownloadedImages(validUrls);
       setCoverIndex(0);
       setManualStep(5);
@@ -463,8 +451,7 @@ export default function CreateAuction() {
   // 🆕 CANCELAR PRÉVIA
   const cancelPreview = () => {
     setProductPreview(null);
-    setImageDetails([]);
-    setProductName("");
+    setProductName(""); // Limpa para nova busca
     setManualStep(0);
     toast.info("Busca cancelada. Digite novamente.");
   };
@@ -1393,60 +1380,23 @@ export default function CreateAuction() {
                             {productPreview.price && (
                               <div className="flex items-center gap-2">
                                 <span className="text-blue-400 font-semibold">💰 Preço:</span>
-                                <span className="text-green-400 font-bold">
-                                  {typeof productPreview.price === 'number' 
-                                    ? `R$ ${productPreview.price.toFixed(2)}` 
-                                    : productPreview.price}
-                                </span>
+                                <span className="text-green-400 font-bold">R$ {productPreview.price.toFixed(2)}</span>
                               </div>
                             )}
 
                             <div className="flex items-center gap-2">
-                              <span className="text-blue-400 font-semibold">📸 Imagens HD:</span>
-                              <span className={`font-bold ${productPreview.imageCount >= 6 ? 'text-green-400' : 'text-yellow-400'}`}>
-                                {productPreview.imageCount} fotos
-                              </span>
+                              <span className="text-blue-400 font-semibold">📸 Imagens disponíveis:</span>
+                              <span className="text-white font-bold">{productPreview.imageCount} fotos</span>
                             </div>
-
-                            {productPreview.qualityScore && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-blue-400 font-semibold">⭐ Qualidade:</span>
-                                <span className="text-white">{productPreview.qualityScore}/10</span>
-                              </div>
-                            )}
-
-                            {/* DETALHES DAS IMAGENS */}
-                            {imageDetails.length > 0 && (
-                              <div className="mt-4 pt-3 border-t border-gray-700">
-                                <p className="text-xs text-gray-400 mb-2">📊 Detalhes das fotos:</p>
-                                <div className="space-y-1 text-xs">
-                                  {imageDetails.slice(0, 6).map((img, idx) => (
-                                    <div key={idx} className="flex items-center gap-2 text-gray-300">
-                                      <span className="font-mono">#{idx + 1}</span>
-                                      <span className="text-blue-400">{img.angle}</span>
-                                      <span className="text-gray-500">•</span>
-                                      <span className="text-green-400">{img.source}</span>
-                                      <span className="text-gray-500">•</span>
-                                      <span className="text-gray-400">{img.resolution}</span>
-                                    </div>
-                                  ))}
-                                  {imageDetails.length > 6 && (
-                                    <p className="text-gray-500 text-xs">+ {imageDetails.length - 6} fotos...</p>
-                                  )}
-                                </div>
-                              </div>
-                            )}
                           </div>
 
-                          {/* STATUS DA BUSCA */}
-                          {productPreview.imageCount < 6 && (
-                            <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mb-4">
-                              <p className="text-yellow-300 text-sm flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4" />
-                                <span>⚠️ Encontradas apenas {productPreview.imageCount} imagens (ideal: 6+)</span>
-                              </p>
-                            </div>
-                          )}
+                          {/* AVISO DE CRÉDITO */}
+                          <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mb-4">
+                            <p className="text-yellow-300 text-sm flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4" />
+                              <span>⚠️ Buscar as imagens completas irá consumir <strong>1 crédito</strong> da API do Google Shopping</span>
+                            </p>
+                          </div>
 
                           {/* PERGUNTA */}
                           <div className="text-center mb-4">
@@ -1464,9 +1414,17 @@ export default function CreateAuction() {
                             </Button>
                             <Button
                               onClick={confirmAndFetchImages}
+                              disabled={isSearchingName}
                               className="bg-green-600 hover:bg-green-700 text-white font-bold"
                             >
-                              ✅ Sim, Usar Essas Fotos
+                              {isSearchingName ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Buscando...
+                                </>
+                              ) : (
+                                <>✅ Sim, Confirmar</>
+                              )}
                             </Button>
                           </div>
                         </div>
