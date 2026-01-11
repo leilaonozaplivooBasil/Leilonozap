@@ -746,9 +746,84 @@ export default function CreateAuction() {
     setSuggestedProducts([]);
   };
 
+  const handleConfirmDuplication = async ({ includeAuction, includeCatalog }) => {
+    setIsSubmittingBid(true);
+
+    try {
+      const finalImageUrls = formData.image_urls.filter(url => url && url.trim() !== "");
+
+      // 1. Criar no Leilão
+      if (includeAuction) {
+        const now = new Date();
+        const endTime = addSeconds(now, parseInt(formData.duration));
+        const endTimeISO = endTime.toISOString();
+
+        const auctionData = {
+          title: formData.title,
+          description: formData.description,
+          image_urls: finalImageUrls,
+          starting_price: parseFloat(formData.starting_price),
+          current_price: parseFloat(formData.starting_price),
+          increment: parseFloat(formData.increment),
+          buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null,
+          end_time: endTimeISO,
+          category: formData.category,
+          status: 'active',
+          seller_id: formData.store_id || currentUser.id,
+          seller_name: formData.store_id ? stores.find(s => s.id === formData.store_id)?.store_name : currentUser.full_name,
+          source_url: formData.supplier_url || formData.source_url || null,
+          product_source: formData.product_source,
+          supplier_logo_url: formData.supplier_logo_url || null,
+          comparai_mode: formData.comparai_mode || "google_shopping",
+          partner_store: formData.partner_store || 'nozap',
+          product_id: formData.product_id || null,
+          allowed_regions: formData.allowed_regions || [],
+        };
+        await Auction.create(auctionData);
+      }
+
+      // 2. Criar no Catálogo de Produtos
+      if (includeCatalog) {
+        const Product = base44.entities.Product;
+        const productData = {
+          description: formData.title, // Usando o título como descrição principal
+          notes: formData.description,
+          image_urls: finalImageUrls, // <<< AQUI A CORREÇÃO CRÍTICA
+          cost_price: 0, // Custo pode ser ajustado depois
+          price_catalog: parseFloat(priceCatalog) || parseFloat(formData.starting_price) * 1.5, // Preço de venda no catálogo
+          quantity: 1, 
+          catalog_active: true,
+        };
+        await Product.create(productData);
+      }
+
+      let successMessage = "✅ Operação concluída!";
+      if (includeAuction && includeCatalog) {
+        successMessage = "✅ Produto adicionado ao Leilão e Catálogo com sucesso!";
+      } else if (includeAuction) {
+        successMessage = "✅ Produto adicionado ao Leilão com sucesso!";
+      } else if (includeCatalog) {
+        successMessage = "✅ Produto adicionado ao Catálogo com sucesso!";
+      }
+
+      toast.success(successMessage);
+
+      setTimeout(() => {
+        navigate(createPageUrl("Home")); // Redireciona para a Home após o sucesso
+      }, 1500);
+
+    } catch (error) {
+      console.error("Erro na duplicação:", error);
+      toast.error("❌ Erro: " + error.message);
+    } finally {
+      setIsSubmittingBid(false);
+      setShowConfirmModal(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!currentUser || currentUser.role !== 'admin') {
       toast.error("Apenas administradores podem criar leilões");
       return;
@@ -760,8 +835,6 @@ export default function CreateAuction() {
       return;
     }
     
-    // VALIDAÇÃO REMOVIDA: Agora permite supplier sem URL (vai usar Google Shopping como fallback)
-
     if (parseFloat(formData.starting_price) <= 0) {
       toast.error("O preço inicial deve ser maior que zero");
       return;
@@ -771,79 +844,8 @@ export default function CreateAuction() {
       return;
     }
 
-    // 🆕 VALIDAÇÃO DO CATÁLOGO
-    if (catalogActive && (!priceCatalog || parseFloat(priceCatalog) <= 0)) {
-      toast.error("Informe o preço do catálogo");
-      return;
-    }
-
-    setIsSubmittingBid(true);
-
-    try {
-      // 🌎 CALCULA END TIME EM UTC (usando Date nativo)
-      const now = new Date(); // Gets current date/time in local timezone, but toISOString converts to UTC.
-      const endTime = addSeconds(now, parseInt(formData.duration)); // addSeconds from date-fns
-      
-      const endTimeISO = endTime.toISOString(); // This will be in UTC
-
-      console.log(`⏰ CRIANDO LEILÃO:`);
-      console.log(`   Duração: ${formData.duration}s`);
-      console.log(`   Termina (UTC): ${endTimeISO}`);
-      
-      const auctionData = {
-        title: formData.title,
-        description: formData.description,
-        image_urls: finalImageUrls,
-        starting_price: parseFloat(formData.starting_price),
-        current_price: parseFloat(formData.starting_price),
-        increment: parseFloat(formData.increment),
-        buy_now_price: formData.buy_now_price ? parseFloat(formData.buy_now_price) : null,
-        end_time: endTimeISO, // Salva em UTC
-        category: formData.category,
-        status: 'active',
-        seller_id: formData.store_id || currentUser.id,
-        seller_name: formData.store_id ? stores.find(s => s.id === formData.store_id)?.store_name : currentUser.full_name,
-        source_url: formData.supplier_url || formData.source_url || null, // PRIORIZA supplier_url
-        product_source: formData.product_source,
-        supplier_logo_url: formData.supplier_logo_url || null, // SALVA LOGO
-        comparai_mode: formData.comparai_mode || "google_shopping", // 🆕 SALVA MODO COMPARAI
-        partner_store: formData.partner_store || 'nozap', // 🆕 MARCA PARCEIRO
-        product_id: formData.product_id || null, // 🆕 VINCULA PRODUTO
-        allowed_regions: formData.allowed_regions || [], // 🆕 SALVA REGIÕES PERMITIDAS
-        catalog_active: catalogActive, // 🆕 CATÁLOGO ATIVO
-        price_catalog: catalogActive ? parseFloat(priceCatalog) : null // 🆕 PREÇO DO CATÁLOGO
-      };
-      const newAuction = await Auction.create(auctionData);
-      
-      // 🆕 ATUALIZA PRODUTO COM ID DO LEILÃO
-      if (formData.product_id) {
-        try {
-          const Product = base44.entities.Product;
-          const products = await Product.filter({ id: formData.product_id });
-          if (products.length > 0) {
-            const product = products[0];
-            const updatedAuctions = [...(product.linked_auctions || []), newAuction.id];
-            await Product.update(formData.product_id, {
-              linked_auctions: updatedAuctions
-            });
-          }
-        } catch (error) {
-          console.error("Erro ao vincular produto:", error);
-        }
-      }
-
-      toast.success("✅ Leilão criado com sucesso!");
-      
-      setTimeout(() => {
-        navigate(createPageUrl("AuctionRoom") + `?id=${newAuction.id}`);
-      }, 1000);
-
-    } catch (error) {
-      console.error("Erro ao criar leilão:", error);
-      toast.error("❌ Erro ao criar leilão. Verifique os campos e tente novamente: " + error.message);
-    } finally {
-      setIsSubmittingBid(false);
-    }
+    // Abre o modal de confirmação em vez de salvar diretamente
+    setShowConfirmModal(true);
   };
 
   if (!currentUser) {
