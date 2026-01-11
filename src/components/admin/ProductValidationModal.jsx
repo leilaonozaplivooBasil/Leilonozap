@@ -38,11 +38,33 @@ export default function ProductValidationModal({ productData, onConfirm, onCance
             </div>
           )}
 
-          {/* IMAGENS */}
+          {/* IMAGENS COM URLs */}
           <div>
-            <h3 className="text-sm font-bold text-blue-400 mb-3">Imagens do Produto</h3>
+            <h3 className="text-sm font-bold text-blue-400 mb-3">Imagens do Produto ({productData.image_urls?.length || 0} encontradas)</h3>
             {productData.image_urls && productData.image_urls.length > 0 ? (
-              <ProductImagePreview imageUrls={productData.image_urls} />
+              <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                {productData.image_urls.map((url, idx) => (
+                  <div key={idx} className="bg-gray-900 border border-gray-600 rounded-lg p-2 flex items-center gap-2">
+                    <img 
+                      src={url} 
+                      alt={`Imagem ${idx + 1}`}
+                      className="w-12 h-12 rounded object-cover bg-gray-800"
+                      onError={(e) => e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"%3E%3Crect width="18" height="18" x="3" y="3" rx="2"/%3E%3Ccircle cx="9" cy="9" r="2"/%3E%3Cpath d="m21 15-5-5L5 21"/%3E%3C/svg%3E'}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-400 truncate">{url.substring(0, 50)}...</p>
+                    </div>
+                    <a 
+                      href={url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 text-xs flex-shrink-0"
+                    >
+                      🔗
+                    </a>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="bg-gray-900 border border-gray-600 rounded-lg p-6 text-center text-gray-400 text-sm">
                 ⚠️ Nenhuma imagem disponível
