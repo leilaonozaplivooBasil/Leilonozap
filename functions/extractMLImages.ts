@@ -324,12 +324,14 @@ Deno.serve(async (req) => {
                     if (mlImages.length > 0) {
                         const uniqueImages = [...new Set(mlImages)];
                         console.log('📸 Imagens do anúncio encontradas:', uniqueImages.length);
+                        const finalTitle = searchTerm || '';
+                        const description = await generateDescription(base44, finalTitle);
                         return Response.json({
                             found: true,
                             images: uniqueImages,
-                            title: searchTerm || '',
+                            title: finalTitle,
                             price: null,
-                            description: searchTerm || '',
+                            description: description,
                             source: 'Mercado Livre'
                         }, { status: 200 });
                     }
