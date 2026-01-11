@@ -981,6 +981,17 @@ export default function CreateAuction() {
   return (
     <div className="min-h-screen bg-gray-900 py-8 px-4 text-gray-300">
       {validationReport && <ValidationReportModal />}
+
+      {showConfirmModal && (
+        <ConfirmProductDuplicationModal
+          isOpen={showConfirmModal}
+          onClose={() => setShowConfirmModal(false)}
+          onConfirm={handleConfirmDuplication}
+          formData={formData}
+          isLoading={isSubmittingBid}
+        />
+      )}
+
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-xl bg-gray-800/50 backdrop-blur-sm border border-gray-700">
           <CardHeader className="text-center border-b border-gray-700">
