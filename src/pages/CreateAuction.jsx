@@ -241,50 +241,38 @@ export default function CreateAuction() {
                       {isLoadingUrl && <p className="text-sm text-purple-300 mt-2">Extraindo URLs das imagens...</p>}
                     </div>
 
-                    {showValidationModal && validationData && (
-                      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <Card className="w-full max-w-2xl shadow-2xl bg-gray-800 border border-gray-700">
-                          <CardHeader className="border-b border-gray-700">
-                            <CardTitle className="text-lg text-blue-400">Validar Dados do Anúncio</CardTitle>
-                          </CardHeader>
-                          <CardContent className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-                            {/* TÍTULO */}
-                            <div>
-                              <h3 className="text-xs font-bold text-blue-300 mb-2">TÍTULO</h3>
-                              <p className="bg-gray-900 border border-gray-600 rounded p-3 text-gray-200 text-sm">{validationData.title}</p>
-                            </div>
-
-                            {/* DESCRIÇÃO */}
-                            <div>
-                              <h3 className="text-xs font-bold text-blue-300 mb-2">DESCRIÇÃO</h3>
-                              <p className="bg-gray-900 border border-gray-600 rounded p-3 text-gray-200 text-sm max-h-[100px] overflow-y-auto">{validationData.description}</p>
-                            </div>
-
-                            {/* IMAGENS - SÓ ENDEREÇOS */}
-                            <div>
-                              <h3 className="text-xs font-bold text-blue-300 mb-2">IMAGENS ({validationData.image_urls?.length || 0} encontradas)</h3>
-                              <div className="bg-gray-900 border border-gray-600 rounded p-3 space-y-2 max-h-[200px] overflow-y-auto">
-                                {validationData.image_urls && validationData.image_urls.length > 0 ? (
-                                  validationData.image_urls.map((url, idx) => (
-                                    <div key={idx} className="text-xs text-gray-400 break-all font-mono bg-gray-950 p-2 rounded border border-gray-700">
-                                      {idx + 1}. {url}
-                                    </div>
-                                  ))
-                                ) : (
-                                  <p className="text-gray-400 text-xs">Nenhuma imagem extraída</p>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* BOTÕES */}
-                            <div className="flex gap-3 pt-4 border-t border-gray-700">
-                              <Button onClick={handleValidationCancel} variant="outline" className="flex-1">Rejeitar</Button>
-                              <Button onClick={handleValidationConfirm} className="flex-1 bg-green-600 hover:bg-green-700">✅ Confirmar</Button>
-                            </div>
-                          </CardContent>
-                          </Card>
+                    {searchResult && (
+                      <Card className="bg-blue-900/20 border-2 border-blue-500/50 rounded-xl p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-bold text-blue-300">✅ Produto encontrado!</h3>
+                            <button onClick={handleClearSearch} className="text-gray-400 hover:text-white">✕</button>
                           </div>
-                          )}
+
+                          <div className="bg-gray-900 border border-gray-600 rounded p-3">
+                            <p className="text-sm font-semibold text-white">{searchResult.title}</p>
+                          </div>
+
+                          <div className="bg-gray-900 border border-gray-600 rounded p-3">
+                            <p className="text-xs text-gray-400 line-clamp-2">{searchResult.description}</p>
+                          </div>
+
+                          <div>
+                            <p className="text-xs text-blue-300 font-semibold mb-2">{searchResult.image_urls?.length || 0} imagens encontradas</p>
+                            <div className="grid grid-cols-3 gap-2">
+                              {searchResult.image_urls?.slice(0, 3).map((url, idx) => (
+                                <img key={idx} src={url} alt={`img-${idx}`} className="w-full h-16 object-cover rounded bg-gray-800" onError={(e) => e.target.style.display = 'none'} />
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2 pt-2 border-t border-gray-600">
+                            <Button onClick={handleClearSearch} variant="outline" className="flex-1 text-xs">Cancelar</Button>
+                            <Button onClick={handleUseAsModel} className="flex-1 bg-green-600 hover:bg-green-700 text-xs">Usar como modelo</Button>
+                          </div>
+                        </div>
+                      </Card>
+                    )}
                           </CardContent>
                 </Card>
 
