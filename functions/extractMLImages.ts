@@ -136,46 +136,60 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback 2: Tenta buscar via API de Search do ML pelo nome do produto
-        console.log('⚠️ API direta falhou, tentando Search API...');
+        // Fallback 2: Usa IA com a URL da página para extrair imagens
+        console.log('⚠️ APIs do ML bloqueadas, usando IA para extrair imagens...');
         
-        if (searchTerm && searchTerm.length > 5) {
-            const searchApiUrl = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerm)}&limit=3`;
-            console.log('🔍 Buscando:', searchApiUrl);
-            
-            const searchResponse = await fetch(searchApiUrl);
-            if (searchResponse.ok) {
-                const searchData = await searchResponse.json();
-                
-                if (searchData.results && searchData.results.length > 0) {
-                    // Pega o primeiro resultado
-                    const firstResult = searchData.results[0];
-                    
-                    // Busca detalhes completos
-                    const itemDetailUrl = `https://api.mercadolibre.com/items/${firstResult.id}`;
-                    const itemResponse = await fetch(itemDetailUrl);
-                    
-                    if (itemResponse.ok) {
-                        const itemData = await itemResponse.json();
-                        
-                        if (itemData.pictures && itemData.pictures.length > 0) {
-                            const images = itemData.pictures.map(pic => {
-                                const url = pic.secure_url || pic.url;
-                                return url.replace(/-[A-Z]\./, '-F.');
-                            });
-                            
-                            console.log('📸 Imagens via Search:', images.length);
-                            return Response.json({
-                                found: true,
-                                images: [...new Set(images)],
-                                title: itemData.title || '',
-                                price: itemData.price || null,
-                                description: itemData.title || '',
-                                source: 'Mercado Livre'
-                            }, { status: 200 });
-                        }
+        const llmResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+            prompt: `Acesse esta página do Mercado Livre e extraia as URLs das imagens do produto:
+
+URL: ${productUrl}
+
+INSTRUÇÕES ESPECÍFICAS:
+1. Acesse a página do produto
+2. Procure as imagens na galeria do produto (lado esquerdo da página)
+3. As imagens do ML seguem o padrão: https://http2.mlstatic.com/D_NQ_NP_...
+4. Extraia TODAS as URLs de imagens em alta resolução
+5. O título está no H1 da página
+6. O preço está próximo ao título
+
+IMPORTANTE:
+- Extraia URLs REAIS que existem na página
+- NÃO invente URLs
+- URLs do ML sempre contêm "mlstatic.com"`,
+            add_context_from_internet: true,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    title: { type: "string", description: "Título do produto" },
+                    price: { type: "number", description: "Preço em reais" },
+                    image_urls: { 
+                        type: "array", 
+                        items: { type: "string" },
+                        description: "URLs das imagens (mlstatic.com)"
                     }
-                }
+                },
+                required: ["title", "image_urls"]
+            }
+        });
+        
+        console.log('🤖 IA retornou:', JSON.stringify(llmResponse));
+        
+        if (llmResponse?.image_urls?.length > 0) {
+            // Filtra apenas URLs válidas do ML
+            const validImages = [...new Set(llmResponse.image_urls)].filter(url => 
+                url && url.includes('mlstatic.com') && url.startsWith('http')
+            ).map(url => url.replace(/-[A-Z]\./, '-F.'));
+            
+            if (validImages.length > 0) {
+                console.log('📸 Imagens via IA:', validImages.length);
+                return Response.json({
+                    found: true,
+                    images: validImages,
+                    title: llmResponse.title || searchTerm || '',
+                    price: llmResponse.price || null,
+                    description: llmResponse.title || searchTerm || '',
+                    source: 'Mercado Livre'
+                }, { status: 200 });
             }
         }
 
