@@ -1567,50 +1567,7 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* 🆕 ETAPA 12: SELEÇÃO DE IMAGENS DO ANÚNCIO */}
-                    {manualStep === 12 && adImagePool.length > 0 && clonedAdData && (
-                      <div className="space-y-4">
-                        <div className="bg-purple-900/30 border-2 border-purple-500 rounded-xl p-6">
-                          <h3 className="text-xl font-bold text-purple-300 mb-2 flex items-center gap-2">
-                            <ImageIcon className="w-5 h-5" />
-                            📸 Escolha as Imagens do Anúncio
-                          </h3>
-                          <p className="text-gray-400 text-sm mb-4">
-                            🏪 Anúncio de <strong className="text-white">{clonedAdData.store}</strong> • {adImagePool.length} imagens disponíveis
-                          </p>
 
-                          {/* GRID DE IMAGENS COM CHECKBOXES */}
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-[500px] overflow-y-auto p-2">
-                            {adImagePool.map((imageUrl, index) => {
-                              const isSelected = selectedImageIndices.includes(index);
-                              
-                              return (
-                                <div
-                                  key={index}
-                                  onClick={() => {
-                                    setSelectedImageIndices(prev => 
-                                      prev.includes(index)
-                                        ? prev.filter(i => i !== index)
-                                        : [...prev, index]
-                                    );
-                                  }}
-                                  className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
-                                    isSelected 
-                                      ? 'border-green-500 ring-2 ring-green-500/50 scale-105' 
-                                      : 'border-gray-600 hover:border-purple-500'
-                                  }`}
-                                >
-                                  {/* CHECKBOX */}
-                                  <div className={`absolute top-2 right-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                                    isSelected 
-                                      ? 'bg-green-500 border-green-500' 
-                                      : 'bg-black/50 border-white/70'
-                                  }`}>
-                                    {isSelected && (
-                                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                      </svg>
-                                    )}
                                   </div>
 
                                   {/* NÚMERO */}
