@@ -78,9 +78,17 @@ Deno.serve(async (req) => {
         const firstResult = data.shopping_results[0];
         const productTitle = firstResult.title;
         const productPrice = firstResult.extracted_price || firstResult.price;
+        const sourceUrl = firstResult.link || '';
+        const sourceHost = sourceUrl ? new URL(sourceUrl).hostname : '';
+        
+        // Identifica se é Mercado Livre
+        const isMercadoLivre = sourceHost.includes('mercadolivre') || sourceHost.includes('mercadolivre.com');
+        const source = isMercadoLivre ? 'Mercado Livre' : (firstResult.source || 'Google Shopping');
 
         console.log('✅ Produto encontrado:', productTitle);
         console.log('💰 Preço:', productPrice);
+        console.log('🌐 Fonte:', source);
+        console.log('🔗 URL:', sourceUrl);
 
         // Valida acessórios no título
         const lower = productTitle.toLowerCase();
@@ -105,12 +113,16 @@ Deno.serve(async (req) => {
              for (const result of topResults) {
                  if (!result.link) continue;
 
-                 let imageUrl = result.thumbnail || `https://www.google.com/s2/favicons?domain=${new URL(result.link).hostname}&sz=128`;
-                 
+                 const resultHost = new URL(result.link).hostname;
+                 const isMercado = resultHost.includes('mercadolivre');
+                 const resultSource = isMercado ? 'Mercado Livre' : (result.source || 'Loja Online');
+
+                 let imageUrl = result.thumbnail || `https://www.google.com/s2/favicons?domain=${resultHost}&sz=128`;
+
                  ads.push({
                      title: result.title || productTitle,
                      url: result.link,
-                     source: result.source || 'Loja Online',
+                     source: resultSource,
                      price: result.extracted_price || result.price || 'Consulte',
                      snippet: result.snippet || '',
                      image: imageUrl,
@@ -181,16 +193,17 @@ Deno.serve(async (req) => {
             }, { status: 200 });
         }
 
-        // MODO PADRÃO: Retorna apenas a prévia inicial
-        return Response.json({
-            found: true,
-            title: productTitle,
-            description: `${productTitle} - Preço de referência: R$ ${productPrice?.toFixed(2) || 'Consulte'}`,
-            price: productPrice,
-            thumbnailUrl: firstResult.thumbnail || null,
-            imageCount: data.shopping_results.length,
-            source: 'Google Shopping'
-        }, { status: 200 });
+        // MODO PADRÃO: Retorna prévia com fonte e link do anúncio original
+         return Response.json({
+             found: true,
+             title: productTitle,
+             description: `${productTitle} - Preço de referência: R$ ${productPrice?.toFixed(2) || 'Consulte'}`,
+             price: productPrice,
+             image_urls: firstResult.thumbnail ? [firstResult.thumbnail] : [],
+             source: source,
+             sourceUrl: sourceUrl,
+             isMercadoLivre: isMercadoLivre
+         }, { status: 200 });
 
     } catch (error) {
         console.error('❌ ERRO GERAL:', error.message);
