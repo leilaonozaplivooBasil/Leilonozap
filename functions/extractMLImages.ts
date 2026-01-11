@@ -116,25 +116,29 @@ Deno.serve(async (req) => {
 ${productUrl}
 
 EXTRAIR:
-1. TÍTULO: Nome completo do produto
+1. TÍTULO: Nome completo do produto (do elemento h1 ou title)
 2. PREÇO: Valor numérico em R$
-3. IMAGENS: URLs das fotos da galeria do produto
+3. IMAGENS: URLs do atributo "data-zoom" de cada <img> dentro de <figure class="ui-pdp-gallery__figure">
 
-FORMATO DAS URLS DE IMAGEM DO ML:
-- Começam com: https://http2.mlstatic.com/D_NQ_NP_
-- Terminam com: -F.webp (alta resolução) ou -O.webp (média)
-- Contém códigos como MLB, MLA ou MLU
+ESTRUTURA HTML DA GALERIA DO ML:
+<div class="ui-pdp-gallery__column">
+  <figure class="ui-pdp-gallery__figure">
+    <img data-zoom="https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXXX_MMYYYY-F.webp" ...>
+  </figure>
+  <!-- mais figures... -->
+</div>
 
-ONDE ENCONTRAR AS IMAGENS:
-- Dentro de <figure> com class "ui-pdp-gallery__figure"
-- Atributo "data-zoom" das imagens (contém URL HD)
-- Atributo "src" das tags <img> principais
+⚠️ CRÍTICO - EXTRAIR APENAS:
+- URLs do atributo "data-zoom" (alta resolução 2X)
+- Formato: https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXXX_MMYYYY-F.webp
+- Cada imagem tem código único (ex: 648933-MLA99498284868_112025)
 
-⚠️ IMPORTANTE: 
-- Copie as URLs EXATAS que aparecem no HTML desta página específica
-- NÃO invente URLs - cada produto tem URLs únicas
-- Ignore thumbnails pequenas (terminam em -R.webp ou -I.webp)
-- Ignore vídeos`,
+🚫 IGNORAR:
+- Thumbnails pequenas (-R.webp)
+- Vídeos
+- Imagens fora da galeria principal
+
+Copie EXATAMENTE as URLs do atributo data-zoom de cada figure.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -144,7 +148,7 @@ ONDE ENCONTRAR AS IMAGENS:
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        description: "URLs das imagens HD do produto (terminando em -F.webp ou -O.webp)"
+                        description: "URLs do atributo data-zoom (terminando em -F.webp)"
                     }
                 },
                 required: ["title", "image_urls"]
