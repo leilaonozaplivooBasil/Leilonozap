@@ -425,7 +425,9 @@ export default function CreateAuction() {
     setManualStep(1); // Mostra loading
 
     try {
-      console.log('🔍 Buscando anúncios disponíveis...');
+      console.log('🔍 ========== BUSCANDO ANÚNCIOS ==========');
+      console.log('🔍 Produto:', productName.trim());
+      console.log('🔍 Flag listAdsOnly:', true);
       
       // Busca lista de anúncios
       const response = await base44.functions.invoke('searchProductByName', { 
@@ -433,26 +435,52 @@ export default function CreateAuction() {
         listAdsOnly: true // 🆕 Flag para retornar lista de anúncios
       });
 
+      // 🔍 DEBUG COMPLETO
+      console.log('📦 ========== RESPOSTA BACKEND ==========');
+      console.log('📦 Response completo:', response);
+      console.log('📦 Response.status:', response?.status);
+      console.log('📦 Response.data:', response?.data);
+      console.log('📦 Response.data.found:', response?.data?.found);
+      console.log('📦 Response.data.ads:', response?.data?.ads);
+      console.log('📦 Response.data.ads.length:', response?.data?.ads?.length);
+      console.log('📦 Response.data.error:', response?.data?.error);
+      console.log('📦 Response.data.debug:', response?.data?.debug);
+
       if (!response || response.status !== 200) {
+        console.log('❌ Response inválido ou status != 200');
         throw new Error('Erro ao buscar anúncios');
       }
 
       const data = response.data;
       
+      // 🔍 DEBUG: Por que está caindo aqui?
       if (!data.ads || data.ads.length === 0) {
+        console.log('⚠️ ========== PROBLEMA DETECTADO ==========');
+        console.log('⚠️ data.ads está vazio!');
+        console.log('⚠️ data.ads:', data.ads);
+        console.log('⚠️ data.found:', data.found);
+        console.log('⚠️ data.error:', data.error);
+        console.log('⚠️ data.debug:', data.debug);
+        console.log('⚠️ Todos os campos de data:', Object.keys(data));
+        
         toast.warning('Nenhum anúncio encontrado. Usando dados básicos.');
-        // Fallback: usa dados do preview
         applyPreviewData();
         return;
       }
 
-      // Mostra lista de anúncios
+      console.log('✅ ========== SUCESSO ==========');
+      console.log('✅ Anúncios encontrados:', data.ads.length);
+      console.log('✅ Mudando para manualStep=11');
+      
       setAvailableAds(data.ads);
       setManualStep(11); // 🆕 Nova etapa: seleção de anúncios
       toast.success(`✅ ${data.ads.length} anúncios encontrados!`);
       
     } catch (error) {
-      console.error('❌ Erro ao buscar anúncios:', error);
+      console.error('❌ ========== ERRO CAPTURADO ==========');
+      console.error('❌ Error:', error);
+      console.error('❌ Message:', error.message);
+      console.error('❌ Stack:', error.stack);
       toast.error('Erro ao buscar anúncios. Usando dados básicos.');
       applyPreviewData(); // Fallback
     } finally {

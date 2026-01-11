@@ -55,7 +55,15 @@ Deno.serve(async (req) => {
 
         const data = await response.json();
         
+        console.log('🔍 DEBUG - SerpAPI Response Keys:', Object.keys(data));
+        console.log('🔍 DEBUG - shopping_results existe?', !!data.shopping_results);
+        console.log('🔍 DEBUG - shopping_results length:', data.shopping_results?.length || 0);
+        
         if (!data.shopping_results || data.shopping_results.length === 0) {
+            console.log('⚠️ Nenhum shopping_results, verificando alternativas...');
+            console.log('🔍 inline_shopping_results:', data.inline_shopping_results?.length || 0);
+            console.log('🔍 organic_results:', data.organic_results?.length || 0);
+            
             await base44.asServiceRole.entities.SystemLog.create({
               step: 'PRODUCT_SEARCH_BY_NAME_NOT_FOUND',
               status: 'warning',
@@ -75,6 +83,9 @@ Deno.serve(async (req) => {
         const productTitle = firstResult.title;
         const productPrice = firstResult.extracted_price || firstResult.price;
 
+        console.log('✅ Produto encontrado:', productTitle);
+        console.log('💰 Preço:', productPrice);
+
         // Valida acessórios no título
         const lower = productTitle.toLowerCase();
         const accessoryKeywords = [
@@ -90,15 +101,22 @@ Deno.serve(async (req) => {
 
         // 🆕 MODO 1: LISTAR ANÚNCIOS (sem buscar imagens)
         if (listAdsOnly) {
-            console.log('📋 Retornando lista de anúncios...');
+            console.log('📋 MODO 1 ATIVADO: Listando anúncios...');
+            console.log('📋 Shopping results disponíveis:', data.shopping_results.length);
             
-            const ads = data.shopping_results.slice(0, 5).map(result => ({
-                store: result.source || 'Loja Online',
-                price: result.extracted_price || result.price,
-                imageCount: '6-10', // Estimativa
-                link: result.link,
-                thumbnail: result.thumbnail
-            }));
+            const ads = data.shopping_results.slice(0, 5).map((result, idx) => {
+                console.log(`📋 Anúncio ${idx + 1}:`, result.source, '-', result.link?.substring(0, 50));
+                return {
+                    store: result.source || 'Loja Online',
+                    price: result.extracted_price || result.price,
+                    imageCount: '6-10', // Estimativa
+                    link: result.link,
+                    thumbnail: result.thumbnail
+                };
+            });
+
+            console.log('✅ Retornando', ads.length, 'anúncios para frontend');
+            console.log('✅ DEBUG - ads array:', JSON.stringify(ads, null, 2));
 
             return Response.json({
                 found: true,
