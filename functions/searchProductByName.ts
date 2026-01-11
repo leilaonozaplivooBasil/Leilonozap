@@ -21,11 +21,12 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         await base44.auth.me();
 
-        const { productName } = await req.json();
+        const { productName, listAdsOnly, adUrl } = await req.json();
         if (!productName) {
             return Response.json({ error: "Nome do produto obrigatório" }, { status: 400 });
         }
 
+        console.log(`🔍 Modo: ${listAdsOnly ? 'LISTA_ANUNCIOS' : adUrl ? 'DOWNLOAD_ESPECIFICO' : 'BUSCA_NORMAL'}`);
         console.log(`🔍 Buscando: ${productName}`);
         
         // Log de início

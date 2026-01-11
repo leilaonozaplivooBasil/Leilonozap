@@ -71,6 +71,9 @@ export default function CreateAuction() {
   const [isSearchingName, setIsSearchingName] = useState(false);
   const [productPreview, setProductPreview] = useState(null); // 🆕 Prévia do produto (com imagens já carregadas)
   const [selectedMarketplace, setSelectedMarketplace] = useState(null);
+  const [availableAds, setAvailableAds] = useState([]); // 🆕 Lista de anúncios disponíveis
+  const [selectedAd, setSelectedAd] = useState(null); // 🆕 Anúncio selecionado
+  const [isLoadingAds, setIsLoadingAds] = useState(false); // 🆕 Loading de anúncios
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
   const [imageUrls, setImageUrls] = useState(["", "", "", "", "", ""]);
@@ -414,11 +417,51 @@ export default function CreateAuction() {
     }
   };
 
-  // 🆕 CONFIRMAR E USAR IMAGENS (JÁ FORAM BAIXADAS)
+  // 🆕 CONFIRMAR PRODUTO E BUSCAR ANÚNCIOS
   const confirmAndFetchImages = async () => {
     if (!productPreview) return;
 
-    // Usa os dados já obtidos (NÃO faz nova chamada à API)
+    setIsLoadingAds(true);
+    setManualStep(1); // Mostra loading
+
+    try {
+      console.log('🔍 Buscando anúncios disponíveis...');
+      
+      // Busca lista de anúncios
+      const response = await base44.functions.invoke('searchProductByName', { 
+        productName: productName.trim(),
+        listAdsOnly: true // 🆕 Flag para retornar lista de anúncios
+      });
+
+      if (!response || response.status !== 200) {
+        throw new Error('Erro ao buscar anúncios');
+      }
+
+      const data = response.data;
+      
+      if (!data.ads || data.ads.length === 0) {
+        toast.warning('Nenhum anúncio encontrado. Usando dados básicos.');
+        // Fallback: usa dados do preview
+        applyPreviewData();
+        return;
+      }
+
+      // Mostra lista de anúncios
+      setAvailableAds(data.ads);
+      setManualStep(11); // 🆕 Nova etapa: seleção de anúncios
+      toast.success(`✅ ${data.ads.length} anúncios encontrados!`);
+      
+    } catch (error) {
+      console.error('❌ Erro ao buscar anúncios:', error);
+      toast.error('Erro ao buscar anúncios. Usando dados básicos.');
+      applyPreviewData(); // Fallback
+    } finally {
+      setIsLoadingAds(false);
+    }
+  };
+
+  // 🆕 APLICAR DADOS DO PREVIEW (FALLBACK)
+  const applyPreviewData = () => {
     setExtractedData({ 
       title: productPreview.title, 
       description: productPreview.description 
@@ -433,18 +476,78 @@ export default function CreateAuction() {
 
     const validUrls = productPreview.allImages.filter(url => url && url.trim());
 
-    if (validUrls.length === 0) {
-      toast.warning(`⚠️ Nenhuma imagem disponível. Use upload manual.`);
-      setProductName("");
-      setProductPreview(null);
-      setManualStep(0);
-    } else {
-      toast.success(`✅ ${validUrls.length} imagens prontas!`);
+    if (validUrls.length > 0) {
       setDownloadedImages(validUrls);
       setCoverIndex(0);
       setManualStep(5);
+    } else {
+      setManualStep(0);
+    }
+
+    setProductName("");
+    setProductPreview(null);
+  };
+
+  // 🆕 BAIXAR IMAGENS DO ANÚNCIO SELECIONADO
+  const downloadImagesFromAd = async () => {
+    if (!selectedAd) {
+      toast.error('Selecione um anúncio primeiro!');
+      return;
+    }
+
+    setIsLoadingAds(true);
+    
+    try {
+      console.log('📸 Baixando imagens do anúncio:', selectedAd.store);
+      
+      // Busca imagens HD do anúncio específico
+      const response = await base44.functions.invoke('searchProductByName', { 
+        productName: productName.trim(),
+        adUrl: selectedAd.link // 🆕 Baixa imagens deste anúncio específico
+      });
+
+      if (!response || response.status !== 200) {
+        throw new Error('Erro ao baixar imagens');
+      }
+
+      const data = response.data;
+      
+      // Aplica dados no formulário
+      setExtractedData({ 
+        title: productPreview.title, 
+        description: productPreview.description 
+      });
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        title: productPreview.title, 
+        description: productPreview.description,
+        starting_price: selectedAd.price ? selectedAd.price.toString() : prev.starting_price
+      }));
+
+      const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
+
+      if (validUrls.length === 0) {
+        toast.warning('⚠️ Nenhuma imagem encontrada neste anúncio. Tente outro.');
+        return;
+      }
+
+      toast.success(`✅ ${validUrls.length} imagens de ${selectedAd.store}!`);
+      setDownloadedImages(validUrls);
+      setCoverIndex(0);
+      setManualStep(5);
+      
+      // Limpa estados
       setProductName("");
       setProductPreview(null);
+      setAvailableAds([]);
+      setSelectedAd(null);
+      
+    } catch (error) {
+      console.error('❌ Erro:', error);
+      toast.error('Erro ao baixar imagens: ' + error.message);
+    } finally {
+      setIsLoadingAds(false);
     }
   };
 
@@ -1347,6 +1450,114 @@ export default function CreateAuction() {
                         <p className="text-blue-400">
                           {isSearchingName ? 'IA buscando produto na internet...' : isSearchingGtin ? 'Buscando produto por código de barras...' : 'Extraindo dados e URLs de imagens...'}
                         </p>
+                      </div>
+                    )}
+
+                    {/* 🆕 ETAPA 11: SELEÇÃO DE ANÚNCIOS */}
+                    {manualStep === 11 && availableAds.length > 0 && (
+                      <div className="space-y-4">
+                        <div className="bg-blue-900/30 border-2 border-blue-500 rounded-xl p-6">
+                          <h3 className="text-xl font-bold text-blue-300 mb-2 flex items-center gap-2">
+                            <Sparkles className="w-5 h-5" />
+                            📦 Escolha o anúncio para baixar as fotos
+                          </h3>
+                          <p className="text-gray-400 text-sm mb-4">
+                            Selecione o anúncio com as melhores imagens para o seu leilão
+                          </p>
+
+                          {/* LISTA DE ANÚNCIOS */}
+                          <div className="space-y-3">
+                            {availableAds.map((ad, index) => (
+                              <div
+                                key={index}
+                                onClick={() => setSelectedAd(ad)}
+                                className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                                  selectedAd?.link === ad.link
+                                    ? 'bg-green-900/30 border-green-500 ring-2 ring-green-500/50'
+                                    : 'bg-gray-800/50 border-gray-600 hover:border-blue-500'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3 mb-3">
+                                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                    selectedAd?.link === ad.link
+                                      ? 'bg-green-500 border-green-500'
+                                      : 'border-gray-500'
+                                  }`}>
+                                    {selectedAd?.link === ad.link && (
+                                      <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <h4 className="font-bold text-white text-lg">ANÚNCIO {index + 1}</h4>
+                                </div>
+
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-blue-400 font-semibold">🏪 Loja:</span>
+                                    <span className="text-white">{ad.store}</span>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-blue-400 font-semibold">💰 Preço:</span>
+                                    <span className="text-green-400 font-bold">R$ {ad.price?.toFixed(2) || '---'}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-blue-400 font-semibold">📸 Fotos disponíveis:</span>
+                                    <span className="text-white font-bold">{ad.imageCount || 0} imagens</span>
+                                  </div>
+
+                                  {ad.link && (
+                                    <div className="flex items-start gap-2 mt-2">
+                                      <span className="text-blue-400 font-semibold">🔗</span>
+                                      <span className="text-gray-400 text-xs break-all">{ad.link.substring(0, 60)}...</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* AVISO */}
+                          <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mt-4">
+                            <p className="text-yellow-300 text-sm flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4" />
+                              {selectedAd 
+                                ? `✅ Você selecionou: ${selectedAd.store}` 
+                                : '⚠️ Selecione 1 anúncio para prosseguir'}
+                            </p>
+                          </div>
+
+                          {/* BOTÕES */}
+                          <div className="grid grid-cols-2 gap-3 mt-4">
+                            <Button
+                              onClick={() => {
+                                setAvailableAds([]);
+                                setSelectedAd(null);
+                                setManualStep(10); // Volta para confirmação
+                              }}
+                              variant="outline"
+                              className="border-gray-500 text-gray-300 hover:bg-gray-700"
+                            >
+                              ⬅️ Voltar
+                            </Button>
+                            <Button
+                              onClick={downloadImagesFromAd}
+                              disabled={!selectedAd || isLoadingAds}
+                              className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                            >
+                              {isLoadingAds ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Baixando...
+                                </>
+                              ) : (
+                                <>📥 Baixar Fotos do Selecionado</>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     )}
 
