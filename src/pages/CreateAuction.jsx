@@ -74,6 +74,9 @@ export default function CreateAuction() {
   const [availableAds, setAvailableAds] = useState([]); // 🆕 Lista de anúncios disponíveis
   const [selectedAd, setSelectedAd] = useState(null); // 🆕 Anúncio selecionado
   const [isLoadingAds, setIsLoadingAds] = useState(false); // 🆕 Loading de anúncios
+  const [adImagePool, setAdImagePool] = useState([]); // 🆕 Pool completo de imagens do anúncio
+  const [selectedImageIndices, setSelectedImageIndices] = useState([]); // 🆕 Índices das imagens selecionadas
+  const [clonedAdData, setClonedAdData] = useState(null); // 🆕 Dados completos do anúncio clonado
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
   const [imageUrls, setImageUrls] = useState(["", "", "", "", "", ""]);
@@ -534,15 +537,12 @@ export default function CreateAuction() {
       console.log('🔗 ========== CLONANDO ANÚNCIO ==========');
       console.log('🏪 Loja:', selectedAd.store);
       console.log('🔗 URL:', selectedAd.link);
-      console.log('📸 Extraindo: título, descrição, preço E imagens...');
       
       // 🔥 BUSCA TODOS OS DADOS DO ANÚNCIO
       const response = await base44.functions.invoke('searchProductByName', { 
         productName: productName.trim(),
         adUrl: selectedAd.link
       });
-
-      console.log('📦 Resposta do backend:', response);
 
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro ao clonar anúncio');
@@ -557,53 +557,78 @@ export default function CreateAuction() {
         imageCount: data.imageUrls?.length
       });
 
-      // 🔥 USA TÍTULO E DESCRIÇÃO DO ANÚNCIO (NÃO DO PREVIEW)
       const clonedTitle = data.title || productPreview.title;
       const clonedDescription = data.description || productPreview.description;
       const clonedPrice = data.price || selectedAd.price;
       
-      setExtractedData({ 
-        title: clonedTitle, 
-        description: clonedDescription 
-      });
-      
-      setFormData(prev => ({ 
-        ...prev, 
-        title: clonedTitle, 
-        description: clonedDescription,
-        starting_price: clonedPrice ? clonedPrice.toString() : prev.starting_price,
-        source_url: selectedAd.link
-      }));
-
       const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
-
-      console.log('📸 URLs de imagens:', validUrls.length);
-      validUrls.forEach((url, i) => {
-        console.log(`  ${i + 1}. ${url.substring(0, 100)}`);
-      });
 
       if (validUrls.length === 0) {
         toast.warning('⚠️ Nenhuma imagem encontrada. Tente outro anúncio.');
         return;
       }
 
-      toast.success(`✅ Anúncio clonado! ${validUrls.length} imagens de ${selectedAd.store}`);
-      setDownloadedImages(validUrls);
-      setCoverIndex(0);
-      setManualStep(5);
+      console.log('📸 Total de imagens encontradas:', validUrls.length);
+
+      // 🆕 SALVA DADOS COMPLETOS E VAI PARA ETAPA DE SELEÇÃO
+      setClonedAdData({
+        title: clonedTitle,
+        description: clonedDescription,
+        price: clonedPrice,
+        source: selectedAd.link,
+        store: selectedAd.store
+      });
       
-      // Limpa estados
-      setProductName("");
-      setProductPreview(null);
-      setAvailableAds([]);
-      setSelectedAd(null);
+      setAdImagePool(validUrls);
+      setSelectedImageIndices(validUrls.slice(0, 5).map((_, i) => i)); // Seleciona as 5 primeiras por padrão
+      setManualStep(12); // 🆕 Nova etapa: seleção de imagens
+      
+      toast.success(`✅ ${validUrls.length} imagens encontradas! Escolha quais usar.`);
       
     } catch (error) {
-      console.error('❌ Erro completo:', error);
+      console.error('❌ Erro:', error);
       toast.error('Erro ao clonar: ' + error.message);
     } finally {
       setIsLoadingAds(false);
     }
+  };
+
+  // 🆕 APLICAR IMAGENS SELECIONADAS
+  const applySelectedImages = () => {
+    if (selectedImageIndices.length === 0) {
+      toast.error('Selecione pelo menos 1 imagem!');
+      return;
+    }
+
+    const selectedUrls = selectedImageIndices.map(i => adImagePool[i]);
+    
+    setExtractedData({ 
+      title: clonedAdData.title, 
+      description: clonedAdData.description 
+    });
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      title: clonedAdData.title, 
+      description: clonedAdData.description,
+      starting_price: clonedAdData.price ? clonedAdData.price.toString() : prev.starting_price,
+      source_url: clonedAdData.source
+    }));
+
+    setDownloadedImages(selectedUrls);
+    setCoverIndex(0);
+    setManualStep(5);
+    
+    // Limpa estados
+    setProductName("");
+    setProductPreview(null);
+    setAvailableAds([]);
+    setSelectedAd(null);
+    setAdImagePool([]);
+    setSelectedImageIndices([]);
+    setClonedAdData(null);
+    
+    toast.success(`✅ ${selectedUrls.length} imagens aplicadas!`);
   };
 
   // 🆕 CANCELAR PRÉVIA
@@ -1635,6 +1660,136 @@ export default function CreateAuction() {
                               ) : (
                                 <>📥 Baixar Fotos do Selecionado</>
                               )}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🆕 ETAPA 12: SELEÇÃO DE IMAGENS DO ANÚNCIO */}
+                    {manualStep === 12 && adImagePool.length > 0 && clonedAdData && (
+                      <div className="space-y-4">
+                        <div className="bg-purple-900/30 border-2 border-purple-500 rounded-xl p-6">
+                          <h3 className="text-xl font-bold text-purple-300 mb-2 flex items-center gap-2">
+                            <ImageIcon className="w-5 h-5" />
+                            📸 Escolha as Imagens do Anúncio
+                          </h3>
+                          <p className="text-gray-400 text-sm mb-4">
+                            🏪 Anúncio de <strong className="text-white">{clonedAdData.store}</strong> • {adImagePool.length} imagens disponíveis
+                          </p>
+
+                          {/* GRID DE IMAGENS COM CHECKBOXES */}
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6 max-h-[500px] overflow-y-auto p-2">
+                            {adImagePool.map((imageUrl, index) => {
+                              const isSelected = selectedImageIndices.includes(index);
+                              
+                              return (
+                                <div
+                                  key={index}
+                                  onClick={() => {
+                                    setSelectedImageIndices(prev => 
+                                      prev.includes(index)
+                                        ? prev.filter(i => i !== index)
+                                        : [...prev, index]
+                                    );
+                                  }}
+                                  className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all ${
+                                    isSelected 
+                                      ? 'border-green-500 ring-2 ring-green-500/50 scale-105' 
+                                      : 'border-gray-600 hover:border-purple-500'
+                                  }`}
+                                >
+                                  {/* CHECKBOX */}
+                                  <div className={`absolute top-2 right-2 z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                                    isSelected 
+                                      ? 'bg-green-500 border-green-500' 
+                                      : 'bg-black/50 border-white/70'
+                                  }`}>
+                                    {isSelected && (
+                                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+
+                                  {/* NÚMERO */}
+                                  <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full font-bold">
+                                    #{index + 1}
+                                  </div>
+
+                                  {/* IMAGEM */}
+                                  <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
+                                    <img 
+                                      src={imageUrl} 
+                                      alt={`Imagem ${index + 1}`}
+                                      className="max-w-full max-h-full object-contain"
+                                      onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.parentElement.innerHTML = '<div class="text-red-400 text-xs">❌ Erro</div>';
+                                      }}
+                                    />
+                                  </div>
+
+                                  {/* URL (pequena) */}
+                                  <div className="bg-gray-800 p-1.5 border-t border-gray-700">
+                                    <p className="text-[9px] text-gray-500 truncate font-mono">
+                                      {imageUrl}
+                                    </p>
+                                  </div>
+
+                                  {/* Overlay ao passar o mouse */}
+                                  {!isSelected && (
+                                    <div className="absolute inset-0 bg-purple-600/0 group-hover:bg-purple-600/20 transition-all flex items-center justify-center">
+                                      <span className="opacity-0 group-hover:opacity-100 text-white text-xs font-bold">
+                                        Clique para selecionar
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* DESCRIÇÃO DO ANÚNCIO */}
+                          <div className="bg-gray-800/50 rounded-lg border border-gray-600 p-4 mb-4">
+                            <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                              📝 Descrição do Anúncio
+                            </h4>
+                            <div className="bg-gray-900 rounded p-3 max-h-40 overflow-y-auto">
+                              <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                                {clonedAdData.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* CONTADOR */}
+                          <div className="bg-green-900/30 border border-green-600 rounded-lg p-3 mb-4 text-center">
+                            <p className="text-green-300 font-bold">
+                              ✅ {selectedImageIndices.length} {selectedImageIndices.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}
+                            </p>
+                          </div>
+
+                          {/* BOTÕES */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <Button
+                              onClick={() => {
+                                setAdImagePool([]);
+                                setSelectedImageIndices([]);
+                                setClonedAdData(null);
+                                setManualStep(11); // Volta para lista de anúncios
+                              }}
+                              variant="outline"
+                              className="border-gray-500 text-gray-300 hover:bg-gray-700"
+                            >
+                              ⬅️ Voltar
+                            </Button>
+                            <Button
+                              onClick={applySelectedImages}
+                              disabled={selectedImageIndices.length === 0}
+                              className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                            >
+                              <CheckCircle className="w-4 h-4 mr-2" />
+                              ✓ Aplicar no Formulário
                             </Button>
                           </div>
                         </div>
