@@ -52,8 +52,7 @@ export default function CreateAuction() {
   const [auctionUrl, setAuctionUrl] = useState("");
   const [isLoadingUrl, setIsLoadingUrl] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [showValidationModal, setShowValidationModal] = useState(false);
-  const [validationData, setValidationData] = useState(null);
+  const [searchResult, setSearchResult] = useState(null);
 
   const loadCurrentUser = useCallback(async () => {
     try {
