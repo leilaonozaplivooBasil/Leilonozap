@@ -95,12 +95,11 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback 2: Tenta buscar via API de Search do ML
-        console.log('⚠️ APIs diretas falharam, tentando Search API...');
+        // Fallback 2: Tenta buscar via API de Search do ML pelo nome do produto
+        console.log('⚠️ API direta falhou, tentando Search API...');
         
-        // Usa o termo de busca para encontrar o produto na API de busca
         if (searchTerm && searchTerm.length > 5) {
-            const searchApiUrl = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerm)}&limit=5`;
+            const searchApiUrl = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerm)}&limit=3`;
             console.log('🔍 Buscando:', searchApiUrl);
             
             const searchResponse = await fetch(searchApiUrl);
@@ -108,91 +107,39 @@ Deno.serve(async (req) => {
                 const searchData = await searchResponse.json();
                 
                 if (searchData.results && searchData.results.length > 0) {
-                    // Pega o primeiro resultado que tenha imagens
-                    for (const result of searchData.results) {
-                        if (result.thumbnail) {
-                            // Busca detalhes completos do item
-                            const itemDetailUrl = `https://api.mercadolibre.com/items/${result.id}`;
-                            const itemResponse = await fetch(itemDetailUrl);
+                    // Pega o primeiro resultado
+                    const firstResult = searchData.results[0];
+                    
+                    // Busca detalhes completos
+                    const itemDetailUrl = `https://api.mercadolibre.com/items/${firstResult.id}`;
+                    const itemResponse = await fetch(itemDetailUrl);
+                    
+                    if (itemResponse.ok) {
+                        const itemData = await itemResponse.json();
+                        
+                        if (itemData.pictures && itemData.pictures.length > 0) {
+                            const images = itemData.pictures.map(pic => {
+                                const url = pic.secure_url || pic.url;
+                                return url.replace(/-[A-Z]\./, '-F.');
+                            });
                             
-                            if (itemResponse.ok) {
-                                const itemData = await itemResponse.json();
-                                
-                                if (itemData.pictures && itemData.pictures.length > 0) {
-                                    const images = itemData.pictures.map(pic => {
-                                        const url = pic.secure_url || pic.url;
-                                        // Converte para alta resolução
-                                        return url.replace(/-[A-Z]\./, '-F.');
-                                    });
-                                    
-                                    console.log('📸 Imagens via Search API:', images.length);
-                                    return Response.json({
-                                        found: true,
-                                        images: [...new Set(images)],
-                                        title: itemData.title || result.title || '',
-                                        price: itemData.price || result.price || null,
-                                        description: itemData.title || result.title || '',
-                                        source: 'Mercado Livre'
-                                    }, { status: 200 });
-                                }
-                            }
+                            console.log('📸 Imagens via Search:', images.length);
+                            return Response.json({
+                                found: true,
+                                images: [...new Set(images)],
+                                title: itemData.title || '',
+                                price: itemData.price || null,
+                                description: itemData.title || '',
+                                source: 'Mercado Livre'
+                            }, { status: 200 });
                         }
                     }
                 }
             }
         }
-        
-        // Fallback 3: Usa IA para extrair
-        console.log('⚠️ Search API falhou, tentando via IA...');
-        const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta URL do Mercado Livre e extraia as informações do produto:
-
-URL: ${productUrl}
-
-Extraia:
-1. TÍTULO: texto exato do H1
-2. PREÇO: valor numérico em reais
-3. IMAGENS: URLs das imagens do produto (formato mlstatic.com)
-
-Busque as imagens em:
-- Elementos <figure class="ui-pdp-gallery__figure"> com atributo data-zoom
-- Ou tags <img> dentro da galeria principal
-
-Retorne APENAS URLs reais que existem na página.`,
-            add_context_from_internet: true,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    title: { type: "string" },
-                    price: { type: "number" },
-                    image_urls: { type: "array", items: { type: "string" } }
-                },
-                required: ["title", "image_urls"]
-            }
-        });
-
-        console.log('🤖 IA retornou:', JSON.stringify(extractResponse));
-
-        if (extractResponse?.image_urls?.length > 0) {
-            const validImages = [...new Set(extractResponse.image_urls)].filter(url => 
-                url && url.includes('mlstatic.com')
-            ).map(url => url.replace(/-[A-Z]\./, '-F.'));
-            
-            if (validImages.length > 0) {
-                console.log('📸 Imagens via IA:', validImages.length);
-                return Response.json({
-                    found: true,
-                    images: validImages,
-                    title: extractResponse.title || searchTerm || '',
-                    price: extractResponse.price || null,
-                    description: extractResponse.title || searchTerm || '',
-                    source: 'Mercado Livre'
-                }, { status: 200 });
-            }
-        }
 
         return Response.json({
-            error: "Não foi possível extrair imagens deste anúncio. Tente usar o upload manual de imagens.",
+            error: "Não foi possível extrair imagens. O anúncio pode estar bloqueado. Use upload manual.",
             found: false
         }, { status: 200 });
 
