@@ -24,15 +24,20 @@ Deno.serve(async (req) => {
         const serpResponse = await fetch(serpUrl);
         const data = await serpResponse.json();
 
+        console.log('🔥 DEBUG - Estrutura completa do SerpAPI:', JSON.stringify(data, null, 2));
+
         if (!data.shopping_results || data.shopping_results.length === 0) {
+            console.log('❌ Nenhum shopping_results encontrado');
             return Response.json({
                 error: "Produto não encontrado",
                 found: false
             }, { status: 404 });
         }
 
+        console.log(`✅ ${data.shopping_results.length} resultados encontrados`);
         const productTitle = data.shopping_results[0].title;
         const productPrice = data.shopping_results[0].extracted_price;
+        console.log(`📦 Título: ${productTitle}, Preço: ${productPrice}`);
 
         // COLETA IMAGENS DE MÚLTIPLOS RESULTADOS
         console.log(`📋 Total de resultados: ${data.shopping_results.length}`);
