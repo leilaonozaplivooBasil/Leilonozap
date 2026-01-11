@@ -252,11 +252,7 @@ Deno.serve(async (req) => {
              found: true,
              title: productTitle,
              description: `${productTitle} - Preço de referência: R$ ${productPrice?.toFixed(2) || 'Consulte'}`,
-             price: productPrice,
-             image_urls: image_urls,
-             source: source,
-             sourceUrl: sourceUrl,
-             isMercadoLivre: isMercadoLivre
+             imageUrls: image_urls
          }, { status: 200 });
 
     } catch (error) {
