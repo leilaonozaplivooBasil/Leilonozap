@@ -205,61 +205,7 @@ Deno.serve(async (req) => {
              }, { status: 200 });
          }
 
-        // 🆕 MODO 2: CLONAR ANÚNCIO COMPLETO (título, descrição, preço, imagens)
-        if (adUrl) {
-            console.log('🔗 ========== MODO 2 ATIVADO (CLONAR ANÚNCIO) ==========');
-            let extractedTitle = productTitle;
-            let extractedDescription = '';
-            let extractedPrice = productPrice;
-            let specificImageUrls = [];
-            
-            try {
-                const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                    prompt: `Acesse e clone COMPLETAMENTE o anúncio: ${adUrl}. Extraia: título completo, descrição completa com especificações (mínimo 300 caracteres), preço exato e uma galeria de 8 a 12 imagens em alta resolução (mínimo 800px) com ÂNGULOS DIFERENTES (frente, traseira, laterais, detalhes, etc). Ignore thumbnails e imagens repetidas. RETORNE EM JSON.`,
-                    add_context_from_internet: true,
-                    response_json_schema: {
-                        type: "object",
-                        properties: {
-                            title: { type: "string" },
-                            description: { type: "string" },
-                            price: { type: "number" },
-                            image_urls: { type: "array", items: { type: "string" } }
-                        },
-                        required: ["title", "description", "price", "image_urls"]
-                    }
-                });
-                
-                if (extractResponse) {
-                    extractedTitle = extractResponse.title || extractedTitle;
-                    extractedDescription = extractResponse.description || '';
-                    extractedPrice = extractResponse.price || extractedPrice;
-                    if (extractResponse.image_urls?.length > 0) {
-                        const validatedUrls = [];
-                        for(const url of extractResponse.image_urls) {
-                            if (await validateImageUrl(url)) {
-                                validatedUrls.push(url);
-                            }
-                        }
-                        specificImageUrls = [...new Set(validatedUrls)];
-                    }
-                }
-            } catch (err) {
-                console.error('❌ Erro ao extrair com IA:', err.message);
-            }
 
-            if (specificImageUrls.length === 0) {
-                 return Response.json({ error: "Nenhuma imagem válida encontrada neste anúncio" }, { status: 404 });
-            }
-
-            return Response.json({
-                found: true,
-                title: extractedTitle,
-                description: extractedDescription,
-                imageUrls: specificImageUrls,
-                price: extractedPrice,
-                source: adUrl
-            }, { status: 200 });
-        }
 
         // MODO PADRÃO: Extrai URLs de imagens do anúncio ML
          let image_urls = [];
