@@ -68,23 +68,23 @@ Deno.serve(async (req) => {
             results = data.shopping_results;
         }
         
-        if (!data.shopping_results || data.shopping_results.length === 0) {
+        if (!results || results.length === 0) {
             await base44.asServiceRole.entities.SystemLog.create({
               step: 'PRODUCT_SEARCH_BY_NAME_NOT_FOUND',
               status: 'warning',
-              message: 'Produto não encontrado no Google Shopping',
+              message: 'Produto não encontrado no Mercado Livre',
               component_name: 'searchProductByName',
               payload: { productName }
             }).catch(() => {});
             
             return Response.json({
-                error: "Produto não encontrado no Google Shopping",
+                error: "Produto não encontrado no Mercado Livre",
                 suggestion: "Tente com marca + modelo completo"
             }, { status: 404 });
         }
 
-        // Pega o primeiro resultado mais relevante
-        const firstResult = data.shopping_results[0];
+        // Pega o primeiro resultado (já é do Mercado Livre)
+        const firstResult = results[0];
         const productTitle = firstResult.title;
         const productPrice = firstResult.extracted_price || firstResult.price;
         
