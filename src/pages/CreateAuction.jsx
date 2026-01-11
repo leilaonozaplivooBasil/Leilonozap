@@ -178,15 +178,6 @@ export default function CreateAuction() {
         />
       )}
 
-      {showValidationModal && (
-        <ProductValidationModal
-          productData={validationData}
-          onConfirm={handleValidationConfirm}
-          onCancel={handleValidationCancel}
-          isLoading={false}
-        />
-      )}
-
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-xl bg-gray-800/50 backdrop-blur-sm border border-gray-700">
           <CardHeader className="text-center border-b border-gray-700">
