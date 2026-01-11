@@ -245,6 +245,52 @@ export default function CreateAuction() {
                       {isLoadingUrl && <p className="text-sm text-purple-300 mt-2">Extraindo URLs das imagens...</p>}
                     </div>
 
+                    {showValidationModal && validationData && (
+                      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <Card className="w-full max-w-2xl shadow-2xl bg-gray-800 border border-gray-700">
+                          <CardHeader className="border-b border-gray-700">
+                            <CardTitle className="text-lg text-blue-400">Validar Dados do Anúncio</CardTitle>
+                          </CardHeader>
+                          <CardContent className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+                            {/* TÍTULO */}
+                            <div>
+                              <h3 className="text-xs font-bold text-blue-300 mb-2">TÍTULO</h3>
+                              <p className="bg-gray-900 border border-gray-600 rounded p-3 text-gray-200 text-sm">{validationData.title}</p>
+                            </div>
+
+                            {/* DESCRIÇÃO */}
+                            <div>
+                              <h3 className="text-xs font-bold text-blue-300 mb-2">DESCRIÇÃO</h3>
+                              <p className="bg-gray-900 border border-gray-600 rounded p-3 text-gray-200 text-sm max-h-[100px] overflow-y-auto">{validationData.description}</p>
+                            </div>
+
+                            {/* IMAGENS - SÓ ENDEREÇOS */}
+                            <div>
+                              <h3 className="text-xs font-bold text-blue-300 mb-2">IMAGENS ({validationData.image_urls?.length || 0} encontradas)</h3>
+                              <div className="bg-gray-900 border border-gray-600 rounded p-3 space-y-2 max-h-[200px] overflow-y-auto">
+                                {validationData.image_urls && validationData.image_urls.length > 0 ? (
+                                  validationData.image_urls.map((url, idx) => (
+                                    <div key={idx} className="text-xs text-gray-400 break-all font-mono bg-gray-950 p-2 rounded border border-gray-700">
+                                      {idx + 1}. {url}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-gray-400 text-xs">Nenhuma imagem extraída</p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* BOTÕES */}
+                            <div className="flex gap-3 pt-4 border-t border-gray-700">
+                              <Button onClick={handleValidationCancel} variant="outline" className="flex-1">Rejeitar</Button>
+                              <Button onClick={handleValidationConfirm} className="flex-1 bg-green-600 hover:bg-green-700">✅ Confirmar</Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    }
+                    </div>
+
                   </CardContent>
                 </Card>
 
