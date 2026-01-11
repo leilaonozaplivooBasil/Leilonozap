@@ -49,10 +49,9 @@ export default function CreateAuction() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   
-  const [productName, setProductName] = useState("");
-  const [isSearchingName, setIsSearchingName] = useState(false);
+  const [auctionUrl, setAuctionUrl] = useState("");
+  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
   const [adImagePool, setAdImagePool] = useState([]);
-  const [manualStep, setManualStep] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [validationData, setValidationData] = useState(null);
   const [showValidationModal, setShowValidationModal] = useState(false);
