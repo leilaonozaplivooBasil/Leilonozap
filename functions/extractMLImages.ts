@@ -252,89 +252,77 @@ Deno.serve(async (req) => {
         }
 
         // ============================================
-        // MÉTODO 3: SerpAPI - Busca produto e extrai galeria completa
+        // MÉTODO 3: SerpAPI - Busca pelo item_id específico do ML
         // ============================================
         console.log('⚠️ APIs do ML bloqueadas, usando SerpAPI...');
         
         const SERPAPI_KEY = Deno.env.get("SERPAPI_KEY");
-        if (SERPAPI_KEY && searchTerm) {
-            // Busca específica no Google Shopping para encontrar o produto exato do ML
-            const serpUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(searchTerm)}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
-            console.log('🔍 Buscando produto no Google Shopping...');
+        if (SERPAPI_KEY && productId) {
+            // Busca Google Images pelo item_id específico (MLB...) para pegar imagens do anúncio exato
+            const serpUrl = `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(productId + ' site:mercadolivre.com.br')}&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
+            console.log('🔍 Buscando imagens pelo item_id:', productId);
             
             const serpResponse = await fetch(serpUrl);
             if (serpResponse.ok) {
                 const serpData = await serpResponse.json();
                 
-                if (serpData.shopping_results && serpData.shopping_results.length > 0) {
-                    // Procura o resultado do Mercado Livre especificamente
-                    const mlResult = serpData.shopping_results.find(r => 
-                        r.source && r.source.toLowerCase().includes('mercado')
-                    );
+                if (serpData.images_results && serpData.images_results.length > 0) {
+                    // Filtra apenas imagens do mlstatic.com (CDN do Mercado Livre)
+                    const mlImages = serpData.images_results
+                        .filter(img => {
+                            const url = img.original || img.thumbnail || '';
+                            return url.includes('mlstatic.com') || url.includes('mercadolivre');
+                        })
+                        .map(img => {
+                            let url = img.original || img.thumbnail;
+                            // Converte para alta resolução se possível
+                            if (url && url.includes('mlstatic.com')) {
+                                url = url.replace(/-[A-Z]\./, '-F.');
+                            }
+                            return url;
+                        })
+                        .filter(url => url && url.startsWith('http'));
                     
-                    if (mlResult && mlResult.product_id) {
-                        // Busca detalhes COMPLETOS do produto para pegar TODA a galeria
-                        const detailUrl = `https://serpapi.com/search.json?engine=google_product&product_id=${mlResult.product_id}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
-                        console.log('🔍 Buscando galeria completa do produto:', mlResult.product_id);
-                        
-                        const detailResponse = await fetch(detailUrl);
-                        if (detailResponse.ok) {
-                            const detailData = await detailResponse.json();
-                            const images = [];
-                            
-                            // 1. Extrai TODAS as imagens da galeria de mídia
-                            if (detailData.product_results?.media) {
-                                console.log('📦 Mídia encontrada:', detailData.product_results.media.length, 'itens');
-                                for (const media of detailData.product_results.media) {
-                                    if (media.type === 'image' && media.link) {
-                                        images.push(media.link);
-                                    }
-                                }
-                            }
-                            
-                            // 2. Também pega imagens de variantes se existirem
-                            if (detailData.product_results?.images) {
-                                for (const img of detailData.product_results.images) {
-                                    if (typeof img === 'string') {
-                                        images.push(img);
-                                    } else if (img.link) {
-                                        images.push(img.link);
-                                    }
-                                }
-                            }
-                            
-                            // 3. Adiciona thumbnail principal se não tiver nenhuma
-                            if (images.length === 0 && mlResult.thumbnail) {
-                                images.push(mlResult.thumbnail);
-                            }
-                            
-                            // Remove duplicatas mantendo ordem
-                            const uniqueImages = [...new Set(images)];
-                            
-                            if (uniqueImages.length > 0) {
-                                console.log('📸 Total de imagens da galeria:', uniqueImages.length);
-                                return Response.json({
-                                    found: true,
-                                    images: uniqueImages,
-                                    title: detailData.product_results?.title || mlResult.title || searchTerm,
-                                    price: mlResult.extracted_price || null,
-                                    description: detailData.product_results?.title || mlResult.title || searchTerm,
-                                    source: 'Mercado Livre'
-                                }, { status: 200 });
-                            }
-                        }
-                    }
-                    
-                    // Fallback: usa apenas a thumbnail do resultado ML (1 imagem)
-                    if (mlResult && mlResult.thumbnail) {
-                        console.log('📸 Usando apenas thumbnail do ML (galeria não disponível)');
+                    if (mlImages.length > 0) {
+                        const uniqueImages = [...new Set(mlImages)];
+                        console.log('📸 Imagens do anúncio encontradas:', uniqueImages.length);
                         return Response.json({
                             found: true,
-                            images: [mlResult.thumbnail],
-                            title: mlResult.title || searchTerm,
-                            price: mlResult.extracted_price || null,
-                            description: mlResult.title || searchTerm,
+                            images: uniqueImages,
+                            title: searchTerm || '',
+                            price: null,
+                            description: searchTerm || '',
                             source: 'Mercado Livre'
+                        }, { status: 200 });
+                    }
+                }
+            }
+        }
+        
+        // Fallback: busca pelo nome do produto se não encontrou pelo ID
+        if (SERPAPI_KEY && searchTerm) {
+            const fallbackUrl = `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchTerm + ' mercadolivre')}&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
+            console.log('🔍 Fallback: buscando por nome do produto...');
+            
+            const fallbackResponse = await fetch(fallbackUrl);
+            if (fallbackResponse.ok) {
+                const fallbackData = await fallbackResponse.json();
+                
+                if (fallbackData.images_results && fallbackData.images_results.length > 0) {
+                    const images = fallbackData.images_results
+                        .slice(0, 5)
+                        .map(img => img.original || img.thumbnail)
+                        .filter(url => url && url.startsWith('http'));
+                    
+                    if (images.length > 0) {
+                        console.log('📸 Imagens via fallback:', images.length);
+                        return Response.json({
+                            found: true,
+                            images: [...new Set(images)],
+                            title: searchTerm || '',
+                            price: null,
+                            description: searchTerm || '',
+                            source: 'Google Images'
                         }, { status: 200 });
                     }
                 }
