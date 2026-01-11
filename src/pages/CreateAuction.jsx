@@ -237,43 +237,29 @@ export default function CreateAuction() {
                 <Card className="bg-gray-800 border border-gray-700">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2 text-blue-400">
-                      <LinkIcon className="w-5 h-5" /> Importador Automático Por Nome
+                      <LinkIcon className="w-5 h-5" /> Importador do Mercado Livre
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    
-                    {manualStep === 0 && (
-                      <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
-                        <Label htmlFor="productName" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
-                          <Zap className="w-4 h-4" /> 1. Buscar Produto Pelo Nome
-                        </Label>
-                        <div className="flex gap-2">
-                          <Input
-                            id="productName"
-                            value={productName}
-                            onChange={(e) => setProductName(e.target.value)}
-                            onKeyPress={(e) => { if (e.key === 'Enter') searchByName(); }}
-                            placeholder="Ex: iPhone 15 Pro, Geladeira Samsung 500L..."
-                            className="bg-gray-900 border-purple-600 text-gray-100"
-                            disabled={isSearchingName}
-                          />
-                          <Button onClick={searchByName} disabled={isSearchingName || !productName.trim()} className="bg-purple-600 hover:bg-purple-700">
-                            {isSearchingName ? <Loader2 className="w-4 h-4 animate-spin" /> : "Buscar"}
-                          </Button>
-                        </div>
+                    <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
+                      <Label htmlFor="auctionUrl" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
+                        <Zap className="w-4 h-4" /> Cole a URL do Anúncio
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="auctionUrl"
+                          value={auctionUrl}
+                          onChange={(e) => setAuctionUrl(e.target.value)}
+                          onKeyPress={(e) => { if (e.key === 'Enter') extractFromUrl(); }}
+                          placeholder="https://www.mercadolivre.com.br/..."
+                          className="bg-gray-900 border-purple-600 text-gray-100"
+                          disabled={isLoadingUrl}
+                        />
+                        <Button onClick={extractFromUrl} disabled={isLoadingUrl || !auctionUrl.trim()} className="bg-purple-600 hover:bg-purple-700 whitespace-nowrap">
+                          {isLoadingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : "Extrair"}
+                        </Button>
                       </div>
-                    )}
-
-                    {manualStep === 1 && (
-                      <div className="text-center py-8">
-                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
-                        <p className="text-blue-400">Buscando produto na internet...</p>
-                      </div>
-                    )}
-                    
-
-                    
-
+                    </div>
 
                     {adImagePool.length > 0 && !showValidationModal && (
                       <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
