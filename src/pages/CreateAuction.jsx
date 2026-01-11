@@ -1462,10 +1462,54 @@ export default function CreateAuction() {
                                 />
                                 
                                 <Button 
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.preventDefault();
                                     if (isProcessing) return;
-                                    extractAllData();
+                                    
+                                    // Se for Mercado Livre, usa extração direta
+                                    if (selectedMarketplace.id === 'mercadolivre' && productUrl.includes('mercadolivre.com.br')) {
+                                      setIsProcessing(true);
+                                      setManualStep(1);
+                                      
+                                      try {
+                                        const response = await base44.functions.invoke('extractMLImages', { productUrl });
+                                        
+                                        if (!response || response.status !== 200 || !response.data.found) {
+                                          throw new Error(response?.data?.error || 'Não foi possível extrair imagens.');
+                                        }
+                                        
+                                        const data = response.data;
+                                        console.log('✅ Imagens ML extraídas:', data.images.length);
+                                        
+                                        setExtractedData({ 
+                                          title: data.title || '', 
+                                          description: data.description || '' 
+                                        });
+                                        
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          title: data.title || prev.title,
+                                          description: data.description || prev.description,
+                                          starting_price: data.price ? data.price.toString() : prev.starting_price,
+                                          source_url: productUrl
+                                        }));
+                                        
+                                        setDownloadedImages(data.images);
+                                        setCoverIndex(0);
+                                        setManualStep(5); // Vai para preview das imagens
+                                        
+                                        toast.success(`✅ ${data.images.length} imagens extraídas do Mercado Livre!`);
+                                      } catch (error) {
+                                        console.error('❌ Erro ML:', error);
+                                        toast.error(error.message || 'Erro ao extrair do Mercado Livre');
+                                        setManualStep(0);
+                                      } finally {
+                                        setIsProcessing(false);
+                                      }
+                                    } else {
+                                      // Outros sites usam o fluxo antigo
+                                      extractAllData();
+                                    }
                                   }}
                                   disabled={isProcessing || !productUrl.trim()}
                                   className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
@@ -1485,7 +1529,9 @@ export default function CreateAuction() {
                                 
                                 <div className="mt-3 p-2 bg-blue-900/30 rounded-lg border border-blue-500/30">
                                   <p className="text-xs text-blue-300">
-                                    ✨ A IA já sabe que vai extrair de <strong>{selectedMarketplace.name}</strong> e buscará dados específicos deste site!
+                                    ✨ {selectedMarketplace.id === 'mercadolivre' 
+                                      ? 'Extração direta de imagens WebP em alta resolução!' 
+                                      : `A IA buscará dados específicos de ${selectedMarketplace.name}`}
                                   </p>
                                 </div>
                               </div>
