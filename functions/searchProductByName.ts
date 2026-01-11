@@ -204,11 +204,45 @@ Deno.serve(async (req) => {
             }, { status: 200 });
         }
 
-        // MODO PADRÃO: Retorna thumbnail do SerpAPI (funciona sempre)
+        // MODO PADRÃO: Extrai URLs de imagens do anúncio ML
          let image_urls = [];
-         if (firstResult.thumbnail && isMercadoLivre) {
-             image_urls = [firstResult.thumbnail];
-             console.log('✅ Usando thumbnail do SerpAPI como imagem inicial');
+
+         if (isMercadoLivre && sourceUrl) {
+             try {
+                 console.log('📸 Extraindo URLs de imagens do anúncio ML...');
+
+                 const urlsResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                     prompt: `Acesse este anúncio do Mercado Livre: ${sourceUrl}
+
+        Extraía APENAS as URLs diretas das imagens da galeria de fotos do produto (imagens principais, não thumbnails).
+
+        RETORNE APENAS UM ARRAY JSON com as URLs:
+        ["https://...", "https://...", ...]
+
+        Se não conseguir acessar, retorne: []`,
+                     add_context_from_internet: true
+                 });
+
+                 console.log('🔍 Resposta IA (URLs):', urlsResponse?.substring(0, 100));
+
+                 if (urlsResponse && urlsResponse.includes('http')) {
+                     try {
+                         const parsed = JSON.parse(urlsResponse);
+                         if (Array.isArray(parsed)) {
+                             image_urls = parsed.filter(url => typeof url === 'string' && url.startsWith('http'));
+                             console.log('✅ Extraídas', image_urls.length, 'URLs de imagens');
+                         }
+                     } catch {
+                         console.log('⚠️ Erro ao parsear URLs, tentando alternativa...');
+                         // Tenta extrair URLs usando regex
+                         const urlMatches = urlsResponse.match(/https:\/\/[^\s"'<>]+\.jpg/gi) || [];
+                         image_urls = [...new Set(urlMatches)];
+                         console.log('✅ Extraídas', image_urls.length, 'URLs via regex');
+                     }
+                 }
+             } catch (err) {
+                 console.log('⚠️ Erro ao extrair URLs:', err.message);
+             }
          }
 
          return Response.json({
