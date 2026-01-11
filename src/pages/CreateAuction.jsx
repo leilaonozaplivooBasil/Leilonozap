@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { addSeconds } from 'date-fns';
 import ProductImagePreview from "../components/admin/ProductImagePreview";
 import ConfirmProductDuplicationModal from "../components/admin/ConfirmProductDuplicationModal";
+import ProductValidationModal from "../components/admin/ProductValidationModal";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -53,6 +54,8 @@ export default function CreateAuction() {
   const [adImagePool, setAdImagePool] = useState([]);
   const [manualStep, setManualStep] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [validationData, setValidationData] = useState(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
 
   const loadCurrentUser = useCallback(async () => {
     try {
@@ -93,14 +96,42 @@ export default function CreateAuction() {
         if (!response || response.status !== 200 || !response.data?.found) {
           throw new Error(response?.data?.error || 'Produto não encontrado');
         }
-        setManualStep(10);
-        toast.success("✅ Produto encontrado! Confirme para prosseguir.");
+        
+        // Armazena dados para validação e mostra modal
+        setValidationData({
+          title: response.data.title || productName,
+          description: response.data.description || "",
+          image_urls: response.data.image_urls || [],
+          price: response.data.price
+        });
+        setShowValidationModal(true);
+        setManualStep(0); // Volta ao step inicial
     } catch (error) {
       toast.error(`Erro na busca: ${error.message}`);
       setManualStep(0);
     } finally {
       setIsSearchingName(false);
     }
+  };
+
+  const handleValidationConfirm = () => {
+    if (validationData) {
+      setAdImagePool(validationData.image_urls || []);
+      setFormData(prev => ({
+        ...prev,
+        title: validationData.title,
+        description: validationData.description
+      }));
+      setShowValidationModal(false);
+      setValidationData(null);
+      toast.success("✅ Dados validados e importados com sucesso!");
+    }
+  };
+
+  const handleValidationCancel = () => {
+    setShowValidationModal(false);
+    setValidationData(null);
+    setProductName("");
   };
 
 
@@ -182,6 +213,15 @@ export default function CreateAuction() {
         />
       )}
 
+      {showValidationModal && (
+        <ProductValidationModal
+          productData={validationData}
+          onConfirm={handleValidationConfirm}
+          onCancel={handleValidationCancel}
+          isLoading={false}
+        />
+      )}
+
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-xl bg-gray-800/50 backdrop-blur-sm border border-gray-700">
           <CardHeader className="text-center border-b border-gray-700">
@@ -240,9 +280,9 @@ export default function CreateAuction() {
                     
 
 
-                    {manualStep === 5 && (
+                    {adImagePool.length > 0 && !showValidationModal && (
                       <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
-                          <h4 className="font-bold text-green-300 mb-3">✅ Produto Importado!</h4>
+                          <h4 className="font-bold text-green-300 mb-3">✅ Produto Validado!</h4>
                           <ProductImagePreview imageUrls={adImagePool} />
                           <Button onClick={applyToForm} className="w-full mt-4 bg-green-600 hover:bg-green-700">🚀 Aplicar no Formulário</Button>
                       </div>
