@@ -21,12 +21,14 @@ function cleanTitle(title) {
     return words.slice(0, 8).join(' ');
 }
 
-// 🚫 VALIDA PREÇO
+// 🚫 VALIDA PREÇO - VERSÃO MAIS FLEXÍVEL
 function isValidPrice(price, currentPrice) {
-    if (!price || price < 10) return false;
-    const badPrices = [99.99, 199.99, 299.99, 399.99, 499.99, 599.99, 699.99, 799.99, 899.99, 999.99, 9999.99];
-    if (badPrices.includes(price)) return false;
-    if (currentPrice > 0 && price > currentPrice * 40) return false;
+    if (!price || price < 5) return false; // Aceita preços a partir de R$5
+    if (price > 500000) return false; // Preço máximo razoável
+    
+    // Removido filtro de "badPrices" - preços redondos são comuns
+    // Removido limite de 40x - muito restritivo para produtos baratos
+    
     return true;
 }
 
