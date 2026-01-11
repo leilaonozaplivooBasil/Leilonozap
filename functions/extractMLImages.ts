@@ -112,33 +112,30 @@ Deno.serve(async (req) => {
         console.log('⚠️ API não retornou, tentando via IA...');
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta URL do Mercado Livre e extraia os dados do produto:
-${productUrl}
+            prompt: `Acesse ${productUrl} e extraia EXATAMENTE as URLs de imagem do atributo "data-zoom".
 
-EXTRAIR:
-1. TÍTULO: Nome completo do produto (do elemento h1 ou title)
-2. PREÇO: Valor numérico em R$
-3. IMAGENS: URLs do atributo "data-zoom" de cada <img> dentro de <figure class="ui-pdp-gallery__figure">
+LOCALIZAÇÃO NO HTML:
+Dentro de <div class="ui-pdp-gallery__column">, procure todas as tags:
+<figure class="ui-pdp-gallery__figure">
+  <img data-zoom="URL_AQUI" ...>
+</figure>
 
-ESTRUTURA HTML DA GALERIA DO ML:
-<div class="ui-pdp-gallery__column">
-  <figure class="ui-pdp-gallery__figure">
-    <img data-zoom="https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXXX_MMYYYY-F.webp" ...>
-  </figure>
-  <!-- mais figures... -->
-</div>
+COPIE LITERALMENTE cada URL do atributo data-zoom.
 
-⚠️ CRÍTICO - EXTRAIR APENAS:
-- URLs do atributo "data-zoom" (alta resolução 2X)
-- Formato: https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXXX_MMYYYY-F.webp
-- Cada imagem tem código único (ex: 648933-MLA99498284868_112025)
+Cada URL é ÚNICA e tem este formato:
+https://http2.mlstatic.com/D_NQ_NP_2X_[6digitos]-MLA[id]_[data]-F.webp
 
-🚫 IGNORAR:
-- Thumbnails pequenas (-R.webp)
-- Vídeos
-- Imagens fora da galeria principal
+Exemplo de URLs REAIS que você deve encontrar nesta página:
+- https://http2.mlstatic.com/D_NQ_NP_2X_648933-MLA99498284868_112025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_603199-MLA93967786557_102025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_2X_763958-MLA100186854181_122025-F.webp
 
-Copie EXATAMENTE as URLs do atributo data-zoom de cada figure.`,
+⛔ PROIBIDO:
+- Inventar URLs
+- Modificar números das URLs
+- Criar sequências (112025, 112026, 112027...)
+
+Cada imagem tem números DIFERENTES. Copie EXATAMENTE como está no HTML.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -148,7 +145,7 @@ Copie EXATAMENTE as URLs do atributo data-zoom de cada figure.`,
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        description: "URLs do atributo data-zoom (terminando em -F.webp)"
+                        description: "URLs EXATAS copiadas do atributo data-zoom"
                     }
                 },
                 required: ["title", "image_urls"]
