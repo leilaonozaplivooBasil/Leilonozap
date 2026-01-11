@@ -135,14 +135,23 @@ Deno.serve(async (req) => {
         // 🆕 MODO 1: LISTAR ANÚNCIOS (com imagem extraída)
          if (listAdsOnly === true) {
              console.log('📋 ========== MODO 1 ATIVADO ==========');
-             console.log('📋 Retornando lista de anúncios COM IMAGENS...');
+             console.log('📋 Retornando lista de anúncios COM LINKS CORRETOS...');
              const ads = [];
              const topResults = data.shopping_results.slice(0, 5); // Apenas 5 anúncios
 
              for (const result of topResults) {
                  if (!result.link) continue;
 
-                 const resultHost = new URL(result.link).hostname;
+                 // 🔍 Extrai link correto (pode ser redirect_link ou link)
+                 let resultUrl = result.redirect_link || result.link;
+                 let resultHost = '';
+                 try {
+                     const urlObj = new URL(resultUrl);
+                     resultHost = urlObj.hostname;
+                 } catch (e) {
+                     resultHost = 'unknown';
+                 }
+
                  const isMercado = resultHost.includes('mercadolivre');
                  const resultSource = isMercado ? 'Mercado Livre' : (result.source || 'Loja Online');
 
@@ -150,7 +159,7 @@ Deno.serve(async (req) => {
 
                  ads.push({
                      title: result.title || productTitle,
-                     url: result.link,
+                     url: resultUrl,
                      source: resultSource,
                      price: result.extracted_price || result.price || 'Consulte',
                      snippet: result.snippet || '',
