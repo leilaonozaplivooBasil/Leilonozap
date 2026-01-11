@@ -1,37 +1,5 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// Função para gerar descrição detalhada usando IA
-async function generateDescription(base44, title) {
-    if (!title) return '';
-    
-    try {
-        const result = await base44.integrations.Core.InvokeLLM({
-            prompt: `Baseado no título do produto "${title}", crie uma descrição detalhada para venda em leilão online. 
-            
-            A descrição deve:
-            - Ter 3-5 linhas
-            - Destacar características principais do produto
-            - Mencionar benefícios para o comprador
-            - Ser persuasiva e profissional
-            - NÃO inventar especificações técnicas que não estejam no título
-            - Ser em português brasileiro
-            
-            Retorne APENAS a descrição, sem título ou formatação extra.`,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    description: { type: "string" }
-                }
-            }
-        });
-        
-        return result.description || title;
-    } catch (error) {
-        console.log('⚠️ Erro ao gerar descrição com IA:', error.message);
-        return title;
-    }
-}
-
 // Headers para simular navegador real
 const BROWSER_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -191,14 +159,12 @@ Deno.serve(async (req) => {
                     
                     if (uniqueImages.length > 0) {
                         console.log('📸 Imagens via scraping:', uniqueImages.length);
-                        const finalTitle = title || searchTerm || '';
-                        const description = await generateDescription(base44, finalTitle);
                         return Response.json({
                             found: true,
                             images: uniqueImages,
-                            title: finalTitle,
+                            title: title || searchTerm || '',
                             price: price,
-                            description: description,
+                            description: title || searchTerm || '',
                             source: 'Mercado Livre'
                         }, { status: 200 });
                     }
@@ -235,14 +201,12 @@ Deno.serve(async (req) => {
                 
                 if (images.length > 0) {
                     console.log('📸 Imagens do catálogo:', images.length);
-                    const finalTitle = catalogData.name || '';
-                    const description = await generateDescription(base44, finalTitle);
                     return Response.json({
                         found: true,
                         images: [...new Set(images)],
-                        title: finalTitle,
+                        title: catalogData.name || '',
                         price: null,
-                        description: description,
+                        description: catalogData.name || '',
                         source: 'Mercado Livre'
                     }, { status: 200 });
                 }
@@ -273,14 +237,12 @@ Deno.serve(async (req) => {
                 
                 if (images.length > 0) {
                     console.log('📸 Imagens encontradas:', images.length);
-                    const finalTitle = productData.title || '';
-                    const description = await generateDescription(base44, finalTitle);
                     return Response.json({
                         found: true,
                         images: [...new Set(images)],
-                        title: finalTitle,
+                        title: productData.title || '',
                         price: productData.price || null,
-                        description: description,
+                        description: productData.title || '',
                         source: 'Mercado Livre'
                     }, { status: 200 });
                 }
@@ -324,14 +286,12 @@ Deno.serve(async (req) => {
                     if (mlImages.length > 0) {
                         const uniqueImages = [...new Set(mlImages)];
                         console.log('📸 Imagens do anúncio encontradas:', uniqueImages.length);
-                        const finalTitle = searchTerm || '';
-                        const description = await generateDescription(base44, finalTitle);
                         return Response.json({
                             found: true,
                             images: uniqueImages,
-                            title: finalTitle,
+                            title: searchTerm || '',
                             price: null,
-                            description: description,
+                            description: searchTerm || '',
                             source: 'Mercado Livre'
                         }, { status: 200 });
                     }
@@ -356,14 +316,12 @@ Deno.serve(async (req) => {
                     
                     if (images.length > 0) {
                         console.log('📸 Imagens via fallback:', images.length);
-                        const finalTitle = searchTerm || '';
-                        const description = await generateDescription(base44, finalTitle);
                         return Response.json({
                             found: true,
                             images: [...new Set(images)],
-                            title: finalTitle,
+                            title: searchTerm || '',
                             price: null,
-                            description: description,
+                            description: searchTerm || '',
                             source: 'Google Images'
                         }, { status: 200 });
                     }
