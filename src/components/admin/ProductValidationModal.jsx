@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, X, Loader2 } from "lucide-react";
+import { Check, X, Loader2, ExternalLink } from "lucide-react";
 import ProductImagePreview from "./ProductImagePreview";
 
 export default function ProductValidationModal({ productData, onConfirm, onCancel, isLoading }) {
@@ -14,14 +14,40 @@ export default function ProductValidationModal({ productData, onConfirm, onCance
           <CardTitle className="text-xl text-yellow-400 flex items-center gap-2">
             ⚠️ Validar Dados do Produto
           </CardTitle>
-          <p className="text-sm text-gray-400 mt-2">Revise os dados encontrados no Mercado Livre antes de importar</p>
+          <p className="text-sm text-gray-400 mt-2">Revise os dados encontrados antes de importar</p>
         </CardHeader>
         <CardContent className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
           
+          {/* FONTE E LINK DO ANÚNCIO */}
+          {productData.sourceUrl && (
+            <div className="bg-blue-900/30 border border-blue-600/50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-blue-400 font-semibold">FONTE DO ANÚNCIO</p>
+                  <p className="text-sm text-blue-300 mt-1">{productData.source || 'Loja Online'}</p>
+                </div>
+                <a 
+                  href={productData.sourceUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white text-xs font-semibold transition-colors"
+                >
+                  Ver Anúncio <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* IMAGENS */}
           <div>
             <h3 className="text-sm font-bold text-blue-400 mb-3">Imagens do Produto</h3>
-            <ProductImagePreview imageUrls={productData.image_urls || []} />
+            {productData.image_urls && productData.image_urls.length > 0 ? (
+              <ProductImagePreview imageUrls={productData.image_urls} />
+            ) : (
+              <div className="bg-gray-900 border border-gray-600 rounded-lg p-6 text-center text-gray-400 text-sm">
+                ⚠️ Nenhuma imagem disponível
+              </div>
+            )}
           </div>
 
           {/* TÍTULO */}
@@ -40,7 +66,7 @@ export default function ProductValidationModal({ productData, onConfirm, onCance
             </div>
           </div>
 
-          {/* PREÇO (opcional) */}
+          {/* PREÇO */}
           {productData.price && (
             <div>
               <h3 className="text-sm font-bold text-blue-400 mb-2">Preço de Referência</h3>
