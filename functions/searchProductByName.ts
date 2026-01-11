@@ -204,13 +204,47 @@ Deno.serve(async (req) => {
             }, { status: 200 });
         }
 
-        // MODO PADRÃO: Retorna prévia com fonte e link do anúncio original
+        // MODO PADRÃO: Extrai imagens do anúncio ML e retorna tudo
+         let image_urls = [];
+         
+         if (isMercadoLivre && sourceUrl) {
+             try {
+                 console.log('📸 Extraindo imagens do anúncio ML...');
+                 const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                     prompt: `Acesse este anúncio do Mercado Livre: ${sourceUrl}\n\nExtraía APENAS URLs diretas de imagens em alta resolução (mínimo 600px) da galeria de fotos do produto. Ignore logotipos, watermarks e imagens pequenas. Retorne um array JSON com no máximo 12 URLs válidas: ["url1", "url2", ...]`,
+                     add_context_from_internet: true,
+                     response_json_schema: {
+                         type: "array",
+                         items: { type: "string" }
+                     }
+                 });
+                 
+                 if (Array.isArray(extractResponse) && extractResponse.length > 0) {
+                     // Valida as URLs extraídas
+                     for (const url of extractResponse) {
+                         if (url && typeof url === 'string' && url.startsWith('http')) {
+                             if (await validateImageUrl(url)) {
+                                 image_urls.push(url);
+                             }
+                         }
+                     }
+                     image_urls = [...new Set(image_urls)].slice(0, 12);
+                     console.log('✅ Extraídas', image_urls.length, 'imagens do ML');
+                 }
+             } catch (err) {
+                 console.log('⚠️ Erro ao extrair imagens, usando thumbnail:', err.message);
+                 if (firstResult.thumbnail) {
+                     image_urls = [firstResult.thumbnail];
+                 }
+             }
+         }
+
          return Response.json({
              found: true,
              title: productTitle,
              description: `${productTitle} - Preço de referência: R$ ${productPrice?.toFixed(2) || 'Consulte'}`,
              price: productPrice,
-             image_urls: firstResult.thumbnail ? [firstResult.thumbnail] : [],
+             image_urls: image_urls,
              source: source,
              sourceUrl: sourceUrl,
              isMercadoLivre: isMercadoLivre
