@@ -1,5 +1,23 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Headers para simular navegador real
+const BROWSER_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1'
+};
+
 Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     
@@ -27,22 +45,17 @@ Deno.serve(async (req) => {
     console.log('🔍 Extraindo imagens do ML:', productUrl);
 
     try {
-        // Extrai o ID do produto da URL - vários padrões possíveis
-        // Padrão 1: /p/MLB12345678 (catálogo)
-        // Padrão 2: MLB-12345678 ou MLB12345678 (item direto)
-        // Padrão 3: item_id=MLB12345678 na query string
-        // Padrão 4: pdp_filters=item_id%3AMLB12345678
-        
+        // Extrai IDs da URL
         let productId = null;
         
-        // Tenta extrair do pdp_filters (formato mais comum em URLs de catálogo)
+        // Padrão pdp_filters=item_id%3AMLB...
         const filtersMatch = productUrl.match(/item_id[=%3A]+([A-Z]{3}\d+)/i);
         if (filtersMatch) {
             productId = filtersMatch[1].toUpperCase();
             console.log('📦 ID extraído de pdp_filters:', productId);
         }
         
-        // Se não achou, tenta padrão direto na URL
+        // Padrão direto MLB-123 ou MLB123
         if (!productId) {
             const mlMatch = productUrl.match(/(MLB|MLA|MLU)[- ]?(\d+)/i);
             if (mlMatch) {
@@ -51,13 +64,13 @@ Deno.serve(async (req) => {
             }
         }
         
-        // Extrai nome do produto da URL para busca fallback
+        // Extrai nome do produto para fallback
         const urlParts = productUrl.split('/');
         const productSlug = urlParts.find(p => p.includes('-') && !p.includes('MLB') && !p.includes('MLA') && !p.includes('?') && p.length > 10) || '';
         const searchTerm = productSlug.replace(/-/g, ' ').substring(0, 50);
         console.log('📝 Termo de busca:', searchTerm);
         
-        // Extrai também o ID do catálogo (MLB55308774) da URL /p/
+        // Extrai ID do catálogo (/p/MLB...)
         const catalogMatch = productUrl.match(/\/p\/([A-Z]{3}\d+)/i);
         const catalogId = catalogMatch ? catalogMatch[1].toUpperCase() : null;
         console.log('📦 Catalog ID:', catalogId, '| Item ID:', productId);
