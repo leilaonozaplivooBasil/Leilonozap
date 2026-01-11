@@ -88,7 +88,85 @@ Deno.serve(async (req) => {
             }, { status: 404 });
         }
 
-        // 🔥 BUSCA IMAGENS DE ALTA QUALIDADE
+        // 🆕 MODO 1: LISTAR ANÚNCIOS (sem buscar imagens)
+        if (listAdsOnly) {
+            console.log('📋 Retornando lista de anúncios...');
+            
+            const ads = data.shopping_results.slice(0, 5).map(result => ({
+                store: result.source || 'Loja Online',
+                price: result.extracted_price || result.price,
+                imageCount: '6-10', // Estimativa
+                link: result.link,
+                thumbnail: result.thumbnail
+            }));
+
+            return Response.json({
+                found: true,
+                title: productTitle,
+                ads: ads
+            }, { status: 200 });
+        }
+
+        // 🆕 MODO 2: IMAGENS DE ANÚNCIO ESPECÍFICO
+        if (adUrl) {
+            console.log('📸 Baixando imagens HD de:', adUrl.substring(0, 60));
+            
+            const specificImageUrls = [];
+            const seenSpecificUrls = new Set();
+            
+            try {
+                const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                    prompt: `Analise esta página e extraia URLs de imagens em ALTA RESOLUÇÃO.
+
+Requisitos:
+- Mínimo 800x800px (ideal: 1200x1200px+)
+- ÂNGULOS DIFERENTES: frente, verso, laterais, detalhes
+- IGNORAR thumbnails, ícones, banners
+- Retornar 6-10 MELHORES imagens VARIADAS
+
+URL: ${adUrl}`,
+                    add_context_from_internet: true,
+                    response_json_schema: {
+                        type: "object",
+                        properties: {
+                            image_urls: { type: "array", items: { type: "string" } }
+                        }
+                    }
+                });
+                
+                if (extractResponse?.image_urls?.length > 0) {
+                    for (const url of extractResponse.image_urls) {
+                        if (url && !seenSpecificUrls.has(url)) {
+                            const isValid = await validateImageUrl(url);
+                            if (isValid) {
+                                specificImageUrls.push(url);
+                                seenSpecificUrls.add(url);
+                                console.log(`✅ Imagem HD #${specificImageUrls.length}`);
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('⚠️ Erro:', err.message);
+            }
+
+            if (specificImageUrls.length === 0) {
+                return Response.json({
+                    error: "Nenhuma imagem HD encontrada",
+                    suggestion: "Tente outro anúncio"
+                }, { status: 404 });
+            }
+
+            return Response.json({
+                found: true,
+                title: productTitle,
+                imageUrls: specificImageUrls,
+                price: productPrice,
+                source: 'Anúncio HD'
+            }, { status: 200 });
+        }
+
+        // 🔥 MODO 3: BUSCA NORMAL (múltiplos anúncios)
         console.log('📸 Iniciando busca de imagens HD...');
         
         const imageUrls = [];
