@@ -90,44 +90,48 @@ Deno.serve(async (req) => {
                 console.log(`📍 URL: ${auction.source_url}`);
 
                 try {
+                    // 🆕 PRIMEIRA TENTATIVA: Busca direta com contexto da URL
                     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `Você está extraindo o PREÇO EXATO de um produto direto do fabricante.
+                        prompt: `TAREFA: Extrair o PREÇO DE VENDA de um produto diretamente da página do fabricante/loja.
 
-        URL DO PRODUTO: ${auction.source_url}
-        NOME DO PRODUTO: ${auction.title}
-        PREÇO DO LEILÃO (referência): R$ ${currentPrice.toFixed(2)}
+🔗 URL DA PÁGINA DO PRODUTO: ${auction.source_url}
+📦 PRODUTO ESPERADO: ${auction.title}
 
-        ⚠️ REGRAS OBRIGATÓRIAS:
-        - Acesse a URL e extraia o preço REAL que está sendo vendido
-        - Se houver múltiplas variações (voltagem, cor), retorne o preço da mais barata
-        - JAMAIS invente preços - se não conseguir acessar, retorne null
-        - Extraia também o nome EXATO da loja/fabricante do site
-        - Se possível, identifique a logo do fornecedor (procure por <img> com "logo" no alt ou class)
+INSTRUÇÕES CRÍTICAS:
+1. ACESSE a URL fornecida e encontre o preço do produto
+2. O preço deve ser o valor de VENDA (não o parcelado, não o antigo riscado)
+3. Procure por padrões como: "R$", "Por:", "Preço:", "A vista:", valores numéricos
+4. Se houver variações (110V/220V), pegue o MENOR preço disponível
+5. EXTRAIA o nome exato da loja (geralmente no header ou footer do site)
+6. Se não conseguir acessar ou encontrar o preço, retorne price: null
 
-        Retorne EXATAMENTE este formato:
-        {
-        "store": "Nome Exato da Loja/Fabricante",
-        "productNameFound": "Nome do Produto no Site",
-        "price": 99.90,
-        "url": "${auction.source_url}",
-        "logo_url": "URL da logo se encontrada, senão null"
-        }`,
+EXEMPLOS DE SITES COMUNS:
+- Magazine Luiza: procure ".price__value" ou "R$"
+- Americanas: procure "currentPrice" ou preço principal
+- Mercado Livre: procure "price-tag-fraction"
+- Amazon: procure "priceblock_ourprice" ou "a-price"
+- Lojas próprias: procure "price", "preco", "valor"
+
+RETORNE APENAS O JSON:`,
                         add_context_from_internet: true,
                         response_json_schema: {
                             type: "object",
                             properties: {
-                                store: { type: "string" },
-                                productNameFound: { type: "string" },
-                                price: { type: ["number", "null"] },
+                                store: { type: "string", description: "Nome da loja/fabricante" },
+                                productNameFound: { type: "string", description: "Nome do produto na página" },
+                                price: { type: ["number", "null"], description: "Preço em reais (ex: 199.90)" },
                                 url: { type: "string" },
-                                logo_url: { type: ["string", "null"] }
+                                logo_url: { type: ["string", "null"] },
+                                confidence: { type: "string", enum: ["high", "medium", "low"] }
                             },
                             required: ["store", "price", "url"]
                         }
                     });
 
-                    if (!result || result.price === null || result.price < 10) {
-                        console.log(`⚠️ Falha na extração do fabricante, tentando Google Shopping...`);
+                    console.log(`📊 Resultado LLM:`, JSON.stringify(result));
+
+                    if (!result || result.price === null || result.price < 1) {
+                        console.log(`⚠️ Falha na extração do fabricante (price=${result?.price}), tentando Google Shopping...`);
                         useGoogleShopping = true;
                     } else {
 
