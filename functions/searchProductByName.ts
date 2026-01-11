@@ -93,31 +93,10 @@ Deno.serve(async (req) => {
         let source = 'Google Shopping';
         let isMercadoLivre = false;
         
-        // PRIORIDADE 1: Procura por Mercado Livre em redirect_link ou link
-        for (const result of data.shopping_results) {
-            const candidateUrl = result.redirect_link || result.link || '';
-            
-            if (candidateUrl && candidateUrl.includes('mercadolivre')) {
-                sourceUrl = candidateUrl;
-                isMercadoLivre = true;
-                source = 'Mercado Livre';
-                console.log('✅ ENCONTRADO MERCADO LIVRE:', sourceUrl);
-                break;
-            }
-        }
-        
-        // PRIORIDADE 2: Se não achou ML, usa o primeiro resultado
-        if (!sourceUrl) {
-            sourceUrl = firstResult.redirect_link || firstResult.link || '';
-            try {
-                const urlObj = new URL(sourceUrl);
-                source = firstResult.source || urlObj.hostname;
-                console.log('✅ Usando primeiro resultado:', source);
-            } catch (e) {
-                source = firstResult.source || 'Loja Online';
-                console.log('⚠️ Erro ao parsear URL, usando source:', source);
-            }
-        }
+        // Já vem do Mercado Livre (filtrado acima)
+        sourceUrl = firstResult.link || firstResult.redirect_link || '';
+        isMercadoLivre = sourceUrl.includes('mercadolivre');
+        source = isMercadoLivre ? 'Mercado Livre' : 'Loja Online';
 
         console.log('✅ Produto encontrado:', productTitle);
         console.log('💰 Preço:', productPrice);
