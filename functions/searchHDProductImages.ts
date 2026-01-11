@@ -35,10 +35,20 @@ Deno.serve(async (req) => {
         const productPrice = data.shopping_results[0].extracted_price;
 
         // COLETA IMAGENS DE MÚLTIPLOS RESULTADOS
+        console.log(`📋 Total de resultados: ${data.shopping_results.length}`);
+        
         const allImages = [];
         const seenUrls = new Set();
 
-        for (const result of data.shopping_results.slice(0, 15)) {
+        for (let i = 0; i < Math.min(15, data.shopping_results.length); i++) {
+            const result = data.shopping_results[i];
+            
+            console.log(`🔍 Resultado ${i + 1}:`, {
+                title: result.title?.substring(0, 30),
+                hasThumbnail: !!result.thumbnail,
+                hasLink: !!result.link
+            });
+            
             // Identifica fonte
             let source = 'Google Shopping';
             const link = result.link || '';
@@ -49,7 +59,6 @@ Deno.serve(async (req) => {
             else if (link.includes('carrefour')) source = 'Carrefour';
             else if (link.includes('casasbahia')) source = 'Casas Bahia';
             
-            // Tenta pegar imagem maior (não thumbnail)
             const imgUrl = result.thumbnail;
             
             if (imgUrl && !seenUrls.has(imgUrl)) {
@@ -57,14 +66,18 @@ Deno.serve(async (req) => {
                     url: imgUrl,
                     source,
                     resolution: 'Auto',
-                    angle: `Resultado #${allImages.length + 1}`
+                    angle: `Ângulo #${allImages.length + 1}`
                 });
                 seenUrls.add(imgUrl);
-                console.log(`📸 #${allImages.length}: ${source}`);
+                console.log(`✅ Imagem coletada #${allImages.length}: ${source}`);
+            } else {
+                console.log(`⚠️ Sem thumbnail ou duplicada`);
             }
             
             if (allImages.length >= 12) break;
         }
+        
+        console.log(`📦 Total coletado: ${allImages.length} imagens`);
 
         // VALIDA URLS
         const validatedImages = [];
