@@ -49,9 +49,13 @@ export default function CreateAuction() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   
-  const [auctionUrl, setAuctionUrl] = useState("");
-  const [isLoadingUrl, setIsLoadingUrl] = useState(false);
+  const [productName, setProductName] = useState("");
+  const [isSearchingName, setIsSearchingName] = useState(false);
+  const [adImagePool, setAdImagePool] = useState([]);
+  const [manualStep, setManualStep] = useState(0);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [validationData, setValidationData] = useState(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
 
   const loadCurrentUser = useCallback(async () => {
     try {
@@ -76,47 +80,78 @@ export default function CreateAuction() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const extractFromUrl = async () => {
-    if (!auctionUrl || auctionUrl.trim().length < 10) {
-      toast.error("Cole a URL completa do anúncio do Mercado Livre");
+  const searchByName = async () => {
+    if (!productName || productName.trim().length < 3) {
+      toast.error("Digite pelo menos 3 caracteres do nome do produto");
       return;
     }
-    
-    setIsLoadingUrl(true);
+    setIsSearchingName(true);
+    setManualStep(1);
+
     try {
-      const response = await base44.functions.invoke('searchProductByName', { 
-        adUrl: auctionUrl.trim()
-      });
+        const response = await base44.functions.invoke('searchProductByName', { 
+          productName: productName.trim()
+        });
 
-      if (!response?.data?.found) {
-        throw new Error(response?.data?.error || 'Erro ao extrair anúncio');
-      }
+        if (!response || response.status !== 200 || !response.data?.found) {
+          throw new Error(response?.data?.error || 'Produto não encontrado');
+        }
+        
+        // Armazena dados para validação e mostra modal
+        setValidationData({
+          title: response.data.title || productName,
+          description: response.data.description || "",
+          image_urls: response.data.image_urls || [],
+          price: response.data.price
+        });
+        setShowValidationModal(true);
+        setManualStep(0); // Volta ao step inicial
+    } catch (error) {
+      toast.error(`Erro na busca: ${error.message}`);
+      setManualStep(0);
+    } finally {
+      setIsSearchingName(false);
+    }
+  };
 
-      const imageUrls = response.data.imageUrls || [];
-      
+  const handleValidationConfirm = () => {
+    if (validationData) {
+      setAdImagePool(validationData.image_urls || []);
       setFormData(prev => ({
         ...prev,
-        title: response.data.title || "Produto",
-        description: response.data.description || ""
+        title: validationData.title,
+        description: validationData.description
       }));
-
-      const finalImages = imageUrls.slice(0, 5);
-      while (finalImages.length < 5) finalImages.push("");
-      setFormData(prev => ({ ...prev, image_urls: finalImages }));
-
-      setAuctionUrl("");
-      toast.success(`✅ ${imageUrls.length} imagens extraídas com sucesso!`);
-    } catch (error) {
-      toast.error(`Erro: ${error.message}`);
-    } finally {
-      setIsLoadingUrl(false);
+      setShowValidationModal(false);
+      setValidationData(null);
+      toast.success("✅ Dados validados e importados com sucesso!");
     }
+  };
+
+  const handleValidationCancel = () => {
+    setShowValidationModal(false);
+    setValidationData(null);
+    setProductName("");
   };
 
 
 
 
+  const applyToForm = () => {
+    const finalImages = adImagePool.slice(0, 5);
+    while (finalImages.length < 5) finalImages.push("");
 
+    setFormData(prev => ({ ...prev, image_urls: finalImages }));
+    
+    resetImporterState();
+    toast.success("✅ Dados aplicados com sucesso no formulário!");
+  };
+
+  const resetImporterState = () => {
+      setManualStep(0);
+      setProductName("");
+      setAdImagePool([]);
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -178,6 +213,15 @@ export default function CreateAuction() {
         />
       )}
 
+      {showValidationModal && (
+        <ProductValidationModal
+          productData={validationData}
+          onConfirm={handleValidationConfirm}
+          onCancel={handleValidationCancel}
+          isLoading={false}
+        />
+      )}
+
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-xl bg-gray-800/50 backdrop-blur-sm border border-gray-700">
           <CardHeader className="text-center border-b border-gray-700">
@@ -198,30 +242,51 @@ export default function CreateAuction() {
                 <Card className="bg-gray-800 border border-gray-700">
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2 text-blue-400">
-                      <LinkIcon className="w-5 h-5" /> Importador do Mercado Livre
+                      <LinkIcon className="w-5 h-5" /> Importador Automático Por Nome
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
-                      <Label htmlFor="auctionUrl" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
-                        <Zap className="w-4 h-4" /> Cole a URL do Anúncio do Mercado Livre
-                      </Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="auctionUrl"
-                          value={auctionUrl}
-                          onChange={(e) => setAuctionUrl(e.target.value)}
-                          onKeyPress={(e) => { if (e.key === 'Enter') extractFromUrl(); }}
-                          placeholder="https://www.mercadolivre.com.br/iphone-17-pro-max..."
-                          className="bg-gray-900 border-purple-600 text-gray-100"
-                          disabled={isLoadingUrl}
-                        />
-                        <Button onClick={extractFromUrl} disabled={isLoadingUrl || !auctionUrl.trim()} className="bg-purple-600 hover:bg-purple-700 whitespace-nowrap">
-                          {isLoadingUrl ? <Loader2 className="w-4 h-4 animate-spin" /> : "Extrair"}
-                        </Button>
+                    
+                    {manualStep === 0 && (
+                      <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
+                        <Label htmlFor="productName" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
+                          <Zap className="w-4 h-4" /> 1. Buscar Produto Pelo Nome
+                        </Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="productName"
+                            value={productName}
+                            onChange={(e) => setProductName(e.target.value)}
+                            onKeyPress={(e) => { if (e.key === 'Enter') searchByName(); }}
+                            placeholder="Ex: iPhone 15 Pro, Geladeira Samsung 500L..."
+                            className="bg-gray-900 border-purple-600 text-gray-100"
+                            disabled={isSearchingName}
+                          />
+                          <Button onClick={searchByName} disabled={isSearchingName || !productName.trim()} className="bg-purple-600 hover:bg-purple-700">
+                            {isSearchingName ? <Loader2 className="w-4 h-4 animate-spin" /> : "Buscar"}
+                          </Button>
+                        </div>
                       </div>
-                      {isLoadingUrl && <p className="text-sm text-purple-300 mt-2">Extraindo URLs das imagens...</p>}
-                    </div>
+                    )}
+
+                    {manualStep === 1 && (
+                      <div className="text-center py-8">
+                        <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-500" />
+                        <p className="text-blue-400">Buscando produto na internet...</p>
+                      </div>
+                    )}
+                    
+
+                    
+
+
+                    {adImagePool.length > 0 && !showValidationModal && (
+                      <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
+                          <h4 className="font-bold text-green-300 mb-3">✅ Produto Validado!</h4>
+                          <ProductImagePreview imageUrls={adImagePool} />
+                          <Button onClick={applyToForm} className="w-full mt-4 bg-green-600 hover:bg-green-700">🚀 Aplicar no Formulário</Button>
+                      </div>
+                    )}
 
                   </CardContent>
                 </Card>
