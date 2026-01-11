@@ -276,12 +276,18 @@ Deno.serve(async (req) => {
             }, { status: 404 });
         }
 
-        // 7️⃣ CALCULA ECONOMIA
+        // 7️⃣ CALCULA ECONOMIA - USA PREÇO MÉDIO COMO REFERÊNCIA
         const prices = validResults.map(c => c.price);
         const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
         const avgPrice = prices.reduce((a, b) => a + b, 0) / prices.length;
-        const savings = minPrice - currentPrice;
-        const savingsPercent = minPrice > 0 ? (savings / minPrice) * 100 : 0;
+        
+        // 🆕 USA PREÇO MÉDIO para comparação (mais justo)
+        const referencePrice = avgPrice;
+        const savings = referencePrice - currentPrice;
+        const savingsPercent = referencePrice > 0 ? (savings / referencePrice) * 100 : 0;
+        
+        console.log(`📊 Preços encontrados: Min R$ ${minPrice.toFixed(2)} | Médio R$ ${avgPrice.toFixed(2)} | Max R$ ${maxPrice.toFixed(2)}`);
 
         console.log(`💰 Menor: R$ ${minPrice} | Economia: ${Math.round(savingsPercent)}%`);
 
