@@ -114,46 +114,77 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback 2: Usa IA para extrair da página específica
-        console.log('⚠️ APIs não retornaram, tentando via IA...');
-        console.log('📝 URL original:', productUrl);
-        console.log('📝 Termo de busca:', searchTerm);
+        // Fallback 2: Tenta buscar via API de Search do ML
+        console.log('⚠️ APIs diretas falharam, tentando Search API...');
         
-        // Estratégia: Pedir para a IA acessar a URL específica e extrair as imagens da galeria
+        // Usa o termo de busca para encontrar o produto na API de busca
+        if (searchTerm && searchTerm.length > 5) {
+            const searchApiUrl = `https://api.mercadolibre.com/sites/MLB/search?q=${encodeURIComponent(searchTerm)}&limit=5`;
+            console.log('🔍 Buscando:', searchApiUrl);
+            
+            const searchResponse = await fetch(searchApiUrl);
+            if (searchResponse.ok) {
+                const searchData = await searchResponse.json();
+                
+                if (searchData.results && searchData.results.length > 0) {
+                    // Pega o primeiro resultado que tenha imagens
+                    for (const result of searchData.results) {
+                        if (result.thumbnail) {
+                            // Busca detalhes completos do item
+                            const itemDetailUrl = `https://api.mercadolibre.com/items/${result.id}`;
+                            const itemResponse = await fetch(itemDetailUrl);
+                            
+                            if (itemResponse.ok) {
+                                const itemData = await itemResponse.json();
+                                
+                                if (itemData.pictures && itemData.pictures.length > 0) {
+                                    const images = itemData.pictures.map(pic => {
+                                        const url = pic.secure_url || pic.url;
+                                        // Converte para alta resolução
+                                        return url.replace(/-[A-Z]\./, '-F.');
+                                    });
+                                    
+                                    console.log('📸 Imagens via Search API:', images.length);
+                                    return Response.json({
+                                        found: true,
+                                        images: [...new Set(images)],
+                                        title: itemData.title || result.title || '',
+                                        price: itemData.price || result.price || null,
+                                        description: itemData.title || result.title || '',
+                                        source: 'Mercado Livre'
+                                    }, { status: 200 });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback 3: Usa IA para extrair
+        console.log('⚠️ Search API falhou, tentando via IA...');
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `TAREFA: Acesse esta URL do Mercado Livre e extraia as imagens em ALTA RESOLUÇÃO:
+            prompt: `Acesse esta URL do Mercado Livre e extraia as informações do produto:
 
 URL: ${productUrl}
 
-ONDE ENCONTRAR AS IMAGENS (IMPORTANTE!):
-- Procure elementos <figure class="ui-pdp-gallery__figure">
-- Dentro de cada figure, busque o atributo "data-zoom" - ele contém a URL em alta resolução
-- Formato: data-zoom="https://http2.mlstatic.com/D_NQ_NP_2X_..."
-- As imagens estão na galeria principal do produto (carrossel de fotos)
-
-EXTRAIA:
-1. TÍTULO: texto do H1 da página
+Extraia:
+1. TÍTULO: texto exato do H1
 2. PREÇO: valor numérico em reais
-3. IMAGENS: URLs do atributo data-zoom de cada <figure class="ui-pdp-gallery__figure">
-   - Use APENAS URLs que contenham "mlstatic.com"
-   - Prefira URLs com "2X" ou "-F." (alta resolução)
+3. IMAGENS: URLs das imagens do produto (formato mlstatic.com)
 
-REGRAS:
-- Acesse ${productUrl} diretamente
-- Extraia APENAS imagens DESTA página específica
-- NÃO invente URLs
-- Retorne as URLs exatas encontradas no data-zoom`,
+Busque as imagens em:
+- Elementos <figure class="ui-pdp-gallery__figure"> com atributo data-zoom
+- Ou tags <img> dentro da galeria principal
+
+Retorne APENAS URLs reais que existem na página.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string", description: "Título exato do H1" },
-                    price: { type: "number", description: "Preço em reais" },
-                    image_urls: { 
-                        type: "array", 
-                        items: { type: "string" },
-                        description: "URLs do data-zoom das figures da galeria"
-                    }
+                    title: { type: "string" },
+                    price: { type: "number" },
+                    image_urls: { type: "array", items: { type: "string" } }
                 },
                 required: ["title", "image_urls"]
             }
@@ -162,16 +193,9 @@ REGRAS:
         console.log('🤖 IA retornou:', JSON.stringify(extractResponse));
 
         if (extractResponse?.image_urls?.length > 0) {
-            // Remove duplicatas e filtra URLs válidas do ML
             const validImages = [...new Set(extractResponse.image_urls)].filter(url => 
-                url && (url.includes('mlstatic.com') || url.includes('mercadolibre'))
-            ).map(url => {
-                // Converte para alta resolução se necessário
-                if (url.includes('-I.') || url.includes('-R.') || url.includes('-V.') || url.includes('-O.')) {
-                    return url.replace(/-[A-Z]\./, '-F.');
-                }
-                return url;
-            });
+                url && url.includes('mlstatic.com')
+            ).map(url => url.replace(/-[A-Z]\./, '-F.'));
             
             if (validImages.length > 0) {
                 console.log('📸 Imagens via IA:', validImages.length);
@@ -181,46 +205,6 @@ REGRAS:
                     title: extractResponse.title || searchTerm || '',
                     price: extractResponse.price || null,
                     description: extractResponse.title || searchTerm || '',
-                    source: 'Mercado Livre'
-                }, { status: 200 });
-            }
-        }
-
-        // Último fallback: tentar extrair pelo nome do produto
-        console.log('⚠️ Tentando busca genérica pelo nome...');
-        const fallbackResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse a página do Mercado Livre: ${productUrl}
-
-Extraia as imagens da galeria do produto:
-- Procure <figure class="ui-pdp-gallery__figure">
-- Pegue o atributo data-zoom de cada figure
-- As URLs são do formato https://http2.mlstatic.com/D_NQ_NP_...
-
-Retorne título, preço e URLs das imagens.`,
-            add_context_from_internet: true,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    title: { type: "string" },
-                    price: { type: "number" },
-                    image_urls: { type: "array", items: { type: "string" } }
-                }
-            }
-        });
-
-        if (fallbackResponse?.image_urls?.length > 0) {
-            const fallbackImages = [...new Set(fallbackResponse.image_urls)].filter(url => 
-                url && url.includes('mlstatic.com')
-            );
-            
-            if (fallbackImages.length > 0) {
-                console.log('📸 Imagens via fallback:', fallbackImages.length);
-                return Response.json({
-                    found: true,
-                    images: fallbackImages,
-                    title: fallbackResponse.title || searchTerm || '',
-                    price: fallbackResponse.price || null,
-                    description: fallbackResponse.title || searchTerm || '',
                     source: 'Mercado Livre'
                 }, { status: 200 });
             }
