@@ -28,29 +28,66 @@ Deno.serve(async (req) => {
 
     try {
         // Extrai o ID do produto da URL
-        // Padrões: /p/MLB12345678 ou MLB-12345678
-        const mlbMatch = productUrl.match(/MLB[- ]?(\d+)/i);
+        // Padrões: /p/MLB12345678 ou MLB-12345678 ou MLA/MLU
+        const mlMatch = productUrl.match(/(MLB|MLA|MLU)[- ]?(\d+)/i);
         
-        if (mlbMatch) {
-            const productId = 'MLB' + mlbMatch[1];
+        if (mlMatch) {
+            const productId = mlMatch[1].toUpperCase() + mlMatch[2];
             console.log('📦 Product ID encontrado:', productId);
             
-            // Usa API pública do ML
+            // Tenta API de catálogo primeiro (para produtos /p/)
+            if (productUrl.includes('/p/')) {
+                const catalogId = productId;
+                console.log('📦 Tentando API de catálogo para:', catalogId);
+                
+                // API de catálogo
+                const catalogUrl = `https://api.mercadolibre.com/products/${catalogId}`;
+                const catalogResponse = await fetch(catalogUrl);
+                
+                if (catalogResponse.ok) {
+                    const catalogData = await catalogResponse.json();
+                    console.log('✅ API Catálogo retornou:', catalogData.name);
+                    
+                    const images = [];
+                    if (catalogData.pictures && catalogData.pictures.length > 0) {
+                        for (const pic of catalogData.pictures) {
+                            const imageUrl = pic.url;
+                            if (imageUrl) {
+                                // Converte para resolução máxima
+                                const hdUrl = imageUrl.replace(/-[A-Z]\./, '-F.');
+                                images.push(hdUrl);
+                            }
+                        }
+                    }
+                    
+                    if (images.length > 0) {
+                        console.log('📸 Imagens do catálogo:', images.length);
+                        return Response.json({
+                            found: true,
+                            images: [...new Set(images)], // Remove duplicatas
+                            title: catalogData.name || '',
+                            price: null,
+                            description: catalogData.name || '',
+                            source: 'Mercado Livre'
+                        }, { status: 200 });
+                    }
+                }
+            }
+            
+            // Fallback: API de items
             const apiUrl = `https://api.mercadolibre.com/items/${productId}`;
+            console.log('📦 Tentando API items:', apiUrl);
             const apiResponse = await fetch(apiUrl);
             
             if (apiResponse.ok) {
                 const productData = await apiResponse.json();
-                console.log('✅ API ML retornou:', productData.title);
+                console.log('✅ API Items retornou:', productData.title);
                 
-                // Extrai imagens de alta resolução
                 const images = [];
                 if (productData.pictures && productData.pictures.length > 0) {
                     for (const pic of productData.pictures) {
-                        // Prioriza URL de maior resolução
                         const imageUrl = pic.secure_url || pic.url;
                         if (imageUrl) {
-                            // Converte para resolução máxima (F = Full)
                             const hdUrl = imageUrl.replace(/-[A-Z]\./, '-F.');
                             images.push(hdUrl);
                         }
@@ -58,10 +95,10 @@ Deno.serve(async (req) => {
                 }
                 
                 if (images.length > 0) {
-                    console.log('📸 Imagens encontradas via API:', images.length);
+                    console.log('📸 Imagens via API Items:', images.length);
                     return Response.json({
                         found: true,
-                        images: images,
+                        images: [...new Set(images)],
                         title: productData.title || '',
                         price: productData.price || null,
                         description: productData.title || '',
