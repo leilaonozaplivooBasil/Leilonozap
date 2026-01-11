@@ -81,40 +81,73 @@ export default function CreateAuction() {
   };
 
   const searchByName = async () => {
-    if (!productName || productName.trim().length < 3) {
-      toast.error("Digite pelo menos 3 caracteres do nome do produto");
-      return;
-    }
-    setIsSearchingName(true);
-    setManualStep(1);
-
-    try {
-        const response = await base44.functions.invoke('searchProductByName', { 
-          productName: productName.trim()
-        });
-
-        if (!response || response.status !== 200 || !response.data?.found) {
-          throw new Error(response?.data?.error || 'Produto não encontrado');
+        if (!productName || productName.trim().length < 3) {
+          toast.error("Digite pelo menos 3 caracteres do nome do produto");
+          return;
         }
-        
-        // Armazena dados para validação e mostra modal com FONTE e LINK
-        setValidationData({
-          title: response.data.title || productName,
-          description: response.data.description || "",
-          image_urls: response.data.image_urls || [],
-          price: response.data.price,
-          source: response.data.source || 'Google Shopping',
-          sourceUrl: response.data.sourceUrl || null
-        });
-        setShowValidationModal(true);
-        setManualStep(0); // Volta ao step inicial
-    } catch (error) {
-      toast.error(`Erro na busca: ${error.message}`);
-      setManualStep(0);
-    } finally {
-      setIsSearchingName(false);
-    }
-  };
+        setIsSearchingName(true);
+        setManualStep(1);
+
+        try {
+            const response = await base44.functions.invoke('searchProductByName', { 
+              productName: productName.trim()
+            });
+
+            if (!response || response.status !== 200 || !response.data?.found) {
+              throw new Error(response?.data?.error || 'Produto não encontrado');
+            }
+
+            const firstData = response.data;
+
+            // Se tem sourceUrl (anúncio do ML), extrai as imagens usando adUrl
+            if (firstData.sourceUrl && firstData.isMercadoLivre) {
+              console.log('🔗 Extraindo imagens do anúncio:', firstData.sourceUrl);
+
+              const imageResponse = await base44.functions.invoke('searchProductByName', { 
+                adUrl: firstData.sourceUrl
+              });
+
+              if (imageResponse?.data?.found && imageResponse.data.imageUrls?.length > 0) {
+                setValidationData({
+                  title: imageResponse.data.title || firstData.title,
+                  description: imageResponse.data.description || firstData.description || "",
+                  image_urls: imageResponse.data.imageUrls || [],
+                  price: imageResponse.data.price || firstData.price,
+                  source: firstData.source || 'Mercado Livre',
+                  sourceUrl: firstData.sourceUrl
+                });
+              } else {
+                // Se não conseguir extrair imagens, usa os dados iniciais
+                setValidationData({
+                  title: firstData.title,
+                  description: firstData.description || "",
+                  image_urls: firstData.image_urls || [],
+                  price: firstData.price,
+                  source: firstData.source || 'Mercado Livre',
+                  sourceUrl: firstData.sourceUrl
+                });
+              }
+            } else {
+              // Se não é ML, usa dados iniciais
+              setValidationData({
+                title: firstData.title,
+                description: firstData.description || "",
+                image_urls: firstData.image_urls || [],
+                price: firstData.price,
+                source: firstData.source || 'Google Shopping',
+                sourceUrl: firstData.sourceUrl || null
+              });
+            }
+
+            setShowValidationModal(true);
+            setManualStep(0);
+        } catch (error) {
+          toast.error(`Erro na busca: ${error.message}`);
+          setManualStep(0);
+        } finally {
+          setIsSearchingName(false);
+        }
+      };
 
   const handleValidationConfirm = () => {
     if (validationData) {
