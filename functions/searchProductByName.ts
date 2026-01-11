@@ -79,37 +79,34 @@ Deno.serve(async (req) => {
         const productTitle = firstResult.title;
         const productPrice = firstResult.extracted_price || firstResult.price;
         
-        // 🔍 EXTRAI O LINK CORRETO DO MERCADO LIVRE
-        let sourceUrl = firstResult.link || '';
-        let source = firstResult.source || 'Google Shopping';
+        // 🔍 BUSCA AGRESSIVA DO MERCADO LIVRE NOS RESULTADOS
+        let sourceUrl = '';
+        let source = 'Google Shopping';
         let isMercadoLivre = false;
         
-        // Verifica se há redirect_link (link real) vs link (pode ser encriptado)
-        if (firstResult.redirect_link) {
-            sourceUrl = firstResult.redirect_link;
-        }
-        
-        // Detecta se é Mercado Livre pela URL ou pelo título
-        if (sourceUrl) {
-            try {
-                const urlObj = new URL(sourceUrl);
-                const sourceHost = urlObj.hostname;
-                isMercadoLivre = sourceHost.includes('mercadolivre');
-                if (isMercadoLivre) source = 'Mercado Livre';
-            } catch (e) {
-                console.warn('⚠️ Erro ao parsear URL:', sourceUrl);
+        // PRIORIDADE 1: Procura por Mercado Livre em redirect_link ou link
+        for (const result of data.shopping_results) {
+            const candidateUrl = result.redirect_link || result.link || '';
+            
+            if (candidateUrl && candidateUrl.includes('mercadolivre')) {
+                sourceUrl = candidateUrl;
+                isMercadoLivre = true;
+                source = 'Mercado Livre';
+                console.log('✅ ENCONTRADO MERCADO LIVRE:', sourceUrl);
+                break;
             }
         }
         
-        // Se ainda não achou link ML, tenta procurar nos resultados
-        if (!isMercadoLivre && data.shopping_results.length > 0) {
-            for (const result of data.shopping_results) {
-                if (result.link && result.link.includes('mercadolivre')) {
-                    sourceUrl = result.link;
-                    isMercadoLivre = true;
-                    source = 'Mercado Livre';
-                    break;
-                }
+        // PRIORIDADE 2: Se não achou ML, usa o primeiro resultado
+        if (!sourceUrl) {
+            sourceUrl = firstResult.redirect_link || firstResult.link || '';
+            try {
+                const urlObj = new URL(sourceUrl);
+                source = firstResult.source || urlObj.hostname;
+                console.log('✅ Usando primeiro resultado:', source);
+            } catch (e) {
+                source = firstResult.source || 'Loja Online';
+                console.log('⚠️ Erro ao parsear URL, usando source:', source);
             }
         }
 
