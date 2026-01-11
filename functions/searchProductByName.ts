@@ -21,12 +21,12 @@ Deno.serve(async (req) => {
         const base44 = createClientFromRequest(req);
         await base44.auth.me();
 
-        const { productName, previewOnly } = await req.json();
+        const { productName } = await req.json();
         if (!productName) {
             return Response.json({ error: "Nome do produto obrigatório" }, { status: 400 });
         }
 
-        console.log(`🔍 Buscando: ${productName} (preview: ${previewOnly || false})`);
+        console.log(`🔍 Buscando: ${productName}`);
         
         // Log de início
         await base44.asServiceRole.entities.SystemLog.create({
@@ -87,22 +87,7 @@ Deno.serve(async (req) => {
             }, { status: 404 });
         }
 
-        // 🆕 SE FOR APENAS PREVIEW: retorna só metadados
-        if (previewOnly) {
-            console.log(`✅ Preview: ${productTitle}`);
-            
-            return Response.json({
-                found: true,
-                title: productTitle,
-                description: `${productTitle}`,
-                price: productPrice,
-                thumbnailUrl: firstResult.thumbnail || null,
-                imageCount: data.shopping_results.length, // Quantidade de resultados (estimativa de imagens)
-                source: 'Google Shopping (Preview)'
-            }, { status: 200 });
-        }
-
-        // 🔥 BUSCA COMPLETA: Coleta imagens de múltiplos resultados
+        // Coleta imagens de múltiplos resultados
         const imageUrls = [];
         
         for (const result of data.shopping_results.slice(0, 8)) {
@@ -136,12 +121,15 @@ Deno.serve(async (req) => {
           }
         }).catch(() => {});
 
+        // 🆕 RETORNA PREVIEW + IMAGENS (uma única chamada à API)
         return Response.json({
             found: true,
             title: productTitle,
             description: `${productTitle} - Preço de referência: R$ ${productPrice?.toFixed(2) || 'Consulte'}`,
-            imageUrls: imageUrls,
+            imageUrls: imageUrls, // Todas as imagens
             price: productPrice,
+            thumbnailUrl: firstResult.thumbnail || imageUrls[0] || null, // Preview
+            imageCount: imageUrls.length,
             source: 'Google Shopping'
         }, { status: 200 });
 

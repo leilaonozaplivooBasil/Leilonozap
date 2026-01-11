@@ -69,7 +69,7 @@ export default function CreateAuction() {
   const [productName, setProductName] = useState("");
   const [isSearchingGtin, setIsSearchingGtin] = useState(false);
   const [isSearchingName, setIsSearchingName] = useState(false);
-  const [productPreview, setProductPreview] = useState(null); // 🆕 Prévia do produto
+  const [productPreview, setProductPreview] = useState(null); // 🆕 Prévia do produto (com imagens já carregadas)
   const [selectedMarketplace, setSelectedMarketplace] = useState(null);
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
@@ -345,7 +345,7 @@ export default function CreateAuction() {
     }));
   };
 
-  // 🆕 ETAPA 1: BUSCA INICIAL (SÓ PREVIEW)
+  // 🆕 BUSCA COM PRÉVIA (UMA ÚNICA CHAMADA À API)
   const searchByName = async () => {
     if (!productName || productName.trim().length < 3) {
       toast.error("Digite pelo menos 3 caracteres do nome do produto");
@@ -363,14 +363,13 @@ export default function CreateAuction() {
     setDebugError(null);
 
     try {
-        console.log('🔍 Buscando preview do produto:', productName);
+        console.log('🔍 Buscando produto:', productName);
         
         const response = await base44.functions.invoke('searchProductByName', { 
-          productName: productName.trim(),
-          previewOnly: true // 🆕 Apenas preview
+          productName: productName.trim()
         });
 
-        console.log('📦 Resposta preview:', response);
+        console.log('📦 Resposta completa:', response);
 
         if (!response || response.status !== 200) {
           throw new Error(response?.data?.error || 'Erro na busca');
@@ -379,23 +378,24 @@ export default function CreateAuction() {
         const data = response.data;
 
         if (!data?.found) {
-          toast.error(`Produto não encontrado. Tente com nome mais completo (marca + modelo + especificação)`);
+          toast.error(`Produto não encontrado. Tente com nome mais completo`);
           setManualStep(0);
           setIsSearchingName(false);
           return;
         }
 
-        // MOSTRA PRÉVIA
+        // ARMAZENA TUDO (preview + imagens completas)
         setProductPreview({
           title: data.title,
           description: data.description,
           price: data.price,
           thumbnailUrl: data.thumbnailUrl,
-          imageCount: data.imageCount || 0
+          imageCount: data.imageCount || 0,
+          allImages: data.imageUrls || [] // 🔥 Já tem todas as imagens
         });
         
-        setManualStep(10); // 🆕 Estado de preview
-        toast.success("✅ Produto encontrado! Confirme para buscar imagens.");
+        setManualStep(10); // Mostra preview
+        toast.success("✅ Produto encontrado! Confirme para prosseguir.");
       
     } catch (error) {
       console.error("❌ Erro:", error);
@@ -414,69 +414,44 @@ export default function CreateAuction() {
     }
   };
 
-  // 🆕 ETAPA 2: BUSCA COMPLETA (APÓS CONFIRMAÇÃO)
+  // 🆕 CONFIRMAR E USAR IMAGENS (JÁ FORAM BAIXADAS)
   const confirmAndFetchImages = async () => {
     if (!productPreview) return;
 
-    setIsSearchingName(true);
-    setManualStep(1);
+    // Usa os dados já obtidos (NÃO faz nova chamada à API)
+    setExtractedData({ 
+      title: productPreview.title, 
+      description: productPreview.description 
+    });
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      title: productPreview.title, 
+      description: productPreview.description,
+      starting_price: productPreview.price ? productPreview.price.toString() : prev.starting_price
+    }));
 
-    try {
-      console.log('📸 Buscando imagens completas...');
-      
-      const response = await base44.functions.invoke('searchProductByName', { 
-        productName: productName.trim(),
-        previewOnly: false // 🆕 Busca completa
-      });
+    const validUrls = productPreview.allImages.filter(url => url && url.trim());
 
-      if (!response || response.status !== 200) {
-        throw new Error('Erro ao buscar imagens');
-      }
-
-      const data = response.data;
-      
-      setExtractedData({ 
-        title: productPreview.title, 
-        description: productPreview.description 
-      });
-      
-      setFormData(prev => ({ 
-        ...prev, 
-        title: productPreview.title, 
-        description: productPreview.description,
-        starting_price: productPreview.price ? productPreview.price.toString() : prev.starting_price
-      }));
-
-      const validUrls = (data.imageUrls || [])
-        .filter(url => url && typeof url === 'string' && url.trim());
-
-      if (validUrls.length === 0) {
-        toast.warning(`⚠️ Nenhuma imagem encontrada. Use upload manual.`);
-        setProductName("");
-        setProductPreview(null);
-        setManualStep(0);
-      } else {
-        toast.success(`✅ ${validUrls.length} imagens carregadas!`);
-        setDownloadedImages(validUrls);
-        setCoverIndex(0);
-        setManualStep(5);
-        setProductName("");
-        setProductPreview(null);
-      }
-      
-    } catch (error) {
-      console.error("❌ Erro ao buscar imagens:", error);
-      toast.error(`Erro: ${error.message}`);
-      setManualStep(0);
+    if (validUrls.length === 0) {
+      toast.warning(`⚠️ Nenhuma imagem disponível. Use upload manual.`);
+      setProductName("");
       setProductPreview(null);
-    } finally {
-      setIsSearchingName(false);
+      setManualStep(0);
+    } else {
+      toast.success(`✅ ${validUrls.length} imagens prontas!`);
+      setDownloadedImages(validUrls);
+      setCoverIndex(0);
+      setManualStep(5);
+      setProductName("");
+      setProductPreview(null);
     }
   };
 
   // 🆕 CANCELAR PRÉVIA
   const cancelPreview = () => {
     setProductPreview(null);
+    setProductName(""); // Limpa para nova busca
     setManualStep(0);
     toast.info("Busca cancelada. Digite novamente.");
   };
