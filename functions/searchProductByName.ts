@@ -209,41 +209,45 @@ Deno.serve(async (req) => {
 
 
 
-        // MODO PADRÃO: Extrai URLs de imagens do anúncio ML
+        // MODO PADRÃO: Extrai URLs de imagens do produto (galeria)
          let image_urls = [];
 
-         if (isMercadoLivre && sourceUrl) {
+         if (sourceUrl) {
              try {
-                 console.log('📸 Extraindo URLs de imagens do anúncio ML...');
+                 console.log('📸 Extraindo URLs de imagens da galeria do produto...');
 
                  const urlsResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                     prompt: `Acesse este anúncio do Mercado Livre: ${sourceUrl}
+                     prompt: `Acesse este anúncio: ${sourceUrl}
 
-        Extraía APENAS as URLs diretas das imagens da galeria de fotos do produto (imagens principais, não thumbnails).
+        Extraia TODAS as URLs diretas das imagens principais do PRODUTO (as imagens grandes da galeria/carousel, não thumbnails de capa).
 
-        RETORNE APENAS UM ARRAY JSON com as URLs:
+        Procure por:
+        - URLs em atributos "src" de imagens grandes
+        - URLs em estruturas de galeria/carousel
+        - Padrões como: .jpeg, .jpg, .png, .webp
+
+        Ignore imagens de logo, ícones ou banners.
+
+        RETORNE APENAS UM ARRAY JSON válido com as URLs:
         ["https://...", "https://...", ...]
 
-        Se não conseguir acessar, retorne: []`,
-                     add_context_from_internet: true
+        Se não conseguir acessar ou sem imagens, retorne: []`,
+                     add_context_from_internet: true,
+                     response_json_schema: {
+                         type: "object",
+                         properties: {
+                             images: { type: "array", items: { type: "string" } }
+                         }
+                     }
                  });
 
-                 console.log('🔍 Resposta IA (URLs):', urlsResponse?.substring(0, 100));
+                 console.log('🔍 Resposta IA (URLs):', urlsResponse?.images?.slice(0, 2));
 
-                 if (urlsResponse && urlsResponse.includes('http')) {
-                     try {
-                         const parsed = JSON.parse(urlsResponse);
-                         if (Array.isArray(parsed)) {
-                             image_urls = parsed.filter(url => typeof url === 'string' && url.startsWith('http'));
-                             console.log('✅ Extraídas', image_urls.length, 'URLs de imagens');
-                         }
-                     } catch {
-                         console.log('⚠️ Erro ao parsear URLs, tentando alternativa...');
-                         // Tenta extrair URLs usando regex
-                         const urlMatches = urlsResponse.match(/https:\/\/[^\s"'<>]+\.jpg/gi) || [];
-                         image_urls = [...new Set(urlMatches)];
-                         console.log('✅ Extraídas', image_urls.length, 'URLs via regex');
-                     }
+                 if (urlsResponse && Array.isArray(urlsResponse.images)) {
+                     image_urls = urlsResponse.images
+                         .filter(url => typeof url === 'string' && url.startsWith('http'))
+                         .slice(0, 12);
+                     console.log('✅ Extraídas', image_urls.length, 'URLs de imagens');
                  }
              } catch (err) {
                  console.log('⚠️ Erro ao extrair URLs:', err.message);
