@@ -57,7 +57,49 @@ Deno.serve(async (req) => {
         const searchTerm = productSlug.replace(/-/g, ' ').substring(0, 50);
         console.log('📝 Termo de busca:', searchTerm);
         
-        // Se temos um ID, busca diretamente na API de items
+        // Extrai também o ID do catálogo (MLB55308774) da URL /p/
+        const catalogMatch = productUrl.match(/\/p\/([A-Z]{3}\d+)/i);
+        const catalogId = catalogMatch ? catalogMatch[1].toUpperCase() : null;
+        console.log('📦 Catalog ID:', catalogId, '| Item ID:', productId);
+
+        // Tenta API de catálogo primeiro (mais confiável para produtos /p/)
+        if (catalogId) {
+            const catalogApiUrl = `https://api.mercadolibre.com/products/${catalogId}`;
+            console.log('📦 Buscando catálogo:', catalogApiUrl);
+            const catalogResponse = await fetch(catalogApiUrl);
+            
+            if (catalogResponse.ok) {
+                const catalogData = await catalogResponse.json();
+                console.log('✅ API Catálogo retornou:', catalogData.name);
+                
+                const images = [];
+                if (catalogData.pictures && catalogData.pictures.length > 0) {
+                    for (const pic of catalogData.pictures) {
+                        const imageUrl = pic.url;
+                        if (imageUrl) {
+                            const hdUrl = imageUrl.replace(/-[A-Z]\./, '-F.');
+                            images.push(hdUrl);
+                        }
+                    }
+                }
+                
+                if (images.length > 0) {
+                    console.log('📸 Imagens do catálogo:', images.length);
+                    return Response.json({
+                        found: true,
+                        images: [...new Set(images)],
+                        title: catalogData.name || '',
+                        price: null,
+                        description: catalogData.name || '',
+                        source: 'Mercado Livre'
+                    }, { status: 200 });
+                }
+            } else {
+                console.log('⚠️ API Catálogo retornou status:', catalogResponse.status);
+            }
+        }
+        
+        // Se temos um ID de item, busca diretamente na API de items
         if (productId) {
             const apiUrl = `https://api.mercadolibre.com/items/${productId}`;
             console.log('📦 Buscando item:', apiUrl);
@@ -72,7 +114,6 @@ Deno.serve(async (req) => {
                     for (const pic of productData.pictures) {
                         const imageUrl = pic.secure_url || pic.url;
                         if (imageUrl) {
-                            // Converte para resolução máxima (-F é a maior)
                             const hdUrl = imageUrl.replace(/-[A-Z]\./, '-F.');
                             images.push(hdUrl);
                         }
@@ -91,7 +132,7 @@ Deno.serve(async (req) => {
                     }, { status: 200 });
                 }
             } else {
-                console.log('⚠️ API retornou status:', apiResponse.status);
+                console.log('⚠️ API Items retornou status:', apiResponse.status);
             }
         }
 
