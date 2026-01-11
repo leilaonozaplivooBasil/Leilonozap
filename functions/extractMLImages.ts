@@ -112,12 +112,25 @@ Deno.serve(async (req) => {
         console.log('⚠️ API não retornou, tentando via IA...');
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse ${productUrl} e extraia:
-1. Título completo do produto
-2. Preço (número)
-3. URLs das imagens do produto (formato: https://http2.mlstatic.com/D_NQ_NP_...-F.webp)
+            prompt: `Acesse ${productUrl} e extraia as URLs das imagens da galeria do produto.
 
-Procure as imagens na galeria do produto, pegando os atributos "data-zoom" ou "src" das imagens principais.`,
+As URLs do Mercado Livre seguem este padrão exato:
+https://http2.mlstatic.com/D_NQ_NP_XXXXXX-MLAXXXXXXXXXX_MMYYYY-F.webp
+
+Onde:
+- XXXXXX = código da imagem (6 dígitos)
+- MLAXXXXXXXXXX = ID do item (MLA/MLB/MLU + números)
+- MMYYYY = mês e ano
+- F = alta resolução (ou O para média)
+
+Exemplos REAIS dessa página que você deve encontrar:
+- https://http2.mlstatic.com/D_NQ_NP_670475-MLA99453294496_112025-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_829929-MLU76569640662_062024-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_842236-MLU76569640668_062024-F.webp
+- https://http2.mlstatic.com/D_NQ_NP_982490-MLU76569640672_062024-F.webp
+
+Procure no atributo "data-zoom" das imagens da galeria ou no "src" das figuras.
+COPIE EXATAMENTE as URLs, não invente.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
@@ -130,11 +143,13 @@ Procure as imagens na galeria do produto, pegando os atributos "data-zoom" ou "s
         });
 
         if (extractResponse?.image_urls?.length > 0) {
-            const validImages = extractResponse.image_urls.filter(url => 
-                url && url.includes('mlstatic.com')
+            // Remove duplicatas e filtra URLs válidas
+            const validImages = [...new Set(extractResponse.image_urls)].filter(url => 
+                url && url.includes('mlstatic.com') && (url.includes('-F.') || url.includes('-O.'))
             );
             
             if (validImages.length > 0) {
+                console.log('📸 Imagens via IA:', validImages.length);
                 return Response.json({
                     found: true,
                     images: validImages,
