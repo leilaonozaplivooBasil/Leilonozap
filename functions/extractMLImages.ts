@@ -136,65 +136,69 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback 2: Usa IA com a URL da página para extrair imagens
-        console.log('⚠️ APIs do ML bloqueadas, usando IA para extrair imagens...');
+        // Fallback 2: Usa SerpAPI para buscar imagens via Google Shopping
+        console.log('⚠️ APIs do ML bloqueadas, usando SerpAPI...');
         
-        const llmResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta página do Mercado Livre e extraia as URLs das imagens do produto:
-
-URL: ${productUrl}
-
-INSTRUÇÕES ESPECÍFICAS:
-1. Acesse a página do produto
-2. Procure as imagens na galeria do produto (lado esquerdo da página)
-3. As imagens do ML seguem o padrão: https://http2.mlstatic.com/D_NQ_NP_...
-4. Extraia TODAS as URLs de imagens em alta resolução
-5. O título está no H1 da página
-6. O preço está próximo ao título
-
-IMPORTANTE:
-- Extraia URLs REAIS que existem na página
-- NÃO invente URLs
-- URLs do ML sempre contêm "mlstatic.com"`,
-            add_context_from_internet: true,
-            response_json_schema: {
-                type: "object",
-                properties: {
-                    title: { type: "string", description: "Título do produto" },
-                    price: { type: "number", description: "Preço em reais" },
-                    image_urls: { 
-                        type: "array", 
-                        items: { type: "string" },
-                        description: "URLs das imagens (mlstatic.com)"
-                    }
-                },
-                required: ["title", "image_urls"]
-            }
-        });
-        
-        console.log('🤖 IA retornou:', JSON.stringify(llmResponse));
-        
-        if (llmResponse?.image_urls?.length > 0) {
-            // Filtra apenas URLs válidas do ML
-            const validImages = [...new Set(llmResponse.image_urls)].filter(url => 
-                url && url.includes('mlstatic.com') && url.startsWith('http')
-            ).map(url => url.replace(/-[A-Z]\./, '-F.'));
+        const SERPAPI_KEY = Deno.env.get("SERPAPI_KEY");
+        if (SERPAPI_KEY && searchTerm) {
+            const serpUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(searchTerm + ' mercado livre')}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
+            console.log('🔍 Buscando via SerpAPI...');
             
-            if (validImages.length > 0) {
-                console.log('📸 Imagens via IA:', validImages.length);
-                return Response.json({
-                    found: true,
-                    images: validImages,
-                    title: llmResponse.title || searchTerm || '',
-                    price: llmResponse.price || null,
-                    description: llmResponse.title || searchTerm || '',
-                    source: 'Mercado Livre'
-                }, { status: 200 });
+            const serpResponse = await fetch(serpUrl);
+            if (serpResponse.ok) {
+                const serpData = await serpResponse.json();
+                
+                if (serpData.shopping_results && serpData.shopping_results.length > 0) {
+                    // Procura resultado do Mercado Livre
+                    const mlResult = serpData.shopping_results.find(r => 
+                        r.source && r.source.toLowerCase().includes('mercado')
+                    ) || serpData.shopping_results[0];
+                    
+                    if (mlResult) {
+                        const images = [];
+                        
+                        // Pega thumbnail e tenta converter para HD
+                        if (mlResult.thumbnail) {
+                            images.push(mlResult.thumbnail);
+                        }
+                        
+                        // Se tem product_id, busca mais detalhes
+                        if (mlResult.product_id) {
+                            const detailUrl = `https://serpapi.com/search.json?engine=google_product&product_id=${mlResult.product_id}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
+                            const detailResponse = await fetch(detailUrl);
+                            
+                            if (detailResponse.ok) {
+                                const detailData = await detailResponse.json();
+                                
+                                // Extrai imagens do produto
+                                if (detailData.product_results?.media) {
+                                    for (const media of detailData.product_results.media) {
+                                        if (media.type === 'image' && media.link) {
+                                            images.push(media.link);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (images.length > 0) {
+                            console.log('📸 Imagens via SerpAPI:', images.length);
+                            return Response.json({
+                                found: true,
+                                images: [...new Set(images)],
+                                title: mlResult.title || searchTerm || '',
+                                price: mlResult.extracted_price || null,
+                                description: mlResult.title || searchTerm || '',
+                                source: 'Mercado Livre'
+                            }, { status: 200 });
+                        }
+                    }
+                }
             }
         }
 
         return Response.json({
-            error: "Não foi possível extrair imagens. O anúncio pode estar bloqueado. Use upload manual.",
+            error: "Não foi possível extrair imagens. As APIs do Mercado Livre estão bloqueando requisições. Use upload manual.",
             found: false
         }, { status: 200 });
 
