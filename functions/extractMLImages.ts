@@ -108,49 +108,51 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback: Usa IA se API não funcionar
+        // Fallback: Usa IA para extrair direto da página
         console.log('⚠️ API não retornou, tentando via IA...');
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse esta página do Mercado Livre: ${productUrl}
+            prompt: `Acesse esta URL e extraia as informações do produto:
+${productUrl}
 
-EXTRAIA DO HTML DESTA PÁGINA ESPECÍFICA:
+EXTRAIA:
+1. Título do produto (elemento h1)
+2. Preço em reais (número)
+3. URLs de imagem da galeria - procure por:
+   - Atributo "data-zoom" em tags <img> dentro de <figure>
+   - Ou atributo "src" com URLs contendo "mlstatic.com" e alta resolução
+   - URLs terminam em -F.webp ou -O.webp para alta resolução
 
-1. TÍTULO: Texto do elemento <h1> da página
-
-2. PREÇO: Valor numérico em reais
-
-3. IMAGENS DA GALERIA:
-   - Localize: <div class="ui-pdp-gallery__column">
-   - Dentro dela, cada <figure class="ui-pdp-gallery__figure"> contém um <img>
-   - Extraia o valor do atributo "data-zoom" de cada <img>
-   - Formato típico: https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXX_MMYYYY-F.webp
-   - Cada produto tem URLs ÚNICAS - extraia as URLs REAIS desta página
-   - Geralmente são 6-12 imagens por produto
-
-⚠️ IMPORTANTE: Extraia APENAS as URLs que REALMENTE existem nesta página específica.
-Não invente URLs. Cada anúncio tem códigos únicos nas URLs.`,
+Retorne SOMENTE dados que você encontrar NESTA página específica.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string", description: "Título do produto extraído do h1" },
+                    title: { type: "string", description: "Título do produto" },
                     price: { type: "number", description: "Preço em R$" },
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        description: "URLs do atributo data-zoom extraídas desta página"
+                        description: "URLs das imagens encontradas"
                     }
                 },
                 required: ["title", "image_urls"]
             }
         });
 
+        console.log('🤖 IA retornou:', JSON.stringify(extractResponse));
+
         if (extractResponse?.image_urls?.length > 0) {
-            // Remove duplicatas e filtra URLs válidas
+            // Remove duplicatas e filtra URLs válidas do ML
             const validImages = [...new Set(extractResponse.image_urls)].filter(url => 
-                url && url.includes('mlstatic.com') && (url.includes('-F.') || url.includes('-O.'))
-            );
+                url && url.includes('mlstatic.com')
+            ).map(url => {
+                // Converte para alta resolução se necessário
+                if (url.includes('-I.') || url.includes('-R.') || url.includes('-V.')) {
+                    return url.replace(/-[A-Z]\./, '-F.');
+                }
+                return url;
+            });
             
             if (validImages.length > 0) {
                 console.log('📸 Imagens via IA:', validImages.length);
