@@ -29,6 +29,7 @@ import { toast } from "sonner";
 import { addSeconds } from 'date-fns';
 import ImageAnalyzer from "../components/admin/ImageAnalyzer";
 import ProductImagePreview from "../components/admin/ProductImagePreview";
+import ConfirmProductDuplicationModal from "../components/admin/ConfirmProductDuplicationModal";
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
