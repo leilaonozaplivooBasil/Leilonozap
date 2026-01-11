@@ -92,39 +92,25 @@ export default function CreateAuction() {
         throw new Error(response?.data?.error || 'Erro ao extrair anúncio');
       }
 
-      setValidationData({
+      const imageUrls = response.data.imageUrls || [];
+      
+      setFormData(prev => ({
+        ...prev,
         title: response.data.title || "Produto",
-        description: response.data.description || "",
-        image_urls: response.data.imageUrls || [],
-        price: response.data.price,
-        sourceUrl: auctionUrl
-      });
-      setShowValidationModal(true);
+        description: response.data.description || ""
+      }));
+
+      const finalImages = imageUrls.slice(0, 5);
+      while (finalImages.length < 5) finalImages.push("");
+      setFormData(prev => ({ ...prev, image_urls: finalImages }));
+
+      setAuctionUrl("");
+      toast.success(`✅ ${imageUrls.length} imagens extraídas com sucesso!`);
     } catch (error) {
       toast.error(`Erro: ${error.message}`);
     } finally {
       setIsLoadingUrl(false);
     }
-  };
-
-  const handleValidationConfirm = () => {
-    if (validationData) {
-      setAdImagePool(validationData.image_urls || []);
-      setFormData(prev => ({
-        ...prev,
-        title: validationData.title,
-        description: validationData.description
-      }));
-      setShowValidationModal(false);
-      setValidationData(null);
-      toast.success("✅ Dados validados e importados com sucesso!");
-    }
-  };
-
-  const handleValidationCancel = () => {
-    setShowValidationModal(false);
-    setValidationData(null);
-    setAuctionUrl("");
   };
 
 
