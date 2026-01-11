@@ -112,45 +112,34 @@ Deno.serve(async (req) => {
         console.log('⚠️ API não retornou, tentando via IA...');
         
         const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-            prompt: `Acesse ${productUrl} e extraia TODAS as URLs de imagem da galeria do produto.
+            prompt: `Acesse esta página do Mercado Livre: ${productUrl}
 
-TAREFA: Encontrar TODAS as imagens (geralmente 8-12) dentro da galeria.
+EXTRAIA DO HTML DESTA PÁGINA ESPECÍFICA:
 
-ONDE PROCURAR:
-Na div <div class="ui-pdp-gallery__column">, cada imagem está em:
-<figure class="ui-pdp-gallery__figure">
-  <img data-zoom="https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXXX_MMYYYY-F.webp" ...>
-</figure>
+1. TÍTULO: Texto do elemento <h1> da página
 
-EXTRAIA o valor do atributo "data-zoom" de CADA <img> dentro de CADA <figure>.
+2. PREÇO: Valor numérico em reais
 
-Produto com 10 imagens terá 10 URLs diferentes como:
-- https://http2.mlstatic.com/D_NQ_NP_2X_648933-MLA99498284868_112025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_603199-MLA93967786557_102025-F.webp  
-- https://http2.mlstatic.com/D_NQ_NP_2X_763958-MLA100186854181_122025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_638884-MLA100187109197_122025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_873462-MLA99701308916_122025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_916799-MLA99701665156_122025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_744293-MLA100187069693_122025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_767998-MLA87471204019_072025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_981499-MLA87145785902_072025-F.webp
-- https://http2.mlstatic.com/D_NQ_NP_2X_618630-MLA84353238095_052025-F.webp
+3. IMAGENS DA GALERIA:
+   - Localize: <div class="ui-pdp-gallery__column">
+   - Dentro dela, cada <figure class="ui-pdp-gallery__figure"> contém um <img>
+   - Extraia o valor do atributo "data-zoom" de cada <img>
+   - Formato típico: https://http2.mlstatic.com/D_NQ_NP_2X_XXXXXX-MLAXXXXXXXXX_MMYYYY-F.webp
+   - Cada produto tem URLs ÚNICAS - extraia as URLs REAIS desta página
+   - Geralmente são 6-12 imagens por produto
 
-Note que CADA URL tem códigos ÚNICOS e DIFERENTES. Extraia TODAS.
-
-Também extraia:
-- Título do produto (tag h1)
-- Preço (número)`,
+⚠️ IMPORTANTE: Extraia APENAS as URLs que REALMENTE existem nesta página específica.
+Não invente URLs. Cada anúncio tem códigos únicos nas URLs.`,
             add_context_from_internet: true,
             response_json_schema: {
                 type: "object",
                 properties: {
-                    title: { type: "string", description: "Título do produto" },
+                    title: { type: "string", description: "Título do produto extraído do h1" },
                     price: { type: "number", description: "Preço em R$" },
                     image_urls: { 
                         type: "array", 
                         items: { type: "string" },
-                        description: "TODAS as URLs do atributo data-zoom (8-12 imagens)"
+                        description: "URLs do atributo data-zoom extraídas desta página"
                     }
                 },
                 required: ["title", "image_urls"]
