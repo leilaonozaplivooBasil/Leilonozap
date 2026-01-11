@@ -235,12 +235,14 @@ Deno.serve(async (req) => {
                 
                 if (images.length > 0) {
                     console.log('📸 Imagens do catálogo:', images.length);
+                    const finalTitle = catalogData.name || '';
+                    const description = await generateDescription(base44, finalTitle);
                     return Response.json({
                         found: true,
                         images: [...new Set(images)],
-                        title: catalogData.name || '',
+                        title: finalTitle,
                         price: null,
-                        description: catalogData.name || '',
+                        description: description,
                         source: 'Mercado Livre'
                     }, { status: 200 });
                 }
