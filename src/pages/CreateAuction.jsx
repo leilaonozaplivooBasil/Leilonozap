@@ -291,7 +291,7 @@ export default function CreateAuction() {
                           )}
                           </div>
 
-                  </CardContent>
+                          </CardContent>
                 </Card>
 
                 <form onSubmit={handleSubmit} className="space-y-6 pt-4">
