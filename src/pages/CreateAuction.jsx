@@ -425,15 +425,19 @@ export default function CreateAuction() {
     setManualStep(1); // Mostra loading
 
     try {
-      console.log('🔍 ========== BUSCANDO ANÚNCIOS ==========');
-      console.log('🔍 Produto:', productName.trim());
-      console.log('🔍 Flag listAdsOnly:', true);
+      const payload = {
+        productName: productName.trim(),
+        listAdsOnly: true
+      };
+      
+      console.log('🔍 ========== ENVIANDO PARA BACKEND ==========');
+      console.log('🔍 Payload:', payload);
+      console.log('🔍 Produto:', payload.productName);
+      console.log('🔍 Flag listAdsOnly:', payload.listAdsOnly);
+      console.log('🔍 Tipo de listAdsOnly:', typeof payload.listAdsOnly);
       
       // Busca lista de anúncios
-      const response = await base44.functions.invoke('searchProductByName', { 
-        productName: productName.trim(),
-        listAdsOnly: true // 🆕 Flag para retornar lista de anúncios
-      });
+      const response = await base44.functions.invoke('searchProductByName', payload);
 
       // 🔍 DEBUG COMPLETO
       console.log('📦 ========== RESPOSTA BACKEND ==========');

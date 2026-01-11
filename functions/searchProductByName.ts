@@ -22,12 +22,19 @@ Deno.serve(async (req) => {
         await base44.auth.me();
 
         const { productName, listAdsOnly, adUrl } = await req.json();
+        
+        // 🔍 DEBUG: Parâmetros recebidos
+        console.log('🔍 ========== PARÂMETROS RECEBIDOS ==========');
+        console.log('  - productName:', productName);
+        console.log('  - listAdsOnly:', listAdsOnly);
+        console.log('  - adUrl:', adUrl);
+        console.log('  - Tipo de listAdsOnly:', typeof listAdsOnly);
+        console.log('  - listAdsOnly === true?', listAdsOnly === true);
+        console.log('  - !!listAdsOnly?', !!listAdsOnly);
+        
         if (!productName) {
             return Response.json({ error: "Nome do produto obrigatório" }, { status: 400 });
         }
-
-        console.log(`🔍 Modo: ${listAdsOnly ? 'LISTA_ANUNCIOS' : adUrl ? 'DOWNLOAD_ESPECIFICO' : 'BUSCA_NORMAL'}`);
-        console.log(`🔍 Buscando: ${productName}`);
         
         // Log de início
         await base44.asServiceRole.entities.SystemLog.create({
@@ -99,9 +106,17 @@ Deno.serve(async (req) => {
             }, { status: 404 });
         }
 
+        // 🔍 DEBUG: Verificando modo de operação
+        console.log('🔍 ========== VERIFICANDO MODO ==========');
+        console.log('  - listAdsOnly:', listAdsOnly);
+        console.log('  - listAdsOnly === true:', listAdsOnly === true);
+        console.log('  - adUrl:', adUrl);
+        console.log('  - !!adUrl:', !!adUrl);
+
         // 🆕 MODO 1: LISTAR ANÚNCIOS (sem buscar imagens)
-        if (listAdsOnly) {
-            console.log('📋 MODO 1 ATIVADO: Listando anúncios...');
+        if (listAdsOnly === true) {
+            console.log('📋 ========== MODO 1 ATIVADO ==========');
+            console.log('📋 Retornando lista de anúncios...');
             console.log('📋 Shopping results disponíveis:', data.shopping_results.length);
             
             const ads = data.shopping_results.slice(0, 5).map((result, idx) => {
@@ -117,7 +132,9 @@ Deno.serve(async (req) => {
 
             console.log('✅ Retornando', ads.length, 'anúncios para frontend');
             console.log('✅ DEBUG - ads array:', JSON.stringify(ads, null, 2));
+            console.log('📦 Estrutura de retorno:', { found: true, title: productTitle, ads: '(array com ' + ads.length + ' itens)' });
 
+            // ⚠️ IMPORTANTE: RETORNAR AQUI E NÃO CONTINUAR!
             return Response.json({
                 found: true,
                 title: productTitle,
@@ -125,8 +142,12 @@ Deno.serve(async (req) => {
             }, { status: 200 });
         }
 
+        // Se chegou aqui, NÃO é modo listAdsOnly
+        console.log('⚠️ Não entrou no modo listAdsOnly, continuando...');
+
         // 🆕 MODO 2: IMAGENS DE ANÚNCIO ESPECÍFICO
         if (adUrl) {
+            console.log('🔗 ========== MODO 2 ATIVADO ==========');
             console.log('📸 Baixando imagens HD de:', adUrl.substring(0, 60));
             
             const specificImageUrls = [];
@@ -185,6 +206,7 @@ URL: ${adUrl}`,
         }
 
         // 🔥 MODO 3: BUSCA NORMAL (múltiplos anúncios)
+        console.log('🖼️ ========== MODO 3 ATIVADO (PADRÃO) ==========');
         console.log('📸 Iniciando busca de imagens HD...');
         
         const imageUrls = [];
