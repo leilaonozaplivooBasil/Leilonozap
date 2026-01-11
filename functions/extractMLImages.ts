@@ -251,69 +251,83 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Fallback 2: Usa SerpAPI para buscar imagens via Google Shopping
-        console.log('⚠️ APIs do ML bloqueadas, usando SerpAPI...');
+        // ============================================
+        // MÉTODO 3: SerpAPI - Google Images
+        // ============================================
+        console.log('⚠️ APIs do ML bloqueadas, usando SerpAPI Google Images...');
         
         const SERPAPI_KEY = Deno.env.get("SERPAPI_KEY");
         if (SERPAPI_KEY && searchTerm) {
-            const serpUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(searchTerm + ' mercado livre')}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
-            console.log('🔍 Buscando via SerpAPI...');
+            // Busca imagens diretamente pelo Google Images
+            const googleImagesUrl = `https://serpapi.com/search.json?engine=google_images&q=${encodeURIComponent(searchTerm)}&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
+            console.log('🔍 Buscando no Google Images...');
+            
+            const imgResponse = await fetch(googleImagesUrl);
+            if (imgResponse.ok) {
+                const imgData = await imgResponse.json();
+                
+                if (imgData.images_results && imgData.images_results.length > 0) {
+                    // Pega as primeiras 6 imagens em alta resolução
+                    const images = imgData.images_results
+                        .slice(0, 6)
+                        .map(img => img.original || img.thumbnail)
+                        .filter(url => url && url.startsWith('http'));
+                    
+                    if (images.length > 0) {
+                        console.log('📸 Imagens via Google Images:', images.length);
+                        return Response.json({
+                            found: true,
+                            images: [...new Set(images)],
+                            title: searchTerm || '',
+                            price: null,
+                            description: searchTerm || '',
+                            source: 'Google Images'
+                        }, { status: 200 });
+                    }
+                }
+            }
+            
+            // Fallback: Google Shopping
+            const serpUrl = `https://serpapi.com/search.json?engine=google_shopping&q=${encodeURIComponent(searchTerm)}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
+            console.log('🔍 Buscando no Google Shopping...');
             
             const serpResponse = await fetch(serpUrl);
             if (serpResponse.ok) {
                 const serpData = await serpResponse.json();
                 
                 if (serpData.shopping_results && serpData.shopping_results.length > 0) {
-                    // Procura resultado do Mercado Livre
-                    const mlResult = serpData.shopping_results.find(r => 
-                        r.source && r.source.toLowerCase().includes('mercado')
-                    ) || serpData.shopping_results[0];
+                    const images = [];
+                    let title = searchTerm;
+                    let price = null;
                     
-                    if (mlResult) {
-                        const images = [];
-                        
-                        // Pega thumbnail e tenta converter para HD
-                        if (mlResult.thumbnail) {
-                            images.push(mlResult.thumbnail);
+                    // Pega imagens de vários resultados
+                    for (const result of serpData.shopping_results.slice(0, 5)) {
+                        if (result.thumbnail) {
+                            images.push(result.thumbnail);
                         }
-                        
-                        // Se tem product_id, busca mais detalhes
-                        if (mlResult.product_id) {
-                            const detailUrl = `https://serpapi.com/search.json?engine=google_product&product_id=${mlResult.product_id}&location=Brazil&hl=pt&gl=br&api_key=${SERPAPI_KEY}`;
-                            const detailResponse = await fetch(detailUrl);
-                            
-                            if (detailResponse.ok) {
-                                const detailData = await detailResponse.json();
-                                
-                                // Extrai imagens do produto
-                                if (detailData.product_results?.media) {
-                                    for (const media of detailData.product_results.media) {
-                                        if (media.type === 'image' && media.link) {
-                                            images.push(media.link);
-                                        }
-                                    }
-                                }
-                            }
+                        if (!price && result.extracted_price) {
+                            price = result.extracted_price;
+                            title = result.title || title;
                         }
-                        
-                        if (images.length > 0) {
-                            console.log('📸 Imagens via SerpAPI:', images.length);
-                            return Response.json({
-                                found: true,
-                                images: [...new Set(images)],
-                                title: mlResult.title || searchTerm || '',
-                                price: mlResult.extracted_price || null,
-                                description: mlResult.title || searchTerm || '',
-                                source: 'Mercado Livre'
-                            }, { status: 200 });
-                        }
+                    }
+                    
+                    if (images.length > 0) {
+                        console.log('📸 Imagens via Google Shopping:', images.length);
+                        return Response.json({
+                            found: true,
+                            images: [...new Set(images)],
+                            title: title,
+                            price: price,
+                            description: title,
+                            source: 'Google Shopping'
+                        }, { status: 200 });
                     }
                 }
             }
         }
 
         return Response.json({
-            error: "Não foi possível extrair imagens. As APIs do Mercado Livre estão bloqueando requisições. Use upload manual.",
+            error: "Não foi possível extrair imagens. O Mercado Livre está bloqueando requisições externas. Use upload manual de imagens.",
             found: false
         }, { status: 200 });
 
