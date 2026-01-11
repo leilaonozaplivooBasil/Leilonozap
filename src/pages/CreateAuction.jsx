@@ -69,6 +69,7 @@ export default function CreateAuction() {
   const [productName, setProductName] = useState("");
   const [isSearchingGtin, setIsSearchingGtin] = useState(false);
   const [isSearchingName, setIsSearchingName] = useState(false);
+  const [productPreview, setProductPreview] = useState(null); // 🆕 Prévia do produto
   const [selectedMarketplace, setSelectedMarketplace] = useState(null);
   const [manualStep, setManualStep] = useState(0);
   const [extractedData, setExtractedData] = useState({ title: "", description: "" });
@@ -344,7 +345,7 @@ export default function CreateAuction() {
     }));
   };
 
-  // BUSCA DIRETA POR NOME (fluxo único)
+  // 🆕 ETAPA 1: BUSCA INICIAL (SÓ PREVIEW)
   const searchByName = async () => {
     if (!productName || productName.trim().length < 3) {
       toast.error("Digite pelo menos 3 caracteres do nome do produto");
@@ -362,65 +363,39 @@ export default function CreateAuction() {
     setDebugError(null);
 
     try {
-        console.log('🔍 Buscando produto:', productName);
-        let response;
+        console.log('🔍 Buscando preview do produto:', productName);
         
-        try {
-          response = await base44.functions.invoke('searchProductByName', { 
-            productName: productName.trim() 
-          });
-        } catch (axiosError) {
-          // Axios lança erro para status !== 2xx
-          if (axiosError.response?.status === 404) {
-            const errorMsg = axiosError.response.data?.error || "Produto não encontrado";
-            const suggestion = axiosError.response.data?.suggestion || "Tente com marca e modelo completos";
-            toast.error(`${errorMsg}. ${suggestion}`);
-            setManualStep(0);
-            setIsSearchingName(false);
-            return;
-          }
-          throw axiosError;
+        const response = await base44.functions.invoke('searchProductByName', { 
+          productName: productName.trim(),
+          previewOnly: true // 🆕 Apenas preview
+        });
+
+        console.log('📦 Resposta preview:', response);
+
+        if (!response || response.status !== 200) {
+          throw new Error(response?.data?.error || 'Erro na busca');
         }
 
-        console.log('📦 Resposta:', response);
+        const data = response.data;
 
-      if (!response || response.status !== 200) {
-        throw new Error(response?.data?.error || 'Erro na busca');
-      }
+        if (!data?.found) {
+          toast.error(`Produto não encontrado. Tente com nome mais completo (marca + modelo + especificação)`);
+          setManualStep(0);
+          setIsSearchingName(false);
+          return;
+        }
 
-      const data = response.data;
-
-      if (!data?.found) {
-        toast.error(`Produto não encontrado. Tente com nome mais completo (marca + modelo + especificação)`);
-        setManualStep(0);
-        setIsSearchingName(false);
-        return;
-      }
-
-      const productTitle = data.title || "Produto";
-      const productDesc = data.description || `Produto encontrado: ${productName}`;
-
-      console.log(`✅ Título: ${productTitle}`);
-      console.log(`🖼️ Imagens: ${data.imageUrls?.length || 0}`);
-
-      setExtractedData({ title: productTitle, description: productDesc });
-      setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
-
-      const validUrls = (data.imageUrls || [])
-        .filter(url => url && typeof url === 'string' && url.trim());
-
-      if (validUrls.length === 0) {
-        toast.warning(`⚠️ ${productTitle} sem imagens. Use upload manual.`);
-        setProductName("");
-        setManualStep(0);
-      } else {
-        toast.success(`✅ ${validUrls.length} imagens encontradas!`);
-        setDownloadedImages(validUrls);
-        setCoverIndex(0);
-        setManualStep(5);
-      }
-
-      setProductName("");
+        // MOSTRA PRÉVIA
+        setProductPreview({
+          title: data.title,
+          description: data.description,
+          price: data.price,
+          thumbnailUrl: data.thumbnailUrl,
+          imageCount: data.imageCount || 0
+        });
+        
+        setManualStep(10); // 🆕 Estado de preview
+        toast.success("✅ Produto encontrado! Confirme para buscar imagens.");
       
     } catch (error) {
       console.error("❌ Erro:", error);
@@ -432,11 +407,78 @@ export default function CreateAuction() {
         timestamp: new Date().toISOString()
       });
       
-      toast.error(`Erro na busca: ${error.message}. Tente outro método de importação.`);
+      toast.error(`Erro na busca: ${error.message}`);
       setManualStep(0);
     } finally {
       setIsSearchingName(false);
     }
+  };
+
+  // 🆕 ETAPA 2: BUSCA COMPLETA (APÓS CONFIRMAÇÃO)
+  const confirmAndFetchImages = async () => {
+    if (!productPreview) return;
+
+    setIsSearchingName(true);
+    setManualStep(1);
+
+    try {
+      console.log('📸 Buscando imagens completas...');
+      
+      const response = await base44.functions.invoke('searchProductByName', { 
+        productName: productName.trim(),
+        previewOnly: false // 🆕 Busca completa
+      });
+
+      if (!response || response.status !== 200) {
+        throw new Error('Erro ao buscar imagens');
+      }
+
+      const data = response.data;
+      
+      setExtractedData({ 
+        title: productPreview.title, 
+        description: productPreview.description 
+      });
+      
+      setFormData(prev => ({ 
+        ...prev, 
+        title: productPreview.title, 
+        description: productPreview.description,
+        starting_price: productPreview.price ? productPreview.price.toString() : prev.starting_price
+      }));
+
+      const validUrls = (data.imageUrls || [])
+        .filter(url => url && typeof url === 'string' && url.trim());
+
+      if (validUrls.length === 0) {
+        toast.warning(`⚠️ Nenhuma imagem encontrada. Use upload manual.`);
+        setProductName("");
+        setProductPreview(null);
+        setManualStep(0);
+      } else {
+        toast.success(`✅ ${validUrls.length} imagens carregadas!`);
+        setDownloadedImages(validUrls);
+        setCoverIndex(0);
+        setManualStep(5);
+        setProductName("");
+        setProductPreview(null);
+      }
+      
+    } catch (error) {
+      console.error("❌ Erro ao buscar imagens:", error);
+      toast.error(`Erro: ${error.message}`);
+      setManualStep(0);
+      setProductPreview(null);
+    } finally {
+      setIsSearchingName(false);
+    }
+  };
+
+  // 🆕 CANCELAR PRÉVIA
+  const cancelPreview = () => {
+    setProductPreview(null);
+    setManualStep(0);
+    toast.info("Busca cancelada. Digite novamente.");
   };
 
   // BUSCA POR GTIN
@@ -1330,6 +1372,87 @@ export default function CreateAuction() {
                         <p className="text-blue-400">
                           {isSearchingName ? 'IA buscando produto na internet...' : isSearchingGtin ? 'Buscando produto por código de barras...' : 'Extraindo dados e URLs de imagens...'}
                         </p>
+                      </div>
+                    )}
+
+                    {/* 🆕 ETAPA 10: PRÉVIA DO PRODUTO (CONFIRMAÇÃO) */}
+                    {manualStep === 10 && productPreview && (
+                      <div className="space-y-4">
+                        <div className="bg-blue-900/30 border-2 border-blue-500 rounded-xl p-6">
+                          <h3 className="text-xl font-bold text-blue-300 mb-4 flex items-center gap-2">
+                            <Sparkles className="w-5 h-5" />
+                            🔍 Produto Encontrado
+                          </h3>
+
+                          {/* THUMBNAIL PREVIEW */}
+                          {productPreview.thumbnailUrl && (
+                            <div className="w-32 h-32 mx-auto mb-4 bg-white rounded-lg p-2 border-2 border-blue-400">
+                              <img 
+                                src={productPreview.thumbnailUrl} 
+                                alt="Preview"
+                                className="w-full h-full object-contain"
+                              />
+                            </div>
+                          )}
+
+                          {/* DADOS DO PRODUTO */}
+                          <div className="space-y-3 mb-6 bg-black/30 p-4 rounded-lg">
+                            <div className="flex items-start gap-2">
+                              <span className="text-blue-400 font-semibold">📦 Nome:</span>
+                              <span className="text-white">{productPreview.title}</span>
+                            </div>
+                            
+                            {productPreview.price && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-blue-400 font-semibold">💰 Preço:</span>
+                                <span className="text-green-400 font-bold">R$ {productPreview.price.toFixed(2)}</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-2">
+                              <span className="text-blue-400 font-semibold">📸 Imagens disponíveis:</span>
+                              <span className="text-white font-bold">{productPreview.imageCount} fotos</span>
+                            </div>
+                          </div>
+
+                          {/* AVISO DE CRÉDITO */}
+                          <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-3 mb-4">
+                            <p className="text-yellow-300 text-sm flex items-center gap-2">
+                              <AlertCircle className="w-4 h-4" />
+                              <span>⚠️ Buscar as imagens completas irá consumir <strong>1 crédito</strong> da API do Google Shopping</span>
+                            </p>
+                          </div>
+
+                          {/* PERGUNTA */}
+                          <div className="text-center mb-4">
+                            <p className="text-white font-bold text-lg">❓ Este é o produto correto?</p>
+                          </div>
+
+                          {/* BOTÕES DE AÇÃO */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <Button
+                              onClick={cancelPreview}
+                              variant="outline"
+                              className="border-red-500 text-red-400 hover:bg-red-600 hover:text-white"
+                            >
+                              ❌ Não, Buscar Novamente
+                            </Button>
+                            <Button
+                              onClick={confirmAndFetchImages}
+                              disabled={isSearchingName}
+                              className="bg-green-600 hover:bg-green-700 text-white font-bold"
+                            >
+                              {isSearchingName ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                  Buscando...
+                                </>
+                              ) : (
+                                <>✅ Sim, Confirmar</>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     )}
 
