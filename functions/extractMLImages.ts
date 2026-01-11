@@ -1,5 +1,37 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Função para gerar descrição detalhada usando IA
+async function generateDescription(base44, title) {
+    if (!title) return '';
+    
+    try {
+        const result = await base44.integrations.Core.InvokeLLM({
+            prompt: `Baseado no título do produto "${title}", crie uma descrição detalhada para venda em leilão online. 
+            
+            A descrição deve:
+            - Ter 3-5 linhas
+            - Destacar características principais do produto
+            - Mencionar benefícios para o comprador
+            - Ser persuasiva e profissional
+            - NÃO inventar especificações técnicas que não estejam no título
+            - Ser em português brasileiro
+            
+            Retorne APENAS a descrição, sem título ou formatação extra.`,
+            response_json_schema: {
+                type: "object",
+                properties: {
+                    description: { type: "string" }
+                }
+            }
+        });
+        
+        return result.description || title;
+    } catch (error) {
+        console.log('⚠️ Erro ao gerar descrição com IA:', error.message);
+        return title;
+    }
+}
+
 // Headers para simular navegador real
 const BROWSER_HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
