@@ -67,6 +67,7 @@ export default function CreateAuction() {
   const [productUrl, setProductUrl] = useState("");
   const [gtinCode, setGtinCode] = useState("");
   const [productName, setProductName] = useState("");
+  const [confirmedProductName, setConfirmedProductName] = useState(""); // 🆕 Salva o nome confirmado
   const [isSearchingGtin, setIsSearchingGtin] = useState(false);
   const [isSearchingName, setIsSearchingName] = useState(false);
   const [productPreview, setProductPreview] = useState(null); // 🆕 Prévia do produto (com imagens já carregadas)
@@ -390,6 +391,9 @@ export default function CreateAuction() {
           return;
         }
 
+        // 🆕 Salva o nome do produto confirmado para uso posterior
+        setConfirmedProductName(productName.trim());
+
         // ARMAZENA ANÚNCIOS ENCONTRADOS
          if (data.ads && data.ads.length > 0) {
            setAvailableAds(data.ads);
@@ -537,21 +541,21 @@ export default function CreateAuction() {
     }
 
     setIsLoadingAds(true);
-    toast.info('🤖 Clonando anúncio completo...');
+    toast.info('🤖 Buscando detalhes e galeria do anúncio...');
     
     try {
-      console.log('🔗 ========== CLONANDO ANÚNCIO ==========');
-      console.log('🏪 Loja:', selectedAd.store);
-      console.log('🔗 URL:', selectedAd.link);
+      console.log('🔗 ========== CARREGANDO ANÚNCIO ==========');
+      console.log('🏪 Loja:', selectedAd.source);
+      console.log('🔗 URL:', selectedAd.url);
       
-      // 🔥 BUSCA TODOS OS DADOS DO ANÚNCIO
+      // 🔥 BUSCA TODOS OS DADOS DO ANÚNCIO SELECIONADO
       const response = await base44.functions.invoke('searchProductByName', { 
-        productName: productName.trim(),
-        adUrl: selectedAd.link
+        productName: confirmedProductName || productName.trim(),
+        adUrl: selectedAd.url || selectedAd.link
       });
 
       if (!response || response.status !== 200) {
-        throw new Error(response?.data?.error || 'Erro ao clonar anúncio');
+        throw new Error(response?.data?.error || 'Não foi possível carregar este anúncio.');
       }
 
       const data = response.data;
@@ -563,26 +567,26 @@ export default function CreateAuction() {
         imageCount: data.imageUrls?.length
       });
 
-      const clonedTitle = data.title || productPreview.title;
-      const clonedDescription = data.description || productPreview.description;
-      const clonedPrice = data.price || selectedAd.price;
-      
       const validUrls = data.imageUrls?.filter(url => url && url.trim()) || [];
 
       if (validUrls.length === 0) {
-        toast.warning('⚠️ Nenhuma imagem encontrada. Tente outro anúncio.');
+        toast.warning('⚠️ Não foi possível carregar este anúncio. Tente outro.');
         return;
       }
 
       console.log('📸 Total de imagens encontradas:', validUrls.length);
+
+      const clonedTitle = data.title || selectedAd.title || confirmedProductName;
+      const clonedDescription = data.description || selectedAd.snippet || 'Sem descrição';
+      const clonedPrice = data.price || selectedAd.price;
 
       // 🆕 SALVA DADOS COMPLETOS E VAI PARA ETAPA DE SELEÇÃO
       setClonedAdData({
         title: clonedTitle,
         description: clonedDescription,
         price: clonedPrice,
-        source: selectedAd.link,
-        store: selectedAd.store
+        source: selectedAd.url || selectedAd.link,
+        store: selectedAd.source || selectedAd.store
       });
       
       setAdImagePool(validUrls);
@@ -593,7 +597,7 @@ export default function CreateAuction() {
       
     } catch (error) {
       console.error('❌ Erro:', error);
-      toast.error('Erro ao clonar: ' + error.message);
+      toast.error('❌ Não foi possível carregar este anúncio. Tente outro.');
     } finally {
       setIsLoadingAds(false);
     }
@@ -1552,108 +1556,56 @@ export default function CreateAuction() {
                           </p>
 
                           {/* LISTA DE ANÚNCIOS */}
-                          <div className="space-y-3">
-                            {availableAds.map((ad, index) => (
-                              <div
-                                key={index}
-                                onClick={async () => {
-                                  // ✅ SELECIONA O ANÚNCIO E CARREGA GALERIA
-                                  setIsLoadingAds(true);
-                                  toast.info('🤖 Carregando galeria de imagens...');
+                                 <div className="space-y-3">
+                                   {availableAds.map((ad, index) => {
+                                     const isSelected = selectedAd?.url === ad.url;
 
-                                  try {
-                                    // 🆕 NOVA FUNÇÃO: Busca APENAS imagens do anúncio selecionado
-                                    const response = await base44.functions.invoke('getOfferDetails', { 
-                                      offerId: ad.product_id || ad.id, // Usa product_id ou id
-                                      offerUrl: ad.url || ad.link
-                                    });
-
-                                    if (!response || response.status !== 200) {
-                                      toast.warning('⚠️ Não foi possível carregar este anúncio. Tente outro.');
-                                      return;
-                                    }
-
-                                    const data = response.data;
-
-                                    if (!data.found || data.gallery.length === 0) {
-                                      toast.warning('⚠️ Nenhuma imagem encontrada neste anúncio. Tente outro.');
-                                      return;
-                                    }
-
-                                    // 🆕 SALVA DADOS EXCLUSIVAMENTE DO ANÚNCIO SELECIONADO
-                                    setSelectedAd(ad);
-                                    setClonedAdData({
-                                      title: data.details?.title || ad.title || productName,
-                                      description: data.details?.description || ad.snippet || 'Sem descrição',
-                                      price: data.details?.price || ad.price || 'Consulte',
-                                      source: ad.url || ad.link,
-                                      store: ad.source || ad.store || 'Loja Online'
-                                    });
-
-                                    setAdImagePool(data.gallery);
-                                    setSelectedImageIndices(data.gallery.slice(0, 5).map((_, i) => i));
-                                    setManualStep(12);
-
-                                    toast.success(`✅ ${data.gallery.length} imagens carregadas do anúncio! Escolha quais usar.`);
-
-                                  } catch (error) {
-                                    console.error('❌ Erro:', error);
-                                    toast.error('Erro ao carregar anúncio: ' + error.message);
-                                  } finally {
-                                    setIsLoadingAds(false);
-                                  }
-                                }}
-                                className="border-2 rounded-lg p-4 cursor-pointer transition-all bg-gray-800/50 border-gray-600 hover:border-blue-500 hover:bg-blue-900/20"
-                              >
+                                     return (
+                                     <button
+                                       key={ad.url || index}
+                                       type="button"
+                                       onClick={() => setSelectedAd(ad)}
+                                       className={[
+                                         "w-full text-left p-4 rounded-lg border transition-all duration-200",
+                                         "bg-gray-800/50 hover:bg-blue-900/20",
+                                         isSelected ? "border-green-500 ring-2 ring-green-500/30" : "border-gray-600 hover:border-blue-500"
+                                       ].join(" ")}
+                                     >
                                 <div className="flex items-start gap-4">
-                                  {/* 🆕 THUMBNAIL */}
-                                  {ad.thumbnail && (
+                                  {/* THUMBNAIL */}
+                                  {ad.image && (
                                     <img 
-                                      src={ad.thumbnail} 
-                                      alt={ad.store}
-                                      className="w-20 h-20 object-cover rounded flex-shrink-0 border-2 border-gray-600"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                      }}
+                                      src={ad.image} 
+                                      alt={ad.title}
+                                      className="w-20 h-20 object-cover rounded flex-shrink-0 border border-gray-700"
+                                      onError={(e) => { e.target.style.display = 'none'; }}
                                     />
                                   )}
-                                  
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-3">
-                                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                        selectedAd?.link === ad.link
-                                          ? 'bg-green-500 border-green-500'
-                                          : 'border-gray-500'
-                                      }`}>
-                                        {selectedAd?.link === ad.link && (
-                                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                          </svg>
-                                        )}
-                                      </div>
-                                      <h4 className="font-bold text-white text-lg">ANÚNCIO {index + 1}</h4>
-                                    </div>
 
-                                    <div className="space-y-2 text-sm">
+                                  <div className="flex-1">
+                                    <h4 className="font-bold text-white text-lg mb-1">{ad.title}</h4>
+
+                                    <div className="space-y-1 text-sm">
                                       <div className="flex items-center gap-2">
                                         <span className="text-blue-400 font-semibold">🏪 Loja:</span>
-                                        <span className="text-white">{ad.store}</span>
+                                        <span className="text-gray-300">{ad.source}</span>
                                       </div>
-                                      
+
                                       <div className="flex items-center gap-2">
                                         <span className="text-blue-400 font-semibold">💰 Preço:</span>
-                                        <span className="text-green-400 font-bold">R$ {ad.price?.toFixed(2) || '---'}</span>
+                                        <span className="text-green-400 font-bold">{ad.price}</span>
                                       </div>
 
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-blue-400 font-semibold">📸 Fotos disponíveis:</span>
-                                        <span className="text-white font-bold">{ad.imageCount || 0} imagens</span>
-                                      </div>
+                                      {ad.snippet && (
+                                        <div className="flex items-start gap-2">
+                                          <span className="text-blue-400 font-semibold">Resumo:</span>
+                                          <span className="text-gray-400 text-xs line-clamp-2">{ad.snippet}</span>
+                                        </div>
+                                      )}
 
-                                      {/* 🆕 LINK CLICÁVEL */}
-                                      {ad.link && (
+                                      {ad.url && (
                                         <a 
-                                          href={ad.link} 
+                                          href={ad.url} 
                                           target="_blank" 
                                           rel="noopener noreferrer"
                                           onClick={(e) => e.stopPropagation()}
