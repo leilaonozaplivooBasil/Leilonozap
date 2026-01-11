@@ -356,12 +356,14 @@ Deno.serve(async (req) => {
                     
                     if (images.length > 0) {
                         console.log('📸 Imagens via fallback:', images.length);
+                        const finalTitle = searchTerm || '';
+                        const description = await generateDescription(base44, finalTitle);
                         return Response.json({
                             found: true,
                             images: [...new Set(images)],
-                            title: searchTerm || '',
+                            title: finalTitle,
                             price: null,
-                            description: searchTerm || '',
+                            description: description,
                             source: 'Google Images'
                         }, { status: 200 });
                     }
