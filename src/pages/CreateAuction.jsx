@@ -4,7 +4,6 @@ import { base44 } from "@/api/base44Client";
 
 const Auction = base44.entities.Auction;
 const User = { me: () => base44.auth.me() };
-const AppUser = base44.entities.AppUser;
 import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, FastForward, RefreshCw, FlaskConical, AlertCircle, Sparkles, CheckCircle, Package } from "lucide-react";
+import { Upload, Link as LinkIcon, Loader2, Zap } from "lucide-react";
 import { createPageUrl } from "@/utils";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -51,15 +49,9 @@ export default function CreateAuction() {
   const [currentUser, setCurrentUser] = useState(null);
   
   const [productName, setProductName] = useState("");
-  const [confirmedProductName, setConfirmedProductName] = useState("");
   const [isSearchingName, setIsSearchingName] = useState(false);
-  const [productPreview, setProductPreview] = useState(null);
-  const [availableAds, setAvailableAds] = useState([]);
-  const [selectedAd, setSelectedAd] = useState(null);
-  const [isLoadingAds, setIsLoadingAds] = useState(false);
   const [adImagePool, setAdImagePool] = useState([]);
   const [manualStep, setManualStep] = useState(0);
-  const [debugError, setDebugError] = useState(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const loadCurrentUser = useCallback(async () => {
@@ -92,10 +84,6 @@ export default function CreateAuction() {
     }
     setIsSearchingName(true);
     setManualStep(1);
-    setDebugError(null);
-    setProductPreview(null);
-    setAvailableAds([]);
-    setSelectedAd(null);
 
     try {
         const response = await base44.functions.invoke('searchProductByName', { 
@@ -105,18 +93,9 @@ export default function CreateAuction() {
         if (!response || response.status !== 200 || !response.data?.found) {
           throw new Error(response?.data?.error || 'Produto não encontrado');
         }
-        const data = response.data;
-        setConfirmedProductName(productName.trim());
-        setProductPreview({
-          title: data.title,
-          price: data.price,
-          thumbnailUrl: data.thumbnailUrl,
-          imageCount: data.imageCount || 0,
-        });
         setManualStep(10);
         toast.success("✅ Produto encontrado! Confirme para prosseguir.");
     } catch (error) {
-      setDebugError({ type: 'searchByName', message: error.message });
       toast.error(`Erro na busca: ${error.message}`);
       setManualStep(0);
     } finally {
@@ -125,56 +104,7 @@ export default function CreateAuction() {
   };
 
 
-  
-  const applyPreviewDataAsFallback = () => {
-      setFormData(prev => ({
-          ...prev,
-          title: productPreview.title,
-          starting_price: productPreview.price ? productPreview.price.toString() : prev.starting_price,
-      }));
-      setAdImagePool(productPreview.thumbnailUrl ? [productPreview.thumbnailUrl] : []);
-      setManualStep(12);
-      toast.warning("Usando dados básicos do produto.");
-  }
 
-  const downloadDataFromAd = async () => {
-    if (!selectedAd) {
-      toast.error('Selecione um anúncio primeiro!');
-      return;
-    }
-    setIsLoadingAds(true);
-    toast.info('🤖 Buscando detalhes e galeria do anúncio...');
-    
-    try {
-      const response = await base44.functions.invoke('searchProductByName', { 
-        productName: confirmedProductName,
-        adUrl: selectedAd.url
-      });
-
-      if (!response || response.status !== 200 || !response.data.imageUrls || response.data.imageUrls.length === 0) {
-        throw new Error('Não foi possível carregar as imagens deste anúncio.');
-      }
-      
-      const data = response.data;
-      
-      setFormData(prev => ({
-          ...prev,
-          title: data.title,
-          description: data.description,
-          starting_price: data.price ? data.price.toString() : prev.starting_price,
-          source_url: data.source
-      }));
-
-      setAdImagePool(data.imageUrls);
-      setManualStep(5);
-      toast.success(`✅ ${data.imageUrls.length} imagens importadas!`);
-      
-    } catch (error) {
-      toast.error(`❌ ${error.message} Tente outro anúncio.`);
-    } finally {
-      setIsLoadingAds(false);
-    }
-  };
 
   const applyToForm = () => {
     const finalImages = adImagePool.slice(0, 5);
@@ -189,17 +119,8 @@ export default function CreateAuction() {
   const resetImporterState = () => {
       setManualStep(0);
       setProductName("");
-      setProductPreview(null);
-      setConfirmedProductName("");
-      setAvailableAds([]);
-      setSelectedAd(null);
       setAdImagePool([]);
   }
-
-  const cancelPreview = () => {
-    resetImporterState();
-    toast.info("Busca cancelada.");
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
