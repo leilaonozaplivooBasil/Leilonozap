@@ -108,28 +108,26 @@ export default function CreateAuction() {
     }
   };
 
-  const handleValidationConfirm = () => {
-    if (validationData) {
-      const finalImages = validationData.image_urls.slice(0, 5);
+  const handleUseAsModel = () => {
+    if (searchResult) {
+      const finalImages = searchResult.image_urls.slice(0, 5);
       while (finalImages.length < 5) finalImages.push("");
       
       setFormData(prev => ({
         ...prev,
-        title: validationData.title,
-        description: validationData.description,
+        title: searchResult.title,
+        description: searchResult.description,
         image_urls: finalImages
       }));
       
-      setShowValidationModal(false);
-      setValidationData(null);
+      setSearchResult(null);
       setAuctionUrl("");
-      toast.success(`✅ ${validationData.image_urls.length} imagens importadas!`);
+      toast.success(`✅ ${searchResult.image_urls.length} imagens importadas!`);
     }
   };
 
-  const handleValidationCancel = () => {
-    setShowValidationModal(false);
-    setValidationData(null);
+  const handleClearSearch = () => {
+    setSearchResult(null);
     setAuctionUrl("");
   };
 
