@@ -148,60 +148,98 @@ Deno.serve(async (req) => {
         // 🆕 MODO 2: IMAGENS DE ANÚNCIO ESPECÍFICO
         if (adUrl) {
             console.log('🔗 ========== MODO 2 ATIVADO ==========');
-            console.log('📸 Baixando imagens HD de:', adUrl.substring(0, 60));
+            console.log('🔗 URL do anúncio:', adUrl);
+            console.log('📸 Extraindo imagens REAIS do anúncio...');
             
             const specificImageUrls = [];
             const seenSpecificUrls = new Set();
             
             try {
+                // 🆕 PROMPT MELHORADO para extrair imagens REAIS do produto
                 const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                    prompt: `Analise esta página e extraia URLs de imagens em ALTA RESOLUÇÃO.
+                    prompt: `Você é um extrator de imagens de produtos de e-commerce.
 
-Requisitos:
-- Mínimo 800x800px (ideal: 1200x1200px+)
-- ÂNGULOS DIFERENTES: frente, verso, laterais, detalhes
-- IGNORAR thumbnails, ícones, banners
-- Retornar 6-10 MELHORES imagens VARIADAS
+TAREFA: Acesse esta página de produto e extraia APENAS as URLs das imagens DO PRODUTO.
 
-URL: ${adUrl}`,
+URL: ${adUrl}
+
+REQUISITOS OBRIGATÓRIOS:
+1. APENAS imagens do produto principal (não de acessórios, produtos relacionados ou anúncios)
+2. Resolução mínima: 800x800px (ideal: 1000x1000px ou maior)
+3. Buscar ÂNGULOS DIFERENTES: frente, verso, laterais, detalhes, aberto/fechado
+4. IGNORAR:
+   - Thumbnails pequenas
+   - Ícones de pagamento/frete
+   - Banners promocionais
+   - Produtos relacionados
+   - Imagens de reviews/avaliações
+   - Logos de loja
+
+5. Priorizar imagens no formato:
+   - product-image
+   - gallery-image
+   - zoom-image
+   - main-image
+   - large-image
+
+6. Retornar 6 a 12 URLs de imagens DIFERENTES e VARIADAS do produto
+
+FORMATO DE RESPOSTA:
+Retorne um array com as URLs completas (https://...) das melhores imagens encontradas.`,
                     add_context_from_internet: true,
                     response_json_schema: {
                         type: "object",
                         properties: {
-                            image_urls: { type: "array", items: { type: "string" } }
+                            image_urls: { 
+                                type: "array", 
+                                items: { type: "string" },
+                                description: "URLs completas das imagens do produto em alta resolução"
+                            }
                         }
                     }
                 });
                 
+                console.log('🔍 IA retornou:', extractResponse?.image_urls?.length || 0, 'URLs');
+                
                 if (extractResponse?.image_urls?.length > 0) {
                     for (const url of extractResponse.image_urls) {
-                        if (url && !seenSpecificUrls.has(url)) {
+                        if (url && !seenSpecificUrls.has(url) && specificImageUrls.length < 12) {
+                            // Validar se é URL válida e se a imagem existe
                             const isValid = await validateImageUrl(url);
                             if (isValid) {
                                 specificImageUrls.push(url);
                                 seenSpecificUrls.add(url);
-                                console.log(`✅ Imagem HD #${specificImageUrls.length}`);
+                                console.log(`✅ Imagem HD #${specificImageUrls.length}: ${url.substring(0, 80)}...`);
+                            } else {
+                                console.log(`❌ URL inválida ou imagem não acessível: ${url.substring(0, 80)}...`);
                             }
                         }
                     }
+                } else {
+                    console.log('⚠️ IA não retornou image_urls ou array vazio');
                 }
             } catch (err) {
-                console.error('⚠️ Erro:', err.message);
+                console.error('❌ Erro ao extrair imagens com IA:', err.message);
+                console.error('❌ Stack:', err.stack);
             }
 
             if (specificImageUrls.length === 0) {
+                console.log('❌ Nenhuma imagem válida encontrada no anúncio');
                 return Response.json({
-                    error: "Nenhuma imagem HD encontrada",
-                    suggestion: "Tente outro anúncio"
+                    error: "Nenhuma imagem HD encontrada neste anúncio",
+                    suggestion: "Tente outro anúncio da lista",
+                    details: "A IA não conseguiu extrair imagens válidas desta página"
                 }, { status: 404 });
             }
+
+            console.log(`✅ Total: ${specificImageUrls.length} imagens HD do anúncio`);
 
             return Response.json({
                 found: true,
                 title: productTitle,
                 imageUrls: specificImageUrls,
                 price: productPrice,
-                source: 'Anúncio HD'
+                source: adUrl
             }, { status: 200 });
         }
 
