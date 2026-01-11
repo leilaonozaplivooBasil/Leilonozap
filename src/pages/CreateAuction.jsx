@@ -1393,7 +1393,11 @@ export default function CreateAuction() {
                             {productPreview.price && (
                               <div className="flex items-center gap-2">
                                 <span className="text-blue-400 font-semibold">💰 Preço:</span>
-                                <span className="text-green-400 font-bold">R$ {productPreview.price.toFixed(2)}</span>
+                                <span className="text-green-400 font-bold">
+                                  {typeof productPreview.price === 'number' 
+                                    ? `R$ ${productPreview.price.toFixed(2)}` 
+                                    : productPreview.price}
+                                </span>
                               </div>
                             )}
 
