@@ -77,9 +77,7 @@ Deno.serve(async (req) => {
                     found: true,
                     title: extractResponse.title || 'Produto',
                     description: extractResponse.description || '',
-                    imageUrls: imageUrls,
-                    price: extractResponse.price || null,
-                    source: adUrl
+                    imageUrls: imageUrls
                 }, { status: 200 });
 
             } catch (llmError) {
