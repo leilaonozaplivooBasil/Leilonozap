@@ -124,31 +124,7 @@ export default function CreateAuction() {
     }
   };
 
-  const confirmAndFetchAds = async () => {
-    if (!productPreview) return;
-    setIsLoadingAds(true);
-    setManualStep(1);
 
-    try {
-      const response = await base44.functions.invoke('searchProductByName', {
-        productName: confirmedProductName,
-        listAdsOnly: true
-      });
-
-      if (!response || response.status !== 200 || !response.data.ads || response.data.ads.length === 0) {
-        throw new Error('Nenhum anúncio encontrado para este produto.');
-      }
-      
-      setAvailableAds(response.data.ads.slice(0, 5));
-      setManualStep(11);
-      toast.success(`✅ ${response.data.ads.length} anúncios encontrados!`);
-    } catch (error) {
-      toast.error(error.message);
-      applyPreviewDataAsFallback();
-    } finally {
-      setIsLoadingAds(false);
-    }
-  };
   
   const applyPreviewDataAsFallback = () => {
       setFormData(prev => ({
@@ -339,53 +315,9 @@ export default function CreateAuction() {
                       </div>
                     )}
                     
-                    {manualStep === 10 && productPreview && (
-                      <div className="bg-blue-900/30 border-2 border-blue-500 rounded-xl p-6 text-center">
-                        <h3 className="text-xl font-bold text-blue-300 mb-4">🔍 Produto Encontrado</h3>
-                        {productPreview.thumbnailUrl && <img src={productPreview.thumbnailUrl} alt="Preview" className="w-32 h-32 mx-auto mb-4 bg-white rounded-lg p-2 border-2 border-blue-400 object-contain"/>}
-                        <p className="text-white font-semibold">{productPreview.title}</p>
-                        {productPreview.price && <p className="text-green-400 font-bold">R$ {productPreview.price.toFixed(2)}</p>}
-                        <p className="text-gray-400 text-sm">{productPreview.imageCount} imagens disponíveis</p>
-                        <div className="mt-4 bg-yellow-900/30 border border-yellow-600 p-2 rounded-lg text-yellow-300 text-sm">
-                          ⚠️ Buscar as imagens completas irá consumir <strong>1 crédito</strong> da API.
-                        </div>
-                        <p className="text-white font-bold text-lg mt-4">❓ Este é o produto correto?</p>
-                        <div className="grid grid-cols-2 gap-3 mt-4">
-                          <Button onClick={cancelPreview} variant="outline" className="border-red-500 text-red-400 hover:bg-red-600 hover:text-white">❌ Não, Buscar Novamente</Button>
-                          <Button onClick={confirmAndFetchAds} disabled={isLoadingAds} className="bg-green-600 hover:bg-green-700">
-                            {isLoadingAds ? <Loader2 className="animate-spin" /> : "✅ Sim, Confirmar"}
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+
                     
-                    {manualStep === 11 && (
-                        <div className="bg-blue-900/30 border-2 border-blue-500 rounded-xl p-6">
-                            <h3 className="text-xl font-bold text-blue-300 mb-2">📦 Escolha o anúncio para importar</h3>
-                            <p className="text-gray-400 text-sm mb-4">Selecione o anúncio com os melhores dados. Apenas um pode ser selecionado.</p>
-                            <div className="space-y-3">
-                                {availableAds.map((ad, idx) => (
-                                    <button key={ad.url || idx} type="button" onClick={() => setSelectedAd(ad)} className={`w-full text-left p-4 rounded-lg border transition-all ${selectedAd?.url === ad.url ? "border-green-500 ring-2 ring-green-500/30" : "border-gray-600 hover:border-blue-500"}`}>
-                                        <div className="flex items-start gap-4">
-                                            {ad.image && <img src={ad.image} alt={ad.title} className="w-20 h-20 object-cover rounded border border-gray-700"/>}
-                                            <div className="flex-1">
-                                                <h4 className="font-bold text-white text-lg">{ad.title}</h4>
-                                                <div className="text-sm"><span className="text-blue-400">Loja:</span> {ad.source}</div>
-                                                <div className="text-sm"><span className="text-blue-400">Preço:</span> <span className="text-green-400 font-bold">{ad.price}</span></div>
-                                            </div>
-                                            {selectedAd?.url === ad.url && <CheckCircle className="w-5 h-5 text-green-400" />}
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                             <div className="flex gap-3 pt-4 mt-4 border-t border-gray-700">
-                                <Button onClick={cancelPreview} variant="outline" className="flex-1">⬅️ Voltar</Button>
-                                <Button onClick={downloadDataFromAd} disabled={!selectedAd || isLoadingAds} className="flex-1 bg-blue-600 hover:bg-blue-700">
-                                    {isLoadingAds ? <Loader2 className="animate-spin" /> : "Usar este anúncio"}
-                                </Button>
-                            </div>
-                        </div>
-                    )}
+
 
                     {manualStep === 5 && (
                       <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
