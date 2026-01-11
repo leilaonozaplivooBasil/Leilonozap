@@ -463,17 +463,17 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
                           alt="Comparai"
                           className="w-10 h-10"
                         />
-                        <div className="text-orange-300 text-sm font-bold uppercase">📊 {comparisonData.priceLabel || 'Preço de Mercado'}</div>
+                        <div className="text-orange-300 text-sm font-bold uppercase">📊 {comparisonData.priceLabel || 'Preço Médio do Mercado'}</div>
                       </div>
                       
                       <div className="text-5xl font-black text-orange-400 mb-2">
-                        R$ {comparisonData.cheapestMarketPrice.toFixed(2)}
+                        R$ {(comparisonData.referencePrice || comparisonData.averageMarketPrice || comparisonData.cheapestMarketPrice).toFixed(2)}
                       </div>
                       
                       <div className="text-orange-300 text-sm">
                         {comparisonData.isManualPrice 
                           ? '✏️ Preço inserido manualmente' 
-                          : `✅ Menor preço entre ${comparisonData.totalStoresAnalyzed || 'várias'} lojas`}
+                          : `✅ Preço médio entre ${comparisonData.totalStoresAnalyzed || 'várias'} lojas`}
                       </div>
                     </div>
                   )}
