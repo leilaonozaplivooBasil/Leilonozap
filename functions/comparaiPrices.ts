@@ -264,9 +264,10 @@ Deno.serve(async (req) => {
 
         console.log(`💰 Menor: R$ ${minPrice} | Economia: ${Math.round(savingsPercent)}%`);
 
-        // 8️⃣ VALIDA ECONOMIA
-        if (Math.abs(savingsPercent) > 93) {
-            console.log(`⚠️ Economia irrealista: ${savingsPercent}%`);
+        // 8️⃣ VALIDA ECONOMIA - MAIS FLEXÍVEL
+        // Permite economias de até 98% (produtos de arremate podem ter descontos enormes)
+        if (savingsPercent > 99 || savingsPercent < -500) {
+            console.log(`⚠️ Economia fora do range: ${savingsPercent}%`);
             return Response.json({
                 success: false,
                 error: "Dados inconsistentes detectados. Por favor, tente novamente.",
