@@ -229,19 +229,40 @@ Deno.serve(async (req) => {
             }, { status: 404 });
         }
 
-        // Formata resultados do SerpAPI
+        // Formata resultados do SerpAPI - FILTRA POR RELEVÂNCIA
         const validResults = data.shopping_results
-            .slice(0, 10)
+            .slice(0, 15)
             .map(result => {
                 const price = result.extracted_price || parseFloat(result.price?.replace(/[^\d,]/g, '').replace(',', '.'));
                 return {
                     store: result.source || 'Loja',
-                    productNameFound: result.title,
+                    productNameFound: result.title || '',
                     price: price,
                     url: result.product_link || result.link || '#'
                 };
             })
-            .filter(c => isValidPrice(c.price, currentPrice));
+            .filter(c => {
+                // Validação básica de preço
+                if (!isValidPrice(c.price, currentPrice)) return false;
+                
+                // 🆕 FILTRA PRODUTOS IRRELEVANTES
+                // Extrai palavras-chave do título original (marca + modelo)
+                const titleWords = cleanedTitle.toLowerCase().split(' ').filter(w => w.length > 2);
+                const foundWords = c.productNameFound.toLowerCase();
+                
+                // Conta quantas palavras do título original aparecem no resultado
+                const matchCount = titleWords.filter(word => foundWords.includes(word)).length;
+                const matchRatio = titleWords.length > 0 ? matchCount / titleWords.length : 0;
+                
+                // Precisa ter pelo menos 40% das palavras-chave
+                if (matchRatio < 0.4) {
+                    console.log(`❌ Filtrado (baixa relevância ${Math.round(matchRatio*100)}%): ${c.productNameFound} - R$ ${c.price}`);
+                    return false;
+                }
+                
+                console.log(`✅ Aceito (${Math.round(matchRatio*100)}% match): ${c.productNameFound} - R$ ${c.price}`);
+                return true;
+            });
 
         console.log(`✅ SerpAPI retornou ${validResults.length} produtos válidos`);
 
