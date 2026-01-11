@@ -1,8 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
-
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
     const { url } = await req.json();
 
     if (!url || typeof url !== 'string') {
@@ -13,41 +10,74 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'URL deve ser do Mercado Livre' }, { status: 400 });
     }
 
-    // Usar InvokeLLM para extrair dados do HTML
-    const response = await base44.integrations.Core.InvokeLLM({
-      prompt: `Acesse a URL ${url} e extraia EXATAMENTE os seguintes dados do anúncio:
-1. TÍTULO do anúncio
-2. DESCRIÇÃO completa (tudo que está descrito)
-3. TODAS as URLs das IMAGENS do anúncio (lista com cada URL em uma linha)
-
-Retorne em JSON com as chaves: title, description, images (array)`,
-      add_context_from_internet: true,
-      response_json_schema: {
-        type: 'object',
-        properties: {
-          title: { type: 'string' },
-          description: { type: 'string' },
-          images: { type: 'array', items: { type: 'string' } }
-        },
-        required: ['title', 'description', 'images']
+    // Fazer fetch real do anúncio
+    const html = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
-    });
+    }).then(r => r.text());
 
-    if (!response || !response.title) {
-      return Response.json({ error: 'Não foi possível extrair dados do anúncio' }, { status: 400 });
+    if (!html) {
+      return Response.json({ error: 'Não foi possível acessar o anúncio' }, { status: 400 });
     }
 
-    // Filtrar URLs vazias
-    const cleanImages = (response.images || []).filter(img => img && typeof img === 'string' && img.trim() !== '');
+    // Extrair dados do HTML
+    let title = '';
+    let description = '';
+    let images = [];
+
+    // Buscar JSON-LD (dados estruturados)
+    const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    if (jsonLdMatch) {
+      try {
+        const jsonLd = JSON.parse(jsonLdMatch[1]);
+        if (jsonLd.name) title = jsonLd.name;
+        if (jsonLd.description) description = jsonLd.description;
+        if (jsonLd.image) {
+          images = Array.isArray(jsonLd.image) ? jsonLd.image : [jsonLd.image];
+        }
+      } catch (e) {
+        // Continuar com parsing manual
+      }
+    }
+
+    // Se não encontrou via JSON-LD, tentar extração manual
+    if (!title) {
+      const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/);
+      if (titleMatch) title = titleMatch[1].trim();
+    }
+
+    if (!description) {
+      const descMatch = html.match(/<p[^>]*class="[^"]*description[^"]*"[^>]*>([^<]+)<\/p>/i);
+      if (descMatch) description = descMatch[1].trim();
+    }
+
+    if (images.length === 0) {
+      // Extrair imagens do atributo data-src ou src em img tags
+      const imgMatches = html.matchAll(/<img[^>]*(?:src|data-src)="([^"]*\.jpg[^"]*)"/gi);
+      const imgSet = new Set();
+      for (const match of imgMatches) {
+        const imgUrl = match[1];
+        if (imgUrl && imgUrl.includes('mercadolivre') && imgSet.size < 20) {
+          imgSet.add(imgUrl);
+        }
+      }
+      images = Array.from(imgSet);
+    }
+
+    // Validar dados
+    if (!title || !description || images.length === 0) {
+      return Response.json({ error: 'Não foi possível extrair dados completos do anúncio' }, { status: 400 });
+    }
 
     return Response.json({
-      title: response.title,
-      description: response.description,
-      images: cleanImages
+      title: title.substring(0, 200),
+      description: description.substring(0, 1000),
+      images: images.filter(img => img && typeof img === 'string').slice(0, 10)
     }, { status: 200 });
 
   } catch (error) {
     console.error('Import error:', error);
-    return Response.json({ error: error.message || 'Erro ao importar anúncio' }, { status: 500 });
+    return Response.json({ error: 'Erro ao importar anúncio: ' + error.message }, { status: 500 });
   }
 });
