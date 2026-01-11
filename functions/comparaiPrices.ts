@@ -1,11 +1,24 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
-// 🧹 LIMPEZA DE TÍTULOS
+// 🧹 LIMPEZA DE TÍTULOS - VERSÃO MELHORADA
 function cleanTitle(title) {
     if (!title) return '';
-    let clean = title.replace(/leil[aã]o\s*(nozap|no\s*zap)?/gi, '').replace(/\b(novo|usado)\b/gi, '').replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
-    const words = clean.split(' ').filter(w => w.length > 2);
-    return words.slice(0, 6).join(' ');
+    
+    // Remove termos irrelevantes
+    let clean = title
+        .replace(/leil[aã]o\s*(nozap|no\s*zap)?/gi, '')
+        .replace(/\b(novo|usado|semi[-\s]?novo|original|lacrado|garantia|frete\s*gr[aá]tis)\b/gi, '')
+        .replace(/\b(arremate|devolu[çc][aã]o|promo[çc][aã]o)\b/gi, '')
+        .replace(/\b(110v|220v|bivolt)\b/gi, '')
+        .replace(/[-_]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    
+    // Pega palavras significativas (mínimo 2 caracteres)
+    const words = clean.split(' ').filter(w => w.length > 1);
+    
+    // Retorna até 8 palavras para melhor precisão na busca
+    return words.slice(0, 8).join(' ');
 }
 
 // 🚫 VALIDA PREÇO
