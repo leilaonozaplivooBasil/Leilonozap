@@ -129,16 +129,18 @@ export default function Home() {
     };
   }, []);
 
-  // 🚀 SUPER OTIMIZADO: Filtragem consolidada em um único loop
+  // 🚀 SUPER OTIMIZADO: Filtragem instantânea com cache
   const filteredAuctions = useMemo(() => {
     if (!Array.isArray(auctions) || auctions.length === 0) return [];
 
-    // FAVORITOS - Retorno rápido
+    let filtered = auctions;
+
+    // FAVORITOS
     if (showFavoritesOnly) {
       return Array.isArray(favoriteAuctions) && favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
     }
 
-    // SAI DE BAIXO - Retorno rápido
+    // SAI DE BAIXO
     if (activeSourceFilter === "sai_de_baixo") {
       return auctions
         .filter((a) => a?.partner_store === 'sai_de_baixo' && !a.is_investment_plan)
@@ -149,24 +151,27 @@ export default function Home() {
         });
     }
 
-    // FILTRO CONSOLIDADO - Um único .filter() com todas as condições
-    const filtered = auctions.filter((a) => {
-      // NOZAP BASE
-      if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
-      
-      // REGIÃO
-      if (userRegion && a.allowed_regions && a.allowed_regions.length > 0 && !a.allowed_regions.includes(userRegion)) return false;
-      
-      // ORIGEM DO PRODUTO
-      if (activeSourceFilter === "todos" && a.product_source === 'factory_new') return false;
-      if (activeSourceFilter === "factory" && a.product_source !== 'factory_new') return false;
-      
-      // CATEGORIA
-      if (activeCategory === "ativos" && a?.status !== 'active') return false;
-      if (activeCategory !== "todos" && activeCategory !== "ativos" && a?.category !== activeCategory) return false;
-      
-      return true;
-    });
+    // NOZAP - FILTRO BASE
+    filtered = auctions.filter((a) => a?.partner_store !== 'sai_de_baixo' && !a.is_investment_plan);
+
+    // REGIÃO
+    if (userRegion) {
+      filtered = filtered.filter((a) => !a.allowed_regions || a.allowed_regions.length === 0 || a.allowed_regions.includes(userRegion));
+    }
+
+    // ORIGEM DO PRODUTO
+    if (activeSourceFilter === "todos") {
+      filtered = filtered.filter((a) => a.product_source !== 'factory_new');
+    } else if (activeSourceFilter === "factory") {
+      filtered = filtered.filter((a) => a.product_source === 'factory_new');
+    }
+
+    // CATEGORIA
+    if (activeCategory === "ativos") {
+      filtered = filtered.filter((a) => a?.status === 'active');
+    } else if (activeCategory !== "todos") {
+      filtered = filtered.filter((a) => a?.category === activeCategory);
+    }
 
     // ORDENAÇÃO OTIMIZADA
     return filtered.sort((a, b) => {
@@ -200,7 +205,8 @@ export default function Home() {
       console.log('🔍 [NoZap] Favoritos carregados:', nozapFavoriteIds);
 
       if (nozapFavoriteIds.length > 0) {
-        const favAuctions = await Auction.filter({ id: { $in: nozapFavoriteIds } });
+        const allAuctions = await Auction.list("-created_date", 200);
+        const favAuctions = allAuctions.filter((a) => nozapFavoriteIds.includes(a.id));
         setFavoriteAuctions(favAuctions);
         
         // Salva no cache
