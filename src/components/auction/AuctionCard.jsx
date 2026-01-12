@@ -466,10 +466,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             </div>
           )}
 
-          {/* 🆕 BADGE DE PECHINCHA */}
-          {showPechincaBadge && (
+          {/* 🆕 BADGE DE PECHINCHA - REMOVIDO */}
+          {/* {showPechincaBadge && (
             <PechincaBadge savingsPercent={savingsPercent} savings={savings} />
-          )}
+          )} */}
 
 
         </div>
