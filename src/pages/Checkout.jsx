@@ -231,62 +231,69 @@ export default function CheckoutPage() {
         };
 
         const initializeMercadoPago = async () => {
-            try {
-                console.log('🔧 Inicializando Mercado Pago SDK...');
-                console.log('🔑 Public Key:', publicKey);
-                console.log('🎫 Preference ID:', preferenceId);
-                
-                // Verificar se container existe
-                const container = document.getElementById('walletBrick_container');
-                if (!container) {
-                    throw new Error('Container walletBrick_container não encontrado');
+        try {
+        console.log('🔧 Inicializando Mercado Pago SDK...');
+        console.log('🔑 Public Key:', publicKey);
+        console.log('🎫 Preference ID:', preferenceId);
+
+        // Verificar se container existe
+        const container = document.getElementById('walletBrick_container');
+        if (!container) {
+            throw new Error('Container walletBrick_container não encontrado');
+        }
+        console.log('✅ Container encontrado');
+
+        // Aguardar um tick para garantir que o DOM está pronto
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Limpar container antes de renderizar
+        container.innerHTML = '';
+
+        // Inicializar MP com public key recebida do backend
+        const mp = new window.MercadoPago(publicKey.trim(), {
+            locale: 'pt-BR'
+        });
+
+        mpInstanceRef.current = mp;
+        console.log('✅ SDK MP inicializado');
+
+        // Criar Wallet Brick
+        const bricksBuilder = mp.bricks();
+        console.log('🧱 Criando Wallet Brick...');
+
+        const brick = await bricksBuilder.create('wallet', 'walletBrick_container', {
+            initialization: {
+                preferenceId: preferenceId.trim()
+            },
+            customization: {
+                texts: {
+                    valueProp: 'security_safety'
                 }
-                console.log('✅ Container encontrado');
-
-                // Limpar container antes de renderizar
-                container.innerHTML = '';
-                
-                // Inicializar MP com public key recebida do backend
-                const mp = new window.MercadoPago(publicKey.trim(), {
-                    locale: 'pt-BR'
-                });
-
-                mpInstanceRef.current = mp;
-                console.log('✅ SDK MP inicializado');
-
-                // Criar Wallet Brick
-                const bricksBuilder = mp.bricks();
-                console.log('🧱 Criando Wallet Brick...');
-
-                const brick = await bricksBuilder.create('wallet', 'walletBrick_container', {
-                    initialization: {
-                        preferenceId: preferenceId.trim()
-                    },
-                    customization: {
-                        texts: {
-                            valueProp: 'security_safety'
-                        }
-                    }
-                });
-
-                console.log('✅ Wallet Brick criado:', brick);
-                console.log('✅ Botão de pagamento renderizado com sucesso!');
-
-            } catch (error) {
-                console.error('❌ Erro detalhado ao inicializar MP:', error);
-                console.error('Tipo do erro:', error.name);
-                console.error('Mensagem:', error.message);
-                console.error('Stack:', error.stack);
-                
-                // Mostrar erro mais detalhado
-                if (error.message.includes('public_key')) {
-                    toast.error('Chave pública inválida. Verifique as credenciais do Mercado Pago.');
-                } else if (error.message.includes('preference')) {
-                    toast.error('Erro ao carregar preferência de pagamento.');
-                } else {
-                    toast.error(`Erro: ${error.message}`);
-                }
+            },
+            onError: (error) => {
+                console.error('❌ Erro Wallet Brick:', error);
+                toast.error('Erro ao renderizar opções de pagamento.');
             }
+        });
+
+        console.log('✅ Wallet Brick criado:', brick);
+        console.log('✅ Botão de pagamento renderizado com sucesso!');
+
+        } catch (error) {
+        console.error('❌ Erro detalhado ao inicializar MP:', error);
+        console.error('Tipo do erro:', error.name);
+        console.error('Mensagem:', error.message);
+        console.error('Stack:', error.stack);
+
+        // Mostrar erro mais detalhado
+        if (error.message.includes('public_key')) {
+            toast.error('Chave pública inválida. Verifique as credenciais do Mercado Pago.');
+        } else if (error.message.includes('preference')) {
+            toast.error('Erro ao carregar preferência de pagamento.');
+        } else {
+            toast.error(`Erro: ${error.message}`);
+        }
+        }
         };
 
         loadMercadoPagoSDK();
