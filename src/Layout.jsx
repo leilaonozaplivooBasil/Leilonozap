@@ -779,6 +779,7 @@ export default function Layout({ children, currentPageName }) {
         )}
 
         <main>{children}</main>
+        <Footer />
 
         {/* 🆕 BOTÃO FLUTUANTE WHATSAPP - SÓ NA SALA DE LEILÃO (AuctionRoom) */}
         {currentUser && (isLicensee || isAdmin) && currentPageName === "AuctionRoom" && (
