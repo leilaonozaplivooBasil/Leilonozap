@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
                 failure: `${req.headers.get('origin')}/Checkout?auction_id=${auction_id}`,
                 pending: `${req.headers.get('origin')}/MyWinnings`
             },
-            auto_return: 'approved',
+            auto_return: 'all',
             notification_url: `${req.headers.get('origin')}/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,
             statement_descriptor: 'LEILAO NOZAP',
             payment_methods: {
