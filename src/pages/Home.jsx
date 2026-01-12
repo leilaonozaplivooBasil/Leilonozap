@@ -111,7 +111,8 @@ export default function Home() {
     };
   }, []);
 
-  const filteredAuctions = React.useMemo(() => {
+  // 🚀 OTIMIZAÇÃO: useMemo calcula filteredAuctions automaticamente
+  const filteredAuctions = useMemo(() => {
     if (!Array.isArray(auctions)) return [];
 
     let filtered;
