@@ -326,6 +326,21 @@ export default function CheckoutPage() {
                                  />
                              </div>
 
+                             {/* Campo CPF */}
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                                     CPF *
+                                 </label>
+                                 <input
+                                     type="text"
+                                     value={cpf}
+                                     onChange={(e) => setCpf(e.target.value)}
+                                     placeholder="000.000.000-00"
+                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
+                                 />
+                             </div>
+
                              <p className="text-gray-400 text-sm">
                                  Escolha seu método de pagamento preferido:
                              </p>
