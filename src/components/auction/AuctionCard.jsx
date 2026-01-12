@@ -277,15 +277,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   
   const currentPrice = auction.current_price || auction.starting_price;
 
-  // 🆕 CALCULA ECONOMIA - USA PREÇO MÉDIO COMO REFERÊNCIA (IGUAL À COMPARAI)
-  // A Comparai retorna averageMarketPrice, que é usado como referência para o cálculo
-  // O cálculo correto é: savings = avgPrice - currentPrice, percent = (savings / avgPrice) * 100
+  // 🆕 CALCULA ECONOMIA SE TIVER market_price
   const showPechincaBadge = auction.market_price && auction.market_price > currentPrice;
-
-  // market_price armazena o preço médio/referência calculado pela Comparai
-  const referencePrice = auction.market_price;
-  const savings = showPechincaBadge ? (referencePrice - currentPrice) : 0;
-  const savingsPercent = showPechincaBadge ? ((savings / referencePrice) * 100) : 0;
+  const savingsPercent = showPechincaBadge ? ((auction.market_price - currentPrice) / auction.market_price * 100) : 0;
+  const savings = showPechincaBadge ? (auction.market_price - currentPrice) : 0;
 
   // 🌎 FORMATA DATA EM FUSO HORÁRIO DE SÃO PAULO
   const getTimeRemaining = () => {
