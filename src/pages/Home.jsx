@@ -39,7 +39,6 @@ export default function Home() {
   const location = useLocation();
 
   const [auctions, setAuctions] = useState([]);
-  const [filteredAuctions, setFilteredAuctions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("todos");
   const [activeSourceFilter, setActiveSourceFilter] = useState("todos");
@@ -461,12 +460,7 @@ export default function Home() {
     };
   }, []);
 
-  // ❌ REMOVIDO - useRealtimeSync já faz isso melhor
-
-  useEffect(() => {
-    // 🚀 OTIMIZAÇÃO: Executa filtro imediatamente sem esperar
-    filterAuctions();
-  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, filterAuctions]);
+  // ❌ REMOVIDO - useMemo já calcula automaticamente
 
   const categories = useMemo(() => [
   { value: "todos", label: "Todos", icon: Filter },
