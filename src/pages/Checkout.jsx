@@ -303,6 +303,21 @@ export default function CheckoutPage() {
                                  />
                              </div>
 
+                             {/* Campo Telefone */}
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                                     Telefone *
+                                 </label>
+                                 <input
+                                     type="tel"
+                                     value={phone}
+                                     onChange={(e) => setPhone(e.target.value)}
+                                     placeholder="(11) 99999-9999"
+                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
+                                 />
+                             </div>
+
                              <p className="text-gray-400 text-sm">
                                  Escolha seu método de pagamento preferido:
                              </p>
