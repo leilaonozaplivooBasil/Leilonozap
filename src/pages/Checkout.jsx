@@ -56,7 +56,8 @@ export default function CheckoutPage() {
                         id: savedUser.id,
                         email: savedUser.email,
                         full_name: savedUser.full_name,
-                        phone: savedUser.phone
+                        phone: savedUser.phone,
+                        last_name: lastName || ''
                     }
                 });
                 console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
