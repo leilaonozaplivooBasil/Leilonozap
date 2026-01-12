@@ -102,66 +102,62 @@ Deno.serve(async (req) => {
                 try {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
-                    // ⏱️ TIMEOUT DE 15 SEGUNDOS (aumentado para sites lentos)
+                    // ⏱️ TIMEOUT DE 10 SEGUNDOS
                     const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('LLM timeout')), 15000)
+                        setTimeout(() => reject(new Error('LLM timeout')), 10000)
                     );
 
                     const llmPromise = base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `🏭 MISSÃO CRÍTICA: EXTRAIR PREÇO DO SITE DO FABRICANTE/FORNECEDOR
+                        prompt: `🏭 MISSÃO: EXTRAIR PREÇO À VISTA DO SITE DO FORNECEDOR
 
 📍 URL: ${auction.source_url}
-🏷️ PRODUTO: ${searchTitle}
 
-🎯 OBJETIVO:
-Encontre o preço PRINCIPAL do produto nesta página (seja à vista, parcelado ou preço único).
+🎯 OBJETIVO CRÍTICO: 
+Encontre o preço À VISTA (não parcelado) do produto na página.
 
-⚠️ REGRAS DE EXTRAÇÃO:
+⚠️ REGRAS ABSOLUTAS:
+1. PROCURE APENAS valores que começam com "R$" seguido de número
+2. IGNORE completamente:
+   - Códigos de produto (1197, AM-132, KR302, etc.)
+   - Valores de parcelas (ex: "3x de R$ 69,67", "12x de R$ 99")
+   - Preços riscados/antigos
+   - Números sem "R$"
 
-1️⃣ PROCURE O PREÇO PRINCIPAL:
-   ✅ Preço maior/destaque perto do botão "Comprar"
-   ✅ Valor com "R$" em fonte grande
-   ✅ Pode ser "à vista", "no PIX", ou preço único
-   ✅ Se houver "De R$ X por R$ Y" → pegue Y (preço promocional)
+📋 ONDE ENCONTRAR O PREÇO À VISTA:
+- Texto "à vista" ou "no PIX" ou "no boleto"
+- Preço MAIOR em destaque (não parcelado)
+- Próximo ao botão "Comprar"
+- Geralmente em VERDE ou PRETO
+- Se tiver "De R$ X por R$ Y", pegue o "Y" (segundo valor)
 
-2️⃣ IGNORE COMPLETAMENTE:
-   ❌ Códigos de produto (1197, SKU, REF)
-   ❌ Valores de parcelas individuais ("12x de R$ 50")
-   ❌ Preços riscados (descarte o valor antigo)
-   ❌ Números SEM "R$"
+📊 EXEMPLOS REAIS:
 
-3️⃣ SITES COMUNS:
-   • Laura Novaes/Lojas de Roupa: Preço abaixo do título, geralmente "R$ XXX,00" ou "Parcele em 3x de R$ YY sem juros"
-   • Mercado Livre: "R$ XXX" em destaque
-   • Amazon/Shopee: Preço principal em grande
+Exemplo 1 - Mercado Livre:
+- "Código: 1197"
+- "R$ 209,00 à vista"
+- "ou 3x de R$ 69,67"
+→ RESPOSTA: 209.00
 
-📊 EXEMPLOS:
-
-Exemplo 1 - Laura Novaes:
-"Body Vênus - Rubro
-R$ 209,00
-Parcele em 3x de R$ 69,67 sem juros"
-→ RESPOSTA: 209.00 (preço total, NÃO a parcela)
-
-Exemplo 2 - Mercado Livre:
-"R$ 450 à vista
-ou 12x de R$ 45"
-→ RESPOSTA: 450.00
-
-Exemplo 3 - Loja qualquer:
-"De R$ 299 por R$ 189"
+Exemplo 2 - Shopee:
+- "SKU: AM-132"
+- "De R$ 299 por R$ 189"
+- "ou 6x de R$ 31,50"
 → RESPOSTA: 189.00
 
-🔥 ATENÇÃO CRÍTICA:
-- Se ver "3x de R$ 69,67", calcule: 69.67 × 3 = 209.00
-- Se ver apenas "R$ 209,00", retorne 209.00
-- NÃO retorne o valor da parcela, retorne o PREÇO TOTAL
+Exemplo 3 - Amazon:
+- "Produto: KR302"
+- "R$ 450,00 no PIX"
+- "ou R$ 499,00 no cartão"
+→ RESPOSTA: 450.00
+
+🔥 IMPORTANTE:
+Se houver DOIS preços (à vista e parcelado), SEMPRE pegue o MENOR (à vista).
 
 RETORNE APENAS JSON:
 {
-  "store": "nome da loja/site",
+  "store": "nome da loja",
   "price": 209.00,
-  "productNameFound": "nome exato do produto encontrado"
+  "productNameFound": "nome do produto"
 }`,
                         add_context_from_internet: true,
                         response_json_schema: {
@@ -178,7 +174,7 @@ RETORNE APENAS JSON:
 
                     const result = await Promise.race([llmPromise, timeoutPromise]);
 
-                    if (!result?.price || result.price < 1 || result.price > 50000) {
+                    if (!result?.price || result.price < 1) {
                         console.log(`❌ Falha na extração (preço: ${result?.price})`);
                         useGoogleShopping = true;
                     } else {
