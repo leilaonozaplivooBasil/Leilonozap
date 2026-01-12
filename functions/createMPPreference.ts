@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
             },
             external_reference: externalReference,
             back_urls: {
-                success: `${req.headers.get('origin')}/PaymentSuccess?auction_id=${auction_id}`,
+                success: `${req.headers.get('origin')}/MyWinnings`,
                 failure: `${req.headers.get('origin')}/Checkout?auction_id=${auction_id}`,
                 pending: `${req.headers.get('origin')}/MyWinnings`
             },
