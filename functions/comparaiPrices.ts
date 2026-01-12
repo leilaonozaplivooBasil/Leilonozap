@@ -172,6 +172,8 @@ RETORNE APENAS JSON:
                         }
                     });
 
+                    const result = await Promise.race([llmPromise, timeoutPromise]);
+
                     if (!result?.price || result.price < 1) {
                         console.log(`❌ Falha na extração (preço: ${result?.price})`);
                         useGoogleShopping = true;
