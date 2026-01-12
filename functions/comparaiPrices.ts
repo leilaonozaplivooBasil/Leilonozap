@@ -93,31 +93,32 @@ Deno.serve(async (req) => {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
                     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `ACESSE: ${auction.source_url}
+                        prompt: `URL: ${auction.source_url}
 
-🎯 MISSÃO: Extrair o preço à vista do produto
+TAREFA: Extraia o preço de venda à vista desta página.
 
-⚠️ CRÍTICO: O PREÇO SEMPRE TEM "R$" NA FRENTE!
-- Exemplo certo: "R$ 209,00" → price: 209.00
-- Exemplo ERRADO: "1197" → NÃO é preço (é código)
+REGRA ABSOLUTA: O preço SEMPRE começa com "R$"
 
-✅ ACEITAR:
-- "R$ 209,00" (preço à vista)
-- "Por R$ 189,90"
-- "Preço: R$ 150"
+EXEMPLOS VÁLIDOS (aceitar):
+✅ "R$ 209,00" → retorne 209.00
+✅ "Por: R$ 189,90" → retorne 189.90  
+✅ "Preço R$ 150" → retorne 150.00
 
-❌ REJEITAR:
-- "3x de R$ 69,67" (parcelado)
-- "1197" (código sem R$)
-- "De R$ 300" (riscado)
+EXEMPLOS INVÁLIDOS (ignorar):
+❌ "1197" sem "R$" → código de produto, NÃO é preço
+❌ "3x de R$ 69,67" → parcelamento, NÃO é preço à vista
+❌ "De R$ 300" riscado → preço antigo, NÃO é preço atual
 
-BUSQUE valores que tenham "R$" + número com vírgula.
-Ignore códigos, SKUs, parcelas.
+INSTRUÇÕES:
+1. Procure o preço principal em DESTAQUE na página
+2. Ele DEVE ter o símbolo "R$" antes do número
+3. Se encontrar "R$ 209,00" e "1197", use R$ 209,00 (tem R$)
+4. Ignore qualquer número sem "R$" na frente
 
-RETORNE:
-- store: Nome da loja
-- price: SOMENTE o valor à vista (ex: 209.00)
-- productNameFound: Nome do produto`,
+RETORNE JSON:
+- store: nome da loja do site
+- price: preço à vista como número (ex: 209.00)
+- productNameFound: nome do produto`,
                         add_context_from_internet: true,
                         response_json_schema: {
                             type: "object",
