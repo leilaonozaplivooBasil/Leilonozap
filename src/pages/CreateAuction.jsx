@@ -1497,15 +1497,20 @@ export default function CreateAuction() {
                                         
                                         console.log('✅ Imagens ML extraídas:', data.images.length);
                                         
+                                        // Monta descrição completa com especificações
+                                        const fullDesc = data.specifications
+                                          ? `${data.description || ''}\n\n📋 Especificações:\n${data.specifications}`
+                                          : (data.description || '');
+                                        
                                         setExtractedData({ 
                                           title: data.title || '', 
-                                          description: data.description || '' 
+                                          description: fullDesc
                                         });
                                         
                                         setFormData(prev => ({
                                           ...prev,
                                           title: data.title || prev.title,
-                                          description: data.description || prev.description,
+                                          description: fullDesc,
                                           starting_price: data.price ? data.price.toString() : prev.starting_price,
                                           source_url: productUrl
                                         }));
