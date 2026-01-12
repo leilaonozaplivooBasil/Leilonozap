@@ -93,29 +93,30 @@ Deno.serve(async (req) => {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
                     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `ACESSE ESTA URL E EXTRAIA O PREÇO À VISTA:
-${auction.source_url}
+                        prompt: `ACESSE: ${auction.source_url}
 
-⚠️ REGRAS OBRIGATÓRIAS:
-1. Encontre o PREÇO À VISTA do produto (valor ÚNICO sem parcelas)
-2. NÃO use preços parcelados (ex: "3x de R$ 70,00" = ERRADO)
-3. NÃO use valores riscados/antigos
-4. Procure padrões como:
-   - "R$ XXX,XX" em destaque
-   - "Preço: R$ XXX"
-   - "Por: R$ XXX"
-   - "À vista: R$ XXX"
-5. Se tiver voltagem (110V/220V) ou cores, pegue o MENOR preço
-6. Extraia o nome EXATO da loja do site
+🎯 MISSÃO: Extrair o preço à vista do produto
 
-EXEMPLO DO QUE BUSCAR:
-✅ "R$ 209,00" → retorne: 209.00
-❌ "3x de R$ 69,67" → IGNORE (é parcelado)
-❌ "De R$ 300,00" → IGNORE (é preço riscado)
+⚠️ CRÍTICO: O PREÇO SEMPRE TEM "R$" NA FRENTE!
+- Exemplo certo: "R$ 209,00" → price: 209.00
+- Exemplo ERRADO: "1197" → NÃO é preço (é código)
+
+✅ ACEITAR:
+- "R$ 209,00" (preço à vista)
+- "Por R$ 189,90"
+- "Preço: R$ 150"
+
+❌ REJEITAR:
+- "3x de R$ 69,67" (parcelado)
+- "1197" (código sem R$)
+- "De R$ 300" (riscado)
+
+BUSQUE valores que tenham "R$" + número com vírgula.
+Ignore códigos, SKUs, parcelas.
 
 RETORNE:
 - store: Nome da loja
-- price: Preço à vista em número (ex: 209.90)
+- price: SOMENTE o valor à vista (ex: 209.00)
 - productNameFound: Nome do produto`,
                         add_context_from_internet: true,
                         response_json_schema: {
