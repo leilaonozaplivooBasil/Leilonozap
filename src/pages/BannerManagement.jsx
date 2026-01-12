@@ -13,6 +13,7 @@ import ImageCropEditor from '../components/admin/ImageCropEditor';
 export default function BannerManagement() {
   const [banners, setBanners] = useState([]);
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [footerSettings, setFooterSettings] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [editingBanner, setEditingBanner] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
