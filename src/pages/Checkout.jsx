@@ -109,6 +109,8 @@ export default function CheckoutPage() {
                 }
 
                 setAuction(auctions[0]);
+                setLastName(savedUser.full_name ? savedUser.full_name.split(' ').slice(1).join(' ') : '');
+                setPhone(savedUser.phone || '');
 
             } catch (error) {
                 console.error('Erro:', error);
