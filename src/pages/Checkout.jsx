@@ -45,6 +45,31 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (!addressStreet || addressStreet.trim() === '') {
+            toast.error('Endereço é obrigatório para entrega');
+            return;
+        }
+
+        if (!addressNumber || addressNumber.trim() === '') {
+            toast.error('Número do endereço é obrigatório');
+            return;
+        }
+
+        if (!addressCity || addressCity.trim() === '') {
+            toast.error('Cidade é obrigatória');
+            return;
+        }
+
+        if (!addressState || addressState.trim() === '') {
+            toast.error('Estado é obrigatório');
+            return;
+        }
+
+        if (!addressZip || addressZip.trim() === '') {
+            toast.error('CEP é obrigatório');
+            return;
+        }
+
         if (!auction) {
             toast.error('Leilão não encontrado');
             return;
