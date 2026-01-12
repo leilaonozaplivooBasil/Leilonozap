@@ -316,90 +316,132 @@ export default function Home() {
     }
   }, [loadUserFavorites]);
 
-  const loadAuctions = React.useCallback(async (forceRefresh = false) => {
+  const loadAuctions = React.useCallback(async (isRetry = false) => {
     const cachedData = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
-    const age = cachedData && cacheTime ? Date.now() - parseInt(cacheTime) : Infinity;
 
-    // Se tem cache válido E não é refresh forçado, pula
-    if (!forceRefresh && age < 60000 && cachedData) {
-      try {
-        const parsed = JSON.parse(cachedData);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setIsLoading(false);
-          return; // JÁ TEM DADOS NO ESTADO INICIAL
+    // CACHE INSTANTÂNEO: Mostra imediatamente se existir
+    if (cachedData && cacheTime) {
+      const age = Date.now() - parseInt(cacheTime);
+      if (age < 60000) {
+        try {
+          const parsedData = JSON.parse(cachedData);
+          if (Array.isArray(parsedData) && parsedData.length > 0) {
+            setAuctions(parsedData);
+            setIsLoading(false);
+
+            // Atualização silenciosa em background após 15s
+            if (age > 15000 && !isRetry) {
+              setTimeout(() => {
+                Auction.list("-created_date", 50).then((data) => {
+                  if (Array.isArray(data) && data.length > 0) {
+                    sessionStorage.setItem('auctions_cache', JSON.stringify(data));
+                    sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+                    setAuctions(data);
+                  }
+                }).catch(() => {});
+              }, 3000);
+            }
+            return;
+          }
+        } catch (e) {
+          console.error('Cache parse error:', e);
         }
-      } catch (e) {}
+      }
     }
 
-    // Busca do servidor
+    // Se não tem cache válido, busca do servidor
     try {
       const data = await Auction.list("-created_date", 50);
       if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
         sessionStorage.setItem('auctions_cache', JSON.stringify(data));
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+        setRetryCount(0);
+      } else {
+        setAuctions([]);
       }
     } catch (error) {
-      // Usa cache antigo se falhar
-      if (cachedData) {
+      const oldCache = sessionStorage.getItem('auctions_cache');
+      if (oldCache) {
         try {
-          const parsed = JSON.parse(cachedData);
-          if (Array.isArray(parsed)) setAuctions(parsed);
-        } catch (e) {}
+          const parsedCache = JSON.parse(oldCache);
+          if (Array.isArray(parsedCache)) {
+            setAuctions(parsedCache);
+          }
+        } catch (e) {
+          setAuctions([]);
+        }
+      } else {
+        setAuctions([]);
       }
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [retryCount]);
 
 
 
 
 
   useEffect(() => {
-    // URL PARAMS
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('filter') === 'ativos') setActiveCategory('ativos');
-    if (urlParams.get('favorites') === 'true') setShowFavoritesOnly(true);
-
-    // BANNERS - Cache imediato
-    const cachedBanners = sessionStorage.getItem('banners_cache');
-    const bannerCacheTime = sessionStorage.getItem('banners_cache_time');
-    if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 120000) {
-      setBanners(JSON.parse(cachedBanners));
-    }
-
-    // Verifica se precisa buscar leilões
-    const auctionCache = sessionStorage.getItem('auctions_cache');
-    const auctionCacheTime = sessionStorage.getItem('auctions_cache_time');
-    const needsAuctionFetch = !auctionCache || !auctionCacheTime || (Date.now() - parseInt(auctionCacheTime) >= 60000);
-
-    if (needsAuctionFetch) {
-      loadAuctions(true); // Força busca
-    } else {
-      setIsLoading(false); // Cache já carregado no estado inicial
-      // Update silencioso em 30s
-      setTimeout(() => loadAuctions(true), 30000);
-    }
-
-    // User e localização em paralelo
-    loadCurrentUser();
-    checkLocation().then((d) => d?.location?.region && setUserRegion(d.location.region)).catch(() => {});
     
-    // Banners em background
-    if (!cachedBanners || !bannerCacheTime || Date.now() - parseInt(bannerCacheTime) >= 120000) {
-      base44.entities.BannerImage.filter({ is_active: true })
-        .then((data) => {
-          const sorted = data.sort((a, b) => a.order - b.order);
-          setBanners(sorted);
-          sessionStorage.setItem('banners_cache', JSON.stringify(sorted));
+    const loadInitialData = async () => {
+      // Verifica cache ANTES de ativar loading
+      const cachedData = sessionStorage.getItem('auctions_cache');
+      const cacheTime = sessionStorage.getItem('auctions_cache_time');
+      const hasValidCache = cachedData && cacheTime && (Date.now() - parseInt(cacheTime) < 60000);
+
+      if (!hasValidCache) {
+        setIsLoading(true);
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      
+      if (urlParams.get('filter') === 'ativos') {
+        setActiveCategory('ativos');
+      }
+      if (urlParams.get('favorites') === 'true') {
+        setShowFavoritesOnly(true);
+      }
+
+      // Localização em background
+      checkLocation().then((locationData) => {
+        if (locationData?.location?.region) {
+          setUserRegion(locationData.location.region);
+        }
+      }).catch(() => {});
+
+      // EXECUTA EM PARALELO - NÃO BLOQUEIA
+      loadAuctions();
+      loadCurrentUser();
+
+      // Banners do cache imediatamente
+      const cachedBanners = sessionStorage.getItem('banners_cache');
+      const bannerCacheTime = sessionStorage.getItem('banners_cache_time');
+      
+      if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 120000) {
+        setBanners(JSON.parse(cachedBanners));
+      } else {
+        // Carrega em background
+        base44.entities.BannerImage.filter({ is_active: true }).then((bannerData) => {
+          const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
+          setBanners(sortedBanners);
+          sessionStorage.setItem('banners_cache', JSON.stringify(sortedBanners));
           sessionStorage.setItem('banners_cache_time', Date.now().toString());
-        }).catch(() => {});
-    }
+        }).catch(() => {
+          const oldBanners = sessionStorage.getItem('banners_cache');
+          if (oldBanners) setBanners(JSON.parse(oldBanners));
+        });
+      }
+    };
+
+    loadInitialData();
 
     return () => {
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
     };
   }, []);
 
