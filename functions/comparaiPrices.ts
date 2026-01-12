@@ -43,6 +43,35 @@ Deno.serve(async (req) => {
             return Response.json({ success: false, error: "auctionId ou productId obrigatório" }, { status: 400 });
         }
 
+        // 🆕 VERIFICA CACHE PRIMEIRO (se não for forceRefresh)
+        if (!forceRefresh) {
+            const cacheKey = auctionId || productId;
+            try {
+                const cachedResults = await base44.asServiceRole.entities.ComparaiCache.filter({ 
+                    product_key: cacheKey 
+                });
+                
+                if (cachedResults && cachedResults.length > 0) {
+                    const cached = cachedResults[0];
+                    const expiresAt = new Date(cached.expires_at);
+                    
+                    if (expiresAt > new Date()) {
+                        console.log(`✅ CACHE VÁLIDO encontrado (expira em ${Math.floor((expiresAt - new Date()) / 3600000)}h)`);
+                        return Response.json({
+                            ...cached.comparison_data,
+                            cached: true,
+                            cacheExpiresAt: cached.expires_at
+                        });
+                    } else {
+                        console.log('⏰ Cache expirado, deletando...');
+                        await base44.asServiceRole.entities.ComparaiCache.delete(cached.id);
+                    }
+                }
+            } catch (cacheError) {
+                console.log('⚠️ Erro ao verificar cache:', cacheError.message);
+            }
+        }
+
         let searchTitle, currentPrice, entityId, isProduct = false;
 
         // 1️⃣ BUSCA LEILÃO OU PRODUTO
@@ -200,7 +229,7 @@ RETORNE APENAS JSON:
 
                             console.log(`✅ SUCESSO MODO FABRICANTE!`);
 
-                            return Response.json({
+                            const factoryResponse = {
                                 success: true,
                                 comparison: {
                                     productName: searchTitle,
@@ -221,7 +250,25 @@ RETORNE APENAS JSON:
                                     priceLabel: 'Preço no Fabricante'
                                 },
                                 cached: false
-                            });
+                            };
+
+                            // 🆕 SALVA CACHE DE FABRICANTE (24h)
+                            try {
+                                const expiresAt = new Date();
+                                expiresAt.setHours(expiresAt.getHours() + 24);
+                                
+                                await base44.asServiceRole.entities.ComparaiCache.create({
+                                    product_key: auctionId,
+                                    comparison_data: factoryResponse,
+                                    expires_at: expiresAt.toISOString()
+                                });
+                                
+                                console.log('💾 Cache fabricante salvo (24h)');
+                            } catch (cacheErr) {
+                                console.log('⚠️ Erro cache:', cacheErr.message);
+                            }
+
+                            return Response.json(factoryResponse);
                         }
                     }
 
@@ -351,7 +398,7 @@ RETORNE APENAS JSON:
             }, { status: 422 });
         }
 
-        // 9️⃣ SALVA CACHE (apenas para auctions, não para produtos)
+        // 9️⃣ SALVA NO AUCTION E NO CACHE
         if (auctionId) {
             await base44.asServiceRole.entities.Auction.update(auctionId, {
                 market_price: minPrice,
@@ -361,8 +408,8 @@ RETORNE APENAS JSON:
 
         console.log('✅ Sucesso!');
 
-        // 🔟 RETORNA - USA PREÇO MÉDIO COMO REFERÊNCIA
-        return Response.json({
+        // 🔟 PREPARA RESPOSTA
+        const responseData = {
             success: true,
             comparison: {
                 productName: searchTitle,
@@ -376,12 +423,31 @@ RETORNE APENAS JSON:
                 totalStoresAnalyzed: validResults.length,
                 searchAttempts: 1,
                 priceLabel: 'Preço Médio do Mercado',
-                referencePrice: referencePrice // 🆕 Preço usado na comparação
+                referencePrice: referencePrice
             },
             cached: false
-        });
+        };
 
-    } catch (error) {
+        // 🆕 SALVA NO CACHE (24h)
+        const cacheKey = auctionId || productId;
+        try {
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 24);
+
+            await base44.asServiceRole.entities.ComparaiCache.create({
+                product_key: cacheKey,
+                comparison_data: responseData,
+                expires_at: expiresAt.toISOString()
+            });
+
+            console.log('💾 Cache salvo com sucesso (24h)');
+        } catch (cacheError) {
+            console.log('⚠️ Erro ao salvar cache:', cacheError.message);
+        }
+
+        return Response.json(responseData);
+
+        } catch (error) {
         console.error('💥 ERRO:', error.message);
         return Response.json({
             success: false,
