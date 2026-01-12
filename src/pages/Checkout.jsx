@@ -13,6 +13,7 @@ export default function CheckoutPage() {
     const [preferenceId, setPreferenceId] = useState(null);
     const [publicKey, setPublicKey] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
+    const [lastName, setLastName] = useState('');
     const walletContainerRef = useRef(null);
     const mpInstanceRef = useRef(null);
     const navigate = useNavigate();
