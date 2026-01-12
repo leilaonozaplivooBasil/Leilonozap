@@ -77,7 +77,8 @@ Deno.serve(async (req) => {
                 }
             ],
             payer: {
-                name: user.full_name || user.email.split('@')[0],
+                name: user.full_name?.split(' ')[0] || user.email.split('@')[0],
+                last_name: user.full_name?.split(' ').slice(1).join(' ') || '',
                 email: user.email,
                 phone: user.phone ? {
                     area_code: user.phone.substring(0, 2),
