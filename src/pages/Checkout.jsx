@@ -15,6 +15,7 @@ export default function CheckoutPage() {
     const [currentUser, setCurrentUser] = useState(null);
     const [lastName, setLastName] = useState('');
     const [phone, setPhone] = useState('');
+    const [cpf, setCpf] = useState('');
     const walletContainerRef = useRef(null);
     const mpInstanceRef = useRef(null);
     const navigate = useNavigate();
