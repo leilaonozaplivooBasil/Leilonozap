@@ -94,9 +94,16 @@ Deno.serve(async (req) => {
         // Criar referência externa
         const externalReference = `auction_${auction_id}_${Date.now()}`;
 
-        // Criar preferência de pagamento
-        // Usar sobrenome fornecido pelo frontend
-        const firstName = user.full_name?.split(' ')[0] || user.email.split('@')[0];
+        // Montar endereço completo
+        const fullAddress = [
+        user.address_street,
+        user.address_number,
+        user.address_complement,
+        user.address_neighborhood,
+        user.address_city,
+        user.address_state,
+        user.address_zip_code
+        ].filter(x => x && x.trim()).join(', ');
 
         const preferenceData = {
             items: [
