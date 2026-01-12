@@ -223,6 +223,12 @@ RETORNE APENAS JSON:
 
                 } catch (error) {
                     console.error(`❌ Erro modo fabricante: ${error.message}`);
+                    
+                    // Se timeout ou erro, cai para Google Shopping
+                    if (error.message.includes('timeout') || error.message.includes('LLM timeout')) {
+                        console.log(`⏱️ Timeout detectado, caindo para Google Shopping`);
+                    }
+                    
                     useGoogleShopping = true;
                 }
             }
