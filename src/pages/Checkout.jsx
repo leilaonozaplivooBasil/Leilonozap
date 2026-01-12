@@ -298,7 +298,7 @@ export default function CheckoutPage() {
                              <p className="text-gray-400 text-sm">
                                  Escolha seu método de pagamento preferido:
                              </p>
-                            <ul className="text-gray-300 text-sm space-y-2 mb-6">
+                             <ul className="text-gray-300 text-sm space-y-2 mb-6">
                                 <li>✓ Cartão de crédito (até 12x)</li>
                                 <li>✓ Cartão de débito</li>
                                 <li>✓ PIX</li>
