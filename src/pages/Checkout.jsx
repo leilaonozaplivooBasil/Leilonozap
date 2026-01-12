@@ -555,8 +555,8 @@ export default function CheckoutPage() {
                                              'Continuar com Pagamento'
                                          )}
                                      </button>
-                                     {(!lastName || lastName.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '') && (
-                                         <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
+                                     {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
+                                     <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
                                      )}
                                  </div>
                              )}
