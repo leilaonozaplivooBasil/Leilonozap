@@ -346,6 +346,21 @@ export default function CheckoutPage() {
                              <CardTitle className="text-white">Finalizar Pagamento</CardTitle>
                          </CardHeader>
                          <CardContent className="space-y-4">
+                             {/* Campo Nome */}
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                                     Primeiro Nome *
+                                 </label>
+                                 <input
+                                     type="text"
+                                     value={firstName}
+                                     onChange={(e) => setFirstName(e.target.value)}
+                                     placeholder="Digite seu primeiro nome"
+                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
+                                 />
+                             </div>
+
                              {/* Campo Sobrenome */}
                              <div>
                                  <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -356,6 +371,21 @@ export default function CheckoutPage() {
                                      value={lastName}
                                      onChange={(e) => setLastName(e.target.value)}
                                      placeholder="Digite seu sobrenome"
+                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
+                                 />
+                             </div>
+
+                             {/* Campo Email */}
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                                     Email *
+                                 </label>
+                                 <input
+                                     type="email"
+                                     value={email}
+                                     onChange={(e) => setEmail(e.target.value)}
+                                     placeholder="seu@email.com"
                                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
                                      required
                                  />
