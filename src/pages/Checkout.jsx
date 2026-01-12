@@ -85,11 +85,18 @@ export default function CheckoutPage() {
                 auction_id: auctionId,
                 user_data: {
                     id: savedUser.id,
-                    email: savedUser.email,
+                    email: email.trim(),
                     full_name: savedUser.full_name,
                     phone: phone.trim(),
                     cpf: cpf.trim(),
-                    last_name: lastName.trim()
+                    last_name: lastName.trim(),
+                    address_street: addressStreet.trim(),
+                    address_number: addressNumber.trim(),
+                    address_complement: addressComplement.trim(),
+                    address_neighborhood: addressNeighborhood.trim(),
+                    address_city: addressCity.trim(),
+                    address_state: addressState.trim(),
+                    address_zip_code: addressZip.trim()
                 }
             });
             console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
