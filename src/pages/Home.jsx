@@ -111,46 +111,55 @@ export default function Home() {
     };
   }, []);
 
-  // 🚀 OTIMIZAÇÃO: useMemo calcula filteredAuctions automaticamente
+  // 🚀 SUPER OTIMIZADO: Filtragem instantânea com cache
   const filteredAuctions = useMemo(() => {
-    if (!Array.isArray(auctions)) return [];
+    if (!Array.isArray(auctions) || auctions.length === 0) return [];
 
-    let filtered;
+    let filtered = auctions;
 
+    // FAVORITOS
     if (showFavoritesOnly) {
-      filtered = Array.isArray(favoriteAuctions) && favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
-    } else if (activeSourceFilter === "sai_de_baixo") {
-      filtered = auctions.filter((a) => a?.partner_store === 'sai_de_baixo' && !a.is_investment_plan);
-    } else {
-      // NoZap only
-      let nozapOnly = auctions.filter((a) => a?.partner_store !== 'sai_de_baixo' && !a.is_investment_plan);
-
-      if (userRegion) {
-        nozapOnly = nozapOnly.filter((a) => !a.allowed_regions || a.allowed_regions.length === 0 || a.allowed_regions.includes(userRegion));
-      }
-
-      if (activeSourceFilter === "todos") {
-        filtered = nozapOnly.filter((a) => a.product_source !== 'factory_new');
-      } else if (activeSourceFilter === "factory") {
-        filtered = nozapOnly.filter((a) => a.product_source === 'factory_new');
-      } else {
-        filtered = nozapOnly;
-      }
-
-      if (activeCategory === "ativos") {
-        filtered = filtered.filter((a) => a?.status === 'active');
-      } else if (activeCategory !== "todos") {
-        filtered = filtered.filter((a) => a?.category === activeCategory);
-      }
+      return Array.isArray(favoriteAuctions) && favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
     }
 
+    // SAI DE BAIXO
+    if (activeSourceFilter === "sai_de_baixo") {
+      return auctions
+        .filter((a) => a?.partner_store === 'sai_de_baixo' && !a.is_investment_plan)
+        .sort((a, b) => {
+          if (a.status === 'active' && b.status !== 'active') return -1;
+          if (a.status !== 'active' && b.status === 'active') return 1;
+          return a.status === 'active' ? new Date(a.end_time) - new Date(b.end_time) : new Date(b.end_time) - new Date(a.end_time);
+        });
+    }
+
+    // NOZAP - FILTRO BASE
+    filtered = auctions.filter((a) => a?.partner_store !== 'sai_de_baixo' && !a.is_investment_plan);
+
+    // REGIÃO
+    if (userRegion) {
+      filtered = filtered.filter((a) => !a.allowed_regions || a.allowed_regions.length === 0 || a.allowed_regions.includes(userRegion));
+    }
+
+    // ORIGEM DO PRODUTO
+    if (activeSourceFilter === "todos") {
+      filtered = filtered.filter((a) => a.product_source !== 'factory_new');
+    } else if (activeSourceFilter === "factory") {
+      filtered = filtered.filter((a) => a.product_source === 'factory_new');
+    }
+
+    // CATEGORIA
+    if (activeCategory === "ativos") {
+      filtered = filtered.filter((a) => a?.status === 'active');
+    } else if (activeCategory !== "todos") {
+      filtered = filtered.filter((a) => a?.category === activeCategory);
+    }
+
+    // ORDENAÇÃO OTIMIZADA
     return filtered.sort((a, b) => {
       if (a.status === 'active' && b.status !== 'active') return -1;
       if (a.status !== 'active' && b.status === 'active') return 1;
-      if (a.status === 'active' && b.status === 'active') {
-        return new Date(a.end_time) - new Date(b.end_time);
-      }
-      return new Date(b.end_time) - new Date(a.end_time);
+      return a.status === 'active' ? new Date(a.end_time) - new Date(b.end_time) : new Date(b.end_time) - new Date(a.end_time);
     });
   }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion]);
 
