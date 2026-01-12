@@ -29,7 +29,27 @@ Deno.serve(async (req) => {
         }
 
         if (!user.cpf || user.cpf.trim() === '') {
-            return Response.json({ error: 'CPF é obrigatório' }, { status: 400 });
+        return Response.json({ error: 'CPF é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.address_street || user.address_street.trim() === '') {
+        return Response.json({ error: 'Endereço é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.address_number || user.address_number.trim() === '') {
+        return Response.json({ error: 'Número do endereço é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.address_city || user.address_city.trim() === '') {
+        return Response.json({ error: 'Cidade é obrigatória' }, { status: 400 });
+        }
+
+        if (!user.address_state || user.address_state.trim() === '') {
+        return Response.json({ error: 'Estado é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.address_zip_code || user.address_zip_code.trim() === '') {
+        return Response.json({ error: 'CEP é obrigatório' }, { status: 400 });
         }
 
         if (!auction_id) {
