@@ -316,69 +316,42 @@ export default function Home() {
     }
   }, [loadUserFavorites]);
 
-  const loadAuctions = React.useCallback(async (isRetry = false) => {
+  const loadAuctions = React.useCallback(async (forceRefresh = false) => {
     const cachedData = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
+    const age = cachedData && cacheTime ? Date.now() - parseInt(cacheTime) : Infinity;
 
-    // CACHE INSTANTÂNEO: Mostra imediatamente se existir
-    if (cachedData && cacheTime) {
-      const age = Date.now() - parseInt(cacheTime);
-      if (age < 60000) {
-        try {
-          const parsedData = JSON.parse(cachedData);
-          if (Array.isArray(parsedData) && parsedData.length > 0) {
-            setAuctions(parsedData);
-            setIsLoading(false);
-
-            // Atualização silenciosa em background após 15s
-            if (age > 15000 && !isRetry) {
-              setTimeout(() => {
-                Auction.list("-created_date", 50).then((data) => {
-                  if (Array.isArray(data) && data.length > 0) {
-                    sessionStorage.setItem('auctions_cache', JSON.stringify(data));
-                    sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-                    setAuctions(data);
-                  }
-                }).catch(() => {});
-              }, 3000);
-            }
-            return;
-          }
-        } catch (e) {
-          console.error('Cache parse error:', e);
+    // Se tem cache válido E não é refresh forçado, pula
+    if (!forceRefresh && age < 60000 && cachedData) {
+      try {
+        const parsed = JSON.parse(cachedData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setIsLoading(false);
+          return; // JÁ TEM DADOS NO ESTADO INICIAL
         }
-      }
+      } catch (e) {}
     }
 
-    // Se não tem cache válido, busca do servidor
+    // Busca do servidor
     try {
       const data = await Auction.list("-created_date", 50);
       if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
         sessionStorage.setItem('auctions_cache', JSON.stringify(data));
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-        setRetryCount(0);
-      } else {
-        setAuctions([]);
       }
     } catch (error) {
-      const oldCache = sessionStorage.getItem('auctions_cache');
-      if (oldCache) {
+      // Usa cache antigo se falhar
+      if (cachedData) {
         try {
-          const parsedCache = JSON.parse(oldCache);
-          if (Array.isArray(parsedCache)) {
-            setAuctions(parsedCache);
-          }
-        } catch (e) {
-          setAuctions([]);
-        }
-      } else {
-        setAuctions([]);
+          const parsed = JSON.parse(cachedData);
+          if (Array.isArray(parsed)) setAuctions(parsed);
+        } catch (e) {}
       }
     } finally {
       setIsLoading(false);
     }
-  }, [retryCount]);
+  }, []);
 
 
 
@@ -397,12 +370,24 @@ export default function Home() {
       setBanners(JSON.parse(cachedBanners));
     }
 
-    // TUDO EM PARALELO - SEM BLOQUEIOS
-    loadAuctions();
+    // Verifica se precisa buscar leilões
+    const auctionCache = sessionStorage.getItem('auctions_cache');
+    const auctionCacheTime = sessionStorage.getItem('auctions_cache_time');
+    const needsAuctionFetch = !auctionCache || !auctionCacheTime || (Date.now() - parseInt(auctionCacheTime) >= 60000);
+
+    if (needsAuctionFetch) {
+      loadAuctions(true); // Força busca
+    } else {
+      setIsLoading(false); // Cache já carregado no estado inicial
+      // Update silencioso em 30s
+      setTimeout(() => loadAuctions(true), 30000);
+    }
+
+    // User e localização em paralelo
     loadCurrentUser();
     checkLocation().then((d) => d?.location?.region && setUserRegion(d.location.region)).catch(() => {});
     
-    // Banners em background se necessário
+    // Banners em background
     if (!cachedBanners || !bannerCacheTime || Date.now() - parseInt(bannerCacheTime) >= 120000) {
       base44.entities.BannerImage.filter({ is_active: true })
         .then((data) => {
