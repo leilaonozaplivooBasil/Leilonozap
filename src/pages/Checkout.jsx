@@ -47,7 +47,7 @@ export default function CheckoutPage() {
                     id: savedUser.id,
                     email: savedUser.email,
                     full_name: savedUser.full_name,
-                    phone: savedUser.phone,
+                    phone: phone.trim(),
                     last_name: lastName.trim()
                 }
             });
