@@ -2732,57 +2732,6 @@ export default function CreateAuction() {
                         <Label htmlFor="description" className="text-sm font-medium text-gray-400">
                           Descrição Detalhada * (Revise)
                         </Label>
-                        <div className="flex gap-2 mb-2">
-                          <Input
-                            type="text"
-                            placeholder="Cole o link para extrair descrição completa..."
-                            className="bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-blue-500"
-                            onKeyPress={(e) => {
-                              if (e.key === 'Enter') {
-                                const url = e.target.value.trim();
-                                if (url) {
-                                  extractDataFromUrl({ productUrl: url }).then((response) => {
-                                    if (response?.data?.description) {
-                                      setFormData(prev => ({ ...prev, description: response.data.description }));
-                                      e.target.value = '';
-                                      toast.success('✅ Descrição extraída com sucesso!');
-                                    } else {
-                                      toast.error('❌ Não foi possível extrair a descrição');
-                                    }
-                                  }).catch(() => toast.error('❌ Erro ao extrair descrição'));
-                                }
-                              }
-                            }}
-                          />
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="border-blue-600 text-blue-400 hover:bg-blue-600 hover:text-white whitespace-nowrap"
-                            onClick={async (e) => {
-                              const input = e.target.previousSibling;
-                              const url = input.value.trim();
-                              if (!url) {
-                                toast.error('Cole um URL válido');
-                                return;
-                              }
-                              try {
-                                const response = await extractDataFromUrl({ productUrl: url });
-                                if (response?.data?.description) {
-                                  setFormData(prev => ({ ...prev, description: response.data.description }));
-                                  input.value = '';
-                                  toast.success('✅ Descrição extraída com sucesso!');
-                                } else {
-                                  toast.error('❌ Não foi possível extrair a descrição');
-                                }
-                              } catch (error) {
-                                toast.error('❌ Erro ao extrair descrição');
-                              }
-                            }}
-                          >
-                            🔗 Extrair
-                          </Button>
-                        </div>
                         <Textarea id="description" value={formData.description} onChange={(e) => handleInputChange("description", e.target.value)} className="mt-1 min-h-[100px] bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500" required />
                       </div>
                     </div>
