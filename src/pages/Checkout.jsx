@@ -358,7 +358,7 @@ export default function CheckoutPage() {
                                  <div className="space-y-3">
                                      <button
                                          onClick={handleCreatePreference}
-                                         disabled={!lastName || lastName.trim() === '' || !phone || phone.trim() === ''}
+                                         disabled={!lastName || lastName.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === ''}
                                          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors"
                                      >
                                          {preferenceId ? (
