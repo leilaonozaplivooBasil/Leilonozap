@@ -80,12 +80,22 @@ Deno.serve(async (req) => {
         // 2️⃣ PARA PRODUTOS, SEMPRE USA GOOGLE SHOPPING
         let useGoogleShopping = forceGoogleShopping || isProduct;
 
-        // 3️⃣ SE NÃO FOR USAR GOOGLE SHOPPING, TENTA SUPPLIER (APENAS AUCTIONS)
-        if (!useGoogleShopping && auctionId) {
+        // 3️⃣ SE FOR AUCTION, BUSCA DADOS PARA VERIFICAR MODO
+        let auction = null;
+        if (auctionId) {
             const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
-            const auction = auctions[0];
+            auction = auctions[0];
+            
+            // 🆕 SE FOR DIRETO DE FÁBRICA, PRIORIZA MODO SUPPLIER
+            if (auction.product_source === 'factory_new' && auction.source_url) {
+                console.log(`✨ PRODUTO DIRETO DE FÁBRICA DETECTADO`);
+                useGoogleShopping = false;
+            }
+        }
 
-            if (auction.comparai_mode === 'supplier' && auction.source_url) {
+        // 4️⃣ SE NÃO FOR USAR GOOGLE SHOPPING, TENTA SUPPLIER (APENAS AUCTIONS)
+        if (!useGoogleShopping && auctionId && auction) {
+            if ((auction.comparai_mode === 'supplier' || auction.product_source === 'factory_new') && auction.source_url) {
                 console.log(`🏭 MODO FABRICANTE ATIVADO`);
                 console.log(`📍 URL: ${auction.source_url}`);
 
