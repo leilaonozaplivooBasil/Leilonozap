@@ -421,6 +421,111 @@ export default function CheckoutPage() {
                                  />
                              </div>
 
+                             {/* SEÇÃO DE ENDEREÇO */}
+                             <div className="border-t border-gray-600 pt-4 mt-4">
+                                 <h3 className="text-lg font-semibold text-white mb-4">Endereço de Entrega *</h3>
+
+                                 <div>
+                                     <label className="block text-sm font-medium text-gray-300 mb-2">
+                                         Logradouro *
+                                     </label>
+                                     <input
+                                         type="text"
+                                         value={addressStreet}
+                                         onChange={(e) => setAddressStreet(e.target.value)}
+                                         placeholder="Rua, Avenida, etc"
+                                         className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                         required
+                                     />
+                                 </div>
+
+                                 <div className="grid grid-cols-2 gap-3 mt-3">
+                                     <div>
+                                         <label className="block text-sm font-medium text-gray-300 mb-2">
+                                             Número *
+                                         </label>
+                                         <input
+                                             type="text"
+                                             value={addressNumber}
+                                             onChange={(e) => setAddressNumber(e.target.value)}
+                                             placeholder="123"
+                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                             required
+                                         />
+                                     </div>
+                                     <div>
+                                         <label className="block text-sm font-medium text-gray-300 mb-2">
+                                             Complemento
+                                         </label>
+                                         <input
+                                             type="text"
+                                             value={addressComplement}
+                                             onChange={(e) => setAddressComplement(e.target.value)}
+                                             placeholder="Apto, Bloco, etc"
+                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                         />
+                                     </div>
+                                 </div>
+
+                                 <div>
+                                     <label className="block text-sm font-medium text-gray-300 mb-2 mt-3">
+                                         Bairro *
+                                     </label>
+                                     <input
+                                         type="text"
+                                         value={addressNeighborhood}
+                                         onChange={(e) => setAddressNeighborhood(e.target.value)}
+                                         placeholder="Digite o bairro"
+                                         className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                         required
+                                     />
+                                 </div>
+
+                                 <div className="grid grid-cols-2 gap-3 mt-3">
+                                     <div>
+                                         <label className="block text-sm font-medium text-gray-300 mb-2">
+                                             Cidade *
+                                         </label>
+                                         <input
+                                             type="text"
+                                             value={addressCity}
+                                             onChange={(e) => setAddressCity(e.target.value)}
+                                             placeholder="São Paulo"
+                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                             required
+                                         />
+                                     </div>
+                                     <div>
+                                         <label className="block text-sm font-medium text-gray-300 mb-2">
+                                             Estado *
+                                         </label>
+                                         <input
+                                             type="text"
+                                             value={addressState}
+                                             onChange={(e) => setAddressState(e.target.value)}
+                                             placeholder="SP"
+                                             maxLength="2"
+                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                             required
+                                         />
+                                     </div>
+                                 </div>
+
+                                 <div>
+                                     <label className="block text-sm font-medium text-gray-300 mb-2 mt-3">
+                                         CEP *
+                                     </label>
+                                     <input
+                                         type="text"
+                                         value={addressZip}
+                                         onChange={(e) => setAddressZip(e.target.value)}
+                                         placeholder="00000-000"
+                                         className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                         required
+                                     />
+                                 </div>
+                             </div>
+
                              <p className="text-gray-400 text-sm">
                                  Escolha seu método de pagamento preferido:
                              </p>
