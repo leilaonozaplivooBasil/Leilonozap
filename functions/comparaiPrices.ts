@@ -90,104 +90,74 @@ Deno.serve(async (req) => {
                 console.log(`📍 URL: ${auction.source_url}`);
 
                 try {
-                    // 🆕 PRIMEIRA TENTATIVA: Busca direta com contexto da URL
-                    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `TAREFA: Extrair o PREÇO DE VENDA de um produto diretamente da página do fabricante/loja.
+                    // ⚡ EXTRAÇÃO RÁPIDA COM TIMEOUT
+                    const extractionPromise = base44.asServiceRole.integrations.Core.InvokeLLM({
+                        prompt: `Acesse esta URL e extraia o preço do produto: ${auction.source_url}
 
-🔗 URL DA PÁGINA DO PRODUTO: ${auction.source_url}
-📦 PRODUTO ESPERADO: ${auction.title}
+Produto: ${auction.title}
 
-INSTRUÇÕES CRÍTICAS:
-1. ACESSE a URL fornecida e encontre o preço do produto
-2. O preço deve ser o valor de VENDA (não o parcelado, não o antigo riscado)
-3. Procure por padrões como: "R$", "Por:", "Preço:", "A vista:", valores numéricos
-4. Se houver variações (110V/220V), pegue o MENOR preço disponível
-5. EXTRAIA o nome exato da loja (geralmente no header ou footer do site)
-6. Se não conseguir acessar ou encontrar o preço, retorne price: null
-
-EXEMPLOS DE SITES COMUNS:
-- Magazine Luiza: procure ".price__value" ou "R$"
-- Americanas: procure "currentPrice" ou preço principal
-- Mercado Livre: procure "price-tag-fraction"
-- Amazon: procure "priceblock_ourprice" ou "a-price"
-- Lojas próprias: procure "price", "preco", "valor"
-
-RETORNE APENAS O JSON:`,
+Retorne o preço de venda atual (não parcelado) e o nome da loja.`,
                         add_context_from_internet: true,
                         response_json_schema: {
                             type: "object",
                             properties: {
-                                store: { type: "string", description: "Nome da loja/fabricante" },
-                                productNameFound: { type: "string", description: "Nome do produto na página" },
-                                price: { type: ["number", "null"], description: "Preço em reais (ex: 199.90)" },
-                                url: { type: "string" },
-                                logo_url: { type: ["string", "null"] },
-                                confidence: { type: "string", enum: ["high", "medium", "low"] }
+                                store: { type: "string" },
+                                price: { type: "number" },
+                                url: { type: "string" }
                             },
                             required: ["store", "price", "url"]
                         }
                     });
 
-                    console.log(`📊 Resultado LLM:`, JSON.stringify(result));
+                    // ⏱️ TIMEOUT DE 15 SEGUNDOS
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Timeout')), 15000)
+                    );
 
-                    if (!result || result.price === null || result.price < 1) {
-                        console.log(`⚠️ Falha na extração do fabricante (price=${result?.price}), tentando Google Shopping...`);
+                    const result = await Promise.race([extractionPromise, timeoutPromise]);
+
+                    if (!result?.price || result.price < 1) {
+                        console.log(`⚠️ Preço inválido, usando Google Shopping`);
                         useGoogleShopping = true;
                     } else {
+                        console.log(`✅ R$ ${result.price} - ${result.store}`);
 
-                    console.log(`✅ Preço extraído: R$ ${result.price}`);
-                    console.log(`🏪 Loja: ${result.store}`);
+                        const savings = result.price - currentPrice;
+                        const savingsPercent = (savings / result.price) * 100;
 
-                    const savings = result.price - currentPrice;
-                    const savingsPercent = result.price > 0 ? (savings / result.price) * 100 : 0;
+                        if (savingsPercent > 99 || savingsPercent < -500) {
+                            console.log(`⚠️ Economia ${Math.round(savingsPercent)}% inválida`);
+                            useGoogleShopping = true;
+                        } else {
+                            await base44.asServiceRole.entities.Auction.update(auctionId, {
+                                market_price: result.price,
+                                last_comparison_date: new Date().toISOString()
+                            });
 
-                    console.log(`💰 Economia: ${Math.round(savingsPercent)}%`);
-
-                    // Valida economia - MAIS FLEXÍVEL
-                    if (savingsPercent > 99 || savingsPercent < -500) {
-                        console.log(`⚠️ Economia fora do range: ${savingsPercent}%`);
-                        return Response.json({
-                            success: false,
-                            error: "Dados inconsistentes detectados. Por favor, tente novamente.",
-                            errorCode: "UNREALISTIC_DATA"
-                        }, { status: 422 });
-                    }
-
-                    // Salva cache + logo se encontrada
-                    const updateData = {
-                        market_price: result.price,
-                        last_comparison_date: new Date().toISOString()
-                    };
-
-                    if (result.logo_url) {
-                        updateData.supplier_logo_url = result.logo_url;
-                    }
-
-                    await base44.asServiceRole.entities.Auction.update(auctionId, updateData);
-
-                    console.log('✅ Sucesso modo fabricante!');
-
-                    return Response.json({
-                        success: true,
-                        comparison: {
-                            productName: searchTitle,
-                            ourPrice: currentPrice,
-                            comparisons: [result],
-                            cheapestMarketPrice: result.price,
-                            averageMarketPrice: result.price,
-                            savings: savings,
-                            savingsPercent: Math.round(savingsPercent),
-                            isFactoryDirect: true,
-                            totalStoresAnalyzed: 1,
-                            searchAttempts: 1,
-                            priceLabel: 'Preço no Fabricante'
-                        },
-                        cached: false
-                    });
+                            return Response.json({
+                                success: true,
+                                comparison: {
+                                    productName: searchTitle,
+                                    ourPrice: currentPrice,
+                                    comparisons: [{
+                                        store: result.store,
+                                        price: result.price,
+                                        url: result.url || auction.source_url
+                                    }],
+                                    cheapestMarketPrice: result.price,
+                                    averageMarketPrice: result.price,
+                                    savings: savings,
+                                    savingsPercent: Math.round(savingsPercent),
+                                    isFactoryDirect: true,
+                                    totalStoresAnalyzed: 1,
+                                    priceLabel: 'Preço no Fabricante'
+                                }
+                            });
+                        }
                     }
 
                 } catch (error) {
-                    console.error('⚠️ Erro modo fabricante, tentando Google Shopping:', error.message);
+                    console.log(`⚠️ Erro: ${error.message}`);
                     useGoogleShopping = true;
                 }
             }
