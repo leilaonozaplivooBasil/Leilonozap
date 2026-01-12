@@ -436,7 +436,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               onClick={handleShare}
               onMouseDown={(e) => e.stopPropagation()} 
               onTouchStart={(e) => e.stopPropagation()}
-              className="w-10 h-10 shadow-lg bg-blue-600/90 hover:bg-blue-500 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
+              className="w-10 h-10 shadow-lg bg-blue-600/90 hover:bg-blue-500 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95 border border-blue-700"
             >
               <Share2 className="w-5 h-5" />
             </button>
@@ -446,7 +446,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               <FavoriteButton 
                 auctionId={auction.id} 
                 userId={userId} 
-                size="sm"
+                size="md"
                 context={favoriteContext}
               />
             )}
