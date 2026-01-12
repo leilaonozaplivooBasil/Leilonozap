@@ -93,20 +93,30 @@ Deno.serve(async (req) => {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
                     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `EXTRAIR PREÇO DE VENDA DA PÁGINA:
-URL: ${auction.source_url}
+                        prompt: `ACESSE ESTA URL E EXTRAIA O PREÇO À VISTA:
+${auction.source_url}
 
-INSTRUÇÕES:
-1. Acesse a URL acima
-2. Encontre o preço de VENDA do produto (não o parcelado, não o riscado)
-3. Procure por "R$", "Por:", valores em destaque
-4. Se tiver várias opções (110V/220V), pegue o MENOR preço
-5. Extraia o nome da loja/site
+⚠️ REGRAS OBRIGATÓRIAS:
+1. Encontre o PREÇO À VISTA do produto (valor ÚNICO sem parcelas)
+2. NÃO use preços parcelados (ex: "3x de R$ 70,00" = ERRADO)
+3. NÃO use valores riscados/antigos
+4. Procure padrões como:
+   - "R$ XXX,XX" em destaque
+   - "Preço: R$ XXX"
+   - "Por: R$ XXX"
+   - "À vista: R$ XXX"
+5. Se tiver voltagem (110V/220V) ou cores, pegue o MENOR preço
+6. Extraia o nome EXATO da loja do site
 
-RETORNE APENAS:
+EXEMPLO DO QUE BUSCAR:
+✅ "R$ 209,00" → retorne: 209.00
+❌ "3x de R$ 69,67" → IGNORE (é parcelado)
+❌ "De R$ 300,00" → IGNORE (é preço riscado)
+
+RETORNE:
 - store: Nome da loja
-- price: Preço em número (ex: 189.90)
-- productNameFound: Nome do produto na página`,
+- price: Preço à vista em número (ex: 209.90)
+- productNameFound: Nome do produto`,
                         add_context_from_internet: true,
                         response_json_schema: {
                             type: "object",
