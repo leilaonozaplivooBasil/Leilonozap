@@ -54,6 +54,7 @@ export default function CheckoutPage() {
                     email: savedUser.email,
                     full_name: savedUser.full_name,
                     phone: phone.trim(),
+                    cpf: cpf.trim(),
                     last_name: lastName.trim()
                 }
             });
