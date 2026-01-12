@@ -277,6 +277,10 @@ export default function CheckoutPage() {
         });
 
         console.log('✅ Wallet Brick criado:', brick);
+
+        // Verificar se realmente foi renderizado
+        const containerAfter = document.getElementById('walletBrick_container');
+        console.log('✅ Container após render:', containerAfter?.innerHTML.length, 'chars');
         console.log('✅ Botão de pagamento renderizado com sucesso!');
 
         } catch (error) {
