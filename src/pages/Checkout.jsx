@@ -24,6 +24,11 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (!currentUser?.phone || currentUser.phone.trim() === '') {
+            toast.error('Telefone é obrigatório para pagamento. Atualize seu perfil.');
+            return;
+        }
+
         if (!auction) {
             toast.error('Leilão não encontrado');
             return;
