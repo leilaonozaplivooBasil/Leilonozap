@@ -309,9 +309,24 @@ export default function CheckoutPage() {
                             <div id="walletBrick_container" ref={walletContainerRef}></div>
 
                             {(!preferenceId || !publicKey) && (
-                                <div className="flex flex-col items-center justify-center py-8 space-y-3">
-                                    <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-                                    <p className="text-sm text-gray-400">Carregando opções de pagamento...</p>
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={handleCreatePreference}
+                                        disabled={!lastName || lastName.trim() === ''}
+                                        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                                    >
+                                        {preferenceId ? (
+                                            <>
+                                                <Loader2 className="inline w-4 h-4 mr-2 animate-spin" />
+                                                Carregando opções de pagamento...
+                                            </>
+                                        ) : (
+                                            'Continuar com Pagamento'
+                                        )}
+                                    </button>
+                                    {!lastName || lastName.trim() === '' && (
+                                        <p className="text-xs text-yellow-400">Preencha seu sobrenome para continuar</p>
+                                    )}
                                 </div>
                             )}
 
