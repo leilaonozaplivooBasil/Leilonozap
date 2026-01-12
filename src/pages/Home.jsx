@@ -307,15 +307,14 @@ export default function Home() {
 
       if (cachedData && cacheTime && !isRetry) {
         const age = Date.now() - parseInt(cacheTime);
-        if (age < 5000) {
-          console.log("⚡ Cache instantâneo!");
+        if (age < 10000) {
           const parsedData = JSON.parse(cachedData);
-          // 🛡️ PROTEÇÃO: Valida se é array válido
           if (Array.isArray(parsedData)) {
             setAuctions(parsedData);
             setIsLoading(false);
 
-            if (age > 2000) {
+            // Atualização silenciosa apenas se cache > 3s
+            if (age > 3000) {
               setTimeout(() => {
                 Auction.list("-created_date", 50).then((data) => {
                   if (Array.isArray(data)) {
@@ -331,24 +330,14 @@ export default function Home() {
         }
       }
 
-      console.log("🔍 Carregando leilões...");
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-
-      // 🚀 OTIMIZAÇÃO: Limit exato - 50 leilões suficientes
       const data = await Auction.list("-created_date", 50);
-      clearTimeout(timeoutId);
 
-      // 🛡️ PROTEÇÃO: Validação robusta dos dados
       if (Array.isArray(data) && data.length >= 0) {
         setAuctions(data);
         sessionStorage.setItem('auctions_cache', JSON.stringify(data));
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-        console.log(`⚡ ${data.length} leilões`);
         setRetryCount(0);
       } else {
-        console.warn('⚠️ Dados não são array válido, usando array vazio');
         setAuctions([]);
       }
 
