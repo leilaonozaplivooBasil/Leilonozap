@@ -93,32 +93,45 @@ Deno.serve(async (req) => {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
                     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `URL: ${auction.source_url}
+                        prompt: `Analise esta página de produto: ${auction.source_url}
 
-TAREFA: Extraia o preço de venda à vista desta página.
+🎯 OBJETIVO: Encontrar o preço de venda atual do produto
 
-REGRA ABSOLUTA: O preço SEMPRE começa com "R$"
+⚠️ REGRA CRÍTICA: Procure APENAS por valores que começam com "R$"
 
-EXEMPLOS VÁLIDOS (aceitar):
-✅ "R$ 209,00" → retorne 209.00
-✅ "Por: R$ 189,90" → retorne 189.90  
-✅ "Preço R$ 150" → retorne 150.00
+📋 COMO ENCONTRAR:
+1. Procure por textos como:
+   - "R$ 209,00"
+   - "Por R$ 189,90"
+   - "Preço: R$ 150"
+   - "De R$ xxx por R$ yyy" (pegue o segundo valor)
 
-EXEMPLOS INVÁLIDOS (ignorar):
-❌ "1197" sem "R$" → código de produto, NÃO é preço
-❌ "3x de R$ 69,67" → parcelamento, NÃO é preço à vista
-❌ "De R$ 300" riscado → preço antigo, NÃO é preço atual
+2. O preço geralmente está:
+   - Em fonte GRANDE
+   - Próximo ao botão "Comprar"
+   - Na cor verde, laranja ou preta
+   - Com destaque visual
 
-INSTRUÇÕES:
-1. Procure o preço principal em DESTAQUE na página
-2. Ele DEVE ter o símbolo "R$" antes do número
-3. Se encontrar "R$ 209,00" e "1197", use R$ 209,00 (tem R$)
-4. Ignore qualquer número sem "R$" na frente
+❌ NÃO CONFUNDA COM:
+- Números sem "R$" (códigos de produto, SKU, etc.)
+- Valores de parcelas (ex: "3x de R$ 69,67")
+- Preços riscados ou antigos
+- Códigos numéricos (1197, 2345, etc.)
+
+📊 EXEMPLO REAL:
+Se a página mostrar:
+- "Código: 1197"
+- "R$ 209,00"
+- "3x de R$ 69,67"
+
+O preço correto é R$ 209,00 (único com R$ não parcelado)
 
 RETORNE JSON:
-- store: nome da loja do site
-- price: preço à vista como número (ex: 209.00)
-- productNameFound: nome do produto`,
+{
+  "store": "nome da loja",
+  "price": 209.00,
+  "productNameFound": "nome do produto"
+}`,
                         add_context_from_internet: true,
                         response_json_schema: {
                             type: "object",
