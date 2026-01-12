@@ -452,9 +452,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             )}
           </div>
 
-          {/* 🆕 BOTÃO EDITAR (TOP RIGHT NA IMAGEM) - SÓ ADMIN */}
+          {/* 🆕 BOTÃO EDITAR (BOTTOM RIGHT NA IMAGEM) - SÓ ADMIN */}
           {isAdmin && (
-            <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20">
+            <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 z-20">
               <Link 
                 to={createPageUrl("EditAuction") + `?id=${auction.id}`} 
                 onClick={(e) => e.stopPropagation()}
