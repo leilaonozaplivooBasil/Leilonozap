@@ -543,9 +543,9 @@ export default function CheckoutPage() {
                                  <div className="space-y-3">
                                      <button
                                          onClick={handleCreatePreference}
-                                         disabled={!lastName || lastName.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === ''}
+                                         disabled={!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
                                          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors"
-                                     >
+                                         >
                                          {preferenceId ? (
                                              <>
                                                  <Loader2 className="inline w-4 h-4 mr-2 animate-spin" />
