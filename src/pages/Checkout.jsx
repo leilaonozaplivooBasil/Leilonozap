@@ -157,9 +157,18 @@ export default function CheckoutPage() {
                 }
 
                 setAuction(auctions[0]);
+                setFirstName(savedUser.full_name ? savedUser.full_name.split(' ')[0] : '');
                 setLastName(savedUser.full_name ? savedUser.full_name.split(' ').slice(1).join(' ') : '');
+                setEmail(savedUser.email || '');
                 setPhone(savedUser.phone || '');
                 setCpf(savedUser.cpf || '');
+                setAddressStreet(savedUser.address_street || '');
+                setAddressNumber(savedUser.address_number || '');
+                setAddressComplement(savedUser.address_complement || '');
+                setAddressNeighborhood(savedUser.address_neighborhood || '');
+                setAddressCity(savedUser.address_city || '');
+                setAddressState(savedUser.address_state || '');
+                setAddressZip(savedUser.address_zip_code || '');
 
             } catch (error) {
                 console.error('Erro:', error);
