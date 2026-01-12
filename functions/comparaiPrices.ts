@@ -178,7 +178,7 @@ RETORNE APENAS JSON:
 
                     const result = await Promise.race([llmPromise, timeoutPromise]);
 
-                    if (!result?.price || result.price < 1) {
+                    if (!result?.price || result.price < 1 || result.price > 50000) {
                         console.log(`❌ Falha na extração (preço: ${result?.price})`);
                         useGoogleShopping = true;
                     } else {
