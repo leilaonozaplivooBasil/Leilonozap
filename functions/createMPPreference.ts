@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
                 }
             ],
             payer: {
-                name: firstName,
+                name: user.full_name || user.email.split('@')[0],
                 last_name: user.last_name.trim(),
                 email: user.email,
                 phone: {
@@ -129,6 +129,11 @@ Deno.serve(async (req) => {
                 identification: {
                     type: 'CPF',
                     number: user.cpf.replace(/\D/g, '')
+                },
+                address: {
+                    zip_code: user.address_zip_code.replace(/\D/g, ''),
+                    street_name: user.address_street.trim(),
+                    street_number: user.address_number.trim()
                 }
             },
             external_reference: externalReference,
