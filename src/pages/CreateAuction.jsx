@@ -531,10 +531,7 @@ export default function CreateAuction() {
       }
 
       const clonedTitle = data.title || ad.title || confirmedProductName;
-      // Monta descrição completa: principais detalhes + specs adicionais
-      const mainDesc = data.description || 'Sem descrição disponível';
-      const additionalSpecs = data.specifications ? `\n\n📋 Especificações:\n${data.specifications}` : '';
-      const clonedDescription = mainDesc + additionalSpecs;
+      const clonedDescription = data.description || 'Sem descrição';
       const clonedPrice = data.price || ad.price;
 
       // APLICA DIRETAMENTE, SEM SELEÇÃO
@@ -657,13 +654,8 @@ export default function CreateAuction() {
       console.log(`🖼️ Array imageUrls do backend:`, data.imageUrls);
       console.log(`🖼️ Quantidade: ${data.imageUrls?.length || 0}`);
 
-      // Monta descrição completa com specs se disponível
-      const fullDesc = data.specifications 
-        ? `${productDesc}\n\n📋 Especificações:\n${data.specifications}`
-        : productDesc;
-
-      setExtractedData({ title: productTitle, description: fullDesc });
-      setFormData(prev => ({ ...prev, title: productTitle, description: fullDesc }));
+      setExtractedData({ title: productTitle, description: productDesc });
+      setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
 
       const validUrls = (data.imageUrls || [])
         .filter(url => url && typeof url === 'string' && url.trim());
@@ -1497,20 +1489,15 @@ export default function CreateAuction() {
                                         
                                         console.log('✅ Imagens ML extraídas:', data.images.length);
                                         
-                                        // Monta descrição completa com especificações
-                                        const fullDesc = data.specifications
-                                          ? `${data.description || ''}\n\n📋 Especificações:\n${data.specifications}`
-                                          : (data.description || '');
-                                        
                                         setExtractedData({ 
                                           title: data.title || '', 
-                                          description: fullDesc
+                                          description: data.description || '' 
                                         });
                                         
                                         setFormData(prev => ({
                                           ...prev,
                                           title: data.title || prev.title,
-                                          description: fullDesc,
+                                          description: data.description || prev.description,
                                           starting_price: data.price ? data.price.toString() : prev.starting_price,
                                           source_url: productUrl
                                         }));
