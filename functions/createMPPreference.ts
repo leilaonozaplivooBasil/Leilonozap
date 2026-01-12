@@ -103,7 +103,10 @@ Deno.serve(async (req) => {
             statement_descriptor: 'LEILAO NOZAP',
             payment_methods: {
                 excluded_payment_types: [],
-                installments: 12
+                excluded_payment_methods: [],
+                installments: 12,
+                default_payment_method_id: 'credit_card',
+                default_installments: 1
             }
         };
 
