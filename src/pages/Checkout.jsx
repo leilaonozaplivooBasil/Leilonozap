@@ -31,6 +31,11 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (!cpf || cpf.trim() === '') {
+            toast.error('CPF é obrigatório para pagamento');
+            return;
+        }
+
         if (!auction) {
             toast.error('Leilão não encontrado');
             return;
