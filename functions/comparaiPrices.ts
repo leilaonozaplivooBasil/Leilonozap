@@ -221,7 +221,7 @@ RETORNE APENAS JSON:
             }
         }
 
-        // 4️⃣ LIMPA TÍTULO (modo Google Shopping)
+        // 5️⃣ LIMPA TÍTULO (modo Google Shopping)
         const cleanedTitle = cleanTitle(searchTitle);
 
         if (!cleanedTitle || cleanedTitle.length < 4) {
