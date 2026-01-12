@@ -146,11 +146,7 @@ Deno.serve(async (req) => {
             notification_url: `${req.headers.get('origin')}/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,
             statement_descriptor: 'LEILAO NOZAP',
             payment_methods: {
-                excluded_payment_types: [],
-                excluded_payment_methods: [],
-                installments: 12,
-                default_payment_method_id: 'credit_card',
-                default_installments: 1
+                installments: 12
             }
         };
 
