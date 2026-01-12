@@ -385,63 +385,36 @@ export default function Home() {
 
 
   useEffect(() => {
+    // URL PARAMS
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('filter') === 'ativos') setActiveCategory('ativos');
+    if (urlParams.get('favorites') === 'true') setShowFavoritesOnly(true);
+
+    // BANNERS - Cache imediato
+    const cachedBanners = sessionStorage.getItem('banners_cache');
+    const bannerCacheTime = sessionStorage.getItem('banners_cache_time');
+    if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 120000) {
+      setBanners(JSON.parse(cachedBanners));
+    }
+
+    // TUDO EM PARALELO - SEM BLOQUEIOS
+    loadAuctions();
+    loadCurrentUser();
+    checkLocation().then((d) => d?.location?.region && setUserRegion(d.location.region)).catch(() => {});
     
-    const loadInitialData = async () => {
-      // Verifica cache ANTES de ativar loading
-      const cachedData = sessionStorage.getItem('auctions_cache');
-      const cacheTime = sessionStorage.getItem('auctions_cache_time');
-      const hasValidCache = cachedData && cacheTime && (Date.now() - parseInt(cacheTime) < 60000);
-
-      if (!hasValidCache) {
-        setIsLoading(true);
-      }
-
-      const urlParams = new URLSearchParams(window.location.search);
-      
-      if (urlParams.get('filter') === 'ativos') {
-        setActiveCategory('ativos');
-      }
-      if (urlParams.get('favorites') === 'true') {
-        setShowFavoritesOnly(true);
-      }
-
-      // Localização em background
-      checkLocation().then((locationData) => {
-        if (locationData?.location?.region) {
-          setUserRegion(locationData.location.region);
-        }
-      }).catch(() => {});
-
-      // EXECUTA EM PARALELO - NÃO BLOQUEIA
-      loadAuctions();
-      loadCurrentUser();
-
-      // Banners do cache imediatamente
-      const cachedBanners = sessionStorage.getItem('banners_cache');
-      const bannerCacheTime = sessionStorage.getItem('banners_cache_time');
-      
-      if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 120000) {
-        setBanners(JSON.parse(cachedBanners));
-      } else {
-        // Carrega em background
-        base44.entities.BannerImage.filter({ is_active: true }).then((bannerData) => {
-          const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
-          setBanners(sortedBanners);
-          sessionStorage.setItem('banners_cache', JSON.stringify(sortedBanners));
+    // Banners em background se necessário
+    if (!cachedBanners || !bannerCacheTime || Date.now() - parseInt(bannerCacheTime) >= 120000) {
+      base44.entities.BannerImage.filter({ is_active: true })
+        .then((data) => {
+          const sorted = data.sort((a, b) => a.order - b.order);
+          setBanners(sorted);
+          sessionStorage.setItem('banners_cache', JSON.stringify(sorted));
           sessionStorage.setItem('banners_cache_time', Date.now().toString());
-        }).catch(() => {
-          const oldBanners = sessionStorage.getItem('banners_cache');
-          if (oldBanners) setBanners(JSON.parse(oldBanners));
-        });
-      }
-    };
-
-    loadInitialData();
+        }).catch(() => {});
+    }
 
     return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
     };
   }, []);
 
