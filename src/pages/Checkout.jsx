@@ -18,48 +18,33 @@ export default function CheckoutPage() {
     const mpInstanceRef = useRef(null);
     const navigate = useNavigate();
 
-    useEffect(() => {
-        const loadData = async () => {
-            try {
-                const savedUserJSON = localStorage.getItem('currentUser');
-                if (!savedUserJSON) {
-                    toast.error('Faça login para continuar');
-                    navigate(createPageUrl('Home'));
-                    return;
+    const handleCreatePreference = async () => {
+        if (!lastName || lastName.trim() === '') {
+            toast.error('Por favor, preencha seu sobrenome');
+            return;
+        }
+
+        if (!auction) {
+            toast.error('Leilão não encontrado');
+            return;
+        }
+
+        try {
+            const savedUserJSON = localStorage.getItem('currentUser');
+            const savedUser = JSON.parse(savedUserJSON);
+
+            const auctionId = auction.id;
+            console.log('🔄 Criando preferência MP para auction:', auctionId);
+            const response = await createMPPreference({ 
+                auction_id: auctionId,
+                user_data: {
+                    id: savedUser.id,
+                    email: savedUser.email,
+                    full_name: savedUser.full_name,
+                    phone: savedUser.phone,
+                    last_name: lastName.trim()
                 }
-                const savedUser = JSON.parse(savedUserJSON);
-                setCurrentUser(savedUser);
-
-                const urlParams = new URLSearchParams(window.location.search);
-                const auctionId = urlParams.get('auction_id');
-
-                if (!auctionId) {
-                    toast.error('Leilão não encontrado');
-                    navigate(createPageUrl('MyWinnings'));
-                    return;
-                }
-
-                const auctions = await base44.entities.Auction.filter({ id: auctionId });
-                if (auctions.length === 0) {
-                    toast.error('Leilão não encontrado');
-                    navigate(createPageUrl('MyWinnings'));
-                    return;
-                }
-
-                setAuction(auctions[0]);
-
-                // Criar preferência de pagamento
-                console.log('🔄 Criando preferência MP para auction:', auctionId);
-                const response = await createMPPreference({ 
-                    auction_id: auctionId,
-                    user_data: {
-                        id: savedUser.id,
-                        email: savedUser.email,
-                        full_name: savedUser.full_name,
-                        phone: savedUser.phone,
-                        last_name: lastName || ''
-                    }
-                });
+            });
                 console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
                 
                 if (response?.data?.success) {
