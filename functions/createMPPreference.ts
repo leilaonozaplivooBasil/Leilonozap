@@ -24,6 +24,14 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Sobrenome é obrigatório' }, { status: 400 });
         }
 
+        if (!user.phone || user.phone.trim() === '') {
+            return Response.json({ error: 'Telefone é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.cpf || user.cpf.trim() === '') {
+            return Response.json({ error: 'CPF é obrigatório' }, { status: 400 });
+        }
+
         if (!auction_id) {
             return Response.json({ error: 'auction_id é obrigatório' }, { status: 400 });
         }
