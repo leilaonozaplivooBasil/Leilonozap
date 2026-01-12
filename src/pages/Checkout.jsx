@@ -309,35 +309,35 @@ export default function CheckoutPage() {
                              <div id="walletBrick_container" ref={walletContainerRef}></div>
 
                              {(!preferenceId || !publicKey) && (
-                                <div className="space-y-3">
-                                    <button
-                                        onClick={handleCreatePreference}
-                                        disabled={!lastName || lastName.trim() === ''}
-                                        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors"
-                                    >
-                                        {preferenceId ? (
-                                            <>
-                                                <Loader2 className="inline w-4 h-4 mr-2 animate-spin" />
-                                                Carregando opções de pagamento...
-                                            </>
-                                        ) : (
-                                            'Continuar com Pagamento'
-                                        )}
-                                    </button>
-                                    {!lastName || lastName.trim() === '' && (
-                                        <p className="text-xs text-yellow-400">Preencha seu sobrenome para continuar</p>
-                                    )}
-                                </div>
-                            )}
+                                 <div className="space-y-3">
+                                     <button
+                                         onClick={handleCreatePreference}
+                                         disabled={!lastName || lastName.trim() === ''}
+                                         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors"
+                                     >
+                                         {preferenceId ? (
+                                             <>
+                                                 <Loader2 className="inline w-4 h-4 mr-2 animate-spin" />
+                                                 Carregando opções de pagamento...
+                                             </>
+                                         ) : (
+                                             'Continuar com Pagamento'
+                                         )}
+                                     </button>
+                                     {!lastName || lastName.trim() === '' && (
+                                         <p className="text-xs text-yellow-400">Preencha seu sobrenome para continuar</p>
+                                     )}
+                                 </div>
+                             )}
 
-                            {preferenceId && publicKey && (
-                                <div className="text-xs text-gray-500 mt-2">
-                                    <p>Debug: Preference ID carregado</p>
-                                    <p>Debug: Public Key carregado</p>
-                                </div>
-                            )}
+                             {preferenceId && publicKey && (
+                                 <div className="text-xs text-gray-500 mt-2">
+                                     <p>Debug: Preference ID carregado</p>
+                                     <p>Debug: Public Key carregado</p>
+                                 </div>
+                             )}
 
-                            <p className="text-xs text-gray-500 text-center mt-4">
+                             <p className="text-xs text-gray-500 text-center mt-4">
                                 Pagamento processado de forma segura pelo Mercado Pago
                             </p>
                         </CardContent>
