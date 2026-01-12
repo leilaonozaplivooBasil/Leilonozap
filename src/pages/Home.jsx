@@ -112,83 +112,47 @@ export default function Home() {
     };
   }, []);
 
-  const filterAuctions = React.useCallback(() => {
-    // 🛡️ PROTEÇÃO CRÍTICA: Sempre valida se auctions é array
-    if (!Array.isArray(auctions)) {
-      console.warn("⚠️ auctions não é array");
-      setFilteredAuctions([]);
-      return;
-    }
+  const filteredAuctions = React.useMemo(() => {
+    if (!Array.isArray(auctions)) return [];
 
     let filtered;
 
     if (showFavoritesOnly) {
-      console.log('🔍 [NoZap] Filtrando apenas favoritos:', favoriteAuctions?.length || 0);
-      // 🛡️ PROTEÇÃO: Valida favoriteAuctions também
-      // 🛡️ VALIDAÇÃO: Verifica tipo antes de usar
       filtered = Array.isArray(favoriteAuctions) && favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
     } else if (activeSourceFilter === "sai_de_baixo") {
-      // Filtra APENAS leilões do Sai de Baixo
-      filtered = auctions.filter((auction) => 
-        auction && 
-        auction.partner_store === 'sai_de_baixo' && 
-        !auction.is_investment_plan
-      );
+      filtered = auctions.filter((a) => a?.partner_store === 'sai_de_baixo' && !a.is_investment_plan);
     } else {
-      // Filtra apenas leilões do NoZap (exclui Sai de Baixo e planos de investimento)
-      let nozapOnly = auctions.filter((auction) => 
-        auction && 
-        auction.partner_store !== 'sai_de_baixo' && 
-        !auction.is_investment_plan
-      );
+      // NoZap only
+      let nozapOnly = auctions.filter((a) => a?.partner_store !== 'sai_de_baixo' && !a.is_investment_plan);
 
-      // 🆕 FILTRO POR REGIÃO: Remove leilões que não são permitidos na região do usuário
       if (userRegion) {
-        nozapOnly = nozapOnly.filter((auction) => {
-          // Se allowed_regions estiver vazio ou não existir, o leilão está disponível em todo Brasil
-          if (!auction.allowed_regions || auction.allowed_regions.length === 0) {
-            return true;
-          }
-          // Caso contrário, verifica se a região do usuário está na lista
-          return auction.allowed_regions.includes(userRegion);
-        });
+        nozapOnly = nozapOnly.filter((a) => !a.allowed_regions || a.allowed_regions.length === 0 || a.allowed_regions.includes(userRegion));
       }
 
       if (activeSourceFilter === "todos") {
-        filtered = nozapOnly.filter((auction) => auction.product_source !== 'factory_new');
+        filtered = nozapOnly.filter((a) => a.product_source !== 'factory_new');
       } else if (activeSourceFilter === "factory") {
-        filtered = nozapOnly.filter((auction) => auction.product_source === 'factory_new');
+        filtered = nozapOnly.filter((a) => a.product_source === 'factory_new');
       } else {
         filtered = nozapOnly;
       }
 
       if (activeCategory === "ativos") {
-        filtered = filtered.filter((auction) => auction && auction.status === 'active');
+        filtered = filtered.filter((a) => a?.status === 'active');
       } else if (activeCategory !== "todos") {
-        filtered = filtered.filter((auction) => auction && auction.category === activeCategory);
+        filtered = filtered.filter((a) => a?.category === activeCategory);
       }
     }
 
-    filtered = filtered.sort((a, b) => {
-      const aIsActive = a.status === 'active';
-      const bIsActive = b.status === 'active';
-
-      if (aIsActive && !bIsActive) return -1;
-      if (!aIsActive && bIsActive) return 1;
-
-      if (aIsActive && bIsActive) {
-        return new Date(a.end_time).getTime() - new Date(b.end_time).getTime();
+    return filtered.sort((a, b) => {
+      if (a.status === 'active' && b.status !== 'active') return -1;
+      if (a.status !== 'active' && b.status === 'active') return 1;
+      if (a.status === 'active' && b.status === 'active') {
+        return new Date(a.end_time) - new Date(b.end_time);
       }
-
-      if (!aIsActive && !bIsActive) {
-        return new Date(b.end_time).getTime() - new Date(a.end_time).getTime();
-      }
-
-      return 0;
-      });
-
-      setFilteredAuctions(filtered);
-      }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion]);
+      return new Date(b.end_time) - new Date(a.end_time);
+    });
+  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion]);
 
   const loadUserFavorites = React.useCallback(async (userId, retryCount = 0) => {
     if (!userId) return;
