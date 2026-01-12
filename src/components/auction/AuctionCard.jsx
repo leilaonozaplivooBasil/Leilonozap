@@ -420,21 +420,27 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             </div>
           )}
           
-          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10 pointer-events-none flex flex-col gap-1 sm:gap-2">
-          <Badge className="bg-black/80 text-white text-xs sm:text-sm">
-            {categoryEmojis[auction.category] || '📦'} {auction.category?.replace('_', ' ')}
-          </Badge>
-
           {/* 🆕 SÓ MOSTRA BADGE SE FOR DE FÁBRICA */}
           {auction.product_source === 'factory_new' && (
-            <Badge className="bg-green-600 text-white font-bold text-xs sm:text-sm">
-              ✨ NOVO - Com Garantia
-            </Badge>
+            <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10 pointer-events-none">
+              <Badge className="bg-green-600 text-white font-bold text-xs sm:text-sm">
+                ✨ NOVO - Com Garantia
+              </Badge>
+            </div>
           )}
-          </div>
 
-          {/* 🆕 BOTÕES DE AÇÃO (TOP RIGHT) */}
-          <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20 flex gap-1 sm:gap-2">
+          {/* 🆕 BOTÕES DE AÇÃO (TOP LEFT) */}
+          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-20 flex gap-1 sm:gap-2">
+            {/* Botão COMPARTILHAR - REDONDO */}
+            <button
+              onClick={handleShare}
+              onMouseDown={(e) => e.stopPropagation()} 
+              onTouchStart={(e) => e.stopPropagation()}
+              className="w-9 h-9 sm:w-10 sm:h-10 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
+            >
+              <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
             {/* 🆕 BOTÃO FAVORITAR */}
             {showFavoriteButton && userId && (
               <FavoriteButton 
@@ -444,20 +450,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 context={favoriteContext}
               />
             )}
+          </div>
 
-            {/* Botão COMPARTILHAR - SEMPRE VISÍVEL - CORRIGIDO */}
-            <button
-              onClick={handleShare}
-              onMouseDown={(e) => e.stopPropagation()} 
-              onTouchStart={(e) => e.stopPropagation()}
-              className="min-h-[44px] min-w-[44px] h-9 sm:h-10 px-2 sm:px-3 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
-            >
-              <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="text-xs font-semibold hidden sm:inline">Compartilhar</span>
-            </button>
-
-            {/* Botão EDITAR - SÓ ADMIN */}
-            {isAdmin && (
+          {/* 🆕 BOTÃO EDITAR (TOP RIGHT) - SÓ ADMIN */}
+          {isAdmin && (
+            <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20">
               <Link 
                 to={createPageUrl("EditAuction") + `?id=${auction.id}`} 
                 onClick={(e) => e.stopPropagation()}
@@ -467,8 +464,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   <span className="text-xs font-semibold hidden sm:inline">Editar</span>
                 </Button>
               </Link>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* 🆕 BADGE DE PECHINCHA */}
           {showPechincaBadge && (
