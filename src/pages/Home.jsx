@@ -38,8 +38,25 @@ export default function Home() {
   const retryTimeoutRef = useRef(null);
   const location = useLocation();
 
-  const [auctions, setAuctions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // 🚀 INICIALIZA COM CACHE IMEDIATO
+  const [auctions, setAuctions] = useState(() => {
+    const cached = sessionStorage.getItem('auctions_cache');
+    const cacheTime = sessionStorage.getItem('auctions_cache_time');
+    if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < 60000)) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState(() => {
+    const cached = sessionStorage.getItem('auctions_cache');
+    const cacheTime = sessionStorage.getItem('auctions_cache_time');
+    return !(cached && cacheTime && (Date.now() - parseInt(cacheTime) < 60000));
+  });
   const [activeCategory, setActiveCategory] = useState("todos");
   const [activeSourceFilter, setActiveSourceFilter] = useState("todos");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
