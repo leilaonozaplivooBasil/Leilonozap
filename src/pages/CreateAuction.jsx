@@ -531,7 +531,10 @@ export default function CreateAuction() {
       }
 
       const clonedTitle = data.title || ad.title || confirmedProductName;
-      const clonedDescription = data.description || 'Sem descrição';
+      // Monta descrição completa: principais detalhes + specs adicionais
+      const mainDesc = data.description || 'Sem descrição disponível';
+      const additionalSpecs = data.specifications ? `\n\n📋 Especificações:\n${data.specifications}` : '';
+      const clonedDescription = mainDesc + additionalSpecs;
       const clonedPrice = data.price || ad.price;
 
       // APLICA DIRETAMENTE, SEM SELEÇÃO
