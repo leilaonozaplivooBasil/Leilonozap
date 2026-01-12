@@ -545,7 +545,12 @@ export default function CheckoutPage() {
                              </ul>
 
                              {/* Container para o Wallet Brick do Mercado Pago */}
-                             <div id="walletBrick_container" ref={walletContainerRef}></div>
+                             <div 
+                                 id="walletBrick_container" 
+                                 ref={walletContainerRef}
+                                 style={{ minHeight: '400px', width: '100%' }}
+                                 className="flex items-center justify-center"
+                             ></div>
 
                              {(!preferenceId || !publicKey) && (
                                  <div className="space-y-3">
