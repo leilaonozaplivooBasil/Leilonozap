@@ -299,8 +299,8 @@ RETORNE APENAS JSON:
                 const matchCount = titleWords.filter(word => foundWords.includes(word)).length;
                 const matchRatio = titleWords.length > 0 ? matchCount / titleWords.length : 0;
                 
-                // Precisa ter pelo menos 40% das palavras-chave
-                if (matchRatio < 0.4) {
+                // 🆕 FLEXIBILIZA FILTRO: 30% ao invés de 40%
+                if (matchRatio < 0.3) {
                     console.log(`❌ Filtrado (baixa relevância ${Math.round(matchRatio*100)}%): ${c.productNameFound} - R$ ${c.price}`);
                     return false;
                 }
