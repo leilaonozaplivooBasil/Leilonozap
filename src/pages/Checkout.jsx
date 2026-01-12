@@ -207,17 +207,25 @@ export default function CheckoutPage() {
 
             console.log('📥 Carregando SDK do Mercado Pago...');
             
-            // Carregar SDK
+            // Carregar SDK com timeout
             const script = document.createElement('script');
             script.src = 'https://sdk.mercadopago.com/js/v2';
             script.async = true;
+            
+            let sdkTimeout = setTimeout(() => {
+                console.error('❌ SDK timeout após 15s');
+                toast.error('SDK demorou muito para carregar. Verifique conexão.');
+            }, 15000);
+            
             script.onload = () => {
+                clearTimeout(sdkTimeout);
                 console.log('✅ SDK carregado com sucesso');
                 initializeMercadoPago();
             };
             script.onerror = (error) => {
+                clearTimeout(sdkTimeout);
                 console.error('❌ Erro ao carregar SDK:', error);
-                toast.error('Erro ao carregar SDK do Mercado Pago. Verifique sua conexão.');
+                toast.error('Erro ao carregar SDK. Tente novamente.');
             };
             document.body.appendChild(script);
         };
