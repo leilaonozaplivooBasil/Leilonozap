@@ -300,23 +300,21 @@ export default function Home() {
   }, [loadUserFavorites]);
 
   const loadAuctions = React.useCallback(async (isRetry = false) => {
-    try {
-      setLoadError(null);
+    const cachedData = sessionStorage.getItem('auctions_cache');
+    const cacheTime = sessionStorage.getItem('auctions_cache_time');
 
-      const cachedData = sessionStorage.getItem('auctions_cache');
-      const cacheTime = sessionStorage.getItem('auctions_cache_time');
-
-      // CACHE AGRESSIVO: 30 segundos
-      if (cachedData && cacheTime && !isRetry) {
-        const age = Date.now() - parseInt(cacheTime);
-        if (age < 30000) {
+    // CACHE INSTANTÂNEO: Mostra imediatamente se existir
+    if (cachedData && cacheTime) {
+      const age = Date.now() - parseInt(cacheTime);
+      if (age < 60000) {
+        try {
           const parsedData = JSON.parse(cachedData);
           if (Array.isArray(parsedData) && parsedData.length > 0) {
             setAuctions(parsedData);
             setIsLoading(false);
 
-            // Atualização em background apenas após 10s
-            if (age > 10000) {
+            // Atualização silenciosa em background após 15s
+            if (age > 15000 && !isRetry) {
               setTimeout(() => {
                 Auction.list("-created_date", 50).then((data) => {
                   if (Array.isArray(data) && data.length > 0) {
@@ -325,15 +323,19 @@ export default function Home() {
                     setAuctions(data);
                   }
                 }).catch(() => {});
-              }, 2000);
+              }, 3000);
             }
             return;
           }
+        } catch (e) {
+          console.error('Cache parse error:', e);
         }
       }
+    }
 
+    // Se não tem cache válido, busca do servidor
+    try {
       const data = await Auction.list("-created_date", 50);
-
       if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
         sessionStorage.setItem('auctions_cache', JSON.stringify(data));
@@ -342,44 +344,19 @@ export default function Home() {
       } else {
         setAuctions([]);
       }
-
     } catch (error) {
-      console.error("❌ Erro:", error);
-      
-      // 🆕 LOGA NO SYSTEMLOG
-      try {
-        await base44.entities.SystemLog.create({
-          step: 'FETCH_HOME_AUCTIONS',
-          status: 'error',
-          message: `Failed to load auctions: ${error.message}`,
-          component_name: 'Home',
-          error_details: { message: error.message, stack: error.stack },
-          user_agent: navigator.userAgent,
-          is_mobile: /Mobi|Android/i.test(navigator.userAgent)
-        });
-      } catch (logErr) {
-        console.debug('Logging falhou (não crítico)');
-      }
-
       const oldCache = sessionStorage.getItem('auctions_cache');
       if (oldCache) {
         try {
           const parsedCache = JSON.parse(oldCache);
           if (Array.isArray(parsedCache)) {
             setAuctions(parsedCache);
-            setLoadError(null);
           }
         } catch (e) {
           setAuctions([]);
         }
-      } else if (retryCount < 2) {
-        setTimeout(() => {
-          setRetryCount((prev) => prev + 1);
-          loadAuctions(true);
-        }, 1500);
       } else {
-        setLoadError("Erro de conexão. Tente novamente.");
-        setAuctions([]); // 🛡️ Garante array vazio ao invés de undefined
+        setAuctions([]);
       }
     } finally {
       setIsLoading(false);
@@ -393,7 +370,14 @@ export default function Home() {
   useEffect(() => {
     
     const loadInitialData = async () => {
-      setIsLoading(true);
+      // Verifica cache ANTES de ativar loading
+      const cachedData = sessionStorage.getItem('auctions_cache');
+      const cacheTime = sessionStorage.getItem('auctions_cache_time');
+      const hasValidCache = cachedData && cacheTime && (Date.now() - parseInt(cacheTime) < 60000);
+
+      if (!hasValidCache) {
+        setIsLoading(true);
+      }
 
       const urlParams = new URLSearchParams(window.location.search);
       
@@ -404,20 +388,15 @@ export default function Home() {
         setShowFavoritesOnly(true);
       }
 
-      // 🆕 VERIFICA LOCALIZAÇÃO DO USUÁRIO
-      try {
-        const locationData = await checkLocation();
+      // Localização em background
+      checkLocation().then((locationData) => {
         if (locationData?.location?.region) {
           setUserRegion(locationData.location.region);
-          console.log('📍 Região detectada:', locationData.location.region);
         }
-      } catch (error) {
-        console.error('❌ Erro ao detectar localização:', error);
-        // Se falhar, não bloqueia - usuário vê todos os leilões
-      }
+      }).catch(() => {});
 
       await loadAuctions();
-      await loadCurrentUser();
+      loadCurrentUser();
 
       console.log('✅ [NoZap] Carregando apenas leilões NoZap (partner_store !== "sai_de_baixo")');
 
