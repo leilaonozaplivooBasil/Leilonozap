@@ -412,39 +412,27 @@ export default function Home() {
         }
       }).catch(() => {});
 
-      await loadAuctions();
+      // EXECUTA EM PARALELO - NÃO BLOQUEIA
+      loadAuctions();
       loadCurrentUser();
 
-      console.log('✅ [NoZap] Carregando apenas leilões NoZap (partner_store !== "sai_de_baixo")');
-
-      try {
-        const cachedBanners = sessionStorage.getItem('banners_cache');
-        const cacheTime = sessionStorage.getItem('banners_cache_time');
-
-        // Cache de 2 minutos para banners (atualização rápida)
-        if (cachedBanners && cacheTime && Date.now() - parseInt(cacheTime) < 120000) {
-          setBanners(JSON.parse(cachedBanners));
-          console.log('⚡ Banners do cache');
-        } else {
-          // Carrega banners com delay para evitar concorrência
-          setTimeout(async () => {
-            try {
-              const bannerData = await base44.entities.BannerImage.filter({ is_active: true });
-              const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
-              setBanners(sortedBanners);
-              sessionStorage.setItem('banners_cache', JSON.stringify(sortedBanners));
-              sessionStorage.setItem('banners_cache_time', Date.now().toString());
-            } catch (error) {
-              console.debug('Erro ao carregar banners:', error.message);
-            }
-          }, 1500);
-        }
-      } catch (error) {
-        console.error('Erro ao carregar banners:', error);
-        const cachedBanners = sessionStorage.getItem('banners_cache');
-        if (cachedBanners) {
-          setBanners(JSON.parse(cachedBanners));
-        }
+      // Banners do cache imediatamente
+      const cachedBanners = sessionStorage.getItem('banners_cache');
+      const bannerCacheTime = sessionStorage.getItem('banners_cache_time');
+      
+      if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 120000) {
+        setBanners(JSON.parse(cachedBanners));
+      } else {
+        // Carrega em background
+        base44.entities.BannerImage.filter({ is_active: true }).then((bannerData) => {
+          const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
+          setBanners(sortedBanners);
+          sessionStorage.setItem('banners_cache', JSON.stringify(sortedBanners));
+          sessionStorage.setItem('banners_cache_time', Date.now().toString());
+        }).catch(() => {
+          const oldBanners = sessionStorage.getItem('banners_cache');
+          if (oldBanners) setBanners(JSON.parse(oldBanners));
+        });
       }
     };
 
