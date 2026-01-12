@@ -254,14 +254,29 @@ export default function CheckoutPage() {
                     </Card>
 
                     {/* Método de Pagamento */}
-                    <Card className="bg-gray-800 border-gray-700">
-                        <CardHeader>
-                            <CardTitle className="text-white">Finalizar Pagamento</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <p className="text-gray-400 text-sm">
-                                Escolha seu método de pagamento preferido:
-                            </p>
+                     <Card className="bg-gray-800 border-gray-700">
+                         <CardHeader>
+                             <CardTitle className="text-white">Finalizar Pagamento</CardTitle>
+                         </CardHeader>
+                         <CardContent className="space-y-4">
+                             {/* Campo Sobrenome */}
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                                     Sobrenome *
+                                 </label>
+                                 <input
+                                     type="text"
+                                     value={lastName}
+                                     onChange={(e) => setLastName(e.target.value)}
+                                     placeholder="Digite seu sobrenome"
+                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
+                                 />
+                             </div>
+
+                             <p className="text-gray-400 text-sm">
+                                 Escolha seu método de pagamento preferido:
+                             </p>
                             <ul className="text-gray-300 text-sm space-y-2 mb-6">
                                 <li>✓ Cartão de crédito (até 12x)</li>
                                 <li>✓ Cartão de débito</li>
