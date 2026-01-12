@@ -168,7 +168,8 @@ Deno.serve(async (req) => {
             amount: auction.current_price,
             external_reference: externalReference,
             status: 'pending',
-            payment_method: 'pending'
+            payment_method: 'pending',
+            buyer_address: fullAddress
         });
 
         const trimmedPublicKey = publicKey.trim();
