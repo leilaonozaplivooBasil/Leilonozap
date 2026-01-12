@@ -45,28 +45,64 @@ export default function CheckoutPage() {
                     last_name: lastName.trim()
                 }
             });
-                console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
+            console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
+            
+            if (response?.data?.success) {
+                console.log('✅ Preference ID:', response.data.preference_id);
+                console.log('✅ Public Key:', response.data.public_key);
                 
-                if (response?.data?.success) {
-                    console.log('✅ Preference ID:', response.data.preference_id);
-                    console.log('✅ Public Key:', response.data.public_key);
-                    
-                    if (!response.data.preference_id) {
-                        toast.error('Erro: Preference ID não retornado');
-                        return;
-                    }
-                    
-                    if (!response.data.public_key) {
-                        toast.error('Erro: Public Key não retornada');
-                        return;
-                    }
-                    
-                    setPreferenceId(response.data.preference_id);
-                    setPublicKey(response.data.public_key);
-                } else {
-                    console.error('❌ Erro na resposta:', response);
-                    toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
+                if (!response.data.preference_id) {
+                    toast.error('Erro: Preference ID não retornado');
+                    return;
                 }
+                
+                if (!response.data.public_key) {
+                    toast.error('Erro: Public Key não retornada');
+                    return;
+                }
+                
+                setPreferenceId(response.data.preference_id);
+                setPublicKey(response.data.public_key);
+            } else {
+                console.error('❌ Erro na resposta:', response);
+                toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
+            }
+
+        } catch (error) {
+            console.error('Erro:', error);
+            toast.error('Erro ao criar preferência de pagamento');
+        }
+    };
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const savedUserJSON = localStorage.getItem('currentUser');
+                if (!savedUserJSON) {
+                    toast.error('Faça login para continuar');
+                    navigate(createPageUrl('Home'));
+                    return;
+                }
+                const savedUser = JSON.parse(savedUserJSON);
+                setCurrentUser(savedUser);
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const auctionId = urlParams.get('auction_id');
+
+                if (!auctionId) {
+                    toast.error('Leilão não encontrado');
+                    navigate(createPageUrl('MyWinnings'));
+                    return;
+                }
+
+                const auctions = await base44.entities.Auction.filter({ id: auctionId });
+                if (auctions.length === 0) {
+                    toast.error('Leilão não encontrado');
+                    navigate(createPageUrl('MyWinnings'));
+                    return;
+                }
+
+                setAuction(auctions[0]);
 
             } catch (error) {
                 console.error('Erro:', error);
