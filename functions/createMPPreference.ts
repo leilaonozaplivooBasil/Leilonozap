@@ -144,10 +144,7 @@ Deno.serve(async (req) => {
             },
             auto_return: 'all',
             notification_url: `${req.headers.get('origin')}/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,
-            statement_descriptor: 'LEILAO NOZAP',
-            payment_methods: {
-                installments: 12
-            }
+            statement_descriptor: 'LEILAO NOZAP'
         };
 
         console.log('📤 Criando preferência:', JSON.stringify(preferenceData, null, 2));
