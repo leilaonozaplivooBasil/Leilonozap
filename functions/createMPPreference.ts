@@ -95,10 +95,14 @@ Deno.serve(async (req) => {
                 name: firstName,
                 last_name: user.last_name.trim(),
                 email: user.email,
-                phone: user.phone ? {
+                phone: {
                     area_code: user.phone.substring(0, 2),
                     number: user.phone.substring(2)
-                } : undefined
+                },
+                identification: {
+                    type: 'CPF',
+                    number: user.cpf.replace(/\D/g, '')
+                }
             },
             external_reference: externalReference,
             back_urls: {
