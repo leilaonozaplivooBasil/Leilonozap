@@ -63,6 +63,11 @@ Deno.serve(async (req) => {
         const externalReference = `auction_${auction_id}_${Date.now()}`;
 
         // Criar preferência de pagamento
+        // Separar nome e sobrenome corretamente
+        const nameParts = user.full_name ? user.full_name.trim().split(' ') : [];
+        const firstName = nameParts[0] || user.email.split('@')[0];
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'Cliente';
+
         const preferenceData = {
             items: [
                 {
@@ -77,8 +82,8 @@ Deno.serve(async (req) => {
                 }
             ],
             payer: {
-                name: user.full_name?.split(' ')[0] || user.email.split('@')[0],
-                last_name: user.full_name?.split(' ').slice(1).join(' ') || '',
+                name: firstName,
+                last_name: lastName,
                 email: user.email,
                 phone: user.phone ? {
                     area_code: user.phone.substring(0, 2),
