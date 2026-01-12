@@ -370,8 +370,8 @@ export default function CheckoutPage() {
                                              'Continuar com Pagamento'
                                          )}
                                      </button>
-                                     {(!lastName || lastName.trim() === '' || !phone || phone.trim() === '') && (
-                                         <p className="text-xs text-yellow-400">Preencha todos os campos obrigatorios</p>
+                                     {(!lastName || lastName.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '') && (
+                                         <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
                                      )}
                                  </div>
                              )}
