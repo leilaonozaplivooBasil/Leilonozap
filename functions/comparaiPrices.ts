@@ -103,40 +103,52 @@ Deno.serve(async (req) => {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
                     const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `Analise esta página de produto: ${auction.source_url}
+                        prompt: `🏭 MISSÃO: EXTRAIR PREÇO À VISTA DO SITE DO FORNECEDOR
 
-🎯 OBJETIVO: Encontrar o preço de venda atual do produto
+📍 URL: ${auction.source_url}
 
-⚠️ REGRA CRÍTICA: Procure APENAS por valores que começam com "R$"
+🎯 OBJETIVO CRÍTICO: 
+Encontre o preço À VISTA (não parcelado) do produto na página.
 
-📋 COMO ENCONTRAR:
-1. Procure por textos como:
-   - "R$ 209,00"
-   - "Por R$ 189,90"
-   - "Preço: R$ 150"
-   - "De R$ xxx por R$ yyy" (pegue o segundo valor)
+⚠️ REGRAS ABSOLUTAS:
+1. PROCURE APENAS valores que começam com "R$" seguido de número
+2. IGNORE completamente:
+   - Códigos de produto (1197, AM-132, KR302, etc.)
+   - Valores de parcelas (ex: "3x de R$ 69,67", "12x de R$ 99")
+   - Preços riscados/antigos
+   - Números sem "R$"
 
-2. O preço geralmente está:
-   - Em fonte GRANDE
-   - Próximo ao botão "Comprar"
-   - Na cor verde, laranja ou preta
-   - Com destaque visual
+📋 ONDE ENCONTRAR O PREÇO À VISTA:
+- Texto "à vista" ou "no PIX" ou "no boleto"
+- Preço MAIOR em destaque (não parcelado)
+- Próximo ao botão "Comprar"
+- Geralmente em VERDE ou PRETO
+- Se tiver "De R$ X por R$ Y", pegue o "Y" (segundo valor)
 
-❌ NÃO CONFUNDA COM:
-- Números sem "R$" (códigos de produto, SKU, etc.)
-- Valores de parcelas (ex: "3x de R$ 69,67")
-- Preços riscados ou antigos
-- Códigos numéricos (1197, 2345, etc.)
+📊 EXEMPLOS REAIS:
 
-📊 EXEMPLO REAL:
-Se a página mostrar:
+Exemplo 1 - Mercado Livre:
 - "Código: 1197"
-- "R$ 209,00"
-- "3x de R$ 69,67"
+- "R$ 209,00 à vista"
+- "ou 3x de R$ 69,67"
+→ RESPOSTA: 209.00
 
-O preço correto é R$ 209,00 (único com R$ não parcelado)
+Exemplo 2 - Shopee:
+- "SKU: AM-132"
+- "De R$ 299 por R$ 189"
+- "ou 6x de R$ 31,50"
+→ RESPOSTA: 189.00
 
-RETORNE JSON:
+Exemplo 3 - Amazon:
+- "Produto: KR302"
+- "R$ 450,00 no PIX"
+- "ou R$ 499,00 no cartão"
+→ RESPOSTA: 450.00
+
+🔥 IMPORTANTE:
+Se houver DOIS preços (à vista e parcelado), SEMPRE pegue o MENOR (à vista).
+
+RETORNE APENAS JSON:
 {
   "store": "nome da loja",
   "price": 209.00,
