@@ -90,49 +90,57 @@ Deno.serve(async (req) => {
                 console.log(`📍 URL: ${auction.source_url}`);
 
                 try {
-                    // ⚡ EXTRAÇÃO RÁPIDA COM TIMEOUT
-                    const extractionPromise = base44.asServiceRole.integrations.Core.InvokeLLM({
-                        prompt: `Acesse esta URL e extraia o preço do produto: ${auction.source_url}
+                    console.log(`🔍 Extraindo preço da URL do fornecedor...`);
+                    
+                    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                        prompt: `EXTRAIR PREÇO DE VENDA DA PÁGINA:
+URL: ${auction.source_url}
 
-Produto: ${auction.title}
+INSTRUÇÕES:
+1. Acesse a URL acima
+2. Encontre o preço de VENDA do produto (não o parcelado, não o riscado)
+3. Procure por "R$", "Por:", valores em destaque
+4. Se tiver várias opções (110V/220V), pegue o MENOR preço
+5. Extraia o nome da loja/site
 
-Retorne o preço de venda atual (não parcelado) e o nome da loja.`,
+RETORNE APENAS:
+- store: Nome da loja
+- price: Preço em número (ex: 189.90)
+- productNameFound: Nome do produto na página`,
                         add_context_from_internet: true,
                         response_json_schema: {
                             type: "object",
                             properties: {
                                 store: { type: "string" },
+                                productNameFound: { type: "string" },
                                 price: { type: "number" },
                                 url: { type: "string" }
                             },
-                            required: ["store", "price", "url"]
+                            required: ["store", "price"]
                         }
                     });
 
-                    // ⏱️ TIMEOUT DE 15 SEGUNDOS
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout')), 15000)
-                    );
-
-                    const result = await Promise.race([extractionPromise, timeoutPromise]);
-
                     if (!result?.price || result.price < 1) {
-                        console.log(`⚠️ Preço inválido, usando Google Shopping`);
+                        console.log(`❌ Falha na extração (preço: ${result?.price})`);
                         useGoogleShopping = true;
                     } else {
-                        console.log(`✅ R$ ${result.price} - ${result.store}`);
+                        console.log(`✅ Preço extraído: R$ ${result.price.toFixed(2)} - ${result.store}`);
 
                         const savings = result.price - currentPrice;
                         const savingsPercent = (savings / result.price) * 100;
 
+                        console.log(`💰 Economia: ${Math.round(savingsPercent)}%`);
+
                         if (savingsPercent > 99 || savingsPercent < -500) {
-                            console.log(`⚠️ Economia ${Math.round(savingsPercent)}% inválida`);
+                            console.log(`⚠️ Economia ${Math.round(savingsPercent)}% fora do range`);
                             useGoogleShopping = true;
                         } else {
                             await base44.asServiceRole.entities.Auction.update(auctionId, {
                                 market_price: result.price,
                                 last_comparison_date: new Date().toISOString()
                             });
+
+                            console.log(`✅ SUCESSO MODO FABRICANTE!`);
 
                             return Response.json({
                                 success: true,
@@ -141,8 +149,9 @@ Retorne o preço de venda atual (não parcelado) e o nome da loja.`,
                                     ourPrice: currentPrice,
                                     comparisons: [{
                                         store: result.store,
+                                        productNameFound: result.productNameFound || searchTitle,
                                         price: result.price,
-                                        url: result.url || auction.source_url
+                                        url: auction.source_url
                                     }],
                                     cheapestMarketPrice: result.price,
                                     averageMarketPrice: result.price,
@@ -150,14 +159,16 @@ Retorne o preço de venda atual (não parcelado) e o nome da loja.`,
                                     savingsPercent: Math.round(savingsPercent),
                                     isFactoryDirect: true,
                                     totalStoresAnalyzed: 1,
+                                    searchAttempts: 1,
                                     priceLabel: 'Preço no Fabricante'
-                                }
+                                },
+                                cached: false
                             });
                         }
                     }
 
                 } catch (error) {
-                    console.log(`⚠️ Erro: ${error.message}`);
+                    console.error(`❌ Erro modo fabricante: ${error.message}`);
                     useGoogleShopping = true;
                 }
             }
