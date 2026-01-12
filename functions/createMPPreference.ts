@@ -20,6 +20,10 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Dados do usuário não fornecidos' }, { status: 401 });
         }
 
+        if (!user.last_name || user.last_name.trim() === '') {
+            return Response.json({ error: 'Sobrenome é obrigatório' }, { status: 400 });
+        }
+
         if (!auction_id) {
             return Response.json({ error: 'auction_id é obrigatório' }, { status: 400 });
         }
