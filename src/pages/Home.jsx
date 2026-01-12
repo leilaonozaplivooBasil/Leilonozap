@@ -56,12 +56,13 @@ export default function Home() {
     entityName: 'Auction',
     filters: {},
     onUpdate: (freshAuctions) => {
-      console.log('🔄 Leilões atualizados em tempo real!');
-      sessionStorage.setItem('auctions_cache', JSON.stringify(freshAuctions));
-      sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-      setAuctions(freshAuctions);
+      if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
+        sessionStorage.setItem('auctions_cache', JSON.stringify(freshAuctions));
+        sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+        setAuctions(freshAuctions);
+      }
     },
-    interval: 5000,
+    interval: 10000,
     enabled: true
   });
 
@@ -305,25 +306,26 @@ export default function Home() {
       const cachedData = sessionStorage.getItem('auctions_cache');
       const cacheTime = sessionStorage.getItem('auctions_cache_time');
 
+      // CACHE AGRESSIVO: 30 segundos
       if (cachedData && cacheTime && !isRetry) {
         const age = Date.now() - parseInt(cacheTime);
-        if (age < 10000) {
+        if (age < 30000) {
           const parsedData = JSON.parse(cachedData);
-          if (Array.isArray(parsedData)) {
+          if (Array.isArray(parsedData) && parsedData.length > 0) {
             setAuctions(parsedData);
             setIsLoading(false);
 
-            // Atualização silenciosa apenas se cache > 3s
-            if (age > 3000) {
+            // Atualização em background apenas após 10s
+            if (age > 10000) {
               setTimeout(() => {
                 Auction.list("-created_date", 50).then((data) => {
-                  if (Array.isArray(data)) {
+                  if (Array.isArray(data) && data.length > 0) {
                     sessionStorage.setItem('auctions_cache', JSON.stringify(data));
                     sessionStorage.setItem('auctions_cache_time', Date.now().toString());
                     setAuctions(data);
                   }
                 }).catch(() => {});
-              }, 100);
+              }, 2000);
             }
             return;
           }
@@ -332,7 +334,7 @@ export default function Home() {
 
       const data = await Auction.list("-created_date", 50);
 
-      if (Array.isArray(data) && data.length >= 0) {
+      if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
         sessionStorage.setItem('auctions_cache', JSON.stringify(data));
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
