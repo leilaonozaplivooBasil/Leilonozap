@@ -102,7 +102,12 @@ Deno.serve(async (req) => {
                 try {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
-                    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
+                    // ⏱️ TIMEOUT DE 10 SEGUNDOS
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('LLM timeout')), 10000)
+                    );
+
+                    const llmPromise = base44.asServiceRole.integrations.Core.InvokeLLM({
                         prompt: `🏭 MISSÃO: EXTRAIR PREÇO À VISTA DO SITE DO FORNECEDOR
 
 📍 URL: ${auction.source_url}
