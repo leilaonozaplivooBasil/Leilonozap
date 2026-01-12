@@ -8,6 +8,7 @@ import GlobalMonitor from "@/components/system/GlobalMonitor";
 import LoginModal from "@/components/common/LoginModal";
 
 import ErrorBoundary from "@/components/system/ErrorBoundary";
+import Footer from "@/components/common/Footer";
 
       import { Button } from "@/components/ui/button";
       import { base44 } from '@/api/base44Client';
