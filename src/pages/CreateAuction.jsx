@@ -657,8 +657,13 @@ export default function CreateAuction() {
       console.log(`🖼️ Array imageUrls do backend:`, data.imageUrls);
       console.log(`🖼️ Quantidade: ${data.imageUrls?.length || 0}`);
 
-      setExtractedData({ title: productTitle, description: productDesc });
-      setFormData(prev => ({ ...prev, title: productTitle, description: productDesc }));
+      // Monta descrição completa com specs se disponível
+      const fullDesc = data.specifications 
+        ? `${productDesc}\n\n📋 Especificações:\n${data.specifications}`
+        : productDesc;
+
+      setExtractedData({ title: productTitle, description: fullDesc });
+      setFormData(prev => ({ ...prev, title: productTitle, description: fullDesc }));
 
       const validUrls = (data.imageUrls || [])
         .filter(url => url && typeof url === 'string' && url.trim());
