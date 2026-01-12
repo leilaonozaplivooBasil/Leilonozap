@@ -99,9 +99,11 @@ Deno.serve(async (req) => {
                 console.log(`🏭 MODO FABRICANTE ATIVADO`);
                 console.log(`📍 URL: ${auction.source_url}`);
 
+                const isSupplierMode = auction.comparai_mode === 'supplier';
+
                 try {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
-                    
+
                     // ⏱️ TIMEOUT DE 15 SEGUNDOS (aumentado para sites lentos)
                     const timeoutPromise = new Promise((_, reject) => 
                         setTimeout(() => reject(new Error('LLM timeout')), 15000)
@@ -110,59 +112,59 @@ Deno.serve(async (req) => {
                     const llmPromise = base44.asServiceRole.integrations.Core.InvokeLLM({
                         prompt: `🏭 MISSÃO CRÍTICA: EXTRAIR PREÇO DO SITE DO FABRICANTE/FORNECEDOR
 
-📍 URL: ${auction.source_url}
-🏷️ PRODUTO: ${searchTitle}
+        📍 URL: ${auction.source_url}
+        🏷️ PRODUTO: ${searchTitle}
 
-🎯 OBJETIVO:
-Encontre o preço PRINCIPAL do produto nesta página (seja à vista, parcelado ou preço único).
+        🎯 OBJETIVO:
+        Encontre o preço PRINCIPAL do produto nesta página (seja à vista, parcelado ou preço único).
 
-⚠️ REGRAS DE EXTRAÇÃO:
+        ⚠️ REGRAS DE EXTRAÇÃO:
 
-1️⃣ PROCURE O PREÇO PRINCIPAL:
-   ✅ Preço maior/destaque perto do botão "Comprar"
-   ✅ Valor com "R$" em fonte grande
-   ✅ Pode ser "à vista", "no PIX", ou preço único
-   ✅ Se houver "De R$ X por R$ Y" → pegue Y (preço promocional)
+        1️⃣ PROCURE O PREÇO PRINCIPAL:
+        ✅ Preço maior/destaque perto do botão "Comprar"
+        ✅ Valor com "R$" em fonte grande
+        ✅ Pode ser "à vista", "no PIX", ou preço único
+        ✅ Se houver "De R$ X por R$ Y" → pegue Y (preço promocional)
 
-2️⃣ IGNORE COMPLETAMENTE:
-   ❌ Códigos de produto (1197, SKU, REF)
-   ❌ Valores de parcelas individuais ("12x de R$ 50")
-   ❌ Preços riscados (descarte o valor antigo)
-   ❌ Números SEM "R$"
+        2️⃣ IGNORE COMPLETAMENTE:
+        ❌ Códigos de produto (1197, SKU, REF)
+        ❌ Valores de parcelas individuais ("12x de R$ 50")
+        ❌ Preços riscados (descarte o valor antigo)
+        ❌ Números SEM "R$"
 
-3️⃣ SITES COMUNS:
-   • Laura Novaes/Lojas de Roupa: Preço abaixo do título, geralmente "R$ XXX,00" ou "Parcele em 3x de R$ YY sem juros"
-   • Mercado Livre: "R$ XXX" em destaque
-   • Amazon/Shopee: Preço principal em grande
+        3️⃣ SITES COMUNS:
+        • Laura Novaes/Lojas de Roupa: Preço abaixo do título, geralmente "R$ XXX,00" ou "Parcele em 3x de R$ YY sem juros"
+        • Mercado Livre: "R$ XXX" em destaque
+        • Amazon/Shopee: Preço principal em grande
 
-📊 EXEMPLOS:
+        📊 EXEMPLOS:
 
-Exemplo 1 - Laura Novaes:
-"Body Vênus - Rubro
-R$ 209,00
-Parcele em 3x de R$ 69,67 sem juros"
-→ RESPOSTA: 209.00 (preço total, NÃO a parcela)
+        Exemplo 1 - Laura Novaes:
+        "Body Vênus - Rubro
+        R$ 209,00
+        Parcele em 3x de R$ 69,67 sem juros"
+        → RESPOSTA: 209.00 (preço total, NÃO a parcela)
 
-Exemplo 2 - Mercado Livre:
-"R$ 450 à vista
-ou 12x de R$ 45"
-→ RESPOSTA: 450.00
+        Exemplo 2 - Mercado Livre:
+        "R$ 450 à vista
+        ou 12x de R$ 45"
+        → RESPOSTA: 450.00
 
-Exemplo 3 - Loja qualquer:
-"De R$ 299 por R$ 189"
-→ RESPOSTA: 189.00
+        Exemplo 3 - Loja qualquer:
+        "De R$ 299 por R$ 189"
+        → RESPOSTA: 189.00
 
-🔥 ATENÇÃO CRÍTICA:
-- Se ver "3x de R$ 69,67", calcule: 69.67 × 3 = 209.00
-- Se ver apenas "R$ 209,00", retorne 209.00
-- NÃO retorne o valor da parcela, retorne o PREÇO TOTAL
+        🔥 ATENÇÃO CRÍTICA:
+        - Se ver "3x de R$ 69,67", calcule: 69.67 × 3 = 209.00
+        - Se ver apenas "R$ 209,00", retorne 209.00
+        - NÃO retorne o valor da parcela, retorne o PREÇO TOTAL
 
-RETORNE APENAS JSON:
-{
-  "store": "nome da loja/site",
-  "price": 209.00,
-  "productNameFound": "nome exato do produto encontrado"
-}`,
+        RETORNE APENAS JSON:
+        {
+        "store": "nome da loja/site",
+        "price": 209.00,
+        "productNameFound": "nome exato do produto encontrado"
+        }`,
                         add_context_from_internet: true,
                         response_json_schema: {
                             type: "object",
@@ -180,6 +182,17 @@ RETORNE APENAS JSON:
 
                     if (!result?.price || result.price < 1 || result.price > 50000) {
                         console.log(`❌ Falha na extração (preço: ${result?.price})`);
+
+                        // 🆕 SE FOR MODO SUPPLIER, NÃO CAI PARA GOOGLE SHOPPING
+                        if (isSupplierMode) {
+                            console.log(`⛔ MODO SUPPLIER: Não pode usar Google Shopping`);
+                            return Response.json({
+                                success: false,
+                                error: "Não foi possível extrair o preço do site do fabricante",
+                                errorCode: "SUPPLIER_EXTRACTION_FAILED"
+                            }, { status: 404 });
+                        }
+
                         useGoogleShopping = true;
                     } else {
                         console.log(`✅ Preço extraído: R$ ${result.price.toFixed(2)} - ${result.store}`);
@@ -191,6 +204,17 @@ RETORNE APENAS JSON:
 
                         if (savingsPercent > 99 || savingsPercent < -500) {
                             console.log(`⚠️ Economia ${Math.round(savingsPercent)}% fora do range`);
+
+                            // 🆕 SE FOR MODO SUPPLIER, NÃO CAI PARA GOOGLE SHOPPING
+                            if (isSupplierMode) {
+                                console.log(`⛔ MODO SUPPLIER: Dados inconsistentes, não pode usar Google Shopping`);
+                                return Response.json({
+                                    success: false,
+                                    error: "Dados inconsistentes detectados no site do fabricante",
+                                    errorCode: "UNREALISTIC_SUPPLIER_DATA"
+                                }, { status: 422 });
+                            }
+
                             useGoogleShopping = true;
                         } else {
                             await base44.asServiceRole.entities.Auction.update(auctionId, {
@@ -227,12 +251,23 @@ RETORNE APENAS JSON:
 
                 } catch (error) {
                     console.error(`❌ Erro modo fabricante: ${error.message}`);
-                    
-                    // Se timeout ou erro, cai para Google Shopping
+
+                    // 🆕 SE FOR MODO SUPPLIER, NÃO CAI PARA GOOGLE SHOPPING
+                    if (isSupplierMode) {
+                        console.log(`⛔ MODO SUPPLIER: Erro detectado, não pode usar Google Shopping`);
+                        return Response.json({
+                            success: false,
+                            error: "Erro ao extrair preço do site do fabricante",
+                            errorCode: "SUPPLIER_ERROR",
+                            details: error.message
+                        }, { status: 500 });
+                    }
+
+                    // Se não for modo supplier e houver timeout, cai para Google Shopping
                     if (error.message.includes('timeout') || error.message.includes('LLM timeout')) {
                         console.log(`⏱️ Timeout detectado, caindo para Google Shopping`);
                     }
-                    
+
                     useGoogleShopping = true;
                 }
             }
