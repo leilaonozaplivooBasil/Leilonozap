@@ -102,12 +102,7 @@ Deno.serve(async (req) => {
                 try {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
-                    // ⏱️ TIMEOUT DE 10 SEGUNDOS
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('LLM timeout')), 10000)
-                    );
-
-                    const llmPromise = base44.asServiceRole.integrations.Core.InvokeLLM({
+                    const result = await base44.asServiceRole.integrations.Core.InvokeLLM({
                         prompt: `🏭 MISSÃO: EXTRAIR PREÇO À VISTA DO SITE DO FORNECEDOR
 
 📍 URL: ${auction.source_url}
@@ -172,8 +167,6 @@ RETORNE APENAS JSON:
                         }
                     });
 
-                    const result = await Promise.race([llmPromise, timeoutPromise]);
-
                     if (!result?.price || result.price < 1) {
                         console.log(`❌ Falha na extração (preço: ${result?.price})`);
                         useGoogleShopping = true;
@@ -223,12 +216,6 @@ RETORNE APENAS JSON:
 
                 } catch (error) {
                     console.error(`❌ Erro modo fabricante: ${error.message}`);
-                    
-                    // Se timeout ou erro, cai para Google Shopping
-                    if (error.message.includes('timeout') || error.message.includes('LLM timeout')) {
-                        console.log(`⏱️ Timeout detectado, caindo para Google Shopping`);
-                    }
-                    
                     useGoogleShopping = true;
                 }
             }
