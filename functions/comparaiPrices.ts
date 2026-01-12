@@ -102,9 +102,9 @@ Deno.serve(async (req) => {
                 try {
                     console.log(`🔍 Extraindo preço da URL do fornecedor...`);
                     
-                    // ⏱️ TIMEOUT DE 10 SEGUNDOS
+                    // ⏱️ TIMEOUT DE 15 SEGUNDOS (aumentado para sites lentos)
                     const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('LLM timeout')), 10000)
+                        setTimeout(() => reject(new Error('LLM timeout')), 15000)
                     );
 
                     const llmPromise = base44.asServiceRole.integrations.Core.InvokeLLM({
