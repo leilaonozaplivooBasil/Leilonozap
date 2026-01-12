@@ -16,6 +16,15 @@ export default function CheckoutPage() {
     const [lastName, setLastName] = useState('');
     const [phone, setPhone] = useState('');
     const [cpf, setCpf] = useState('');
+    const [email, setEmail] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [addressStreet, setAddressStreet] = useState('');
+    const [addressNumber, setAddressNumber] = useState('');
+    const [addressComplement, setAddressComplement] = useState('');
+    const [addressNeighborhood, setAddressNeighborhood] = useState('');
+    const [addressCity, setAddressCity] = useState('');
+    const [addressState, setAddressState] = useState('');
+    const [addressZip, setAddressZip] = useState('');
     const walletContainerRef = useRef(null);
     const mpInstanceRef = useRef(null);
     const navigate = useNavigate();
