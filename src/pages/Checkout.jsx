@@ -117,26 +117,9 @@ export default function CheckoutPage() {
                 
                 setPreferenceId(response.data.preference_id);
                 setPublicKey(response.data.public_key);
-            } else if (response?.success) {
-                // Suporta resposta direta
-                console.log('✅ Preference ID:', response.preference_id);
-                console.log('✅ Public Key:', response.public_key);
-                
-                if (!response.preference_id) {
-                    toast.error('Erro: Preference ID não retornado');
-                    return;
-                }
-                
-                if (!response.public_key) {
-                    toast.error('Erro: Public Key não retornada');
-                    return;
-                }
-                
-                setPreferenceId(response.preference_id);
-                setPublicKey(response.public_key);
             } else {
                 console.error('❌ Erro na resposta:', response);
-                toast.error(response?.data?.error || response?.error || 'Erro ao criar preferência de pagamento');
+                toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
             }
 
         } catch (error) {

@@ -138,12 +138,12 @@ Deno.serve(async (req) => {
             },
             external_reference: externalReference,
             back_urls: {
-                success: `https://leilaonozap.app/MyWinnings`,
-                failure: `https://leilaonozap.app/Checkout?auction_id=${auction_id}`,
-                pending: `https://leilaonozap.app/MyWinnings`
+                success: `${req.headers.get('origin')}/MyWinnings`,
+                failure: `${req.headers.get('origin')}/Checkout?auction_id=${auction_id}`,
+                pending: `${req.headers.get('origin')}/MyWinnings`
             },
             auto_return: 'all',
-            notification_url: `https://leilaonozap.app/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,
+            notification_url: `${req.headers.get('origin')}/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,
             statement_descriptor: 'LEILAO NOZAP'
         };
 
