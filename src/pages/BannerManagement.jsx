@@ -246,6 +246,13 @@ export default function BannerManagement() {
           >
             ⭐ Produtos em Destaque
           </Button>
+          <Button
+            onClick={() => setActiveTab('footer')}
+            variant={activeTab === 'footer' ? 'default' : 'outline'}
+            className={activeTab === 'footer' ? 'bg-green-600 hover:bg-green-700' : ''}
+          >
+            📄 Rodapé
+          </Button>
         </div>
 
         {activeTab === 'banners' && (
