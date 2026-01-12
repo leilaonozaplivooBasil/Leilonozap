@@ -430,15 +430,15 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           )}
 
           {/* 🆕 BOTÕES DE AÇÃO (TOP LEFT) */}
-          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-20 flex gap-1 sm:gap-2">
-            {/* Botão COMPARTILHAR - REDONDO */}
+          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-20 flex gap-2">
+            {/* Botão COMPARTILHAR - MESMO TAMANHO DO FAVORITO */}
             <button
               onClick={handleShare}
               onMouseDown={(e) => e.stopPropagation()} 
               onTouchStart={(e) => e.stopPropagation()}
-              className="w-9 h-9 sm:w-10 sm:h-10 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
+              className="w-10 h-10 shadow-lg bg-blue-600/90 hover:bg-blue-500 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
             >
-              <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Share2 className="w-5 h-5" />
             </button>
 
             {/* 🆕 BOTÃO FAVORITAR */}
@@ -452,17 +452,16 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             )}
           </div>
 
-          {/* 🆕 BOTÃO EDITAR (TOP RIGHT) - SÓ ADMIN */}
+          {/* 🆕 BOTÃO EDITAR (TOP RIGHT NA IMAGEM) - SÓ ADMIN */}
           {isAdmin && (
             <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-20">
               <Link 
                 to={createPageUrl("EditAuction") + `?id=${auction.id}`} 
                 onClick={(e) => e.stopPropagation()}
               >
-                <Button size="sm" className="min-h-[40px] sm:h-9 px-2 sm:px-3 gap-1 shadow-md bg-gray-700/80 hover:bg-gray-600 text-white rounded-lg transition-all duration-300 flex items-center backdrop-blur-sm">
-                  <Edit className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span className="text-xs font-semibold hidden sm:inline">Editar</span>
-                </Button>
+                <button className="w-10 h-10 shadow-lg bg-gray-700/90 hover:bg-gray-600 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm active:scale-95">
+                  <Edit className="w-5 h-5" />
+                </button>
               </Link>
             </div>
           )}
