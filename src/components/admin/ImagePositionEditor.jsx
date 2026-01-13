@@ -2,7 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, RotateCw, Check, X } from 'lucide-react';
 
-export default function ImagePositionEditor({ imageUrl, onSave, onCancel, aspectRatio = 16/9 }) {
+export default function ImagePositionEditor({ imageUrl, onSave, onCancel, deviceType = 'desktop' }) {
+  // Dimensões reais do banner
+  const dimensions = deviceType === 'desktop' 
+    ? { width: 1920, height: 600 } 
+    : { width: 800, height: 600 };
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
@@ -168,10 +172,10 @@ export default function ImagePositionEditor({ imageUrl, onSave, onCancel, aspect
             ref={containerRef}
             className="relative bg-gray-800 border-2 border-gray-600 overflow-hidden cursor-move"
             style={{
-              width: '800px',
-              height: `${800 / aspectRatio}px`,
+              width: dimensions.width > 1000 ? '960px' : `${dimensions.width}px`,
+              height: dimensions.width > 1000 ? '300px' : `${dimensions.height}px`,
               maxWidth: '90vw',
-              maxHeight: '60vh'
+              aspectRatio: `${dimensions.width}/${dimensions.height}`
             }}
             onMouseDown={handleMouseDown}
             onTouchStart={handleTouchStart}

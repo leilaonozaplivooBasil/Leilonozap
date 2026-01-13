@@ -373,11 +373,11 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
       {showPositionEditor && formData.image_url && (
         <ImagePositionEditor
           imageUrl={formData.image_url}
-          aspectRatio={formData.device_type === 'desktop' ? 16/9 : 4/3}
+          deviceType={formData.device_type}
           onSave={(adjustments) => {
             setFormData({ ...formData, image_adjustments: adjustments });
             setShowPositionEditor(false);
-            toast.success('Posição ajustada!');
+            toast.success('Posição ajustada! Salve o banner para aplicar.');
           }}
           onCancel={() => setShowPositionEditor(false)}
         />
