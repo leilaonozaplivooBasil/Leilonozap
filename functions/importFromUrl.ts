@@ -167,6 +167,7 @@ RETORNE JSON:
         console.log(`📊 Imagens para validar: ${finalImageUrls.length}`);
 
         console.log(`✅ Título: ${title}`);
+        console.log(`✅ Descrição: ${description?.substring(0, 100)}...`);
         console.log(`📸 Imagens a validar: ${finalImageUrls.length}`);
 
         // VALIDA IMAGENS (limitado para não travar)
@@ -185,8 +186,8 @@ RETORNE JSON:
         console.log(`✅ FINAL: ${validUrls.length} imagens validadas de ${finalImageUrls.length} extraídas`);
 
         return Response.json({
-            title,
-            description,
+            title: title || '',
+            description: description || '',
             imageUrls: validUrls,
             price: price || null,
             brand: brand || null,
