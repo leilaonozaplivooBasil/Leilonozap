@@ -70,6 +70,11 @@ export default function CheckoutPage() {
             return;
         }
 
+        if (!addressNeighborhood || addressNeighborhood.trim() === '') {
+            toast.error('Bairro é obrigatório');
+            return;
+        }
+
         if (!auction) {
             toast.error('Leilão não encontrado');
             return;
@@ -560,14 +565,14 @@ export default function CheckoutPage() {
                                  id="walletBrick_container" 
                                  ref={walletContainerRef}
                                  style={{ minHeight: '400px', width: '100%' }}
-                                 className="flex items-center justify-center"
+                                 className="w-full"
                              ></div>
 
                              {(!preferenceId || !publicKey) && (
                                  <div className="space-y-3">
                                      <button
                                          onClick={handleCreatePreference}
-                                         disabled={!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
+                                         disabled={!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
                                          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors"
                                          >
                                          {preferenceId ? (
@@ -579,16 +584,9 @@ export default function CheckoutPage() {
                                              'Continuar com Pagamento'
                                          )}
                                      </button>
-                                     {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
+                                     {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
                                      <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
                                      )}
-                                 </div>
-                             )}
-
-                             {preferenceId && publicKey && (
-                                 <div className="text-xs text-gray-500 mt-2">
-                                     <p>Debug: Preference ID carregado</p>
-                                     <p>Debug: Public Key carregado</p>
                                  </div>
                              )}
 
