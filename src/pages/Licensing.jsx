@@ -33,6 +33,75 @@ import UserEditModal from '../components/admin/UserEditModal';
 import UserPasswordModal from '../components/admin/UserPasswordModal';
 import EarningsSimulator from '../components/licensing/EarningsSimulator';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
+import CatalogProductCard from '../components/catalog/CatalogProductCard';
+
+const Product = base44.entities.Product;
+
+const CatalogTab = ({ isSaiDeBaixo }) => {
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const catalogProducts = await Product.filter({ catalog_active: true }, '-created_date', 50);
+        setProducts(Array.isArray(catalogProducts) ? catalogProducts : []);
+      } catch (error) {
+        console.error('Erro ao carregar catálogo:', error);
+        toast.error('Erro ao carregar produtos');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return products;
+    const term = searchTerm.toLowerCase();
+    return products.filter(p => p.description?.toLowerCase().includes(term));
+  }, [products, searchTerm]);
+
+  return (
+    <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+      <CardHeader>
+        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo de Produtos</CardTitle>
+        <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+          Produtos disponíveis para venda - Compartilhe seu link do catálogo
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Buscar produtos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={isSaiDeBaixo ? 'pl-10 bg-gray-100 border-gray-300 text-gray-900' : 'pl-10 bg-gray-700 border-gray-600 text-white'}
+          />
+        </div>
+
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-12 text-gray-400">
+            <Package className="w-16 h-16 mx-auto opacity-50 mb-4" />
+            <p>Nenhum produto disponível</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredProducts.map(product => (
+              <CatalogProductCard key={product.id} product={product} currentUser={null} />
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) => (
     <Card
@@ -1394,6 +1463,13 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+        )}
+
+        {/* ABA: CATÁLOGO - Produtos para vender */}
+        {userLevels.includes('licenciado_catalogo') && (
+          <TabsContent value="catalogo" className="space-y-6">
+            <CatalogTab isSaiDeBaixo={isSaiDeBaixo} />
           </TabsContent>
         )}
 
