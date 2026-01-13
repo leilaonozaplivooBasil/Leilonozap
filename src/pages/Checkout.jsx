@@ -550,23 +550,27 @@ export default function CheckoutPage() {
                                  </div>
                              </div>
 
-                             <p className="text-gray-400 text-sm">
-                                 Escolha seu método de pagamento preferido:
-                             </p>
-                             <ul className="text-gray-300 text-sm space-y-2 mb-6">
-                                 <li>✓ Cartão de crédito (até 12x)</li>
-                                 <li>✓ Cartão de débito</li>
-                                 <li>✓ PIX</li>
-                                 <li>✓ Boleto bancário</li>
-                             </ul>
-
-                             {/* Container para o Wallet Brick do Mercado Pago */}
-                             <div 
-                                 id="walletBrick_container" 
-                                 ref={walletContainerRef}
-                                 style={{ minHeight: '400px', width: '100%' }}
-                                 className="w-full"
-                             ></div>
+                             {(!preferenceId || !publicKey) ? (
+                                 <>
+                                     <p className="text-gray-400 text-sm">
+                                         Escolha seu método de pagamento preferido:
+                                     </p>
+                                     <ul className="text-gray-300 text-sm space-y-2 mb-6">
+                                         <li>✓ Cartão de crédito (até 12x)</li>
+                                         <li>✓ Cartão de débito</li>
+                                         <li>✓ PIX</li>
+                                         <li>✓ Boleto bancário</li>
+                                     </ul>
+                                 </>
+                             ) : (
+                                 /* Container para o Wallet Brick do Mercado Pago */
+                                 <div 
+                                     id="walletBrick_container" 
+                                     ref={walletContainerRef}
+                                     style={{ minHeight: '400px', width: '100%' }}
+                                     className="w-full mb-4"
+                                 ></div>
+                             )}
 
                              {(!preferenceId || !publicKey) && (
                                  <div className="space-y-3">
