@@ -86,12 +86,13 @@ function CatalogProductCard({ product, currentUser }) {
     e.stopPropagation();
 
     const productUrl = `${window.location.origin}${createPageUrl("CatalogProductDetails")}?id=${product.id}`;
-    const shareMessage = `🛍️ CATÁLOGO NOZAP!
+    const categoryEmoji = categoryEmojis[product.category] || '📦';
+    const shareMessage = `🛍️${categoryEmoji} CATÁLOGO LEILÃO NO ZAP!
 
-📱 ${product.description}
-💰 R$ ${product.price_catalog?.toFixed(2)}
+${categoryEmoji} ${product.description}
+💰 Preço: R$ ${product.price_catalog?.toFixed(2)}
 
-🛒 Compre agora!`;
+🛒 Compre agora: ${productUrl}`;
 
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
