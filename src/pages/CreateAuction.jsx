@@ -1517,6 +1517,11 @@ export default function CreateAuction() {
                                         setManualStep(5); // Vai para preview das imagens
                                         
                                         toast.success(`✅ ${data.images.length} imagens extraídas do Mercado Livre!`);
+                                        setDownloadedImages(data.images);
+                                        setCoverIndex(0);
+                                        setManualStep(5);
+                                        
+                                        toast.success(`✅ ${data.images.length} imagens extraídas do Mercado Livre!`);
                                       } catch (error) {
                                         console.error('❌ Erro ML:', error);
                                         toast.error(error.message || 'Erro ao extrair do Mercado Livre');
