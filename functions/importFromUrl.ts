@@ -130,22 +130,37 @@ Deno.serve(async (req) => {
             const snippet = html.substring(0, 15000);
             
             const aiResult = await base44.integrations.Core.InvokeLLM({
-                prompt: `EXTRAÇÃO DO HTML DO PRODUTO - SEPARAÇÃO CRÍTICA:
+                prompt: `EXTRAÇÃO DO HTML - SEPARAÇÃO TOTAL ENTRE TÍTULO E DESCRIÇÃO:
 
-HTML:
+HTML DO PRODUTO:
 ${snippet}
 
-RETORNE JSON EXATO COM CAMPOS SEPARADOS:
-1. title: APENAS o nome do produto, SEM descrição. Ex: "iPhone 15 Pro" ou "Geladeira Brastemp 500L"
-2. description: DESCRIÇÃO DETALHADA com especificações técnicas, características, dimensões, voltagem, etc. SEM repetir o título
-3. price: Preço numérico (apenas números, ex: 2999.90)
-4. brand: Marca do produto (se identificável)
-5. model: Modelo específico (se identificável)
+INSTRUÇÕES RIGOROSAS:
 
-⚠️ CRÍTICO: 
-- title deve ter APENAS o nome (5-10 palavras máximo)
-- description deve ter os DETALHES completos (sem repetir o título)
-- Não misture os dois campos!`,
+CAMPO 1 - title (Nome Curto):
+- MÁXIMO 3-6 palavras
+- APENAS marca + modelo/tipo
+- Exemplos CORRETOS:
+  ✅ "Máquina de Lavar Tanquinho"
+  ✅ "iPhone 15 Pro 256GB"
+  ✅ "Geladeira Brastemp 500L"
+- Exemplos ERRADOS (não faça):
+  ❌ "Máquina de lavar semi automática tanquinho 24kg 110V"
+  ❌ "iPhone 15 Pro com 256GB de armazenamento e câmera de 48MP"
+
+CAMPO 2 - description (Descrição Completa):
+- Detalhe TUDO aqui
+- Especificações técnicas: voltagem, capacidade, cores, material, dimensões, etc
+- Características: automática/semi-automática, velocidades, ciclos, etc
+- Inclua TUDO EXCETO o nome que já está em title
+- Este é o campo de DETALHES
+
+EXEMPLO PERFEITO:
+  Produto: "Máquina de Lavar Roupas Tanquinho Mondial 24kg Semi Automática 110V"
+  title: "Máquina de Lavar Tanquinho Mondial 24kg"
+  description: "Semi automática, capacidade 24kg, voltagem 110V, cores disponíveis, características de lavagem..."
+
+RETORNE JSON:`,
                 response_json_schema: {
                     type: "object",
                     properties: {
