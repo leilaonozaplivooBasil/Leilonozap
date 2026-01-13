@@ -98,7 +98,31 @@ ${categoryEmoji} ${product.description}
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     try {
+      // 🍎 iOS
       if (isIOS && navigator.share && navigator.canShare) {
+        const imageUrl = product.image_urls?.[0];
+        
+        if (imageUrl) {
+          try {
+            const response = await fetch(imageUrl);
+            if (!response.ok) throw new Error('Erro ao baixar imagem');
+            
+            const blob = await response.blob();
+            const file = new File([blob], 'produto.jpg', { type: blob.type });
+            
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                title: `🛍️ ${product.description}`,
+                text: shareMessage,
+                files: [file]
+              });
+              return;
+            }
+          } catch (imgError) {
+            // Fallback sem imagem
+          }
+        }
+        
         await navigator.share({
           title: `🛍️ ${product.description}`,
           text: shareMessage,
@@ -106,12 +130,40 @@ ${categoryEmoji} ${product.description}
         return;
       }
 
+      // 🤖 ANDROID
       if (isAndroid) {
+        const imageUrl = product.image_urls?.[0];
+        
+        if (imageUrl && navigator.share && navigator.canShare) {
+          try {
+            const response = await fetch(imageUrl);
+            if (!response.ok) throw new Error('Erro ao baixar imagem');
+            
+            const blob = await response.blob();
+            const file = new File([blob], 'produto.jpg', { 
+              type: 'image/jpeg',
+              lastModified: new Date().getTime()
+            });
+            
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                title: `🛍️ ${product.description}`,
+                text: shareMessage,
+                files: [file]
+              });
+              return;
+            }
+          } catch (imgError) {
+            // Fallback
+          }
+        }
+        
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
         window.open(whatsappUrl, '_blank');
         return;
       }
 
+      // 💻 DESKTOP
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
       
     } catch (err) {
