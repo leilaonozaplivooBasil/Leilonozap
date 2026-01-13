@@ -54,6 +54,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
+import OlxCallback from './pages/OlxCallback';
 import __Layout from './Layout.jsx';
 
 
@@ -114,6 +115,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
     "CatalogCheckout2": CatalogCheckout2,
+    "OlxCallback": OlxCallback,
 }
 
 export const pagesConfig = {
