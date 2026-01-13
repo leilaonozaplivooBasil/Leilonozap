@@ -399,16 +399,46 @@ export default function CatalogCheckout2() {
                              <CardTitle className="text-green-400">Dados da Entrega</CardTitle>
                          </CardHeader>
                          <CardContent className="space-y-4">
-                             {/* Nome Completo */}
+                             {/* Nome */}
                              <div>
                                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                                     Nome Completo *
+                                     Primeiro Nome *
                                  </label>
                                  <input
                                      type="text"
                                      value={firstName}
                                      onChange={(e) => setFirstName(e.target.value)}
-                                     placeholder="Digite seu nome"
+                                     placeholder="Digite seu primeiro nome"
+                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
+                                 />
+                             </div>
+
+                             {/* Sobrenome */}
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                                     Sobrenome *
+                                 </label>
+                                 <input
+                                     type="text"
+                                     value={lastName}
+                                     onChange={(e) => setLastName(e.target.value)}
+                                     placeholder="Digite seu sobrenome"
+                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
+                                 />
+                             </div>
+
+                             {/* CPF */}
+                             <div>
+                                 <label className="block text-sm font-medium text-gray-300 mb-2">
+                                     CPF *
+                                 </label>
+                                 <input
+                                     type="text"
+                                     value={cpf}
+                                     onChange={(e) => setCpf(e.target.value)}
+                                     placeholder="000.000.000-00"
                                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
                                      required
                                  />
