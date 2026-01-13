@@ -95,7 +95,17 @@ Deno.serve(async (req) => {
         if (apiResult) {
             console.log('📋 Extraindo dados da API Própria...');
             title = apiResult.title;
-            description = apiResult.description;
+            
+            // Combina description + attributes (características)
+            let fullDescription = apiResult.description || '';
+            if (apiResult.attributes && typeof apiResult.attributes === 'object') {
+                const attrs = Object.entries(apiResult.attributes)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(' | ');
+                fullDescription = fullDescription + (fullDescription ? ' | ' : '') + attrs;
+            }
+            description = fullDescription;
+            
             price = apiResult.price ? parseFloat(apiResult.price.replace(/[^\d.,]/g, '').replace(',', '.')) : null;
             brand = apiResult.attributes?.Marca || '';
             model = apiResult.attributes?.['Modelo'] || '';
