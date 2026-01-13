@@ -481,11 +481,11 @@ export default function Catalog() {
               })}
             </div>
           }
-          </div>
-          </div>
+        </div>
+      </div>
 
-          <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
-          {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
-          </div>
-          );
+      <ComparaiFloatingButton auctions={filteredProducts} mode="catalog" />
+      {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
+    </div>
+  );
 }
