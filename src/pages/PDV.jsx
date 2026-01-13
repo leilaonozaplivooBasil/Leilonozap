@@ -1905,7 +1905,7 @@ ${boletoInfo}================================
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-white flex items-center gap-2">
                     <TrendingUp className="w-5 h-5" />
-                    Relatório de Vendedores - Por Dia
+                    Relatório de Vendedores
                   </CardTitle>
                   <Button
                     onClick={loadSellerStats}
@@ -1916,126 +1916,95 @@ ${boletoInfo}================================
                 </div>
               </CardHeader>
               <CardContent>
-                {allSales.length === 0 ? (
+                {sellerStats.length === 0 ? (
                   <div className="text-center py-12 text-gray-400">
-                    <p>Nenhuma venda registrada para exibir relatório</p>
+                    <p>Clique em "Atualizar" para carregar dados dos vendedores</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {(() => {
-                      // Agrupa vendas por dia
-                      const salesByDay = {};
-                      allSales.forEach(sale => {
-                        const date = new Date(sale.sale_datetime).toLocaleDateString('pt-BR');
-                        if (!salesByDay[date]) {
-                          salesByDay[date] = [];
-                        }
-                        salesByDay[date].push(sale);
-                      });
-
-                      // Ordena datas decrescente (mais recentes primeiro)
-                      const sortedDates = Object.keys(salesByDay).sort((a, b) => {
-                        const dateA = new Date(a.split('/').reverse().join('-'));
-                        const dateB = new Date(b.split('/').reverse().join('-'));
-                        return dateB - dateA;
-                      });
-
-                      return sortedDates.map((date) => {
-                        const daySales = salesByDay[date];
-                        const dayTotal = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-                        const dayCount = daySales.length;
-
-                        // Agrupa por vendedor dentro do dia
-                        const sellersByDay = {};
-                        daySales.forEach(sale => {
-                          const sellerName = sale.seller_name || 'Sem vendedor';
-                          if (!sellersByDay[sellerName]) {
-                            sellersByDay[sellerName] = [];
-                          }
-                          sellersByDay[sellerName].push(sale);
-                        });
-
-                        return (
-                          <div key={date} className="bg-gray-900/50 rounded-lg p-5 border border-gray-700">
-                            {/* HEADER DO DIA */}
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center gap-3">
-                                <Calendar className="w-5 h-5 text-blue-400" />
-                                <div>
-                                  <h3 className="text-white font-bold text-lg">{date}</h3>
-                                  <p className="text-gray-400 text-sm">{dayCount} vendas realizadas</p>
-                                </div>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-green-400 font-bold text-2xl">
-                                  R$ {dayTotal.toFixed(2)}
-                                </p>
-                                <p className="text-gray-500 text-xs">Total do dia</p>
-                              </div>
+                    {sellerStats.map((seller, index) => (
+                      <div key={seller.seller_id} className="bg-gray-900/50 rounded-lg p-5 border border-gray-700">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
+                              index === 0 ? 'bg-yellow-600' :
+                              index === 1 ? 'bg-gray-500' :
+                              index === 2 ? 'bg-orange-600' :
+                              'bg-blue-600'
+                            }`}>
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                             </div>
-
-                            {/* VENDEDORES DO DIA */}
-                            <div className="space-y-3">
-                              {Object.entries(sellersByDay).map(([sellerName, sales]) => {
-                                const sellerTotal = sales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-                                const sellerCommission = sales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
-                                const sellerCount = sales.length;
-
-                                return (
-                                  <details key={sellerName} className="bg-gray-800 rounded p-3">
-                                    <summary className="cursor-pointer flex items-center justify-between font-medium text-blue-400 hover:text-blue-300">
-                                      <div className="flex items-center gap-2">
-                                        <span>👤 {sellerName}</span>
-                                        <span className="text-xs text-gray-400">({sellerCount})</span>
-                                      </div>
-                                      <span className="text-green-400">R$ {sellerTotal.toFixed(2)}</span>
-                                    </summary>
-                                    <div className="mt-3 ml-3 space-y-2 border-l-2 border-gray-700 pl-3 max-h-48 overflow-y-auto">
-                                      <div className="grid grid-cols-3 gap-2 mb-2 text-xs">
-                                        <div className="bg-gray-700 rounded p-2">
-                                          <p className="text-gray-400">Vendas</p>
-                                          <p className="text-white font-bold">{sellerCount}</p>
-                                        </div>
-                                        <div className="bg-gray-700 rounded p-2">
-                                          <p className="text-gray-400">Total</p>
-                                          <p className="text-green-400 font-bold">R$ {sellerTotal.toFixed(2)}</p>
-                                        </div>
-                                        <div className="bg-gray-700 rounded p-2">
-                                          <p className="text-gray-400">Comissão</p>
-                                          <p className="text-orange-400 font-bold">R$ {sellerCommission.toFixed(2)}</p>
-                                        </div>
-                                      </div>
-                                      <table className="w-full text-xs">
-                                        <thead className="bg-gray-700 sticky top-0">
-                                          <tr className="text-gray-400">
-                                            <th className="text-left p-1">Horário</th>
-                                            <th className="text-left p-1">Produto</th>
-                                            <th className="text-right p-1">Valor</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {sales.map((sale) => (
-                                            <tr key={sale.id} className="border-b border-gray-700 text-gray-300">
-                                              <td className="p-1">
-                                                {new Date(sale.sale_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                              </td>
-                                              <td className="p-1 text-xs">{sale.product_description.substring(0, 20)}</td>
-                                              <td className="text-right p-1 text-green-400 font-bold">
-                                                R$ {sale.total_amount.toFixed(2)}
-                                              </td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  </details>
-                                );
-                              })}
+                            <div>
+                              <h3 className="text-white font-bold text-lg">{seller.seller_name}</h3>
+                              <p className="text-gray-400 text-sm">{seller.sales_count} vendas realizadas</p>
                             </div>
                           </div>
-                        );
-                      });
-                    })()}
+                          <div className="text-right">
+                            <p className="text-green-400 font-bold text-2xl">
+                              R$ {seller.total_commission.toFixed(2)}
+                            </p>
+                            <p className="text-gray-500 text-xs">Comissão total</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          <div className="bg-gray-800 rounded p-3">
+                            <p className="text-gray-400 text-xs mb-1">Total Bruto</p>
+                            <p className="text-white font-bold">R$ {seller.total_sales.toFixed(2)}</p>
+                          </div>
+                          <div className="bg-gray-800 rounded p-3">
+                            <p className="text-gray-400 text-xs mb-1">Total Líquido</p>
+                            <p className="text-green-400 font-bold">
+                              R$ {seller.sales.reduce((sum, s) => sum + (s.net_amount || 0), 0).toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="bg-gray-800 rounded p-3">
+                            <p className="text-gray-400 text-xs mb-1">Total em Impostos</p>
+                            <p className="text-red-400 font-bold">
+                              R$ {seller.sales.reduce((sum, s) => sum + (s.total_taxes || 0), 0).toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <details className="mt-3">
+                          <summary className="cursor-pointer text-blue-400 text-sm hover:text-blue-300 font-medium">
+                            Ver detalhes das vendas ({seller.sales.length})
+                          </summary>
+                          <div className="mt-3 max-h-64 overflow-y-auto">
+                            <table className="w-full text-xs">
+                              <thead className="bg-gray-800 sticky top-0">
+                                <tr className="text-gray-400">
+                                  <th className="text-left p-2">Data</th>
+                                  <th className="text-left p-2">Produto</th>
+                                  <th className="text-right p-2">Total</th>
+                                  <th className="text-right p-2">Líquido</th>
+                                  <th className="text-right p-2">Comissão</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {seller.sales.map((sale) => (
+                                  <tr key={sale.id} className="border-b border-gray-700 text-gray-300">
+                                    <td className="p-2">
+                                      {new Date(sale.sale_datetime).toLocaleDateString('pt-BR')}
+                                    </td>
+                                    <td className="p-2">{sale.product_description}</td>
+                                    <td className="text-right p-2 text-white">
+                                      R$ {sale.total_amount.toFixed(2)}
+                                    </td>
+                                    <td className="text-right p-2 text-green-400 font-bold">
+                                      R$ {(sale.net_amount || 0).toFixed(2)}
+                                    </td>
+                                    <td className="text-right p-2 text-orange-400 font-bold">
+                                      R$ {(sale.commission_amount || 0).toFixed(2)}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </details>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
