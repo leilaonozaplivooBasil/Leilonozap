@@ -236,6 +236,14 @@ export default function CreateAuction() {
     return () => clearInterval(interval);
   }, []);
 
+  // 🆕 AUTO-APPLY QUANDO IMAGENS SÃO CARREGADAS
+  useEffect(() => {
+    if (manualStep === 5 && downloadedImages.length > 0) {
+      const timer = setTimeout(applyToForm, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [manualStep, downloadedImages.length]);
+
   const handleCreateTest = async () => {
     setIsProcessingTest(true);
     try {
