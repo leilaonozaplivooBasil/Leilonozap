@@ -50,7 +50,7 @@ export default function RotatingBanner({ banners }) {
   if (filteredBanners.length === 0) return null;
 
   return (
-    <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-2xl overflow-hidden group">
+    <div className="relative w-full h-40 md:h-48 lg:h-56 rounded-2xl overflow-hidden group">
       {/* Imagem do Banner */}
       <div className="relative w-full h-full">
         {filteredBanners.map((banner, index) => (
