@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone } from 'lucide-react';
+import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
 
 export default function CatalogManagement() {
   const [catalogBanners, setCatalogBanners] = useState([]);
@@ -343,6 +344,7 @@ export default function CatalogManagement() {
 function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
   const [formData, setFormData] = useState(banner);
   const [isUploading, setIsUploading] = useState(false);
+  const [showPositionEditor, setShowPositionEditor] = useState(false);
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -367,38 +369,63 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <Card className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        <CardHeader>
-          <CardTitle className="text-white">
-            {banner.id ? 'Editar Banner do Catálogo' : 'Novo Banner do Catálogo'}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label className="text-gray-300">Imagem do Banner</Label>
-              {formData.image_url && (
-                <img
-                  src={formData.image_url}
-                  alt="Preview"
-                  className="w-full h-48 object-cover rounded-lg mb-2"
-                />
-              )}
-              <div className="flex gap-2">
-                <Input
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  onChange={handleFileChange}
-                  disabled={isUploading}
-                  className="bg-gray-700 text-white border-gray-600"
-                />
-                <Button type="button" disabled={isUploading} variant="outline">
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isUploading ? 'Enviando...' : 'Upload'}
-                </Button>
+    <>
+      {showPositionEditor && formData.image_url && (
+        <ImagePositionEditor
+          imageUrl={formData.image_url}
+          aspectRatio={formData.device_type === 'desktop' ? 16/9 : 4/3}
+          onSave={(adjustments) => {
+            setFormData({ ...formData, image_adjustments: adjustments });
+            setShowPositionEditor(false);
+            toast.success('Posição ajustada!');
+          }}
+          onCancel={() => setShowPositionEditor(false)}
+        />
+      )}
+
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <Card className="bg-gray-800 border-gray-700 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <CardHeader>
+            <CardTitle className="text-white">
+              {banner.id ? 'Editar Banner do Catálogo' : 'Novo Banner do Catálogo'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label className="text-gray-300">Imagem do Banner</Label>
+                {formData.image_url && (
+                  <div className="relative">
+                    <img
+                      src={formData.image_url}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded-lg mb-2"
+                    />
+                    <Button
+                      type="button"
+                      onClick={() => setShowPositionEditor(true)}
+                      className="absolute top-2 right-2 bg-blue-600 hover:bg-blue-700"
+                      size="sm"
+                    >
+                      <Move className="w-4 h-4 mr-2" />
+                      Ajustar Posição
+                    </Button>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleFileChange}
+                    disabled={isUploading}
+                    className="bg-gray-700 text-white border-gray-600"
+                  />
+                  <Button type="button" disabled={isUploading} variant="outline">
+                    <Upload className="w-4 h-4 mr-2" />
+                    {isUploading ? 'Enviando...' : 'Upload'}
+                  </Button>
+                </div>
               </div>
-            </div>
 
             <div>
               <Label className="text-gray-300">Tipo de Dispositivo</Label>
@@ -459,5 +486,6 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }
