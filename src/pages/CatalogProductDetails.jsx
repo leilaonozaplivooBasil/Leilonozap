@@ -78,7 +78,7 @@ export default function CatalogProductDetails() {
     }
 
     sessionStorage.setItem('selectedProduct', JSON.stringify(product));
-    navigate(createPageUrl("CatalogCheckout") + `?product_id=${product.id}`);
+    navigate(createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`);
   };
 
   const handleShare = async () => {
