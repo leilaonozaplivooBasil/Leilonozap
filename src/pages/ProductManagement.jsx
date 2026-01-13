@@ -406,6 +406,7 @@ export default function ProductManagement() {
             <option value="all">Nome do depósito</option>
             <option value="Bangu">Bangu</option>
             <option value="Oficina">Oficina</option>
+            <option value="Recreio">Recreio</option>
           </select>
 
           <select
@@ -820,6 +821,7 @@ export default function ProductManagement() {
                       >
                         <option value="Bangu">Bangu</option>
                         <option value="Oficina">Oficina</option>
+                        <option value="Recreio">Recreio</option>
                       </select>
                     </div>
 
