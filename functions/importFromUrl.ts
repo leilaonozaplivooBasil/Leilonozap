@@ -198,9 +198,18 @@ RETORNE JSON:`,
 
         console.log(`✅ FINAL: ${validUrls.length} imagens validadas de ${finalImageUrls.length} extraídas`);
 
+        // Formata características como string legível
+        let characteristics = '';
+        if (apiResult?.attributes && typeof apiResult.attributes === 'object') {
+            characteristics = Object.entries(apiResult.attributes)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join('\n');
+        }
+
         return Response.json({
             title: title || '',
             description: description || '',
+            characteristics: characteristics || '',
             imageUrls: validUrls,
             price: price || null,
             brand: brand || null,
