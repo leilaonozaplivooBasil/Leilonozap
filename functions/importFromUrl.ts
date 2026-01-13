@@ -130,44 +130,32 @@ Deno.serve(async (req) => {
             const snippet = html.substring(0, 15000);
             
             const aiResult = await base44.integrations.Core.InvokeLLM({
-                prompt: `TAREFA: Separar NOME do DETALHES do produto
+                prompt: `TAREFA SIMPLES: Extrair título e descrição do anúncio
 
 HTML:
 ${snippet}
 
-REGRAS ABSOLUTAS - NÃO QUEBRAR:
+INSTRUÇÕES:
 
-**TITLE (Deve ser CURTO - máximo 6 palavras):**
-- SÓ: Marca + Tipo + Capacidade (se houver)
-- NÃO incluir: voltagem, cor, estado, velocidades, características
+**TITLE:**
+- Pegue exatamente o título do anúncio/produto como aparece
+- SEM limite de palavras
+- Apenas o nome do produto
 
-**DESCRIPTION (Deve ser LONGO - todos os detalhes):**
-- Tipo: automático, semi-automático, manual, etc
-- Voltagem: 110V, 220V, bivolt
-- Capacidade: kg, litros, tamanho
-- Cores disponíveis
-- Material
-- Características de funcionamento
-- Tudo mais NÃO colocado no title
+**DESCRIPTION:**
+- Pegue a descrição completa do anúncio
+- Inclua TODAS as características técnicas
+- Inclua especificações, detalhes, condição, estado
+- SEM limite de tamanho
+- Combine descrição + características em um texto único
 
-REGRA DE OURO: O que sobrar do title vai na description
+Exemplo:
+- Anúncio: "Máquina de Lavar Tanquinho 24kg 110V Semi Automática"
+  - Description: "Descrição completa com especificações..."
+- title: "Máquina de Lavar Tanquinho 24kg 110V Semi Automática"
+- description: "Semi-automática, capacidade 24kg, voltagem 110V, para 7 dias, estado testado e funcional..."
 
-**EXEMPLO 1:**
-Entrada: "Máquina de Lavar Tanquinho 24kg Semi Automática 110V"
-title: ✅ "Máquina de Lavar Tanquinho"
-description: ✅ "Capacidade 24kg, semi-automática, voltagem 110V"
-
-**EXEMPLO 2:**
-Entrada: "iPhone 15 Pro 256GB Cor Preta Câmera 48MP"
-title: ✅ "iPhone 15 Pro"
-description: ✅ "256GB de armazenamento, cor preta, câmera de 48MP, tela OLED, processador A17 Pro"
-
-**EXEMPLO 3 (AVISO - ERRADO):**
-Entrada: "Geladeira Brastemp 500L Frost Free 110V"
-❌ ERRADO: title="Geladeira Brastemp 500L Frost Free 110V" + description="Geladeira Brastemp 500L Frost Free 110V" (IDÊNTICOS!)
-✅ CORRETO: title="Geladeira Brastemp 500L" + description="Frost Free, voltagem 110V, capacidade 500L..."
-
-RETORNE JSON com TITLE DIFERENTE da DESCRIPTION:`,
+RETORNE JSON:`,
                 response_json_schema: {
                     type: "object",
                     properties: {
