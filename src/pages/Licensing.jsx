@@ -581,15 +581,9 @@ const DashboardContent = ({ user, isAdmin }) => {
       const referredIds = Array.isArray(referredUsers) ? referredUsers.map(u => u.id).filter(Boolean) : [];
 
       console.log('📊 Usuários indicados:', referredIds.length);
+      console.log('🔑 Meu código de referral:', user.referral_code);
 
-      if (referredIds.length === 0) {
-        setMyAuctions([]);
-        setMySales([]);
-        setIsLoadingSales(false);
-        return;
-      }
-
-      // Buscar arremates de leilão (ended OU sold)
+      // Buscar arremates de leilão (ended OU sold) dos indicados
       const allAuctions = await Auction.list('-updated_date', 300);
       const wonAuctions = Array.isArray(allAuctions) 
         ? allAuctions.filter(a => 
@@ -602,15 +596,22 @@ const DashboardContent = ({ user, isAdmin }) => {
       console.log('🏆 Arremates encontrados:', wonAuctions.length);
       setMyAuctions(wonAuctions);
 
-      // Buscar vendas do catálogo
+      // Buscar vendas do catálogo onde EU SOU O LICENCIADO (vendedor)
       try {
         const CatalogSale = base44.entities.CatalogSale;
         const allCatalogSales = await CatalogSale.list('-created_date', 300);
+        
+        // Filtra vendas onde o licensee_id é meu código de referral OU meu user ID
         const catalogSales = Array.isArray(allCatalogSales)
-          ? allCatalogSales.filter(s => s.buyer_id && referredIds.includes(s.buyer_id))
+          ? allCatalogSales.filter(s => 
+              s.referred_by_code === user.referral_code || 
+              s.licensee_id === user.referral_code ||
+              s.licensee_id === user.id
+            )
           : [];
         
         console.log('🛍️ Vendas catálogo encontradas:', catalogSales.length);
+        console.log('🛍️ Vendas completas:', catalogSales);
         setMySales(catalogSales);
       } catch (catalogError) {
         console.error("Erro ao buscar vendas do catálogo:", catalogError);
