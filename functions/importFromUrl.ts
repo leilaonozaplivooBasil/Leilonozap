@@ -130,37 +130,44 @@ Deno.serve(async (req) => {
             const snippet = html.substring(0, 15000);
             
             const aiResult = await base44.integrations.Core.InvokeLLM({
-                prompt: `EXTRAÇÃO DO HTML - SEPARAÇÃO TOTAL ENTRE TÍTULO E DESCRIÇÃO:
+                prompt: `TAREFA: Separar NOME do DETALHES do produto
 
-HTML DO PRODUTO:
+HTML:
 ${snippet}
 
-INSTRUÇÕES RIGOROSAS:
+REGRAS ABSOLUTAS - NÃO QUEBRAR:
 
-CAMPO 1 - title (Nome Curto):
-- MÁXIMO 3-6 palavras
-- APENAS marca + modelo/tipo
-- Exemplos CORRETOS:
-  ✅ "Máquina de Lavar Tanquinho"
-  ✅ "iPhone 15 Pro 256GB"
-  ✅ "Geladeira Brastemp 500L"
-- Exemplos ERRADOS (não faça):
-  ❌ "Máquina de lavar semi automática tanquinho 24kg 110V"
-  ❌ "iPhone 15 Pro com 256GB de armazenamento e câmera de 48MP"
+**TITLE (Deve ser CURTO - máximo 6 palavras):**
+- SÓ: Marca + Tipo + Capacidade (se houver)
+- NÃO incluir: voltagem, cor, estado, velocidades, características
 
-CAMPO 2 - description (Descrição Completa):
-- Detalhe TUDO aqui
-- Especificações técnicas: voltagem, capacidade, cores, material, dimensões, etc
-- Características: automática/semi-automática, velocidades, ciclos, etc
-- Inclua TUDO EXCETO o nome que já está em title
-- Este é o campo de DETALHES
+**DESCRIPTION (Deve ser LONGO - todos os detalhes):**
+- Tipo: automático, semi-automático, manual, etc
+- Voltagem: 110V, 220V, bivolt
+- Capacidade: kg, litros, tamanho
+- Cores disponíveis
+- Material
+- Características de funcionamento
+- Tudo mais NÃO colocado no title
 
-EXEMPLO PERFEITO:
-  Produto: "Máquina de Lavar Roupas Tanquinho Mondial 24kg Semi Automática 110V"
-  title: "Máquina de Lavar Tanquinho Mondial 24kg"
-  description: "Semi automática, capacidade 24kg, voltagem 110V, cores disponíveis, características de lavagem..."
+REGRA DE OURO: O que sobrar do title vai na description
 
-RETORNE JSON:`,
+**EXEMPLO 1:**
+Entrada: "Máquina de Lavar Tanquinho 24kg Semi Automática 110V"
+title: ✅ "Máquina de Lavar Tanquinho"
+description: ✅ "Capacidade 24kg, semi-automática, voltagem 110V"
+
+**EXEMPLO 2:**
+Entrada: "iPhone 15 Pro 256GB Cor Preta Câmera 48MP"
+title: ✅ "iPhone 15 Pro"
+description: ✅ "256GB de armazenamento, cor preta, câmera de 48MP, tela OLED, processador A17 Pro"
+
+**EXEMPLO 3 (AVISO - ERRADO):**
+Entrada: "Geladeira Brastemp 500L Frost Free 110V"
+❌ ERRADO: title="Geladeira Brastemp 500L Frost Free 110V" + description="Geladeira Brastemp 500L Frost Free 110V" (IDÊNTICOS!)
+✅ CORRETO: title="Geladeira Brastemp 500L" + description="Frost Free, voltagem 110V, capacidade 500L..."
+
+RETORNE JSON com TITLE DIFERENTE da DESCRIPTION:`,
                 response_json_schema: {
                     type: "object",
                     properties: {
