@@ -106,6 +106,7 @@ export default function StockPosition() {
             <option value="all">Nome do depósito</option>
             <option value="Principal">Principal</option>
             <option value="Secundario">Secundário</option>
+            <option value="Recreio">Recreio</option>
           </select>
 
           <select
