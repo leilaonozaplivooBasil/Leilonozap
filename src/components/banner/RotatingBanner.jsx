@@ -50,7 +50,7 @@ export default function RotatingBanner({ banners }) {
   if (filteredBanners.length === 0) return null;
 
   return (
-    <div className="relative w-full h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden group">
+    <div className="relative w-full h-48 md:h-64 lg:h-80 rounded-2xl overflow-hidden group">
       {/* Imagem do Banner */}
       <div className="relative w-full h-full">
         {filteredBanners.map((banner, index) => (
@@ -65,7 +65,7 @@ export default function RotatingBanner({ banners }) {
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className="w-full h-full object-contain cursor-pointer"
+                  className="w-full h-full object-cover cursor-pointer"
                   loading="eager"
                   fetchpriority="high"
                   decoding="sync"
@@ -76,7 +76,7 @@ export default function RotatingBanner({ banners }) {
               <img
                 src={banner.image_url}
                 alt={banner.title || 'Banner'}
-                className="w-full h-full object-contain"
+                className="w-full h-full object-cover"
                 loading="eager"
                 fetchpriority="high"
                 decoding="sync"
