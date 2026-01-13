@@ -410,6 +410,7 @@ export default function Layout({ children, currentPageName }) {
       items: [
         { title: "Gestão de Produtos", pageName: "ProductManagement" },
         { title: "🎨 Gerenciar Banners", pageName: "BannerManagement" },
+        { title: "📦 Gerenciar Catálogo", pageName: "CatalogManagement" },
         { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
         { title: "💳 Transações", pageName: "TransactionHistory" },
       ]
