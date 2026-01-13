@@ -61,27 +61,43 @@ export default function RotatingBanner({ banners }) {
             }`}
           >
             {banner.link_url ? (
-              <a href={banner.link_url} target="_blank" rel="noopener noreferrer">
+              <a href={banner.link_url} target="_blank" rel="noopener noreferrer" className="block w-full h-full overflow-hidden">
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className="w-full h-full object-contain cursor-pointer"
+                  className="w-full h-full cursor-pointer"
                   loading="eager"
                   fetchpriority="high"
                   decoding="sync"
-                  style={{ imageRendering: '-webkit-optimize-contrast' }}
+                  style={{
+                    imageRendering: '-webkit-optimize-contrast',
+                    objectFit: 'cover',
+                    ...(banner.image_adjustments ? {
+                      objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
+                      transform: `scale(${banner.image_adjustments.scale || 1})`
+                    } : {})
+                  }}
                 />
               </a>
             ) : (
-              <img
-                src={banner.image_url}
-                alt={banner.title || 'Banner'}
-                className="w-full h-full object-contain"
-                loading="eager"
-                fetchpriority="high"
-                decoding="sync"
-                style={{ imageRendering: '-webkit-optimize-contrast' }}
-              />
+              <div className="w-full h-full overflow-hidden">
+                <img
+                  src={banner.image_url}
+                  alt={banner.title || 'Banner'}
+                  className="w-full h-full"
+                  loading="eager"
+                  fetchpriority="high"
+                  decoding="sync"
+                  style={{
+                    imageRendering: '-webkit-optimize-contrast',
+                    objectFit: 'cover',
+                    ...(banner.image_adjustments ? {
+                      objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
+                      transform: `scale(${banner.image_adjustments.scale || 1})`
+                    } : {})
+                  }}
+                />
+              </div>
             )}
           </div>
         ))}
