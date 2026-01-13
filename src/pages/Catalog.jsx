@@ -366,7 +366,7 @@ export default function Catalog() {
           animation: fire 1.8s ease-in-out infinite;
         }
       `}</style>
-
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Hero Section */}
         <div className="mb-8">
@@ -392,18 +392,14 @@ export default function Catalog() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* BANNER ROTATIVO - LARGURA TOTAL */}
-      {banners.length > 0 &&
-      <div className="mb-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <RotatingBanner banners={banners} />
-        </div>
-      </div>
-      }
+        {/* BANNER ROTATIVO */}
+        {banners.length > 0 &&
+        <div className="mb-8">
+            <RotatingBanner banners={banners} />
+          </div>
+        }
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
           {/* Busca */}

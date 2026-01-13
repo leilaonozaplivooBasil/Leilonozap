@@ -50,7 +50,7 @@ export default function RotatingBanner({ banners }) {
   if (filteredBanners.length === 0) return null;
 
   return (
-    <div className="relative w-full rounded-2xl overflow-hidden group" style={{ aspectRatio: '1920/600' }}>
+    <div className="relative w-full h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden group">
       {/* Imagem do Banner */}
       <div className="relative w-full h-full">
         {filteredBanners.map((banner, index) => (
