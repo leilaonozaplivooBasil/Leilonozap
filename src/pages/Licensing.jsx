@@ -1272,17 +1272,17 @@ const DashboardContent = ({ user, isAdmin }) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-         <TabsList className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-           <TabsTrigger value="visao-geral">Visão Geral</TabsTrigger>
-           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo">🛍️ Catálogo</TabsTrigger>}
-           <TabsTrigger value="meus-links">Meus Links</TabsTrigger>
-           <TabsTrigger value="minhas-vendas">Minhas Vendas</TabsTrigger>
-           {['diretor', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe">Vendas da Equipe</TabsTrigger>}
-           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos">📦 Pedidos</TabsTrigger>}
-           <TabsTrigger value="meus-clientes">👥 Clientes ({myClients.length})</TabsTrigger>
-           <TabsTrigger value="comissoes">💰 Comissões</TabsTrigger>
-           <TabsTrigger value="plano-carreira">🎯 Plano de Carreira</TabsTrigger>
-           {isAdmin && <TabsTrigger value="admin">Admin</TabsTrigger>}
+         <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
+           <TabsTrigger value="visao-geral" className="text-xs sm:text-sm whitespace-nowrap">Visão Geral</TabsTrigger>
+           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Catálogo</TabsTrigger>}
+           <TabsTrigger value="meus-links" className="text-xs sm:text-sm whitespace-nowrap">Meus Links</TabsTrigger>
+           <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
+           {['diretor', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
+           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
+           <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
+           <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
+           <TabsTrigger value="plano-carreira" className="text-xs sm:text-sm whitespace-nowrap">🎯 Carreira</TabsTrigger>
+           {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
          </TabsList>
 
         {/* ABA: MEUS LINKS */}
