@@ -1833,14 +1833,6 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* AUTO-APPLY EFFECT */}
-                    {React.useEffect(() => {
-                      if (manualStep === 5 && downloadedImages.length > 0) {
-                        const timer = setTimeout(applyToForm, 1000);
-                        return () => clearTimeout(timer);
-                      }
-                    }, [manualStep, downloadedImages.length])}
-
                     {/* 🆕 ETAPA 2: URLs DAS IMAGENS EXTRAÍDAS (SEM PREVIEW) */}
                     {manualStep === 2 && (
                       <div className="space-y-4">
