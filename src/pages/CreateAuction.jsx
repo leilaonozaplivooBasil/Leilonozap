@@ -732,22 +732,22 @@ export default function CreateAuction() {
      setExtractedData({ title: data.title, description: data.description });
       
       // 📸 MOSTRA URLs EXTRAÍDAS (SEM BAIXAR)
-      if (imageUrls && imageUrls.length > 0) {
-        setExtractedImageUrls(imageUrls.slice(0, 6));
+      if (data.imageUrls && data.imageUrls.length > 0) {
+        setExtractedImageUrls(data.imageUrls.slice(0, 6));
         setManualStep(2); // Vai para tela de URLs
-        toast.success(`✅ ${imageUrls.length} URLs de imagens encontradas!`);
+        toast.success(`✅ ${data.imageUrls.length} URLs de imagens encontradas!`);
       } else {
         toast.warning("⚠️ Nenhuma imagem encontrada. Use upload manual.");
-        
+
         // Aplica só dados textuais
         setFormData(prev => ({
           ...prev,
-          title,
-          description,
-          starting_price: price ? price.toString() : prev.starting_price,
+          title: data.title,
+          description: data.description,
+          starting_price: data.price ? data.price.toString() : prev.starting_price,
           source_url: productUrl
         }));
-        
+
         setProductUrl("");
         setManualStep(0);
       }
