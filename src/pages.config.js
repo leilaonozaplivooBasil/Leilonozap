@@ -7,8 +7,10 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
+import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
+import CatalogManagement from './pages/CatalogManagement';
 import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
 import CreateAuction from './pages/CreateAuction';
@@ -53,8 +55,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import CatalogManagement from './pages/CatalogManagement';
-import Catalog from './pages/Catalog';
 import __Layout from './Layout.jsx';
 
 
@@ -68,8 +68,10 @@ export const PAGES = {
     "AuctionRoom": AuctionRoom,
     "BannerManagement": BannerManagement,
     "CRM": CRM,
+    "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
+    "CatalogManagement": CatalogManagement,
     "CatalogProductDetails": CatalogProductDetails,
     "Checkout": Checkout,
     "CreateAuction": CreateAuction,
@@ -114,8 +116,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "CatalogManagement": CatalogManagement,
-    "Catalog": Catalog,
 }
 
 export const pagesConfig = {

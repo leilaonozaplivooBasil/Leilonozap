@@ -1488,6 +1488,11 @@ export default function CreateAuction() {
                                         }
                                         
                                         console.log('✅ Imagens ML extraídas:', data.images.length);
+                                        console.log('📝 DADOS EXTRAÍDOS:', {
+                                          title: data.title,
+                                          description: data.description,
+                                          price: data.price
+                                        });
                                         
                                         setExtractedData({ 
                                           title: data.title || '', 
@@ -1496,8 +1501,8 @@ export default function CreateAuction() {
                                         
                                         setFormData(prev => ({
                                           ...prev,
-                                          title: data.title || prev.title,
-                                          description: data.description || prev.description,
+                                          title: (data.title || prev.title).trim(),
+                                          description: (data.description || prev.description).trim(),
                                           starting_price: data.price ? data.price.toString() : prev.starting_price,
                                           source_url: productUrl
                                         }));
