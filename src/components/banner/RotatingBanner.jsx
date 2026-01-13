@@ -65,7 +65,7 @@ export default function RotatingBanner({ banners }) {
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className="w-full h-full object-cover cursor-pointer"
+                  className="w-full h-full object-contain cursor-pointer"
                   loading="eager"
                   fetchpriority="high"
                   decoding="sync"
@@ -76,7 +76,7 @@ export default function RotatingBanner({ banners }) {
               <img
                 src={banner.image_url}
                 alt={banner.title || 'Banner'}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 loading="eager"
                 fetchpriority="high"
                 decoding="sync"
