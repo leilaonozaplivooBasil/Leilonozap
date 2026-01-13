@@ -40,11 +40,11 @@ export default function ImagePositionEditor({ imageUrl, onSave, onCancel, device
 
     const container = containerRef.current.getBoundingClientRect();
     
-    // Limites para evitar espaços vazios
+    // Calcular limites: a imagem deve sempre cobrir todo o container
     const maxX = 0;
-    const minX = container.width - imageDimensions.width;
+    const minX = Math.min(0, container.width - imageDimensions.width);
     const maxY = 0;
-    const minY = container.height - imageDimensions.height;
+    const minY = Math.min(0, container.height - imageDimensions.height);
 
     return {
       x: Math.max(minX, Math.min(maxX, x)),
@@ -100,11 +100,19 @@ export default function ImagePositionEditor({ imageUrl, onSave, onCancel, device
   const handleZoomIn = () => {
     const newScale = Math.min(scale + 0.1, 3);
     setScale(newScale);
+    // Reaplica constraint após zoom
+    setTimeout(() => {
+      setPosition(prev => constrainPosition(prev.x, prev.y));
+    }, 50);
   };
 
   const handleZoomOut = () => {
     const newScale = Math.max(scale - 0.1, 1);
     setScale(newScale);
+    // Reaplica constraint após zoom
+    setTimeout(() => {
+      setPosition(prev => constrainPosition(prev.x, prev.y));
+    }, 50);
   };
 
   const handleReset = () => {

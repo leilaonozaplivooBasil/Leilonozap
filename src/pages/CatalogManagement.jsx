@@ -353,7 +353,7 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
     setIsUploading(true);
     const imageUrl = await onUploadImage(file);
     if (imageUrl) {
-      setFormData({ ...formData, image_url: imageUrl });
+      setFormData({ ...formData, image_url: imageUrl, image_adjustments: null });
       toast.success('Imagem enviada com sucesso!');
     }
     setIsUploading(false);
