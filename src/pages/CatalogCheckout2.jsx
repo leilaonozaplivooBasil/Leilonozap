@@ -33,48 +33,25 @@ export default function CatalogCheckout2() {
     const navigate = useNavigate();
 
     const handleCreatePreference = async () => {
-        if (!lastName || lastName.trim() === '') {
-            toast.error('Por favor, preencha seu sobrenome');
+        // Validações básicas
+        if (!firstName?.trim()) {
+            toast.error('Preencha o primeiro nome');
             return;
         }
-
-        if (!phone || phone.trim() === '') {
-            toast.error('Telefone é obrigatório para pagamento');
+        if (!lastName?.trim()) {
+            toast.error('Preencha o sobrenome');
             return;
         }
-
-        if (!cpf || cpf.trim() === '') {
-            toast.error('CPF é obrigatório para pagamento');
+        if (!cpf?.trim()) {
+            toast.error('CPF é obrigatório');
             return;
         }
-
-        if (!addressStreet || addressStreet.trim() === '') {
-            toast.error('Endereço é obrigatório para entrega');
+        if (!email?.trim()) {
+            toast.error('Email é obrigatório');
             return;
         }
-
-        if (!addressNumber || addressNumber.trim() === '') {
-            toast.error('Número do endereço é obrigatório');
-            return;
-        }
-
-        if (!addressCity || addressCity.trim() === '') {
-            toast.error('Cidade é obrigatória');
-            return;
-        }
-
-        if (!addressState || addressState.trim() === '') {
-            toast.error('Estado é obrigatório');
-            return;
-        }
-
-        if (!addressZip || addressZip.trim() === '') {
-            toast.error('CEP é obrigatório');
-            return;
-        }
-
-        if (!addressNeighborhood || addressNeighborhood.trim() === '') {
-            toast.error('Bairro é obrigatório');
+        if (!phone?.trim()) {
+            toast.error('Telefone é obrigatório');
             return;
         }
 
@@ -82,6 +59,8 @@ export default function CatalogCheckout2() {
             toast.error('Produto não encontrado');
             return;
         }
+
+        console.log('✅ Validações OK, processando...');
 
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
@@ -599,7 +578,7 @@ export default function CatalogCheckout2() {
                                  <div className="space-y-3">
                                      <button
                                          onClick={handleCreatePreference}
-                                         disabled={!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
+                                         disabled={!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim()}
                                          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
                                          >
                                          {preferenceId ? (
@@ -614,8 +593,10 @@ export default function CatalogCheckout2() {
                                              </>
                                          )}
                                      </button>
-                                     {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
-                                     <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
+                                     {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim()) && (
+                                         <p className="text-xs text-yellow-400 text-center">
+                                             Preencha Nome, Sobrenome, CPF, Email e Telefone
+                                         </p>
                                      )}
                                  </div>
                              )}
