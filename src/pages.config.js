@@ -46,7 +46,6 @@ import ProtectionDashboard from './pages/ProtectionDashboard';
 import Register from './pages/Register';
 import RegisterBatches from './pages/RegisterBatches';
 import ShippingSettings from './pages/ShippingSettings';
-import StockPosition from './pages/StockPosition';
 import StoreRegistration from './pages/StoreRegistration';
 import StressTest from './pages/StressTest';
 import SystemChecklist from './pages/SystemChecklist';
@@ -55,6 +54,7 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
+import StockPosition from './pages/StockPosition';
 import __Layout from './Layout.jsx';
 
 
@@ -107,7 +107,6 @@ export const PAGES = {
     "Register": Register,
     "RegisterBatches": RegisterBatches,
     "ShippingSettings": ShippingSettings,
-    "StockPosition": StockPosition,
     "StoreRegistration": StoreRegistration,
     "StressTest": StressTest,
     "SystemChecklist": SystemChecklist,
@@ -116,6 +115,7 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
+    "StockPosition": StockPosition,
 }
 
 export const pagesConfig = {
