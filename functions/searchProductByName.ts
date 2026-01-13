@@ -381,12 +381,13 @@ RETORNE EM JSON:`,
                             }
                         }
                     }
-                } else {
-                    console.log('⚠️ IA não retornou image_urls');
+                    } else {
+                        console.log('⚠️ IA não retornou image_urls');
+                    }
+                } catch (err) {
+                    console.error('❌ Erro ao extrair com IA:', err.message);
                 }
-            } catch (err) {
-                console.error('❌ Erro ao extrair com IA:', err.message);
-            }
+              }
 
             if (specificImageUrls.length === 0) {
                 console.log('❌ Nenhuma imagem válida encontrada');
