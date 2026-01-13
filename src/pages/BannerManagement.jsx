@@ -21,7 +21,7 @@ export default function BannerManagement() {
 
   const loadBanners = async () => {
     try {
-      const data = await base44.entities.BannerImage.list('order');
+      const data = await base44.entities.BannerImage.filter({ context: 'home' }, 'order');
       setBanners(data || []);
     } catch (error) {
       console.error('Erro ao carregar banners:', error);
@@ -70,6 +70,7 @@ export default function BannerManagement() {
     try {
       await base44.entities.BannerImage.create({
         ...formData,
+        context: 'home',
         order: banners.length
       });
       toast.success('Banner criado com sucesso!');
