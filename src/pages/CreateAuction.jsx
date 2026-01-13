@@ -1769,61 +1769,68 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* 🆕 ETAPA 5: PREVIEW DAS IMAGENS IMPORTADAS */}
+                    {/* 🆕 ETAPA 5: PREVIEW DAS IMAGENS IMPORTADAS - AUTO APPLY */}
                     {manualStep === 5 && downloadedImages.length > 0 && (
-                      <div className="space-y-4">
-                        <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
-                          <h4 className="font-bold text-green-300 mb-3 flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4" />
-                            ✅ Produto Importado com Sucesso!
-                          </h4>
-                          <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
-                            <div><span className="text-green-400 font-semibold">Título:</span> {importedData?.title || extractedData?.title || formData.title}</div>
-                            {importedData?.price && (
-                              <div><span className="text-green-400 font-semibold">Preço:</span> R$ {importedData.price.toFixed(2)}</div>
-                            )}
+                      <>
+                        <div className="space-y-4">
+                          <div className="bg-green-900/30 p-4 rounded-lg border border-green-700">
+                            <h4 className="font-bold text-green-300 mb-3 flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4" />
+                              ✅ Produto Importado com Sucesso!
+                            </h4>
+                            <div className="space-y-2 text-sm bg-black/30 p-3 rounded">
+                              <div><span className="text-green-400 font-semibold">Título:</span> {importedData?.title || extractedData?.title || formData.title}</div>
+                              {importedData?.price && (
+                                <div><span className="text-green-400 font-semibold">Preço:</span> R$ {importedData.price.toFixed(2)}</div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
+                            <h4 className="font-bold text-white mb-3 flex items-center gap-2">
+                              <ImageIcon className="w-4 h-4" />
+                              📸 Imagens ({downloadedImages.length})
+                            </h4>
+                            <div className="grid grid-cols-2 gap-3">
+                              {downloadedImages.map((img, index) => (
+                                <div key={index} className="relative border-2 border-gray-700 rounded-lg overflow-hidden">
+                                  <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
+                                    <img 
+                                      src={img} 
+                                      alt={`Imagem ${index + 1}`}
+                                      className="max-w-full max-h-full object-contain"
+                                      loading="eager"
+                                      onError={(e) => {
+                                        console.error(`❌ Erro ao carregar imagem ${index + 1}`);
+                                        e.target.style.display = 'none';
+                                        if (e.target.parentElement) {
+                                          e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs">❌ Erro ao carregar</div>`;
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
+                                    {index === 0 ? '🏆 CAPA' : `#${index + 1}`}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="bg-blue-900/20 p-3 rounded-lg border border-blue-600 text-center">
+                            <p className="text-sm text-blue-300 flex items-center justify-center gap-2">
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Aplicando dados no formulário automaticamente...
+                            </p>
                           </div>
                         </div>
-
-                        <div className="bg-gray-800 rounded-lg border border-gray-700 p-4">
-                          <h4 className="font-bold text-white mb-3 flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4" />
-                            📸 Imagens ({downloadedImages.length})
-                          </h4>
-                          <div className="grid grid-cols-2 gap-3">
-                            {downloadedImages.map((img, index) => (
-                              <div key={index} className="relative border-2 border-gray-700 rounded-lg overflow-hidden">
-                                <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
-                                  <img 
-                                    src={img} 
-                                    alt={`Imagem ${index + 1}`}
-                                    className="max-w-full max-h-full object-contain"
-                                    loading="eager"
-                                    onError={(e) => {
-                                      console.error(`❌ Erro ao carregar imagem ${index + 1}`);
-                                      e.target.style.display = 'none';
-                                      if (e.target.parentElement) {
-                                        e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs">❌ Erro ao carregar</div>`;
-                                      }
-                                    }}
-                                  />
-                                </div>
-                                <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
-                                  {index === 0 ? '🏆 CAPA' : `#${index + 1}`}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <Button 
-                          onClick={applyToForm}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-base py-3"
-                        >
-                          <Upload className="w-5 h-5 mr-2" />
-                          🚀 Aplicar no Formulário
-                        </Button>
-                      </div>
+                        
+                        {/* AUTO-APPLY NO CARREGAMENTO */}
+                        {React.useEffect(() => {
+                          const timer = setTimeout(applyToForm, 500);
+                          return () => clearTimeout(timer);
+                        }, [manualStep, downloadedImages.length])}
+                      </>
                     )}
 
                     {/* 🆕 ETAPA 2: URLs DAS IMAGENS EXTRAÍDAS (SEM PREVIEW) */}
