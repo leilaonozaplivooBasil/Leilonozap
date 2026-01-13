@@ -4,7 +4,7 @@ import { MercadoPagoConfig, Preference } from 'npm:mercadopago@2.0.15';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const { auction_id, user_data } = await req.json();
+        const { auction_id, product_id, catalog_sale_id, user_data } = await req.json();
 
         // Aceita user_data do frontend (domínio customizado) ou tenta pegar via auth.me()
         let user = user_data;
@@ -52,17 +52,50 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'CEP é obrigatório' }, { status: 400 });
         }
 
-        if (!auction_id) {
-            return Response.json({ error: 'auction_id é obrigatório' }, { status: 400 });
+        if (!auction_id && !product_id) {
+            return Response.json({ error: 'auction_id ou product_id é obrigatório' }, { status: 400 });
         }
 
-        // Buscar leilão
-        const auctions = await base44.entities.Auction.filter({ id: auction_id });
-        if (auctions.length === 0) {
-            return Response.json({ error: 'Leilão não encontrado' }, { status: 404 });
+        let itemData;
+        let entityId;
+        
+        if (product_id) {
+            // Checkout de catálogo
+            const products = await base44.entities.Product.filter({ id: product_id });
+            if (products.length === 0) {
+                return Response.json({ error: 'Produto não encontrado' }, { status: 404 });
+            }
+            const product = products[0];
+            itemData = {
+                id: product_id,
+                title: product.description,
+                description: product.notes || product.description,
+                picture_url: product.image_urls?.[0] || undefined,
+                category_id: 'others',
+                quantity: 1,
+                currency_id: 'BRL',
+                unit_price: product.price_catalog
+            };
+            entityId = product_id;
+        } else {
+            // Checkout de leilão
+            const auctions = await base44.entities.Auction.filter({ id: auction_id });
+            if (auctions.length === 0) {
+                return Response.json({ error: 'Leilão não encontrado' }, { status: 404 });
+            }
+            const auction = auctions[0];
+            itemData = {
+                id: auction_id,
+                title: auction.title,
+                description: auction.description || auction.title,
+                picture_url: auction.image_urls?.[0] || undefined,
+                category_id: 'others',
+                quantity: 1,
+                currency_id: 'BRL',
+                unit_price: auction.current_price
+            };
+            entityId = auction_id;
         }
-
-        const auction = auctions[0];
 
         // Inicializar SDK do Mercado Pago
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
@@ -92,7 +125,9 @@ Deno.serve(async (req) => {
         const preference = new Preference(client);
 
         // Criar referência externa
-        const externalReference = `auction_${auction_id}_${Date.now()}`;
+        const externalReference = product_id 
+            ? `catalog_${product_id}_${Date.now()}`
+            : `auction_${auction_id}_${Date.now()}`;
 
         // Montar endereço completo
         const fullAddress = [
@@ -106,18 +141,7 @@ Deno.serve(async (req) => {
         ].filter(x => x && x.trim()).join(', ');
 
         const preferenceData = {
-            items: [
-                {
-                    id: auction_id,
-                    title: auction.title,
-                    description: auction.description || auction.title,
-                    picture_url: auction.image_urls?.[0] || undefined,
-                    category_id: 'others',
-                    quantity: 1,
-                    currency_id: 'BRL',
-                    unit_price: auction.current_price
-                }
-            ],
+            items: [itemData],
             payer: {
                 name: user.full_name || user.email.split('@')[0],
                 last_name: user.last_name.trim(),
@@ -137,7 +161,11 @@ Deno.serve(async (req) => {
                 }
             },
             external_reference: externalReference,
-            back_urls: {
+            back_urls: product_id ? {
+                success: `${req.headers.get('origin')}/Catalog`,
+                failure: `${req.headers.get('origin')}/CatalogCheckout2?product_id=${product_id}`,
+                pending: `${req.headers.get('origin')}/Catalog`
+            } : {
                 success: `${req.headers.get('origin')}/MyWinnings`,
                 failure: `${req.headers.get('origin')}/Checkout?auction_id=${auction_id}`,
                 pending: `${req.headers.get('origin')}/MyWinnings`
@@ -155,10 +183,12 @@ Deno.serve(async (req) => {
 
         // Salvar no banco
         await base44.entities.MercadoPagoPayment.create({
-            auction_id,
+            auction_id: auction_id || null,
+            product_id: product_id || null,
+            catalog_sale_id: catalog_sale_id || null,
             user_id: user.id,
             preference_id: result.id,
-            amount: auction.current_price,
+            amount: itemData.unit_price,
             external_reference: externalReference,
             status: 'pending',
             payment_method: 'pending',
