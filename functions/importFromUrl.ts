@@ -130,19 +130,22 @@ Deno.serve(async (req) => {
             const snippet = html.substring(0, 15000);
             
             const aiResult = await base44.integrations.Core.InvokeLLM({
-                prompt: `EXTRAÇÃO DO HTML DO PRODUTO:
+                prompt: `EXTRAÇÃO DO HTML DO PRODUTO - SEPARAÇÃO CRÍTICA:
 
 HTML:
 ${snippet}
 
-RETORNE JSON:
-1. title: Título completo do produto
-2. description: Descrição detalhada com especificações técnicas
+RETORNE JSON EXATO COM CAMPOS SEPARADOS:
+1. title: APENAS o nome do produto, SEM descrição. Ex: "iPhone 15 Pro" ou "Geladeira Brastemp 500L"
+2. description: DESCRIÇÃO DETALHADA com especificações técnicas, características, dimensões, voltagem, etc. SEM repetir o título
 3. price: Preço numérico (apenas números, ex: 2999.90)
 4. brand: Marca do produto (se identificável)
 5. model: Modelo específico (se identificável)
 
-⚠️ NÃO precisa extrair URLs de imagens, isso já foi feito.`,
+⚠️ CRÍTICO: 
+- title deve ter APENAS o nome (5-10 palavras máximo)
+- description deve ter os DETALHES completos (sem repetir o título)
+- Não misture os dois campos!`,
                 response_json_schema: {
                     type: "object",
                     properties: {
