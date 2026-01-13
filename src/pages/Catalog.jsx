@@ -279,20 +279,20 @@ export default function Catalog() {
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
       try {
-        const cachedBanners = sessionStorage.getItem('banners_cache');
-        const cacheTime = sessionStorage.getItem('banners_cache_time');
+        const cachedBanners = sessionStorage.getItem('catalog_banners_cache');
+        const cacheTime = sessionStorage.getItem('catalog_banners_cache_time');
 
         if (cachedBanners && cacheTime && Date.now() - parseInt(cacheTime) < 120000) {
           setBanners(JSON.parse(cachedBanners));
-          console.log('⚡ Banners do cache');
+          console.log('⚡ Banners do catálogo do cache');
         } else {
           setTimeout(async () => {
             try {
-              const bannerData = await base44.entities.BannerImage.filter({ is_active: true });
+              const bannerData = await base44.entities.BannerImage.filter({ is_active: true, context: 'catalog' });
               const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
               setBanners(sortedBanners);
-              sessionStorage.setItem('banners_cache', JSON.stringify(sortedBanners));
-              sessionStorage.setItem('banners_cache_time', Date.now().toString());
+              sessionStorage.setItem('catalog_banners_cache', JSON.stringify(sortedBanners));
+              sessionStorage.setItem('catalog_banners_cache_time', Date.now().toString());
             } catch (error) {
               console.debug('Erro ao carregar banners:', error.message);
             }
@@ -300,7 +300,7 @@ export default function Catalog() {
         }
       } catch (error) {
         console.error('Erro ao carregar banners:', error);
-        const cachedBanners = sessionStorage.getItem('banners_cache');
+        const cachedBanners = sessionStorage.getItem('catalog_banners_cache');
         if (cachedBanners) {
           setBanners(JSON.parse(cachedBanners));
         }
