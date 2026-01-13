@@ -1226,15 +1226,54 @@ const DashboardContent = ({ user, isAdmin }) => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Link do Influenciador */}
+              {/* Link do Influenciador - PRINCIPAL */}
               <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-gray-50 border-gray-300' : 'bg-gray-700/50 border-gray-600'}`}>
-                <h4 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🎯 Link de Influenciador</h4>
+                <h4 className={`font-semibold mb-3 flex items-center gap-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+                  🎯 Link de Influenciador
+                  <span className="px-2 py-0.5 text-xs bg-yellow-500/20 text-yellow-400 rounded-full border border-yellow-500/30">
+                    ⚠️ Domínio em Correção
+                  </span>
+                </h4>
                 <p className={`text-sm mb-3 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Ganhe 3% em cada arremate dos seus indicados</p>
-                <div className="flex gap-2">
-                  <Input value={referralLink} readOnly className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
-                  <Button onClick={copyToClipboard} className="bg-green-600 hover:bg-green-700" size="sm">
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                
+                {/* Link Base44 TEMPORÁRIO */}
+                <div className="space-y-3 mb-4">
+                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                    <p className="text-xs text-blue-300 mb-2 font-semibold flex items-center gap-1">
+                      ✅ Link Temporário Base44 (Use este agora)
+                    </p>
+                    <div className="flex gap-2">
+                      <Input 
+                        value={`https://leilaonozap.base44.app${createPageUrl('Home')}?ref=${user.referral_code}`}
+                        readOnly 
+                        className="bg-gray-700 border-gray-600 text-white font-mono text-xs"
+                      />
+                      <Button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(`https://leilaonozap.base44.app${createPageUrl('Home')}?ref=${user.referral_code}`);
+                          toast.success('Link Base44 copiado!');
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700" 
+                        size="sm"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Link leilaonozap.app (AINDA EM CORREÇÃO) */}
+                <div>
+                  <p className="text-xs text-yellow-400 mb-2 font-semibold">⏳ Link Principal (Em manutenção)</p>
+                  <div className="flex gap-2 opacity-50">
+                    <Input value={referralLink} readOnly className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-xs' : 'bg-gray-700 border-gray-600 text-white font-mono text-xs'} />
+                    <Button disabled className="bg-gray-600" size="sm">
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    💡 Este link voltará a funcionar em breve após correção do DNS
+                  </p>
                 </div>
               </div>
 
@@ -1243,11 +1282,40 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
                   <h4 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-blue-900' : 'text-blue-400'}`}>🛍️ Link do Catálogo</h4>
                   <p className={`text-sm mb-3 ${isSaiDeBaixo ? 'text-blue-700' : 'text-blue-300'}`}>Ganhe comissão em vendas do seu catálogo ({(user.catalog_commission_rate || 0) * 100}%)</p>
-                  <div className="flex gap-2">
-                    <Input value={`https://leilaonozap.app/Catalog?ref=${user.referral_code}`} readOnly className={isSaiDeBaixo ? 'bg-white border-blue-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
-                    <Button onClick={() => { navigator.clipboard.writeText(`https://leilaonozap.app/Catalog?ref=${user.referral_code}`); toast.success('Link copiado!'); }} className="bg-blue-600 hover:bg-blue-700" size="sm">
-                      <Copy className="w-4 h-4" />
-                    </Button>
+                  
+                  {/* Link Base44 TEMPORÁRIO */}
+                  <div className="space-y-3 mb-4">
+                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                      <p className="text-xs text-blue-300 mb-2 font-semibold">✅ Link Temporário Base44</p>
+                      <div className="flex gap-2">
+                        <Input 
+                          value={`https://leilaonozap.base44.app/Catalog?ref=${user.referral_code}`}
+                          readOnly 
+                          className="bg-gray-700 border-gray-600 text-white font-mono text-xs"
+                        />
+                        <Button 
+                          onClick={() => { 
+                            navigator.clipboard.writeText(`https://leilaonozap.base44.app/Catalog?ref=${user.referral_code}`); 
+                            toast.success('Link Base44 copiado!'); 
+                          }} 
+                          className="bg-blue-600 hover:bg-blue-700" 
+                          size="sm"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Link Original (EM MANUTENÇÃO) */}
+                  <div>
+                    <p className="text-xs text-yellow-400 mb-2 font-semibold">⏳ Link Principal (Em manutenção)</p>
+                    <div className="flex gap-2 opacity-50">
+                      <Input value={`https://leilaonozap.app/Catalog?ref=${user.referral_code}`} readOnly className={isSaiDeBaixo ? 'bg-white border-blue-300 text-gray-900 font-mono text-xs' : 'bg-gray-700 border-gray-600 text-white font-mono text-xs'} />
+                      <Button disabled className="bg-gray-600" size="sm">
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
