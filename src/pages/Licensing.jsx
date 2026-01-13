@@ -576,34 +576,46 @@ const DashboardContent = ({ user, isAdmin }) => {
 
     setIsLoadingSales(true);
     try {
-      await delay(500);
-      
       // Buscar usuários indicados
-      const referredUsers = await fetchWithRetry(
-        () => AppUser.filter({ referred_by_id: user.id })
-      );
-      const referredIds = referredUsers.map(u => u.id);
+      const referredUsers = await AppUser.filter({ referred_by_id: user.id });
+      const referredIds = Array.isArray(referredUsers) ? referredUsers.map(u => u.id).filter(Boolean) : [];
 
-      await delay(500);
+      console.log('📊 Usuários indicados:', referredIds.length);
+
+      if (referredIds.length === 0) {
+        setMyAuctions([]);
+        setMySales([]);
+        setIsLoadingSales(false);
+        return;
+      }
+
+      // Buscar arremates de leilão (ended OU sold)
+      const allAuctions = await Auction.list('-updated_date', 300);
+      const wonAuctions = Array.isArray(allAuctions) 
+        ? allAuctions.filter(a => 
+            a.winner_id && 
+            referredIds.includes(a.winner_id) && 
+            (a.status === 'sold' || a.status === 'ended')
+          )
+        : [];
+      
+      console.log('🏆 Arremates encontrados:', wonAuctions.length);
+      setMyAuctions(wonAuctions);
 
       // Buscar vendas do catálogo
-      const CatalogSale = base44.entities.CatalogSale;
-      const allCatalogSales = await fetchWithRetry(
-        () => CatalogSale.list('-created_date', 200)
-      );
-      const catalogSales = allCatalogSales.filter(s => referredIds.includes(s.buyer_id));
-      setMySales(Array.isArray(catalogSales) ? catalogSales : []);
-
-      await delay(500);
-
-      // Buscar arremates de leilão
-      const allAuctions = await fetchWithRetry(
-        () => Auction.list('-updated_date', 200)
-      );
-      const wonAuctions = allAuctions.filter(a => 
-        a.status === 'sold' && referredIds.includes(a.winner_id)
-      );
-      setMyAuctions(Array.isArray(wonAuctions) ? wonAuctions : []);
+      try {
+        const CatalogSale = base44.entities.CatalogSale;
+        const allCatalogSales = await CatalogSale.list('-created_date', 300);
+        const catalogSales = Array.isArray(allCatalogSales)
+          ? allCatalogSales.filter(s => s.buyer_id && referredIds.includes(s.buyer_id))
+          : [];
+        
+        console.log('🛍️ Vendas catálogo encontradas:', catalogSales.length);
+        setMySales(catalogSales);
+      } catch (catalogError) {
+        console.error("Erro ao buscar vendas do catálogo:", catalogError);
+        setMySales([]);
+      }
 
     } catch (error) {
       console.error("Erro ao buscar vendas:", error);
