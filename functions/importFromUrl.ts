@@ -206,15 +206,32 @@ RETORNE JSON:`,
                 .join('\n');
         }
 
+        // Combina descrição com características para o campo description do anúncio
+        const fullDescription = description + (characteristics ? '\n\n**CARACTERÍSTICAS TÉCNICAS:**\n' + characteristics : '');
+
         return Response.json({
-            title: title || '',
-            description: description || '',
-            characteristics: characteristics || '',
-            imageUrls: validUrls,
-            price: price || null,
-            brand: brand || null,
-            model: model || null,
-            sourceUrl: productUrl
+            auction: {
+                title: title || '',
+                description: fullDescription || '',
+                image_urls: validUrls,
+                source_url: productUrl,
+                market_price: price || null
+            },
+            product: {
+                title: title || '',
+                description: fullDescription || '',
+                image_urls: validUrls,
+                cost_price: price || null,
+                selling_price_retail: price ? price * 1.5 : null,
+                selling_price_wholesale: price ? price * 1.3 : null
+            },
+            metadata: {
+                brand: brand || '',
+                model: model || '',
+                characteristics: characteristics || '',
+                source_marketplace: 'mercadolivre',
+                source_url: productUrl
+            }
         });
 
     } catch (error) {
