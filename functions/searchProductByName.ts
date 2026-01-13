@@ -214,20 +214,58 @@ Deno.serve(async (req) => {
         console.log('⚠️ Não entrou no modo listAdsOnly, continuando...');
 
         // 🆕 MODO 2: CLONAR ANÚNCIO COMPLETO (título, descrição, preço, imagens)
-        if (adUrl) {
-            console.log('🔗 ========== MODO 2 ATIVADO (CLONAR ANÚNCIO) ==========');
-            console.log('🔗 URL do anúncio:', adUrl);
-            console.log('📸 Extraindo TODOS os dados do anúncio...');
-            
-            const specificImageUrls = [];
-            const seenSpecificUrls = new Set();
-            let extractedTitle = productTitle;
-            let extractedDescription = '';
-            let extractedPrice = productPrice;
-            
-            try {
-                // 🆕 PROMPT AGRESSIVO - FORÇA ÂNGULOS DIFERENTES
-                const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
+         if (adUrl) {
+             console.log('🔗 ========== MODO 2 ATIVADO (CLONAR ANÚNCIO) ==========');
+             console.log('🔗 URL do anúncio:', adUrl);
+             console.log('📸 Extraindo TODOS os dados do anúncio...');
+
+             const specificImageUrls = [];
+             const seenSpecificUrls = new Set();
+             let extractedTitle = productTitle;
+             let extractedDescription = '';
+             let extractedPrice = productPrice;
+             let usedApiPropria = false;
+
+             // 🆕 PRIMEIRO TENTA: API Própria de Scraping
+             try {
+                 console.log('🔄 Tentando API própria (api.midia.dev.br)...');
+                 const apiResponse = await fetch('https://api.midia.dev.br/api/scrape', {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ url: adUrl, download_images: false }),
+                     signal: AbortSignal.timeout(60000)
+                 });
+
+                 const apiData = await apiResponse.json();
+
+                 if (apiData.success && apiData.data) {
+                     console.log('✅ API Própria retornou com sucesso!');
+                     extractedTitle = apiData.data.title || productTitle;
+                     extractedDescription = apiData.data.description || '';
+                     extractedPrice = apiData.data.price ? parseFloat(apiData.data.price.replace(/[^\d.,]/g, '').replace(',', '.')) : productPrice;
+
+                     if (apiData.data.images && Array.isArray(apiData.data.images)) {
+                         for (const img of apiData.data.images) {
+                             if (img.url && !seenSpecificUrls.has(img.url) && specificImageUrls.length < 12) {
+                                 specificImageUrls.push(img.url);
+                                 seenSpecificUrls.add(img.url);
+                             }
+                         }
+                     }
+                     usedApiPropria = true;
+                 } else {
+                     console.log('⚠️ API Própria retornou erro:', apiData.error);
+                 }
+             } catch (e) {
+                 console.log('⚠️ API Própria falhou:', e.message);
+             }
+
+             // 🔄 SE API PRÓPRIA FALHOU: Fallback para IA + Google
+             if (!usedApiPropria) {
+                 console.log('📥 Usando fallback (IA + Google)...');
+                 try {
+                     // 🆕 PROMPT AGRESSIVO - FORÇA ÂNGULOS DIFERENTES
+                     const extractResponse = await base44.asServiceRole.integrations.Core.InvokeLLM({
                     prompt: `Você é um clonador profissional de anúncios de e-commerce.
 
 🎯 TAREFA: Acesse e clone COMPLETAMENTE este anúncio:
