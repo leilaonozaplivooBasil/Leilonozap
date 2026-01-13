@@ -394,6 +394,9 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [myWithdrawals, setMyWithdrawals] = useState([]);
   const [isLoadingWithdrawals, setIsLoadingWithdrawals] = useState(false);
   const [pendingWithdrawalAmount, setPendingWithdrawalAmount] = useState(0);
+  const [mySales, setMySales] = useState([]);
+  const [myAuctions, setMyAuctions] = useState([]);
+  const [isLoadingSales, setIsLoadingSales] = useState(false);
 
   // 🆕 REF PARA EVITAR MÚLTIPLAS CHAMADAS SIMULTÂNEAS
   const isFetchingRef = useRef(false);
@@ -568,6 +571,50 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   }, [user, isLoadingWithdrawals]);
 
+  const fetchMySales = useCallback(async () => {
+    if (!user || !user.id || isLoadingSales) return;
+
+    setIsLoadingSales(true);
+    try {
+      await delay(500);
+      
+      // Buscar usuários indicados
+      const referredUsers = await fetchWithRetry(
+        () => AppUser.filter({ referred_by_id: user.id })
+      );
+      const referredIds = referredUsers.map(u => u.id);
+
+      await delay(500);
+
+      // Buscar vendas do catálogo
+      const CatalogSale = base44.entities.CatalogSale;
+      const allCatalogSales = await fetchWithRetry(
+        () => CatalogSale.list('-created_date', 200)
+      );
+      const catalogSales = allCatalogSales.filter(s => referredIds.includes(s.buyer_id));
+      setMySales(Array.isArray(catalogSales) ? catalogSales : []);
+
+      await delay(500);
+
+      // Buscar arremates de leilão
+      const allAuctions = await fetchWithRetry(
+        () => Auction.list('-updated_date', 200)
+      );
+      const wonAuctions = allAuctions.filter(a => 
+        a.status === 'sold' && referredIds.includes(a.winner_id)
+      );
+      setMyAuctions(Array.isArray(wonAuctions) ? wonAuctions : []);
+
+    } catch (error) {
+      console.error("Erro ao buscar vendas:", error);
+      setMySales([]);
+      setMyAuctions([]);
+      toast.error("Erro ao carregar vendas.");
+    } finally {
+      setIsLoadingSales(false);
+    }
+  }, [user, isLoadingSales]);
+
   const loadAllUsers = useCallback(async () => {
     if (isLoadingUsers) return;
     
@@ -604,7 +651,11 @@ const DashboardContent = ({ user, isAdmin }) => {
       await delay(2000);
       await fetchMyWithdrawals();
 
-      // 4️⃣ Aguarda mais 3s e busca todos usuários (se admin)
+      // 4️⃣ Aguarda mais 2s e busca vendas
+      await delay(2000);
+      await fetchMySales();
+
+      // 5️⃣ Aguarda mais 3s e busca todos usuários (se admin)
       if (isAdmin) {
         await delay(3000);
         await loadAllUsers();
@@ -1402,24 +1453,88 @@ const DashboardContent = ({ user, isAdmin }) => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="leilao" className="w-full">
-                <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
-                  <TabsTrigger value="leilao">Leilão</TabsTrigger>
-                  {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo">Catálogo</TabsTrigger>}
-                </TabsList>
-                <TabsContent value="leilao" className="mt-4">
-                  <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                    Arremates dos indicados: {realMetrics.networkBidsCount || 0}
-                  </p>
-                </TabsContent>
-                {userLevels.includes('licenciado_catalogo') && (
-                  <TabsContent value="catalogo" className="mt-4">
-                    <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                      Vendas do catálogo: R$ {(user.total_catalog_sales || 0).toFixed(2)}
-                    </p>
+              {isLoadingSales ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+                </div>
+              ) : (
+                <Tabs defaultValue="leilao" className="w-full">
+                  <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
+                    <TabsTrigger value="leilao">Leilão</TabsTrigger>
+                    <TabsTrigger value="catalogo">Catálogo</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="leilao" className="mt-4">
+                    {myAuctions.length === 0 ? (
+                      <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                        Arremates dos indicados: 0
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Arrematante</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (10%)</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {myAuctions.map(auction => (
+                              <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
+                                <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.10).toFixed(2)}</TableCell>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
+                                  {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
                   </TabsContent>
-                )}
-              </Tabs>
+
+                  <TabsContent value="catalogo" className="mt-4">
+                    {mySales.length === 0 ? (
+                      <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                        Nenhuma venda do catálogo
+                      </p>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comprador</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Sua Comissão</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {mySales.map(sale => (
+                              <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{sale.product_title}</TableCell>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{sale.buyer_name}</TableCell>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
+                                <TableCell className="text-green-400 font-semibold">R$ {sale.commission_licensee_amount?.toFixed(2)}</TableCell>
+                                <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
+                                  {new Date(sale.created_date).toLocaleDateString('pt-BR')}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
