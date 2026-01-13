@@ -365,6 +365,7 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
       toast.error('É necessário fazer upload de uma imagem');
       return;
     }
+    console.log('📤 Salvando banner com ajustes:', formData.image_adjustments);
     onSave(formData);
   };
 
@@ -374,10 +375,12 @@ function BannerForm({ banner, onSave, onCancel, onUploadImage }) {
         <ImagePositionEditor
           imageUrl={formData.image_url}
           deviceType={formData.device_type}
+          initialAdjustments={formData.image_adjustments}
           onSave={(adjustments) => {
-            setFormData({ ...formData, image_adjustments: adjustments });
+            console.log('💾 Salvando ajustes:', adjustments);
+            setFormData(prev => ({ ...prev, image_adjustments: adjustments }));
             setShowPositionEditor(false);
-            toast.success('Posição ajustada! Salve o banner para aplicar.');
+            toast.success('✅ Posição ajustada! Clique em "Salvar Banner" para aplicar.');
           }}
           onCancel={() => setShowPositionEditor(false)}
         />

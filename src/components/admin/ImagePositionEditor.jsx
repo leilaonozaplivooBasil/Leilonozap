@@ -2,13 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, RotateCw, Check, X } from 'lucide-react';
 
-export default function ImagePositionEditor({ imageUrl, onSave, onCancel, deviceType = 'desktop' }) {
+export default function ImagePositionEditor({ imageUrl, onSave, onCancel, deviceType = 'desktop', initialAdjustments = null }) {
   // Dimensões reais do banner
   const dimensions = deviceType === 'desktop' 
     ? { width: 1920, height: 600 } 
     : { width: 800, height: 600 };
-  const [position, setPosition] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState(initialAdjustments?.position || { x: 0, y: 0 });
+  const [scale, setScale] = useState(initialAdjustments?.scale || 1);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
