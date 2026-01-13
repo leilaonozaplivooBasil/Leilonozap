@@ -1525,8 +1525,53 @@ export default function CreateAuction() {
                                         setIsProcessing(false);
                                       }
                                     } else {
-                                      // Outros sites usam o fluxo antigo
-                                      extractAllData();
+                                      // Outros sites usam importFromUrl
+                                      setIsProcessing(true);
+                                      setManualStep(1);
+                                      
+                                      try {
+                                        const response = await base44.functions.invoke('importFromUrl', { 
+                                          productUrl: productUrl.trim() 
+                                        });
+                                        
+                                        if (!response || response.status !== 200) {
+                                          throw new Error(response?.data?.error || 'Erro ao importar');
+                                        }
+                                        
+                                        const data = response.data;
+                                        console.log('✅ Dados importFromUrl:', data);
+                                        
+                                        if (!data.imageUrls || data.imageUrls.length === 0) {
+                                          toast.warning('⚠️ Nenhuma imagem encontrada');
+                                          setManualStep(0);
+                                          return;
+                                        }
+                                        
+                                        setExtractedData({ 
+                                          title: data.title || '', 
+                                          description: data.description || '' 
+                                        });
+                                        
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          title: (data.title || '').trim(),
+                                          description: (data.description || '').trim(),
+                                          starting_price: data.price ? data.price.toString() : prev.starting_price,
+                                          source_url: productUrl
+                                        }));
+                                        
+                                        setDownloadedImages(data.imageUrls);
+                                        setCoverIndex(0);
+                                        setManualStep(5);
+                                        
+                                        toast.success(`✅ ${data.imageUrls.length} imagens importadas!`);
+                                      } catch (error) {
+                                        console.error('❌ Erro:', error);
+                                        toast.error(error.message || 'Erro ao importar');
+                                        setManualStep(0);
+                                      } finally {
+                                        setIsProcessing(false);
+                                      }
                                     }
                                   }}
                                   disabled={isProcessing || !productUrl.trim()}
