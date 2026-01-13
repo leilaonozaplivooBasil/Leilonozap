@@ -707,24 +707,29 @@ export default function CreateAuction() {
     setDebugError(null);
     
     try {
-      console.log('🚀 [URL] Iniciando extração para:', productUrl);
-      toast.info("🤖 IA extraindo dados e URLs de imagens...");
-      
-      const response = await extractDataFromUrl({ productUrl });
-      
-      if (!response || !response.data) {
-          throw new Error("Falha na extração");
-      }
-      
-      const { title, description, price, imageUrls } = response.data;
-      
-      console.log('✅ Dados extraídos:', { title, price, imageCount: imageUrls?.length });
-      
-      if (!title || !description) {
-        throw new Error("Dados incompletos");
-      }
-      
-      setExtractedData({ title, description });
+     console.log('🚀 [URL] Iniciando extração para:', productUrl);
+     toast.info("🤖 IA extraindo dados e URLs de imagens...");
+
+     const response = await extractDataFromUrl({ productUrl });
+
+     if (!response || !response.data) {
+         throw new Error("Falha na extração");
+     }
+
+     const data = response.data;
+     console.log('📦 RESPOSTA COMPLETA:', data);
+     console.log('✅ Dados extraídos:', { 
+       title: data.title, 
+       description: data.description, 
+       price: data.price, 
+       imageCount: data.imageUrls?.length 
+     });
+
+     if (!data.title || !data.description) {
+       throw new Error("Dados incompletos");
+     }
+
+     setExtractedData({ title: data.title, description: data.description });
       
       // 📸 MOSTRA URLs EXTRAÍDAS (SEM BAIXAR)
       if (imageUrls && imageUrls.length > 0) {
