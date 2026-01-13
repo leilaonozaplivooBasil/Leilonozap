@@ -1244,13 +1244,13 @@ const DashboardContent = ({ user, isAdmin }) => {
                     </p>
                     <div className="flex gap-2">
                       <Input 
-                        value={`https://leilaonozap.base44.app${createPageUrl('Home')}?ref=${user.referral_code}`}
+                        value={`https://leilao-no-zap.base44.app${createPageUrl('Home')}?ref=${user.referral_code}`}
                         readOnly 
                         className="bg-gray-700 border-gray-600 text-white font-mono text-xs"
                       />
                       <Button 
                         onClick={() => {
-                          navigator.clipboard.writeText(`https://leilaonozap.base44.app${createPageUrl('Home')}?ref=${user.referral_code}`);
+                          navigator.clipboard.writeText(`https://leilao-no-zap.base44.app${createPageUrl('Home')}?ref=${user.referral_code}`);
                           toast.success('Link Base44 copiado!');
                         }}
                         className="bg-blue-600 hover:bg-blue-700" 
@@ -1289,13 +1289,13 @@ const DashboardContent = ({ user, isAdmin }) => {
                       <p className="text-xs text-blue-300 mb-2 font-semibold">✅ Link Temporário Base44</p>
                       <div className="flex gap-2">
                         <Input 
-                          value={`https://leilaonozap.base44.app/Catalog?ref=${user.referral_code}`}
+                          value={`https://leilao-no-zap.base44.app/Catalog?ref=${user.referral_code}`}
                           readOnly 
                           className="bg-gray-700 border-gray-600 text-white font-mono text-xs"
                         />
                         <Button 
                           onClick={() => { 
-                            navigator.clipboard.writeText(`https://leilaonozap.base44.app/Catalog?ref=${user.referral_code}`); 
+                            navigator.clipboard.writeText(`https://leilao-no-zap.base44.app/Catalog?ref=${user.referral_code}`); 
                             toast.success('Link Base44 copiado!'); 
                           }} 
                           className="bg-blue-600 hover:bg-blue-700" 
