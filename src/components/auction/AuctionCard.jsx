@@ -371,10 +371,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 alt={`${auction.title} - imagem ${index + 1}`}
                 loading={index === 0 ? "eager" : "lazy"}
                 decoding="async"
-                className={`absolute top-0 left-0 w-full h-full object-contain transition-opacity duration-300 ease-in-out max-w-full ${
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${
                   index === currentImageIndex ? 'opacity-100' : 'opacity-0'
                 }`}
-                style={{ maxHeight: '100%', height: 'auto' }}
                 onError={(e) => {
                   e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
                   e.target.classList.add('p-4');
