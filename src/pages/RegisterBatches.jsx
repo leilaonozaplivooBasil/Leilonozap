@@ -327,7 +327,7 @@ export default function RegisterBatches() {
       lotes: [...manualBatch.lotes, {
         numero_lote: '',
         valor_lote: 0,
-        produtos: [{ descricao: '', quantidade: 1 }]
+        produtos: [{ codigo: '', descricao: '', variacao: '', quantidade: 1 }]
       }]
     });
   };
@@ -341,7 +341,7 @@ export default function RegisterBatches() {
 
   const addProdutoManual = (loteIdx) => {
     const newLotes = [...manualBatch.lotes];
-    newLotes[loteIdx].produtos.push({ descricao: '', quantidade: 1 });
+    newLotes[loteIdx].produtos.push({ codigo: '', descricao: '', variacao: '', quantidade: 1 });
     setManualBatch({ ...manualBatch, lotes: newLotes });
   };
 
