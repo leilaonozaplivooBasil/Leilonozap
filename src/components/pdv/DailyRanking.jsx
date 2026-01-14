@@ -45,11 +45,18 @@ export default function DailyRanking({ allSales }) {
     try {
       setSharing(true);
       const node = containerRef.current;
+      const rect = node.getBoundingClientRect();
       const canvas = await html2canvas(node, {
         backgroundColor: '#0b0b0b',
-        scale: 2,
         useCORS: true,
-        logging: false
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        width: rect.width,
+        height: rect.height,
+        windowWidth: rect.width,
+        windowHeight: rect.height,
+        scale: Math.max(1, window.devicePixelRatio || 2)
       });
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
