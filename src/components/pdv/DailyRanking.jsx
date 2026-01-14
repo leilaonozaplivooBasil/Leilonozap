@@ -70,14 +70,36 @@ export default function DailyRanking({ allSales }) {
           backgroundColor: '#0b0b0b',
           useCORS: true,
           ...opts,
+          ignoreElements: (el) => {
+            // Render ONLY descendants of the capture container; skip fixed overlays
+            try {
+              return !node.contains(el);
+            } catch {
+              return false;
+            }
+          },
           onclone: (doc) => {
             const el = doc.querySelector('[data-ranking-capture="1"]');
             if (el) {
               el.style.backgroundColor = '#0b0b0b';
               el.style.width = `${width}px`;
+              el.style.maxWidth = `${width}px`;
+              el.style.overflow = 'hidden';
+              el.style.position = 'relative';
+              el.style.isolation = 'isolate';
+              // Hide everything outside the capture container
+              const all = Array.from(doc.querySelectorAll('body *'));
+              all.forEach(e => {
+                if (!e.closest('[data-ranking-capture="1"]')) {
+                  if (e.tagName !== 'HTML' && e.tagName !== 'BODY') {
+                    e.style.display = 'none';
+                  }
+                }
+              });
             }
             const imgs = Array.from(doc.querySelectorAll('img'));
             imgs.forEach(img => img.setAttribute('crossorigin', 'anonymous'));
+            doc.body.style.backgroundColor = '#0b0b0b';
           }
         });
         if (!c || !c.width || !c.height) throw new Error('empty');
@@ -146,7 +168,7 @@ export default function DailyRanking({ allSales }) {
   };
 
   return (
-    <div ref={containerRef} data-ranking-capture="1" className="bg-black rounded-2xl p-5 md:p-6 border border-gray-800 mb-6">
+    <div ref={containerRef} data-ranking-capture="1" className="relative overflow-hidden bg-black rounded-2xl p-5 md:p-6 border border-gray-800 mb-6">
       {/* Header com logos */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-10 md:h-12 object-contain" />
