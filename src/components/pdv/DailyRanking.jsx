@@ -70,14 +70,6 @@ export default function DailyRanking({ allSales }) {
           backgroundColor: '#0b0b0b',
           useCORS: true,
           ...opts,
-          ignoreElements: (el) => {
-            // Render ONLY descendants of the capture container; skip fixed overlays
-            try {
-              return !node.contains(el);
-            } catch {
-              return false;
-            }
-          },
           onclone: (doc) => {
             const el = doc.querySelector('[data-ranking-capture="1"]');
             if (el) {
@@ -126,7 +118,7 @@ export default function DailyRanking({ allSales }) {
           scrollY: 0,
           width,
           height,
-          scale: Math.max(1, Math.min(2, window.devicePixelRatio || 1))
+          scale: Math.max(1, Math.min(3, window.devicePixelRatio || 1))
         });
       } catch (e1) {
         try {
@@ -205,7 +197,7 @@ export default function DailyRanking({ allSales }) {
                 <p className="text-[11px] text-gray-400">{r.count} vendas</p>
               </div>
             </div>
-            <div className="text-right w-24 sm:w-32 md:w-40">
+            <div className="text-right flex-shrink-0 min-w-[110px] sm:min-w-[140px] md:min-w-[160px]">
               <p className="text-green-400 font-bold font-mono whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 R$ {fmt(r.total)}
               </p>
