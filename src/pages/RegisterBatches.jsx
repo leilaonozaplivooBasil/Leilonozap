@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import { formatDateTimeBR } from '@/components/utils/date';
 
 export default function RegisterBatches() {
   const [batches, setBatches] = useState([]);
@@ -638,7 +639,7 @@ export default function RegisterBatches() {
                         </p>
                         {batch.data_lancamento && (
                           <p className="text-xs text-gray-400 mt-1">
-                            ⏱️ Lançado em: {new Date(batch.data_lancamento).toLocaleString('pt-BR')}
+                            ⏱️ Lançado em: {formatDateTimeBR(batch.data_lancamento)}
                           </p>
                         )}
                       </div>
