@@ -50,14 +50,7 @@ export default function DailyRanking({ allSales }) {
       const width = Math.max(1, Math.round(node.offsetWidth || rect.width));
       const height = Math.max(1, Math.round(node.offsetHeight || rect.height));
 
-      // Freeze size and layer above other UI; ensure images are loaded
-      const originalStyle = node.getAttribute('style') || '';
-      node.style.width = `${width}px`;
-      node.style.maxWidth = `${width}px`;
-      node.style.position = 'relative';
-      node.style.zIndex = '2147483647';
-      node.style.overflow = 'hidden';
-
+      // Ensure images are loaded
       const imgs = Array.from(node.querySelectorAll('img'));
       await Promise.all(imgs.map((img) => {
         try { img.crossOrigin = 'anonymous'; } catch {}
@@ -69,21 +62,19 @@ export default function DailyRanking({ allSales }) {
         });
       }));
 
+      const bg = getComputedStyle(node).backgroundColor || '#0b0b0b';
       const canvas = await html2canvas(node, {
-        backgroundColor: '#0b0b0b',
+        backgroundColor: bg,
         useCORS: true,
         logging: false,
-        foreignObjectRendering: true,
-        width,
-        height,
-        scale: 1
+        scrollX: -window.scrollX,
+        scrollY: -window.scrollY,
+        scale: Math.max(2, window.devicePixelRatio || 2)
       });
       const ctx = canvas.getContext('2d');
       if (ctx && ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
-      // Restore styles after capture
-      try { node.setAttribute('style', originalStyle); } catch {}
       if (!blob) throw new Error('Falha ao gerar imagem');
 
       const fileName = `ranking-${targetDate.replace(/\//g, '-')}.png`;
