@@ -208,8 +208,9 @@ export default function DailyRanking({ allSales }) {
       </div>
 
       </div>
-      {/* Ações */}
-      <div className="mt-4 flex items-center justify-end">
+    </div>
+    {/* Ações */}
+    <div className="mt-4 flex items-center justify-end">
         <Button onClick={handleShare} disabled={sharing} className="bg-green-600 hover:bg-green-700 disabled:opacity-50">
           {sharing ? (
             <>
