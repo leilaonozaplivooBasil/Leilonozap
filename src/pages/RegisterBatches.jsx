@@ -642,11 +642,6 @@ export default function RegisterBatches() {
                             ⏱️ Lançado em: {new Date(batch.data_lancamento).toLocaleString('pt-BR')}
                           </p>
                         )}
-                        {batch.data_lancamento && (
-                          <p className="text-xs text-gray-400 mt-1">
-                            ⏱️ Lançado em: {new Date(batch.data_lancamento).toLocaleString('pt-BR')}
-                          </p>
-                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
