@@ -33,8 +33,9 @@ function normalizeMidiaResponse(json) {
     .filter((u) => typeof u === 'string' && /^https?:\/\//i.test(u));
 
   const store = data.store || data.store_name || get(data, 'metadata.store');
+  const attributes = (data.attributes && typeof data.attributes === 'object') ? data.attributes : {};
 
-  return { title, description, price, imageUrls, store };
+  return { title, description, price, imageUrls, store, attributes };
 }
 
 function parseTitleFromUrl(rawUrl) {
@@ -94,6 +95,7 @@ Deno.serve(async (req) => {
         price: midiaData.price ?? null,
         imageUrls: midiaData.imageUrls || [],
         store: midiaData.store || null,
+        attributes: midiaData.attributes || {},
         original_url: productUrl,
       });
     }

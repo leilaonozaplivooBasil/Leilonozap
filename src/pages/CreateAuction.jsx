@@ -1494,6 +1494,9 @@ export default function CreateAuction() {
                                         }
                                         const data = response.data;
                                         console.log('✅ Dados scrapeWithFallback:', data);
+                                        const attrs = data.attributes && typeof data.attributes === 'object' ? Object.entries(data.attributes) : [];
+                                        const attrsText = attrs.length ? '\n\nCaracterísticas:\n' + attrs.map(([k, v]) => `- ${k}: ${v}`).join('\n') : '';
+                                        const fullDescription = ((data.description || '').trim() + attrsText);
                                         if (!data.imageUrls || data.imageUrls.length === 0) {
                                           toast.warning('⚠️ Nenhuma imagem encontrada');
                                           setManualStep(0);
@@ -1501,12 +1504,12 @@ export default function CreateAuction() {
                                         }
                                         setExtractedData({ 
                                           title: data.title || '', 
-                                          description: data.description || '' 
+                                          description: fullDescription 
                                         });
                                         setFormData(prev => ({
                                           ...prev,
                                           title: (data.title || '').trim(),
-                                          description: (data.description || '').trim(),
+                                          description: fullDescription,
                                           starting_price: data.price ? data.price.toString() : prev.starting_price,
                                           source_url: productUrl
                                         }));
@@ -1537,6 +1540,9 @@ export default function CreateAuction() {
                                         
                                         const data = response.data;
                                         console.log('✅ Dados scrapeWithFallback:', data);
+                                        const attrs = data.attributes && typeof data.attributes === 'object' ? Object.entries(data.attributes) : [];
+                                        const attrsText = attrs.length ? '\n\nCaracterísticas:\n' + attrs.map(([k, v]) => `- ${k}: ${v}`).join('\n') : '';
+                                        const fullDescription = ((data.description || '').trim() + attrsText);
                                         
                                         if (!data.imageUrls || data.imageUrls.length === 0) {
                                           toast.warning('⚠️ Nenhuma imagem encontrada');
@@ -1546,13 +1552,13 @@ export default function CreateAuction() {
                                         
                                         setExtractedData({ 
                                           title: data.title || '', 
-                                          description: data.description || '' 
+                                          description: fullDescription 
                                         });
                                         
                                         setFormData(prev => ({
                                           ...prev,
                                           title: (data.title || '').trim(),
-                                          description: (data.description || '').trim(),
+                                          description: fullDescription,
                                           starting_price: data.price ? data.price.toString() : prev.starting_price,
                                           source_url: productUrl
                                         }));
