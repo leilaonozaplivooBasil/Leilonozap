@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { formatDateTimeBR } from '@/components/utils/date';
+import { formatDateTimeBR, brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date';
 
 export default function RegisterBatches() {
   const [batches, setBatches] = useState([]);
@@ -30,7 +30,7 @@ export default function RegisterBatches() {
   const [editingBatch, setEditingBatch] = useState(null);
   const [editFreteValue, setEditFreteValue] = useState(0);
   const [manualFreteValue, setManualFreteValue] = useState(0);
-  const [manualDataLancamento, setManualDataLancamento] = useState(() => new Date().toISOString().slice(0,16));
+  const [manualDataLancamento, setManualDataLancamento] = useState(() => nowBRLocalInput());
   const [editDataLancamento, setEditDataLancamento] = useState('');
   const [manualBatch, setManualBatch] = useState({
     numero_leilao: '',
@@ -303,7 +303,7 @@ export default function RegisterBatches() {
         total_produtos: totalProdutosGlobal,
         custo_por_unidade: custoPorUnidade,
         status: 'pendente',
-        data_lancamento: manualDataLancamento ? new Date(manualDataLancamento).toISOString() : new Date().toISOString()
+        data_lancamento: manualDataLancamento ? brDateTimeToISOString(manualDataLancamento) : new Date().toISOString()
       });
 
       alert(`✅ Leilão ${manualBatch.numero_leilao} registrado com ${manualBatch.lotes.length} lotes!`);
@@ -318,7 +318,7 @@ export default function RegisterBatches() {
           produtos: [{ codigo: '', descricao: '', variacao: '', quantidade: 1 }]
         }]
       });
-      setManualDataLancamento(new Date().toISOString().slice(0,16));
+      setManualDataLancamento(nowBRLocalInput());
       await loadBatches();
     } catch (error) {
       console.error('Erro ao salvar:', error);
@@ -372,7 +372,7 @@ export default function RegisterBatches() {
       }]
     });
     setEditDataLancamento(
-      batch.data_lancamento ? new Date(batch.data_lancamento).toISOString().slice(0,16) : new Date().toISOString().slice(0,16)
+      batch.data_lancamento ? isoToBRLocalInput(batch.data_lancamento) : nowBRLocalInput()
     );
     setShowEditModal(true);
   };
@@ -411,7 +411,7 @@ export default function RegisterBatches() {
         frete_value: editFreteValue || 0,
         total_produtos: totalProdutosGlobal,
         custo_por_unidade: custoPorUnidade,
-        data_lancamento: editDataLancamento ? new Date(editDataLancamento).toISOString() : (editingBatch.data_lancamento || new Date().toISOString())
+        data_lancamento: editDataLancamento ? brDateTimeToISOString(editDataLancamento) : (editingBatch.data_lancamento || new Date().toISOString())
       });
 
       alert(`✅ Leilão ${manualBatch.numero_leilao} atualizado!`);
@@ -445,11 +445,11 @@ export default function RegisterBatches() {
     : batches.filter(b => b.status === statusFilter);
 
   if (dateStart) {
-    const start = new Date(`${dateStart}T00:00:00`);
+    const start = new Date(brDateTimeToISOString(`${dateStart}T00:00`));
     filteredBatches = filteredBatches.filter(b => b.data_lancamento && new Date(b.data_lancamento) >= start);
   }
   if (dateEnd) {
-    const end = new Date(`${dateEnd}T23:59:59`);
+    const end = new Date(brDateTimeToISOString(`${dateEnd}T23:59`));
     filteredBatches = filteredBatches.filter(b => b.data_lancamento && new Date(b.data_lancamento) <= end);
   }
 
