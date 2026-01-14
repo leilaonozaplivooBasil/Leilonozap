@@ -49,6 +49,26 @@ export default function DailyRanking({ allSales }) {
       const rect = node.getBoundingClientRect();
       const width = Math.round(rect.width);
       const height = Math.round(rect.height);
+
+      // Freeze size and layer above other UI; ensure images are loaded
+      const originalStyle = node.getAttribute('style') || '';
+      node.style.width = `${width}px`;
+      node.style.maxWidth = `${width}px`;
+      node.style.position = 'relative';
+      node.style.zIndex = '2147483647';
+      node.style.overflow = 'hidden';
+
+      const imgs = Array.from(node.querySelectorAll('img'));
+      await Promise.all(imgs.map((img) => {
+        try { img.crossOrigin = 'anonymous'; } catch {}
+        if (img.decode) return img.decode().catch(() => {});
+        return new Promise((res) => {
+          if (img.complete) return res();
+          img.addEventListener('load', () => res(), { once: true });
+          img.addEventListener('error', () => res(), { once: true });
+        });
+      }));
+
       const canvas = await html2canvas(node, {
         backgroundColor: '#0b0b0b',
         useCORS: true,
@@ -61,6 +81,8 @@ export default function DailyRanking({ allSales }) {
       if (ctx && ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
+      // Restore styles after capture
+      try { node.setAttribute('style', originalStyle); } catch {}
       if (!blob) throw new Error('Falha ao gerar imagem');
 
       const fileName = `ranking-${targetDate.replace(/\//g, '-')}.png`;
