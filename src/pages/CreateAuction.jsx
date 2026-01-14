@@ -6,7 +6,7 @@ const Auction = base44.entities.Auction;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 import { extractDataFromUrl } from "@/functions/extractDataFromUrl";
-import { importFromUrl } from "@/functions/importFromUrl";
+import { scrapeWithFallback } from "@/functions/scrapeWithFallback";
 import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1538,7 +1538,7 @@ export default function CreateAuction() {
                                         setIsProcessing(false);
                                       }
                                     } else {
-                                      // Outros sites usam importFromUrl
+                                      // Outros sites usam scrapeWithFallback
                                       setIsProcessing(true);
                                       setManualStep(1);
                                       
@@ -1552,7 +1552,7 @@ export default function CreateAuction() {
                                         }
                                         
                                         const data = response.data;
-                                        console.log('✅ Dados importFromUrl:', data);
+                                        console.log('✅ Dados scrapeWithFallback:', data);
                                         
                                         if (!data.imageUrls || data.imageUrls.length === 0) {
                                           toast.warning('⚠️ Nenhuma imagem encontrada');
