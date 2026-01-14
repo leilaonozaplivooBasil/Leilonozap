@@ -29,6 +29,8 @@ export default function RegisterBatches() {
   const [editingBatch, setEditingBatch] = useState(null);
   const [editFreteValue, setEditFreteValue] = useState(0);
   const [manualFreteValue, setManualFreteValue] = useState(0);
+  const [manualDataLancamento, setManualDataLancamento] = useState(() => new Date().toISOString().slice(0,16));
+  const [editDataLancamento, setEditDataLancamento] = useState('');
   const [manualBatch, setManualBatch] = useState({
     numero_leilao: '',
     valor_total: 0,
@@ -300,7 +302,7 @@ export default function RegisterBatches() {
         total_produtos: totalProdutosGlobal,
         custo_por_unidade: custoPorUnidade,
         status: 'pendente',
-        data_lancamento: new Date().toISOString()
+        data_lancamento: manualDataLancamento ? new Date(manualDataLancamento).toISOString() : new Date().toISOString()
       });
 
       alert(`✅ Leilão ${manualBatch.numero_leilao} registrado com ${manualBatch.lotes.length} lotes!`);
@@ -315,6 +317,7 @@ export default function RegisterBatches() {
           produtos: [{ codigo: '', descricao: '', variacao: '', quantidade: 1 }]
         }]
       });
+      setManualDataLancamento(new Date().toISOString().slice(0,16));
       await loadBatches();
     } catch (error) {
       console.error('Erro ao salvar:', error);
@@ -367,6 +370,9 @@ export default function RegisterBatches() {
         produtos: [{ codigo: '', descricao: '', variacao: '', quantidade: 1 }]
       }]
     });
+    setEditDataLancamento(
+      batch.data_lancamento ? new Date(batch.data_lancamento).toISOString().slice(0,16) : new Date().toISOString().slice(0,16)
+    );
     setShowEditModal(true);
   };
 
@@ -403,7 +409,8 @@ export default function RegisterBatches() {
         valor_total: valorComFrete,
         frete_value: editFreteValue || 0,
         total_produtos: totalProdutosGlobal,
-        custo_por_unidade: custoPorUnidade
+        custo_por_unidade: custoPorUnidade,
+        data_lancamento: editDataLancamento ? new Date(editDataLancamento).toISOString() : (editingBatch.data_lancamento || new Date().toISOString())
       });
 
       alert(`✅ Leilão ${manualBatch.numero_leilao} atualizado!`);
@@ -824,6 +831,16 @@ export default function RegisterBatches() {
                   />
                 </div>
 
+                <div>
+                  <label className="text-gray-300 text-sm mb-1 block font-semibold">Data e Hora do Lançamento</label>
+                  <Input
+                    type="datetime-local"
+                    value={editDataLancamento}
+                    onChange={(e) => setEditDataLancamento(e.target.value)}
+                    className="bg-gray-700 text-white"
+                  />
+                </div>
+
                 <div className="bg-blue-900/20 border border-blue-500/30 rounded p-3">
                   <div className="flex justify-between text-sm mb-1">
                     <span className="text-gray-400">Valor da Nota:</span>
@@ -999,6 +1016,7 @@ export default function RegisterBatches() {
                       setShowEditModal(false);
                       setEditingBatch(null);
                       setEditFreteValue(0);
+                      setEditDataLancamento('');
                     }}
                     disabled={isProcessing}
                     variant="outline"
@@ -1052,6 +1070,16 @@ export default function RegisterBatches() {
                     onChange={(e) => setManualFreteValue(parseFloat(e.target.value) || 0)}
                     className="bg-gray-700 text-white"
                     placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-gray-300 text-sm mb-1 block font-semibold">Data e Hora do Lançamento</label>
+                  <Input
+                    type="datetime-local"
+                    value={manualDataLancamento}
+                    onChange={(e) => setManualDataLancamento(e.target.value)}
+                    className="bg-gray-700 text-white"
                   />
                 </div>
 
