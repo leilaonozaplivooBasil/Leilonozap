@@ -176,7 +176,7 @@ export default function DailyRanking({ allSales }) {
             <span className="text-green-400 font-semibold">Total R$ {fmt(dayTotal)}</span>
           </div>
         </div>
-        <img src={NoZapLogo} alt="Leilão NoZap" crossOrigin="anonymous" className="h-10 md:h-12 object-contain rounded" />
+        <img src={NoZapLogo} alt="Leilão NoZap" crossOrigin="anonymous" className="h-9 sm:h-10 md:h-12 object-contain rounded" />
       </div>
 
       {/* Lista Top 10 */}
