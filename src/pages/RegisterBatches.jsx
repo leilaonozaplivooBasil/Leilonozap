@@ -632,6 +632,7 @@ export default function RegisterBatches() {
                         </CardTitle>
                         <p className="text-sm text-gray-400">
                           {batch.lotes?.length || 0} lotes • {batch.total_produtos} produtos • R$ {batch.valor_total?.toFixed(2)}
+                          {batch.data_lancamento && ` • ${new Date(batch.data_lancamento).toLocaleString('pt-BR')}`}
                         </p>
                         <p className="text-xs text-green-400 font-semibold">
                           💰 Custo Unitário: R$ {batch.custo_por_unidade?.toFixed(2)}
