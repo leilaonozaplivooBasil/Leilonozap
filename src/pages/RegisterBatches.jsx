@@ -438,11 +438,11 @@ export default function RegisterBatches() {
 
   if (dateStart) {
     const start = new Date(`${dateStart}T00:00:00`);
-    filteredBatches = filteredBatches.filter(b => !b.data_lancamento || new Date(b.data_lancamento) >= start);
+    filteredBatches = filteredBatches.filter(b => b.data_lancamento && new Date(b.data_lancamento) >= start);
   }
   if (dateEnd) {
     const end = new Date(`${dateEnd}T23:59:59`);
-    filteredBatches = filteredBatches.filter(b => !b.data_lancamento || new Date(b.data_lancamento) <= end);
+    filteredBatches = filteredBatches.filter(b => b.data_lancamento && new Date(b.data_lancamento) <= end);
   }
 
   return (
