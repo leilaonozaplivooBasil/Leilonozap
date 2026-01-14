@@ -67,7 +67,14 @@ export default function DailyRanking({ allSales }) {
         backgroundColor: '#0b0b0b',
         useCORS: true,
         logging: false,
-        scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1))
+        foreignObjectRendering: true,
+        scrollX: 0,
+        scrollY: 0,
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        windowWidth: Math.round(rect.width),
+        windowHeight: Math.round(rect.height),
+        scale: Math.max(1, Math.min(2, window.devicePixelRatio || 1))
       });
       const ctx = canvas.getContext('2d');
       if (ctx && ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
