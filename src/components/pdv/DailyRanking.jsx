@@ -64,31 +64,67 @@ export default function DailyRanking({ allSales }) {
 
       const bg = getComputedStyle(node).backgroundColor || '#0b0b0b';
       let canvas;
-      try {
-        const options1 = {
+
+      const attempt = async (opts) => {
+        const c = await html2canvas(node, {
           backgroundColor: '#0b0b0b',
           useCORS: true,
-          allowTaint: false,
+          ...opts,
+          onclone: (doc) => {
+            const el = doc.querySelector('[data-ranking-capture="1"]');
+            if (el) {
+              el.style.backgroundColor = '#0b0b0b';
+              el.style.width = `${width}px`;
+            }
+            const imgs = Array.from(doc.querySelectorAll('img'));
+            imgs.forEach(img => img.setAttribute('crossorigin', 'anonymous'));
+          }
+        });
+        if (!c || !c.width || !c.height) throw new Error('empty');
+        try {
+          const ctx = c.getContext('2d');
+          const samples = [
+            [1, 1],
+            [Math.floor(c.width / 2), Math.floor(c.height / 2)],
+            [c.width - 2, c.height - 2]
+          ];
+          const allWhite = samples.every(([x, y]) => {
+            const d = ctx.getImageData(Math.max(0, x), Math.max(0, y), 1, 1).data;
+            return d[0] > 250 && d[1] > 250 && d[2] > 250;
+          });
+          if (allWhite) throw new Error('blank');
+        } catch (_) { /* ignore sampling errors */ }
+        return c;
+      };
+
+      try {
+        canvas = await attempt({
+          foreignObjectRendering: false,
           scrollX: 0,
           scrollY: 0,
+          width,
+          height,
           scale: Math.max(1, Math.min(2, window.devicePixelRatio || 1))
-        };
-        canvas = await html2canvas(node, options1);
-        if (!canvas || !canvas.width || !canvas.height) throw new Error('empty canvas');
-      } catch (_) {
-        // Fallback for devices that render blank canvas
-        canvas = await html2canvas(node, {
-          backgroundColor: '#0b0b0b',
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false,
-          scale: 1
         });
+      } catch (e1) {
+        try {
+          canvas = await attempt({
+            foreignObjectRendering: true,
+            allowTaint: true,
+            scale: 1
+          });
+        } catch (e2) {
+          canvas = await html2canvas(node, { backgroundColor: '#0b0b0b', useCORS: true });
+        }
       }
       const ctx = canvas.getContext('2d');
       if (ctx && ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
 
-      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
+      let blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
+      if (!blob) {
+        const dataUrl = canvas.toDataURL('image/png');
+        blob = await (await fetch(dataUrl)).blob();
+      }
       if (!blob) throw new Error('Falha ao gerar imagem');
 
       const fileName = `ranking-${targetDate.replace(/\//g, '-')}.png`;
@@ -110,7 +146,7 @@ export default function DailyRanking({ allSales }) {
   };
 
   return (
-    <div ref={containerRef} className="bg-black rounded-2xl p-5 md:p-6 border border-gray-800 mb-6">
+    <div ref={containerRef} data-ranking-capture="1" className="bg-black rounded-2xl p-5 md:p-6 border border-gray-800 mb-6">
       {/* Header com logos */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-10 md:h-12 object-contain" />
