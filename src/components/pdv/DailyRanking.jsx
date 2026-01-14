@@ -64,11 +64,14 @@ export default function DailyRanking({ allSales }) {
 
       const bg = getComputedStyle(node).backgroundColor || '#0b0b0b';
       const canvas = await html2canvas(node, {
-        backgroundColor: bg,
+        backgroundColor: '#0b0b0b',
         useCORS: true,
+        allowTaint: true,
         logging: false,
-        scrollX: -window.scrollX,
-        scrollY: -window.scrollY,
+        width: width,
+        height: height,
+        scrollX: 0,
+        scrollY: 0,
         scale: Math.max(2, window.devicePixelRatio || 2)
       });
       const ctx = canvas.getContext('2d');
