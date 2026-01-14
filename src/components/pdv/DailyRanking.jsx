@@ -36,12 +36,7 @@ export default function DailyRanking({ allSales }) {
   const [sharing, setSharing] = React.useState(false);
 
   const handleShare = async () => {
-    const lines = [
-
-      `Ranking do Dia ${targetDate} - Total R$ ${fmt(dayTotal)}`,
-      ...ranking.map((r, i) => `${i + 1}) ${r.name} - R$ ${fmt(r.total)} (${r.count} vendas)`)
-    ];
-    const caption = lines.join('\n');
+    // share only image, no caption
 
     try {
       setSharing(true);
@@ -72,16 +67,14 @@ export default function DailyRanking({ allSales }) {
       const file = new File([blob], fileName, { type: 'image/png' });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], text: caption });
+        await navigator.share({ files: [file] });
         return;
       }
 
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const waUrl = `https://wa.me/?text=${encodeURIComponent(caption + '\n' + file_url)}`;
-      window.open(waUrl, '_blank');
+      window.open(file_url, '_blank');
     } catch (e) {
-      const fallbackUrl = `https://wa.me/?text=${encodeURIComponent(caption)}`;
-      window.open(fallbackUrl, '_blank');
+      console.error('Falha ao compartilhar imagem', e);
     } finally {
       setSharing(false);
     }
