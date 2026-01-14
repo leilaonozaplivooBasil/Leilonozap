@@ -193,8 +193,8 @@ export default function DailyRanking({ allSales }) {
               }`}>
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
               </div>
-              <div>
-                <p className="text-white font-medium leading-tight truncate max-w-[60vw] sm:max-w-none">{r.name}</p>
+              <div className="max-w-[60%]">
+                <p className="text-white font-medium leading-tight break-words">{r.name}</p>
                 <p className="text-[11px] text-gray-400">{r.count} vendas</p>
               </div>
             </div>
