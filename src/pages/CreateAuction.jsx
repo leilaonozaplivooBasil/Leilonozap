@@ -1543,7 +1543,7 @@ export default function CreateAuction() {
                                       setManualStep(1);
                                       
                                       try {
-                                        const response = await base44.functions.invoke('importFromUrl', { 
+                                        const response = await base44.functions.invoke('scrapeWithFallback', { 
                                           productUrl: productUrl.trim() 
                                         });
                                         
