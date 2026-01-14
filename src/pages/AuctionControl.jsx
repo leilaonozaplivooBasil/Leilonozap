@@ -193,6 +193,8 @@ export default function AuctionControl() {
     return true;
   });
 
+  const visibleAuctions = React.useMemo(() => auctions.filter(a => !a.is_investment_plan), [auctions]);
+
   const getStatusBadge = (auction) => {
     if (auction.status === "active") {
       return <Badge className="bg-green-600">Ativo</Badge>;
@@ -235,35 +237,35 @@ export default function AuctionControl() {
               variant={filterStatus === "all" ? "default" : "outline"}
               className={filterStatus === "all" ? "bg-green-600" : "border-gray-600 text-gray-300"}
             >
-              Todos ({auctions.length})
+              Todos ({visibleAuctions.length})
             </Button>
             <Button
               onClick={() => setFilterStatus("active")}
               variant={filterStatus === "active" ? "default" : "outline"}
               className={filterStatus === "active" ? "bg-green-600" : "border-gray-600 text-gray-300"}
             >
-              Ativos ({auctions.filter(a => a.status === "active").length})
+              Ativos ({visibleAuctions.filter(a => a.status === "active").length})
             </Button>
             <Button
               onClick={() => setFilterStatus("ended")}
               variant={filterStatus === "ended" ? "default" : "outline"}
               className={filterStatus === "ended" ? "bg-green-600" : "border-gray-600 text-gray-300"}
             >
-              Finalizados ({auctions.filter(a => a.status !== "active").length})
+              Finalizados ({visibleAuctions.filter(a => a.status !== "active").length})
             </Button>
             <Button
               onClick={() => setFilterStatus("paid")}
               variant={filterStatus === "paid" ? "default" : "outline"}
               className={filterStatus === "paid" ? "bg-green-600" : "border-gray-600 text-gray-300"}
             >
-              Pagos ({auctions.filter(a => a.status !== "active" && getPaymentStatus(a.id) === "paid").length})
+              Pagos ({visibleAuctions.filter(a => a.status !== "active" && getPaymentStatus(a.id) === "paid").length})
             </Button>
             <Button
               onClick={() => setFilterStatus("unpaid")}
               variant={filterStatus === "unpaid" ? "default" : "outline"}
               className={filterStatus === "unpaid" ? "bg-green-600" : "border-gray-600 text-gray-300"}
             >
-              Não Pagos ({auctions.filter(a => a.status !== "active" && getPaymentStatus(a.id) === "unpaid").length})
+              Não Pagos ({visibleAuctions.filter(a => a.status !== "active" && getPaymentStatus(a.id) === "unpaid").length})
             </Button>
           </div>
         </div>
