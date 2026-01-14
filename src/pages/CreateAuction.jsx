@@ -839,8 +839,10 @@ export default function CreateAuction() {
 
     setFormData(prev => ({
       ...prev,
+      title: (importedData?.title || extractedData?.title || prev.title || '').toString(),
+      description: (importedData?.description || extractedData?.description || prev.description || ''),
       image_urls: finalImages,
-      source_url: productUrl // SALVA URL ORIGINAL
+      source_url: productUrl
     }));
 
     setManualStep(0);
