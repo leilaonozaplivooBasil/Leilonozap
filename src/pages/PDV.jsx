@@ -1922,7 +1922,9 @@ ${boletoInfo}================================
                     <p>Nenhuma venda registrada para exibir relatório</p>
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <>
+                    <DailyRanking allSales={allSales} />
+                    <div className="space-y-6">
                     {(() => {
                       // Agrupa vendas por dia
                       const salesByDay = {};
