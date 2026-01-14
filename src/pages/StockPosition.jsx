@@ -235,6 +235,7 @@ export default function StockPosition() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200 bg-blue-600">
+                    <th className="text-left p-3 font-semibold text-white">Código</th>
                     <th className="text-left p-3 font-semibold text-white">SKU</th>
                     <th className="text-left p-3 font-semibold text-white">Produto</th>
                     <th className="text-left p-3 font-semibold text-white">Depósito Empresa</th>
@@ -259,6 +260,7 @@ export default function StockPosition() {
                       key={product.id} 
                       className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                     >
+                      <td className="p-3 text-gray-900 font-medium">{product.product_code || product.codigo || product.code || '-'}</td>
                       <td className="p-3 text-blue-600 font-medium">{product.lot || 'N/A'}</td>
                       <td className="p-3 text-gray-900">{product.description}</td>
                       <td className="p-3 text-gray-900">{product.purchase_order || 'Empresa 3'}</td>
