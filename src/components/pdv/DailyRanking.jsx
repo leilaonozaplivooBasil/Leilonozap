@@ -39,7 +39,7 @@ export default function DailyRanking({ allSales }) {
     // share only image, no caption
 
     try {
-      setSharing(true);
+      // capture exactly as currently visible (avoid UI changes before capture)
       if (document.fonts && document.fonts.ready) {
         await document.fonts.ready;
       }
@@ -47,8 +47,8 @@ export default function DailyRanking({ allSales }) {
 
       const node = containerRef.current;
       const rect = node.getBoundingClientRect();
-      const width = Math.round(rect.width);
-      const height = Math.round(rect.height);
+      const width = Math.max(1, Math.round(node.offsetWidth || rect.width));
+      const height = Math.max(1, Math.round(node.offsetHeight || rect.height));
 
       // Freeze size and layer above other UI; ensure images are loaded
       const originalStyle = node.getAttribute('style') || '';
@@ -73,6 +73,7 @@ export default function DailyRanking({ allSales }) {
         backgroundColor: '#0b0b0b',
         useCORS: true,
         logging: false,
+        foreignObjectRendering: true,
         width,
         height,
         scale: 1
@@ -87,6 +88,7 @@ export default function DailyRanking({ allSales }) {
 
       const fileName = `ranking-${targetDate.replace(/\//g, '-')}.png`;
       const file = new File([blob], fileName, { type: 'image/png' });
+      setSharing(true);
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file] });
