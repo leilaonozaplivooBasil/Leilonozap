@@ -643,6 +643,7 @@ export default function ProductManagement() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-700 bg-gray-800">
+                    <th className="text-left p-3 font-semibold text-white">Código</th>
                     <th className="text-left p-3 font-semibold text-white">SKU</th>
                     <th className="text-left p-3 font-semibold text-white">Produto</th>
                     <th className="text-left p-3 font-semibold text-white">Nome Depósito</th>
