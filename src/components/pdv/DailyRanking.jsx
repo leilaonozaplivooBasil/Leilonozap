@@ -176,7 +176,7 @@ export default function DailyRanking({ allSales }) {
       <div ref={containerRef} data-ranking-capture="1" className="relative bg-black text-white rounded-2xl p-5 md:p-6 border border-gray-800 mb-6 mx-auto w-full max-w-[420px] sm:max-w-[560px] md:max-w-2xl overflow-hidden min-h-[220px]">
       {/* Header com logos */}
       <div className="flex items-center justify-between gap-4 mb-4">
-        <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-9 sm:h-10 md:h-12 object-contain" />
+        <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-9 sm:h-10 md:h-12 object-contain" onError={(e)=>{e.currentTarget.style.display='none';}} />
         <div className="text-center min-w-0">
           <div className="flex items-center justify-center gap-2 text-white">
             <Trophy className="w-5 h-5 text-yellow-400" />
