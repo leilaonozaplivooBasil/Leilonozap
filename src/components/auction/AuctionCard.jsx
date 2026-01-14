@@ -363,7 +363,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           onMouseLeave={handleMouseLeave}
           onClick={handleImageClick}
         >
-          <div className="w-full h-full">
+          <div className="w-full h-full relative">
             {images.map((img, index) => (
               <img 
                 key={index}
