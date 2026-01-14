@@ -9,18 +9,30 @@ const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/pub
 const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/c478ca710_LogoLeiloNoZap.PNG";
 
 export default function DailyRanking({ allSales }) {
-  if (!allSales || allSales.length === 0) return null;
+  const sales = Array.isArray(allSales) ? allSales : [];
 
-  // Usa o dia mais recente existente nas vendas
-  const latestSale = allSales[0];
-  const targetDate = new Date(latestSale.sale_datetime).toLocaleDateString('pt-BR');
-  const daySales = allSales.filter(s => new Date(s.sale_datetime).toLocaleDateString('pt-BR') === targetDate);
+  // Usa o dia mais recente existente nas vendas (robusto)
+  const parseValidDate = (d) => {
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+  const validSales = (sales || []).filter(s => parseValidDate(s.sale_datetime));
+  // Ordena por data desc
+  validSales.sort((a, b) => parseValidDate(b.sale_datetime) - parseValidDate(a.sale_datetime));
+  const latest = validSales[0];
+  const headerDate = latest ? parseValidDate(latest.sale_datetime) : new Date();
+  const targetDate = headerDate.toLocaleDateString('pt-BR');
+
+  const daySales = validSales.filter(s => {
+    const d = parseValidDate(s.sale_datetime);
+    return d && d.toLocaleDateString('pt-BR') === targetDate;
+  });
 
   const sellersMap = {};
   daySales.forEach(s => {
     const name = s.seller_name || 'Sem vendedor';
     if (!sellersMap[name]) sellersMap[name] = { name, total: 0, count: 0 };
-    sellersMap[name].total += s.total_amount || 0;
+    sellersMap[name].total += Number(s.total_amount) || 0;
     sellersMap[name].count += 1;
   });
 
@@ -28,9 +40,9 @@ export default function DailyRanking({ allSales }) {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
-  const dayTotal = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+  const dayTotal = daySales.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
 
-  const fmt = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmt = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const containerRef = React.useRef(null);
   const [sharing, setSharing] = React.useState(false);
