@@ -710,7 +710,7 @@ export default function RegisterBatches() {
                           <div className="space-y-2">
                             {lote.produtos?.map((produto, prodIdx) => (
                               <div key={prodIdx} className="flex justify-between bg-gray-900 rounded p-2 text-sm">
-                                <span className="text-white">{produto.descricao}</span>
+                                <span className="text-white">{produto.codigo ? `(${produto.codigo}) ` : ''}{produto.descricao}{produto.variacao ? ` • ${produto.variacao}` : ''}</span>
                                 <div className="text-gray-400">
                                   Qtd: {produto.quantidade} • Unit: R$ {batch.custo_por_unidade?.toFixed(2)}
                                 </div>
@@ -900,6 +900,16 @@ export default function RegisterBatches() {
                                 }}
                                 className="bg-gray-800 text-white flex-1"
                                 placeholder="Descrição do produto"
+                              />
+                              <Input
+                                value={produto.variacao || ''}
+                                onChange={(e) => {
+                                  const newLotes = [...manualBatch.lotes];
+                                  newLotes[loteIdx].produtos[prodIdx].variacao = e.target.value;
+                                  setManualBatch({ ...manualBatch, lotes: newLotes });
+                                }}
+                                className="bg-gray-800 text-white w-28"
+                                placeholder="Variação (ex: 2L)"
                               />
                               <Input
                                 type="number"
@@ -1121,6 +1131,16 @@ export default function RegisterBatches() {
                                 }}
                                 className="bg-gray-800 text-white flex-1"
                                 placeholder="Descrição do produto"
+                              />
+                              <Input
+                                value={produto.variacao || ''}
+                                onChange={(e) => {
+                                  const newLotes = [...manualBatch.lotes];
+                                  newLotes[loteIdx].produtos[prodIdx].variacao = e.target.value;
+                                  setManualBatch({ ...manualBatch, lotes: newLotes });
+                                }}
+                                className="bg-gray-800 text-white w-28"
+                                placeholder="Variação (ex: 2L)"
                               />
                               <Input
                                 type="number"
