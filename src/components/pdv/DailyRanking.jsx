@@ -198,8 +198,8 @@ export default function DailyRanking({ allSales }) {
                 <p className="text-[11px] text-gray-400">{r.count} vendas</p>
               </div>
             </div>
-            <div className="text-right flex-shrink-0 min-w-[110px] sm:min-w-[140px] md:min-w-[160px]">
-              <p className="text-green-400 font-bold font-mono whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            <div className="text-right flex-shrink-0 min-w-[110px] sm:min-w-[140px] md:min-w-[160px] overflow-hidden">
+              <p className="text-green-400 font-bold font-mono whitespace-nowrap text-ellipsis overflow-hidden" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 R$ {fmt(r.total)}
               </p>
             </div>
