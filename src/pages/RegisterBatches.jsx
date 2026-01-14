@@ -125,8 +125,7 @@ export default function RegisterBatches() {
     setProgress('📤 Enviando arquivo...');
 
     try {
-      const { UploadFile } = await import("@/integrations/Core");
-      const uploadResult = await UploadFile({ file });
+      const uploadResult = await base44.integrations.Core.UploadFile({ file });
 
       if (!uploadResult?.file_url) {
         throw new Error('Falha ao fazer upload');
