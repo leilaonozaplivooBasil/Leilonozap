@@ -37,6 +37,7 @@ export default function DailyRanking({ allSales }) {
 
   const handleShare = async () => {
     const lines = [
+
       `Ranking do Dia ${targetDate} - Total R$ ${fmt(dayTotal)}`,
       ...ranking.map((r, i) => `${i + 1}) ${r.name} - R$ ${fmt(r.total)} (${r.count} vendas)`)
     ];
@@ -44,6 +45,11 @@ export default function DailyRanking({ allSales }) {
 
     try {
       setSharing(true);
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+      await new Promise((r) => requestAnimationFrame(() => r()));
+
       const node = containerRef.current;
       const rect = node.getBoundingClientRect();
       const canvas = await html2canvas(node, {
@@ -115,12 +121,14 @@ export default function DailyRanking({ allSales }) {
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
               </div>
               <div>
-                <p className="text-white font-medium leading-tight">{r.name}</p>
+                <p className="text-white font-medium leading-tight truncate max-w-[60vw] sm:max-w-none">{r.name}</p>
                 <p className="text-[11px] text-gray-400">{r.count} vendas</p>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-green-400 font-bold">R$ {fmt(r.total)}</p>
+            <div className="text-right w-32 sm:w-40">
+              <p className="text-green-400 font-bold font-mono whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                R$ {fmt(r.total)}
+              </p>
             </div>
           </div>
         ))}
