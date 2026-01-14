@@ -33,7 +33,7 @@ export default function RegisterBatches() {
     lotes: [{
       numero_lote: '',
       valor_lote: 0,
-      produtos: [{ descricao: '', quantidade: 1 }]
+      produtos: [{ codigo: '', descricao: '', variacao: '', quantidade: 1 }]
     }]
   });
   const [lotesStatus, setLotesStatus] = useState({});
@@ -360,7 +360,7 @@ export default function RegisterBatches() {
       lotes: batch.lotes || [{
         numero_lote: '',
         valor_lote: 0,
-        produtos: [{ descricao: '', quantidade: 1 }]
+        produtos: [{ codigo: '', descricao: '', variacao: '', quantidade: 1 }]
       }]
     });
     setShowEditModal(true);
