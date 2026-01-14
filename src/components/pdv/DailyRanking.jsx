@@ -168,7 +168,7 @@ export default function DailyRanking({ allSales }) {
   };
 
   return (
-    <div ref={containerRef} data-ranking-capture="1" className="relative overflow-hidden bg-black rounded-2xl p-5 md:p-6 border border-gray-800 mb-6">
+    <div ref={containerRef} data-ranking-capture="1" className="relative overflow-hidden bg-black rounded-2xl p-5 md:p-6 border border-gray-800 mb-6 mx-auto w-full max-w-[420px] sm:max-w-[560px] md:max-w-2xl">
       {/* Header com logos */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-10 md:h-12 object-contain" />
@@ -205,7 +205,7 @@ export default function DailyRanking({ allSales }) {
                 <p className="text-[11px] text-gray-400">{r.count} vendas</p>
               </div>
             </div>
-            <div className="text-right w-32 sm:w-40">
+            <div className="text-right w-24 sm:w-32 md:w-40">
               <p className="text-green-400 font-bold font-mono whitespace-nowrap" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 R$ {fmt(r.total)}
               </p>
