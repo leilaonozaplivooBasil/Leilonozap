@@ -66,13 +66,8 @@ export default function DailyRanking({ allSales }) {
       const canvas = await html2canvas(node, {
         backgroundColor: '#0b0b0b',
         useCORS: true,
-        allowTaint: true,
         logging: false,
-        width: width,
-        height: height,
-        scrollX: 0,
-        scrollY: 0,
-        scale: Math.max(2, window.devicePixelRatio || 2)
+        scale: Math.min(2, Math.max(1, window.devicePixelRatio || 1))
       });
       const ctx = canvas.getContext('2d');
       if (ctx && ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
