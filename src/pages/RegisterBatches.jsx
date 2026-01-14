@@ -874,6 +874,24 @@ export default function RegisterBatches() {
                           {lote.produtos.map((produto, prodIdx) => (
                             <div key={prodIdx} className="flex gap-2">
                               <Input
+                                value={produto.codigo || ''}
+                                onChange={(e) => {
+                                  const newLotes = [...manualBatch.lotes];
+                                  const code = e.target.value;
+                                  newLotes[loteIdx].produtos[prodIdx].codigo = code;
+                                  try {
+                                    const map = JSON.parse(localStorage.getItem('productCodeMap') || '{}');
+                                    const match = map[code];
+                                    if (match?.descricao && !newLotes[loteIdx].produtos[prodIdx].descricao) {
+                                      newLotes[loteIdx].produtos[prodIdx].descricao = match.descricao;
+                                    }
+                                  } catch {}
+                                  setManualBatch({ ...manualBatch, lotes: newLotes });
+                                }}
+                                className="bg-gray-800 text-white w-28"
+                                placeholder="Código (ex: 001)"
+                              />
+                              <Input
                                 value={produto.descricao}
                                 onChange={(e) => {
                                   const newLotes = [...manualBatch.lotes];
@@ -1076,6 +1094,24 @@ export default function RegisterBatches() {
 
                           {lote.produtos.map((produto, prodIdx) => (
                             <div key={prodIdx} className="flex gap-2">
+                              <Input
+                                value={produto.codigo || ''}
+                                onChange={(e) => {
+                                  const newLotes = [...manualBatch.lotes];
+                                  const code = e.target.value;
+                                  newLotes[loteIdx].produtos[prodIdx].codigo = code;
+                                  try {
+                                    const map = JSON.parse(localStorage.getItem('productCodeMap') || '{}');
+                                    const match = map[code];
+                                    if (match?.descricao && !newLotes[loteIdx].produtos[prodIdx].descricao) {
+                                      newLotes[loteIdx].produtos[prodIdx].descricao = match.descricao;
+                                    }
+                                  } catch {}
+                                  setManualBatch({ ...manualBatch, lotes: newLotes });
+                                }}
+                                className="bg-gray-800 text-white w-28"
+                                placeholder="Código (ex: 001)"
+                              />
                               <Input
                                 value={produto.descricao}
                                 onChange={(e) => {
