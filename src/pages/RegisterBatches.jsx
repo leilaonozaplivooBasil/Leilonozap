@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { formatDateTimeBR, brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date';
+import { formatDateTimeBR, brDateTimeToISOString, isoToBRLocalInput, nowBRLocalInput } from '@/components/utils/date.js';
 
 export default function RegisterBatches() {
   const [batches, setBatches] = useState([]);
