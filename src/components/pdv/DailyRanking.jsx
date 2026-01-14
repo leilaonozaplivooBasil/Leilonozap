@@ -1,7 +1,9 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Share2, Trophy, Calendar as CalendarIcon } from "lucide-react";
+import { Share2, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import html2canvas from "html2canvas";
+import { base44 } from "@/api/base44Client";
 
 const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/7f0e3593f_Designsemnome1.png";
 const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/c478ca710_LogoLeiloNoZap.PNG";
@@ -30,21 +32,53 @@ export default function DailyRanking({ allSales }) {
 
   const fmt = (v) => v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const handleShare = () => {
+  const containerRef = React.useRef(null);
+  const [sharing, setSharing] = React.useState(false);
+
+  const handleShare = async () => {
     const lines = [
       `Ranking do Dia ${targetDate} - Total R$ ${fmt(dayTotal)}`,
       ...ranking.map((r, i) => `${i + 1}) ${r.name} - R$ ${fmt(r.total)} (${r.count} vendas)`)
     ];
-    const text = lines.join('\n');
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    const caption = lines.join('\n');
+
+    try {
+      setSharing(true);
+      const node = containerRef.current;
+      const canvas = await html2canvas(node, {
+        backgroundColor: '#0b0b0b',
+        scale: 2,
+        useCORS: true,
+        logging: false
+      });
+
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
+      if (!blob) throw new Error('Falha ao gerar imagem');
+
+      const fileName = `ranking-${targetDate.replace(/\//g, '-')}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text: caption });
+        return;
+      }
+
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(caption + '\n' + file_url)}`;
+      window.open(waUrl, '_blank');
+    } catch (e) {
+      const fallbackUrl = `https://wa.me/?text=${encodeURIComponent(caption)}`;
+      window.open(fallbackUrl, '_blank');
+    } finally {
+      setSharing(false);
+    }
   };
 
   return (
-    <div className="bg-black rounded-2xl p-5 md:p-6 border border-gray-800 mb-6">
+    <div ref={containerRef} className="bg-black rounded-2xl p-5 md:p-6 border border-gray-800 mb-6">
       {/* Header com logos */}
       <div className="flex items-center justify-between gap-4 mb-4">
-        <img src={XEosLogo} alt="X-EOS" className="h-10 md:h-12 object-contain" />
+        <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-10 md:h-12 object-contain" />
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 text-white">
             <Trophy className="w-5 h-5 text-yellow-400" />
@@ -57,7 +91,7 @@ export default function DailyRanking({ allSales }) {
             <span className="text-green-400 font-semibold">Total R$ {fmt(dayTotal)}</span>
           </div>
         </div>
-        <img src={NoZapLogo} alt="Leilão NoZap" className="h-10 md:h-12 object-contain rounded" />
+        <img src={NoZapLogo} alt="Leilão NoZap" crossOrigin="anonymous" className="h-10 md:h-12 object-contain rounded" />
       </div>
 
       {/* Lista Top 10 */}
@@ -87,8 +121,16 @@ export default function DailyRanking({ allSales }) {
 
       {/* Ações */}
       <div className="mt-4 flex items-center justify-end">
-        <Button onClick={handleShare} className="bg-green-600 hover:bg-green-700">
-          <Share2 className="w-4 h-4 mr-2" /> Compartilhar no WhatsApp
+        <Button onClick={handleShare} disabled={sharing} className="bg-green-600 hover:bg-green-700 disabled:opacity-50">
+          {sharing ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando imagem...
+            </>
+          ) : (
+            <>
+              <Share2 className="w-4 h-4 mr-2" /> Compartilhar no WhatsApp
+            </>
+          )}
         </Button>
       </div>
     </div>
