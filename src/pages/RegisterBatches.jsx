@@ -47,7 +47,17 @@ export default function RegisterBatches() {
     try {
       const allBatches = await base44.entities.BatchRegistration.list('-created_date', 100);
       setBatches(allBatches);
-      
+
+      // Atualiza mapa local de códigos (code -> descrição) com histórico
+      try {
+        const codeMap = {};
+        (allBatches || []).forEach(b => (b.lotes || []).forEach(l => (l.produtos || []).forEach(p => {
+          if (p.codigo && p.descricao) codeMap[p.codigo] = { descricao: p.descricao };
+        })));
+        const old = JSON.parse(localStorage.getItem('productCodeMap') || '{}');
+        localStorage.setItem('productCodeMap', JSON.stringify({ ...old, ...codeMap }));
+      } catch {}
+
       // Verifica status de cada lote
       await checkLotesStatus(allBatches);
     } catch (error) {
@@ -269,6 +279,16 @@ export default function RegisterBatches() {
       const valorComFrete = manualBatch.valor_total + (manualFreteValue || 0);
       const custoPorUnidade = totalProdutosGlobal > 0 ? valorComFrete / totalProdutosGlobal : 0;
 
+      // Atualiza o mapa de códigos (code -> descrição)
+      try {
+        const mapJson = localStorage.getItem('productCodeMap');
+        const codeMap = mapJson ? JSON.parse(mapJson) : {};
+        manualBatch.lotes.forEach(l => (l.produtos || []).forEach(p => {
+          if (p.codigo && p.descricao) codeMap[p.codigo] = { descricao: p.descricao };
+        }));
+        localStorage.setItem('productCodeMap', JSON.stringify(codeMap));
+      } catch {}
+
       await base44.entities.BatchRegistration.create({
         numero_leilao: manualBatch.numero_leilao,
         lotes: manualBatch.lotes,
@@ -362,6 +382,16 @@ export default function RegisterBatches() {
 
       const valorComFrete = manualBatch.valor_total + (editFreteValue || 0);
       const custoPorUnidade = totalProdutosGlobal > 0 ? valorComFrete / totalProdutosGlobal : 0;
+
+      // Atualiza o mapa de códigos (code -> descrição)
+      try {
+        const mapJson = localStorage.getItem('productCodeMap');
+        const codeMap = mapJson ? JSON.parse(mapJson) : {};
+        manualBatch.lotes.forEach(l => (l.produtos || []).forEach(p => {
+          if (p.codigo && p.descricao) codeMap[p.codigo] = { descricao: p.descricao };
+        }));
+        localStorage.setItem('productCodeMap', JSON.stringify(codeMap));
+      } catch {}
 
       await base44.entities.BatchRegistration.update(editingBatch.id, {
         numero_leilao: manualBatch.numero_leilao,
