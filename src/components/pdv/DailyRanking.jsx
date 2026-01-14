@@ -194,7 +194,7 @@ export default function DailyRanking({ allSales }) {
 
       {/* Lista Top 10 */}
       <div className="space-y-2">
-        {ranking.map((r, i) => (
+        {(ranking.length > 0 ? ranking : [{ name: 'Sem dados', total: 0, count: 0 }]).map((r, i) => (
           <div key={r.name} className="flex items-center justify-between bg-zinc-900/70 hover:bg-zinc-800 transition-colors rounded-lg px-3 py-2 border border-zinc-800">
             <div className="flex items-center gap-3">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
