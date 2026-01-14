@@ -667,6 +667,7 @@ export default function ProductManagement() {
                       key={product.id} 
                       className={`border-b border-gray-100 hover:bg-gray-100 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                     >
+                      <td className="p-3 text-gray-900 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.product_code || product.codigo || product.code || '-'}</td>
                       <td className="p-3 text-gray-900 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.lot || 'N/A'}</td>
                       <td className="p-3 text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.description}</td>
                       <td className="p-3 text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.deposit_name || 'Bangu'}</td>
