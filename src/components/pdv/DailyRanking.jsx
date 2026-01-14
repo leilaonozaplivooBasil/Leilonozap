@@ -51,13 +51,9 @@ export default function DailyRanking({ allSales }) {
         backgroundColor: '#0b0b0b',
         useCORS: true,
         logging: false,
-        scrollX: 0,
-        scrollY: 0,
         width: rect.width,
         height: rect.height,
-        windowWidth: rect.width,
-        windowHeight: rect.height,
-        scale: Math.max(1, window.devicePixelRatio || 2)
+        scale: 1
       });
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
