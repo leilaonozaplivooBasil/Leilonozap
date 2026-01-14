@@ -63,19 +63,28 @@ export default function DailyRanking({ allSales }) {
       }));
 
       const bg = getComputedStyle(node).backgroundColor || '#0b0b0b';
-      const canvas = await html2canvas(node, {
-        backgroundColor: '#0b0b0b',
-        useCORS: true,
-        logging: false,
-        foreignObjectRendering: true,
-        scrollX: 0,
-        scrollY: 0,
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-        windowWidth: Math.round(rect.width),
-        windowHeight: Math.round(rect.height),
-        scale: Math.max(1, Math.min(2, window.devicePixelRatio || 1))
-      });
+      let canvas;
+      try {
+        const options1 = {
+          backgroundColor: '#0b0b0b',
+          useCORS: true,
+          allowTaint: false,
+          scrollX: 0,
+          scrollY: 0,
+          scale: Math.max(1, Math.min(2, window.devicePixelRatio || 1))
+        };
+        canvas = await html2canvas(node, options1);
+        if (!canvas || !canvas.width || !canvas.height) throw new Error('empty canvas');
+      } catch (_) {
+        // Fallback for devices that render blank canvas
+        canvas = await html2canvas(node, {
+          backgroundColor: '#0b0b0b',
+          useCORS: true,
+          allowTaint: true,
+          foreignObjectRendering: false,
+          scale: 1
+        });
+      }
       const ctx = canvas.getContext('2d');
       if (ctx && ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
 
