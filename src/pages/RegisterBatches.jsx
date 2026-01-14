@@ -308,7 +308,7 @@ export default function RegisterBatches() {
         lotes: [{
           numero_lote: '',
           valor_lote: 0,
-          produtos: [{ descricao: '', quantidade: 1 }]
+          produtos: [{ codigo: '', descricao: '', variacao: '', quantidade: 1 }]
         }]
       });
       await loadBatches();
@@ -412,7 +412,7 @@ export default function RegisterBatches() {
         lotes: [{
           numero_lote: '',
           valor_lote: 0,
-          produtos: [{ descricao: '', quantidade: 1 }]
+          produtos: [{ codigo: '', descricao: '', variacao: '', quantidade: 1 }]
         }]
       });
       await loadBatches();
@@ -1278,7 +1278,7 @@ export default function RegisterBatches() {
                         <div className="space-y-1">
                           {(lote.produtos || []).map((prod, pIdx) => (
                             <div key={pIdx} className="text-xs text-gray-400 flex justify-between">
-                              <span>{prod.descricao || 'Sem descrição'}</span>
+                              <span>{prod.codigo ? `(${prod.codigo}) ` : ''}{prod.descricao || 'Sem descrição'}{prod.variacao ? ` • ${prod.variacao}` : ''}</span>
                               <span>Qtd: {prod.quantidade || 1}</span>
                             </div>
                           ))}
