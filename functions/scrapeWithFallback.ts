@@ -14,7 +14,17 @@ function normalizeMidiaResponse(json) {
   const data = json?.data ?? json ?? {};
   const title = data.title || data.name || '';
   const description = data.description || '';
-  const price = typeof data.price === 'number' ? data.price : (typeof data.price === 'string' ? Number(data.price.replace(/[^0-9.,]/g, '').replace(',', '.')) : null);
+  let price = null;
+  if (typeof data.price === 'number') {
+    price = data.price;
+  } else if (typeof data.price === 'string') {
+    const cleaned = data.price
+      .replace(/[^\d,.-]/g, '') // keep digits, comma, dot, minus
+      .replace(/\./g, '')       // remove thousand separators
+      .replace(',', '.');        // convert decimal comma to dot
+    const n = Number(cleaned);
+    price = Number.isFinite(n) ? n : null;
+  }
 
   // images can be array of strings or objects { url }
   let images = Array.isArray(data.images) ? data.images : Array.isArray(data.product_images) ? data.product_images : [];
@@ -60,11 +70,11 @@ Deno.serve(async (req) => {
     try {
       const res = await fetch('https://api.midia.dev.br/api/scrape', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: productUrl }),
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ url: productUrl, download_images: false }),
       });
-      if (res.ok) {
-        const json = await res.json();
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.success) {
         const norm = normalizeMidiaResponse(json);
         if ((norm.title && norm.description) || (norm.imageUrls && norm.imageUrls.length > 0)) {
           midiaOk = true;

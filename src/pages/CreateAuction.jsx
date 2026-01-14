@@ -1479,60 +1479,42 @@ export default function CreateAuction() {
                                     e.preventDefault();
                                     if (isProcessing) return;
                                     
-                                    // Se for Mercado Livre, usa extração direta
-                                    if (selectedMarketplace.id === 'mercadolivre' && productUrl.includes('mercadolivre.com.br')) {
+                                    // Para qualquer site (inclui Mercado Livre), usar Midia como primária
+                                    if (selectedMarketplace && productUrl.trim()) {
                                       setIsProcessing(true);
                                       setManualStep(1);
-                                      
                                       try {
-                                        const response = await base44.functions.invoke('extractMLImages', { productUrl });
-                                        
-                                        console.log('📦 Resposta extractMLImages:', response);
-                                        
-                                        // Verifica se há erro ou se não encontrou
-                                        if (!response || response.status !== 200) {
-                                          throw new Error(response?.data?.error || 'Erro na requisição');
-                                        }
-                                        
-                                        const data = response.data;
-                                        
-                                        if (!data.found || !data.images || data.images.length === 0) {
-                                          throw new Error(data.error || 'Nenhuma imagem encontrada. Use upload manual.');
-                                        }
-                                        
-                                        console.log('✅ Imagens ML extraídas:', data.images.length);
-                                        console.log('📝 DADOS EXTRAÍDOS:', {
-                                          title: data.title,
-                                          description: data.description,
-                                          price: data.price
+                                        const response = await base44.functions.invoke('scrapeWithFallback', { 
+                                          productUrl: productUrl.trim() 
                                         });
-                                        
+                                        if (!response || response.status !== 200) {
+                                          throw new Error(response?.data?.error || 'Erro ao importar');
+                                        }
+                                        const data = response.data;
+                                        console.log('✅ Dados scrapeWithFallback:', data);
+                                        if (!data.imageUrls || data.imageUrls.length === 0) {
+                                          toast.warning('⚠️ Nenhuma imagem encontrada');
+                                          setManualStep(0);
+                                          return;
+                                        }
                                         setExtractedData({ 
                                           title: data.title || '', 
                                           description: data.description || '' 
                                         });
-                                        
                                         setFormData(prev => ({
                                           ...prev,
-                                          title: (data.title || prev.title).trim(),
-                                          description: (data.description || prev.description).trim(),
+                                          title: (data.title || '').trim(),
+                                          description: (data.description || '').trim(),
                                           starting_price: data.price ? data.price.toString() : prev.starting_price,
                                           source_url: productUrl
                                         }));
-                                        
-                                        setDownloadedImages(data.images);
-                                        setCoverIndex(0);
-                                        setManualStep(5); // Vai para preview das imagens
-                                        
-                                        toast.success(`✅ ${data.images.length} imagens extraídas do Mercado Livre!`);
-                                        setDownloadedImages(data.images);
+                                        setDownloadedImages(data.imageUrls);
                                         setCoverIndex(0);
                                         setManualStep(5);
-                                        
-                                        toast.success(`✅ ${data.images.length} imagens extraídas do Mercado Livre!`);
+                                        toast.success(`✅ ${data.imageUrls.length} imagens importadas!`);
                                       } catch (error) {
-                                        console.error('❌ Erro ML:', error);
-                                        toast.error(error.message || 'Erro ao extrair do Mercado Livre');
+                                        console.error('❌ Erro Midia:', error);
+                                        toast.error(error.message || 'Erro ao importar');
                                         setManualStep(0);
                                       } finally {
                                         setIsProcessing(false);
