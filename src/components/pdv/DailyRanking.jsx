@@ -47,14 +47,18 @@ export default function DailyRanking({ allSales }) {
 
       const node = containerRef.current;
       const rect = node.getBoundingClientRect();
+      const width = Math.round(rect.width);
+      const height = Math.round(rect.height);
       const canvas = await html2canvas(node, {
         backgroundColor: '#0b0b0b',
         useCORS: true,
         logging: false,
-        width: rect.width,
-        height: rect.height,
+        width,
+        height,
         scale: 1
       });
+      const ctx = canvas.getContext('2d');
+      if (ctx && ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
 
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
       if (!blob) throw new Error('Falha ao gerar imagem');
