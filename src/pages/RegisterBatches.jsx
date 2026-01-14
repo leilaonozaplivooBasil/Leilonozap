@@ -18,6 +18,8 @@ export default function RegisterBatches() {
   const [isDragging, setIsDragging] = useState(false);
   const [progress, setProgress] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateStart, setDateStart] = useState('');
+  const [dateEnd, setDateEnd] = useState('');
   const [showFreteModal, setShowFreteModal] = useState(false);
   const [extractedData, setExtractedData] = useState(null);
   const [freteValue, setFreteValue] = useState(0);
@@ -218,7 +220,8 @@ export default function RegisterBatches() {
         total_produtos: totalProdutosGlobal,
         custo_por_unidade: custoPorUnidade,
         status: 'pendente',
-        recibo_url: extractedData.recibo_url
+        recibo_url: extractedData.recibo_url,
+        data_lancamento: new Date().toISOString()
       });
 
       alert(`✅ Leilão ${extractedData.numero_leilao} registrado com ${extractedData.lotes.length} lotes!`);
@@ -296,7 +299,8 @@ export default function RegisterBatches() {
         frete_value: manualFreteValue || 0,
         total_produtos: totalProdutosGlobal,
         custo_por_unidade: custoPorUnidade,
-        status: 'pendente'
+        status: 'pendente',
+        data_lancamento: new Date().toISOString()
       });
 
       alert(`✅ Leilão ${manualBatch.numero_leilao} registrado com ${manualBatch.lotes.length} lotes!`);
@@ -428,9 +432,18 @@ export default function RegisterBatches() {
   const pendingBatches = batches.filter(b => b.status === 'pendente');
   const convertedBatches = batches.filter(b => b.status === 'convertido');
   
-  const filteredBatches = statusFilter === 'all' 
+  let filteredBatches = statusFilter === 'all' 
     ? batches 
     : batches.filter(b => b.status === statusFilter);
+
+  if (dateStart) {
+    const start = new Date(`${dateStart}T00:00:00`);
+    filteredBatches = filteredBatches.filter(b => !b.data_lancamento || new Date(b.data_lancamento) >= start);
+  }
+  if (dateEnd) {
+    const end = new Date(`${dateEnd}T23:59:59`);
+    filteredBatches = filteredBatches.filter(b => !b.data_lancamento || new Date(b.data_lancamento) <= end);
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
@@ -579,6 +592,23 @@ export default function RegisterBatches() {
           </Card>
         </div>
 
+        {/* FILTRO POR DATA */}
+        <Card className="bg-gray-800 border-gray-700 mb-4">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-gray-300 text-sm whitespace-nowrap">De:</span>
+                <Input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} className="bg-gray-700 text-white" />
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-gray-300 text-sm whitespace-nowrap">Até:</span>
+                <Input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} className="bg-gray-700 text-white" />
+              </div>
+              <Button variant="outline" onClick={() => { setDateStart(''); setDateEnd(''); }} className="border-gray-600 text-gray-300 w-full sm:w-auto">Limpar</Button>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* LISTA DE LEILÕES */}
         <div className="space-y-4">
           {filteredBatches.map((batch) => {
@@ -599,6 +629,11 @@ export default function RegisterBatches() {
                         <p className="text-xs text-green-400 font-semibold">
                           💰 Custo Unitário: R$ {batch.custo_por_unidade?.toFixed(2)}
                         </p>
+                        {batch.data_lancamento && (
+                          <p className="text-xs text-gray-400 mt-1">
+                            ⏱️ Lançado em: {new Date(batch.data_lancamento).toLocaleString('pt-BR')}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
