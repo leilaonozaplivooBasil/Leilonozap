@@ -78,36 +78,36 @@ export default function LuxuryAccessManager() {
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold flex items-center gap-2"><Key className="w-5 h-5 text-amber-400"/> Acessos VIP</h1>
-          <Link to={createPageUrl("CreateLuxuryAuction")}><Button variant="outline">Voltar</Button></Link>
+          <Link to={createPageUrl("CreateLuxuryAuction")}><Button variant="outline" className="border-gray-600 text-gray-200 bg-gray-900 hover:bg-gray-800">Voltar</Button></Link>
         </div>
 
         <Card className="bg-gray-800/70 border-gray-700 p-4 mb-6">
           <div className="grid md:grid-cols-6 gap-3 items-end">
             <div className="md:col-span-2">
-              <label className="block text-xs mb-1">Código</label>
+              <label className="block text-xs mb-1 text-gray-200">Código</label>
               <div className="flex gap-2">
-                <Input value={newCode} onChange={(e)=>setNewCode(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="EX: VIP1AB23"/>
-                <Button variant="outline" onClick={gen}>Gerar</Button>
+                <Input value={newCode} onChange={(e)=>setNewCode(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" placeholder="EX: VIP1AB23"/>
+                <Button variant="outline" onClick={gen} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">Gerar</Button>
               </div>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs mb-1">Rótulo (opcional)</label>
-              <Input value={label} onChange={(e)=>setLabel(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="Clube Black"/>
+              <label className="block text-xs mb-1 text-gray-200">Rótulo (opcional)</label>
+              <Input value={label} onChange={(e)=>setLabel(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" placeholder="Clube Black"/>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs mb-1">Nome da pessoa</label>
-              <Input value={personName} onChange={(e)=>setPersonName(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="Ex.: João Silva"/>
+              <label className="block text-xs mb-1 text-gray-200">Nome da pessoa</label>
+              <Input value={personName} onChange={(e)=>setPersonName(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" placeholder="Ex.: João Silva"/>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs mb-1">E-mail</label>
-              <Input value={email} onChange={(e)=>setEmail(e.target.value)} type="email" className="bg-gray-900 border-gray-700" placeholder="exemplo@email.com"/>
+              <label className="block text-xs mb-1 text-gray-200">E-mail</label>
+              <Input value={email} onChange={(e)=>setEmail(e.target.value)} type="email" className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" placeholder="exemplo@email.com"/>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-xs mb-1">WhatsApp</label>
-              <Input value={whatsapp} onChange={(e)=>setWhatsapp(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="(11) 99999-9999"/>
+              <label className="block text-xs mb-1 text-gray-200">WhatsApp</label>
+              <Input value={whatsapp} onChange={(e)=>setWhatsapp(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" placeholder="(11) 99999-9999"/>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm">Uso único</span>
+              <span className="text-sm text-gray-200">Uso único</span>
               <Switch checked={singleUse} onCheckedChange={setSingleUse}/>
             </div>
             <div className="md:col-span-6">
@@ -124,7 +124,7 @@ export default function LuxuryAccessManager() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-gray-300">
+                <thead className="text-gray-200">
                   <tr>
                     <th className="text-left py-2">Código</th>
                     <th className="text-left py-2">Pessoa</th>
