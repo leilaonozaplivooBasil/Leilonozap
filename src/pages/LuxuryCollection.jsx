@@ -144,29 +144,27 @@ export default function LuxuryCollection() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Hero */}
-      <div className="relative h-56 md:h-72 w-full overflow-hidden">
-        <img
-          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/96f283ecb_image.png"
-          alt="Coleção Luxo"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/30" />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 h-full flex items-center">
-          <div>
+      <div className="mb-8">
+        <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
+          <div className="absolute -top-10 -right-10 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-yellow-500/10 rounded-full blur-3xl"></div>
+
+          <div className="relative lg:pr-80">
             <div className="flex items-center gap-2 text-amber-300 mb-2">
               <Gem className="w-5 h-5" />
               <span className="uppercase text-xs tracking-widest">Coleção Especial</span>
             </div>
-            <h1 className="text-white text-3xl md:text-4xl font-extrabold flex items-center gap-3">
-              <Crown className="w-8 h-8 text-amber-400" />
-              Artigos de Luxo
+            <h1 className="text-3xl lg:text-4xl font-bold mb-1 tracking-tight flex items-center gap-3">
+              <Crown className="w-9 h-9 text-amber-400" />
+              <span>Artigos de <span className="text-green-400">Luxo</span></span>
             </h1>
-            <p className="text-gray-300 mt-2 max-w-2xl">
+            <p className="text-gray-300 mb-4 max-w-2xl">
               Leilões selecionados com curadoria: relógios, bolsas, supercarros, joias e peças premium.
             </p>
-            <div className="mt-4 flex gap-3">
-              <Link to={createPageUrl("Home")}> 
-                <Button variant="outline" className="border-gray-600 text-gray-200 hover:bg-gray-800">
+
+            <div className="flex gap-3">
+              <Link to={createPageUrl("Home")}>
+                <Button variant="outline" className="border-gray-600 text-white hover:bg-gray-800">
                   <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
                 </Button>
               </Link>
