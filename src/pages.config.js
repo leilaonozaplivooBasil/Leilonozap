@@ -59,6 +59,11 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
+import AsaasConfig from './pages/AsaasConfig';
+import CheckoutAsaas from './pages/CheckoutAsaas';
+import PixPayment from './pages/PixPayment';
+import OrderStatus from './pages/OrderStatus';
+import PaymentFailure from './pages/PaymentFailure';
 import __Layout from './Layout.jsx';
 
 
@@ -124,6 +129,11 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
+    "AsaasConfig": AsaasConfig,
+    "CheckoutAsaas": CheckoutAsaas,
+    "PixPayment": PixPayment,
+    "OrderStatus": OrderStatus,
+    "PaymentFailure": PaymentFailure,
 }
 
 export const pagesConfig = {
