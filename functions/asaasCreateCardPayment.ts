@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
     }
     if (installments < 1) return Response.json({ error: 'Parcelas inválidas' }, { status: 400 });
 
-    const order = await base44.asServiceRole.entities.AsaasOrder.get(orderId);
+    const ordList = await base44.asServiceRole.entities.AsaasOrder.filter({ id: orderId });
+    const order = ordList?.[0];
     if (!order) return Response.json({ error: 'Pedido não encontrado' }, { status: 404 });
 
     // Idempotência básica: evitar duplicidade ativa por método

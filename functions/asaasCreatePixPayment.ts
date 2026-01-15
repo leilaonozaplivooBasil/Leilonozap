@@ -13,7 +13,8 @@ Deno.serve(async (req) => {
     const { orderId } = await req.json();
     if (!orderId) return Response.json({ error: 'orderId é obrigatório' }, { status: 400 });
 
-    const order = await base44.asServiceRole.entities.AsaasOrder.get(orderId);
+    const ordList = await base44.asServiceRole.entities.AsaasOrder.filter({ id: orderId });
+    const order = ordList?.[0];
     if (!order) return Response.json({ error: 'Pedido não encontrado' }, { status: 404 });
 
     // Idempotência: reutilizar pagamento PIX ativo

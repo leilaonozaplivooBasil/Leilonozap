@@ -13,8 +13,8 @@ export default function OrderStatus() {
   const [payment, setPayment] = useState(null);
 
   const load = async () => {
-    const ord = await base44.entities.AsaasOrder.get(orderId);
-    setOrder(ord);
+    const ordList = await base44.entities.AsaasOrder.filter({ id: orderId });
+    setOrder(ordList?.[0] || null);
     const pays = await base44.entities.AsaasPayment.filter({ orderId });
     setPayment(pays?.[0] || null);
   };

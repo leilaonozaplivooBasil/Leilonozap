@@ -6,7 +6,7 @@ export default function PaymentFailure() {
   const orderId = params.get('orderId');
   const [order, setOrder] = useState(null);
 
-  useEffect(() => { (async ()=> { const o = await base44.entities.AsaasOrder.get(orderId); setOrder(o); })(); }, [orderId]);
+  useEffect(() => { (async ()=> { const list = await base44.entities.AsaasOrder.filter({ id: orderId }); setOrder(list?.[0] || null); })(); }, [orderId]);
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center p-6">
