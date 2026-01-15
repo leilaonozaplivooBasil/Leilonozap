@@ -16,9 +16,6 @@ Deno.serve(async (req) => {
     }
 
     const rec = rows[0];
-    if (rec.is_single_use && rec.is_used) {
-      return Response.json({ error: 'already_used' }, { status: 409 });
-    }
 
     let userId = null;
     try {

@@ -16,7 +16,7 @@ export default function LuxuryAccessManager() {
   const [personName, setPersonName] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [singleUse, setSingleUse] = useState(true);
+  
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -49,7 +49,7 @@ export default function LuxuryAccessManager() {
           email: email || undefined,
           whatsapp: whatsapp || undefined,
           is_active: true,
-          is_single_use: singleUse,
+          is_single_use: false,
           is_used: false
         });
       }
@@ -106,10 +106,7 @@ export default function LuxuryAccessManager() {
               <label className="block text-xs mb-1 text-gray-200">WhatsApp</label>
               <Input value={whatsapp} onChange={(e)=>setWhatsapp(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" placeholder="(11) 99999-9999"/>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-200">Uso único</span>
-              <Switch checked={singleUse} onCheckedChange={setSingleUse}/>
-            </div>
+
             <div className="md:col-span-6">
               <Button onClick={create} disabled={saving} className="bg-amber-600 hover:bg-amber-700 w-full md:w-auto"><Plus className="w-4 h-4 mr-2"/>Criar código</Button>
             </div>
@@ -144,11 +141,9 @@ export default function LuxuryAccessManager() {
                       <td className="py-3 px-4 truncate max-w-[180px]">{c.whatsapp || '-'}</td>
                       <td className="py-3 px-4 truncate max-w-[260px]">{c.email || '-'}</td>
                       <td className="py-3 px-4">{c.label ? <span className="px-2 py-1 rounded bg-gray-700/40 border border-gray-600/40">{c.label}</span> : '-'}</td>
-                      <td className="py-3 px-4"><span className={c.is_single_use ? "px-2 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/30" : "px-2 py-1 rounded bg-gray-500/10 text-gray-300 border border-gray-500/30"}>{c.is_single_use ? 'Sim' : 'Não'}</span></td>
+
                       <td className="py-3 px-4">
-                        {c.is_used ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/10 text-red-300 border border-red-500/30"><Lock className="w-3.5 h-3.5"/> Usado</span>
-                        ) : c.is_active ? (
+                        {c.is_active ? (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-500/10 text-green-300 border border-green-500/30"><Unlock className="w-3.5 h-3.5"/> Ativo</span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-500/10 text-gray-300 border border-gray-500/30">Inativo</span>
