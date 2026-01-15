@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { Trash2, RefreshCcw, Lock, Unlock, Key, Plus } from "lucide-react";
+import { Trash2, RefreshCcw, Unlock, Key, Plus } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
 
@@ -48,7 +48,7 @@ export default function LuxuryAccessManager() {
           person_name: personName || undefined,
           email: email || undefined,
           whatsapp: whatsapp || undefined,
-          is_active: true,
+          is_active: false,
           is_single_use: singleUse,
           is_used: false
         });
@@ -127,7 +127,7 @@ export default function LuxuryAccessManager() {
                     <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">WhatsApp</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">E-mail</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Rótulo</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Uso único</th>
+                    
                     <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Status</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Ações</th>
                   </tr>
