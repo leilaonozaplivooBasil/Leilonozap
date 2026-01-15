@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forma de pagamento não permitida' }, { status: 400 });
     }
 
-    const pay = await asaasFetch(baseUrl, apiKey, userAgent, '/lean/payments', { method: 'POST', body: payload });
+    const pay = await asaasFetch(baseUrl, apiKey, userAgent, '/payments', { method: 'POST', body: payload });
 
     const saved = await base44.asServiceRole.entities.AsaasPayment.create({
       orderId,

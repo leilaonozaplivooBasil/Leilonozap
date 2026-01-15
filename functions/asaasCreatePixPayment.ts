@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
 
     const due = fmtDate(addDays(new Date(), settings?.defaultDueDays ?? 1));
 
-    const pay = await asaasFetch(baseUrl, apiKey, userAgent, '/lean/payments', {
+    const pay = await asaasFetch(baseUrl, apiKey, userAgent, '/payments', {
       method: 'POST',
       body: {
         customer: externalCustomerId,
