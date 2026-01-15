@@ -28,23 +28,21 @@ Deno.serve(async (req) => {
     const customerRef = await base44.asServiceRole.entities.AsaasCustomer.filter({ cpfCnpj: order.cpfCnpj });
     let externalCustomerId = customerRef?.[0]?.externalCustomerId;
     if (!externalCustomerId && order.buyer) {
-      // fallback: criar com dados presentes no pedido + endereço quando disponível
+      // criar cliente com dados completos, incluindo endereço de entrega
+      const sa = order?.shippingAddress || {};
       const custBody = {
         name: order.buyer.name,
         cpfCnpj: String(order.buyer.cpfCnpj).replace(/\D/g,''),
         email: order.buyer.email,
         mobilePhone: order.buyer.mobilePhone,
+        postalCode: String(sa.postalCode || sa.zip || '').replace(/\D/g,''),
+        address: sa.address || sa.street || undefined,
+        addressNumber: sa.addressNumber || sa.number || undefined,
+        complement: sa.complement || undefined,
+        province: sa.province || sa.neighborhood || undefined,
+        city: sa.city || undefined,
+        state: sa.state || undefined,
       };
-      if (order?.shippingAddress?.postalCode) {
-        custBody.postalCode = order.shippingAddress.postalCode;
-        custBody.addressNumber = order.shippingAddress.addressNumber || '';
-        if (order?.shippingAddress?.complement) custBody.complement = order.shippingAddress.complement;
-      } else if (order?.shippingAddress) {
-        if (order.shippingAddress.address) custBody.address = order.shippingAddress.address;
-        if (order.shippingAddress.addressNumber) custBody.addressNumber = order.shippingAddress.addressNumber;
-        if (order.shippingAddress.province) custBody.province = order.shippingAddress.province;
-        if (order.shippingAddress.city) custBody.city = order.shippingAddress.city;
-      }
       const ensureRes = await asaasFetch(baseUrl, apiKey, userAgent, '/customers', { method: 'POST', body: custBody });
       externalCustomerId = ensureRes?.id;
       await base44.asServiceRole.entities.AsaasCustomer.create({
