@@ -125,7 +125,7 @@ export default function CheckoutAsaas() {
           {/* Coluna esquerda: Formulário de pagamento */}
           <div className="bg-white rounded-xl shadow p-6">
             <h1 className="text-3xl font-bold text-gray-900">
-              {step===1 ? 'Dados do Comprador' : step===2 ? 'Endereço de Entrega' : 'Finalizar Compra'}
+              {step===1 ? 'Dados Pessoais' : step===2 ? 'Endereço de Entrega' : 'Finalizar Compra'}
             </h1>
             <p className="text-gray-500 mt-1">
               {step===1 ? 'Preencha seus dados para continuar' : step===2 ? 'Informe o endereço e calcule o frete' : 'Escolha seu método de pagamento preferido'}

@@ -2,6 +2,7 @@ import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import ArquitetoIA from './pages/ArquitetoIA';
+import AsaasConfig from './pages/AsaasConfig';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
@@ -13,6 +14,7 @@ import CatalogCheckout2 from './pages/CatalogCheckout2';
 import CatalogManagement from './pages/CatalogManagement';
 import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
+import CheckoutAsaas from './pages/CheckoutAsaas';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
 import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
@@ -38,11 +40,14 @@ import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
+import OrderStatus from './pages/OrderStatus';
 import OrderTracking from './pages/OrderTracking';
 import PDV from './pages/PDV';
 import Partners from './pages/Partners';
+import PaymentFailure from './pages/PaymentFailure';
 import PaymentSettings from './pages/PaymentSettings';
 import PaymentSuccess from './pages/PaymentSuccess';
+import PixPayment from './pages/PixPayment';
 import ProductManagement from './pages/ProductManagement';
 import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
@@ -59,11 +64,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import AsaasConfig from './pages/AsaasConfig';
-import CheckoutAsaas from './pages/CheckoutAsaas';
-import PixPayment from './pages/PixPayment';
-import OrderStatus from './pages/OrderStatus';
-import PaymentFailure from './pages/PaymentFailure';
 import __Layout from './Layout.jsx';
 
 
@@ -72,6 +72,7 @@ export const PAGES = {
     "AdminUsers": AdminUsers,
     "AdminWithdrawals": AdminWithdrawals,
     "ArquitetoIA": ArquitetoIA,
+    "AsaasConfig": AsaasConfig,
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
     "AuctionRoom": AuctionRoom,
@@ -83,6 +84,7 @@ export const PAGES = {
     "CatalogManagement": CatalogManagement,
     "CatalogProductDetails": CatalogProductDetails,
     "Checkout": Checkout,
+    "CheckoutAsaas": CheckoutAsaas,
     "CreateAuction": CreateAuction,
     "CreateAuctionV2": CreateAuctionV2,
     "CreateLuxuryAuction": CreateLuxuryAuction,
@@ -108,11 +110,14 @@ export const PAGES = {
     "MemoryBackup": MemoryBackup,
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
+    "OrderStatus": OrderStatus,
     "OrderTracking": OrderTracking,
     "PDV": PDV,
     "Partners": Partners,
+    "PaymentFailure": PaymentFailure,
     "PaymentSettings": PaymentSettings,
     "PaymentSuccess": PaymentSuccess,
+    "PixPayment": PixPayment,
     "ProductManagement": ProductManagement,
     "Profile": Profile,
     "ProtecaoCriacao": ProtecaoCriacao,
@@ -129,11 +134,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "AsaasConfig": AsaasConfig,
-    "CheckoutAsaas": CheckoutAsaas,
-    "PixPayment": PixPayment,
-    "OrderStatus": OrderStatus,
-    "PaymentFailure": PaymentFailure,
 }
 
 export const pagesConfig = {
