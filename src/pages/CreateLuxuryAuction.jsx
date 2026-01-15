@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Upload, Gem, ArrowLeft, Loader2, Trash2 } from "lucide-react";
+import { Upload, Gem, ArrowLeft, Loader2, Trash2, Key, CheckCircle2 } from "lucide-react";
 
 export default function CreateLuxuryAuction() {
   const navigate = useNavigate();
@@ -16,6 +16,10 @@ export default function CreateLuxuryAuction() {
   const [images, setImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+  const [codeLabel, setCodeLabel] = useState("");
+  const [creatingCode, setCreatingCode] = useState(false);
+  const [codeMessage, setCodeMessage] = useState("");
 
   const handleUpload = async (file) => {
     if (!file) return;
@@ -28,6 +32,40 @@ export default function CreateLuxuryAuction() {
     }
   };
 
+  const ensureAccessCodeExists = async (code, label) => {
+    const rows = await base44.entities.LuxuryAccessCode.filter({ code, is_active: true });
+    if (!Array.isArray(rows) || rows.length === 0) {
+      await base44.entities.LuxuryAccessCode.create({ code, label: label || undefined, is_active: true });
+    }
+  };
+
+  const handleGenerateCode = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let out = "";
+    for (let i = 0; i < 8; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    setAccessCode(out);
+  };
+
+  const handleCreateCode = async () => {
+    const code = accessCode.trim();
+    if (!code) { setCodeMessage("Informe um código."); return; }
+    setCreatingCode(true);
+    setCodeMessage("");
+    try {
+      const rows = await base44.entities.LuxuryAccessCode.filter({ code });
+      if (Array.isArray(rows) && rows.length > 0) {
+        setCodeMessage("Código já existe e está disponível.");
+      } else {
+        await base44.entities.LuxuryAccessCode.create({ code, label: codeLabel || undefined, is_active: true });
+        setCodeMessage("Código criado com sucesso.");
+      }
+    } catch (err) {
+      setCodeMessage("Erro: " + err.message);
+    } finally {
+      setCreatingCode(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const p = parseFloat(price);
@@ -37,6 +75,9 @@ export default function CreateLuxuryAuction() {
     }
     setIsSaving(true);
     try {
+      if (accessCode.trim()) {
+        await ensureAccessCodeExists(accessCode.trim(), codeLabel.trim());
+      }
       await base44.entities.LuxuryAuction.create({
         title: title.trim(),
         description: description.trim(),
@@ -80,6 +121,30 @@ export default function CreateLuxuryAuction() {
               <div>
                 <label className="block text-sm mb-1">Preço (R$) *</label>
                 <Input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} className="bg-gray-900 border-gray-700" required />
+              </div>
+
+              <div className="pt-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+                <div className="flex items-center gap-2 text-amber-300 mb-2">
+                  <Key className="w-4 h-4" />
+                  <span className="text-sm font-semibold">Acesso VIP (opcional)</span>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="md:col-span-2">
+                    <label className="block text-xs mb-1">Código</label>
+                    <Input value={accessCode} onChange={(e)=>setAccessCode(e.target.value)} placeholder="EX: VIP8X29" className="bg-gray-900 border-amber-700/60" />
+                  </div>
+                  <div className="flex items-end gap-2">
+                    <Button type="button" variant="outline" onClick={handleGenerateCode} className="border-amber-700/60 text-amber-300">Gerar</Button>
+                    <Button type="button" onClick={handleCreateCode} disabled={creatingCode} className="bg-amber-600 hover:bg-amber-700">
+                      {creatingCode ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin"/> Criando...</>) : "Criar código"}
+                    </Button>
+                  </div>
+                  <div className="md:col-span-3">
+                    <label className="block text-xs mb-1">Rótulo (opcional)</label>
+                    <Input value={codeLabel} onChange={(e)=>setCodeLabel(e.target.value)} placeholder="Ex.: Clube Black, VIP Rolex..." className="bg-gray-900 border-amber-700/60" />
+                  </div>
+                </div>
+                {codeMessage && <div className="mt-2 text-xs text-amber-200 flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> {codeMessage}</div>}
               </div>
 
               <div>
