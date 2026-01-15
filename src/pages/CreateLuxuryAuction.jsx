@@ -92,7 +92,7 @@ export default function CreateLuxuryAuction() {
           code,
           label: vipLabel || undefined,
           is_active: true,
-          is_single_use: false,
+          is_single_use: vipSingleUse,
           is_used: false
         });
       }

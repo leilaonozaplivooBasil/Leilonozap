@@ -3,8 +3,8 @@ import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-import { Trash2, RefreshCcw, Unlock, Key, Plus } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Trash2, RefreshCcw, Lock, Unlock, Key, Plus } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
 
@@ -16,7 +16,7 @@ export default function LuxuryAccessManager() {
   const [personName, setPersonName] = useState("");
   const [email, setEmail] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  
+  const [singleUse, setSingleUse] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -48,12 +48,12 @@ export default function LuxuryAccessManager() {
           person_name: personName || undefined,
           email: email || undefined,
           whatsapp: whatsapp || undefined,
-          is_active: false,
-          is_single_use: false,
+          is_active: true,
+          is_single_use: singleUse,
           is_used: false
         });
       }
-      setNewCode(""); setLabel(""); setPersonName(""); setEmail(""); setWhatsapp("");
+      setNewCode(""); setLabel(""); setPersonName(""); setEmail(""); setWhatsapp(""); setSingleUse(true);
       await load();
     } finally { setSaving(false); }
   };
@@ -64,7 +64,7 @@ export default function LuxuryAccessManager() {
   };
 
   const resetUse = async (c) => {
-    await base44.entities.LuxuryAccessCode.update(c.id, { is_used: false, is_active: false, used_by_user_id: null, used_at: null });
+    await base44.entities.LuxuryAccessCode.update(c.id, { is_used: false, is_active: true, used_by_user_id: null, used_at: null });
     await load();
   };
 
@@ -106,7 +106,10 @@ export default function LuxuryAccessManager() {
               <label className="block text-xs mb-1 text-gray-200">WhatsApp</label>
               <Input value={whatsapp} onChange={(e)=>setWhatsapp(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" placeholder="(11) 99999-9999"/>
             </div>
-
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-200">Uso único</span>
+              <Switch checked={singleUse} onCheckedChange={setSingleUse}/>
+            </div>
             <div className="md:col-span-6">
               <Button onClick={create} disabled={saving} className="bg-amber-600 hover:bg-amber-700 w-full md:w-auto"><Plus className="w-4 h-4 mr-2"/>Criar código</Button>
             </div>
@@ -128,7 +131,7 @@ export default function LuxuryAccessManager() {
                     <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">WhatsApp</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">E-mail</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Rótulo</th>
-                    
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Uso único</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Status</th>
                     <th className="text-right px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Ações</th>
                   </tr>
@@ -141,9 +144,11 @@ export default function LuxuryAccessManager() {
                       <td className="py-3 px-4 truncate max-w-[180px]">{c.whatsapp || '-'}</td>
                       <td className="py-3 px-4 truncate max-w-[260px]">{c.email || '-'}</td>
                       <td className="py-3 px-4">{c.label ? <span className="px-2 py-1 rounded bg-gray-700/40 border border-gray-600/40">{c.label}</span> : '-'}</td>
-
+                      <td className="py-3 px-4"><span className={c.is_single_use ? "px-2 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/30" : "px-2 py-1 rounded bg-gray-500/10 text-gray-300 border border-gray-500/30"}>{c.is_single_use ? 'Sim' : 'Não'}</span></td>
                       <td className="py-3 px-4">
-                        {c.is_active ? (
+                        {c.is_used ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/10 text-red-300 border border-red-500/30"><Lock className="w-3.5 h-3.5"/> Usado</span>
+                        ) : c.is_active ? (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-500/10 text-green-300 border border-green-500/30"><Unlock className="w-3.5 h-3.5"/> Ativo</span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-500/10 text-gray-300 border border-gray-500/30">Inativo</span>
