@@ -106,20 +106,20 @@ export default function CreateLuxuryAuction() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 py-8 px-4 text-gray-200">
+    <div className="min-h-screen bg-gray-900 py-8 px-4 text-white">
       <div className="max-w-3xl mx-auto">
         {/* Toolbar de gestão */}
         <div className="mb-4 flex flex-wrap gap-2">
-          <Button onClick={() => setShowVipModal(true)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">
+          <Button onClick={() => setShowVipModal(true)} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
             <Key className="w-4 h-4 mr-2" /> Criar Acesso VIP
           </Button>
-          <Button variant="outline" onClick={() => document.getElementById('luxury-form')?.scrollIntoView({ behavior: 'smooth' })} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">
+          <Button variant="outline" onClick={() => document.getElementById('luxury-form')?.scrollIntoView({ behavior: 'smooth' })} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
             Cadastrar Leilão
           </Button>
-          <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryAccessManager"))} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">
+          <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryAccessManager"))} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
             🔑 Gerenciar Acessos VIP
           </Button>
-          <Button variant="outline" onClick={() => navigate(createPageUrl("BannerManagement"))} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">
+          <Button variant="outline" onClick={() => navigate(createPageUrl("BannerManagement"))} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
             <ImagePlus className="w-4 h-4 mr-2" /> Adicionar Banner
           </Button>
 
@@ -130,7 +130,7 @@ export default function CreateLuxuryAuction() {
               <CardTitle className="text-white font-bold flex items-center gap-2">
                 <Gem className="w-5 h-5 text-amber-400" /> Criar Leilão de Luxo
               </CardTitle>
-              <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryCollection"))} className="border-gray-600 bg-gray-900 text-gray-300 hover:bg-gray-800">
+              <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryCollection"))} className="border-gray-600 bg-gray-900 text-white hover:bg-gray-800">
                 <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
               </Button>
             </div>
@@ -139,11 +139,11 @@ export default function CreateLuxuryAuction() {
             <form id="luxury-form" ref={formRef} onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm mb-1">Título *</label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-gray-900 border-gray-700" required />
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" required />
               </div>
               <div>
                 <label className="block text-sm mb-1">Descrição</label>
-                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="bg-gray-900 border-gray-700 min-h-[120px]" />
+                <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="bg-gray-900 border-gray-700 min-h-[120px] text-white placeholder:text-white/60" />
               </div>
               <div className="border border-emerald-800/40 bg-emerald-900/10 rounded-xl p-4">
                 <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-3">
@@ -153,22 +153,22 @@ export default function CreateLuxuryAuction() {
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <label className="block text-sm mb-1">Preço Inicial (R$) *</label>
-                    <Input value={startingPrice} onChange={(e)=>setStartingPrice(e.target.value)} placeholder="0,00" className="bg-gray-900 border-gray-700" />
+                    <Input value={startingPrice} onChange={(e)=>setStartingPrice(e.target.value)} placeholder="0,00" className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" />
                   </div>
                   <div>
                     <label className="block text-sm mb-1">Incremento (R$) *</label>
-                    <Input value={increment} onChange={(e)=>setIncrement(e.target.value)} placeholder="10,00" className="bg-gray-900 border-gray-700" />
+                    <Input value={increment} onChange={(e)=>setIncrement(e.target.value)} placeholder="10,00" className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" />
                   </div>
                   <div>
                     <label className="block text-sm mb-1">Preço de Compra Rápida (opcional)</label>
-                    <Input value={buyNowPrice} onChange={(e)=>setBuyNowPrice(e.target.value)} placeholder="Ex.: 9.999,99" className="bg-gray-900 border-gray-700" />
-                    <p className="text-xs text-gray-400 mt-1">Se preenchido, o leilão pode ser encerrado imediatamente por este valor.</p>
+                    <Input value={buyNowPrice} onChange={(e)=>setBuyNowPrice(e.target.value)} placeholder="Ex.: 9.999,99" className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" />
+                    <p className="text-xs text-white mt-1">Se preenchido, o leilão pode ser encerrado imediatamente por este valor.</p>
                   </div>
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm mb-1">Duração do Leilão</label>
                   <Select value={duration} onValueChange={setDuration}>
-                    <SelectTrigger className="bg-gray-900 border-gray-700">
+                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-900 border-gray-700">
@@ -200,11 +200,11 @@ export default function CreateLuxuryAuction() {
                     <input type="file" accept="image/*" className="hidden" disabled={isUploading}
                       onChange={(e) => e.target.files && e.target.files[0] && handleUpload(e.target.files[0])} />
                     {isUploading ? (
-                      <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                      <Loader2 className="w-4 h-4 animate-spin text-white" />
                     ) : (
                       <>
-                        <Upload className="w-4 h-4 mr-1 text-gray-400" />
-                        <span className="text-xs text-gray-400">Enviar</span>
+                        <Upload className="w-4 h-4 mr-1 text-white" />
+                        <span className="text-xs text-white">Enviar</span>
                       </>
                     )}
                   </label>
@@ -212,7 +212,7 @@ export default function CreateLuxuryAuction() {
               </div>
 
               <div className="pt-2 flex gap-3">
-                <Button type="button" variant="outline" onClick={() => navigate(createPageUrl("Home"))} className="flex-1 border-gray-600 bg-gray-900 text-gray-300 hover:bg-gray-800">Cancelar</Button>
+                <Button type="button" variant="outline" onClick={() => navigate(createPageUrl("Home"))} className="flex-1 border-gray-600 bg-gray-900 text-white hover:bg-gray-800">Cancelar</Button>
                 <Button type="submit" disabled={isSaving} className="flex-1 bg-amber-600 hover:bg-amber-700">
                   {isSaving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin"/> Salvando...</>) : "Criar"}
                 </Button>
