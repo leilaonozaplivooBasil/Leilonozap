@@ -3,7 +3,7 @@ import { base44 } from "@/api/base44Client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+
 import { Trash2, RefreshCcw, Lock, Unlock, Key, Plus } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
@@ -140,7 +140,7 @@ export default function LuxuryAccessManager() {
                       <td className="py-3 px-4 truncate max-w-[180px]">{c.whatsapp || '-'}</td>
                       <td className="py-3 px-4 truncate max-w-[260px]">{c.email || '-'}</td>
                       <td className="py-3 px-4">{c.label ? <span className="px-2 py-1 rounded bg-gray-700/40 border border-gray-600/40">{c.label}</span> : '-'}</td>
-                      <td className="py-3 px-4"><span className={c.is_single_use ? "px-2 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/30" : "px-2 py-1 rounded bg-gray-500/10 text-gray-300 border border-gray-500/30"}>{c.is_single_use ? 'Sim' : 'Não'}</span></td>
+                      
                       <td className="py-3 px-4">
                         {c.is_active ? (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-500/10 text-green-300 border border-green-500/30"><Unlock className="w-3.5 h-3.5"/> Ativo</span>
