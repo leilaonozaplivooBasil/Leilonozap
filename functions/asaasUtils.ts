@@ -12,7 +12,7 @@ export async function getSettings(base44) {
 
   const env = 'PRODUCTION';
   const apiKey = prodKey;
-  const baseUrl = 'https://api.asaas.com/api/v3';
+  const baseUrl = 'https://api.asaas.com/v3';
   const userAgent = settings?.asaasUserAgent || 'Base44-App';
 
   return { settings, env, baseUrl, userAgent, apiKey };
