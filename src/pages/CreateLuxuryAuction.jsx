@@ -9,7 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Gem, ArrowLeft, Loader2, Trash2, Key, ImagePlus } from "lucide-react";
+import { Upload, Gem, ArrowLeft, Loader2, Trash2, Key, ImagePlus, Sparkles } from "lucide-react";
 
 export default function CreateLuxuryAuction() {
   const navigate = useNavigate();
@@ -28,6 +28,7 @@ export default function CreateLuxuryAuction() {
   const [vipLabel, setVipLabel] = useState("");
   const [vipSingleUse, setVipSingleUse] = useState(true);
   const [savingVip, setSavingVip] = useState(false);
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
 
   const handleUpload = async (file) => {
     if (!file) return;
@@ -105,6 +106,23 @@ export default function CreateLuxuryAuction() {
     }
   };
 
+  const generateDescription = async () => {
+    if (!title.trim()) { alert("Preencha o título primeiro"); return; }
+    setIsGeneratingDesc(true);
+    try {
+      const res = await base44.integrations.Core.InvokeLLM({
+        prompt: `Escreva uma descrição comercial curta, clara e atraente para um produto de luxo com o título: "${title}". Use tom premium, em português, 3-5 frases, sem emojis, sem markdown.`,
+      });
+      if (res) {
+        setDescription(typeof res === 'string' ? res : (res.text || String(res)));
+      }
+    } catch (e) {
+      alert("Falha ao gerar descrição.");
+    } finally {
+      setIsGeneratingDesc(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 py-8 px-4 text-white">
       <div className="max-w-3xl mx-auto">
@@ -142,7 +160,12 @@ export default function CreateLuxuryAuction() {
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" required />
               </div>
               <div>
-                <label className="block text-sm mb-1 text-white">Descrição</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm text-white">Descrição</label>
+                  <Button type="button" size="sm" variant="outline" onClick={generateDescription} disabled={isGeneratingDesc} className="border-gray-600 bg-gray-900 text-white hover:bg-gray-800">
+                    {isGeneratingDesc ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Gerando...</>) : (<><Sparkles className="w-4 h-4 mr-2" />Criar por IA</>)}
+                  </Button>
+                </div>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="bg-gray-900 border-gray-700 min-h-[120px] text-white placeholder:text-white/60" />
               </div>
               <div className="border border-emerald-800/40 bg-emerald-900/10 rounded-xl p-4">
