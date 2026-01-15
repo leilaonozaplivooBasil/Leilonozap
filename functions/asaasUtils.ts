@@ -26,7 +26,7 @@ export async function getSettings(base44) {
     throw new Error(`Asaas API key not set. Set ASAAS_API_KEY_PRODUCTION or ASAAS_API_KEY_SANDBOX.`);
   }
 
-  const baseUrl = env === 'PRODUCTION' ? 'https://api.asaas.com/v3' : 'https://api-sandbox.asaas.com/v3';
+  const baseUrl = env === 'PRODUCTION' ? 'https://api.asaas.com/api/v3' : 'https://sandbox.asaas.com/api/v3';
   const userAgent = settings?.asaasUserAgent || 'Base44-App';
 
   return { settings, env, baseUrl, userAgent, apiKey };
@@ -45,6 +45,7 @@ export function normalizeStatus(asaasStatus) {
 export async function asaasFetch(baseUrl, apiKey, userAgent, path, options = {}) {
   const headers = {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
     'User-Agent': userAgent,
     'access_token': apiKey,
     ...(options.headers || {})
@@ -62,6 +63,8 @@ export async function asaasFetch(baseUrl, apiKey, userAgent, path, options = {})
     const err = new Error(msg);
     err.status = res.status;
     err.response = json;
+    err.url = `${baseUrl}${path}`;
+    err.method = options.method || 'GET';
     throw err;
   }
   return json;

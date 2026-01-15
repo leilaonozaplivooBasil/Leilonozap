@@ -97,6 +97,6 @@ Deno.serve(async (req) => {
 
     return Response.json({ payment: saved });
   } catch (error) {
-    return Response.json({ error: error.message }, { status: error.status || 500 });
+    return Response.json({ error: error.message, details: error.response || null, request: { url: error.url, method: error.method } }, { status: error.status || 500 });
   }
 });
