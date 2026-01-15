@@ -126,38 +126,40 @@ export default function LuxuryAccessManager() {
               <table className="w-full text-sm table-fixed">
                 <thead className="text-gray-200 border-b border-gray-700/70">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold w-28 whitespace-nowrap">Código</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold w-48 whitespace-nowrap">Pessoa</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold w-36 whitespace-nowrap">WhatsApp</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold w-64 whitespace-nowrap">E-mail</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold w-32 whitespace-nowrap">Rótulo</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold w-28 whitespace-nowrap">Uso único</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold w-28 whitespace-nowrap">Status</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold w-60 whitespace-nowrap">Ações</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-28 whitespace-nowrap">Código</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-48 whitespace-nowrap">Pessoa</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-36 whitespace-nowrap">WhatsApp</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-64 whitespace-nowrap">E-mail</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-32 whitespace-nowrap">Rótulo</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-28 whitespace-nowrap">Uso único</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-28 whitespace-nowrap">Status</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-60 whitespace-nowrap">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="text-white">
                   {codes.map((c) => (
-                    <tr key={c.id} className="border-t border-gray-700/60 hover:bg-gray-800/60 transition-colors">
-                      <td className="py-3 px-4 font-mono">{c.code}</td>
-                      <td className="py-3 px-4">{c.person_name || '-'}</td>
+                    <tr key={c.id} className="border-t border-gray-700/60 odd:bg-gray-800/30 hover:bg-gray-800/60 transition-colors">
+                      <td className="py-3 px-4"><span className="inline-block px-2.5 py-1 rounded-md bg-gray-900 border border-gray-700 font-mono tracking-wider">{c.code}</span></td>
+                      <td className="py-3 px-4 truncate max-w-[220px]">{c.person_name || '-'}</td>
                       <td className="py-3 px-4">{c.whatsapp || '-'}</td>
-                      <td className="py-3 px-4">{c.email || '-'}</td>
-                      <td className="py-3 px-4">{c.label || '-'}</td>
-                      <td className="py-3 px-4">{c.is_single_use ? 'Sim' : 'Não'}</td>
+                      <td className="py-3 px-4 truncate max-w-[260px]">{c.email || '-'}</td>
+                      <td className="py-3 px-4">{c.label ? <span className="px-2 py-1 rounded bg-gray-700/40 border border-gray-600/40">{c.label}</span> : '-'}</td>
+                      <td className="py-3 px-4"><span className={c.is_single_use ? "px-2 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/30" : "px-2 py-1 rounded bg-gray-500/10 text-gray-300 border border-gray-500/30"}>{c.is_single_use ? 'Sim' : 'Não'}</span></td>
                       <td className="py-3 px-4">
                         {c.is_used ? (
-                          <span className="text-red-400 flex items-center gap-1"><Lock className="w-3.5 h-3.5"/> Usado</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-red-500/10 text-red-300 border border-red-500/30"><Lock className="w-3.5 h-3.5"/> Usado</span>
                         ) : c.is_active ? (
-                          <span className="text-green-400 flex items-center gap-1"><Unlock className="w-3.5 h-3.5"/> Ativo</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-500/10 text-green-300 border border-green-500/30"><Unlock className="w-3.5 h-3.5"/> Ativo</span>
                         ) : (
-                          <span className="text-gray-400">Inativo</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-gray-500/10 text-gray-300 border border-gray-500/30">Inativo</span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-right space-x-3">
-                        <Button size="sm" variant="outline" onClick={()=>toggleActive(c)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">{c.is_active ? 'Desativar' : 'Ativar'}</Button>
-                        {c.is_used && <Button size="sm" variant="outline" onClick={()=>resetUse(c)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800"><RefreshCcw className="w-3.5 h-3.5 mr-1"/>Resetar</Button>}
-                        <Button size="sm" variant="destructive" onClick={()=>remove(c)}><Trash2 className="w-3.5 h-3.5 mr-1"/>Excluir</Button>
+                      <td className="py-3 px-4 text-right">
+                        <div className="inline-flex gap-2 flex-wrap justify-end bg-gray-700/30 border border-gray-600/40 rounded-lg p-1">
+                          <Button size="sm" variant="outline" onClick={()=>toggleActive(c)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">{c.is_active ? 'Desativar' : 'Ativar'}</Button>
+                          {c.is_used && <Button size="sm" variant="outline" onClick={()=>resetUse(c)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800"><RefreshCcw className="w-3.5 h-3.5 mr-1"/>Resetar</Button>}
+                          <Button size="sm" variant="destructive" onClick={()=>remove(c)}><Trash2 className="w-3.5 h-3.5 mr-1"/>Excluir</Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
