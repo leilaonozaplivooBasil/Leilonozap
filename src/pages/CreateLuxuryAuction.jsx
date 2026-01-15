@@ -9,7 +9,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
-import { Upload, Gem, ArrowLeft, Loader2, Trash2, Key, Users, ImagePlus } from "lucide-react";
+import { Upload, Gem, ArrowLeft, Loader2, Trash2, Key, ImagePlus } from "lucide-react";
 
 export default function CreateLuxuryAuction() {
   const navigate = useNavigate();
@@ -110,21 +110,19 @@ export default function CreateLuxuryAuction() {
       <div className="max-w-3xl mx-auto">
         {/* Toolbar de gestão */}
         <div className="mb-4 flex flex-wrap gap-2">
-          <Button onClick={() => setShowVipModal(true)} className="bg-amber-600 hover:bg-amber-700">
+          <Button onClick={() => setShowVipModal(true)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">
             <Key className="w-4 h-4 mr-2" /> Criar Acesso VIP
           </Button>
-          <Button variant="outline" onClick={() => document.getElementById('luxury-form')?.scrollIntoView({ behavior: 'smooth' })}>
+          <Button variant="outline" onClick={() => document.getElementById('luxury-form')?.scrollIntoView({ behavior: 'smooth' })} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">
             Cadastrar Leilão
           </Button>
           <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryAccessManager"))}>
             🔑 Gerenciar Acessos VIP
           </Button>
-          <Button variant="outline" onClick={() => navigate(createPageUrl("BannerManagement"))}>
+          <Button variant="outline" onClick={() => navigate(createPageUrl("BannerManagement"))} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">
             <ImagePlus className="w-4 h-4 mr-2" /> Adicionar Banner
           </Button>
-          <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryAccessManager"))}>
-            <Users className="w-4 h-4 mr-2" /> Gerenciar Usuários
-          </Button>
+
         </div>
         <Card className="bg-gray-800/60 border-gray-700">
           <CardHeader>

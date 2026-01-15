@@ -32,6 +32,7 @@ import LiveShopControl from './pages/LiveShopControl';
 import LiveShopControlNoZap from './pages/LiveShopControlNoZap';
 import LiveShopNoZap from './pages/LiveShopNoZap';
 import LojistaDashboard from './pages/LojistaDashboard';
+import LuxuryAccessManager from './pages/LuxuryAccessManager';
 import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyWinnings from './pages/MyWinnings';
@@ -57,7 +58,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import LuxuryAccessManager from './pages/LuxuryAccessManager';
 import __Layout from './Layout.jsx';
 
 
@@ -96,6 +96,7 @@ export const PAGES = {
     "LiveShopControlNoZap": LiveShopControlNoZap,
     "LiveShopNoZap": LiveShopNoZap,
     "LojistaDashboard": LojistaDashboard,
+    "LuxuryAccessManager": LuxuryAccessManager,
     "LuxuryCollection": LuxuryCollection,
     "MemoryBackup": MemoryBackup,
     "MyWinnings": MyWinnings,
@@ -121,7 +122,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "LuxuryAccessManager": LuxuryAccessManager,
 }
 
 export const pagesConfig = {
