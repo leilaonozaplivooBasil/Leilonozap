@@ -424,7 +424,7 @@ export default function CheckoutAsaas() {
 
             <div className="text-sm text-gray-700 mt-6 font-medium">Métodos de pagamentos aceitos:</div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {['Visa','Mastercard','Elo','Boleto','Pix'].map((m)=> (
+              {['Visa','Mastercard','Elo','Pix'].map((m)=> (
                 <span key={m} className="px-2 py-1 rounded-md border text-xs text-gray-700 bg-gray-50 border-gray-200">{m}</span>
               ))}
             </div>
