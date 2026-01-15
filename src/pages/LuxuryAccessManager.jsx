@@ -124,7 +124,7 @@ export default function LuxuryAccessManager() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm table-fixed">
-                <thead className="text-gray-200">
+                <thead className="text-gray-200 border-b border-gray-700/70">
                   <tr>
                     <th className="text-left px-4 py-3 text-xs font-semibold w-28 whitespace-nowrap">Código</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold w-48 whitespace-nowrap">Pessoa</th>
