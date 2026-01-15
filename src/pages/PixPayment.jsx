@@ -35,9 +35,24 @@ export default function PixPayment() {
   };
 
   const refresh = async () => {
-    const { data } = await asaasPollPaymentStatus({ asaasPaymentId: payment.asaasPaymentId });
-    if (data?.normalizedStatus === 'PAID') {
-      window.location.href = createPageUrl('PaymentSuccess') + `?orderId=${payment.orderId}`;
+    try {
+      const { data } = await asaasPollPaymentStatus({ asaasPaymentId: payment.asaasPaymentId });
+      if (data?.normalizedStatus === 'PAID') {
+        window.location.href = createPageUrl('PaymentSuccess') + `?orderId=${payment.orderId}`;
+      }
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || 'Falha ao checar status';
+      try {
+        await base44.entities.SystemLog.create({
+          step: 'PixPayment_Refresh',
+          status: 'error',
+          message: msg,
+          component_name: 'PixPayment',
+          error_details: { stack: err?.stack, data: err?.response?.data },
+          url: window.location.href,
+          user_agent: navigator.userAgent
+        });
+      } catch (_) {}
     }
   };
 
