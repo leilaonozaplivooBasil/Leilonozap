@@ -40,6 +40,8 @@ export default function CheckoutAsaas() {
       try {
         const params = new URLSearchParams(window.location.search);
         const auctionId = params.get('auction_id');
+
+        // Prefill from local storage if available
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
           const u = JSON.parse(savedUser);
@@ -50,7 +52,42 @@ export default function CheckoutAsaas() {
             mobilePhone: u.phone || v.mobilePhone,
             email: u.email || v.email,
           }));
+          setAddress(a => ({
+            ...a,
+            street: u.address_street || a.street,
+            number: u.address_number || a.number,
+            complement: u.address_complement || a.complement,
+            neighborhood: u.address_neighborhood || a.neighborhood,
+            city: u.address_city || a.city,
+            state: u.address_state || a.state,
+            zip: u.address_zip_code || a.zip,
+          }));
         }
+
+        // Prefill from platform user / AppUser record
+        const platformUser = await base44.auth.me().catch(()=>null);
+        if (platformUser?.id) {
+          const listApp = await base44.entities.AppUser.filter({ id: platformUser.id }).catch(()=>[]);
+          const profile = listApp?.[0] || platformUser;
+          setBuyer(v => ({
+            ...v,
+            name: profile.full_name || v.name,
+            cpfCnpj: profile.cpf || v.cpfCnpj,
+            mobilePhone: profile.phone || v.mobilePhone,
+            email: profile.email || v.email,
+          }));
+          setAddress(a => ({
+            ...a,
+            street: profile.address_street || a.street,
+            number: profile.address_number || a.number,
+            complement: profile.address_complement || a.complement,
+            neighborhood: profile.address_neighborhood || a.neighborhood,
+            city: profile.address_city || a.city,
+            state: profile.address_state || a.state,
+            zip: profile.address_zip_code || a.zip,
+          }));
+        }
+
         if (auctionId) {
           const list = await base44.entities.Auction.filter({ id: auctionId });
           const a = list?.[0];
