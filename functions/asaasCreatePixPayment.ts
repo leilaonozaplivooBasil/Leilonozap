@@ -7,7 +7,7 @@ function fmtDate(d) { const dt = new Date(d); return dt.toISOString().slice(0,10
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    await base44.auth.me().catch(() => null); // permitir convidado
+    await base44.auth.me().catch(() => null); // produção apenas
     const { baseUrl, userAgent, apiKey, settings } = await getSettings(base44);
 
     const { orderId } = await req.json();
