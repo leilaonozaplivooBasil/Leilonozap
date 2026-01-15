@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Crown, Sparkles, Search, Gem, ArrowLeft, Lock, Key } from "lucide-react";
 import LuxuryCard from "../components/luxury/LuxuryCard";
 import RotatingBanner from "../components/banner/RotatingBanner";
+import GoldDiamondRain from "../components/luxury/GoldDiamondRain";
 
 export default function LuxuryCollection() {
   const [auctions, setAuctions] = useState([]);
@@ -113,15 +114,13 @@ const filtered = useMemo(() => {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-gray-900 relative">
-        <div className="relative h-64 md:h-80 w-full overflow-hidden">
-          <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/96f283ecb_image.png"
-            alt="Private Luxury"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/60" />
+      <div className="min-h-screen bg-gray-900 relative overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-[#0b1220] to-gray-900" />
+          <div className="pointer-events-none absolute -top-24 -right-16 w-80 h-80 rounded-full bg-amber-400/15 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-32 -left-24 w-96 h-96 rounded-full bg-yellow-300/10 blur-3xl" />
         </div>
+        <GoldDiamondRain count={48} />
         <div className="absolute inset-0 flex items-center justify-center px-4">
           <div className="w-full max-w-md bg-gray-800/80 backdrop-blur border border-amber-500/40 rounded-2xl p-6 shadow-[0_0_40px_rgba(217,119,6,0.25)]">
             <div className="flex items-center gap-2 text-amber-300 mb-1">
