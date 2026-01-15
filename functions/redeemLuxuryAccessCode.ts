@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
 
     await base44.asServiceRole.entities.LuxuryAccessCode.update(rec.id, {
       is_used: true,
-      is_active: rec.is_single_use ? false : true,
+      is_active: true,
       used_by_user_id: userId,
       used_at: new Date().toISOString(),
     });
