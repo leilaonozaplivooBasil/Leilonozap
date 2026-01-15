@@ -158,6 +158,22 @@ export default function AdminCatalogSales() {
     }
   };
 
+  const handleBackfillAsaas = async () => {
+    setIsUpdating(true);
+    try {
+      const { data } = await base44.functions.invoke('asaasBackfillCustomers', {});
+      const created = data?.created ?? 0;
+      const skipped = data?.skipped ?? 0;
+      const errors = data?.errors ?? 0;
+      toast.success(`Clientes criados: ${created} • existentes: ${skipped} • erros: ${errors}`);
+    } catch (error) {
+      console.error('Backfill Asaas error:', error);
+      toast.error('Falha ao criar clientes no Asaas');
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       pending_payment: 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30',
@@ -206,6 +222,13 @@ export default function AdminCatalogSales() {
             Minhas Vendas
           </h1>
           <p className="text-gray-400">Acompanhe suas vendas de leilão e catálogo</p>
+          <div className="mt-3">
+            {currentUser?.role === 'admin' && (
+              <Button onClick={handleBackfillAsaas} className="bg-green-600 hover:bg-green-700" disabled={isUpdating}>
+                {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar clientes no Asaas'}
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Stats */}
