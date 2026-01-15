@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { Trash2, RefreshCcw, Unlock, Key, Plus } from "lucide-react";
+import { Trash2, RefreshCcw, Unlock, Key, Plus, Copy } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
 
@@ -18,6 +18,15 @@ export default function LuxuryAccessManager() {
   const [whatsapp, setWhatsapp] = useState("");
   const [singleUse, setSingleUse] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [copiedId, setCopiedId] = useState(null);
+
+  const copyCode = async (code, id) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch {}
+  };
 
   const load = async () => {
     setLoading(true);
@@ -135,7 +144,14 @@ export default function LuxuryAccessManager() {
                 <tbody className="text-white">
                   {codes.map((c) => (
                     <tr key={c.id} className="border-t border-gray-700/60 odd:bg-gray-800/30 hover:bg-gray-800/60 transition-colors">
-                      <td className="py-3 px-4"><span className="inline-block px-2.5 py-1 rounded-md bg-gray-900 border border-gray-700 font-mono tracking-wider">{c.code}</span></td>
+                      <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-block px-2.5 py-1 rounded-md bg-gray-900 border border-gray-700 font-mono tracking-wider">{c.code}</span>
+                            <Button size="sm" variant="outline" onClick={()=>copyCode(c.code, c.id)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800 px-2">
+                              <Copy className="w-3.5 h-3.5 mr-1" />{copiedId===c.id ? 'Copiado' : 'Copiar'}
+                            </Button>
+                          </div>
+                        </td>
                       <td className="py-3 px-4 truncate max-w-[220px]">{c.person_name || '-'}</td>
                       <td className="py-3 px-4 truncate max-w-[180px]">{c.whatsapp || '-'}</td>
                       <td className="py-3 px-4 truncate max-w-[260px]">{c.email || '-'}</td>
