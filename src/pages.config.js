@@ -15,6 +15,7 @@ import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
+import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
 import CustomerDetails from './pages/CustomerDetails';
 import EditAuction from './pages/EditAuction';
 import EditCatalogProduct from './pages/EditCatalogProduct';
@@ -31,6 +32,7 @@ import LiveShopControl from './pages/LiveShopControl';
 import LiveShopControlNoZap from './pages/LiveShopControlNoZap';
 import LiveShopNoZap from './pages/LiveShopNoZap';
 import LojistaDashboard from './pages/LojistaDashboard';
+import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
@@ -55,8 +57,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import LuxuryCollection from './pages/LuxuryCollection';
-import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
 import __Layout from './Layout.jsx';
 
 
@@ -78,6 +78,7 @@ export const PAGES = {
     "Checkout": Checkout,
     "CreateAuction": CreateAuction,
     "CreateAuctionV2": CreateAuctionV2,
+    "CreateLuxuryAuction": CreateLuxuryAuction,
     "CustomerDetails": CustomerDetails,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
@@ -94,6 +95,7 @@ export const PAGES = {
     "LiveShopControlNoZap": LiveShopControlNoZap,
     "LiveShopNoZap": LiveShopNoZap,
     "LojistaDashboard": LojistaDashboard,
+    "LuxuryCollection": LuxuryCollection,
     "MemoryBackup": MemoryBackup,
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
@@ -118,8 +120,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "LuxuryCollection": LuxuryCollection,
-    "CreateLuxuryAuction": CreateLuxuryAuction,
 }
 
 export const pagesConfig = {

@@ -5,13 +5,43 @@ import { createPageUrl } from "@/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Crown, Sparkles, Search, Gem, ArrowLeft } from "lucide-react";
+import { Crown, Sparkles, Search, Gem, ArrowLeft, Lock, Key } from "lucide-react";
 import LuxuryCard from "../components/luxury/LuxuryCard";
 
 export default function LuxuryCollection() {
   const [auctions, setAuctions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [isAuthorized, setIsAuthorized] = useState(() => sessionStorage.getItem('luxury_access_ok') === 'true');
+  const [accessCode, setAccessCode] = useState("");
+  const [validating, setValidating] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const validateCode = async (code) => {
+    const value = (code || "").trim();
+    if (!value) { setErrorMsg("Informe o código de acesso"); return false; }
+    setValidating(true);
+    setErrorMsg("");
+    try {
+      const rows = await base44.entities.LuxuryAccessCode.filter({ code: value, is_active: true });
+      if (Array.isArray(rows) && rows.length > 0) {
+        sessionStorage.setItem('luxury_access_ok', 'true');
+        setIsAuthorized(true);
+        return true;
+      }
+      setErrorMsg("Código inválido ou inativo");
+      return false;
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthorized) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    if (code) { validateCode(code); }
+  }, [isAuthorized]);
 
   // Palavras-chave e categorias comuns em "luxo"
   // Removido: lógica antiga de palavras-chave/categorias; coleção agora exibe somente itens criados manualmente
@@ -29,6 +59,7 @@ export default function LuxuryCollection() {
   ];
 
   useEffect(() => {
+    if (!isAuthorized) return;
     let mounted = true;
     async function load() {
       try {
@@ -42,7 +73,6 @@ export default function LuxuryCollection() {
     }
     load();
 
-    // Atualizações em tempo real
     const unsub = base44.entities.LuxuryAuction.subscribe((evt) => {
       setAuctions((prev) => {
         if (evt.type === "create") return [evt.data, ...prev];
@@ -55,7 +85,7 @@ export default function LuxuryCollection() {
       mounted = false;
       unsub?.();
     };
-  }, []);
+  }, [isAuthorized]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -65,6 +95,48 @@ export default function LuxuryCollection() {
       return q ? text.includes(q) : true;
     });
   }, [auctions, query]);
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-gray-900 relative">
+        <div className="relative h-64 md:h-80 w-full overflow-hidden">
+          <img
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/96f283ecb_image.png"
+            alt="Private Luxury"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/70 to-black/60" />
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center px-4">
+          <div className="w-full max-w-md bg-gray-800/80 backdrop-blur border border-amber-500/40 rounded-2xl p-6 shadow-[0_0_40px_rgba(217,119,6,0.25)]">
+            <div className="flex items-center gap-2 text-amber-300 mb-1">
+              <Crown className="w-5 h-5" />
+              <span className="uppercase text-xs tracking-widest">Acesso exclusivo</span>
+            </div>
+            <h2 className="text-white text-2xl font-bold mb-1">Coleção Privada</h2>
+            <p className="text-amber-100/80 text-sm mb-4">Informe seu código para entrar.</p>
+            <div className="relative mb-3">
+              <Key className="w-4 h-4 text-amber-300 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                placeholder="Código de acesso"
+                value={accessCode}
+                onChange={(e)=>setAccessCode(e.target.value)}
+                onKeyDown={(e)=>{ if(e.key==='Enter'){ validateCode(accessCode); }}}
+                className="pl-9 bg-gray-900 border-amber-700/60 text-gray-100 placeholder-gray-400"
+              />
+            </div>
+            {errorMsg ? <div className="text-red-400 text-xs mb-3">{errorMsg}</div> : null}
+            <Button onClick={()=>validateCode(accessCode)} disabled={validating} className="w-full bg-amber-600 hover:bg-amber-700">
+              {validating ? "Verificando..." : "Entrar"}
+            </Button>
+            <div className="mt-4 text-xs text-gray-400 flex items-center gap-2">
+              <Lock className="w-3.5 h-3.5" /> Convite para membros de alto padrão.
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900">
