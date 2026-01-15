@@ -23,26 +23,16 @@ export default function LuxuryCollection() {
     setValidating(true);
     setErrorMsg("");
     try {
-      const rows = await base44.entities.LuxuryAccessCode.filter({ code: value, is_active: true });
-      if (Array.isArray(rows) && rows.length > 0) {
-        const rec = rows[0];
-        if (rec.is_single_use && rec.is_used) {
-          setErrorMsg("Este código já foi utilizado");
-          return false;
-        }
-        let userId = undefined;
-        try { const u = await base44.auth.me(); userId = u?.id; } catch (_) {}
-        await base44.entities.LuxuryAccessCode.update(rec.id, {
-          is_used: true,
-          is_active: rec.is_single_use ? false : true,
-          used_by_user_id: userId,
-          used_at: new Date().toISOString()
-        });
+      const res = await base44.functions.invoke('redeemLuxuryAccessCode', { code: value });
+      const ok = res?.data?.success === true;
+      if (ok) {
         sessionStorage.setItem('luxury_access_ok', 'true');
         setIsAuthorized(true);
         return true;
       }
-      setErrorMsg("Código inválido ou inativo");
+      const err = res?.data?.error || 'Código inválido ou inativo';
+      if (err === 'already_used') setErrorMsg('Este código já foi utilizado');
+      else setErrorMsg('Código inválido ou inativo');
       return false;
     } finally {
       setValidating(false);
