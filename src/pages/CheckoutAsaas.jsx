@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,34 @@ export default function CheckoutAsaas() {
   const [loading, setLoading] = useState(false);
 
   const total = useMemo(() => (Number(item.qty||1) * Number(item.price||0)), [item]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const auctionId = params.get('auction_id');
+        const savedUser = localStorage.getItem('currentUser');
+        if (savedUser) {
+          const u = JSON.parse(savedUser);
+          setBuyer(v => ({
+            ...v,
+            name: u.full_name || v.name,
+            cpfCnpj: u.cpf || v.cpfCnpj,
+            mobilePhone: u.phone || v.mobilePhone,
+            email: u.email || v.email,
+          }));
+        }
+        if (auctionId) {
+          const list = await base44.entities.Auction.filter({ id: auctionId });
+          const a = list?.[0];
+          if (a) {
+            const price = Number(a.current_price || a.buy_now_price || 0);
+            setItem({ name: a.title || 'Pedido avulso', qty: 1, price });
+          }
+        }
+      } catch {}
+    })();
+  }, []);
 
   const createOrder = async () => {
     const orderNumber = 'ORD-' + Math.random().toString(36).slice(2,8).toUpperCase();
