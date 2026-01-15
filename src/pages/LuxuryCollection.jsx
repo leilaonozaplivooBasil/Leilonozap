@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Crown, Sparkles, Search, Gem, ArrowLeft, Lock, Key } from "lucide-react";
 import LuxuryCard from "../components/luxury/LuxuryCard";
+import RotatingBanner from "../components/banner/RotatingBanner";
 
 export default function LuxuryCollection() {
   const [auctions, setAuctions] = useState([]);
@@ -16,6 +17,7 @@ export default function LuxuryCollection() {
   const [accessCode, setAccessCode] = useState("");
   const [validating, setValidating] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+const [banners, setBanners] = useState([]);
 
   const validateCode = async (code) => {
     const value = (code || "").trim();
@@ -90,7 +92,17 @@ export default function LuxuryCollection() {
     };
   }, [isAuthorized]);
 
-  const filtered = useMemo(() => {
+  useEffect(() => {
+  if (!isAuthorized) return;
+  base44.entities.BannerImage.filter({ context: 'luxurycollection' }).then((bannerData) => {
+    const sortedBanners = (bannerData || [])
+      .filter((b) => b.is_active)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    setBanners(sortedBanners);
+  }).catch(() => {});
+}, [isAuthorized]);
+
+const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return auctions.filter((a) => {
       if (a?.status && a.status !== "active") return false;
@@ -171,6 +183,11 @@ export default function LuxuryCollection() {
         </div>
       </div>
 
+      {banners.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 mt-6">
+          <RotatingBanner banners={banners} />
+        </div>
+      )}
       {/* Barra de busca */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
         <div className="flex items-center gap-3">

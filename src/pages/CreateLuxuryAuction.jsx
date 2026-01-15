@@ -137,7 +137,7 @@ export default function CreateLuxuryAuction() {
           <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryAccessManager"))} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
             🔑 Gerenciar Acessos VIP
           </Button>
-          <Button variant="outline" onClick={() => navigate(createPageUrl("BannerManagement"))} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
+          <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryBannerManagement"))} className="border-gray-700 bg-gray-900 text-white hover:bg-gray-800">
             <ImagePlus className="w-4 h-4 mr-2" /> Adicionar Banner
           </Button>
 
