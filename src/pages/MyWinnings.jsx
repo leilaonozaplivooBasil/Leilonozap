@@ -136,8 +136,8 @@ export default function MyWinningsPage() {
         navigate(createPageUrl(trackingPage) + `?auction_id=${auction.id}`);
     };
 
-    const handlePayClick = (auction) => {
-        navigate(createPageUrl('Checkout') + `?auction_id=${auction.id}`);
+    const handlePayClick = () => {
+        toast.info('Pagamento temporariamente desativado. Em breve reativaremos.');
     };
 
 
