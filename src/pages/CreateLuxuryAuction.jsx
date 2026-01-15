@@ -110,7 +110,7 @@ export default function CreateLuxuryAuction() {
           <Button variant="outline" onClick={() => navigate(createPageUrl("BannerManagement"))}>
             <ImagePlus className="w-4 h-4 mr-2" /> Adicionar Banner
           </Button>
-          <Button variant="outline" onClick={() => navigate(createPageUrl("AdminUsers"))}>
+          <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryAccessManager"))}>
             <Users className="w-4 h-4 mr-2" /> Gerenciar Usuários
           </Button>
         </div>

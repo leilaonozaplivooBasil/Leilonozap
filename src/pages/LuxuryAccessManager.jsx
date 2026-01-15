@@ -13,6 +13,9 @@ export default function LuxuryAccessManager() {
   const [loading, setLoading] = useState(true);
   const [newCode, setNewCode] = useState("");
   const [label, setLabel] = useState("");
+  const [personName, setPersonName] = useState("");
+  const [email, setEmail] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
   const [singleUse, setSingleUse] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -39,9 +42,18 @@ export default function LuxuryAccessManager() {
     try {
       const exists = await base44.entities.LuxuryAccessCode.filter({ code: newCode.trim() });
       if (!Array.isArray(exists) || exists.length === 0) {
-        await base44.entities.LuxuryAccessCode.create({ code: newCode.trim(), label: label || undefined, is_active: true, is_single_use: singleUse, is_used: false });
+        await base44.entities.LuxuryAccessCode.create({
+          code: newCode.trim(),
+          label: label || undefined,
+          person_name: personName || undefined,
+          email: email || undefined,
+          whatsapp: whatsapp || undefined,
+          is_active: true,
+          is_single_use: singleUse,
+          is_used: false
+        });
       }
-      setNewCode(""); setLabel(""); setSingleUse(true);
+      setNewCode(""); setLabel(""); setPersonName(""); setEmail(""); setWhatsapp(""); setSingleUse(true);
       await load();
     } finally { setSaving(false); }
   };
@@ -70,7 +82,7 @@ export default function LuxuryAccessManager() {
         </div>
 
         <Card className="bg-gray-800/70 border-gray-700 p-4 mb-6">
-          <div className="grid md:grid-cols-5 gap-3 items-end">
+          <div className="grid md:grid-cols-6 gap-3 items-end">
             <div className="md:col-span-2">
               <label className="block text-xs mb-1">Código</label>
               <div className="flex gap-2">
@@ -82,11 +94,23 @@ export default function LuxuryAccessManager() {
               <label className="block text-xs mb-1">Rótulo (opcional)</label>
               <Input value={label} onChange={(e)=>setLabel(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="Clube Black"/>
             </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs mb-1">Nome da pessoa</label>
+              <Input value={personName} onChange={(e)=>setPersonName(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="Ex.: João Silva"/>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs mb-1">E-mail</label>
+              <Input value={email} onChange={(e)=>setEmail(e.target.value)} type="email" className="bg-gray-900 border-gray-700" placeholder="exemplo@email.com"/>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs mb-1">WhatsApp</label>
+              <Input value={whatsapp} onChange={(e)=>setWhatsapp(e.target.value)} className="bg-gray-900 border-gray-700" placeholder="(11) 99999-9999"/>
+            </div>
             <div className="flex items-center gap-2">
               <span className="text-sm">Uso único</span>
               <Switch checked={singleUse} onCheckedChange={setSingleUse}/>
             </div>
-            <div className="md:col-span-5">
+            <div className="md:col-span-6">
               <Button onClick={create} disabled={saving} className="bg-amber-600 hover:bg-amber-700 w-full md:w-auto"><Plus className="w-4 h-4 mr-2"/>Criar código</Button>
             </div>
           </div>
@@ -103,6 +127,9 @@ export default function LuxuryAccessManager() {
                 <thead className="text-gray-300">
                   <tr>
                     <th className="text-left py-2">Código</th>
+                    <th className="text-left py-2">Pessoa</th>
+                    <th className="text-left py-2">WhatsApp</th>
+                    <th className="text-left py-2">E-mail</th>
                     <th className="text-left py-2">Rótulo</th>
                     <th className="text-left py-2">Uso único</th>
                     <th className="text-left py-2">Status</th>
@@ -113,6 +140,9 @@ export default function LuxuryAccessManager() {
                   {codes.map((c) => (
                     <tr key={c.id} className="border-t border-gray-700/60">
                       <td className="py-2 font-mono">{c.code}</td>
+                      <td className="py-2">{c.person_name || '-'}</td>
+                      <td className="py-2">{c.whatsapp || '-'}</td>
+                      <td className="py-2">{c.email || '-'}</td>
                       <td className="py-2">{c.label || '-'}</td>
                       <td className="py-2">{c.is_single_use ? 'Sim' : 'Não'}</td>
                       <td className="py-2">
