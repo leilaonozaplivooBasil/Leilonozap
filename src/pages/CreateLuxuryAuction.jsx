@@ -91,8 +91,8 @@ export default function CreateLuxuryAuction() {
         await base44.entities.LuxuryAccessCode.create({
           code,
           label: vipLabel || undefined,
-          is_active: true,
-          is_single_use: vipSingleUse,
+          is_active: false,
+          is_single_use: false,
           is_used: false
         });
       }

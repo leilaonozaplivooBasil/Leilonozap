@@ -49,7 +49,7 @@ export default function LuxuryAccessManager() {
           email: email || undefined,
           whatsapp: whatsapp || undefined,
           is_active: false,
-          is_single_use: singleUse,
+          is_single_use: false,
           is_used: false
         });
       }
