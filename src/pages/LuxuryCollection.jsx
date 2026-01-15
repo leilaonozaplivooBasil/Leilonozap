@@ -144,7 +144,7 @@ export default function LuxuryCollection() {
   return (
     <div className="min-h-screen bg-gray-900">
       {/* Hero */}
-      <div className="max-w-7xl mx-auto px-4 mb-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 mb-8">
         <div className="relative overflow-hidden bg-gray-900 rounded-3xl p-8 text-white shadow-xl">
           <div className="absolute -top-10 -right-10 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-yellow-500/10 rounded-full blur-3xl"></div>
