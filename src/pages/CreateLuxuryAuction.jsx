@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -18,6 +18,7 @@ export default function CreateLuxuryAuction() {
   const [images, setImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const formRef = useRef(null);
   const [showVipModal, setShowVipModal] = useState(false);
   const [vipCode, setVipCode] = useState("");
   const [vipLabel, setVipLabel] = useState("");
@@ -100,8 +101,11 @@ export default function CreateLuxuryAuction() {
           <Button onClick={() => setShowVipModal(true)} className="bg-amber-600 hover:bg-amber-700">
             <Key className="w-4 h-4 mr-2" /> Criar Acesso VIP
           </Button>
-          <Button variant="outline" disabled>
+          <Button variant="outline" onClick={() => document.getElementById('luxury-form')?.scrollIntoView({ behavior: 'smooth' })}>
             Cadastrar Leilão
+          </Button>
+          <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryAccessManager"))}>
+            🔑 Gerenciar Acessos VIP
           </Button>
           <Button variant="outline" onClick={() => navigate(createPageUrl("BannerManagement"))}>
             <ImagePlus className="w-4 h-4 mr-2" /> Adicionar Banner
@@ -122,7 +126,7 @@ export default function CreateLuxuryAuction() {
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form id="luxury-form" ref={formRef} onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label className="block text-sm mb-1">Título *</label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-gray-900 border-gray-700" required />
