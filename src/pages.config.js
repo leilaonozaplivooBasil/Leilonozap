@@ -56,6 +56,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
 import LuxuryCollection from './pages/LuxuryCollection';
+import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
 import __Layout from './Layout.jsx';
 
 
@@ -118,6 +119,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
     "LuxuryCollection": LuxuryCollection,
+    "CreateLuxuryAuction": CreateLuxuryAuction,
 }
 
 export const pagesConfig = {

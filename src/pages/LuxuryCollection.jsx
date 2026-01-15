@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Crown, Sparkles, Search, Gem, ArrowLeft } from "lucide-react";
-import AuctionCard from "../components/auction/AuctionCard";
+import LuxuryCard from "../components/luxury/LuxuryCard";
 
 export default function LuxuryCollection() {
   const [auctions, setAuctions] = useState([]);
@@ -14,7 +14,9 @@ export default function LuxuryCollection() {
   const [query, setQuery] = useState("");
 
   // Palavras-chave e categorias comuns em "luxo"
-  const LUXURY_KEYWORDS = [
+  // Removido: lógica antiga de palavras-chave/categorias; coleção agora exibe somente itens criados manualmente
+  const LUXURY_KEYWORDS = [ // legacy (não utilizado)
+
     "rolex","omega","audemars","patek","cartier","lou\u00eds vuitton","louis vuitton","lv",
     "gucci","prada","herm\u00e8s","hermes","chanel","ferrari","lamborghini","porche","porsche",
     "mclaren","tiffany","montblanc","tag heuer","hublot","panerai","versace","dior","yves"
@@ -31,7 +33,7 @@ export default function LuxuryCollection() {
     async function load() {
       try {
         setIsLoading(true);
-        const list = await base44.entities.Auction.list("-created_date", 200);
+        const list = await base44.entities.LuxuryAuction.list("-created_date", 200);
         if (!mounted) return;
         setAuctions(Array.isArray(list) ? list : []);
       } finally {
@@ -41,7 +43,7 @@ export default function LuxuryCollection() {
     load();
 
     // Atualizações em tempo real
-    const unsub = base44.entities.Auction.subscribe((evt) => {
+    const unsub = base44.entities.LuxuryAuction.subscribe((evt) => {
       setAuctions((prev) => {
         if (evt.type === "create") return [evt.data, ...prev];
         if (evt.type === "update") return prev.map((a) => (a.id === evt.id ? evt.data : a));
@@ -59,24 +61,8 @@ export default function LuxuryCollection() {
     const q = query.trim().toLowerCase();
     return auctions.filter((a) => {
       if (a?.status && a.status !== "active") return false;
-
-      // preço de referência
-      const price = Number(a?.market_price ?? a?.starting_price ?? a?.current_price ?? 0);
-
-      // match por categoria
-      const catOk = a?.category && LUXURY_CATEGORIES.includes(a.category);
-
-      // match por palavras-chave no título/descrição
       const text = `${a?.title || ""} ${a?.description || ""}`.toLowerCase();
-      const kwOk = LUXURY_KEYWORDS.some((k) => text.includes(k));
-
-      // critério de preço mínimo (ex.: >= 1000)
-      const priceOk = price >= 1000;
-
-      // Filtro de busca livre
-      const searchOk = q ? text.includes(q) : true;
-
-      return searchOk && (catOk || kwOk || priceOk);
+      return q ? text.includes(q) : true;
     });
   }, [auctions, query]);
 
@@ -143,7 +129,7 @@ export default function LuxuryCollection() {
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {filtered.map((a) => (
-              <AuctionCard key={a.id} auction={a} compact={false} showCompare={false} />
+              <LuxuryCard key={a.id} item={a} />
             ))}
           </div>
         )}

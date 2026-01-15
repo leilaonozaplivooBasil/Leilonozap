@@ -399,6 +399,7 @@ export default function Layout({ children, currentPageName }) {
       isCategory: true,
       items: [
         { title: "Criar Leilão", pageName: "CreateAuction" },
+        { title: "👑 Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
         { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
         { title: "🔴 Live Shop Sai de Baixo", pageName: "LiveShopControl" },
         { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
