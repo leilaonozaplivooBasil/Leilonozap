@@ -158,7 +158,7 @@ export default function LuxuryCollection() {
               <Crown className="w-10 h-10 text-amber-400" />
               <span>Artigos de <span className="text-green-400">Luxo</span></span>
             </h1>
-            <p className="text-gray-300 mb-4 max-w-2xl">
+            <p className="text-gray-200/90 mb-5 max-w-2xl text-lg">
               Leilões selecionados com curadoria: relógios, bolsas, supercarros, joias e peças premium.
             </p>
 
