@@ -430,11 +430,11 @@ export default function Layout({ children, currentPageName }) {
   const isLicensee = isLoggedIn && currentUser.role === 'licensee';
 
   const finalMenuItems = [
-    { title: "Leilões", pageName: "Home" },
-    { title: "Catálogo", pageName: "Catalog" },
-    { title: "Sistema de Alavancagem", pageName: "Licensing" },
-    ...(isLoggedIn ? loggedMenuItems : [])
-  ];
+            { title: "Leilões", pageName: "Home" },
+            { title: "Lojista", pageName: "LojistaDashboard" },
+            { title: "Sistema de Alavancagem", pageName: "Licensing" },
+            ...(isLoggedIn ? loggedMenuItems : [])
+          ];
 
   const isLojistaPage = currentPageName === 'LojistaDashboard';
 
