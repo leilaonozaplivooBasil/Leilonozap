@@ -7,9 +7,11 @@ Deno.serve(async (req) => {
 
         const { cepDestino, productId } = await req.json();
 
-        if (!cepDestino || !productId) {
-            return Response.json({ error: "CEP destino e ID do produto são obrigatórios" }, { status: 400 });
+        if (!cepDestino) {
+            return Response.json({ error: "CEP destino é obrigatório" }, { status: 400 });
         }
+
+        const cep = String(cepDestino).replace(/\D/g, '');
 
         // Buscar configurações de frete
         const settings = await base44.asServiceRole.entities.FreteSettings.list();
@@ -19,9 +21,12 @@ Deno.serve(async (req) => {
 
         const config = settings[0];
 
-        // Buscar produto para obter dimensões
-        const products = await base44.asServiceRole.entities.Product.filter({ id: productId });
-        const product = products.length > 0 ? products[0] : null;
+        // Buscar produto para obter dimensões (opcional)
+        let product = null;
+        if (productId) {
+            const products = await base44.asServiceRole.entities.Product.filter({ id: productId });
+            product = products.length > 0 ? products[0] : null;
+        }
 
         // Usar dimensões do produto ou padrão
         const peso = product?.peso || config.peso_padrao;
@@ -85,7 +90,7 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
                 cepOrigem: config.cep_origem,
-                cepDestino: cepDestino,
+                cepDestino: cep,
                 peso: peso.toString(),
                 comprimento: comprimento.toString(),
                 altura: altura.toString(),

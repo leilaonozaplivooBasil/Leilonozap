@@ -27,6 +27,7 @@ export default function CheckoutAsaas() {
   const [shippingLoading, setShippingLoading] = useState(false);
   const [shippingOptions, setShippingOptions] = useState([]);
   const [selectedShipping, setSelectedShipping] = useState('');
+  const [shippingError, setShippingError] = useState('');
 
   const total = useMemo(() => (Number(item.qty||1) * Number(item.price||0)), [item]);
   const shippingCost = useMemo(() => {
@@ -141,8 +142,11 @@ export default function CheckoutAsaas() {
     const handleCalcShipping = async () => {
       if (!address.zip) return;
       setShippingLoading(true);
+      setShippingError('');
       try {
-        const { data } = await calculateShipping({ cepDestino: address.zip, productId: item.product_id || 'generic' });
+        const payload = { cepDestino: String(address.zip).replace(/\D/g,'') };
+        if (item.product_id) payload.productId = item.product_id;
+        const { data } = await calculateShipping(payload);
         const opts = Object.entries(data || {}).map(([name, info]) => ({
           name,
           valor: Number((info && info.valor) ? info.valor : 0),
@@ -150,6 +154,9 @@ export default function CheckoutAsaas() {
         })).filter(o => !isNaN(o.valor));
         setShippingOptions(opts);
         if (opts.length > 0) setSelectedShipping(opts[0].name);
+        if (opts.length === 0) setShippingError('Nenhuma opção de frete disponível para o CEP informado.');
+      } catch (err) {
+        setShippingError(err?.response?.data?.error || 'Não foi possível calcular o frete agora.');
       } finally {
         setShippingLoading(false);
       }
@@ -251,6 +258,9 @@ export default function CheckoutAsaas() {
                     </div>
                   )}
                 </div>
+                {shippingError && (
+                  <div className="text-red-600 text-sm mt-2">{shippingError}</div>
+                )}
 
                 <div className="flex justify-between">
                   <Button variant="outline" onClick={()=>setStep(1)} className="border-gray-300">Voltar</Button>
