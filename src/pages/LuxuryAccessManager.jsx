@@ -136,7 +136,7 @@ export default function LuxuryAccessManager() {
                     <th className="text-right py-2">Ações</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="text-white">
                   {codes.map((c) => (
                     <tr key={c.id} className="border-t border-gray-700/60">
                       <td className="py-2 font-mono">{c.code}</td>
