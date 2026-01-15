@@ -605,6 +605,14 @@ export default function Home() {
                   </div>
                 </Link>
 
+                <Link to={createPageUrl("LuxuryCollection")}>
+                  <div className="bg-gradient-to-r from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                    <div className="flex items-center justify-start gap-3">
+                      <span className="text-white font-semibold text-sm">👑 Leilões collection</span>
+                    </div>
+                  </div>
+                </Link>
+
                 <div className="flex flex-col gap-3">
                   <Link to={createPageUrl("Partners")}>
                     <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
