@@ -25,6 +25,19 @@ export default function LuxuryCollection() {
     try {
       const rows = await base44.entities.LuxuryAccessCode.filter({ code: value, is_active: true });
       if (Array.isArray(rows) && rows.length > 0) {
+        const rec = rows[0];
+        if (rec.is_single_use && rec.is_used) {
+          setErrorMsg("Este código já foi utilizado");
+          return false;
+        }
+        let userId = undefined;
+        try { const u = await base44.auth.me(); userId = u?.id; } catch (_) {}
+        await base44.entities.LuxuryAccessCode.update(rec.id, {
+          is_used: true,
+          is_active: rec.is_single_use ? false : true,
+          used_by_user_id: userId,
+          used_at: new Date().toISOString()
+        });
         sessionStorage.setItem('luxury_access_ok', 'true');
         setIsAuthorized(true);
         return true;
