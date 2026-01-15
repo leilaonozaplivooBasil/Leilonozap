@@ -92,27 +92,27 @@ export default function CheckoutAsaas() {
     <div className="min-h-screen bg-gray-900 text-white p-4">
       <div className="max-w-3xl mx-auto space-y-4">
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader><CardTitle>Dados do Comprador</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-white">Dados do Comprador</CardTitle></CardHeader>
           <CardContent className="grid sm:grid-cols-2 gap-3">
-            <Input placeholder="Nome completo" value={buyer.name} onChange={(e)=>setBuyer(v=>({...v, name: e.target.value}))} className="bg-gray-900 border-gray-700" />
-            <Input placeholder="CPF/CNPJ" value={buyer.cpfCnpj} onChange={(e)=>setBuyer(v=>({...v, cpfCnpj: e.target.value}))} className="bg-gray-900 border-gray-700" />
-            <Input placeholder="Celular" value={buyer.mobilePhone} onChange={(e)=>setBuyer(v=>({...v, mobilePhone: e.target.value}))} className="bg-gray-900 border-gray-700" />
-            <Input placeholder="E-mail (opcional)" value={buyer.email} onChange={(e)=>setBuyer(v=>({...v, email: e.target.value}))} className="bg-gray-900 border-gray-700" />
+            <Input placeholder="Nome completo" value={buyer.name} onChange={(e)=>setBuyer(v=>({...v, name: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
+            <Input placeholder="CPF/CNPJ" value={buyer.cpfCnpj} onChange={(e)=>setBuyer(v=>({...v, cpfCnpj: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
+            <Input placeholder="Celular" value={buyer.mobilePhone} onChange={(e)=>setBuyer(v=>({...v, mobilePhone: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
+            <Input placeholder="E-mail (opcional)" value={buyer.email} onChange={(e)=>setBuyer(v=>({...v, email: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
           </CardContent>
         </Card>
 
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader><CardTitle>Resumo do Pedido</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-white">Resumo do Pedido</CardTitle></CardHeader>
           <CardContent className="grid sm:grid-cols-3 gap-3 items-end">
-            <Input placeholder="Descrição" value={item.name} onChange={(e)=>setItem(v=>({...v, name: e.target.value}))} className="bg-gray-900 border-gray-700 sm:col-span-2" />
-            <Input type="number" placeholder="Qtd" value={item.qty} onChange={(e)=>setItem(v=>({...v, qty: e.target.value}))} className="bg-gray-900 border-gray-700" />
-            <Input type="number" placeholder="Preço" value={item.price} onChange={(e)=>setItem(v=>({...v, price: e.target.value}))} className="bg-gray-900 border-gray-700" />
+            <Input placeholder="Descrição" value={item.name} onChange={(e)=>setItem(v=>({...v, name: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300 sm:col-span-2" />
+            <Input type="number" placeholder="Qtd" value={item.qty} onChange={(e)=>setItem(v=>({...v, qty: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
+            <Input type="number" placeholder="Preço" value={item.price} onChange={(e)=>setItem(v=>({...v, price: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
             <div className="text-right sm:col-span-3">Total: <strong>R$ {Number(total).toFixed(2)}</strong></div>
           </CardContent>
         </Card>
 
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader><CardTitle>Pagamento</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-white">Pagamento</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div className="flex gap-2">
               <Button variant={method==='PIX'?'default':'outline'} onClick={()=>setMethod('PIX')} className={method==='PIX'? 'bg-emerald-600 hover:bg-emerald-700':'border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800'}><QrCode className="w-4 h-4 mr-2"/> Pix</Button>
@@ -121,19 +121,19 @@ export default function CheckoutAsaas() {
 
             {method==='CARD' && (
               <div className="grid sm:grid-cols-2 gap-3">
-                <Input placeholder="Nome no cartão" value={card.holderName} onChange={(e)=>setCard(v=>({...v, holderName: e.target.value}))} className="bg-gray-900 border-gray-700 sm:col-span-2" />
-                <Input placeholder="Número" value={card.number} onChange={(e)=>setCard(v=>({...v, number: e.target.value}))} className="bg-gray-900 border-gray-700 sm:col-span-2" />
-                <Input placeholder="Mês (MM)" value={card.expiryMonth} onChange={(e)=>setCard(v=>({...v, expiryMonth: e.target.value}))} className="bg-gray-900 border-gray-700" />
-                <Input placeholder="Ano (YYYY)" value={card.expiryYear} onChange={(e)=>setCard(v=>({...v, expiryYear: e.target.value}))} className="bg-gray-900 border-gray-700" />
-                <Input placeholder="CVV" value={card.ccv} onChange={(e)=>setCard(v=>({...v, ccv: e.target.value}))} className="bg-gray-900 border-gray-700" />
+                <Input placeholder="Nome no cartão" value={card.holderName} onChange={(e)=>setCard(v=>({...v, holderName: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300 sm:col-span-2" />
+                <Input placeholder="Número" value={card.number} onChange={(e)=>setCard(v=>({...v, number: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300 sm:col-span-2" />
+                <Input placeholder="Mês (MM)" value={card.expiryMonth} onChange={(e)=>setCard(v=>({...v, expiryMonth: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
+                <Input placeholder="Ano (YYYY)" value={card.expiryYear} onChange={(e)=>setCard(v=>({...v, expiryYear: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
+                <Input placeholder="CVV" value={card.ccv} onChange={(e)=>setCard(v=>({...v, ccv: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
                 <div>
-                  <label className="block text-sm mb-1">Parcelas</label>
+                  <label className="block text-sm mb-1 text-white">Parcelas</label>
                   <Select value={String(installments)} onValueChange={(v)=>setInstallments(Number(v))}>
-                    <SelectTrigger className="bg-gray-900 border-gray-700">
+                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300">
                       <SelectValue placeholder="1x" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({length: 12}).map((_,i)=> <SelectItem key={i+1} value={String(i+1)}>{i+1}x</SelectItem>)}
+                      {Array.from({length: 12}).map((_,i)=> <SelectItem className="text-white" key={i+1} value={String(i+1)}>{i+1}x</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
