@@ -130,7 +130,7 @@ export default function CreateLuxuryAuction() {
               <CardTitle className="text-white font-bold flex items-center gap-2">
                 <Gem className="w-5 h-5 text-amber-400" /> Criar Leilão de Luxo
               </CardTitle>
-              <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryCollection"))} className="border-gray-600 text-gray-300">
+              <Button variant="outline" onClick={() => navigate(createPageUrl("LuxuryCollection"))} className="border-gray-600 bg-gray-900 text-gray-300 hover:bg-gray-800">
                 <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
               </Button>
             </div>
@@ -212,7 +212,7 @@ export default function CreateLuxuryAuction() {
               </div>
 
               <div className="pt-2 flex gap-3">
-                <Button type="button" variant="outline" onClick={() => navigate(createPageUrl("Home"))} className="flex-1 border-gray-600 text-gray-300">Cancelar</Button>
+                <Button type="button" variant="outline" onClick={() => navigate(createPageUrl("Home"))} className="flex-1 border-gray-600 bg-gray-900 text-gray-300 hover:bg-gray-800">Cancelar</Button>
                 <Button type="submit" disabled={isSaving} className="flex-1 bg-amber-600 hover:bg-amber-700">
                   {isSaving ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin"/> Salvando...</>) : "Criar"}
                 </Button>
