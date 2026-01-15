@@ -303,9 +303,6 @@ export default function CheckoutAsaas() {
                     <CreditCard className="w-4 h-4 mr-2"/>
                     Cartão de crédito
                   </Button>
-                  <Button variant="outline" disabled className="border-gray-200 bg-gray-100 text-gray-400">
-                    Boleto
-                  </Button>
                   <Button
                     variant="outline"
                     onClick={()=>setMethod('PIX')}
