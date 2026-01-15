@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
     }
 
     // Fetch active code
-    const rows = await base44.asServiceRole.entities.LuxuryAccessCode.filter({ code, is_active: true });
+    const rows = await base44.asServiceRole.entities.LuxuryAccessCode.filter({ code });
     if (!Array.isArray(rows) || rows.length === 0) {
       return Response.json({ error: 'invalid_or_inactive_code' }, { status: 404 });
     }
