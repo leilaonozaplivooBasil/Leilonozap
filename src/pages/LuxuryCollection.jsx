@@ -154,8 +154,8 @@ export default function LuxuryCollection() {
               <Gem className="w-5 h-5" />
               <span className="uppercase text-xs tracking-widest">Coleção Especial</span>
             </div>
-            <h1 className="text-3xl lg:text-4xl font-bold mb-1 tracking-tight flex items-center gap-3">
-              <Crown className="w-9 h-9 text-amber-400" />
+            <h1 className="text-4xl lg:text-5xl font-extrabold mb-2 tracking-tight flex items-center gap-3 drop-shadow-lg">
+              <Crown className="w-10 h-10 text-amber-400" />
               <span>Artigos de <span className="text-green-400">Luxo</span></span>
             </h1>
             <p className="text-gray-300 mb-4 max-w-2xl">
