@@ -171,7 +171,7 @@ export default function CreateLuxuryAuction() {
                     <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
                       <SelectValue placeholder="Selecione" />
                     </SelectTrigger>
-                    <SelectContent className="bg-gray-900 border-gray-700">
+                    <SelectContent className="bg-gray-900 border-gray-700 text-white">
                       <SelectItem value="1">1 hora</SelectItem>
                       <SelectItem value="6">6 horas</SelectItem>
                       <SelectItem value="12">12 horas</SelectItem>
