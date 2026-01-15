@@ -155,8 +155,8 @@ export default function LuxuryAccessManager() {
                         )}
                       </td>
                       <td className="py-2 text-right space-x-2">
-                        <Button size="sm" variant="outline" onClick={()=>toggleActive(c)}>{c.is_active ? 'Desativar' : 'Ativar'}</Button>
-                        {c.is_used && <Button size="sm" variant="outline" onClick={()=>resetUse(c)}><RefreshCcw className="w-3.5 h-3.5 mr-1"/>Resetar</Button>}
+                        <Button size="sm" variant="outline" onClick={()=>toggleActive(c)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">{c.is_active ? 'Desativar' : 'Ativar'}</Button>
+                        {c.is_used && <Button size="sm" variant="outline" onClick={()=>resetUse(c)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800"><RefreshCcw className="w-3.5 h-3.5 mr-1"/>Resetar</Button>}
                         <Button size="sm" variant="destructive" onClick={()=>remove(c)}><Trash2 className="w-3.5 h-3.5 mr-1"/>Excluir</Button>
                       </td>
                     </tr>
