@@ -138,11 +138,11 @@ export default function CreateLuxuryAuction() {
           <CardContent>
             <form id="luxury-form" ref={formRef} onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label className="block text-sm mb-1">Título *</label>
+                <label className="block text-sm mb-1 text-white">Título *</label>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" required />
               </div>
               <div>
-                <label className="block text-sm mb-1">Descrição</label>
+                <label className="block text-sm mb-1 text-white">Descrição</label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="bg-gray-900 border-gray-700 min-h-[120px] text-white placeholder:text-white/60" />
               </div>
               <div className="border border-emerald-800/40 bg-emerald-900/10 rounded-xl p-4">
@@ -152,21 +152,21 @@ export default function CreateLuxuryAuction() {
                 </div>
                 <div className="grid gap-4 md:grid-cols-3">
                   <div>
-                    <label className="block text-sm mb-1">Preço Inicial (R$) *</label>
+                    <label className="block text-sm mb-1 text-white">Preço Inicial (R$) *</label>
                     <Input value={startingPrice} onChange={(e)=>setStartingPrice(e.target.value)} placeholder="0,00" className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" />
                   </div>
                   <div>
-                    <label className="block text-sm mb-1">Incremento (R$) *</label>
+                    <label className="block text-sm mb-1 text-white">Incremento (R$) *</label>
                     <Input value={increment} onChange={(e)=>setIncrement(e.target.value)} placeholder="10,00" className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" />
                   </div>
                   <div>
-                    <label className="block text-sm mb-1">Preço de Compra Rápida (opcional)</label>
+                    <label className="block text-sm mb-1 text-white">Preço de Compra Rápida (opcional)</label>
                     <Input value={buyNowPrice} onChange={(e)=>setBuyNowPrice(e.target.value)} placeholder="Ex.: 9.999,99" className="bg-gray-900 border-gray-700 text-white placeholder:text-white/60" />
                     <p className="text-xs text-white mt-1">Se preenchido, o leilão pode ser encerrado imediatamente por este valor.</p>
                   </div>
                 </div>
                 <div className="mt-4">
-                  <label className="block text-sm mb-1">Duração do Leilão</label>
+                  <label className="block text-sm mb-1 text-white">Duração do Leilão</label>
                   <Select value={duration} onValueChange={setDuration}>
                     <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
                       <SelectValue placeholder="Selecione" />
@@ -184,7 +184,7 @@ export default function CreateLuxuryAuction() {
               </div>
 
               <div>
-                <label className="block text-sm mb-2">Imagens</label>
+                <label className="block text-sm mb-2 text-white">Imagens</label>
                 <div className="flex gap-3 flex-wrap">
                   {images.map((url, idx) => (
                     <div key={idx} className="relative w-32 h-24 border border-gray-700 rounded overflow-hidden">
