@@ -75,7 +75,7 @@ export default function LuxuryAccessManager() {
 
   return (
     <div className="min-h-screen bg-gray-900 py-8 px-4 text-gray-100">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Key className="w-5 h-5 text-amber-400"/> Acessos VIP</h1>
           <Link to={createPageUrl("CreateLuxuryAuction")}><Button variant="outline" className="border-gray-600 text-gray-200 bg-gray-900 hover:bg-gray-800">Voltar</Button></Link>
@@ -122,18 +122,18 @@ export default function LuxuryAccessManager() {
           ) : codes.length === 0 ? (
             <div className="text-gray-200">Nenhum código criado.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm table-fixed">
+            <div>
+              <table className="w-full text-sm table-auto">
                 <thead className="text-gray-200 border-b border-gray-700/70">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-28 whitespace-nowrap">Código</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-48 whitespace-nowrap">Pessoa</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-36 whitespace-nowrap">WhatsApp</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-64 whitespace-nowrap">E-mail</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-32 whitespace-nowrap">Rótulo</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-28 whitespace-nowrap">Uso único</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-28 whitespace-nowrap">Status</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 w-60 whitespace-nowrap">Ações</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Código</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Pessoa</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">WhatsApp</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">E-mail</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Rótulo</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Uso único</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Status</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold tracking-wide uppercase text-gray-300 whitespace-nowrap">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="text-white">
@@ -141,7 +141,7 @@ export default function LuxuryAccessManager() {
                     <tr key={c.id} className="border-t border-gray-700/60 odd:bg-gray-800/30 hover:bg-gray-800/60 transition-colors">
                       <td className="py-3 px-4"><span className="inline-block px-2.5 py-1 rounded-md bg-gray-900 border border-gray-700 font-mono tracking-wider">{c.code}</span></td>
                       <td className="py-3 px-4 truncate max-w-[220px]">{c.person_name || '-'}</td>
-                      <td className="py-3 px-4">{c.whatsapp || '-'}</td>
+                      <td className="py-3 px-4 truncate max-w-[180px]">{c.whatsapp || '-'}</td>
                       <td className="py-3 px-4 truncate max-w-[260px]">{c.email || '-'}</td>
                       <td className="py-3 px-4">{c.label ? <span className="px-2 py-1 rounded bg-gray-700/40 border border-gray-600/40">{c.label}</span> : '-'}</td>
                       <td className="py-3 px-4"><span className={c.is_single_use ? "px-2 py-1 rounded bg-blue-500/10 text-blue-300 border border-blue-500/30" : "px-2 py-1 rounded bg-gray-500/10 text-gray-300 border border-gray-500/30"}>{c.is_single_use ? 'Sim' : 'Não'}</span></td>
