@@ -17,7 +17,7 @@ export default function CheckoutAsaas() {
 
   const [buyer, setBuyer] = useState({ name: '', cpfCnpj: '', mobilePhone: '', email: '' });
   const [item, setItem] = useState({ name: 'Pedido avulso', qty: 1, price: 100 });
-  const [method, setMethod] = useState('PIX');
+  const [method, setMethod] = useState('CARD');
   const [installments, setInstallments] = useState(1);
   const [card, setCard] = useState({ holderName: '', number: '', expiryMonth: '', expiryYear: '', ccv: '' });
   const [loading, setLoading] = useState(false);
