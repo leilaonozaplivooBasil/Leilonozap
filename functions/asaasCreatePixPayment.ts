@@ -28,11 +28,24 @@ Deno.serve(async (req) => {
     const customerRef = await base44.asServiceRole.entities.AsaasCustomer.filter({ cpfCnpj: order.cpfCnpj });
     let externalCustomerId = customerRef?.[0]?.externalCustomerId;
     if (!externalCustomerId && order.buyer) {
-      // fallback: criar com dados presentes no pedido
-      const ensureRes = await asaasFetch(baseUrl, apiKey, userAgent, '/customers', {
-        method: 'POST',
-        body: { name: order.buyer.name, cpfCnpj: String(order.buyer.cpfCnpj).replace(/\D/g,''), email: order.buyer.email, mobilePhone: order.buyer.mobilePhone }
-      });
+      // fallback: criar com dados presentes no pedido + endereço quando disponível
+      const custBody = {
+        name: order.buyer.name,
+        cpfCnpj: String(order.buyer.cpfCnpj).replace(/\D/g,''),
+        email: order.buyer.email,
+        mobilePhone: order.buyer.mobilePhone,
+      };
+      if (order?.shippingAddress?.postalCode) {
+        custBody.postalCode = order.shippingAddress.postalCode;
+        custBody.addressNumber = order.shippingAddress.addressNumber || '';
+        if (order?.shippingAddress?.complement) custBody.complement = order.shippingAddress.complement;
+      } else if (order?.shippingAddress) {
+        if (order.shippingAddress.address) custBody.address = order.shippingAddress.address;
+        if (order.shippingAddress.addressNumber) custBody.addressNumber = order.shippingAddress.addressNumber;
+        if (order.shippingAddress.province) custBody.province = order.shippingAddress.province;
+        if (order.shippingAddress.city) custBody.city = order.shippingAddress.city;
+      }
+      const ensureRes = await asaasFetch(baseUrl, apiKey, userAgent, '/customers', { method: 'POST', body: custBody });
       externalCustomerId = ensureRes?.id;
       await base44.asServiceRole.entities.AsaasCustomer.create({
         externalCustomerId,

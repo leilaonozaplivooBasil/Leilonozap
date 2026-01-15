@@ -3,13 +3,32 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 export async function getSettings(base44) {
   const list = await base44.asServiceRole.entities.AsaasAppSettings.list('-updated_date', 1);
   const settings = Array.isArray(list) && list.length > 0 ? list[0] : null;
-  const env = settings?.asaasEnvironment || 'SANDBOX';
+
+  const preferredEnv = settings?.asaasEnvironment || 'SANDBOX';
+  const sandboxKey = Deno.env.get('ASAAS_API_KEY_SANDBOX');
+  const prodKey = Deno.env.get('ASAAS_API_KEY_PRODUCTION');
+
+  let env = preferredEnv;
+  let apiKey = env === 'PRODUCTION' ? prodKey : sandboxKey;
+
+  // Fallback: se a chave do ambiente preferido não existir, use a disponível
+  if (!apiKey) {
+    if (env === 'SANDBOX' && prodKey) {
+      env = 'PRODUCTION';
+      apiKey = prodKey;
+    } else if (env === 'PRODUCTION' && sandboxKey) {
+      env = 'SANDBOX';
+      apiKey = sandboxKey;
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error(`Asaas API key not set. Set ASAAS_API_KEY_PRODUCTION or ASAAS_API_KEY_SANDBOX.`);
+  }
+
   const baseUrl = env === 'PRODUCTION' ? 'https://api.asaas.com/v3' : 'https://api-sandbox.asaas.com/v3';
   const userAgent = settings?.asaasUserAgent || 'Base44-App';
-  const apiKey = env === 'PRODUCTION' ? Deno.env.get('ASAAS_API_KEY_PRODUCTION') : Deno.env.get('ASAAS_API_KEY_SANDBOX');
-  if (!apiKey) {
-    throw new Error(`Asaas API key not set for environment ${env}`);
-  }
+
   return { settings, env, baseUrl, userAgent, apiKey };
 }
 

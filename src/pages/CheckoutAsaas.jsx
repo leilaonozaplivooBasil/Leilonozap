@@ -112,6 +112,16 @@ export default function CheckoutAsaas() {
       status: 'CREATED',
       buyer: buyer,
       cpfCnpj: String(buyer.cpfCnpj).replace(/\D/g,''),
+      shippingAddress: {
+        postalCode: String(address.zip || '').replace(/\D/g,''),
+        addressNumber: address.number || '',
+        address: address.street || '',
+        complement: address.complement || '',
+        province: address.neighborhood || '',
+        city: address.city || '',
+        state: address.state || ''
+      },
+      shipping: { serviceName: selectedShipping || null, cost: Number(shippingCost || 0) },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
