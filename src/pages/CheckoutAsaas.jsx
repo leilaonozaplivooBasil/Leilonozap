@@ -272,9 +272,20 @@ export default function CheckoutAsaas() {
                   <div className="text-red-600 text-sm mt-2">{shippingError}</div>
                 )}
 
-                <div className="flex justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <Button variant="outline" onClick={()=>setStep(1)} className="border-gray-300">Voltar</Button>
-                  <Button onClick={()=>setStep(3)} disabled={shippingOptions.length===0 || !selectedShipping} className="bg-gray-900 hover:bg-black text-white">Continuar</Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={()=>setStep(3)}
+                      className="text-gray-500 hover:text-gray-700"
+                      title="Apenas para testes"
+                    >
+                      Pular etapa (teste)
+                    </Button>
+                    <Button onClick={()=>setStep(3)} disabled={shippingOptions.length===0 || !selectedShipping} className="bg-gray-900 hover:bg-black text-white">Continuar</Button>
+                  </div>
                 </div>
               </div>
             )}
