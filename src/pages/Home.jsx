@@ -417,20 +417,20 @@ export default function Home() {
       loadCurrentUser();
 
       // Banners do cache imediatamente
-      const cachedBanners = sessionStorage.getItem('banners_cache');
-      const bannerCacheTime = sessionStorage.getItem('banners_cache_time');
+      const cachedBanners = sessionStorage.getItem('home_banners_cache');
+      const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
       
       if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 120000) {
         setBanners(JSON.parse(cachedBanners));
       } else {
         // Carrega em background
-        base44.entities.BannerImage.filter({ is_active: true }).then((bannerData) => {
+        base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
           const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
           setBanners(sortedBanners);
-          sessionStorage.setItem('banners_cache', JSON.stringify(sortedBanners));
-          sessionStorage.setItem('banners_cache_time', Date.now().toString());
+          sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
+          sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
         }).catch(() => {
-          const oldBanners = sessionStorage.getItem('banners_cache');
+          const oldBanners = sessionStorage.getItem('home_banners_cache');
           if (oldBanners) setBanners(JSON.parse(oldBanners));
         });
       }
