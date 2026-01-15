@@ -146,8 +146,22 @@ export default function CheckoutAsaas() {
       } else {
         navigate(createPageUrl('OrderStatus') + `?orderId=${order.id}`);
       }
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || 'Falha ao finalizar pagamento';
+      try {
+        await base44.entities.SystemLog.create({
+          step: 'Checkout_PayCard',
+          status: 'error',
+          message: msg,
+          component_name: 'CheckoutAsaas',
+          error_details: { stack: err?.stack, data: err?.response?.data },
+          url: window.location.href,
+          user_agent: navigator.userAgent
+        });
+      } catch (_) {}
+      alert(`Erro ao finalizar: ${msg}`);
     } finally { setLoading(false); }
-    };
+  };
 
     const handleCalcShipping = async () => {
       if (!address.zip) return;
