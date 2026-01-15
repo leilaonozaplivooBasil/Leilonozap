@@ -3,8 +3,10 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CreditCard, QrCode } from 'lucide-react';
+import { CreditCard, QrCode, Lock, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -127,7 +129,7 @@ export default function CheckoutAsaas() {
                 <Input placeholder="Ano (YYYY)" value={card.expiryYear} onChange={(e)=>setCard(v=>({...v, expiryYear: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
                 <Input placeholder="CVV" value={card.ccv} onChange={(e)=>setCard(v=>({...v, ccv: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
                 <div>
-                  <label className="block text-sm mb-1 text-white">Parcelas</label>
+                  <label className="block text-sm mb-1 text-gray-700">Parcelas</label>
                   <Select value={String(installments)} onValueChange={(v)=>setInstallments(Number(v))}>
                     <SelectTrigger className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300">
                       <SelectValue placeholder="1x" />
