@@ -671,11 +671,6 @@ export default function Home() {
               </TooltipContent>
             </Tooltip>
 
-            <Link to={createPageUrl("LuxuryCollection")} className="w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px]">
-              <button className="bg-gradient-to-r text-white mx-1 px-4 py-3 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all duration-300 from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 hover:scale-105 w-full shadow-lg shadow-fuchsia-600/30">
-                👑 Leilões collection
-              </button>
-            </Link>
 
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
