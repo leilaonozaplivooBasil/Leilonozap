@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import { Trash2, RefreshCcw, Lock, Unlock, Key, Plus } from "lucide-react";
+import { Trash2, RefreshCcw, Unlock, Key, Plus } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
 
@@ -48,7 +48,7 @@ export default function LuxuryAccessManager() {
           person_name: personName || undefined,
           email: email || undefined,
           whatsapp: whatsapp || undefined,
-          is_active: true,
+          is_active: false,
           is_single_use: false,
           is_used: false
         });
@@ -64,7 +64,7 @@ export default function LuxuryAccessManager() {
   };
 
   const resetUse = async (c) => {
-    await base44.entities.LuxuryAccessCode.update(c.id, { is_used: false, is_active: true, used_by_user_id: null, used_at: null });
+    await base44.entities.LuxuryAccessCode.update(c.id, { is_used: false, is_active: false, used_by_user_id: null, used_at: null });
     await load();
   };
 
