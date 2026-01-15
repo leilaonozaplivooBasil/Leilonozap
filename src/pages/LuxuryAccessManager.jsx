@@ -123,22 +123,22 @@ export default function LuxuryAccessManager() {
             <div className="text-gray-200">Nenhum código criado.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
                 <thead className="text-gray-200">
                   <tr>
-                    <th className="text-left py-2">Código</th>
-                    <th className="text-left py-2">Pessoa</th>
-                    <th className="text-left py-2">WhatsApp</th>
-                    <th className="text-left py-2">E-mail</th>
-                    <th className="text-left py-2">Rótulo</th>
-                    <th className="text-left py-2">Uso único</th>
-                    <th className="text-left py-2">Status</th>
-                    <th className="text-right py-2">Ações</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold w-28 whitespace-nowrap">Código</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold w-48 whitespace-nowrap">Pessoa</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold w-36 whitespace-nowrap">WhatsApp</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold w-64 whitespace-nowrap">E-mail</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold w-32 whitespace-nowrap">Rótulo</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold w-28 whitespace-nowrap">Uso único</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold w-28 whitespace-nowrap">Status</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold w-60 whitespace-nowrap">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="text-white">
                   {codes.map((c) => (
-                    <tr key={c.id} className="border-t border-gray-700/60">
+                    <tr key={c.id} className="border-t border-gray-700/60 hover:bg-gray-800/60 transition-colors">
                       <td className="py-3 px-4 font-mono">{c.code}</td>
                       <td className="py-3 px-4">{c.person_name || '-'}</td>
                       <td className="py-3 px-4">{c.whatsapp || '-'}</td>
