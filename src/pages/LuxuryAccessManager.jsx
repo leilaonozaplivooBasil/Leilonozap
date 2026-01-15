@@ -139,13 +139,13 @@ export default function LuxuryAccessManager() {
                 <tbody className="text-white">
                   {codes.map((c) => (
                     <tr key={c.id} className="border-t border-gray-700/60">
-                      <td className="py-2 font-mono">{c.code}</td>
-                      <td className="py-2">{c.person_name || '-'}</td>
-                      <td className="py-2">{c.whatsapp || '-'}</td>
-                      <td className="py-2">{c.email || '-'}</td>
-                      <td className="py-2">{c.label || '-'}</td>
-                      <td className="py-2">{c.is_single_use ? 'Sim' : 'Não'}</td>
-                      <td className="py-2">
+                      <td className="py-3 px-4 font-mono">{c.code}</td>
+                      <td className="py-3 px-4">{c.person_name || '-'}</td>
+                      <td className="py-3 px-4">{c.whatsapp || '-'}</td>
+                      <td className="py-3 px-4">{c.email || '-'}</td>
+                      <td className="py-3 px-4">{c.label || '-'}</td>
+                      <td className="py-3 px-4">{c.is_single_use ? 'Sim' : 'Não'}</td>
+                      <td className="py-3 px-4">
                         {c.is_used ? (
                           <span className="text-red-400 flex items-center gap-1"><Lock className="w-3.5 h-3.5"/> Usado</span>
                         ) : c.is_active ? (
@@ -154,7 +154,7 @@ export default function LuxuryAccessManager() {
                           <span className="text-gray-400">Inativo</span>
                         )}
                       </td>
-                      <td className="py-2 text-right space-x-2">
+                      <td className="py-3 px-4 text-right space-x-3">
                         <Button size="sm" variant="outline" onClick={()=>toggleActive(c)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800">{c.is_active ? 'Desativar' : 'Ativar'}</Button>
                         {c.is_used && <Button size="sm" variant="outline" onClick={()=>resetUse(c)} className="border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800"><RefreshCcw className="w-3.5 h-3.5 mr-1"/>Resetar</Button>}
                         <Button size="sm" variant="destructive" onClick={()=>remove(c)}><Trash2 className="w-3.5 h-3.5 mr-1"/>Excluir</Button>
