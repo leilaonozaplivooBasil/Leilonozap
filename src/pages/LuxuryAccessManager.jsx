@@ -77,7 +77,7 @@ export default function LuxuryAccessManager() {
     <div className="min-h-screen bg-gray-900 py-8 px-4 text-gray-100">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold flex items-center gap-2"><Key className="w-5 h-5 text-amber-400"/> Acessos VIP</h1>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2"><Key className="w-5 h-5 text-amber-400"/> Acessos VIP</h1>
           <Link to={createPageUrl("CreateLuxuryAuction")}><Button variant="outline" className="border-gray-600 text-gray-200 bg-gray-900 hover:bg-gray-800">Voltar</Button></Link>
         </div>
 
@@ -118,9 +118,9 @@ export default function LuxuryAccessManager() {
 
         <Card className="bg-gray-800/70 border-gray-700 p-4">
           {loading ? (
-            <div className="text-gray-400">Carregando...</div>
+            <div className="text-gray-200">Carregando...</div>
           ) : codes.length === 0 ? (
-            <div className="text-gray-400">Nenhum código criado.</div>
+            <div className="text-gray-200">Nenhum código criado.</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
