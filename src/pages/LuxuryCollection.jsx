@@ -163,13 +163,8 @@ export default function LuxuryCollection() {
             </p>
 
             <div className="flex gap-3">
-              <Link to={createPageUrl("Home")}>
-                <Button variant="outline" className="border-gray-600 text-white hover:bg-gray-800">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
-                </Button>
-              </Link>
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-200">
-                <Sparkles className="w-4 h-4" /> Curadoria Base44
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/20 border border-amber-400/30 text-amber-200">
+                <Sparkles className="w-4 h-4" /> Curadoria Leilão NoZap
               </div>
             </div>
           </div>
