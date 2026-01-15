@@ -5,6 +5,7 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
@@ -14,7 +15,10 @@ export default function CreateLuxuryAuction() {
   const navigate = useNavigate();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
+  const [startingPrice, setStartingPrice] = useState("");
+  const [increment, setIncrement] = useState("10");
+  const [buyNowPrice, setBuyNowPrice] = useState("");
+  const [duration, setDuration] = useState("24");
   const [images, setImages] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -38,11 +42,15 @@ export default function CreateLuxuryAuction() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const p = parseFloat(price);
-    if (!title.trim() || !Number.isFinite(p)) {
-      alert("Preencha título e preço válidos");
+    const p = parseFloat((startingPrice || "").toString().replace(",", "."));
+    const inc = parseFloat((increment || "").toString().replace(",", "."));
+    const buyNow = buyNowPrice ? parseFloat((buyNowPrice || "").toString().replace(",", ".")) : undefined;
+    if (!title.trim() || !Number.isFinite(p) || !Number.isFinite(inc)) {
+      alert("Preencha título, preço inicial e incremento válidos");
       return;
     }
+    const hours = parseInt(duration || "24", 10);
+    const endISO = new Date(Date.now() + (isNaN(hours) ? 24 : hours) * 3600000).toISOString();
     setIsSaving(true);
     try {
 
@@ -51,6 +59,10 @@ export default function CreateLuxuryAuction() {
         description: description.trim(),
         image_urls: images,
         price: p,
+        starting_price: p,
+        increment: inc,
+        buy_now_price: Number.isFinite(buyNow) ? buyNow : undefined,
+        end_time: endISO,
         status: "active"
       });
       alert("Leilão de luxo criado!");
@@ -135,9 +147,42 @@ export default function CreateLuxuryAuction() {
                 <label className="block text-sm mb-1">Descrição</label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="bg-gray-900 border-gray-700 min-h-[120px]" />
               </div>
-              <div>
-                <label className="block text-sm mb-1">Preço (R$) *</label>
-                <Input type="number" step="0.01" value={price} onChange={(e) => setPrice(e.target.value)} className="bg-gray-900 border-gray-700" required />
+              <div className="border border-emerald-800/40 bg-emerald-900/10 rounded-xl p-4">
+                <div className="flex items-center gap-2 text-emerald-400 font-semibold mb-3">
+                  <span>💲</span>
+                  <span>Preços e Duração</span>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div>
+                    <label className="block text-sm mb-1">Preço Inicial (R$) *</label>
+                    <Input value={startingPrice} onChange={(e)=>setStartingPrice(e.target.value)} placeholder="0,00" className="bg-gray-900 border-gray-700" />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">Incremento (R$) *</label>
+                    <Input value={increment} onChange={(e)=>setIncrement(e.target.value)} placeholder="10,00" className="bg-gray-900 border-gray-700" />
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-1">Preço de Compra Rápida (opcional)</label>
+                    <Input value={buyNowPrice} onChange={(e)=>setBuyNowPrice(e.target.value)} placeholder="Ex.: 9.999,99" className="bg-gray-900 border-gray-700" />
+                    <p className="text-xs text-gray-400 mt-1">Se preenchido, o leilão pode ser encerrado imediatamente por este valor.</p>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm mb-1">Duração do Leilão</label>
+                  <Select value={duration} onValueChange={setDuration}>
+                    <SelectTrigger className="bg-gray-900 border-gray-700">
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-900 border-gray-700">
+                      <SelectItem value="1">1 hora</SelectItem>
+                      <SelectItem value="6">6 horas</SelectItem>
+                      <SelectItem value="12">12 horas</SelectItem>
+                      <SelectItem value="24">1 dia (24h)</SelectItem>
+                      <SelectItem value="72">3 dias (72h)</SelectItem>
+                      <SelectItem value="168">7 dias (168h)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div>
