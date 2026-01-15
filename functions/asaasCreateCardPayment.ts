@@ -6,7 +6,7 @@ function calcInstallment(total, count){ const v = Math.round((total / count) * 1
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    await base44.auth.me();
+    await base44.auth.me().catch(() => null);
     const { baseUrl, userAgent, apiKey, settings } = await getSettings(base44);
 
     const body = await req.json();
