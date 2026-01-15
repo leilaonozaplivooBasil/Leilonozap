@@ -91,66 +91,148 @@ export default function CheckoutAsaas() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4">
-      <div className="max-w-3xl mx-auto space-y-4">
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader><CardTitle className="text-white">Dados do Comprador</CardTitle></CardHeader>
-          <CardContent className="grid sm:grid-cols-2 gap-3">
-            <Input placeholder="Nome completo" value={buyer.name} onChange={(e)=>setBuyer(v=>({...v, name: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
-            <Input placeholder="CPF/CNPJ" value={buyer.cpfCnpj} onChange={(e)=>setBuyer(v=>({...v, cpfCnpj: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
-            <Input placeholder="Celular" value={buyer.mobilePhone} onChange={(e)=>setBuyer(v=>({...v, mobilePhone: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
-            <Input placeholder="E-mail (opcional)" value={buyer.email} onChange={(e)=>setBuyer(v=>({...v, email: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
-          </CardContent>
-        </Card>
+    <div className="min-h-screen bg-gray-100 py-10">
+      <div className="max-w-5xl mx-auto px-4">
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Coluna esquerda: Formulário de pagamento */}
+          <div className="bg-white rounded-xl shadow p-6">
+            <h1 className="text-3xl font-bold text-gray-900">Finalizar Compra</h1>
+            <p className="text-gray-500 mt-1">Escolha seu método de pagamento preferido</p>
 
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader><CardTitle className="text-white">Resumo do Pedido</CardTitle></CardHeader>
-          <CardContent className="grid sm:grid-cols-3 gap-3 items-end">
-            <Input placeholder="Descrição" value={item.name} onChange={(e)=>setItem(v=>({...v, name: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300 sm:col-span-2" />
-            <Input type="number" placeholder="Qtd" value={item.qty} onChange={(e)=>setItem(v=>({...v, qty: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
-            <Input type="number" placeholder="Preço" value={item.price} onChange={(e)=>setItem(v=>({...v, price: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
-            <div className="text-right sm:col-span-3">Total: <strong>R$ {Number(total).toFixed(2)}</strong></div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader><CardTitle className="text-white">Pagamento</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex gap-2">
-              <Button variant={method==='PIX'?'default':'outline'} onClick={()=>setMethod('PIX')} className={method==='PIX'? 'bg-emerald-600 hover:bg-emerald-700':'border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800'}><QrCode className="w-4 h-4 mr-2"/> Pix</Button>
-              <Button variant={method==='CARD'?'default':'outline'} onClick={()=>setMethod('CARD')} className={method==='CARD'? 'bg-blue-600 hover:bg-blue-700':'border-gray-700 bg-gray-900 text-gray-200 hover:bg-gray-800'}><CreditCard className="w-4 h-4 mr-2"/> Cartão</Button>
+            {/* Seleção de método */}
+            <div className="flex items-center gap-2 mt-5">
+              <Button
+                variant="outline"
+                onClick={()=>setMethod('CARD')}
+                className={`border-gray-300 bg-white text-gray-900 hover:bg-gray-50 ${method==='CARD' ? 'ring-2 ring-gray-900' : ''}`}
+              >
+                <CreditCard className="w-4 h-4 mr-2"/>
+                Cartão de crédito
+              </Button>
+              <Button variant="outline" disabled className="border-gray-200 bg-gray-100 text-gray-400">
+                Boleto
+              </Button>
+              <Button
+                variant="outline"
+                onClick={()=>setMethod('PIX')}
+                className={`border-gray-300 bg-white text-gray-900 hover:bg-gray-50 ${method==='PIX' ? 'ring-2 ring-gray-900' : ''}`}
+              >
+                <QrCode className="w-4 h-4 mr-2"/>
+                Pix
+              </Button>
             </div>
 
+            {/* Campos do cartão */}
             {method==='CARD' && (
-              <div className="grid sm:grid-cols-2 gap-3">
-                <Input placeholder="Nome no cartão" value={card.holderName} onChange={(e)=>setCard(v=>({...v, holderName: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300 sm:col-span-2" />
-                <Input placeholder="Número" value={card.number} onChange={(e)=>setCard(v=>({...v, number: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300 sm:col-span-2" />
-                <Input placeholder="Mês (MM)" value={card.expiryMonth} onChange={(e)=>setCard(v=>({...v, expiryMonth: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
-                <Input placeholder="Ano (YYYY)" value={card.expiryYear} onChange={(e)=>setCard(v=>({...v, expiryYear: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
-                <Input placeholder="CVV" value={card.ccv} onChange={(e)=>setCard(v=>({...v, ccv: e.target.value}))} className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300" />
+              <div className="mt-6 space-y-4">
                 <div>
-                  <label className="block text-sm mb-1 text-gray-700">Parcelas</label>
+                  <Label className="text-gray-700">Número do Cartão</Label>
+                  <Input placeholder="0000 0000 0000 0000" value={card.number} onChange={(e)=>setCard(v=>({...v, number: e.target.value}))} className="mt-1 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400" />
+                </div>
+                <div>
+                  <Label className="text-gray-700">Nome no Cartão</Label>
+                  <Input placeholder="Nome como está no cartão" value={card.holderName} onChange={(e)=>setCard(v=>({...v, holderName: e.target.value}))} className="mt-1 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-gray-700">Validade</Label>
+                    <Input placeholder="MM/AA" value={card.expiryMonth && card.expiryYear ? `${card.expiryMonth}/${String(card.expiryYear).slice(-2)}` : ''}
+                      onChange={(e)=>{
+                        const val = e.target.value.replace(/[^0-9/]/g,'');
+                        const [mm, aa] = val.split('/');
+                        setCard(v=>({...v, expiryMonth: (mm||'').slice(0,2), expiryYear: (aa||'').slice(0,2)}));
+                      }}
+                      className="mt-1 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400" />
+                  </div>
+                  <div>
+                    <Label className="text-gray-700">CVV</Label>
+                    <Input placeholder="123" value={card.ccv} onChange={(e)=>setCard(v=>({...v, ccv: e.target.value}))} className="mt-1 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-gray-700">Parcelas</Label>
                   <Select value={String(installments)} onValueChange={(v)=>setInstallments(Number(v))}>
-                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-300">
-                      <SelectValue placeholder="1x" />
+                    <SelectTrigger className="mt-1 bg-white border-gray-300 text-gray-900">
+                      <SelectValue placeholder={`1 x de R$${Number(total).toFixed(2)} (sem juros)`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {Array.from({length: 12}).map((_,i)=> <SelectItem className="text-white" key={i+1} value={String(i+1)}>{i+1}x</SelectItem>)}
+                      {Array.from({length: 12}).map((_,i)=> (
+                        <SelectItem key={i+1} value={String(i+1)}>{`${i+1} x de R$${(total/(i+1)).toFixed(2)}`}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="save-card" />
+                  <Label htmlFor="save-card" className="text-gray-700">Salvar cartão para compras futuras</Label>
+                </div>
+                <div className="flex items-center text-gray-400 text-sm">
+                  <Lock className="w-4 h-4 mr-2"/>
+                  Seus dados estão protegidos com criptografia SSL
+                </div>
+                <Button onClick={payCard} disabled={loading} className="w-full bg-gray-900 hover:bg-black text-white">
+                  {`Finalizar pagamento (R$${Number(total).toFixed(2)})`}
+                </Button>
               </div>
             )}
 
-            <div className="flex gap-2">
-              {method==='PIX' ? (
-                <Button onClick={payPix} disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">Gerar Pix</Button>
-              ) : (
-                <Button onClick={payCard} disabled={loading} className="bg-blue-600 hover:bg-blue-700">Pagar com Cartão</Button>
-              )}
+            {/* Alternativa Pix */}
+            {method==='PIX' && (
+              <div className="mt-6 space-y-4">
+                <div className="text-sm text-gray-600">Você selecionou pagamento via Pix.</div>
+                <Button onClick={payPix} disabled={loading} className="w-full bg-gray-900 hover:bg-black text-white">
+                  {`Pagar com Pix (R$${Number(total).toFixed(2)})`}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Coluna direita: Resumo do pedido */}
+          <div className="bg-white rounded-xl shadow p-6 h-fit">
+            <h2 className="text-2xl font-semibold text-gray-900">Resumo do Pedido</h2>
+            <p className="text-gray-500 mt-1">Detalhes da sua compra</p>
+
+            <div className="mt-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-md bg-gray-100 flex items-center justify-center text-gray-400">
+                  <Package className="w-6 h-6"/>
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900 truncate max-w-[180px]" title={item.name}>{item.name}</div>
+                  <div className="text-sm text-gray-500">Quantidade: {item.qty}</div>
+                </div>
+              </div>
+              <div className="text-right font-semibold text-gray-900">R$ {Number(total).toFixed(2)}</div>
             </div>
-          </CardContent>
-        </Card>
+
+            <hr className="my-5" />
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span className="text-gray-900">R$ {Number(total).toFixed(2)}</span></div>
+              <div className="flex justify-between"><span className="text-gray-600">Frete</span><span className="text-gray-900">R$ 0,00</span></div>
+              <div className="flex justify-between"><span className="text-gray-600">Desconto</span><span className="text-emerald-600">R$ 0,00</span></div>
+            </div>
+
+            <hr className="my-5" />
+
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-medium text-gray-900">Total</span>
+              <span className="text-2xl font-bold text-gray-900">R$ {Number(total).toFixed(2)}</span>
+            </div>
+
+            <div className="text-xs text-gray-400 mt-5 space-y-1">
+              <div>* Frete calculado após CEP</div>
+              <div>* Entrega estimada: 3-5 dias úteis</div>
+            </div>
+
+            <div className="text-sm text-gray-700 mt-6 font-medium">Métodos de pagamentos aceitos:</div>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {['Visa','Mastercard','Elo','Boleto','Pix'].map((m)=> (
+                <span key={m} className="px-2 py-1 rounded-md border text-xs text-gray-700 bg-gray-50 border-gray-200">{m}</span>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
