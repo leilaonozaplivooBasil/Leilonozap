@@ -596,23 +596,27 @@ export default function Home() {
 
               {/* BOTÕES DESKTOP - POSIÇÃO ABSOLUTA DIREITA */}
               <div className="hidden lg:flex gap-3 absolute top-0 right-0">
-                <Link to={createPageUrl("Licensing")}>
-                  <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
-                    <div className="flex items-center justify-start gap-3">
-                      <Zap className="w-5 h-5 text-white" />
-                      <span className="text-white font-semibold text-sm">Seja um Licenciado</span>
+                {/* Coluna Esquerda: Licenciado (topo) + Leilões collection (abaixo) */}
+                <div className="flex flex-col gap-3">
+                  <Link to={createPageUrl("Licensing")}>
+                    <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                      <div className="flex items-center justify-start gap-3">
+                        <Zap className="w-5 h-5 text-white" />
+                        <span className="text-white font-semibold text-sm">Seja um Licenciado</span>
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
 
-                <Link to={createPageUrl("LuxuryCollection")}>
-                  <div className="bg-gradient-to-r from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
-                    <div className="flex items-center justify-start gap-3">
-                      <span className="text-white font-semibold text-sm">👑 Leilões collection</span>
+                  <Link to={createPageUrl("LuxuryCollection")}>
+                    <div className="bg-gradient-to-r from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                      <div className="flex items-center justify-start gap-3">
+                        <span className="text-white font-semibold text-sm">👑 Leilões collection</span>
+                      </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
 
+                {/* Coluna Direita: Lucre Conosco (topo) + Grupo VIP (abaixo) */}
                 <div className="flex flex-col gap-3">
                   <Link to={createPageUrl("Partners")}>
                     <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
@@ -629,13 +633,13 @@ export default function Home() {
                     target="_blank"
                     rel="noopener noreferrer">
 
-                      <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
-                        <div className="flex items-center justify-start gap-3">
-                          <MessageCircle className="w-5 h-5 text-white" />
-                          <span className="text-white font-semibold text-sm">Grupo VIP</span>
-                        </div>
+                    <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                      <div className="flex items-center justify-start gap-3">
+                        <MessageCircle className="w-5 h-5 text-white" />
+                        <span className="text-white font-semibold text-sm">Grupo VIP</span>
                       </div>
-                    </a>
+                    </div>
+                  </a>
                   }
                 </div>
               </div>
