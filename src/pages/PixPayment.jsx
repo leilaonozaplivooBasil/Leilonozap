@@ -15,8 +15,24 @@ export default function PixPayment() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await asaasCreatePixPayment({ orderId });
-      setPayment(data.payment);
+      try {
+        const { data } = await asaasCreatePixPayment({ orderId });
+        setPayment(data.payment);
+      } catch (err) {
+        const msg = err?.response?.data?.error || err?.message || 'Falha ao gerar Pix';
+        try {
+          await base44.entities.SystemLog.create({
+            step: 'PixPayment_Create',
+            status: 'error',
+            message: msg,
+            component_name: 'PixPayment',
+            error_details: { stack: err?.stack, data: err?.response?.data },
+            url: window.location.href,
+            user_agent: navigator.userAgent
+          });
+        } catch (_) {}
+        alert(`Erro ao gerar Pix: ${msg}`);
+      }
     })();
   }, [orderId]);
 
