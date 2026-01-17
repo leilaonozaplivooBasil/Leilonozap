@@ -31,8 +31,6 @@ export default function Register() {
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState('');
-  const [dupMsg, setDupMsg] = useState({ email: '', phone: '', cpf: '', name: '' });
-  const [passwordTouched, setPasswordTouched] = useState(false);
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
 
