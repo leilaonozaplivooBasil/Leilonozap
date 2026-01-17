@@ -261,16 +261,7 @@ export default function AmbienteDeTeste() {
                         <div className="col-span-2 text-right">%</div>
                         <div className="col-span-2 text-right">Valor (R$)</div>
                       </div>
-                      <div className="divide-y divide-gray-700">
-                        {preview.records?.map((r, idx) => (
-                          <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center odd:bg-gray-800/60 even:bg-gray-800/30 hover:bg-gray-700/50 text-white">
-                            <div className="col-span-5 truncate">{r.user_full_name}</div>
-                            <div className="col-span-3 font-medium text-white">{roleLabel(r.role)}</div>
-                            <div className="col-span-2 text-right">{Number(r.percent).toFixed(2)}%</div>
-                            <div className="col-span-2 text-right">{Number(r.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-                          </div>
-                        ))}
-                      </div>
+                      {/* removed legacy flat table rows */}
                       <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-sm font-semibold border-t border-gray-700">
                         <div className="col-span-8">Total</div>
                         <div className="col-span-2 text-right">{totalPercent.toFixed(2)}%</div>
