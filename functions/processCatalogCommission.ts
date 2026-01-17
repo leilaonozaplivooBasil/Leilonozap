@@ -93,9 +93,14 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Sale not found' }, { status: 404 });
     }
 
-    const totalAmount = Number(sale.total_amount || 0);
+    // Processar somente quando pago
+    if (sale.status !== 'paid') {
+      return Response.json({ success: true, skipped: true, reason: 'Sale not paid' });
+    }
+
+    const totalAmount = Number((sale.total_amount ?? sale.sale_price ?? 0));
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
-      return Response.json({ error: 'Invalid or missing total_amount on sale' }, { status: 400 });
+      return Response.json({ error: 'Invalid or missing total_amount/sale_price on sale' }, { status: 400 });
     }
 
     // Resolve âncora
