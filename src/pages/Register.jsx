@@ -29,6 +29,10 @@ export default function Register() {
   const [dup, setDup] = useState({ email: false, phone: false, cpf: false, name: false, nameDL: false });
   const [dupMsg, setDupMsg] = useState({ email: '', phone: '', cpf: '', name: '' });
   const [passwordTouched, setPasswordTouched] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState('');
+  const [dupMsg, setDupMsg] = useState({ email: '', phone: '', cpf: '', name: '' });
+  const [passwordTouched, setPasswordTouched] = useState(false);
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
 
@@ -84,6 +88,29 @@ export default function Register() {
         if (has) setErrorMessage('USUÁRIO JÁ CADASTRADO.');
       }
     } catch (_) { /* silencioso */ }
+  };
+
+  const handleCepLookup = async () => {
+    const digits = (addressZipCode || '').replace(/\D/g, '');
+    if (!digits) { setCepError(''); return; }
+    if (digits.length !== 8) { setCepError('CEP inválido'); return; }
+    setCepLoading(true);
+    setCepError('');
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+      const data = await res.json();
+      if (data?.erro) { setCepError('CEP não encontrado'); return; }
+      setAddressStreet(data.logradouro || '');
+      setAddressNeighborhood(data.bairro || '');
+      setAddressCity(data.localidade || '');
+      setAddressState(data.uf || '');
+      // complement optional
+      if (data.complemento) setAddressComplement(data.complemento);
+    } catch (_) {
+      setCepError('Falha ao buscar CEP');
+    } finally {
+      setCepLoading(false);
+    }
   };
 
   const handleRegister = async (e) => {
@@ -327,6 +354,22 @@ export default function Register() {
 
               <div className="border-t pt-4 mt-2">
                 <h3 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Endereço de Entrega</h3>
+                {/* CEP primeiro */}
+                <div className="mb-3">
+                  <Label htmlFor="addressZipCode" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>CEP *</Label>
+                  <Input 
+                    id="addressZipCode" 
+                    type="text" 
+                    value={addressZipCode} 
+                    onChange={(e) => { setAddressZipCode(e.target.value); setCepError(''); }} 
+                    onBlur={handleCepLookup}
+                    placeholder="00000-000" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${cepError ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
+                    disabled={isRegistering}
+                  />
+                  {cepLoading && (<p className="mt-1 text-xs text-gray-400">Buscando endereço...</p>)}
+                  {cepError && (<p className="mt-1 text-xs text-red-400">{cepError}</p>)}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   <div className="md:col-span-2">
                     <Label htmlFor="addressStreet" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Rua/Avenida *</Label>
@@ -408,16 +451,7 @@ export default function Register() {
                   </div>
 
                   <div>
-                    <Label htmlFor="addressZipCode" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>CEP *</Label>
-                    <Input 
-                      id="addressZipCode" 
-                      type="text" 
-                      value={addressZipCode} 
-                      onChange={(e) => setAddressZipCode(e.target.value)} 
-                      placeholder="00000-000" 
-                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
-                      disabled={isRegistering}
-                    />
+
                   </div>
                 </div>
               </div>
