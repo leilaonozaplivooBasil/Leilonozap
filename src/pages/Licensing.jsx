@@ -412,16 +412,21 @@ const DashboardContent = ({ user, isAdmin }) => {
   
   const careerLevelsMap = {
     'usuario': 'Usuário',
-    'licenciado_aplicativo': 'Licenciado Aplicativo',
+    'influencer': 'Influencer',
     'licenciado_catalogo': 'Licenciado Catálogo',
+    'trainee': 'Trainee',
     'executivo': 'Executivo',
+    'kit_start': 'Kit Start',
+    'plano_lider': 'Plano Líder',
+    'plano_lojista': 'Plano Lojista',
+    'distribuidor': 'Distribuidor',
     'diretor': 'Diretor',
     'ceo': 'CEO',
     'conselheiro': 'Conselheiro',
     'fundador': 'Fundador'
   };
 
-  const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretor', 'executivo', 'licenciado_catalogo', 'licenciado_aplicativo', 'usuario'];
+  const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
   
   const highestLevel = careerHierarchy.find(level => userLevels.includes(level)) || 'usuario';
   
@@ -2344,7 +2349,7 @@ export default function LicensingPage() {
       ? currentUser.career_levels 
       : (currentUser.career_levels ? [currentUser.career_levels] : ['usuario']);
     
-    const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretor', 'executivo', 'licenciado_catalogo', 'licenciado_aplicativo', 'usuario'];
+    const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
     const highestLevel = careerHierarchy.find(level => userLevels.includes(level)) || 'usuario';
     
     return highestLevel;
@@ -2394,7 +2399,7 @@ export default function LicensingPage() {
                     Construa um negócio sólido com o sistema de alavancagem {isSaiDeBaixo ? 'do Sai de Baixo' : 'da Leilão NoZap'}!
                   </p>
                 </>
-              ) : userLevel === 'licenciado_aplicativo' ? (
+              ) : userLevel === 'influencer' ? (
                 <>
                   <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
                     Você já é um Influenciador!
@@ -2421,7 +2426,7 @@ export default function LicensingPage() {
               )}
 
               {/* CARD DINÂMICO */}
-              {isLicensee && userLevel === 'licenciado_aplicativo' && (
+              {isLicensee && userLevel === 'influencer' && (
                 <div className="max-w-2xl mx-auto mt-8">
                   <Card className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-2 border-blue-500/50">
                     <CardHeader>
