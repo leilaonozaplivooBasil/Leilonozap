@@ -115,7 +115,7 @@ export default function AmbienteDeTeste() {
         </div>
 
         {!me || me.role !== "admin" ? (
-          <Card className="bg-gray-800 border-gray-700">
+          <Card className="bg-gray-800/90 border-gray-700 text-white">
             <CardContent className="p-6">
               <div className="flex items-start gap-3 text-white">
                 <AlertTriangle className="w-5 h-5 mt-0.5" />
@@ -128,7 +128,7 @@ export default function AmbienteDeTeste() {
           </Card>
         ) : (
           <>
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-gray-800/90 border-gray-700 text-white">
               <CardHeader>
                 <CardTitle className="text-lg text-white">Parâmetros da Simulação</CardTitle>
               </CardHeader>
@@ -155,7 +155,7 @@ export default function AmbienteDeTeste() {
                         <SelectTrigger className="bg-gray-900 border-gray-700 text-white placeholder:text-white/70 data-[placeholder]:text-white/70">
                           <SelectValue placeholder="Selecione o âncora" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-72 overflow-auto">
+                        <SelectContent className="bg-gray-900/95 border-gray-700 text-white max-h-72 overflow-auto">
                           {users.map((u) => (
                             <SelectItem key={u.id} value={u.id}>
                               {u.full_name || u.email}
@@ -171,7 +171,7 @@ export default function AmbienteDeTeste() {
               </CardContent>
             </Card>
 
-            <Card className="bg-gray-800 border-gray-700">
+            <Card className="bg-gray-800/90 border-gray-700 text-white">
               <CardHeader className="flex-row items-center justify-between">
                 <CardTitle className="text-lg text-white flex items-center gap-2">
                   Resultado em tempo real
