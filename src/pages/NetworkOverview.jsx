@@ -14,7 +14,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, LayoutGrid, List, Send } from 'lucide-react';
+import { DollarSign, LayoutGrid, List, Link2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
@@ -687,7 +687,7 @@ export default function NetworkOverview() {
     }
   };
 
-  // Removidos botões/ações não solicitados pelo cliente
+  const handleForceSync = async () => {
     setIsSyncing(true);
     toast.info("Sincronizando...");
     try {
@@ -703,7 +703,7 @@ export default function NetworkOverview() {
     }
   };
 
-  // Removida função de conceder comissão por solicitação
+  const handleGrantCommission = async () => {
     if (!selectedLicenseeId || !commissionAmount || parseFloat(commissionAmount) <= 0) {
       toast.error("Selecione um licenciado e valor válido.");
       return;
@@ -741,7 +741,7 @@ export default function NetworkOverview() {
     });
   };
 
-  // Removida função de organizar alavancagem por solicitação
+  const handleOrganizeAlavancagem = async () => {
     if (!selectedLicenseeForLink || selectedUsersToLink.length === 0) {
       toast.error("Selecione um licenciado e usuários.");
       return;
