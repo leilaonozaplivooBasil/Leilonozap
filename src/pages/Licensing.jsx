@@ -404,8 +404,8 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
   const referralLink = isSaiDeBaixo 
-    ? `https://leilaonozap.app${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}`
-    : `https://leilaonozap.app${createPageUrl('Home')}?ref=${user.referral_code}`;
+    ? `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}`
+    : `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}`;
 
   const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
   const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
@@ -1339,7 +1339,7 @@ const DashboardContent = ({ user, isAdmin }) => {
          <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
            <TabsTrigger value="visao-geral" className="text-xs sm:text-sm whitespace-nowrap">Visão Geral</TabsTrigger>
            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Catálogo</TabsTrigger>}
-           <TabsTrigger value="meus-links" className="text-xs sm:text-sm whitespace-nowrap">Meus Links</TabsTrigger>
+
            <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
            {['diretor', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
@@ -1349,112 +1349,7 @@ const DashboardContent = ({ user, isAdmin }) => {
            {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
          </TabsList>
 
-        {/* ABA: MEUS LINKS */}
-        <TabsContent value="meus-links" className="space-y-6">
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Links de Indicação</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Compartilhe seus links para ganhar comissões
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Link do Influenciador - PRINCIPAL */}
-              <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-gray-50 border-gray-300' : 'bg-gray-700/50 border-gray-600'}`}>
-                <h4 className={`font-semibold mb-3 flex items-center gap-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                  🎯 Link de Influenciador
-                  <span className="px-2 py-0.5 text-xs bg-yellow-500/20 text-yellow-400 rounded-full border border-yellow-500/30">
-                    ⚠️ Domínio em Correção
-                  </span>
-                </h4>
-                <p className={`text-sm mb-3 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Ganhe 3% em cada arremate dos seus indicados</p>
-                
-                {/* Link Base44 TEMPORÁRIO */}
-                <div className="space-y-3 mb-4">
-                  <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
-                    <p className="text-xs text-blue-300 mb-2 font-semibold flex items-center gap-1">
-                      ✅ Link Temporário Base44 (Use este agora)
-                    </p>
-                    <div className="flex gap-2">
-                      <Input 
-                        value={`https://leilao-no-zap.base44.app${createPageUrl('Home')}?ref=${user.referral_code}`}
-                        readOnly 
-                        className="bg-gray-700 border-gray-600 text-white font-mono text-xs"
-                      />
-                      <Button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(`https://leilao-no-zap.base44.app${createPageUrl('Home')}?ref=${user.referral_code}`);
-                          toast.success('Link Base44 copiado!');
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700" 
-                        size="sm"
-                      >
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Link leilaonozap.app (AINDA EM CORREÇÃO) */}
-                <div>
-                  <p className="text-xs text-yellow-400 mb-2 font-semibold">⏳ Link Principal (Em manutenção)</p>
-                  <div className="flex gap-2 opacity-50">
-                    <Input value={referralLink} readOnly className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-xs' : 'bg-gray-700 border-gray-600 text-white font-mono text-xs'} />
-                    <Button disabled className="bg-gray-600" size="sm">
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    💡 Este link voltará a funcionar em breve após correção do DNS
-                  </p>
-                </div>
-              </div>
-
-              {/* Link do Catálogo - Apenas licenciados */}
-              {userLevels.includes('licenciado_catalogo') && (
-                <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
-                  <h4 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-blue-900' : 'text-blue-400'}`}>🛍️ Link do Catálogo</h4>
-                  <p className={`text-sm mb-3 ${isSaiDeBaixo ? 'text-blue-700' : 'text-blue-300'}`}>Ganhe comissão em vendas do seu catálogo ({(user.catalog_commission_rate || 0) * 100}%)</p>
-                  
-                  {/* Link Base44 TEMPORÁRIO */}
-                  <div className="space-y-3 mb-4">
-                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
-                      <p className="text-xs text-blue-300 mb-2 font-semibold">✅ Link Temporário Base44</p>
-                      <div className="flex gap-2">
-                        <Input 
-                          value={`https://leilao-no-zap.base44.app/Catalog?ref=${user.referral_code}`}
-                          readOnly 
-                          className="bg-gray-700 border-gray-600 text-white font-mono text-xs"
-                        />
-                        <Button 
-                          onClick={() => { 
-                            navigator.clipboard.writeText(`https://leilao-no-zap.base44.app/Catalog?ref=${user.referral_code}`); 
-                            toast.success('Link Base44 copiado!'); 
-                          }} 
-                          className="bg-blue-600 hover:bg-blue-700" 
-                          size="sm"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Link Original (EM MANUTENÇÃO) */}
-                  <div>
-                    <p className="text-xs text-yellow-400 mb-2 font-semibold">⏳ Link Principal (Em manutenção)</p>
-                    <div className="flex gap-2 opacity-50">
-                      <Input value={`https://leilaonozap.app/Catalog?ref=${user.referral_code}`} readOnly className={isSaiDeBaixo ? 'bg-white border-blue-300 text-gray-900 font-mono text-xs' : 'bg-gray-700 border-gray-600 text-white font-mono text-xs'} />
-                      <Button disabled className="bg-gray-600" size="sm">
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* ABA: MINHAS VENDAS */}
         <TabsContent value="minhas-vendas" className="space-y-6">
