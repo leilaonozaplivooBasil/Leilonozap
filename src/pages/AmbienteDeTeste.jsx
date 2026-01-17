@@ -222,38 +222,39 @@ export default function AmbienteDeTeste() {
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-gray-700">
-  <Accordion type="multiple" className="w-full">
-    {groupedRoles.map((g) => (
-      <AccordionItem key={g.role} value={g.role}>
-        <AccordionTrigger className="px-3 py-2 hover:no-underline">
-          <div className="flex justify-between w-full">
-            <span className="font-medium">{roleLabel(g.role)}</span>
-            <span className="text-right">{g.percent.toFixed(2)}%</span>
-          </div>
-        </AccordionTrigger>
-        <AccordionContent className="px-0 pb-3">
-          <!-- removed old flat table -->
-            <div className="col-span-6">Usuário</div>
-            <div className="col-span-3 text-right">%</div>
-            <div className="col-span-3 text-right">Valor (R$)</div>
-          </div>
-          <div className="divide-y divide-gray-700">
-            {g.members.map((m, idx) => (
-              <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">
-                <div className="col-span-6 truncate">{m.name}</div>
-                <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>
-                <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-              </div>
-            ))}
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-    ))}
-  </Accordion>
-  <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-sm font-semibold border-t border-gray-700">
-    <div className="col-span-9">Total (cargos)</div>
-    <div className="col-span-3 text-right">{totalPercent.toFixed(2)}% • {Number(groupedRoles.reduce((s, g) => s + Number(g.amount || 0), 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-  </div>\n                                <div className="col-span-6">Usuário</div>\n                                <div className="col-span-3 text-right">%</                                </div>\n                                <div className="col-span-3 text-right">Valor (R$)</div>\n                              </div>\n                              <div className="divide-y divide-gray-700">\n                                {g.members.map((m, idx) => (\n                                  <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">\n                                    <div className="col-span-6 truncate">{m.name}</div>\n                                    <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>\n                                    <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>\n                                  </div>\n                                ))}\n                              </div>\n                            </AccordionContent>\n                          </AccordionItem>\n                        ))}\n                      </Accordion>
+                      <Accordion type="multiple" className="w-full">
+                        {groupedRoles.map((g) => (
+                          <AccordionItem key={g.role} value={g.role}>
+                            <AccordionTrigger className="px-3 py-2 hover:no-underline">
+                              <div className="flex justify-between w-full">
+                                <span className="font-medium">{roleLabel(g.role)}</span>
+                                <span className="text-right">{g.percent.toFixed(2)}%</span>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-0 pb-3">
+                              <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide border-b border-gray-700">
+                                <div className="col-span-6">Usuário</div>
+                                <div className="col-span-3 text-right">%</div>
+                                <div className="col-span-3 text-right">Valor (R$)</div>
+                              </div>
+                              <div className="divide-y divide-gray-700">
+                                {g.members.map((m, idx) => (
+                                  <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">
+                                    <div className="col-span-6 truncate">{m.name}</div>
+                                    <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>
+                                    <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-sm font-semibold border-t border-gray-700">
+                        <div className="col-span-9">Total (cargos)</div>
+                        <div className="col-span-3 text-right">{totalPercent.toFixed(2)}% • {Number(groupedRoles.reduce((s, g) => s + Number(g.amount || 0), 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                      </div>
+                    </div>\n                                <div className="col-span-3 text-right">Valor (R$)</div>\n                              </div>\n                              <div className="divide-y divide-gray-700">\n                                {g.members.map((m, idx) => (\n                                  <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">\n                                    <div className="col-span-6 truncate">{m.name}</div>\n                                    <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>\n                                    <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>\n                                  </div>\n                                ))}\n                              </div>\n                            </AccordionContent>\n                          </AccordionItem>\n                        ))}\n                      </Accordion>
                       <!-- removed old flat table -->
                         <div className="col-span-5">Usuário</div>
                         <div className="col-span-3">Cargo</div>
