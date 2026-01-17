@@ -1540,6 +1540,36 @@ const DashboardContent = ({ user, isAdmin }) => {
             </CardContent>
           </Card>
 
+          {userLevels.includes('licenciado_catalogo') && (
+            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+              <CardHeader>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Link do Catálogo</CardTitle>
+                <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  Compartilhe este link para vender pelo seu catálogo
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex gap-2">
+                  <Input
+                    value={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`}
+                    readOnly
+                    className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'}
+                  />
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`);
+                      toast.success('Link copiado!');
+                    }}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copiar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
               <CardTitle className={`mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Seu Plano de Carreira</CardTitle>
