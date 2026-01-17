@@ -135,7 +135,7 @@ export default function AmbienteDeTeste() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="col-span-1">
-                    <label className="block mb-2 text-sm text-gray-300">Valor da venda (R$)</label>
+                    <label className="block mb-2 text-sm text-white">Valor da venda (R$)</label>
                     <Input
                       type="number"
                       min={1}
@@ -147,9 +147,9 @@ export default function AmbienteDeTeste() {
                   </div>
 
                   <div className="col-span-2">
-                    <label className="block mb-2 text-sm text-gray-300">Âncora (licenciado do link)</label>
+                    <label className="block mb-2 text-sm text-white">Âncora (licenciado do link)</label>
                     {loadingUsers ? (
-                      <div className="flex items-center gap-2 text-gray-300"><Loader2 className="w-4 h-4 animate-spin" /> Carregando usuários...</div>
+                      <div className="flex items-center gap-2 text-white"><Loader2 className="w-4 h-4 animate-spin" /> Carregando usuários...</div>
                     ) : (
                       <Select value={anchorId} onValueChange={setAnchorId}>
                         <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
@@ -189,11 +189,11 @@ export default function AmbienteDeTeste() {
                   <div className="text-red-300 text-sm mb-3">{error}</div>
                 )}
                 {!preview && (
-                  <div className="text-gray-300 text-sm">Preencha os campos e clique em Simular para visualizar a divisão.</div>
+                  <div className="text-white text-sm">Preencha os campos e clique em Simular para visualizar a divisão.</div>
                 )}
                 {preview && (
                   <div className="space-y-4">
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-300">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-white">
                       <span>Âncora:</span>
                       <Badge className="bg-gray-900 border-gray-700">{preview.anchor}</Badge>
                       <span>• Valor:</span>
@@ -201,7 +201,7 @@ export default function AmbienteDeTeste() {
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-gray-700">
-                      <div className="grid grid-cols-12 bg-gray-900 text-gray-300 px-3 py-2 text-xs">
+                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs">
                         <div className="col-span-5">Usuário</div>
                         <div className="col-span-3">Cargo</div>
                         <div className="col-span-2 text-right">%</div>
@@ -211,13 +211,13 @@ export default function AmbienteDeTeste() {
                         {preview.records?.map((r, idx) => (
                           <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center bg-gray-800/50">
                             <div className="col-span-5 truncate">{r.user_full_name}</div>
-                            <div className="col-span-3 text-gray-300">{roleLabel(r.role)}</div>
+                            <div className="col-span-3 text-white">{roleLabel(r.role)}</div>
                             <div className="col-span-2 text-right">{Number(r.percent).toFixed(2)}%</div>
                             <div className="col-span-2 text-right">{Number(r.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
                           </div>
                         ))}
                       </div>
-                      <div className="grid grid-cols-12 bg-gray-900/70 text-gray-200 px-3 py-2 text-sm font-semibold">
+                      <div className="grid grid-cols-12 bg-gray-900/70 text-white px-3 py-2 text-sm font-semibold">
                         <div className="col-span-8">Total</div>
                         <div className="col-span-2 text-right">{totalPercent.toFixed(2)}%</div>
                         <div className="col-span-2 text-right">
