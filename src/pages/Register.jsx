@@ -26,6 +26,7 @@ export default function Register() {
   const [addressZipCode, setAddressZipCode] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [dup, setDup] = useState({ email: false, phone: false, cpf: false, name: false, nameDL: false });
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
 
@@ -47,6 +48,7 @@ export default function Register() {
 
     setIsRegistering(true);
     setErrorMessage('');
+    setDup({ email: false, phone: false, cpf: false, name: false, nameDL: false });
 
     try {
       const normalizedEmail = email.toLowerCase().trim();
@@ -66,6 +68,13 @@ export default function Register() {
       ]);
 
       if ((byEmail?.length || 0) > 0 || (byPhone?.length || 0) > 0 || (byCpf?.length || 0) > 0 || (byNameExact?.length || 0) > 0 || (byNameDL?.length || 0) > 0) {
+        setDup({
+          email: (byEmail?.length || 0) > 0,
+          phone: phoneDigits && (byPhone?.length || 0) > 0,
+          cpf: cpfDigits && (byCpf?.length || 0) > 0,
+          name: nameTrimmed && (byNameExact?.length || 0) > 0,
+          nameDL: (firstName && lastName) && (byNameDL?.length || 0) > 0
+        });
         setErrorMessage("USUÁRIO JÁ CADASTRADO.");
         setIsRegistering(false);
         return;
@@ -182,7 +191,7 @@ export default function Register() {
                     value={fullName} 
                     onChange={(e) => setFullName(e.target.value)} 
                     placeholder="Seu nome completo" 
-                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
                 </div>
@@ -195,7 +204,7 @@ export default function Register() {
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)} 
                     placeholder="seu@email.com" 
-                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
                 </div>
@@ -208,7 +217,7 @@ export default function Register() {
                     value={phone} 
                     onChange={(e) => setPhone(e.target.value)} 
                     placeholder="(XX) XXXXX-XXXX" 
-                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
                 </div>
@@ -221,7 +230,7 @@ export default function Register() {
                     value={cpf} 
                     onChange={(e) => setCpf(e.target.value)} 
                     placeholder="000.000.000-00" 
-                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
                 </div>
@@ -234,7 +243,7 @@ export default function Register() {
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
                     placeholder="Mínimo 6 caracteres" 
-                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
                 </div>
@@ -251,7 +260,7 @@ export default function Register() {
                       value={addressStreet} 
                       onChange={(e) => setAddressStreet(e.target.value)} 
                       placeholder="Nome da rua" 
-                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                       disabled={isRegistering}
                     />
                   </div>
@@ -264,7 +273,7 @@ export default function Register() {
                       value={addressNumber} 
                       onChange={(e) => setAddressNumber(e.target.value)} 
                       placeholder="123" 
-                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                       disabled={isRegistering}
                     />
                   </div>
@@ -277,7 +286,7 @@ export default function Register() {
                       value={addressComplement} 
                       onChange={(e) => setAddressComplement(e.target.value)} 
                       placeholder="Apto, Bloco..." 
-                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                       disabled={isRegistering}
                     />
                   </div>
@@ -290,7 +299,7 @@ export default function Register() {
                       value={addressNeighborhood} 
                       onChange={(e) => setAddressNeighborhood(e.target.value)} 
                       placeholder="Nome do bairro" 
-                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                       disabled={isRegistering}
                     />
                   </div>
@@ -303,7 +312,7 @@ export default function Register() {
                       value={addressCity} 
                       onChange={(e) => setAddressCity(e.target.value)} 
                       placeholder="Nome da cidade" 
-                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                       disabled={isRegistering}
                     />
                   </div>
@@ -317,7 +326,7 @@ export default function Register() {
                       onChange={(e) => setAddressState(e.target.value)} 
                       placeholder="UF (ex: SP)" 
                       maxLength={2}
-                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                       disabled={isRegistering}
                     />
                   </div>
@@ -330,7 +339,7 @@ export default function Register() {
                       value={addressZipCode} 
                       onChange={(e) => setAddressZipCode(e.target.value)} 
                       placeholder="00000-000" 
-                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                      className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                       disabled={isRegistering}
                     />
                   </div>
