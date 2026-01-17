@@ -394,6 +394,10 @@ export default function Layout({ children, currentPageName }) {
       pageName: "ArquitetoIA",
       highlight: true
     },
+    {
+      title: "🧪 Ambiente de Teste",
+      pageName: "AmbienteDeTeste"
+    },
     { 
       title: "Leilões", 
       isCategory: true,
