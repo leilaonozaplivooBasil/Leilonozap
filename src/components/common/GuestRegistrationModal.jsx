@@ -98,15 +98,19 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
       const normalizedEmail = email.toLowerCase().trim();
       const phoneDigits = (phone || '').replace(/\D/g, '');
       const nameTrimmed = (fullName || '').trim();
+      const nameParts = nameTrimmed.split(/\s+/).filter(Boolean);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
       let results;
       try {
-        const [byEmail, byPhone, byNameExact] = await Promise.all([
+        const [byEmail, byPhone, byNameExact, byNameDL] = await Promise.all([
           AppUser.filter({ email: normalizedEmail }),
           phoneDigits ? AppUser.filter({ phone: phoneDigits }) : Promise.resolve([]),
           nameTrimmed ? AppUser.filter({ full_name: nameTrimmed }) : Promise.resolve([]),
+          (firstName && lastName) ? AppUser.filter({ display_first_name: firstName, display_last_name: lastName }) : Promise.resolve([]),
         ]);
-        results = { byEmail, byPhone, byNameExact };
+        results = { byEmail, byPhone, byNameExact, byNameDL };
       } catch (error) {
         console.error("Erro ao verificar duplicidade:", error);
         setErrorMessage("❌ Erro de conexão. Verifique sua internet e tente novamente.");
@@ -114,8 +118,8 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
         return;
       }
 
-      if ((results.byEmail?.length || 0) > 0 || (results.byPhone?.length || 0) > 0 || (results.byNameExact?.length || 0) > 0) {
-        setErrorMessage("Usuário já cadastrado.");
+      if ((results.byEmail?.length || 0) > 0 || (results.byPhone?.length || 0) > 0 || (results.byNameExact?.length || 0) > 0 || (results.byNameDL?.length || 0) > 0) {
+        setErrorMessage("USUÁRIO JÁ CADASTRADO.");
         setIsRegistering(false);
         return;
       }

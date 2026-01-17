@@ -53,16 +53,20 @@ export default function Register() {
       const phoneDigits = (phone || '').replace(/\D/g, '');
       const cpfDigits = (cpf || '').replace(/\D/g, '');
       const nameTrimmed = (fullName || '').trim();
+      const nameParts = nameTrimmed.split(/\s+/).filter(Boolean);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
-      const [byEmail, byPhone, byCpf, byNameExact] = await Promise.all([
+      const [byEmail, byPhone, byCpf, byNameExact, byNameDL] = await Promise.all([
         AppUser.filter({ email: normalizedEmail }),
         phoneDigits ? AppUser.filter({ phone: phoneDigits }) : Promise.resolve([]),
         cpfDigits ? AppUser.filter({ cpf: cpfDigits }) : Promise.resolve([]),
         nameTrimmed ? AppUser.filter({ full_name: nameTrimmed }) : Promise.resolve([]),
+        (firstName && lastName) ? AppUser.filter({ display_first_name: firstName, display_last_name: lastName }) : Promise.resolve([]),
       ]);
 
-      if ((byEmail?.length || 0) > 0 || (byPhone?.length || 0) > 0 || (byCpf?.length || 0) > 0 || (byNameExact?.length || 0) > 0) {
-        setErrorMessage("Usuário já cadastrado.");
+      if ((byEmail?.length || 0) > 0 || (byPhone?.length || 0) > 0 || (byCpf?.length || 0) > 0 || (byNameExact?.length || 0) > 0 || (byNameDL?.length || 0) > 0) {
+        setErrorMessage("USUÁRIO JÁ CADASTRADO.");
         setIsRegistering(false);
         return;
       }
