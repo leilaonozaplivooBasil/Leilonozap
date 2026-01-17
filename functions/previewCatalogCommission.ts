@@ -1,6 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 // Mesmo mapa de percentuais usado no processamento oficial
+const DIRECTOR_PLUS = new Set(['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador']);
+
 const ROLE_ORDER = [
   { id: 'licenciado_catalogo', percent: 13.0 },
   { id: 'trainee', percent: 0.5 },
