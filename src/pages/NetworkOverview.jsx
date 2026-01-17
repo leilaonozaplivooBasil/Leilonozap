@@ -212,8 +212,52 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
   );
 }
 
-function NetworkTree({ users, onPromote, onEdit }) {
+function NetworkTree({ users, onPromote, onEdit, onRelink }) {
   const [expandedUsers, setExpandedUsers] = useState(new Set());
+  // Drag & drop state
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+
+  // Helpers to avoid cycles
+  const getDescendantIds = React.useCallback((id) => {
+    const result = new Set();
+    const stack = [id];
+    while (stack.length) {
+      const current = stack.pop();
+      users.forEach(u => {
+        if (u.referred_by_id === current && !result.has(u.id)) {
+          result.add(u.id);
+          stack.push(u.id);
+        }
+      });
+    }
+    return result;
+  }, [users]);
+
+  const isDropInvalid = React.useCallback((draggedId, targetId) => {
+    if (!draggedId || !targetId) return false;
+    if (draggedId === targetId) return true;
+    const descendants = getDescendantIds(draggedId);
+    return descendants.has(targetId);
+  }, [getDescendantIds]);
+
+  const handleDropOnUser = async (targetId, draggedId) => {
+    if (!draggedId || !targetId || isDropInvalid(draggedId, targetId)) {
+      setDraggingId(null);
+      setDragOverId(null);
+      return;
+    }
+    await onRelink?.(draggedId, targetId);
+    setDraggingId(null);
+    setDragOverId(null);
+  };
+
+  const handleDropOnRoot = async (draggedId) => {
+    if (!draggedId) return;
+    await onRelink?.(draggedId, null);
+    setDraggingId(null);
+    setDragOverId(null);
+  };
 
   const toggleExpand = (userId) => {
     setExpandedUsers(prev => {
@@ -247,9 +291,35 @@ function NetworkTree({ users, onPromote, onEdit }) {
     return (
       <div key={user.id} className="relative">
         {/* Card compacto do usuário */}
-        <div 
-          className={`flex items-center gap-3 p-3 rounded-lg border-2 ${primaryLevelConfig.borderColor} bg-gray-800/80 hover:bg-gray-800 transition-all cursor-pointer group`}
+        <div
+          className={`flex items-center gap-3 p-3 rounded-lg border-2 ${primaryLevelConfig.borderColor} bg-gray-800/80 hover:bg-gray-800 transition-all cursor-pointer group ${dragOverId === user.id ? 'ring-2 ring-green-400' : ''}`}
           style={{ marginLeft: `${level * 40}px` }}
+          draggable
+          onDragStart={(e) => {
+            setDraggingId(user.id);
+            e.dataTransfer.setData('text/plain', String(user.id));
+            e.dataTransfer.effectAllowed = 'move';
+          }}
+          onDragOver={(e) => {
+            if (!draggingId || draggingId === user.id) return;
+            if (isDropInvalid(draggingId, user.id)) return;
+            e.preventDefault();
+            setDragOverId(user.id);
+          }}
+          onDragEnter={(e) => {
+            if (!draggingId || draggingId === user.id) return;
+            if (isDropInvalid(draggingId, user.id)) return;
+            e.preventDefault();
+            setDragOverId(user.id);
+          }}
+          onDragLeave={() => {
+            if (dragOverId === user.id) setDragOverId(null);
+          }}
+          onDrop={(e) => {
+            e.preventDefault();
+            const dragged = e.dataTransfer.getData('text/plain');
+            handleDropOnUser(user.id, dragged);
+          }}
         >
           {/* Linha conectora visual */}
           {level > 0 && (
@@ -369,11 +439,31 @@ function NetworkTree({ users, onPromote, onEdit }) {
           </div>
         </div>
       </div>
-      
-      {/* Árvore em cascata */}
-      <div className="space-y-3">
-        {sortedRoots.map(rootUser => renderUserCascade(rootUser, 0))}
+
+      {/* Zona de soltar para raiz (Site Oficial) */}
+      <div
+        className={`rounded-lg border-2 border-dashed ${dragOverId === 'root' ? 'border-green-500 bg-green-500/10' : 'border-gray-700'} p-3 text-xs text-gray-400 mb-4`}
+        onDragOver={(e) => {
+          if (!draggingId) return;
+          e.preventDefault();
+          setDragOverId('root');
+        }}
+        onDragLeave={() => {
+          if (dragOverId === 'root') setDragOverId(null);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          const dragged = e.dataTransfer.getData('text/plain');
+          handleDropOnRoot(dragged);
+        }}
+      >
+        Solte aqui para mover para “Leilão NoZap - Site Oficial”
       </div>
+
+       {/* Árvore em cascata */}
+       <div className="space-y-3">
+         {sortedRoots.map(rootUser => renderUserCascade(rootUser, 0))}
+       </div>
       
       {/* Estatísticas gerais */}
       <div className="mt-8 bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-lg p-4">
@@ -672,6 +762,25 @@ export default function NetworkOverview() {
       toast.error("Erro ao vincular: " + error.message);
     } finally {
       setIsLinking(false);
+    }
+  };
+
+  // Atualiza vínculo via arrastar-e-soltar
+  const handleRelink = async (draggedId, newParentId) => {
+    try {
+      let targetId = newParentId;
+      if (!newParentId) {
+        const site = allUsers.find(u =>
+          (u.email && u.email.toLowerCase() === 'site@leilaonozap.com') ||
+          (u.full_name && u.full_name.toLowerCase().includes('site oficial'))
+        );
+        targetId = site?.id || null;
+      }
+      await AppUser.update(draggedId, { referred_by_id: targetId });
+      toast.success('Vínculo atualizado!');
+      await fetchData();
+    } catch (error) {
+      toast.error('Erro ao mover: ' + error.message);
     }
   };
 
@@ -1140,7 +1249,7 @@ export default function NetworkOverview() {
                   <CardContent className="overflow-x-auto">
                     {allUsers.length > 0 ? (
                       viewMode === 'network' ? (
-                        <NetworkTree users={allUsers} onPromote={handlePromote} onEdit={handleEditUser} />
+                        <NetworkTree users={allUsers} onPromote={handlePromote} onEdit={handleEditUser} onRelink={handleRelink} />
                       ) : (
                         <div className="grid gap-4">
                           {allUsers.map(user => (
