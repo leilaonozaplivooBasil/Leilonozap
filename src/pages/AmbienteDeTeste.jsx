@@ -103,12 +103,12 @@ export default function AmbienteDeTeste() {
   }[role] || role);
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white px-4 py-8">
+    <div className="ambiente-teste min-h-screen bg-gray-900 text-white px-4 py-8">
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl sm:text-3xl font-bold">🧪 Ambiente de Teste</h1>
           <div className="flex items-center gap-2">
-            <Button className="bg-green-600 hover:bg-green-700 text-white border-none" onClick={simulate} disabled={isSimulating || !anchorUser}>
+            <Button className="bg-green-600 hover:bg-green-700 text-white border-none shadow-md shadow-green-600/20" onClick={simulate} disabled={isSimulating || !anchorUser}>
               {isSimulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Simular
             </Button>
           </div>
@@ -152,7 +152,7 @@ export default function AmbienteDeTeste() {
                       <div className="flex items-center gap-2 text-white"><Loader2 className="w-4 h-4 animate-spin" /> Carregando usuários...</div>
                     ) : (
                       <Select value={anchorId} onValueChange={setAnchorId}>
-                        <SelectTrigger className="bg-gray-900 border-gray-700 text-white placeholder:text-white/70 data-[placeholder]:text-white/70">
+                        <SelectTrigger className="bg-gray-900 border-gray-700 text-white placeholder:text-white data-[placeholder]:text-white">
                           <SelectValue placeholder="Selecione o âncora" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-900/95 border-gray-700 text-white max-h-72 overflow-auto">
@@ -201,23 +201,23 @@ export default function AmbienteDeTeste() {
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-gray-700">
-                      <div className="grid grid-cols-12 bg-gray-900/80 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide border-b border-gray-700">
                         <div className="col-span-5">Usuário</div>
                         <div className="col-span-3">Cargo</div>
                         <div className="col-span-2 text-right">%</div>
                         <div className="col-span-2 text-right">Valor (R$)</div>
                       </div>
-                      <div className="divide-y divide-gray-800">
+                      <div className="divide-y divide-gray-700">
                         {preview.records?.map((r, idx) => (
                           <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center odd:bg-gray-800/60 even:bg-gray-800/30 hover:bg-gray-700/50 text-white">
                             <div className="col-span-5 truncate">{r.user_full_name}</div>
-                            <div className="col-span-3 text-white">{roleLabel(r.role)}</div>
+                            <div className="col-span-3 font-medium text-white">{roleLabel(r.role)}</div>
                             <div className="col-span-2 text-right">{Number(r.percent).toFixed(2)}%</div>
                             <div className="col-span-2 text-right">{Number(r.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
                           </div>
                         ))}
                       </div>
-                      <div className="grid grid-cols-12 bg-gray-900/70 text-white px-3 py-2 text-sm font-semibold">
+                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-sm font-semibold border-t border-gray-700">
                         <div className="col-span-8">Total</div>
                         <div className="col-span-2 text-right">{totalPercent.toFixed(2)}%</div>
                         <div className="col-span-2 text-right">
