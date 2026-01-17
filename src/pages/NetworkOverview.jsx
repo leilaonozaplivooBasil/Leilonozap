@@ -639,14 +639,30 @@ export default function NetworkOverview() {
       return;
     }
 
-    const confirmLink = window.confirm(`Vincular ${selectedUsersToLink.length} usuário(s) ao licenciado ${allUsers.find(u => u.id === selectedLicenseeForLink)?.full_name}?`);
+    const licensee = allUsers.find(u => u.id === selectedLicenseeForLink);
+    if (!licensee) {
+      toast.error("Licenciado não encontrado.");
+      return;
+    }
+
+    const confirmLink = window.confirm(`Vincular ${selectedUsersToLink.length} usuário(s) ao licenciado ${licensee.full_name}?`);
     if (!confirmLink) return;
 
     setIsLinking(true);
     try {
       for (const userId of selectedUsersToLink) {
-        await AppUser.update(userId, { referred_by_id: selectedLicenseeForLink });
+        if (userId === licensee.id) continue; // ignora auto-vínculo
+        const userToLink = allUsers.find(u => u.id === userId);
+        if (!userToLink) continue;
+
+        // Evita ciclo imediato (quando o licenciado é indicado pelo usuário que será movido)
+        if (licensee.referred_by_id === userToLink.id) {
+          await AppUser.update(licensee.id, { referred_by_id: null });
+        }
+
+        await AppUser.update(userId, { referred_by_id: licensee.id });
       }
+
       toast.info("Recalculando estatísticas...");
       await handleForceSync();
       setSelectedLicenseeForLink('');
