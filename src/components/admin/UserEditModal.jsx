@@ -34,7 +34,6 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
     const [displayFirstName, setDisplayFirstName] = useState('');
     const [displayLastName, setDisplayLastName] = useState('');
     const [referrerId, setReferrerId] = useState('');
-    const [referrerId, setReferrerId] = useState('');
 
     useEffect(() => {
         if (user) {
@@ -61,7 +60,6 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                     ? user.display_last_name 
                     : (nameParts.length > 1 ? nameParts[nameParts.length - 1] : '')
             );
-            setReferrerId(user.referred_by_id || '');
             setReferrerId(user.referred_by_id || '');
         }
     }, [user]);
