@@ -108,7 +108,7 @@ export default function AmbienteDeTeste() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl sm:text-3xl font-bold">🧪 Ambiente de Teste</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="text-gray-200 border-gray-700" onClick={simulate} disabled={isSimulating || !anchorUser}>
+            <Button variant="outline" className="text-white border-gray-700" onClick={simulate} disabled={isSimulating || !anchorUser}>
               {isSimulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Simular
             </Button>
           </div>
@@ -117,11 +117,11 @@ export default function AmbienteDeTeste() {
         {!me || me.role !== "admin" ? (
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-6">
-              <div className="flex items-start gap-3 text-amber-300">
+              <div className="flex items-start gap-3 text-white">
                 <AlertTriangle className="w-5 h-5 mt-0.5" />
                 <div>
                   <p className="font-semibold">Acesso restrito</p>
-                  <p className="text-sm text-gray-300">Somente administradores podem usar este ambiente.</p>
+                  <p className="text-sm text-white">Somente administradores podem usar este ambiente.</p>
                 </div>
               </div>
             </CardContent>
@@ -167,7 +167,7 @@ export default function AmbienteDeTeste() {
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-400">Esta simulação usa apenas o preview — não altera saldos nem cria registros.</p>
+                <p className="text-xs text-white">Esta simulação usa apenas o preview — não altera saldos nem cria registros.</p>
               </CardContent>
             </Card>
 
@@ -227,13 +227,13 @@ export default function AmbienteDeTeste() {
                     </div>
 
                     {preview.site_official_rollup && (
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-white">
                         Sobra encaminhada ao Site Oficial: {preview.site_official_rollup.percent}% (
                         R$ {Number(preview.site_official_rollup.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })})
                       </div>
                     )}
 
-                    <div className="pt-2 text-xs text-gray-400">
+                    <div className="pt-2 text-xs text-white">
                       Quando a divisão estiver correta, avise para aplicarmos no sistema de produção.
                     </div>
                   </div>
