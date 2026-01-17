@@ -687,7 +687,7 @@ export default function NetworkOverview() {
     }
   };
 
-  const handleForceSync = async () => {
+  // Removidos botões/ações não solicitados pelo cliente
     setIsSyncing(true);
     toast.info("Sincronizando...");
     try {
