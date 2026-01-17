@@ -131,7 +131,9 @@ Deno.serve(async (req) => {
       if (DIRECTOR_PLUS.has(step.id)) {
         // Cargos executivos: NUNCA consomem carryLow; pagam só o percentual próprio
         const stepPercent = step.percent;
-        const eligible = (Array.isArray(allUsers) ? allUsers : []).filter(u => hasRole(u, step.id));
+        const eligible = (Array.isArray(allUsers) ? allUsers : [])
+            .filter(u => hasRole(u, step.id))
+            .filter(u => (u.full_name !== 'Leilão NoZap - Site Oficial' && u.email !== 'site@leilaonozap.com' && u.referral_code !== 'site_official'));
         if (eligible.length > 0) {
           const share = stepPercent / eligible.length;
           for (const u of eligible) {

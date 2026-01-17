@@ -147,7 +147,9 @@ Deno.serve(async (req) => {
 
             if (DIRECTOR_PLUS.has(step.id)) {
               const stepPercent = step.percent;
-              const eligible = users.filter(u => hasRole(u, step.id));
+              const eligible = users
+          .filter(u => hasRole(u, step.id))
+          .filter(u => u.full_name !== 'Leilão NoZap - Site Oficial');
               if (eligible.length > 0) {
                 const share = stepPercent / eligible.length;
                 for (const u of eligible) {
