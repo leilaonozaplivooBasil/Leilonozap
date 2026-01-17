@@ -152,7 +152,7 @@ export default function AmbienteDeTeste() {
                       <div className="flex items-center gap-2 text-white"><Loader2 className="w-4 h-4 animate-spin" /> Carregando usuários...</div>
                     ) : (
                       <Select value={anchorId} onValueChange={setAnchorId}>
-                        <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+                        <SelectTrigger className="bg-gray-900 border-gray-700 text-white placeholder:text-white/70 data-[placeholder]:text-white/70">
                           <SelectValue placeholder="Selecione o âncora" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-900 border-gray-700 text-white max-h-72 overflow-auto">
@@ -201,7 +201,7 @@ export default function AmbienteDeTeste() {
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-gray-700">
-                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide">
+                      <div className="grid grid-cols-12 bg-gray-900/80 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide">
                         <div className="col-span-5">Usuário</div>
                         <div className="col-span-3">Cargo</div>
                         <div className="col-span-2 text-right">%</div>
@@ -209,7 +209,7 @@ export default function AmbienteDeTeste() {
                       </div>
                       <div className="divide-y divide-gray-800">
                         {preview.records?.map((r, idx) => (
-                          <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center bg-gray-800/50 text-white">
+                          <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center odd:bg-gray-800/60 even:bg-gray-800/30 hover:bg-gray-700/50 text-white">
                             <div className="col-span-5 truncate">{r.user_full_name}</div>
                             <div className="col-span-3 text-white">{roleLabel(r.role)}</div>
                             <div className="col-span-2 text-right">{Number(r.percent).toFixed(2)}%</div>
