@@ -254,8 +254,9 @@ export default function AmbienteDeTeste() {
                         <div className="col-span-9">Total (cargos)</div>
                         <div className="col-span-3 text-right">{totalPercent.toFixed(2)}% • {Number(groupedRoles.reduce((s, g) => s + Number(g.amount || 0), 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
                       </div>
+                    </div>
 
-                    {/* Sobra removida do preview visual, pois não é um cargo */} {false && (
+                    {false && (
                       <div className="text-xs text-white">
                         Sobra encaminhada ao Site Oficial: {preview.site_official_rollup.percent}% (
                         R$ {Number(preview.site_official_rollup.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })})
