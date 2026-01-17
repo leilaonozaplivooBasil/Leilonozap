@@ -24,7 +24,7 @@ const CAREER_LEVELS = [
   { id: 'fundador', name: 'Fundador', color: 'bg-amber-500' }
 ];
 
-export default function UserEditModal({ user, isOpen, onClose, onSuccess }) {
+export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUsers = [] }) {
     const [userData, setUserData] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
@@ -33,6 +33,8 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess }) {
     const [primaryLevel, setPrimaryLevel] = useState('');
     const [displayFirstName, setDisplayFirstName] = useState('');
     const [displayLastName, setDisplayLastName] = useState('');
+    const [referrerId, setReferrerId] = useState('');
+    const [referrerId, setReferrerId] = useState('');
 
     useEffect(() => {
         if (user) {
@@ -59,6 +61,8 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess }) {
                     ? user.display_last_name 
                     : (nameParts.length > 1 ? nameParts[nameParts.length - 1] : '')
             );
+            setReferrerId(user.referred_by_id || '');
+            setReferrerId(user.referred_by_id || '');
         }
     }, [user]);
 
@@ -111,6 +115,7 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess }) {
                 email: userData.email,
                 phone: userData.phone || null,
                 role: userData.role,
+                referred_by_id: referrerId || null,
                 career_levels: selectedLevels,
                 primary_career_level: primaryLevel,
                 display_first_name: displayFirstName.trim() || null,
@@ -238,6 +243,52 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess }) {
                             <p className="col-span-2 text-xs text-gray-400 italic">
                                 Como aparecerá: "<strong className="text-white">{displayFirstName} {displayLastName}</strong>"
                             </p>
+                        </div>
+                    </div>
+
+                    {/* HIERARQUIA / INDICADOR */}
+                    <div className="space-y-4 pt-4 border-t border-gray-700">
+                        <h3 className="text-sm font-semibold text-emerald-400">📈 Hierarquia (Sistema de Alavancagem)</h3>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right text-gray-300">Indicador</Label>
+                            <div className="col-span-3">
+                                <Select value={referrerId} onValueChange={setReferrerId}>
+                                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                                        <SelectValue placeholder="Selecione o indicador (opcional)" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white max-h-72">
+                                        <SelectItem value={null}>Sem indicação</SelectItem>
+                                        {(Array.isArray(allUsers) ? allUsers.filter(u => u.id !== user.id) : []).map(u => (
+                                            <SelectItem key={u.id} value={u.id}>
+                                                {u.full_name} — {u.email}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* HIERARQUIA / INDICADOR */}
+                    <div className="space-y-4 pt-4 border-t border-gray-700">
+                        <h3 className="text-sm font-semibold text-emerald-400">📈 Hierarquia (Sistema de Alavancagem)</h3>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right text-gray-300">Indicador</Label>
+                            <div className="col-span-3">
+                                <Select value={referrerId} onValueChange={setReferrerId}>
+                                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                                        <SelectValue placeholder="Selecione o indicador (opcional)" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white max-h-72">
+                                        <SelectItem value={null}>Sem indicação</SelectItem>
+                                        {(Array.isArray(allUsers) ? allUsers.filter(u => u.id !== user.id) : []).map(u => (
+                                            <SelectItem key={u.id} value={u.id}>
+                                                {u.full_name} — {u.email}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
 

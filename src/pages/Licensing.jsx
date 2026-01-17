@@ -1945,6 +1945,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           isOpen={true}
           onClose={() => setEditingUser(null)}
           onSuccess={handleUserUpdate}
+          allUsers={allUsers}
         />
       )}
       {changingPasswordUser && (

@@ -1381,11 +1381,12 @@ export default function NetworkOverview() {
 
       {editingUserFull && (
         <UserEditModal
-          user={editingUserFull}
-          isOpen={true}
-          onClose={() => setEditingUserFull(null)}
-          onSuccess={handleSaveEditUser}
-        />
+           user={editingUserFull}
+           isOpen={true}
+           onClose={() => setEditingUserFull(null)}
+           onSuccess={handleSaveEditUser}
+           allUsers={allUsers}
+         />
       )}
 
       {/* MODAL DISPARADOR DE MENSAGENS */}
