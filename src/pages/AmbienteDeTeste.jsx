@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Loader2, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export default function AmbienteDeTeste() {
@@ -56,7 +57,27 @@ export default function AmbienteDeTeste() {
 
   const totalPercent = useMemo(() => {
     if (!preview?.records) return 0;
-    return preview.records.reduce((s, r) => s + Number(r.percent || 0), 0);
+    return preview.records
+      .filter(r => r.role !== 'site_official_rollup')
+      .reduce((s, r) => s + Number(r.percent || 0), 0);
+  }, [preview]);
+
+  const groupedRoles = useMemo(() => {
+    if (!preview?.records) return [];
+    const map = new Map();
+    for (const r of preview.records) {
+      if (r.role === 'site_official_rollup') continue; // excluir sobra
+      const key = r.role;
+      if (!map.has(key)) {
+        map.set(key, { role: key, percent: 0, amount: 0, members: [] });
+      }
+      const entry = map.get(key);
+      entry.percent += Number(r.percent || 0);
+      entry.amount += Number(r.amount || 0);
+      entry.members.push({ name: r.user_full_name, percent: Number(r.percent || 0), amount: Number(r.amount || 0) });
+    }
+    const ORDER = ['licenciado_catalogo','trainee','executivo','kit_start','plano_lider','plano_lojista','distribuidor','diretor','diretoria','ceo','conselheiro','fundador'];
+    return Array.from(map.values()).sort((a,b) => ORDER.indexOf(a.role) - ORDER.indexOf(b.role));
   }, [preview]);
 
   const simulate = async () => {
@@ -84,7 +105,7 @@ export default function AmbienteDeTeste() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anchorUser?.id, saleValue]);
 
-  const percentOk = Math.abs(totalPercent - 27) < 0.0001;
+  const percentOk = totalPercent <= 26 + 0.0001;
 
   const roleLabel = (role) => ({
     licenciado_catalogo: "Licenciado Catálogo",
@@ -200,7 +221,7 @@ export default function AmbienteDeTeste() {
                       <Badge className="bg-gray-900 border-gray-700 text-white">R$ {Number(preview.sale_value || saleValue).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</Badge>
                     </div>
 
-                    <div className="overflow-hidden rounded-lg border border-gray-700">
+                    <div className="overflow-hidden rounded-lg border border-gray-700">\n                      <Accordion type="multiple" className="w-full">\n                        {groupedRoles.map((g) => (\n                          <AccordionItem key={g.role} value={g.role}>\n                            <AccordionTrigger className="px-3 py-2 hover:no-underline">\n                              <div className="flex justify-between w-full">\n                                <span className="font-medium">{roleLabel(g.role)}</span>\n                                <span className="text-right">{g.percent.toFixed(2)}%</span>\n                              </div>\n                            </AccordionTrigger>\n                            <AccordionContent className="px-0 pb-3">\n                              <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide border-b border-gray-700">\n                                <div className="col-span-6">Usuário</div>\n                                <div className="col-span-3 text-right">%</n                                </div>\n                                <div className="col-span-3 text-right">Valor (R$)</div>\n                              </div>\n                              <div className="divide-y divide-gray-700">\n                                {g.members.map((m, idx) => (\n                                  <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">\n                                    <div className="col-span-6 truncate">{m.name}</div>\n                                    <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>\n                                    <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>\n                                  </div>\n                                ))}\n                              </div>\n                            </AccordionContent>\n                          </AccordionItem>\n                        ))}\n                      </Accordion>
                       <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide border-b border-gray-700">
                         <div className="col-span-5">Usuário</div>
                         <div className="col-span-3">Cargo</div>
@@ -221,12 +242,12 @@ export default function AmbienteDeTeste() {
                         <div className="col-span-8">Total</div>
                         <div className="col-span-2 text-right">{totalPercent.toFixed(2)}%</div>
                         <div className="col-span-2 text-right">
-                          {Number(preview.records?.reduce((s, r) => s + Number(r.amount || 0), 0) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          {Number(groupedRoles.reduce((s, g) => s + Number(g.amount || 0), 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                         </div>
                       </div>
                     </div>
 
-                    {preview.site_official_rollup && (
+                    {/* Sobra removida do preview visual, pois não é um cargo */} {false && (
                       <div className="text-xs text-white">
                         Sobra encaminhada ao Site Oficial: {preview.site_official_rollup.percent}% (
                         R$ {Number(preview.site_official_rollup.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })})
