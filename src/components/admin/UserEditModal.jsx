@@ -18,6 +18,7 @@ const CAREER_LEVELS = [
   { id: 'licenciado_catalogo', name: 'Licenciado Catálogo', color: 'bg-yellow-500' },
   { id: 'executivo', name: 'Executivo', color: 'bg-purple-500' },
   { id: 'diretor', name: 'Diretor', color: 'bg-orange-500' },
+  { id: 'diretoria', name: 'Diretoria', color: 'bg-fuchsia-500' },
   { id: 'ceo', name: 'CEO', color: 'bg-red-500' },
   { id: 'conselheiro', name: 'Conselheiro', color: 'bg-cyan-500' },
   { id: 'fundador', name: 'Fundador', color: 'bg-amber-500' }

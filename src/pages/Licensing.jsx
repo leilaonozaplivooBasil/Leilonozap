@@ -422,12 +422,13 @@ const DashboardContent = ({ user, isAdmin }) => {
     'plano_lojista': 'Plano Lojista',
     'distribuidor': 'Distribuidor',
     'diretor': 'Diretor',
+    'diretoria': 'Diretoria',
     'ceo': 'CEO',
     'conselheiro': 'Conselheiro',
     'fundador': 'Fundador'
   };
 
-  const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
+  const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
   
   const highestLevel = careerHierarchy.find(level => userLevels.includes(level)) || 'usuario';
   
@@ -1347,7 +1348,7 @@ const DashboardContent = ({ user, isAdmin }) => {
            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Catálogo</TabsTrigger>}
 
            <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
-           {['diretor', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
+           {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
            <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
            <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
@@ -1454,7 +1455,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         {/* ABA: VENDAS DA EQUIPE - Apenas diretores+ */}
-        {['diretor', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && (
+        {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some(l => userLevels.includes(l)) && (
           <TabsContent value="vendas-equipe" className="space-y-6">
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
@@ -2350,7 +2351,7 @@ export default function LicensingPage() {
       ? currentUser.career_levels 
       : (currentUser.career_levels ? [currentUser.career_levels] : ['usuario']);
     
-    const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
+    const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
     const highestLevel = careerHierarchy.find(level => userLevels.includes(level)) || 'usuario';
     
     return highestLevel;

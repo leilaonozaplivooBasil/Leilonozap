@@ -36,6 +36,7 @@ const CAREER_LEVELS = [
   { id: 'plano_lojista', name: 'Plano Lojista', color: 'bg-sky-500', textColor: 'text-sky-400', borderColor: 'border-sky-500' },
   { id: 'distribuidor', name: 'Distribuidor', color: 'bg-teal-500', textColor: 'text-teal-400', borderColor: 'border-teal-500' },
   { id: 'diretor', name: 'Diretor', color: 'bg-orange-500', textColor: 'text-orange-400', borderColor: 'border-orange-500' },
+  { id: 'diretoria', name: 'Diretoria', color: 'bg-fuchsia-500', textColor: 'text-fuchsia-400', borderColor: 'border-fuchsia-500' },
   { id: 'ceo', name: 'CEO', color: 'bg-red-500', textColor: 'text-red-400', borderColor: 'border-red-500' },
   { id: 'conselheiro', name: 'Conselheiro', color: 'bg-cyan-500', textColor: 'text-cyan-400', borderColor: 'border-cyan-500' },
   { id: 'fundador', name: 'Fundador', color: 'bg-amber-500', textColor: 'text-amber-400', borderColor: 'border-amber-500' }
