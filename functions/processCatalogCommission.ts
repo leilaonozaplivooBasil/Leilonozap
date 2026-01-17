@@ -120,54 +120,56 @@ Deno.serve(async (req) => {
     const allUsers = await base44.asServiceRole.entities.AppUser.list();
 
     // Distribuição
-    const totalPercent = 26.0;
-    const assignments = []; // { role, user, percent }
-    let carry = 0;
+              const totalPercent = 27.0;
+              const assignments = []; // { role, user, percent }
+              let carryLow = 0; // acumula até distribuidor
+              let carryTop = 0; // acumula cargos executivos quando não há elegíveis
 
-    for (let i = 0; i < ROLE_ORDER.length; i++) {
+              for (let i = 0; i < ROLE_ORDER.length; i++) {
       const step = ROLE_ORDER[i];
-      let stepPercent = step.percent + carry;
-
-      if (step.id === 'licenciado_catalogo') {
-        // 13% sempre para o âncora
-        assignments.push({ role: step.id, user: anchorUser, percent: stepPercent });
-        carry = 0;
-        continue;
-      }
 
       if (DIRECTOR_PLUS.has(step.id)) {
-        // Divisão global para Diretor em diante
+        // Cargos executivos: NUNCA consomem carryLow; pagam só o percentual próprio
+        const stepPercent = step.percent;
         const eligible = (Array.isArray(allUsers) ? allUsers : []).filter(u => hasRole(u, step.id));
         if (eligible.length > 0) {
           const share = stepPercent / eligible.length;
           for (const u of eligible) {
             assignments.push({ role: step.id, user: u, percent: share });
           }
-          carry = 0;
         } else {
-          carry = stepPercent; // acumula se não houver ninguém no cargo
+          carryTop += stepPercent;
         }
+        continue;
+      }
+
+      // Até Distribuidor: percent + carryLow para o primeiro na árvore
+      let stepPercent = step.percent + carryLow;
+
+      if (step.id === 'licenciado_catalogo') {
+        assignments.push({ role: step.id, user: anchorUser, percent: stepPercent });
+        carryLow = 0;
+        continue;
+      }
+
+      let assignedUser = null;
+      for (const u of chain) {
+        if (hasRole(u, step.id)) { assignedUser = u; break; }
+      }
+      if (assignedUser) {
+        assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+        carryLow = 0;
       } else {
-        // Até Distribuidor: paga para o primeiro na ÁRVORE; se não houver, acumula
-        let assignedUser = null;
-        for (const u of chain) {
-          if (hasRole(u, step.id)) { assignedUser = u; break; }
-        }
-        if (assignedUser) {
-          assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
-          carry = 0;
-        } else {
-          carry = stepPercent;
-        }
+        carryLow = stepPercent;
       }
     }
 
     // Sobra no topo -> Site Oficial
-    if (carry > 0.000001) {
-      const site = await getOrCreateSiteOfficial(base44);
-      assignments.push({ role: 'site_official_rollup', user: site, percent: carry });
-      carry = 0;
-    }
+              const leftover = (carryLow + carryTop);
+              if (leftover > 0.000001) {
+                const site = await getOrCreateSiteOfficial(base44);
+                assignments.push({ role: 'site_official_rollup', user: site, percent: leftover });
+              }
 
     // Calcula valores e consolida por usuário
     const records = [];
