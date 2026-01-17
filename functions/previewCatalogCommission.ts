@@ -165,11 +165,21 @@ Deno.serve(async (req) => {
 
             if (step.id === 'licenciado_catalogo') {
               assignments.push({ role: step.id, user: anchor, percent: stepPercent });
+              carryLow = 0;
               continue;
             }
 
-            // Regra confirmada: até Distribuidor, sempre paga ao primeiro da linha (âncora)
-            assignments.push({ role: step.id, user: anchor, percent: stepPercent });
+            // Até Distribuidor: paga para o primeiro na ÁRVORE; se não houver, acumula
+            let assignedUser = null;
+            for (const u of chain) {
+              if (hasRole(u, step.id)) { assignedUser = u; break; }
+            }
+            if (assignedUser) {
+              assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+              carryLow = 0;
+            } else {
+              carryLow = stepPercent;
+            }
           }
 
           const leftover = (carryLow + carryTop);
