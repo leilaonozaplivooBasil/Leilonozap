@@ -280,12 +280,7 @@ export default function AmbienteDeTeste() {
                         <div className="col-span-3 text-right">{totalPercent.toFixed(2)}% • {Number(groupedRoles.reduce((s, g) => s + Number(g.amount || 0), 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
                       </div>
                     </div>\n                                <div className="col-span-3 text-right">Valor (R$)</div>\n                              </div>\n                              <div className="divide-y divide-gray-700">\n                                {g.members.map((m, idx) => (\n                                  <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">\n                                    <div className="col-span-6 truncate">{m.name}</div>\n                                    <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>\n                                    <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>\n                                  </div>\n                                ))}\n                              </div>\n                            </AccordionContent>\n                          </AccordionItem>\n                        ))}\n                      </Accordion>
-                      {/* removed old flat table */}
-                        <div className="col-span-5">Usuário</div>
-                        <div className="col-span-3">Cargo</div>
-                        <div className="col-span-2 text-right">%</div>
-                        <div className="col-span-2 text-right">Valor (R$)</div>
-                      </div>
+                      {/* removed old flat table block */}
                       {/* removed legacy flat table rows */}
                       <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-sm font-semibold border-t border-gray-700">
                         <div className="col-span-8">Total</div>
