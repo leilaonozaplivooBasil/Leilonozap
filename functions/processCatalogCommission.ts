@@ -7,7 +7,7 @@ const ROLE_ORDER = [
   { id: 'trainee', percent: 0.5 },
   { id: 'executivo', percent: 0.5 },
   { id: 'kit_start', percent: 1.0 },
-  { id: 'plano_lider', percent: 1.0 },
+  { id: 'plano_lider', percent: 2.5 },
   { id: 'plano_lojista', percent: 3.0 },
   { id: 'distribuidor', percent: 2.0 },
   { id: 'diretor', percent: 0.5 },
@@ -150,11 +150,21 @@ Deno.serve(async (req) => {
 
       if (step.id === 'licenciado_catalogo') {
         assignments.push({ role: step.id, user: anchorUser, percent: stepPercent });
+        carryLow = 0;
         continue;
       }
 
-      // Regra confirmada: até Distribuidor, sempre paga ao primeiro da linha (âncora)
-      assignments.push({ role: step.id, user: anchorUser, percent: stepPercent });
+      // Até Distribuidor: paga para o primeiro na ÁRVORE; se não houver, acumula
+      let assignedUser = null;
+      for (const u of chain) {
+        if (hasRole(u, step.id)) { assignedUser = u; break; }
+      }
+      if (assignedUser) {
+        assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+        carryLow = 0;
+      } else {
+        carryLow = stepPercent;
+      }
     }
 
     // Sobra no topo -> Site Oficial
