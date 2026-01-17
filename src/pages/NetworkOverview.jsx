@@ -703,7 +703,7 @@ export default function NetworkOverview() {
     }
   };
 
-  const handleGrantCommission = async () => {
+  // Removida função de conceder comissão por solicitação
     if (!selectedLicenseeId || !commissionAmount || parseFloat(commissionAmount) <= 0) {
       toast.error("Selecione um licenciado e valor válido.");
       return;
