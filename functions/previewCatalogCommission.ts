@@ -8,7 +8,7 @@ const ROLE_ORDER = [
   { id: 'kit_start', percent: 1.0 },
   { id: 'plano_lider', percent: 1.0 },
   { id: 'plano_lojista', percent: 3.0 },
-  { id: 'distribuidor', percent: 1.0 },
+  { id: 'distribuidor', percent: 2.0 },
   { id: 'diretor', percent: 0.5 },
   { id: 'diretoria', percent: 0.5 },
   { id: 'ceo', percent: 3.0 },
@@ -130,11 +130,11 @@ Deno.serve(async (req) => {
       current = await findByIdLocalOrDB(current.referred_by_id);
     }
 
-    // Distribuição conforme regra de negócio ATUAL:
-    // - Total 26%
-    // - 13% Licenciado Catálogo: 100% para o âncora (dono do link)
-    // - Para TODOS os demais cargos: pool global (sistema inteiro) dividido igualmente entre todos os usuários ativos naquele cargo
-    // - Se um cargo não tiver usuários ativos, seu percentual acumula (carry) para o próximo cargo; se sobrar no topo, vai ao Site Oficial
+    // Distribuição conforme a regra enviada:
+    // - 26% no total
+    // - 13% para o âncora (Licenciado Catálogo)
+    // - Até Distribuidor: paga 100% para o primeiro na ÁRVORE; se não houver, acumula (roll-up)
+    // - De Diretor em diante: dividir igualmente entre TODOS que possuem o cargo; se não houver ninguém, acumula
     const totalPercent = 26.0;
     const assignments = []; // { role, user, percent }
     let carry = 0;
@@ -144,23 +144,33 @@ Deno.serve(async (req) => {
       let stepPercent = step.percent + carry;
 
       if (step.id === 'licenciado_catalogo') {
-        // 13% exclusivo do âncora
         assignments.push({ role: step.id, user: anchor, percent: stepPercent });
         carry = 0;
         continue;
       }
 
-      // Pool global por cargo
-      const eligible = users.filter(u => hasRole(u, step.id));
-      if (eligible.length > 0) {
-        const share = stepPercent / eligible.length;
-        for (const u of eligible) {
-          assignments.push({ role: step.id, user: u, percent: share });
+      if (DIRECTOR_PLUS.has(step.id)) {
+        const eligible = users.filter(u => hasRole(u, step.id));
+        if (eligible.length > 0) {
+          const share = stepPercent / eligible.length;
+          for (const u of eligible) {
+            assignments.push({ role: step.id, user: u, percent: share });
+          }
+          carry = 0;
+        } else {
+          carry = stepPercent;
         }
-        carry = 0;
       } else {
-        // Ninguém no cargo → acumula para o próximo
-        carry = stepPercent;
+        let assignedUser = null;
+        for (const u of chain) {
+          if (hasRole(u, step.id)) { assignedUser = u; break; }
+        }
+        if (assignedUser) {
+          assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+          carry = 0;
+        } else {
+          carry = stepPercent;
+        }
       }
     }
 

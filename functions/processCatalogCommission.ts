@@ -7,7 +7,7 @@ const ROLE_ORDER = [
   { id: 'kit_start', percent: 1.0 },
   { id: 'plano_lider', percent: 1.0 },
   { id: 'plano_lojista', percent: 3.0 },
-  { id: 'distribuidor', percent: 1.0 },
+  { id: 'distribuidor', percent: 2.0 },
   { id: 'diretor', percent: 0.5 },
   { id: 'diretoria', percent: 0.5 },
   { id: 'ceo', percent: 3.0 },
@@ -115,6 +115,7 @@ Deno.serve(async (req) => {
 
     // Monta cadeia de ancestrais a partir do âncora
     const chain = await buildAncestorChain(base44, anchorUser);
+    const allUsers = await base44.asServiceRole.entities.AppUser.list();
 
     // Distribuição
     const totalPercent = 26.0;
@@ -124,26 +125,38 @@ Deno.serve(async (req) => {
     for (let i = 0; i < ROLE_ORDER.length; i++) {
       const step = ROLE_ORDER[i];
       let stepPercent = step.percent + carry;
-      let assignedUser = null;
 
       if (step.id === 'licenciado_catalogo') {
-        // Regra especial: o âncora SEMPRE recebe os 13%, mesmo que seja o Site Oficial sem esse cargo
-        assignedUser = anchorUser;
-      } else {
-        // Primeiro ancestral (inclui âncora) que tenha o cargo
-        for (const u of chain) {
-          if (hasRole(u, step.id)) {
-            assignedUser = u; break;
-          }
-        }
+        // 13% sempre para o âncora
+        assignments.push({ role: step.id, user: anchorUser, percent: stepPercent });
+        carry = 0;
+        continue;
       }
 
-      if (assignedUser) {
-        assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
-        carry = 0; // zerou o roll-up
+      if (DIRECTOR_PLUS.has(step.id)) {
+        // Divisão global para Diretor em diante
+        const eligible = (Array.isArray(allUsers) ? allUsers : []).filter(u => hasRole(u, step.id));
+        if (eligible.length > 0) {
+          const share = stepPercent / eligible.length;
+          for (const u of eligible) {
+            assignments.push({ role: step.id, user: u, percent: share });
+          }
+          carry = 0;
+        } else {
+          carry = stepPercent; // acumula se não houver ninguém no cargo
+        }
       } else {
-        // Sobe para o próximo cargo
-        carry = stepPercent;
+        // Até Distribuidor: paga para o primeiro na ÁRVORE; se não houver, acumula
+        let assignedUser = null;
+        for (const u of chain) {
+          if (hasRole(u, step.id)) { assignedUser = u; break; }
+        }
+        if (assignedUser) {
+          assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+          carry = 0;
+        } else {
+          carry = stepPercent;
+        }
       }
     }
 
