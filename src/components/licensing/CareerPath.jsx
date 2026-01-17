@@ -54,7 +54,7 @@ const careerSteps = [
     achievedDescription: '📘 Em formação para próximos níveis.',
     lockedDescription: 'Em breve: Entre como Trainee.' },
   { id: 'licenciado_catalogo', title: 'Licenciado Catálogo', icon: BookOpen,
-    achievedDescription: '📚 Expanda seus ganhos com nosso catálogo exclusivo.',
+    achievedDescription: '📚 Expanda seus ganhos com nosso catálogo exclusivo. 13% exclusivo em vendas feitas pelo seu link do catálogo.',
     lockedDescription: 'Em breve: Expanda seus ganhos com catálogo.' },
   { id: 'licenciado_aplicativo', title: 'Influencer', icon: Award,
     achievedDescription: '✅ Você é um Influencer! Indique clientes e ganhe 3% em cada arremate deles (App).',
@@ -107,7 +107,7 @@ export default function CareerPath({ currentUser }) {
                                         {step.title}
                                         {isPrimary && <span className="text-xs text-gray-400">(Função Principal)</span>}
                                         {isActive && rolePercentages[step.id] ? (
-                                          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-green-600/20 text-green-300 border border-green-500/30">+{rolePercentages[step.id]}%</span>
+                                          <span className="ml-2 text-xs px-2 py-0.5 rounded bg-green-600/20 text-green-300 border border-green-500/30">+{rolePercentages[step.id]}%{step.id === 'licenciado_catalogo' ? ' via link' : ''}</span>
                                         ) : null}
                                     </h4>
                                     <p className={cn(
