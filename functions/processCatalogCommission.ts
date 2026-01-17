@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
     // Distribuição
               const totalPercent = 27.0;
               const assignments = []; // { role, user, percent }
-              let carryLow = 0; // acumula até distribuidor
+              let leftoverLow = 0; // percentuais sem elegível até distribuidor
               let carryTop = 0; // acumula cargos executivos quando não há elegíveis
 
               for (let i = 0; i < ROLE_ORDER.length; i++) {
@@ -145,30 +145,28 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Até Distribuidor: percent + carryLow para o primeiro na árvore
-      let stepPercent = step.percent + carryLow;
+      // Até Distribuidor: paga exatamente o percentual do cargo ao primeiro na árvore
+      const stepPercent = step.percent;
 
       if (step.id === 'licenciado_catalogo') {
         assignments.push({ role: step.id, user: anchorUser, percent: stepPercent });
-        carryLow = 0;
         continue;
       }
 
-      // Até Distribuidor: paga para o primeiro na ÁRVORE; se não houver, acumula
+      // Paga para o primeiro na ÁRVORE que possua o cargo; se não houver, acumula em leftoverLow
       let assignedUser = null;
       for (const u of chain) {
         if (hasRole(u, step.id)) { assignedUser = u; break; }
       }
       if (assignedUser) {
         assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
-        carryLow = 0;
       } else {
-        carryLow = stepPercent;
+        leftoverLow += stepPercent;
       }
     }
 
     // Sobra no topo -> Site Oficial
-              const leftover = (carryLow + carryTop);
+              const leftover = (leftoverLow + carryTop);
               if (leftover > 0.000001) {
                 const site = await getOrCreateSiteOfficial(base44);
                 assignments.push({ role: 'site_official_rollup', user: site, percent: leftover });
