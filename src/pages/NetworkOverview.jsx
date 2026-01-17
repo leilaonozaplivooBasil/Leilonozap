@@ -242,12 +242,13 @@ function NetworkTree({ users, onPromote, onEdit, onRelink }) {
   }, [getDescendantIds]);
 
   const handleDropOnUser = async (targetId, draggedId) => {
-    if (!draggedId || !targetId || isDropInvalid(draggedId, targetId)) {
+    if (!draggedId || !targetId) {
       setDraggingId(null);
       setDragOverId(null);
       return;
     }
-    await onRelink?.(draggedId, targetId);
+    // Permite mover mesmo quando o alvo é descendente (o handler resolve o ciclo)
+    await onRelink?.(draggedId, targetId, true);
     setDraggingId(null);
     setDragOverId(null);
   };
@@ -302,13 +303,11 @@ function NetworkTree({ users, onPromote, onEdit, onRelink }) {
           }}
           onDragOver={(e) => {
             if (!draggingId || draggingId === user.id) return;
-            if (isDropInvalid(draggingId, user.id)) return;
-            e.preventDefault();
+            e.preventDefault(); // permite soltar mesmo em descendentes (ciclo será resolvido)
             setDragOverId(user.id);
           }}
           onDragEnter={(e) => {
             if (!draggingId || draggingId === user.id) return;
-            if (isDropInvalid(draggingId, user.id)) return;
             e.preventDefault();
             setDragOverId(user.id);
           }}
@@ -766,7 +765,7 @@ export default function NetworkOverview() {
   };
 
   // Atualiza vínculo via arrastar-e-soltar
-  const handleRelink = async (draggedId, newParentId) => {
+  const handleRelink = async (draggedId, newParentId, resolveCycles = false) => {
     try {
       let targetId = newParentId;
       if (!newParentId) {
@@ -776,6 +775,35 @@ export default function NetworkOverview() {
         );
         targetId = site?.id || null;
       }
+
+      // Se necessário, resolve possíveis ciclos: se o alvo for descendente do arrastado, destacamos o alvo para raiz antes
+      if (resolveCycles && targetId) {
+        const isDescendant = (ancestorId, maybeDescId) => {
+          const queue = [ancestorId];
+          const seen = new Set();
+          while (queue.length) {
+            const curr = queue.shift();
+            allUsers.forEach(u => {
+              if (u.referred_by_id === curr && !seen.has(u.id)) {
+                if (u.id === maybeDescId) {
+                  seen.add(u.id);
+                  queue.length = 0;
+                } else {
+                  seen.add(u.id);
+                  queue.push(u.id);
+                }
+              }
+            });
+          }
+          return seen.has(maybeDescId);
+        };
+
+        if (isDescendant(draggedId, targetId)) {
+          // Quebra o ciclo: solta o alvo na raiz antes de mover o arrastado
+          await AppUser.update(targetId, { referred_by_id: null });
+        }
+      }
+
       await AppUser.update(draggedId, { referred_by_id: targetId });
       toast.success('Vínculo atualizado!');
       await fetchData();
