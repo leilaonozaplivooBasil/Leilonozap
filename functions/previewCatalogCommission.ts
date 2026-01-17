@@ -130,7 +130,11 @@ Deno.serve(async (req) => {
       current = await findByIdLocalOrDB(current.referred_by_id);
     }
 
-    // Distribuição conforme regra atual
+    // Distribuição conforme regra de negócio ATUAL:
+    // - Total 26%
+    // - 13% Licenciado Catálogo: 100% para o âncora (dono do link)
+    // - Para TODOS os demais cargos: pool global (sistema inteiro) dividido igualmente entre todos os usuários ativos naquele cargo
+    // - Se um cargo não tiver usuários ativos, seu percentual acumula (carry) para o próximo cargo; se sobrar no topo, vai ao Site Oficial
     const totalPercent = 26.0;
     const assignments = []; // { role, user, percent }
     let carry = 0;
@@ -138,21 +142,25 @@ Deno.serve(async (req) => {
     for (let i = 0; i < ROLE_ORDER.length; i++) {
       const step = ROLE_ORDER[i];
       let stepPercent = step.percent + carry;
-      let assignedUser = null;
 
       if (step.id === 'licenciado_catalogo') {
-        assignedUser = anchor; // 13% sempre para o âncora
-      } else {
-        for (const u of chain) {
-          if (hasRole(u, step.id)) { assignedUser = u; break; }
-        }
+        // 13% exclusivo do âncora
+        assignments.push({ role: step.id, user: anchor, percent: stepPercent });
+        carry = 0;
+        continue;
       }
 
-      if (assignedUser) {
-        assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+      // Pool global por cargo
+      const eligible = users.filter(u => hasRole(u, step.id));
+      if (eligible.length > 0) {
+        const share = stepPercent / eligible.length;
+        for (const u of eligible) {
+          assignments.push({ role: step.id, user: u, percent: share });
+        }
         carry = 0;
       } else {
-        carry = stepPercent; // acumula para o próximo nível
+        // Ninguém no cargo → acumula para o próximo
+        carry = stepPercent;
       }
     }
 
