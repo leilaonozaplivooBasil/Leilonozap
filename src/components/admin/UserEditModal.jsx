@@ -107,13 +107,25 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
 
         setIsSaving(true);
         try {
+            const newReferrerId = referrerId && String(referrerId).trim() !== '' ? referrerId : null;
+            if (newReferrerId && newReferrerId === user.id) {
+                toast.error("Um usuário não pode indicar a si mesmo.");
+                setIsSaving(false);
+                return;
+            }
+            if (newReferrerId) {
+                const refUser = (Array.isArray(allUsers) ? allUsers : []).find(u => u.id === newReferrerId);
+                if (refUser && refUser.referred_by_id === user.id) {
+                    await AppUser.update(refUser.id, { referred_by_id: null });
+                }
+            }
             const updatePayload = {
                 full_name: userData.full_name,
                 nickname: userData.nickname || null,
                 email: userData.email,
                 phone: userData.phone || null,
                 role: userData.role,
-                referred_by_id: referrerId || null,
+                referred_by_id: newReferrerId,
                 career_levels: selectedLevels,
                 primary_career_level: primaryLevel,
                 display_first_name: displayFirstName.trim() || null,
