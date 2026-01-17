@@ -54,10 +54,11 @@ Deno.serve(async (req) => {
         // 3. Buscar TODOS os usuários órfãos (sem indicação)
         const allUsers = await base44.asServiceRole.entities.AppUser.list("-created_date", 1000);
         
+        // Apenas USUÁRIOS NORMAIS (role === 'user') serão vinculados automaticamente ao Site Oficial
         const orphanUsers = allUsers.filter(u => 
             !u.referred_by_id && 
             u.id !== siteLicensee.id && 
-            u.role !== 'admin'
+            u.role === 'user'
         );
 
         console.log(`🔍 Encontrados ${orphanUsers.length} usuários órfãos`);
