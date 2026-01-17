@@ -108,7 +108,7 @@ export default function AmbienteDeTeste() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl sm:text-3xl font-bold">🧪 Ambiente de Teste</h1>
           <div className="flex items-center gap-2">
-            <Button variant="outline" className="text-white border-gray-700" onClick={simulate} disabled={isSimulating || !anchorUser}>
+            <Button className="bg-green-600 hover:bg-green-700 text-white border-none" onClick={simulate} disabled={isSimulating || !anchorUser}>
               {isSimulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Simular
             </Button>
           </div>
@@ -130,7 +130,7 @@ export default function AmbienteDeTeste() {
           <>
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-lg">Parâmetros da Simulação</CardTitle>
+                <CardTitle className="text-lg text-white">Parâmetros da Simulação</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -173,7 +173,7 @@ export default function AmbienteDeTeste() {
 
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader className="flex-row items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className="text-lg text-white flex items-center gap-2">
                   Resultado em tempo real
                   {percentOk ? (
                     <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 flex items-center gap-1">
@@ -195,13 +195,13 @@ export default function AmbienteDeTeste() {
                   <div className="space-y-4">
                     <div className="flex flex-wrap items-center gap-2 text-sm text-white">
                       <span>Âncora:</span>
-                      <Badge className="bg-gray-900 border-gray-700">{preview.anchor}</Badge>
+                      <Badge className="bg-gray-900 border-gray-700 text-white">{preview.anchor}</Badge>
                       <span>• Valor:</span>
-                      <Badge className="bg-gray-900 border-gray-700">R$ {Number(preview.sale_value || saleValue).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</Badge>
+                      <Badge className="bg-gray-900 border-gray-700 text-white">R$ {Number(preview.sale_value || saleValue).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</Badge>
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-gray-700">
-                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs">
+                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide">
                         <div className="col-span-5">Usuário</div>
                         <div className="col-span-3">Cargo</div>
                         <div className="col-span-2 text-right">%</div>
@@ -209,7 +209,7 @@ export default function AmbienteDeTeste() {
                       </div>
                       <div className="divide-y divide-gray-800">
                         {preview.records?.map((r, idx) => (
-                          <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center bg-gray-800/50">
+                          <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center bg-gray-800/50 text-white">
                             <div className="col-span-5 truncate">{r.user_full_name}</div>
                             <div className="col-span-3 text-white">{roleLabel(r.role)}</div>
                             <div className="col-span-2 text-right">{Number(r.percent).toFixed(2)}%</div>
