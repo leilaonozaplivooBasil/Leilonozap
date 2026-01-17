@@ -1049,7 +1049,6 @@ export default function NetworkOverview() {
             <p className="text-sm sm:text-base text-gray-400">Visão completa do sistema</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {/* NOVO BOTÃO DISPARAR MENSAGENS */}
             <Button
               onClick={() => setShowMessageDispatcher(true)}
               className="bg-blue-600 hover:bg-blue-700"
@@ -1057,50 +1056,6 @@ export default function NetworkOverview() {
             >
               <Send className="w-4 h-4 mr-2" />
               Disparar Mensagens
-            </Button>
-
-            {/* BOTÃO CORRIGIDO */}
-            <Button
-              onClick={handleCleanSiteDuplicates}
-              disabled={isCleaningDuplicates}
-              variant="outline"
-              className="border-red-500 text-red-400 hover:bg-red-500/10" // Updated className
-              size="sm"
-            >
-              {isCleaningDuplicates ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />} {/* Changed icon */}
-              🧹 Limpar Site Duplicado (CORRIGIDO) {/* Updated text */}
-            </Button>
-
-            <Button
-              onClick={handleCleanDuplicates}
-              disabled={isCleaningDuplicates}
-              variant="outline"
-              className="border-yellow-500 text-yellow-400"
-              size="sm"
-            >
-              {isCleaningDuplicates ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserX className="w-4 h-4 mr-2" />}
-              Limpar Duplicatas
-            </Button>
-            
-            <Button
-              onClick={handleLinkOrphanUsers}
-              disabled={isLinkingOrphans}
-              variant="outline"
-              className="border-green-500 text-green-400"
-              size="sm"
-            >
-              {isLinkingOrphans ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Link2 className="w-4 h-4 mr-2" />}
-              Vincular Órfãos
-            </Button>
-            <Button
-              onClick={handleForceSync}
-              disabled={isSyncing}
-              variant="outline"
-              className="border-green-500 text-green-400"
-              size="sm"
-            >
-              {isSyncing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-              Sincronizar
             </Button>
           </div>
         </div>
