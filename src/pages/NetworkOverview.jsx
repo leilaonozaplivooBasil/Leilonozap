@@ -515,6 +515,13 @@ export default function NetworkOverview() {
   const [isLinkingOrphans, setIsLinkingOrphans] = useState(false);
   const [editingUserFull, setEditingUserFull] = useState(null);
   const [showMessageDispatcher, setShowMessageDispatcher] = useState(false);
+  
+  const siteLicensee = useMemo(() => {
+    return allUsers.find(u =>
+      (u.email && u.email.toLowerCase() === 'site@leilaonozap.com') ||
+      (u.full_name && u.full_name.toLowerCase().includes('site oficial'))
+    ) || null;
+  }, [allUsers]);
 
   const fetchData = useCallback(async () => {
     // 🔧 CORREÇÃO CRÍTICA: Validar ADMIN PRIMEIRO
@@ -544,6 +551,18 @@ export default function NetworkOverview() {
 
       setAllUsers(Array.isArray(users) ? users : []);
       setAllAuctions(Array.isArray(auctions) ? auctions : []);
+      
+      // Auto-link órfãos (role=user) ao Site Oficial
+      try {
+        const hasOrphans = (Array.isArray(users) ? users : []).some(u => !u.referred_by_id && u.role === 'user');
+        if (hasOrphans) {
+          await linkOrphanUsers();
+          const refreshed = await AppUser.list("-created_date", 1000);
+          setAllUsers(Array.isArray(refreshed) ? refreshed : (Array.isArray(users) ? users : []));
+        }
+      } catch (e) {
+        console.debug('Auto-link órfãos ignorado:', e?.message);
+      }
       
       console.log("✅ Dados carregados:", users.length, "usuários");
     } catch (error) {
@@ -1379,13 +1398,13 @@ export default function NetworkOverview() {
                                     </div>
                                   </TableCell>
                                   <TableCell>
-                                    {referrer ? (
+                                    {(referrer || siteLicensee) ? (
                                       <div className="flex flex-col">
                                         <span className="text-green-400 font-semibold text-sm">
-                                          {referrer.full_name}
+                                          {(referrer || siteLicensee).full_name}
                                         </span>
-                                        <span className="text-xs text-gray-500">({referrer.nickname || 'Sem apelido'})</span>
-                                        <span className="text-xs text-gray-600">{referrer.email}</span>
+                                        <span className="text-xs text-gray-500">{((referrer || siteLicensee).nickname || 'Sem apelido')}</span>
+                                        <span className="text-xs text-gray-600">{(referrer || siteLicensee).email}</span>
                                       </div>
                                     ) : (
                                       <span className="text-gray-500">Sem indicação</span>
