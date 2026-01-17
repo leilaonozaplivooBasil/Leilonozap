@@ -68,6 +68,8 @@ export default function RegisterModal({ onClose, onSuccess, onSwitchToLogin }) {
 
       const newUser = await AppUser.create({
         full_name: fullName.trim(),
+        display_first_name: firstName || null,
+        display_last_name: lastName || null,
         email: normalizedEmail,
         phone: phoneDigits,
         cpf: cpfDigits,
