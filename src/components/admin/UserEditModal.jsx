@@ -14,7 +14,7 @@ const AppUser = base44.entities.AppUser;
 
 const CAREER_LEVELS = [
   { id: 'usuario', name: 'Usuário', color: 'bg-gray-500' },
-  { id: 'licenciado_aplicativo', name: 'Licenciado Aplicativo', color: 'bg-green-500' },
+  { id: 'licenciado_aplicativo', name: 'Influencer', color: 'bg-green-500' },
   { id: 'licenciado_catalogo', name: 'Licenciado Catálogo', color: 'bg-yellow-500' },
   { id: 'executivo', name: 'Executivo', color: 'bg-purple-500' },
   { id: 'diretor', name: 'Diretor', color: 'bg-orange-500' },
