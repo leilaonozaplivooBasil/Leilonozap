@@ -74,7 +74,8 @@ Deno.serve(async (req) => {
     }
 
     const payload = await req.json().catch(() => ({}));
-    const saleId = payload?.sale_id;
+    // Permite automação por evento: usa event.entity_id se não vier sale_id
+    const saleId = payload?.sale_id || payload?.event?.entity_id;
     if (!saleId) {
       return Response.json({ error: 'Missing sale_id' }, { status: 400 });
     }
@@ -119,10 +120,15 @@ Deno.serve(async (req) => {
       let stepPercent = step.percent + carry;
       let assignedUser = null;
 
-      // Primeiro ancestral (inclui âncora) que tenha o cargo
-      for (const u of chain) {
-        if (hasRole(u, step.id)) {
-          assignedUser = u; break;
+      if (step.id === 'licenciado_catalogo') {
+        // Regra especial: o âncora SEMPRE recebe os 13%, mesmo que seja o Site Oficial sem esse cargo
+        assignedUser = anchorUser;
+      } else {
+        // Primeiro ancestral (inclui âncora) que tenha o cargo
+        for (const u of chain) {
+          if (hasRole(u, step.id)) {
+            assignedUser = u; break;
+          }
         }
       }
 
