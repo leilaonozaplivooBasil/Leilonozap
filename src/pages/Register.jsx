@@ -27,8 +27,64 @@ export default function Register() {
   const [isRegistering, setIsRegistering] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [dup, setDup] = useState({ email: false, phone: false, cpf: false, name: false, nameDL: false });
+  const [dupMsg, setDupMsg] = useState({ email: '', phone: '', cpf: '', name: '' });
+  const [passwordTouched, setPasswordTouched] = useState(false);
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
+
+  const validatePassword = (pwd) => /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(pwd);
+
+  const checkDuplicateOnBlur = async (field) => {
+    try {
+      if (field === 'email') {
+        const normalizedEmail = (email || '').toLowerCase().trim();
+        if (!normalizedEmail) return;
+        const byEmail = await AppUser.filter({ email: normalizedEmail });
+        const has = (byEmail?.length || 0) > 0;
+        setDup((d) => ({ ...d, email: has }));
+        setDupMsg((m) => ({ ...m, email: has ? 'E-mail já cadastrado' : '' }));
+        if (has) setErrorMessage('USUÁRIO JÁ CADASTRADO.');
+        return;
+      }
+      if (field === 'phone') {
+        const digits = (phone || '').replace(/\D/g, '');
+        if (!digits) return;
+        const byPhone = await AppUser.filter({ phone: digits });
+        const has = (byPhone?.length || 0) > 0;
+        setDup((d) => ({ ...d, phone: has }));
+        setDupMsg((m) => ({ ...m, phone: has ? 'Telefone já cadastrado' : '' }));
+        if (has) setErrorMessage('USUÁRIO JÁ CADASTRADO.');
+        return;
+      }
+      if (field === 'cpf') {
+        const digits = (cpf || '').replace(/\D/g, '');
+        if (!digits) return;
+        const byCpf = await AppUser.filter({ cpf: digits });
+        const has = (byCpf?.length || 0) > 0;
+        setDup((d) => ({ ...d, cpf: has }));
+        setDupMsg((m) => ({ ...m, cpf: has ? 'CPF já cadastrado' : '' }));
+        if (has) setErrorMessage('USUÁRIO JÁ CADASTRADO.');
+        return;
+      }
+      if (field === 'full_name') {
+        const trimmed = (fullName || '').trim();
+        if (!trimmed) return;
+        const parts = trimmed.split(/\s+/).filter(Boolean);
+        const fn = parts[0] || '';
+        const ln = parts.length > 1 ? parts[parts.length - 1] : '';
+        const [byNameExact, byNameDL] = await Promise.all([
+          AppUser.filter({ full_name: trimmed }),
+          (fn && ln) ? AppUser.filter({ display_first_name: fn, display_last_name: ln }) : Promise.resolve([]),
+        ]);
+        const hasExact = (byNameExact?.length || 0) > 0;
+        const hasDL = (byNameDL?.length || 0) > 0;
+        const has = hasExact || hasDL;
+        setDup((d) => ({ ...d, name: hasExact, nameDL: hasDL }));
+        setDupMsg((m) => ({ ...m, name: has ? 'Nome já cadastrado' : '' }));
+        if (has) setErrorMessage('USUÁRIO JÁ CADASTRADO.');
+      }
+    } catch (_) { /* silencioso */ }
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
@@ -41,8 +97,8 @@ export default function Register() {
       setErrorMessage("❌ Por favor, insira um E-mail válido.");
       return;
     }
-    if (password.length < 6) {
-      setErrorMessage("❌ A senha deve ter no mínimo 6 caracteres.");
+    if (!validatePassword(password)) {
+      setErrorMessage("❌ A senha deve ter no mínimo 8 caracteres, incluindo letra, número e caractere especial.");
       return;
     }
 
@@ -190,10 +246,14 @@ export default function Register() {
                     type="text" 
                     value={fullName} 
                     onChange={(e) => setFullName(e.target.value)} 
+                    onBlur={() => checkDuplicateOnBlur('full_name')}
                     placeholder="Seu nome completo" 
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.name || dup.nameDL ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
+                  {(dup.name || dup.nameDL) && (
+                    <p className="mt-1 text-xs text-red-400">{dupMsg.name || 'Nome já cadastrado'}</p>
+                  )}
                 </div>
 
                 <div>
@@ -203,10 +263,14 @@ export default function Register() {
                     type="email" 
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)} 
+                    onBlur={() => checkDuplicateOnBlur('email')}
                     placeholder="seu@email.com" 
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
+                  {dup.email && (
+                    <p className="mt-1 text-xs text-red-400">{dupMsg.email || 'E-mail já cadastrado'}</p>
+                  )}
                 </div>
 
                 <div>
@@ -216,10 +280,14 @@ export default function Register() {
                     type="tel" 
                     value={phone} 
                     onChange={(e) => setPhone(e.target.value)} 
+                    onBlur={() => checkDuplicateOnBlur('phone')}
                     placeholder="(XX) XXXXX-XXXX" 
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.phone ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
+                  {dup.phone && (
+                    <p className="mt-1 text-xs text-red-400">{dupMsg.phone || 'Telefone já cadastrado'}</p>
+                  )}
                 </div>
 
                 <div>
@@ -229,10 +297,14 @@ export default function Register() {
                     type="text" 
                     value={cpf} 
                     onChange={(e) => setCpf(e.target.value)} 
+                    onBlur={() => checkDuplicateOnBlur('cpf')}
                     placeholder="000.000.000-00" 
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.cpf ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
+                  {dup.cpf && (
+                    <p className="mt-1 text-xs text-red-400">{dupMsg.cpf || 'CPF já cadastrado'}</p>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
@@ -242,10 +314,14 @@ export default function Register() {
                     type="password" 
                     value={password} 
                     onChange={(e) => setPassword(e.target.value)} 
-                    placeholder="Mínimo 6 caracteres" 
-                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    onBlur={() => setPasswordTouched(true)}
+                    placeholder="Mínimo 8 caracteres com letra, número e caractere especial" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${passwordTouched && !validatePassword(password) ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
+                  {passwordTouched && !validatePassword(password) && (
+                    <p className="mt-1 text-xs text-red-400">A senha deve ter no mínimo 8 caracteres, com letra, número e caractere especial.</p>
+                  )}
                 </div>
               </div>
 
@@ -349,7 +425,7 @@ export default function Register() {
               <div className="flex flex-col gap-3 sm:gap-4">
                 <Button 
                   type="submit"
-                  disabled={isRegistering || !fullName || !email || !phone || !cpf || !password || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode}
+                  disabled={isRegistering || !fullName || !email || !phone || !cpf || !password || !validatePassword(password) || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode}
                   className={`w-full h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
                 >
                   {isRegistering ? (
