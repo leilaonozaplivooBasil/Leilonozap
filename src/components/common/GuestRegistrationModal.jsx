@@ -185,6 +185,8 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
       
       const newUser = {
         full_name: fullName.trim(),
+        display_first_name: firstName || null,
+        display_last_name: lastName || null,
         nickname: nickname.trim(),
         email: normalizedEmail,
         password: password,
