@@ -198,10 +198,10 @@ export default function AmbienteDeTeste() {
                   Resultado em tempo real
                   {percentOk ? (
                     <Badge className="bg-green-500/20 text-green-300 border border-green-500/40 flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3" /> Soma 27%
+                      <CheckCircle2 className="w-3 h-3" /> Dentro do limite (≤ 26%)
                     </Badge>
                   ) : (
-                    <Badge className="bg-red-500/20 text-red-300 border border-red-500/40">Soma {totalPercent.toFixed(2)}%</Badge>
+                    <Badge className="bg-red-500/20 text-red-300 border border-red-500/40">Excede 26% • {totalPercent.toFixed(2)}%</Badge>
                   )}
                 </CardTitle>
               </CardHeader>
