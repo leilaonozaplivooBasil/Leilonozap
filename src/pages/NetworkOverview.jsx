@@ -471,7 +471,7 @@ export default function NetworkOverview() {
 
   const stats = useMemo(() => {
     const total = allUsers.length;
-    const byLevel = CAREER_LEVELS.map(level => ({
+    const byLevel = CAREER_LEVELS.slice().reverse().map(level => ({
       ...level,
       count: allUsers.filter(u => {
         const userLevels = Array.isArray(u.career_levels) ? u.career_levels : (u.career_levels ? [u.career_levels] : ['usuario']);
