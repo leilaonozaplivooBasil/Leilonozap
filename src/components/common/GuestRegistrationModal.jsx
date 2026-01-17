@@ -96,24 +96,26 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
     
     try {
       const normalizedEmail = email.toLowerCase().trim();
-      
-      console.log("🔍 [CADASTRO] Verificando se email já existe...");
-      
-      let existingUsers;
+      const phoneDigits = (phone || '').replace(/\D/g, '');
+      const nameTrimmed = (fullName || '').trim();
+
+      let results;
       try {
-        existingUsers = await AppUser.filter({ email: normalizedEmail });
+        const [byEmail, byPhone, byNameExact] = await Promise.all([
+          AppUser.filter({ email: normalizedEmail }),
+          phoneDigits ? AppUser.filter({ phone: phoneDigits }) : Promise.resolve([]),
+          nameTrimmed ? AppUser.filter({ full_name: nameTrimmed }) : Promise.resolve([]),
+        ]);
+        results = { byEmail, byPhone, byNameExact };
       } catch (error) {
-        console.error("Erro ao verificar email:", error);
+        console.error("Erro ao verificar duplicidade:", error);
         setErrorMessage("❌ Erro de conexão. Verifique sua internet e tente novamente.");
         setIsRegistering(false);
         return;
       }
-      
-      console.log("🔍 [CADASTRO] Usuários encontrados:", existingUsers.length);
-      
-      if (existingUsers.length > 0) {
-        console.log("❌ Email já cadastrado:", existingUsers[0]);
-        setErrorMessage("❌ Este email já está cadastrado. Tente fazer login ou use outro email.");
+
+      if ((results.byEmail?.length || 0) > 0 || (results.byPhone?.length || 0) > 0 || (results.byNameExact?.length || 0) > 0) {
+        setErrorMessage("Usuário já cadastrado.");
         setIsRegistering(false);
         return;
       }
@@ -182,7 +184,7 @@ export default function GuestRegistrationModal({ onClose, onSuccess }) {
         nickname: nickname.trim(),
         email: normalizedEmail,
         password: password,
-        phone: phone.trim(),
+        phone: phoneDigits,
         terms_accepted: true,
         avatar_url: avatarUrl || null,
         points: 0,

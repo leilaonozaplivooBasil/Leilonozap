@@ -49,9 +49,20 @@ export default function Register() {
     setErrorMessage('');
 
     try {
-      const existingUsers = await AppUser.filter({ email: email.toLowerCase().trim() });
-      if (existingUsers.length > 0) {
-        setErrorMessage("❌ Este e-mail já está cadastrado. Tente fazer login.");
+      const normalizedEmail = email.toLowerCase().trim();
+      const phoneDigits = (phone || '').replace(/\D/g, '');
+      const cpfDigits = (cpf || '').replace(/\D/g, '');
+      const nameTrimmed = (fullName || '').trim();
+
+      const [byEmail, byPhone, byCpf, byNameExact] = await Promise.all([
+        AppUser.filter({ email: normalizedEmail }),
+        phoneDigits ? AppUser.filter({ phone: phoneDigits }) : Promise.resolve([]),
+        cpfDigits ? AppUser.filter({ cpf: cpfDigits }) : Promise.resolve([]),
+        nameTrimmed ? AppUser.filter({ full_name: nameTrimmed }) : Promise.resolve([]),
+      ]);
+
+      if ((byEmail?.length || 0) > 0 || (byPhone?.length || 0) > 0 || (byCpf?.length || 0) > 0 || (byNameExact?.length || 0) > 0) {
+        setErrorMessage("Usuário já cadastrado.");
         setIsRegistering(false);
         return;
       }
@@ -87,10 +98,10 @@ export default function Register() {
       }
 
       const newUser = await AppUser.create({
-        full_name: fullName,
-        email: email.toLowerCase().trim(),
-        phone: phone,
-        cpf: cpf,
+        full_name: fullName.trim(),
+        email: normalizedEmail,
+        phone: phoneDigits,
+        cpf: cpfDigits,
         password: password,
         role: 'user',
         address_street: addressStreet,
