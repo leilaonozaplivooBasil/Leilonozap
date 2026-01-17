@@ -68,12 +68,13 @@ async function buildAncestorChain(base44, anchorUser) {
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user || user.role !== 'admin') {
+    const payload = await req.json().catch(() => ({}));
+    const isAutomation = !!payload?.event;
+    const user = await base44.auth.me().catch(() => null);
+    if (!isAutomation && (!user || user.role !== 'admin')) {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const payload = await req.json().catch(() => ({}));
     // Permite automação por evento: usa event.entity_id se não vier sale_id
     const saleId = payload?.sale_id || payload?.event?.entity_id;
     if (!saleId) {
