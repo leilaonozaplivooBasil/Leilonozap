@@ -412,6 +412,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   
   const careerLevelsMap = {
     'usuario': 'Usuário',
+    'licenciado_aplicativo': 'Influencer',
     'influencer': 'Influencer',
     'licenciado_catalogo': 'Licenciado Catálogo',
     'trainee': 'Trainee',

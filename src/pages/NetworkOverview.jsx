@@ -27,7 +27,7 @@ import MessageDispatcher from "../components/admin/MessageDispatcher";
 
 const CAREER_LEVELS = [
   { id: 'usuario', name: 'Usuário', color: 'bg-gray-500', textColor: 'text-gray-400', borderColor: 'border-gray-500' },
-  { id: 'influencer', name: 'Influencer', color: 'bg-green-500', textColor: 'text-green-400', borderColor: 'border-green-500' },
+  { id: 'licenciado_aplicativo', name: 'Influencer', color: 'bg-green-500', textColor: 'text-green-400', borderColor: 'border-green-500' },
   { id: 'licenciado_catalogo', name: 'Licenciado Catálogo', color: 'bg-yellow-500', textColor: 'text-yellow-400', borderColor: 'border-yellow-500' },
   { id: 'trainee', name: 'Trainee', color: 'bg-blue-500', textColor: 'text-blue-400', borderColor: 'border-blue-500' },
   { id: 'executivo', name: 'Executivo', color: 'bg-purple-500', textColor: 'text-purple-400', borderColor: 'border-purple-500' },
