@@ -1316,7 +1316,7 @@ export default function NetworkOverview() {
 
               <p className="text-sm text-gray-400">Selecione um ou mais cargos:</p>
               <div className="space-y-3 max-h-64 overflow-y-auto">
-                {CAREER_LEVELS.map(level => {
+               {CAREER_LEVELS.slice().reverse().map(level => {
                   const isSelected = selectedLevels.includes(level.id);
                   const isPrimary = primaryLevel === level.id;
                   
