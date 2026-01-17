@@ -63,21 +63,28 @@ export default function AmbienteDeTeste() {
   }, [preview]);
 
   const groupedRoles = useMemo(() => {
-    if (!preview?.records) return [];
-    const map = new Map();
-    for (const r of preview.records) {
-      if (r.role === 'site_official_rollup') continue; // excluir sobra
-      const key = r.role;
-      if (!map.has(key)) {
-        map.set(key, { role: key, percent: 0, amount: 0, members: [] });
-      }
-      const entry = map.get(key);
-      entry.percent += Number(r.percent || 0);
-      entry.amount += Number(r.amount || 0);
-      entry.members.push({ name: r.user_full_name, percent: Number(r.percent || 0), amount: Number(r.amount || 0) });
-    }
     const ORDER = ['licenciado_catalogo','trainee','executivo','kit_start','plano_lider','plano_lojista','distribuidor','diretor','diretoria','ceo','conselheiro','fundador'];
-    return Array.from(map.values()).sort((a,b) => ORDER.indexOf(a.role) - ORDER.indexOf(b.role));
+    const map = new Map();
+    
+    // Inicializa todos os cargos
+    for (const role of ORDER) {
+      map.set(role, { role, percent: 0, amount: 0, members: [] });
+    }
+    
+    // Preenche com dados do preview
+    if (preview?.records) {
+      for (const r of preview.records) {
+        if (r.role === 'site_official_rollup') continue;
+        const entry = map.get(r.role);
+        if (entry) {
+          entry.percent += Number(r.percent || 0);
+          entry.amount += Number(r.amount || 0);
+          entry.members.push({ name: r.user_full_name, percent: Number(r.percent || 0), amount: Number(r.amount || 0) });
+        }
+      }
+    }
+    
+    return Array.from(map.values());
   }, [preview]);
 
   const simulate = async () => {
