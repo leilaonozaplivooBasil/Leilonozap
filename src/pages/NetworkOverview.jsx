@@ -741,7 +741,7 @@ export default function NetworkOverview() {
     });
   };
 
-  const handleOrganizeAlavancagem = async () => {
+  // Removida função de organizar alavancagem por solicitação
     if (!selectedLicenseeForLink || selectedUsersToLink.length === 0) {
       toast.error("Selecione um licenciado e usuários.");
       return;
