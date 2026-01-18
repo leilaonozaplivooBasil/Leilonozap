@@ -85,7 +85,7 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}}
+                  className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`
                   loading="eager"
                   fetchpriority="high"
                   decoding="sync"
