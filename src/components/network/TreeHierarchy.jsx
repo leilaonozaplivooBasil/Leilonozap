@@ -150,9 +150,14 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
               relative group/btn
               hover:scale-110
               border-2 border-white/20
+              overflow-hidden
             `}
           >
-            {initials}
+            {node.avatar_url ? (
+              <img src={node.avatar_url} alt={node.full_name} className="w-full h-full object-cover" />
+            ) : (
+              initials
+            )}
 
             {/* Dropdown indicator */}
             {hasChildren && (
