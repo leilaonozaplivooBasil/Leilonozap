@@ -167,10 +167,62 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
   };
 
   const roots = getHierarchy();
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    if (!svgRef.current) return;
+
+    const drawConnections = () => {
+      const svg = svgRef.current;
+      svg.innerHTML = '';
+
+      const drawCurve = (fromId, toId) => {
+        const from = nodeRefs.current[fromId];
+        const to = nodeRefs.current[toId];
+
+        if (!from || !to) return;
+
+        const svg = svgRef.current;
+        const container = svg.parentElement;
+        const containerRect = container.getBoundingClientRect();
+
+        const x1 = from.x - containerRect.left;
+        const y1 = from.y - containerRect.top;
+        const x2 = to.x - containerRect.left;
+        const y2 = to.y - containerRect.top;
+
+        const controlY = y1 + (y2 - y1) * 0.4;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`);
+        path.setAttribute('stroke', '#64748b');
+        path.setAttribute('stroke-width', '1.5');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-linecap', 'round');
+
+        svg.appendChild(path);
+      };
+
+      Object.values(users).forEach(user => {
+        if (user.children && user.children.length > 0) {
+          user.children.forEach(child => {
+            drawCurve(user.id, child.id);
+          });
+        }
+      });
+    };
+
+    setTimeout(drawConnections, 100);
+  }, [expandedNodes, users]);
 
   return (
-    <div className="w-full p-8 bg-gray-900 rounded-lg">
-      <div className="flex flex-col items-center gap-12">
+    <div className="w-full p-8 bg-gray-900 rounded-lg relative">
+      <svg
+        ref={svgRef}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        style={{ zIndex: 1 }}
+      />
+      <div className="flex flex-col items-center gap-12 relative" style={{ zIndex: 2 }}>
         {roots.map((root) => (
           <TreeNode key={root.id} node={root} isRoot={true} />
         ))}
