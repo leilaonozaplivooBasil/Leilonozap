@@ -10,7 +10,7 @@ const ROLE_ORDER = [
   { id: 'kit_start', percent: 1.0 },
   { id: 'plano_lider', percent: 1.0 },
   { id: 'plano_lojista', percent: 3.0 },
-  { id: 'distribuidor', percent: 2.0 },
+  { id: 'distribuidor', percent: 1.0 },
   { id: 'diretor', percent: 0.5 },
   { id: 'diretoria', percent: 0.5 },
   { id: 'ceo', percent: 3.0 },
