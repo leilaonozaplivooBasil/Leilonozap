@@ -58,6 +58,26 @@ export default function CatalogCheckout2() {
             toast.error('Telefone é obrigatório');
             return;
         }
+        if (!addressStreet?.trim()) {
+            toast.error('Rua é obrigatória');
+            return;
+        }
+        if (!addressNumber?.trim()) {
+            toast.error('Número é obrigatório');
+            return;
+        }
+        if (!addressCity?.trim()) {
+            toast.error('Cidade é obrigatória');
+            return;
+        }
+        if (!addressState?.trim()) {
+            toast.error('Estado é obrigatório');
+            return;
+        }
+        if (!addressZip?.trim()) {
+            toast.error('CEP é obrigatório');
+            return;
+        }
 
         if (!product) {
             toast.error('Produto não encontrado');
@@ -485,7 +505,7 @@ export default function CatalogCheckout2() {
                              {/* Rua */}
                              <div>
                                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                                     Rua
+                                     Rua *
                                  </label>
                                  <input
                                      type="text"
@@ -493,6 +513,7 @@ export default function CatalogCheckout2() {
                                      onChange={(e) => setAddressStreet(e.target.value)}
                                      placeholder="Rua, Avenida, etc"
                                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
                                  />
                              </div>
 
@@ -500,7 +521,7 @@ export default function CatalogCheckout2() {
                              <div className="grid grid-cols-2 gap-3">
                                  <div>
                                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                                         Número
+                                         Número *
                                      </label>
                                      <input
                                          type="text"
@@ -508,6 +529,7 @@ export default function CatalogCheckout2() {
                                          onChange={(e) => setAddressNumber(e.target.value)}
                                          placeholder="123"
                                          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                         required
                                      />
                                  </div>
                                  <div>
@@ -542,7 +564,7 @@ export default function CatalogCheckout2() {
                              <div className="grid grid-cols-2 gap-3">
                                  <div>
                                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                                         Cidade
+                                         Cidade *
                                      </label>
                                      <input
                                          type="text"
@@ -550,11 +572,12 @@ export default function CatalogCheckout2() {
                                          onChange={(e) => setAddressCity(e.target.value)}
                                          placeholder="São Paulo"
                                          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                         required
                                      />
                                  </div>
                                  <div>
                                      <label className="block text-sm font-medium text-gray-300 mb-2">
-                                         UF
+                                         UF *
                                      </label>
                                      <input
                                          type="text"
@@ -563,6 +586,7 @@ export default function CatalogCheckout2() {
                                          placeholder="SP"
                                          maxLength="2"
                                          className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 uppercase"
+                                         required
                                      />
                                  </div>
                              </div>
@@ -570,7 +594,7 @@ export default function CatalogCheckout2() {
                              {/* CEP */}
                              <div>
                                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                                     CEP
+                                     CEP *
                                  </label>
                                  <input
                                      type="text"
@@ -578,6 +602,7 @@ export default function CatalogCheckout2() {
                                      onChange={(e) => setAddressZip(e.target.value)}
                                      placeholder="00000-000"
                                      className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                     required
                                  />
                              </div>
 
@@ -607,7 +632,7 @@ export default function CatalogCheckout2() {
                                  <div className="space-y-3">
                                      <button
                                          onClick={handleCreatePreference}
-                                         disabled={!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim()}
+                                         disabled={!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
                                          className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
                                          >
                                          {preferenceId ? (
@@ -622,9 +647,9 @@ export default function CatalogCheckout2() {
                                              </>
                                          )}
                                      </button>
-                                     {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim()) && (
+                                     {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()) && (
                                          <p className="text-xs text-yellow-400 text-center">
-                                             Preencha Nome, Sobrenome, CPF, Email e Telefone
+                                             Preencha todos os campos obrigatórios (*)
                                          </p>
                                      )}
                                  </div>
