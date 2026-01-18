@@ -143,27 +143,27 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
 
         {/* Linha para baixo */}
         {hasChildren && isExpanded && (
-          <div className="w-0.5 h-5 bg-gradient-to-b from-slate-400 to-slate-300"></div>
+          <div className="w-0.5 h-4 bg-gradient-to-b from-slate-400 to-slate-300"></div>
         )}
 
         {/* Children */}
         {hasChildren && isExpanded && (
-          <div className="relative pt-3">
+          <div className="relative pt-2">
             {/* Linha horizontal conectora */}
-            <div className="h-0.5 bg-slate-400 mb-6" style={{ width: `${Math.max(120, node.children.length * 120)}px`, marginLeft: `${-Math.max(60, (node.children.length - 1) * 60)}px` }}></div>
+            <div className="h-0.5 bg-slate-400 mb-4" style={{ width: `${Math.max(100, node.children.length * 100)}px`, marginLeft: `${-Math.max(50, (node.children.length - 1) * 50)}px` }}></div>
 
             {/* Grid de filhos */}
             <div
-              className="flex gap-8 justify-center relative"
+              className="flex gap-6 justify-center relative"
               style={{
-                marginTop: '-1.5rem',
+                marginTop: '-1rem',
               }}
             >
               {/* Linhas verticais de conexão */}
               {node.children.map((child, idx) => (
                 <div key={child.id} className="flex flex-col items-center">
                   {/* Linha vertical */}
-                  <div className="w-0.5 h-6 bg-gradient-to-b from-slate-400 to-slate-300"></div>
+                  <div className="w-0.5 h-4 bg-gradient-to-b from-slate-400 to-slate-300"></div>
 
                   {/* Nó filho */}
                   <TreeNode node={child} />
