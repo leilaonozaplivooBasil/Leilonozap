@@ -140,16 +140,7 @@ export default function Home() {
       return Array.isArray(favoriteAuctions) && favoriteAuctions.length > 0 ? [...favoriteAuctions] : [];
     }
 
-    // SAI DE BAIXO
-    if (activeSourceFilter === "sai_de_baixo") {
-      return auctions
-        .filter((a) => a?.partner_store === 'sai_de_baixo' && !a.is_investment_plan)
-        .sort((a, b) => {
-          if (a.status === 'active' && b.status !== 'active') return -1;
-          if (a.status !== 'active' && b.status === 'active') return 1;
-          return a.status === 'active' ? new Date(a.end_time) - new Date(b.end_time) : new Date(b.end_time) - new Date(a.end_time);
-        });
-    }
+    // Removido: filtro específico 'sai_de_baixo' (desativado permanentemente)
 
     // NOZAP - FILTRO BASE
     filtered = auctions.filter((a) => a?.partner_store !== 'sai_de_baixo' && !a.is_investment_plan);
@@ -678,60 +669,6 @@ export default function Home() {
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => {setActiveSourceFilter("sai_de_baixo");setShowFavoritesOnly(false);}}
-                  className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 text-sm ${
-                  activeSourceFilter === "sai_de_baixo" && !showFavoritesOnly ?
-                  "bg-red-600 text-white shadow-lg shadow-red-500/30 scale-105" :
-                  "bg-gray-800 text-gray-300 hover:bg-red-700 hover:text-white hover:scale-105 border border-gray-700 shadow-lg"}`
-                  }>
-                  ✨ Sai de Baixo
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs bg-gray-800 border-red-500/50 text-left p-4">
-                <div className="space-y-2">
-                  <p className="font-bold text-red-400 text-base">✨ PRODUTOS SAI DE BAIXO!</p>
-                  <ul className="space-y-1 text-sm text-gray-200">
-                    <li>✅ Variedade exclusiva</li>
-                    <li>✅ Produtos selecionados</li>
-                    <li>✅ Preços especiais</li>
-                  </ul>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-
-
-
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => {setActiveSourceFilter("todos");setShowFavoritesOnly(false);}}
-                  className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 text-sm ${
-                  activeSourceFilter === "todos" && !showFavoritesOnly ?
-                  "bg-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105" :
-                  "bg-gray-800 text-gray-300 hover:bg-orange-700 hover:text-white hover:scale-105 border border-gray-700 shadow-lg"}`
-                  }>
-
-                  <Percent className="w-4 h-4" />
-                  🔥 Arremate & Devoluções
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs bg-gray-800 border-orange-500/50 text-left p-4">
-                <div className="space-y-2">
-                  <p className="font-bold text-orange-400 text-base">🔥 PRODUTOS PRATICAMENTE NOVOS!</p>
-                  <ul className="space-y-1 text-sm text-gray-200">
-                    <li>✅ Nunca usados ou usados por poucas horas</li>
-                    <li>✅ Devolvidos em até 7 dias (lei do arrependimento)</li>
-                    <li>✅ Motivos: desistência, arrependimento, mostruário</li>
-                  </ul>
-                  <p className="text-sm text-yellow-300 font-semibold">💰 Por isso o preço é IMBATÍVEL!</p>
-                  <p className="text-sm text-green-300 font-semibold">🛡️ A garantia é o próprio produto: testado e funcional!</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip delayDuration={200}>
-              <TooltipTrigger asChild>
-                <button
                   onClick={() => {setActiveSourceFilter("factory");setShowFavoritesOnly(false);}}
                   className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 text-sm ${
                   activeSourceFilter === "factory" && !showFavoritesOnly ?
@@ -740,7 +677,6 @@ export default function Home() {
                   }
                   aria-label="Direto de Fábrica"
                   >
-
                   <CheckCircle className="w-4 h-4" />
                   ✨ Direto de Fábrica
                 </button>
@@ -758,6 +694,38 @@ export default function Home() {
                 </div>
               </TooltipContent>
             </Tooltip>
+
+
+
+            <Tooltip delayDuration={200}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => {setActiveSourceFilter("todos");setShowFavoritesOnly(false);}}
+                  className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 text-sm ${
+                  activeSourceFilter === "todos" && !showFavoritesOnly ?
+                  "bg-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105" :
+                  "bg-gray-800 text-gray-300 hover:bg-orange-700 hover:text-white hover:scale-105 border border-gray-700 shadow-lg"}`
+                  }>
+
+                  <Percent className="w-4 h-4" />
+                  % 🔥 Arremate & Devoluções
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs bg-gray-800 border-orange-500/50 text-left p-4">
+                <div className="space-y-2">
+                  <p className="font-bold text-orange-400 text-base">🔥 PRODUTOS PRATICAMENTE NOVOS!</p>
+                  <ul className="space-y-1 text-sm text-gray-200">
+                    <li>✅ Nunca usados ou usados por poucas horas</li>
+                    <li>✅ Devolvidos em até 7 dias (lei do arrependimento)</li>
+                    <li>✅ Motivos: desistência, arrependimento, mostruário</li>
+                  </ul>
+                  <p className="text-sm text-yellow-300 font-semibold">💰 Por isso o preço é IMBATÍVEL!</p>
+                  <p className="text-sm text-green-300 font-semibold">🛡️ A garantia é o próprio produto: testado e funcional!</p>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+
+
           </div>
         </TooltipProvider>
 
