@@ -106,14 +106,14 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
 
         {/* Linha para baixo */}
         {hasChildren && isExpanded && (
-          <div className="w-1 h-6 bg-gradient-to-b from-green-500 to-green-400"></div>
+          <div className="w-0.5 h-5 bg-gradient-to-b from-slate-400 to-slate-300"></div>
         )}
 
         {/* Children */}
         {hasChildren && isExpanded && (
-          <div className="relative">
+          <div className="relative pt-3">
             {/* Linha horizontal conectora */}
-            <div className="h-1 bg-gradient-to-r from-transparent via-green-500 to-transparent mb-6" style={{ width: `${Math.max(120, node.children.length * 120)}px`, marginLeft: `${-Math.max(60, (node.children.length - 1) * 60)}px` }}></div>
+            <div className="h-0.5 bg-slate-400 mb-6" style={{ width: `${Math.max(120, node.children.length * 120)}px`, marginLeft: `${-Math.max(60, (node.children.length - 1) * 60)}px` }}></div>
 
             {/* Grid de filhos */}
             <div
@@ -125,28 +125,11 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
               {/* Linhas verticais de conexão */}
               {node.children.map((child, idx) => (
                 <div key={child.id} className="flex flex-col items-center">
-                  {/* Linha vertical curva */}
-                  <svg
-                    className="absolute -top-6 w-12 h-12"
-                    style={{
-                      left: `${idx * 120 + 48}px`,
-                    }}
-                    viewBox="0 0 48 48"
-                    preserveAspectRatio="none"
-                  >
-                    <path
-                      d="M 24 0 Q 24 24 24 48"
-                      stroke="#22c55e"
-                      strokeWidth="2"
-                      fill="none"
-                      strokeLinecap="round"
-                    />
-                  </svg>
+                  {/* Linha vertical */}
+                  <div className="w-0.5 h-6 bg-gradient-to-b from-slate-400 to-slate-300"></div>
 
                   {/* Nó filho */}
-                  <div className="pt-8">
-                    <TreeNode node={child} />
-                  </div>
+                  <TreeNode node={child} />
                 </div>
               ))}
             </div>
