@@ -150,8 +150,8 @@ Deno.serve(async (req) => {
             const step = ROLE_ORDER[i];
 
             if (DIRECTOR_PLUS.has(step.id)) {
-              // Cargos de diretor+: divide igualmente entre TODOS que possuem o cargo
-              const eligible = users
+              // Cargos de diretor+: procura APENAS na cadeia (não em todos os usuários)
+              const eligible = chain
                 .filter(u => hasRole(u, step.id))
                 .filter(u => u.full_name !== 'Leilão NoZap - Site Oficial')
                 .filter(u => u.full_name !== 'Paulo Sergio' && u.full_name !== 'Anderson de Souza Moita');
