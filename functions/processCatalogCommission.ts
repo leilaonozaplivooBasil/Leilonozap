@@ -159,24 +159,32 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Para cargos até distribuidor: licensee recebe se tiver, senão divide entre quem tiver
-        const eligible = (Array.isArray(allUsers) ? allUsers : [])
-          .filter(u => hasRole(u, step.id))
-          .filter(u => (u.full_name !== 'Leilão NoZap - Site Oficial' && u.email !== 'site@leilaonozap.com' && u.referral_code !== 'site_official'));
+      // Para cargos até distribuidor: distribui apenas na CADEIA do licensee
+              const roleHierarchy = ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor'];
+              const stepIndex = roleHierarchy.indexOf(step.id);
+              const anchorMaxIndex = anchorMaxRole ? roleHierarchy.indexOf(anchorMaxRole) : -1;
 
-        if (hasRole(anchorUser, step.id)) {
-          // Licensee tem este cargo: recebe tudo
-          assignments.push({ role: step.id, user: anchorUser, percent: step.percent });
-        } else if (eligible.length > 0) {
-          // Licensee não tem: divide entre quem tiver
-          const share = step.percent / eligible.length;
-          for (const u of eligible) {
-            assignments.push({ role: step.id, user: u, percent: share });
-          }
-        } else {
-          // Ninguém tem: fica com empresa
-          companyPercent += step.percent;
-        }
+              if (stepIndex >= 0 && stepIndex <= anchorMaxIndex) {
+                // Cargo está no range da âncora: âncora recebe
+                assignments.push({ role: step.id, user: anchorUser, percent: step.percent });
+              } else if (stepIndex > anchorMaxIndex) {
+                // Cargo acima do max da âncora: procura na cadeia
+                let assignedUser = null;
+                for (const u of chain) {
+                  if (u.id !== anchorUser.id && hasRole(u, step.id)) {
+                    assignedUser = u;
+                    break;
+                  }
+                }
+                if (assignedUser) {
+                  assignments.push({ role: step.id, user: assignedUser, percent: step.percent });
+                } else {
+                  companyPercent += step.percent;
+                }
+              } else {
+                // Cargo abaixo: fica com empresa
+                companyPercent += step.percent;
+              }
     }
 
     if (companyPercent > 0.000001) {
