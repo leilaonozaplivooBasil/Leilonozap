@@ -64,6 +64,55 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     return roots;
   };
 
+  const drawSVGConnections = () => {
+    if (!svgRef.current || !containerRef.current) return;
+
+    const svg = svgRef.current;
+    svg.innerHTML = '';
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    Object.keys(nodePositions.current).forEach(nodeId => {
+      const user = users.find(u => u.id === nodeId);
+      if (!user || !user.children) return;
+
+      user.children.forEach(child => {
+        const parentPos = nodePositions.current[user.id];
+        const childPos = nodePositions.current[child.id];
+
+        if (parentPos && childPos) {
+          const x1 = parentPos.x;
+          const y1 = parentPos.y;
+          const x2 = childPos.x;
+          const y2 = childPos.y;
+
+          const controlX1 = x1;
+          const controlY1 = y1 + (y2 - y1) * 0.3;
+          const controlX2 = x2;
+          const controlY2 = y1 + (y2 - y1) * 0.7;
+
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute(
+            'd',
+            `M ${x1} ${y1} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${x2} ${y2}`
+          );
+          path.setAttribute('stroke', '#64748b');
+          path.setAttribute('stroke-width', '2');
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke-linecap', 'round');
+          path.setAttribute('stroke-linejoin', 'round');
+
+          svg.appendChild(path);
+        }
+      });
+    });
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(drawSVGConnections, 50);
+    return () => clearTimeout(timer);
+  }, [expandedNodes, users]);
+
   const nodeRefs = useRef({});
 
   const TreeNode = ({ node, isRoot = false, parentPos = null }) => {
