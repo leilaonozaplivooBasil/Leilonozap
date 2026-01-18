@@ -120,6 +120,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     const bgColor = getCareerColor(primaryLevel);
     const initials = getInitials(node.full_name);
     const nodeRef = useRef(null);
+    const [showTooltip, setShowTooltip] = useState(false);
 
     useEffect(() => {
       if (nodeRef.current) {
