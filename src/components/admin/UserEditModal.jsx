@@ -147,7 +147,8 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                 career_levels: selectedLevels,
                 primary_career_level: primaryLevel,
                 display_first_name: displayFirstName.trim() || null,
-                display_last_name: displayLastName.trim() || null
+                display_last_name: displayLastName.trim() || null,
+                avatar_url: userData.avatar_url || null
             };
             
             await AppUser.update(user.id, updatePayload);
