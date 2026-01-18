@@ -113,9 +113,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     return () => clearTimeout(timer);
   }, [expandedNodes, users]);
 
-  const nodeRefs = useRef({});
-
-  const TreeNode = ({ node, isRoot = false, parentPos = null }) => {
+  const TreeNode = ({ node, depth = 0 }) => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
     const primaryLevel = node.primary_career_level || 'usuario';
@@ -126,45 +124,49 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     useEffect(() => {
       if (nodeRef.current) {
         const rect = nodeRef.current.getBoundingClientRect();
-        nodeRefs.current[node.id] = {
-          x: rect.left + rect.width / 2,
-          y: rect.top + rect.height / 2
-        };
+        const container = containerRef.current?.getBoundingClientRect();
+        if (container) {
+          nodePositions.current[node.id] = {
+            x: rect.left - container.left + rect.width / 2,
+            y: rect.top - container.top + rect.height / 2
+          };
+        }
       }
     }, [node.id, isExpanded]);
 
     return (
-      <div className="flex flex-col items-center gap-2" ref={nodeRef}>
+      <div className="flex flex-col items-start gap-4" ref={nodeRef}>
         {/* Nó/Bolha */}
         <div className="relative group">
-          {/* Bolha clean e minimalista */}
+          {/* Bolha melhorada */}
           <button
             onClick={() => hasChildren && toggleNode(node.id)}
             className={`
-              w-14 h-14 rounded-full ${bgColor}
+              w-16 h-16 rounded-full ${bgColor}
               flex items-center justify-center
-              text-white font-bold text-xs
-              hover:shadow-xl transition-all duration-200
-              cursor-pointer shadow-md
-              relative
-              ${hasChildren ? 'hover:scale-105' : ''}
+              text-white font-bold text-sm
+              hover:shadow-2xl transition-all duration-300
+              cursor-pointer shadow-lg
+              relative group/btn
+              hover:scale-110
+              border-2 border-white/20
             `}
           >
             {initials}
 
             {/* Dropdown indicator */}
             {hasChildren && (
-              <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                <div className="bg-gray-900 rounded-full p-0.5">
-                  <ChevronDown className="w-2.5 h-2.5 text-white" />
+              <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
+                <div className="bg-gray-900 rounded-full p-1 border border-gray-700">
+                  <ChevronDown className="w-3 h-3 text-white" />
                 </div>
               </div>
             )}
           </button>
 
           {/* Tooltip com info e ações */}
-          <div className="absolute top-full mt-2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-10 border border-gray-700 shadow-lg">
-            <div className="font-semibold whitespace-nowrap">{node.full_name}</div>
+          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-20 border border-gray-600 shadow-2xl whitespace-nowrap">
+            <div className="font-bold">{node.full_name}</div>
             <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
 
             {/* Botões de ação */}
@@ -206,11 +208,11 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
           </div>
         </div>
 
-        {/* Children */}
+        {/* Children - Renderizados em coluna abaixo */}
         {hasChildren && isExpanded && (
-          <div className="flex items-center justify-center gap-6">
-            {node.children.map((child, idx) => (
-              <TreeNode key={child.id} node={child} parentPos={nodeRefs.current[node.id]} />
+          <div className="flex flex-col gap-6 ml-12">
+            {node.children.map((child) => (
+              <TreeNode key={child.id} node={child} depth={depth + 1} />
             ))}
           </div>
         )}
