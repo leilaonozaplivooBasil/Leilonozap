@@ -64,7 +64,7 @@ export default function AmbienteDeTeste() {
 
   const groupedRoles = useMemo(() => {
     if (!preview?.records) return [];
-    const ORDER = ['fundador','conselheiro','ceo','diretoria','diretor','distribuidor','plano_lojista','plano_lider','kit_start','executivo','trainee','licenciado_catalogo'];
+    const ORDER = ['fundador','conselheiro','ceo','diretoria','diretor','distribuidor','plano_lojista','plano_lider','kit_start','executivo','trainee','licenciado_catalogo','usuario'];
     const map = new Map();
     
     // Inicializa todos os cargos com valores zerados
@@ -128,6 +128,7 @@ export default function AmbienteDeTeste() {
     ceo: "CEO",
     conselheiro: "Conselheiro",
     fundador: "Fundador",
+    usuario: "Usuário",
     site_official_rollup: "Site Oficial (Sobra)"
   }[role] || role);
 
@@ -230,6 +231,10 @@ export default function AmbienteDeTeste() {
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-gray-700">
+                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-sm font-semibold border-b border-gray-700">
+                        <div className="col-span-9">Total (cargos)</div>
+                        <div className="col-span-3 text-right">{totalPercent.toFixed(2)}% • {Number(groupedRoles.reduce((s, g) => s + Number(g.amount || 0), 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                      </div>
                       <Accordion type="multiple" className="w-full">
                         {groupedRoles.map((g) => (
                           <AccordionItem key={g.role} value={g.role}>
@@ -269,13 +274,9 @@ export default function AmbienteDeTeste() {
                               )}
                             </AccordionContent>
                           </AccordionItem>
-                        ))}
-                      </Accordion>
-                      <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-sm font-semibold border-t border-gray-700">
-                        <div className="col-span-9">Total (cargos)</div>
-                        <div className="col-span-3 text-right">{totalPercent.toFixed(2)}% • {Number(groupedRoles.reduce((s, g) => s + Number(g.amount || 0), 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
-                      </div>
-                    </div>
+                          ))}
+                          </Accordion>
+                          </div>
 
                     {false && (
                       <div className="text-xs text-white">
