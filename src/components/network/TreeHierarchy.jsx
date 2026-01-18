@@ -97,10 +97,47 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
             )}
           </button>
 
-          {/* Tooltip com info */}
-          <div className="absolute top-full mt-2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-10 border border-gray-700 whitespace-nowrap shadow-lg">
-            <div className="font-semibold">{node.full_name}</div>
+          {/* Tooltip com info e ações */}
+          <div className="absolute top-full mt-2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-10 border border-gray-700 shadow-lg">
+            <div className="font-semibold whitespace-nowrap">{node.full_name}</div>
             <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
+            
+            {/* Botões de ação */}
+            <div className="flex gap-1 mt-2 pt-2 border-t border-gray-700">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-1.5 text-xs text-blue-400 hover:bg-blue-500/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(node);
+                }}
+              >
+                ✏️
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-1.5 text-xs text-green-400 hover:bg-green-500/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPromote(node);
+                }}
+              >
+                ⭐
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-1.5 text-xs text-red-400 hover:bg-red-500/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(node);
+                }}
+              >
+                🗑️
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -135,43 +172,6 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
             </div>
           </div>
         )}
-
-        {/* Ações */}
-        <div className="flex gap-1 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs text-blue-400 hover:bg-blue-500/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(node);
-            }}
-          >
-            ✏️
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs text-green-400 hover:bg-green-500/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              onPromote(node);
-            }}
-          >
-            ⭐
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7 px-2 text-xs text-red-400 hover:bg-red-500/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(node);
-            }}
-          >
-            🗑️
-          </Button>
-        </div>
       </div>
     );
   };
