@@ -12,21 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Store, Package, DollarSign, TrendingUp, LogOut, Printer, Eye, Edit, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import CatalogHome from "@/components/lojista/CatalogHome";
-import CatalogOrders from "@/components/lojista/CatalogOrders";
-import CatalogClients from "@/components/lojista/CatalogClients";
 
 const StoreEntity = base44.entities.Store;
 const AuctionEntity = base44.entities.Auction;
 const AppUserEntity = base44.entities.AppUser;
-const CatalogSaleEntity = base44.entities.CatalogSale;
 
 export default function LojistaDashboard() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginForm, setLoginForm] = useState({ login: "", password: "" });
   const [currentStore, setCurrentStore] = useState(null);
   const [auctions, setAuctions] = useState([]);
-  const [catalogSales, setCatalogSales] = useState([]);
   const [stats, setStats] = useState({ totalSales: 0, activeAuctions: 0, soldProducts: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -87,10 +82,6 @@ export default function LojistaDashboard() {
       const allAuctions = await AuctionEntity.list("-created_date", 500);
       const storeAuctions = allAuctions.filter(a => a.seller_id === storeId);
       setAuctions(storeAuctions);
-
-      // Carrega vendas do catálogo
-      const allSales = await CatalogSaleEntity.list("-created_date", 500);
-      setCatalogSales(allSales);
 
       const activeCount = storeAuctions.filter(a => a.status === 'active').length;
       const soldCount = storeAuctions.filter(a => a.status === 'sold' || (a.status === 'ended' && a.winner_id)).length;
@@ -373,12 +364,9 @@ export default function LojistaDashboard() {
 
         {/* Tabs */}
          <Tabs defaultValue="auctions" className="w-full">
-           <TabsList className="bg-gray-800 border-gray-700 flex-wrap h-auto">
+           <TabsList className="bg-gray-800 border-gray-700">
              <TabsTrigger value="auctions">Meus Leilões</TabsTrigger>
              <TabsTrigger value="sold">Vendas Realizadas</TabsTrigger>
-             <TabsTrigger value="catalog-home">Catálogo - Início</TabsTrigger>
-             <TabsTrigger value="catalog-orders">Catálogo - Pedidos</TabsTrigger>
-             <TabsTrigger value="catalog-clients">Catálogo - Clientes</TabsTrigger>
            </TabsList>
 
           <TabsContent value="auctions" className="space-y-4 mt-6">
@@ -449,18 +437,6 @@ export default function LojistaDashboard() {
                 </CardContent>
               </Card>
             ))}
-          </TabsContent>
-
-          <TabsContent value="catalog-home" className="mt-6">
-            <CatalogHome currentStore={currentStore} catalogSales={catalogSales} />
-          </TabsContent>
-
-          <TabsContent value="catalog-orders" className="mt-6">
-            <CatalogOrders catalogSales={catalogSales} />
-          </TabsContent>
-
-          <TabsContent value="catalog-clients" className="mt-6">
-            <CatalogClients catalogSales={catalogSales} />
           </TabsContent>
           </Tabs>
 
