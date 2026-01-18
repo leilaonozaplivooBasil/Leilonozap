@@ -77,12 +77,17 @@ const CatalogTab = ({ isSaiDeBaixo }) => {
   return (
     <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
       <CardHeader>
-        <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo de Produtos</CardTitle>
-        <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-          Produtos disponíveis para venda - Compartilhe seu link do catálogo
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+          <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo de Produtos</CardTitle>
+          <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+            Produtos disponíveis para venda - Compartilhe seu link do catálogo
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {banners.length > 0 && (
+            <div className="-mt-2">
+              <RotatingBanner banners={banners} />
+            </div>
+          )}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
