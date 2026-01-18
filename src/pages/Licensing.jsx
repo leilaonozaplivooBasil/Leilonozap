@@ -35,6 +35,9 @@ import EarningsSimulator from '../components/licensing/EarningsSimulator';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
 import CatalogProductCard from '../components/catalog/CatalogProductCard';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import CatalogHome from '../components/lojista/CatalogHome';
+import CatalogOrders from '../components/lojista/CatalogOrders';
+import CatalogClients from '../components/lojista/CatalogClients';
 
 const Product = base44.entities.Product;
 
@@ -413,6 +416,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [mySales, setMySales] = useState([]);
   const [myAuctions, setMyAuctions] = useState([]);
   const [isLoadingSales, setIsLoadingSales] = useState(false);
+  const [myCatalogSales, setMyCatalogSales] = useState([]);
 
   // 🆕 REF PARA EVITAR MÚLTIPLAS CHAMADAS SIMULTÂNEAS
   const isFetchingRef = useRef(false);
@@ -636,9 +640,11 @@ const DashboardContent = ({ user, isAdmin }) => {
         console.log('🛍️ Vendas catálogo encontradas:', catalogSales.length);
         console.log('🛍️ Vendas completas:', catalogSales);
         setMySales(catalogSales);
+        setMyCatalogSales(catalogSales);
       } catch (catalogError) {
         console.error("Erro ao buscar vendas do catálogo:", catalogError);
         setMySales([]);
+        setMyCatalogSales([]);
       }
 
     } catch (error) {
@@ -1512,10 +1518,33 @@ const DashboardContent = ({ user, isAdmin }) => {
           </TabsContent>
         }
 
-        {/* ABA: CATÁLOGO - Produtos para vender */}
+        {/* ABA: CATÁLOGO - Produtos para vender + Dashboard */}
         {userLevels.includes('licenciado_catalogo') &&
         <TabsContent value="catalogo" className="space-y-6">
-            <CatalogTab isSaiDeBaixo={isSaiDeBaixo} />
+            <Tabs defaultValue="catalogo-home" className="w-full">
+              <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
+                <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Página Inicial</TabsTrigger>
+                <TabsTrigger value="catalogo-pedidos" className="text-xs sm:text-sm">📦 Pedidos</TabsTrigger>
+                <TabsTrigger value="catalogo-clientes" className="text-xs sm:text-sm">👥 Clientes</TabsTrigger>
+                <TabsTrigger value="catalogo-produtos" className="text-xs sm:text-sm">🛍️ Produtos</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="catalogo-home" className="mt-6">
+                <CatalogHome currentStore={null} catalogSales={myCatalogSales} />
+              </TabsContent>
+
+              <TabsContent value="catalogo-pedidos" className="mt-6">
+                <CatalogOrders catalogSales={myCatalogSales} />
+              </TabsContent>
+
+              <TabsContent value="catalogo-clientes" className="mt-6">
+                <CatalogClients catalogSales={myCatalogSales} />
+              </TabsContent>
+
+              <TabsContent value="catalogo-produtos" className="mt-6">
+                <CatalogTab isSaiDeBaixo={isSaiDeBaixo} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
         }
 
