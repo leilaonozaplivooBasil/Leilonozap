@@ -3,9 +3,10 @@ import { base44 } from '@/api/base44Client';
 
 const CommissionRecord = base44.entities.CommissionRecord;
 const CatalogSale = base44.entities.CatalogSale;
+const AppUser = base44.entities.AppUser;
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Loader2, DollarSign, User, ShoppingBag, Calendar, TrendingUp } from 'lucide-react';
+import { Loader2, DollarSign, User, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 
 const ROLE_LABELS = {
@@ -38,32 +39,36 @@ const ROLE_COLORS = {
   fundador: "bg-lime-500/15 text-lime-300 border-lime-500/30"
 };
 
-const CommissionRecordItem = ({ record, sale }) => {
+const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
     const orderTotal = sale?.total_amount ?? sale?.sale_price ?? 0;
     const roleLabel = ROLE_LABELS[record.role] || record.role;
     const roleColor = ROLE_COLORS[record.role] || "bg-gray-700 text-gray-300 border-gray-600";
     const dateStr = new Date(record.created_date || sale?.created_date || Date.now()).toLocaleDateString('pt-BR');
+    const isExpanded = expandedId === record.id;
 
     return (
-        <Card className="bg-gray-800 border-gray-700 mb-4">
-            <CardHeader className="pb-2">
+        <Card className="bg-gray-800 border-gray-700 mb-3">
+            <CardHeader className="pb-2 cursor-pointer hover:bg-gray-750 transition" onClick={() => onToggleExpand(record.id)}>
                 <div className="flex justify-between items-center text-xs text-gray-400">
                     <div className="flex items-center gap-2">
                         <Calendar className="w-3 h-3" />
                         <span>{dateStr}</span>
                     </div>
-                    <Badge className={`${roleColor} font-semibold`}>
-                        {roleLabel}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                        <Badge className={`${roleColor} font-semibold`}>
+                            {roleLabel}
+                        </Badge>
+                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
                 </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pb-3">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
                         <div className="p-2 bg-gray-700 rounded-lg">
                             <ShoppingBag className="w-5 h-5 text-gray-300" />
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <p className="font-semibold text-white line-clamp-1">
                                 {sale?.product_title || (sale ? `Venda ${sale.product_id}` : 'Comissão de venda')}
                             </p>
@@ -72,79 +77,120 @@ const CommissionRecordItem = ({ record, sale }) => {
                             ) : null}
                         </div>
                     </div>
-                    <Badge className="bg-green-500/10 text-green-400 border-green-500/30 font-bold text-base mt-2 sm:mt-0">
+                    <Badge className="bg-green-500/10 text-green-400 border-green-500/30 font-bold text-base mt-2 sm:mt-0 whitespace-nowrap">
                         + R$ {Number(record.amount || 0).toFixed(2)}
                     </Badge>
                 </div>
-                <div className="text-right text-xs text-gray-500 mt-2 italic">
-                    Percentual aplicado: {Number(record.percent || 0).toFixed(2)}%
-                </div>
+                
+                {isExpanded && (
+                    <div className="mt-4 pt-4 border-t border-gray-700 space-y-3">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <p className="text-gray-500 text-xs mb-1">Cargo</p>
+                                <p className="font-semibold text-white">{roleLabel}</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-500 text-xs mb-1">Percentual</p>
+                                <p className="font-semibold text-green-400">{Number(record.percent || 0).toFixed(2)}%</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-500 text-xs mb-1">Comissão Recebida</p>
+                                <p className="font-semibold text-green-400">R$ {Number(record.amount || 0).toFixed(2)}</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-500 text-xs mb-1">Status</p>
+                                <Badge className={record.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-green-500/20 text-green-300'}>
+                                    {record.status === 'pending' ? 'Pendente' : 'Processado'}
+                                </Badge>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
 };
 
 export default function CommissionStatementModal({ licensee, isOpen, onClose }) {
-    const [commissionRecords, setCommissionRecords] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [roleTotals, setRoleTotals] = useState({});
+     const [commissionRecords, setCommissionRecords] = useState([]);
+     const [isLoading, setIsLoading] = useState(false);
+     const [roleTotals, setRoleTotals] = useState({});
+     const [expandedId, setExpandedId] = useState(null);
 
-    useEffect(() => {
-        if (isOpen && licensee) {
-            const fetchCommissionRecords = async () => {
-                setIsLoading(true);
-                setCommissionRecords([]);
-                setRoleTotals({});
-                try {
-                    console.log(`🔍 Buscando CommissionRecord para ${licensee.full_name}...`);
-                    const records = await CommissionRecord.filter(
-                        { user_id: licensee.id },
-                        "-created_date",
-                        500
-                    );
-                    
-                    if (!Array.isArray(records)) {
-                        console.warn("CommissionRecord não retornou um array:", records);
-                        setIsLoading(false);
-                        return;
-                    }
+     async function buildHierarchyChain(user) {
+         const chain = [user.id];
+         let current = user;
+         while (current?.referred_by_id) {
+             const parent = await AppUser.filter({ id: current.referred_by_id });
+             if (Array.isArray(parent) && parent.length > 0) {
+                 const p = parent[0];
+                 chain.push(p.id);
+                 current = p;
+             } else {
+                 break;
+             }
+         }
+         return chain;
+     }
 
-                    // Buscar vendas relacionadas para enriquecer a UI
-                    const saleIds = Array.from(new Set(records.map(r => r.sale_id).filter(Boolean)));
-                    let salesById = {};
-                    if (saleIds.length > 0) {
-                        const sales = await CatalogSale.filter(
-                            { id: { $in: saleIds } },
-                            "-created_date",
-                            saleIds.length
-                        );
-                        if (Array.isArray(sales)) {
-                            salesById = Object.fromEntries(sales.map(s => [s.id, s]));
-                        }
-                    }
+     useEffect(() => {
+         if (isOpen && licensee) {
+             const fetchCommissionRecords = async () => {
+                 setIsLoading(true);
+                 setCommissionRecords([]);
+                 setRoleTotals({});
+                 try {
+                     console.log(`🔍 Buscando comissões para ${licensee.full_name} e sua hierarquia...`);
 
-                    const enriched = records.map(r => ({ record: r, sale: salesById[r.sale_id] || null }));
-                    setCommissionRecords(enriched);
+                     const chain = await buildHierarchyChain(licensee);
+                     const records = await CommissionRecord.filter(
+                         { user_id: { $in: chain } },
+                         "-created_date",
+                         500
+                     );
 
-                    // Totais por cargo
-                    const totals = records.reduce((acc, r) => {
-                        const role = r.role || "outro";
-                        acc[role] = (acc[role] || 0) + (r.amount || 0);
-                        return acc;
-                    }, {});
-                    setRoleTotals(totals);
+                     if (!Array.isArray(records)) {
+                         console.warn("CommissionRecord não retornou um array:", records);
+                         setIsLoading(false);
+                         return;
+                     }
 
-                    console.log(`✅ ${enriched.length} registros carregados.`);
-                } catch (error) {
-                    console.error("Failed to fetch commission records:", error);
-                    alert("Erro ao buscar extrato de comissões.");
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchCommissionRecords();
-        }
-    }, [isOpen, licensee]);
+                     // Buscar vendas relacionadas
+                     const saleIds = Array.from(new Set(records.map(r => r.sale_id).filter(Boolean)));
+                     let salesById = {};
+                     if (saleIds.length > 0) {
+                         const sales = await CatalogSale.filter(
+                             { id: { $in: saleIds } },
+                             "-created_date",
+                             saleIds.length
+                         );
+                         if (Array.isArray(sales)) {
+                             salesById = Object.fromEntries(sales.map(s => [s.id, s]));
+                         }
+                     }
+
+                     const enriched = records.map(r => ({ record: r, sale: salesById[r.sale_id] || null }));
+                     setCommissionRecords(enriched);
+
+                     // Totais por cargo
+                     const totals = records.reduce((acc, r) => {
+                         const role = r.role || "outro";
+                         acc[role] = (acc[role] || 0) + (r.amount || 0);
+                         return acc;
+                     }, {});
+                     setRoleTotals(totals);
+
+                     console.log(`✅ ${enriched.length} registros carregados da cadeia.`);
+                 } catch (error) {
+                     console.error("Failed to fetch commission records:", error);
+                     alert("Erro ao buscar extrato de comissões.");
+                 } finally {
+                     setIsLoading(false);
+                 }
+             };
+             fetchCommissionRecords();
+         }
+     }, [isOpen, licensee]);
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -184,10 +230,16 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                                 <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
                             </div>
                         ) : commissionRecords.length > 0 ? (
-                            commissionRecords.map(({ record, sale }) => (
-                                <CommissionRecordItem key={record.id} record={record} sale={sale} />
-                            ))
-                        ) : (
+                             commissionRecords.map(({ record, sale }) => (
+                                 <CommissionRecordItem 
+                                     key={record.id} 
+                                     record={record} 
+                                     sale={sale}
+                                     expandedId={expandedId}
+                                     onToggleExpand={setExpandedId}
+                                 />
+                             ))
+                         ) : (
                             <div className="text-center py-16 bg-gray-800 rounded-lg">
                                 <TrendingUp className="w-12 h-12 mx-auto text-gray-500 mb-4" />
                                 <p className="text-gray-400 font-semibold">Nenhuma comissão registrada ainda.</p>
