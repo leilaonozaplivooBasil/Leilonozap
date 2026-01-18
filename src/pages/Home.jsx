@@ -40,22 +40,35 @@ export default function Home() {
 
   // 🚀 INICIALIZA COM CACHE IMEDIATO
   const [auctions, setAuctions] = useState(() => {
-    const cached = sessionStorage.getItem('auctions_cache');
-    const cacheTime = sessionStorage.getItem('auctions_cache_time');
-    if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < 300000)) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        const cached = sessionStorage.getItem('auctions_cache');
+        const cacheTime = sessionStorage.getItem('auctions_cache_time');
+        if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < 300000)) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed;
+            }
+          } catch (e) {}
         }
-      } catch (e) {}
-    }
-    return [];
-  });
+        // Fallback rápido entre sessões
+        try {
+          const persisted = localStorage.getItem('auctions_cache_persistent');
+          if (persisted) {
+            const parsed = JSON.parse(persisted);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              return parsed;
+            }
+          }
+        } catch (e) {}
+        return [];
+      });
   const [isLoading, setIsLoading] = useState(() => {
     const cached = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
-    return !(cached && cacheTime && (Date.now() - parseInt(cacheTime) < 300000));
+    const hasFreshSession = cached && cacheTime && (Date.now() - parseInt(cacheTime) < 300000);
+    if (hasFreshSession) return false;
+    const persisted = localStorage.getItem('auctions_cache_persistent');
+    return !persisted;
   });
   const [activeCategory, setActiveCategory] = useState("todos");
   const [activeSourceFilter, setActiveSourceFilter] = useState("todos");
@@ -74,8 +87,10 @@ export default function Home() {
     filters: {},
     onUpdate: (freshAuctions) => {
       if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
-        sessionStorage.setItem('auctions_cache', JSON.stringify(freshAuctions));
+        const serialized = JSON.stringify(freshAuctions);
+        sessionStorage.setItem('auctions_cache', serialized);
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+        localStorage.setItem('auctions_cache_persistent', serialized);
         setAuctions(freshAuctions);
       }
     },
@@ -326,8 +341,10 @@ export default function Home() {
               setTimeout(() => {
                 Auction.list("-created_date", 20).then((data) => {
                   if (Array.isArray(data) && data.length > 0) {
-                    sessionStorage.setItem('auctions_cache', JSON.stringify(data));
+                    const serialized = JSON.stringify(data);
+                    sessionStorage.setItem('auctions_cache', serialized);
                     sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+                    localStorage.setItem('auctions_cache_persistent', serialized);
                     setAuctions(data);
                   }
                 }).catch(() => {});
@@ -349,8 +366,10 @@ export default function Home() {
       ]);
       if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
-        sessionStorage.setItem('auctions_cache', JSON.stringify(data));
+        const serialized = JSON.stringify(data);
+        sessionStorage.setItem('auctions_cache', serialized);
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+        localStorage.setItem('auctions_cache_persistent', serialized);
         setRetryCount(0);
       } else {
         setAuctions([]);

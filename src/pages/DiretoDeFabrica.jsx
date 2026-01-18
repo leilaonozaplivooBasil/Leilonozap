@@ -19,6 +19,26 @@ export default function DiretoDeFabrica() {
         if (Array.isArray(data)) setAuctions(data);
         setIsLoading(false);
       } catch {}
+    } else {
+      // Fallback imediato: usa cache geral da Home (session ou persistente)
+      try {
+        const general = sessionStorage.getItem('auctions_cache');
+        const generalTime = sessionStorage.getItem('auctions_cache_time');
+        const useGeneral = general && generalTime;
+        let base = null;
+        if (useGeneral) base = JSON.parse(general);
+        if (!base) {
+          const persisted = localStorage.getItem('auctions_cache_persistent');
+          if (persisted) base = JSON.parse(persisted);
+        }
+        if (Array.isArray(base) && base.length > 0) {
+          const onlyFactoryInstant = base.filter(a => a?.product_source === "factory_new" && !a?.is_investment_plan);
+          if (onlyFactoryInstant.length > 0) {
+            setAuctions(onlyFactoryInstant);
+            setIsLoading(false);
+          }
+        }
+      } catch {}
     }
 
     (async () => {
@@ -31,6 +51,8 @@ export default function DiretoDeFabrica() {
         setAuctions(onlyFactory);
         sessionStorage.setItem("factory_auctions_cache", JSON.stringify(onlyFactory));
         sessionStorage.setItem("factory_auctions_cache_time", Date.now().toString());
+        // também persiste para uso entre sessões
+        try { localStorage.setItem('factory_auctions_cache_persistent', JSON.stringify(onlyFactory)); } catch {}
       } catch {
         // mantém o cache se houver
       } finally {
