@@ -42,7 +42,7 @@ export default function Home() {
   const [auctions, setAuctions] = useState(() => {
     const cached = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
-    if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < 60000)) {
+    if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < 300000)) {
       try {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -55,7 +55,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(() => {
     const cached = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
-    return !(cached && cacheTime && (Date.now() - parseInt(cacheTime) < 60000));
+    return !(cached && cacheTime && (Date.now() - parseInt(cacheTime) < 300000));
   });
   const [activeCategory, setActiveCategory] = useState("todos");
   const [activeSourceFilter, setActiveSourceFilter] = useState("todos");
@@ -393,7 +393,7 @@ export default function Home() {
       // Verifica cache ANTES de ativar loading
       const cachedData = sessionStorage.getItem('auctions_cache');
       const cacheTime = sessionStorage.getItem('auctions_cache_time');
-      const hasValidCache = cachedData && cacheTime && (Date.now() - parseInt(cacheTime) < 60000);
+      const hasValidCache = cachedData && cacheTime && (Date.now() - parseInt(cacheTime) < 300000);
 
       if (!hasValidCache) {
         setIsLoading(true);
