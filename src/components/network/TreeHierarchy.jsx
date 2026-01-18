@@ -70,6 +70,13 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     const svg = svgRef.current;
     svg.innerHTML = '';
 
+    // Garante stroke visível e não escalonado
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    style.textContent = `line { vector-effect: non-scaling-stroke; }`;
+    defs.appendChild(style);
+    svg.appendChild(defs);
+
     // Definir dimensões do SVG
     const containerRect = containerRef.current.getBoundingClientRect();
     const container = containerRef.current;
