@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +29,9 @@ const getInitials = (name) => {
 
 export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
+  const nodePositions = useRef({});
+  const svgRef = useRef(null);
+  const containerRef = useRef(null);
 
   const toggleNode = (userId) => {
     const newExpanded = new Set(expandedNodes);
