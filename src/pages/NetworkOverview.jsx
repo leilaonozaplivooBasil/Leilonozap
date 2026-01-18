@@ -1311,7 +1311,7 @@ export default function NetworkOverview() {
                   <CardContent className="overflow-x-auto">
                     {allUsers.length > 0 ? (
                       viewMode === 'network' ? (
-                        <NetworkTree users={allUsers} onPromote={handlePromote} onEdit={handleEditUser} onRelink={handleRelink} />
+                        <NetworkTree users={allUsers} onPromote={handlePromote} onEdit={handleEditUser} onRelink={handleRelink} onDelete={handleDeleteUser} />
                       ) : (
                         <div className="grid gap-4">
                           {allUsers.map(user => (
