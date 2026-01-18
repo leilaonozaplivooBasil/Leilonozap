@@ -137,7 +137,7 @@ export default function MyWinningsPage() {
     };
 
     const handlePayClick = (auction) => {
-        navigate(createPageUrl('CheckoutAsaas') + `?auction_id=${auction.id}`);
+        navigate(createPageUrl('CatalogCheckout2') + `?auction_id=${auction.id}`);
     };
 
 
