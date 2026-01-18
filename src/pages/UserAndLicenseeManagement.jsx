@@ -8,6 +8,7 @@ import { Search, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import HierarchyGroupTree from '@/components/licensing/HierarchyGroupTree';
 
 const AppUser = base44.entities.AppUser;
 
