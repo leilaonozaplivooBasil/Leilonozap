@@ -1943,8 +1943,9 @@ const DashboardContent = ({ user, isAdmin }) => {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
-                  <EditableOrganigramTree 
-                    users={allUsers}
+                  <HierarchyTreeView 
+                    users={allUsers} 
+                    isLoading={isLoadingUsers}
                   />
                 </AccordionContent>
               </AccordionItem>
