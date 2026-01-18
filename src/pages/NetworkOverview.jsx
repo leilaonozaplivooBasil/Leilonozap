@@ -1316,14 +1316,15 @@ export default function NetworkOverview() {
                         <div className="grid gap-4">
                           {allUsers.map(user => (
                             <UserCard
-                              key={user.id}
-                              user={user}
-                              level={0}
-                              onPromote={handlePromote}
-                              onEdit={handleEditUser}
-                              isLinearView={true}
-                              allUsers={allUsers}
-                            />
+                                     key={user.id}
+                                     user={user}
+                                     level={0}
+                                     onPromote={handlePromote}
+                                     onEdit={handleEditUser}
+                                     onDelete={handleDeleteUser}
+                                     isLinearView={true}
+                                     allUsers={allUsers}
+                                   />
                           ))}
                         </div>
                       )
