@@ -223,7 +223,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
   const roots = getHierarchy();
 
   return (
-    <div className="w-full p-8 bg-gray-900 rounded-lg relative overflow-auto" ref={containerRef}>
+    <div className="w-full p-8 bg-gray-900 rounded-lg relative overflow-auto min-h-screen" ref={containerRef}>
       <svg
         ref={svgRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
