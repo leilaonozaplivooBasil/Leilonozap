@@ -2478,7 +2478,7 @@ export default function LicensingPage() {
                     </CardHeader>
                     <CardContent>
                       <a
-                      href="https://wa.me/5521979228336?text=Olá,%20quero%20evoluir%20no%20sistema%20de%20alavancagem!"
+                      href="https://wa.me/5521966629605?text=Olá,%20quero%20evoluir%20no%20sistema%20de%20alavancagem!"
                       target="_blank"
                       rel="noopener noreferrer">
 
@@ -2500,7 +2500,7 @@ export default function LicensingPage() {
                     </CardHeader>
                     <CardContent>
                       <a
-                      href={`https://wa.me/5521979228336?text=Olá,%20sou%20${userLevel}%20e%20preciso%20de%20suporte!`}
+                      href={`https://wa.me/5521966629605?text=Olá,%20sou%20${userLevel}%20e%20preciso%20de%20suporte!`}
                       target="_blank"
                       rel="noopener noreferrer">
 
