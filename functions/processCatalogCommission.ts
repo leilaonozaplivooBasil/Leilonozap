@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     const allUsers = await base44.asServiceRole.entities.AppUser.list();
 
     // CÓPIA EXATA DA LÓGICA DO PREVIEW
-    const totalPercent = 27.0;
+     const totalPercent = 26.0;
     const assignments = []; // { role, user, percent }
     let companyPercent = 0;
 
