@@ -734,7 +734,9 @@ export default function Home() {
                   activeSourceFilter === "factory" && !showFavoritesOnly ?
                   "bg-green-600 text-white shadow-lg shadow-green-500/30 scale-105" :
                   "bg-gray-800 text-gray-300 hover:bg-green-700 hover:text-white hover:scale-105 border border-gray-700 shadow-lg"}`
-                  }>
+                  }
+                  aria-label="Direto de Fábrica"
+                  >
 
                   <CheckCircle className="w-4 h-4" />
                   ✨ Direto de Fábrica
