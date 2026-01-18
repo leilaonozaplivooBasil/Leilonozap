@@ -236,14 +236,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
               initials
             )}
 
-            {/* Dropdown indicator */}
-            {hasChildren && (
-              <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
-                <div className="bg-gray-900 rounded-full p-1 border border-gray-700">
-                  <ChevronDown className="w-3 h-3 text-white" />
-                </div>
-              </div>
-            )}
+            {/* Dropdown indicator removido para visual mais limpo */}
           </button>
 
           {/* Tooltip com info e ações */}
