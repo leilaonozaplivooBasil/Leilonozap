@@ -1436,16 +1436,30 @@ export default function NetworkOverview() {
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => handleEditUser(user)}
-                                        className="text-blue-400 hover:text-blue-300"
-                                        title="Editar tudo"
-                                      >
-                                        <Pencil className="w-4 h-4" />
-                                      </Button>
-                                    </div>
+                                                     <Button
+                                                       size="sm"
+                                                       variant="ghost"
+                                                       onClick={() => handleEditUser(user)}
+                                                       className="text-blue-400 hover:text-blue-300"
+                                                       title="Editar usuário"
+                                                     >
+                                                       <Pencil className="w-4 h-4" />
+                                                     </Button>
+                                                     <Button
+                                                       size="sm"
+                                                       variant="ghost"
+                                                       onClick={() => handleDeleteUser(user)}
+                                                       className="text-red-400 hover:text-red-300"
+                                                       title="Deletar usuário"
+                                                       disabled={isDeleting && deletingUserId === user.id}
+                                                     >
+                                                       {isDeleting && deletingUserId === user.id ? (
+                                                         <Loader2 className="w-4 h-4 animate-spin" />
+                                                       ) : (
+                                                         <Trash2 className="w-4 h-4" />
+                                                       )}
+                                                     </Button>
+                                                   </div>
                                   </TableCell>
                                 </TableRow>
                               );
