@@ -17,8 +17,6 @@ const CatalogSale = base44.entities.CatalogSale;
 export default function CatalogCheckout2() {
     const [product, setProduct] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [preferenceId, setPreferenceId] = useState(null);
-    const [publicKey, setPublicKey] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [lastName, setLastName] = useState('');
     const [phone, setPhone] = useState('');
@@ -32,8 +30,6 @@ export default function CatalogCheckout2() {
     const [addressCity, setAddressCity] = useState('');
     const [addressState, setAddressState] = useState('');
     const [addressZip, setAddressZip] = useState('');
-    const walletContainerRef = useRef(null);
-    const mpInstanceRef = useRef(null);
     const navigate = useNavigate();
 
     const handleCreatePreference = async () => {
@@ -85,6 +81,7 @@ export default function CatalogCheckout2() {
         }
 
         console.log('✅ Validações OK, processando...');
+        toast.loading('Processando compra...', { id: 'checkout-loading' });
 
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
@@ -131,24 +128,28 @@ export default function CatalogCheckout2() {
                     address_zip_code: addressZip.trim()
                 }
             });
+            
             console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
             
+            toast.dismiss('checkout-loading');
+            
             if (response?.data?.success) {
-                console.log('✅ Preference ID:', response.data.preference_id);
-                console.log('✅ Public Key:', response.data.public_key);
+                console.log('✅ Init Point:', response.data.init_point);
                 
-                if (!response.data.preference_id) {
-                    toast.error('Erro: Preference ID não retornado');
+                if (!response.data.init_point) {
+                    toast.error('Erro: Link de pagamento não retornado');
                     return;
                 }
                 
-                if (!response.data.public_key) {
-                    toast.error('Erro: Public Key não retornada');
-                    return;
-                }
+                // 🔥 REDIRECIONAMENTO DIRETO PARA O MERCADO PAGO
+                console.log('🚀 Redirecionando para checkout MP:', response.data.init_point);
+                toast.success('Redirecionando para pagamento...');
                 
-                setPreferenceId(response.data.preference_id);
-                setPublicKey(response.data.public_key);
+                // Aguarda 500ms para usuário ver a mensagem
+                setTimeout(() => {
+                    window.location.href = response.data.init_point;
+                }, 500);
+                
             } else {
                 console.error('❌ Erro na resposta:', response);
                 toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
@@ -156,6 +157,7 @@ export default function CatalogCheckout2() {
 
         } catch (error) {
             console.error('Erro:', error);
+            toast.dismiss('checkout-loading');
             toast.error('Erro ao processar compra');
         }
     };
@@ -237,137 +239,7 @@ export default function CatalogCheckout2() {
         loadData();
     }, []);
 
-    // Carregar SDK do Mercado Pago e renderizar botão
-    useEffect(() => {
-        console.log('🔍 [SDK Effect] Estado atual:', { 
-            preferenceId: preferenceId ? 'SIM' : 'NÃO', 
-            publicKey: publicKey ? 'SIM' : 'NÃO',
-            prefValue: preferenceId,
-            keyValue: publicKey
-        });
-        
-        if (!preferenceId || !publicKey) {
-            console.log('⏳ Aguardando preferenceId e publicKey...');
-            return;
-        }
-
-        console.log('🚀 Iniciando carregamento do SDK MP');
-
-        const loadMercadoPagoSDK = () => {
-            // Verificar se já existe
-            if (window.MercadoPago) {
-                console.log('✅ SDK já carregado, inicializando...');
-                initializeMercadoPago();
-                return;
-            }
-
-            console.log('📥 Carregando SDK do Mercado Pago...');
-            
-            // Carregar SDK com timeout
-            const script = document.createElement('script');
-            script.src = 'https://sdk.mercadopago.com/js/v2';
-            script.async = true;
-            
-            let sdkTimeout = setTimeout(() => {
-                console.error('❌ SDK timeout após 15s');
-                toast.error('SDK demorou muito para carregar. Verifique conexão.');
-            }, 15000);
-            
-            script.onload = () => {
-                clearTimeout(sdkTimeout);
-                console.log('✅ SDK carregado com sucesso');
-                initializeMercadoPago();
-            };
-            script.onerror = (error) => {
-                clearTimeout(sdkTimeout);
-                console.error('❌ Erro ao carregar SDK:', error);
-                toast.error('Erro ao carregar SDK. Tente novamente.');
-            };
-            document.body.appendChild(script);
-        };
-
-        const initializeMercadoPago = async () => {
-        try {
-        console.log('🔧 Inicializando Mercado Pago SDK...');
-        console.log('🔑 Public Key:', publicKey);
-        console.log('🎫 Preference ID:', preferenceId);
-
-        // Verificar se container existe
-        const container = document.getElementById('walletBrick_container');
-        if (!container) {
-            throw new Error('Container walletBrick_container não encontrado');
-        }
-        console.log('✅ Container encontrado');
-
-        // Aguardar um tick para garantir que o DOM está pronto
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Limpar container antes de renderizar
-        container.innerHTML = '';
-
-        // Inicializar MP com public key recebida do backend
-        const mp = new window.MercadoPago(publicKey.trim(), {
-            locale: 'pt-BR'
-        });
-
-        mpInstanceRef.current = mp;
-        console.log('✅ SDK MP inicializado');
-
-        // Criar Wallet Brick
-        const bricksBuilder = mp.bricks();
-        console.log('🧱 Criando Wallet Brick...');
-
-        const brick = await bricksBuilder.create('wallet', 'walletBrick_container', {
-            initialization: {
-                preferenceId: preferenceId.trim()
-            },
-            customization: {
-                texts: {
-                    valueProp: 'security_safety'
-                }
-            },
-            onError: (error) => {
-                console.error('❌ Erro Wallet Brick:', error);
-                toast.error('Erro ao renderizar opções de pagamento.');
-            }
-        });
-
-        console.log('✅ Wallet Brick criado:', brick);
-
-        // Verificar se realmente foi renderizado
-        const containerAfter = document.getElementById('walletBrick_container');
-        console.log('✅ Container após render:', containerAfter?.innerHTML.length, 'chars');
-        console.log('✅ Botão de pagamento renderizado com sucesso!');
-
-        } catch (error) {
-        console.error('❌ Erro detalhado ao inicializar MP:', error);
-        console.error('Tipo do erro:', error.name);
-        console.error('Mensagem:', error.message);
-        console.error('Stack:', error.stack);
-
-        // Mostrar erro mais detalhado
-        if (error.message.includes('public_key')) {
-            toast.error('Chave pública inválida. Verifique as credenciais do Mercado Pago.');
-        } else if (error.message.includes('preference')) {
-            toast.error('Erro ao carregar preferência de pagamento.');
-        } else {
-            toast.error(`Erro: ${error.message}`);
-        }
-        }
-        };
-
-        loadMercadoPagoSDK();
-
-        // Cleanup
-        return () => {
-            if (mpInstanceRef.current) {
-                const container = document.getElementById('walletBrick_container');
-                if (container) {
-                    container.innerHTML = '';
-                }
-            }
-        };
-    }, [preferenceId, publicKey]);
+    // ❌ SDK do Mercado Pago REMOVIDO - agora fazemos redirecionamento direto
 
     if (isLoading) {
         return (
@@ -606,54 +478,31 @@ export default function CatalogCheckout2() {
                                  />
                              </div>
 
-                             {(!preferenceId || !publicKey) ? (
-                                 <>
-                                     <p className="text-gray-400 text-sm">
-                                         Escolha seu método de pagamento preferido:
-                                     </p>
-                                     <ul className="text-gray-300 text-sm space-y-2 mb-6">
-                                         <li>✓ Cartão de crédito (até 12x)</li>
-                                         <li>✓ Cartão de débito</li>
-                                         <li>✓ PIX</li>
-                                         <li>✓ Boleto bancário</li>
-                                     </ul>
-                                 </>
-                             ) : (
-                                 /* Container para o Wallet Brick do Mercado Pago */
-                                 <div 
-                                     id="walletBrick_container" 
-                                     ref={walletContainerRef}
-                                     style={{ minHeight: '400px', width: '100%' }}
-                                     className="w-full mb-4"
-                                 ></div>
-                             )}
+                             <p className="text-gray-400 text-sm">
+                                 Escolha seu método de pagamento preferido:
+                             </p>
+                             <ul className="text-gray-300 text-sm space-y-2 mb-6">
+                                 <li>✓ Cartão de crédito (até 12x)</li>
+                                 <li>✓ Cartão de débito</li>
+                                 <li>✓ PIX</li>
+                                 <li>✓ Boleto bancário</li>
+                             </ul>
 
-                             {(!preferenceId || !publicKey) && (
-                                 <div className="space-y-3">
-                                     <button
-                                         onClick={handleCreatePreference}
-                                         disabled={!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
-                                         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                         >
-                                         {preferenceId ? (
-                                             <>
-                                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                                 Carregando opções de pagamento...
-                                             </>
-                                         ) : (
-                                             <>
-                                                 <ShoppingCart className="w-5 h-5" />
-                                                 Confirmar Compra
-                                             </>
-                                         )}
-                                     </button>
-                                     {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()) && (
-                                         <p className="text-xs text-yellow-400 text-center">
-                                             Preencha todos os campos obrigatórios (*)
-                                         </p>
-                                     )}
-                                 </div>
-                             )}
+                             <div className="space-y-3">
+                                 <button
+                                     onClick={handleCreatePreference}
+                                     disabled={!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
+                                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                 >
+                                     <ShoppingCart className="w-5 h-5" />
+                                     Confirmar Compra
+                                 </button>
+                                 {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()) && (
+                                     <p className="text-xs text-yellow-400 text-center">
+                                         Preencha todos os campos obrigatórios (*)
+                                     </p>
+                                 )}
+                             </div>
 
                              <p className="text-xs text-gray-500 text-center mt-4">
                                 Pagamento processado de forma segura pelo Mercado Pago
