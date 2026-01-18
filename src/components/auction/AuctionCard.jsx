@@ -369,7 +369,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 key={index}
                 src={img}
                 alt={`${auction.title} - imagem ${index + 1}`}
-                loading={index === 0 ? "eager" : "lazy"}
+                loading="lazy"
                 decoding="async"
                 className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${
                   index === currentImageIndex ? 'opacity-100' : 'opacity-0'
