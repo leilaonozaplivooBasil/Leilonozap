@@ -42,6 +42,7 @@ import MemoryBackup from './pages/MemoryBackup';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
 import OrderStatus from './pages/OrderStatus';
+import OrderStatusMP from './pages/OrderStatusMP';
 import OrderTracking from './pages/OrderTracking';
 import PDV from './pages/PDV';
 import Partners from './pages/Partners';
@@ -65,7 +66,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import OrderStatusMP from './pages/OrderStatusMP';
 import __Layout from './Layout.jsx';
 
 
@@ -114,6 +114,7 @@ export const PAGES = {
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderStatus": OrderStatus,
+    "OrderStatusMP": OrderStatusMP,
     "OrderTracking": OrderTracking,
     "PDV": PDV,
     "Partners": Partners,
@@ -137,7 +138,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "OrderStatusMP": OrderStatusMP,
 }
 
 export const pagesConfig = {

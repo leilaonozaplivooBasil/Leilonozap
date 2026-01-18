@@ -17,6 +17,8 @@ export default function AmbienteDeTeste() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [error, setError] = useState("");
   const [me, setMe] = useState(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
 
   // Load current user and all AppUsers (for anchor select)
   useEffect(() => {
@@ -105,6 +107,19 @@ export default function AmbienteDeTeste() {
     }
   };
 
+  const syncToProduction = async () => {
+    setIsSyncing(true);
+    setSyncMessage("");
+    try {
+      const { data } = await base44.functions.invoke("syncCommissionLogicProduction", {});
+      setSyncMessage("✅ Lógica sincronizada com sucesso! O sistema de comissões agora está operacional.");
+    } catch (e) {
+      setSyncMessage("❌ Erro ao sincronizar: " + e.message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Auto-simulate on changes (debounced)
   useEffect(() => {
     if (!anchorUser || !saleValue) return;
@@ -141,8 +156,21 @@ export default function AmbienteDeTeste() {
             <Button className="bg-green-600 hover:bg-green-700 text-white border-none shadow-md shadow-green-600/20" onClick={simulate} disabled={isSimulating || !anchorUser}>
               {isSimulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Simular
             </Button>
+            {me?.role === 'admin' && (
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-md shadow-blue-600/20" onClick={syncToProduction} disabled={isSyncing}>
+                {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔄'} Sincronizar
+              </Button>
+            )}
           </div>
         </div>
+
+        {syncMessage && (
+          <Card className={syncMessage.includes("✅") ? "bg-green-900/20 border-green-700" : "bg-red-900/20 border-red-700"}>
+            <CardContent className="p-4 text-sm">
+              {syncMessage}
+            </CardContent>
+          </Card>
+        )}
 
         {!me || me.role !== "admin" ? (
           <Card className="bg-gray-800/90 border-gray-700 text-white">
