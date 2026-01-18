@@ -17,6 +17,7 @@ import CatalogManagement from './pages/CatalogManagement';
 import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
 import CheckoutAsaas from './pages/CheckoutAsaas';
+import CommissionDistributionFull from './pages/CommissionDistributionFull';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
 import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
@@ -41,7 +42,6 @@ import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
 import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyWinnings from './pages/MyWinnings';
-import NetworkOverview from './pages/NetworkOverview';
 import OrderStatus from './pages/OrderStatus';
 import OrderStatusMP from './pages/OrderStatusMP';
 import OrderTracking from './pages/OrderTracking';
@@ -68,7 +68,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserAndLicenseeManagement from './pages/UserAndLicenseeManagement';
 import WalletHistory from './pages/WalletHistory';
-import CommissionDistributionFull from './pages/CommissionDistributionFull';
+import NetworkOverview from './pages/NetworkOverview';
 import __Layout from './Layout.jsx';
 
 
@@ -92,6 +92,7 @@ export const PAGES = {
     "CatalogProductDetails": CatalogProductDetails,
     "Checkout": Checkout,
     "CheckoutAsaas": CheckoutAsaas,
+    "CommissionDistributionFull": CommissionDistributionFull,
     "CreateAuction": CreateAuction,
     "CreateAuctionV2": CreateAuctionV2,
     "CreateLuxuryAuction": CreateLuxuryAuction,
@@ -116,7 +117,6 @@ export const PAGES = {
     "LuxuryCollection": LuxuryCollection,
     "MemoryBackup": MemoryBackup,
     "MyWinnings": MyWinnings,
-    "NetworkOverview": NetworkOverview,
     "OrderStatus": OrderStatus,
     "OrderStatusMP": OrderStatusMP,
     "OrderTracking": OrderTracking,
@@ -143,7 +143,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserAndLicenseeManagement": UserAndLicenseeManagement,
     "WalletHistory": WalletHistory,
-    "CommissionDistributionFull": CommissionDistributionFull,
+    "NetworkOverview": NetworkOverview,
 }
 
 export const pagesConfig = {

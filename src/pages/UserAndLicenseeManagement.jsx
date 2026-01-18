@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Loader2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+import CareerGroupBuilder from '@/components/admin/CareerGroupBuilder';
 
 const AppUser = base44.entities.AppUser;
 
