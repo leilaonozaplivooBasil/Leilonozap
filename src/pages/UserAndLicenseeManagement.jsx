@@ -17,6 +17,7 @@ export default function UserAndLicenseeManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [expandedCargo, setExpandedCargo] = useState(null);
+  const [showGroupBuilder, setShowGroupBuilder] = useState(false);
   const navigate = useNavigate();
 
   const allCareerLevels = [
