@@ -223,15 +223,15 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
   const roots = getHierarchy();
 
   return (
-    <div className="w-full p-8 bg-gray-900 rounded-lg relative overflow-auto min-h-screen" ref={containerRef}>
+    <div className="w-full p-8 bg-gray-900 rounded-lg relative overflow-auto min-h-screen flex items-center justify-center" ref={containerRef}>
       <svg
         ref={svgRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{ zIndex: 1 }}
       />
-      <div className="flex flex-col gap-8 relative" style={{ zIndex: 2 }}>
+      <div className="relative" style={{ zIndex: 2 }}>
         {roots.map((root) => (
-          <TreeNode key={root.id} node={root} depth={0} />
+          <TreeNode key={root.id} node={root} depth={0} isRoot={true} />
         ))}
       </div>
     </div>
