@@ -297,6 +297,13 @@ export default function Profile() {
       } else {
         await User.updateMyUserData(finalData);
       }
+
+      // Atualiza cache local para refletir imediatamente em todo o app
+      try {
+        const cached = localStorage.getItem('currentUser');
+        const baseUser = cached ? JSON.parse(cached) : currentUser;
+        localStorage.setItem('currentUser', JSON.stringify({ ...baseUser, ...finalData }));
+      } catch (_) {}
       
       if (passwordData.newPassword) {
         alert("✅ Senha alterada com sucesso!");
