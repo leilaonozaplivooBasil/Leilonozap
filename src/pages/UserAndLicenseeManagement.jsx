@@ -116,6 +116,13 @@ export default function UserAndLicenseeManagement() {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-white mb-6">Gerenciamento de Usuários e Sistema de Alavancagem</h1>
 
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-white">Gerenciamento de Usuários e Sistema de Alavancagem</h1>
+          <Button onClick={() => setShowGroupBuilder(true)} className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2">
+            <Plus className="w-4 h-4" /> Criar Grupos por Cargo
+          </Button>
+        </div>
+
         <Tabs defaultValue="licensees" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-gray-800 border border-gray-700">
             <TabsTrigger value="licensees" className="data-[state=active]:bg-green-600 data-[state=active]:text-white">
