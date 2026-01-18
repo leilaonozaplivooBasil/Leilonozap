@@ -67,7 +67,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import UserAndLicenseeManagement from './pages/UserAndLicenseeManagement';
 import NetworkOverview from './pages/NetworkOverview';
 import __Layout from './Layout.jsx';
 
@@ -142,7 +141,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "UserAndLicenseeManagement": UserAndLicenseeManagement,
     "NetworkOverview": NetworkOverview,
 }
 
