@@ -76,8 +76,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     svg.setAttribute('width', container.scrollWidth);
     svg.setAttribute('height', container.scrollHeight);
 
-    // Buscar nós raiz
-    const roots = users.filter(u => !u.referred_by_id);
+    // Buscar nós raiz a partir da hierarquia calculada
+    const roots = getHierarchy();
 
     // Desenhar conexões para cada raiz
     roots.forEach(root => {
