@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function RotatingBanner({ banners }) { if (!Array.isArray(banners) || banners.length === 0) return null;
+export default function RotatingBanner({ banners, fit = 'cover', heightClass = 'h-64 md:h-80 lg:h-96', rounded = true }) { if (!Array.isArray(banners) || banners.length === 0) return null;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -50,7 +50,7 @@ export default function RotatingBanner({ banners }) { if (!Array.isArray(banners
   if (filteredBanners.length === 0) return null;
 
   return (
-    <div className="relative w-full h-64 md:h-80 lg:h-96 rounded-2xl overflow-hidden group">
+    <div className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}>
       {/* Imagem do Banner */}
       <div className="relative w-full h-full">
         {filteredBanners.map((banner, index) => (
@@ -65,7 +65,7 @@ export default function RotatingBanner({ banners }) { if (!Array.isArray(banners
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className="w-full h-full cursor-pointer"
+                  className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''} cursor-pointer`
                   loading="eager"
                   fetchpriority="high"
                   decoding="sync"
@@ -84,7 +84,7 @@ export default function RotatingBanner({ banners }) { if (!Array.isArray(banners
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className="w-full h-full"
+                  className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`
                   loading="eager"
                   fetchpriority="high"
                   decoding="sync"
