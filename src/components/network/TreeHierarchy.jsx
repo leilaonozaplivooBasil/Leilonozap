@@ -105,21 +105,22 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
       const maxX = childPositions[childPositions.length - 1].pos.x;
       const firstChildY = childPositions[0].pos.y;
 
-      // Conexões no estilo em 'L' pontilhadas do exemplo para cada filho direto
+      // Conexões no estilo do exemplo: diagonal pontilhada do topo até um "cotovelo" acima do filho e descida vertical
       childPositions.forEach(({ pos: cpos }) => {
-        const rootBottomY = rootPos.y + 40;
-        const childTopY = cpos.y - 40;
-        const elbowY = Math.min(childTopY - 20, rootBottomY + 120);
-        const midX = rootPos.x + (cpos.x - rootPos.x) * 0.55;
+        const rootBottomY = rootPos.y + 40;        // base do nó raiz
+        const childTopY = cpos.y - 40;             // topo do nó filho
+        const elbowY = rootBottomY + Math.min(160, Math.max(80, (childTopY - rootBottomY) * 0.6));
 
+        // Caminho: raiz -> (x do filho, elbowY) -> (x do filho, topo do filho)
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const d = `M ${rootPos.x} ${rootBottomY} L ${midX} ${elbowY} L ${cpos.x} ${elbowY} L ${cpos.x} ${childTopY}`;
+        const d = `M ${rootPos.x} ${rootBottomY} L ${cpos.x} ${elbowY} L ${cpos.x} ${childTopY}`;
         path.setAttribute('d', d);
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke', '#cbd5e1');
-        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke-width', '4');
         path.setAttribute('stroke-linecap', 'round');
-        path.setAttribute('stroke-dasharray', '8 8');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-dasharray', '10 8');
         svg.appendChild(path);
       });
 
