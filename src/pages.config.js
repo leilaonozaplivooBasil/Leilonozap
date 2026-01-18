@@ -67,6 +67,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
 import CareerLevelsReport from './pages/CareerLevelsReport';
+import UserAndLicenseeManagement from './pages/UserAndLicenseeManagement';
 import __Layout from './Layout.jsx';
 
 
@@ -140,6 +141,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
     "CareerLevelsReport": CareerLevelsReport,
+    "UserAndLicenseeManagement": UserAndLicenseeManagement,
 }
 
 export const pagesConfig = {
