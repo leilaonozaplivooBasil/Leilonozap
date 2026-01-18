@@ -70,7 +70,11 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     const svg = svgRef.current;
     svg.innerHTML = '';
 
+    // Definir dimensões do SVG
     const containerRect = containerRef.current.getBoundingClientRect();
+    const container = containerRef.current;
+    svg.setAttribute('width', container.scrollWidth);
+    svg.setAttribute('height', container.scrollHeight);
 
     // Buscar nós raiz
     const roots = users.filter(u => !u.referred_by_id);
@@ -82,71 +86,77 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
 
       // Encontrar posições de todos os filhos diretos
       const childPositions = root.children
-        .map(child => nodePositions.current[child.id])
-        .filter(pos => pos !== undefined);
+        .map((child, idx) => ({ pos: nodePositions.current[child.id], child }))
+        .filter(item => item.pos !== undefined);
 
       if (childPositions.length === 0) return;
 
       // Ordenar filhos por posição X (esquerda para direita)
-      childPositions.sort((a, b) => a.x - b.x);
+      childPositions.sort((a, b) => a.pos.x - b.pos.x);
 
-      const minX = childPositions[0].x;
-      const maxX = childPositions[childPositions.length - 1].x;
-      const avgY = childPositions[0].y; // Todos no mesmo Y
+      const minX = childPositions[0].pos.x;
+      const maxX = childPositions[childPositions.length - 1].pos.x;
+      const firstChildY = childPositions[0].pos.y;
 
-      // 1. Linha vertical do pai para o nível dos filhos
+      // 1. Linha vertical do pai para baixo
       const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       verticalLine.setAttribute('x1', rootPos.x);
-      verticalLine.setAttribute('y1', rootPos.y + 35); // Abaixo da bolha
+      verticalLine.setAttribute('y1', rootPos.y + 40);
       verticalLine.setAttribute('x2', rootPos.x);
-      verticalLine.setAttribute('y2', avgY - 30); // Um pouco acima dos filhos
+      verticalLine.setAttribute('y2', firstChildY - 50);
       verticalLine.setAttribute('stroke', '#64748b');
-      verticalLine.setAttribute('stroke-width', '2');
+      verticalLine.setAttribute('stroke-width', '3');
       verticalLine.setAttribute('stroke-linecap', 'round');
       svg.appendChild(verticalLine);
 
       // 2. Linha horizontal conectando todos os filhos
       const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       horizontalLine.setAttribute('x1', minX);
-      horizontalLine.setAttribute('y1', avgY - 30);
+      horizontalLine.setAttribute('y1', firstChildY - 50);
       horizontalLine.setAttribute('x2', maxX);
-      horizontalLine.setAttribute('y2', avgY - 30);
+      horizontalLine.setAttribute('y2', firstChildY - 50);
       horizontalLine.setAttribute('stroke', '#64748b');
-      horizontalLine.setAttribute('stroke-width', '2');
+      horizontalLine.setAttribute('stroke-width', '3');
       horizontalLine.setAttribute('stroke-linecap', 'round');
       svg.appendChild(horizontalLine);
 
-      // 3. Linhas verticais de cada filho para seus próprios filhos
-      root.children.forEach(child => {
-        const childPos = nodePositions.current[child.id];
-        if (!childPos || !child.children || child.children.length === 0) return;
+      // 3. Linhas verticais dos filhos aos seus netos
+      childPositions.forEach(({ pos: childPos, child }) => {
+        if (!child.children || child.children.length === 0) return;
 
-        child.children.forEach(grandchild => {
-          const grandchildPos = nodePositions.current[grandchild.id];
-          if (!grandchildPos) return;
+        const grandchildPositions = child.children
+          .map(gc => nodePositions.current[gc.id])
+          .filter(pos => pos !== undefined);
 
-          // Linha vertical do filho até o neto
-          const verticalToGrandchild = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          verticalToGrandchild.setAttribute('x1', childPos.x);
-          verticalToGrandchild.setAttribute('y1', childPos.y + 35);
-          verticalToGrandchild.setAttribute('x2', childPos.x);
-          verticalToGrandchild.setAttribute('y2', grandchildPos.y - 30);
-          verticalToGrandchild.setAttribute('stroke', '#64748b');
-          verticalToGrandchild.setAttribute('stroke-width', '2');
-          verticalToGrandchild.setAttribute('stroke-linecap', 'round');
-          svg.appendChild(verticalToGrandchild);
+        if (grandchildPositions.length === 0) return;
 
-          // Linha horizontal do filho até o neto
-          const horizontalToGrandchild = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          horizontalToGrandchild.setAttribute('x1', childPos.x);
-          horizontalToGrandchild.setAttribute('y1', grandchildPos.y - 30);
-          horizontalToGrandchild.setAttribute('x2', grandchildPos.x);
-          horizontalToGrandchild.setAttribute('y2', grandchildPos.y - 30);
-          horizontalToGrandchild.setAttribute('stroke', '#64748b');
-          horizontalToGrandchild.setAttribute('stroke-width', '2');
-          horizontalToGrandchild.setAttribute('stroke-linecap', 'round');
-          svg.appendChild(horizontalToGrandchild);
-        });
+        grandchildPositions.sort((a, b) => a.x - b.x);
+
+        const minGX = grandchildPositions[0].x;
+        const maxGX = grandchildPositions[grandchildPositions.length - 1].x;
+        const firstGrandchildY = grandchildPositions[0].y;
+
+        // Linha vertical do filho
+        const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        vLine.setAttribute('x1', childPos.x);
+        vLine.setAttribute('y1', childPos.y + 40);
+        vLine.setAttribute('x2', childPos.x);
+        vLine.setAttribute('y2', firstGrandchildY - 50);
+        vLine.setAttribute('stroke', '#64748b');
+        vLine.setAttribute('stroke-width', '3');
+        vLine.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(vLine);
+
+        // Linha horizontal dos netos
+        const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        hLine.setAttribute('x1', minGX);
+        hLine.setAttribute('y1', firstGrandchildY - 50);
+        hLine.setAttribute('x2', maxGX);
+        hLine.setAttribute('y2', firstGrandchildY - 50);
+        hLine.setAttribute('stroke', '#64748b');
+        hLine.setAttribute('stroke-width', '3');
+        hLine.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(hLine);
       });
     });
   };
