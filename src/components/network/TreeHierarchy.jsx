@@ -69,6 +69,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
 
     const svg = svgRef.current;
     svg.innerHTML = '';
+    const SHOW_GRANDCHILDREN = false;
 
     // Garante stroke visível e não escalonado
     const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
@@ -123,8 +124,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
         svg.appendChild(path);
       });
 
-      // 3. Linhas verticais dos filhos aos seus netos
-      childPositions.forEach(({ pos: childPos, child }) => {
+      // 3. Linhas verticais dos filhos aos seus netos (desativado no layout de leque)
+      if (SHOW_GRANDCHILDREN) childPositions.forEach(({ pos: childPos, child }) => {
         if (!child.children || child.children.length === 0) return;
 
         const grandchildPositions = child.children
