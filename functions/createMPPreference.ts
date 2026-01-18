@@ -140,6 +140,55 @@ Deno.serve(async (req) => {
         user.address_zip_code
         ].filter(x => x && x.trim()).join(', ');
 
+        // Validações e logs detalhados dos dados
+        const cpfClean = user.cpf.replace(/\D/g, '');
+        const cepClean = user.address_zip_code.replace(/\D/g, '');
+        const phoneAreaCode = user.phone.substring(0, 2);
+        const phoneNumber = user.phone.substring(2);
+
+        console.log('🔍 VALIDAÇÃO DE DADOS DO PAGADOR:');
+        console.log('  Nome completo:', user.full_name);
+        console.log('  Sobrenome:', user.last_name.trim());
+        console.log('  Email:', user.email);
+        console.log('  CPF original:', user.cpf);
+        console.log('  CPF limpo:', cpfClean);
+        console.log('  CPF length:', cpfClean.length);
+        console.log('  Telefone original:', user.phone);
+        console.log('  DDD:', phoneAreaCode);
+        console.log('  Número:', phoneNumber);
+        console.log('  CEP original:', user.address_zip_code);
+        console.log('  CEP limpo:', cepClean);
+        console.log('  CEP length:', cepClean.length);
+        console.log('  Rua:', user.address_street.trim());
+        console.log('  Número:', user.address_number.trim());
+        console.log('  Cidade:', user.address_city);
+        console.log('  Estado:', user.address_state);
+
+        // Validações críticas
+        if (cpfClean.length !== 11) {
+            console.error('❌ CPF inválido - deve ter 11 dígitos, tem:', cpfClean.length);
+            return Response.json({ 
+                error: 'CPF inválido - deve conter 11 dígitos', 
+                debug: { cpf: cpfClean, length: cpfClean.length }
+            }, { status: 400 });
+        }
+
+        if (cepClean.length !== 8) {
+            console.error('❌ CEP inválido - deve ter 8 dígitos, tem:', cepClean.length);
+            return Response.json({ 
+                error: 'CEP inválido - deve conter 8 dígitos', 
+                debug: { cep: cepClean, length: cepClean.length }
+            }, { status: 400 });
+        }
+
+        if (phoneAreaCode.length !== 2 || phoneNumber.length < 8) {
+            console.error('❌ Telefone inválido - DDD:', phoneAreaCode.length, 'Número:', phoneNumber.length);
+            return Response.json({ 
+                error: 'Telefone inválido - formato esperado: (11)999999999', 
+                debug: { phone: user.phone, ddd: phoneAreaCode, number: phoneNumber }
+            }, { status: 400 });
+        }
+
         const preferenceData = {
             items: [itemData],
             payer: {
@@ -147,15 +196,15 @@ Deno.serve(async (req) => {
                 last_name: user.last_name.trim(),
                 email: user.email,
                 phone: {
-                    area_code: user.phone.substring(0, 2),
-                    number: user.phone.substring(2)
+                    area_code: phoneAreaCode,
+                    number: phoneNumber
                 },
                 identification: {
                     type: 'CPF',
-                    number: user.cpf.replace(/\D/g, '')
+                    number: cpfClean
                 },
                 address: {
-                    zip_code: user.address_zip_code.replace(/\D/g, ''),
+                    zip_code: cepClean,
                     street_name: user.address_street.trim(),
                     street_number: user.address_number.trim()
                 }
@@ -175,7 +224,7 @@ Deno.serve(async (req) => {
             statement_descriptor: 'LEILAO NOZAP'
         };
 
-        console.log('📤 Criando preferência:', JSON.stringify(preferenceData, null, 2));
+        console.log('📤 Criando preferência MP:', JSON.stringify(preferenceData, null, 2));
 
         const result = await preference.create({ body: preferenceData });
 
