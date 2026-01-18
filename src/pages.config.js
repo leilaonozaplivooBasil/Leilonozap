@@ -20,6 +20,7 @@ import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
 import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
 import CustomerDetails from './pages/CustomerDetails';
+import DiretoDeFabrica from './pages/DiretoDeFabrica';
 import EditAuction from './pages/EditAuction';
 import EditCatalogProduct from './pages/EditCatalogProduct';
 import ErrorReport from './pages/ErrorReport';
@@ -64,7 +65,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import DiretoDeFabrica from './pages/DiretoDeFabrica';
 import __Layout from './Layout.jsx';
 
 
@@ -91,6 +91,7 @@ export const PAGES = {
     "CreateAuctionV2": CreateAuctionV2,
     "CreateLuxuryAuction": CreateLuxuryAuction,
     "CustomerDetails": CustomerDetails,
+    "DiretoDeFabrica": DiretoDeFabrica,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
     "ErrorReport": ErrorReport,
@@ -135,7 +136,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "DiretoDeFabrica": DiretoDeFabrica,
 }
 
 export const pagesConfig = {

@@ -34,6 +34,7 @@ import UserPasswordModal from '../components/admin/UserPasswordModal';
 import EarningsSimulator from '../components/licensing/EarningsSimulator';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
 import CatalogProductCard from '../components/catalog/CatalogProductCard';
+import RotatingBanner from '../components/banner/RotatingBanner';
 
 const Product = base44.entities.Product;
 
@@ -41,11 +42,12 @@ const CatalogTab = ({ isSaiDeBaixo }) => {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [banners, setBanners] = useState([]);
 
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const catalogProducts = await Product.filter({ catalog_active: true }, '-created_date', 50);
+        const catalogProducts = await Product.filter({ catalog_active: true }, '-created_date', 200);
         setProducts(Array.isArray(catalogProducts) ? catalogProducts : []);
       } catch (error) {
         console.error('Erro ao carregar catálogo:', error);
@@ -55,6 +57,15 @@ const CatalogTab = ({ isSaiDeBaixo }) => {
       }
     };
     loadProducts();
+  }, []);
+
+  useEffect(() => {
+    base44.entities.BannerImage.filter({ is_active: true, context: 'catalog' })
+      .then((bannerData) => {
+        const sortedBanners = bannerData.sort((a,b)=>a.order-b.order);
+        setBanners(sortedBanners);
+      })
+      .catch(() => {});
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -92,7 +103,7 @@ const CatalogTab = ({ isSaiDeBaixo }) => {
             <p>Nenhum produto disponível</p>
           </div> :
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((product) =>
           <CatalogProductCard key={product.id} product={product} currentUser={null} />
           )}
