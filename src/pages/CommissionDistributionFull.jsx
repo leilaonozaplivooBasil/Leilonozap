@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { previewCatalogCommission } from '@/functions/previewCatalogCommission';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +17,7 @@ export default function CommissionDistributionFull() {
     setResult(null);
 
     try {
-      const response = await base44.asServiceRole.functions.invoke('previewCatalogCommission', {
+      const response = await previewCatalogCommission({
         sale_value: Number(saleValue),
         anchor_name: anchorName,
         candidate_names: []
