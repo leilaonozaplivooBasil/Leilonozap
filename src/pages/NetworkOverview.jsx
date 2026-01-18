@@ -3,6 +3,8 @@ import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
+const Group = base44.entities.Group;
+const GroupMember = base44.entities.GroupMember;
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +26,7 @@ import { cleanSiteDuplicates } from "@/functions/cleanSiteDuplicates"; // Update
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
+import GroupHierarchy from "../components/admin/GroupHierarchy";
 
 const CAREER_LEVELS = [
   { id: 'usuario', name: 'Usuário', color: 'bg-gray-500', textColor: 'text-gray-400', borderColor: 'border-gray-500' },
@@ -491,6 +494,8 @@ export default function NetworkOverview() {
   const [currentUser, setCurrentUser] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
   const [allAuctions, setAllAuctions] = useState([]);
+  const [allGroups, setAllGroups] = useState([]);
+  const [allGroupMembers, setAllGroupMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [promotingUser, setPromotingUser] = useState(null);
   const [selectedLevels, setSelectedLevels] = useState([]);
@@ -548,9 +553,13 @@ export default function NetworkOverview() {
     try {
       const users = await AppUser.list("-created_date", 1000);
       const auctions = await Auction.list("-created_date", 500);
+      const groups = await Group.list("-created_date", 500);
+      const groupMembers = await GroupMember.list("-created_date", 1000);
 
       setAllUsers(Array.isArray(users) ? users : []);
       setAllAuctions(Array.isArray(auctions) ? auctions : []);
+      setAllGroups(Array.isArray(groups) ? groups : []);
+      setAllGroupMembers(Array.isArray(groupMembers) ? groupMembers : []);
       
       // Auto-link órfãos (role=user) ao Site Oficial
       try {
@@ -1227,61 +1236,14 @@ export default function NetworkOverview() {
                </TabsTrigger>
              </TabsList>
 
-              {/* ABA 1: LICENCIADOS */}
+              {/* ABA 1: LICENCIADOS - GRUPOS */}
               <TabsContent value="licensees" className="mt-6">
-                <Card className="bg-gray-800/50 border-gray-700">
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-green-400">Visualização do Sistema de Alavancagem</CardTitle>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => setViewMode('network')}
-                          variant={viewMode === 'network' ? 'default' : 'outline'}
-                          className={viewMode === 'network' ? 'bg-green-600 hover:bg-green-700' : 'border-gray-600 text-gray-300'}
-                          size="sm"
-                        >
-                          <LayoutGrid className="w-4 h-4 mr-2" />
-                          Visão em Árvore
-                        </Button>
-                        <Button
-                          onClick={() => setViewMode('linear')}
-                          variant={viewMode === 'linear' ? 'default' : 'outline'}
-                          className={viewMode === 'linear' ? 'bg-green-600 hover:bg-green-700' : 'border-gray-600 text-gray-300'}
-                          size="sm"
-                        >
-                          <List className="w-4 h-4 mr-2" />
-                          Visão Linear
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="overflow-x-auto">
-                    {allUsers.length > 0 ? (
-                      viewMode === 'network' ? (
-                        <NetworkTree users={allUsers} onPromote={handlePromote} onEdit={handleEditUser} onRelink={handleRelink} />
-                      ) : (
-                        <div className="grid gap-4">
-                          {allUsers.map(user => (
-                            <UserCard
-                              key={user.id}
-                              user={user}
-                              level={0}
-                              onPromote={handlePromote}
-                              onEdit={handleEditUser}
-                              isLinearView={true}
-                              allUsers={allUsers}
-                            />
-                          ))}
-                        </div>
-                      )
-                    ) : (
-                      <div className="text-center py-12 text-gray-500">
-                        <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                        <p>Nenhum usuário no sistema ainda.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                <GroupHierarchy 
+                  groups={allGroups} 
+                  users={allUsers}
+                  groupMembers={allGroupMembers}
+                  onRefresh={fetchData}
+                />
               </TabsContent>
 
               {/* ABA 3: HIERARQUIA POR CARGO */}
