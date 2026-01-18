@@ -162,10 +162,10 @@ Deno.serve(async (req) => {
         // Âncora recebe este cargo
         assignments.push({ role: step.id, user: anchorUser, percent: step.percent });
       } else if (stepIndex > anchorMaxIndex) {
-        // Cargo acima do âncora: procura na cadeia
+        // Cargo acima do âncora: procura na cadeia (incluindo a âncora)
         let assignedUser = null;
         for (const u of chain) {
-          if (u.id !== anchorUser.id && hasRole(u, step.id)) { assignedUser = u; break; }
+          if (hasRole(u, step.id)) { assignedUser = u; break; }
         }
         if (assignedUser) {
           assignments.push({ role: step.id, user: assignedUser, percent: step.percent });
