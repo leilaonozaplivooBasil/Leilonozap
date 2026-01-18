@@ -115,7 +115,7 @@ export default function CatalogCheckout2() {
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
             const savedUser = JSON.parse(savedUserJSON);
-            const licenseeCode = sessionStorage.getItem('licenseeCode');
+            const referralCode = sessionStorage.getItem('referralCode'); // Pega ?ref do URL
 
             // Criar registro de venda no catálogo
             const sale = await CatalogSale.create({
@@ -127,9 +127,9 @@ export default function CatalogCheckout2() {
                 buyer_name: savedUser.full_name,
                 buyer_email: email.trim(),
                 buyer_phone: phone.trim(),
-                licensee_id: licenseeCode || savedUser.id,
-                licensee_name: licenseeCode || 'Venda Direta',
-                referred_by_code: licenseeCode || '',
+                licensee_id: savedUser.id,
+                licensee_name: savedUser.full_name,
+                referral_code: referralCode || '', // ✅ Campo correto com ?ref
                 status: 'pending_payment'
             });
 
