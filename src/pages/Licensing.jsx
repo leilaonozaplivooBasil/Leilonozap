@@ -2386,7 +2386,7 @@ export default function LicensingPage() {
               'bg-green-500/10 border-green-500/30'}`
               }>
                 <TrendingUp className={`w-6 h-6 ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`} />
-                <span className={`font-semibold ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`}>Programa de Influenciadores</span>
+                <span className="font-semibold text-green-400">Plano de Carreira da Leilão NoZap!</span>
               </div>
               
               {/* TÍTULO DINÂMICO */}
