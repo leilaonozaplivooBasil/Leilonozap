@@ -54,21 +54,31 @@ Deno.serve(async (req) => {
 
                         console.log(`✅ Status atualizado: ${payment.status}`);
 
-                        // Se aprovado, marcar leilão como pago
-                        if (payment.status === 'approved') {
-                            if (dbPayment.auction_id) {
-                                await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
-                                    order_status: 'paid'
-                                });
-                                console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
-                            }
-                            if (dbPayment.catalog_sale_id) {
-                                await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
-                                    status: 'paid'
-                                });
-                                console.log(`🛒 CatalogSale ${dbPayment.catalog_sale_id} marcada como paga`);
-                            }
-                        }
+                        // Se aprovado, marcar leilão como pago e processar comissões
+                         if (payment.status === 'approved') {
+                             if (dbPayment.auction_id) {
+                                 await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
+                                     order_status: 'paid'
+                                 });
+                                 console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
+                             }
+                             if (dbPayment.catalog_sale_id) {
+                                 await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
+                                     status: 'paid'
+                                 });
+                                 console.log(`🛒 CatalogSale ${dbPayment.catalog_sale_id} marcada como paga`);
+
+                                 // ✅ Processa distribuição de comissões automaticamente
+                                 try {
+                                     await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                                         sale_id: dbPayment.catalog_sale_id
+                                     });
+                                     console.log(`✅ Comissões processadas para sale ${dbPayment.catalog_sale_id}`);
+                                 } catch (commErr) {
+                                     console.error(`❌ Erro ao processar comissões:`, commErr.message);
+                                 }
+                             }
+                         }
                     } else {
                         console.log('⚠️ Pagamento não encontrado no banco:', externalRef);
                     }
