@@ -2360,6 +2360,27 @@ export default function LicensingPage() {
 
   const userLevel = getUserLevel();
 
+  // Mapear níveis para labels dinâmicos
+  const getLevelLabel = (level) => {
+    const labels = {
+      'usuario': 'um Usuário',
+      'influencer': 'um Influencer',
+      'licenciado_catalogo': 'um Licenciado Catálogo',
+      'trainee': 'um Trainee',
+      'executivo': 'um Executivo',
+      'kit_start': 'Kit Start',
+      'plano_lider': 'Plano Líder',
+      'plano_lojista': 'Plano Lojista',
+      'distribuidor': 'um Distribuidor',
+      'diretor': 'um Diretor',
+      'diretoria': 'Diretoria',
+      'ceo': 'CEO',
+      'conselheiro': 'um Conselheiro',
+      'fundador': 'um Fundador'
+    };
+    return labels[level] || 'um Influencer';
+  };
+
   return (
     <>
       <div className={`min-h-screen ${
@@ -2386,7 +2407,7 @@ export default function LicensingPage() {
               'bg-green-500/10 border-green-500/30'}`
               }>
                 <TrendingUp className={`w-6 h-6 ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`} />
-                <span className="font-semibold text-green-400">Plano de Carreira da Leilão NoZap!</span>
+                <span className={`font-semibold ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`}>Programa de Influenciadores</span>
               </div>
               
               {/* TÍTULO DINÂMICO */}
@@ -2417,7 +2438,7 @@ export default function LicensingPage() {
 
               <>
                   <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                    Parabéns! Você é {userLevel === 'licenciado_catalogo' ? 'Influenciador Master' : 'um Influenciador'} 🎉
+                    Parabéns! Você é {getLevelLabel(userLevel)} 🎉
                   </h1>
                   <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
                     Você já evoluiu no sistema! Continue crescendo seu sistema de alavancagem e maximizando seus ganhos.
