@@ -120,6 +120,19 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
       horizontalLine.setAttribute('stroke-linecap', 'round');
       svg.appendChild(horizontalLine);
 
+      // 2.1 Pinos verticais ligando a barra a cada filho
+      childPositions.forEach(({ pos: cpos }) => {
+        const pin = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        pin.setAttribute('x1', cpos.x);
+        pin.setAttribute('y1', firstChildY - 50);
+        pin.setAttribute('x2', cpos.x);
+        pin.setAttribute('y2', cpos.y - 40);
+        pin.setAttribute('stroke', '#64748b');
+        pin.setAttribute('stroke-width', '3');
+        pin.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(pin);
+      });
+
       // 3. Linhas verticais dos filhos aos seus netos
       childPositions.forEach(({ pos: childPos, child }) => {
         if (!child.children || child.children.length === 0) return;
