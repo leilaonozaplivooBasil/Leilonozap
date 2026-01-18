@@ -205,7 +205,7 @@ export default function Home() {
       console.log('🔍 [NoZap] Favoritos carregados:', nozapFavoriteIds);
 
       if (nozapFavoriteIds.length > 0) {
-        const allAuctions = await Auction.list("-created_date", 200);
+        const allAuctions = await Auction.list("-created_date", 80);
         const favAuctions = allAuctions.filter((a) => nozapFavoriteIds.includes(a.id));
         setFavoriteAuctions(favAuctions);
         
@@ -333,7 +333,7 @@ export default function Home() {
             // Atualização silenciosa em background após 15s
             if (age > 15000 && !isRetry) {
               setTimeout(() => {
-                Auction.list("-created_date", 50).then((data) => {
+                Auction.list("-created_date", 20).then((data) => {
                   if (Array.isArray(data) && data.length > 0) {
                     sessionStorage.setItem('auctions_cache', JSON.stringify(data));
                     sessionStorage.setItem('auctions_cache_time', Date.now().toString());
@@ -352,7 +352,10 @@ export default function Home() {
 
     // Se não tem cache válido, busca do servidor
     try {
-      const data = await Auction.list("-created_date", 50);
+      const data = await Promise.race([
+        Auction.list("-created_date", 20),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000))
+      ]);
       if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
         sessionStorage.setItem('auctions_cache', JSON.stringify(data));
