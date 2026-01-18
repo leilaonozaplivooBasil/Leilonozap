@@ -24,6 +24,7 @@ import { cleanSiteDuplicates } from "@/functions/cleanSiteDuplicates"; // Update
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
+import HierarchyTreeVisualization from "../components/network/HierarchyTreeVisualization";
 
 const CAREER_LEVELS = [
   { id: 'usuario', name: 'Usuário', color: 'bg-gray-500', textColor: 'text-gray-400', borderColor: 'border-gray-500' },
