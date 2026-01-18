@@ -408,7 +408,7 @@ export default function Layout({ children, currentPageName }) {
     { title: "✨ Direto de Fábrica", pageName: "DiretoDeFabrica" },
     { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
     ]
-    }
+    },
     { 
     title: "Gestão do Aplicativo", 
     isCategory: true,
