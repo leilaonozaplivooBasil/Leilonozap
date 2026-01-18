@@ -2380,7 +2380,7 @@ export default function LicensingPage() {
     const messages = {
       'influencer': 'Continue evoluindo! O próximo passo é se tornar Licenciado Catálogo e desbloquear ainda mais benefícios.',
       'licenciado_catalogo': 'Você já tem acesso ao catálogo! Cresça sua rede para alcançar os níveis Trainee e Executivo.',
-      'trainee': 'Excelente progresso! Continue expandindo para atingir Executivo e Kit Start.',
+      'trainee': 'Não sei se te dou parabéns ou pêsames, seja bem vindo a... SIFUDENCIA! Serão 6 meses de extremo desafio, porém se você se formar o céu é o limite. BOA SORTE!',
       'executivo': 'Ótimo trabalho! Os próximos níveis são Kit Start, Plano Líder e Plano Lojista.',
       'kit_start': 'Continue crescendo! Avance para Plano Líder e aumente suas comissões.',
       'plano_lider': 'Muito bem! Próximo objetivo: Plano Lojista e depois Distribuidor.',
