@@ -1019,6 +1019,34 @@ export default function NetworkOverview() {
     toast.success("Usuário atualizado com sucesso!");
   };
 
+  const handleDeleteUser = async (user) => {
+    const confirmDelete = window.confirm(
+      `⚠️ ATENÇÃO: Deletar usuário e TODOS os seus dados?\n\n` +
+      `Usuário: ${user.full_name}\n` +
+      `Email: ${user.email}\n\n` +
+      `Esta ação é IRREVERSÍVEL!\n\n` +
+      `Tem certeza que deseja continuar?`
+    );
+    if (!confirmDelete) return;
+
+    setDeletingUserId(user.id);
+    setIsDeleting(true);
+    toast.info("Deletando usuário...");
+    
+    try {
+      // Chamar função backend para deletar usuário e todos os dados associados
+      await base44.functions.invoke('deleteUserAndData', { user_id: user.id });
+      toast.success(`${user.full_name} e todos os seus dados foram deletados!`);
+      await fetchData();
+    } catch (error) {
+      console.error("Erro ao deletar usuário:", error);
+      toast.error(`Erro ao deletar usuário: ${error.message}`);
+    } finally {
+      setDeletingUserId(null);
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
