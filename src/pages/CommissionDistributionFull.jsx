@@ -104,9 +104,9 @@ export default function CommissionDistributionFull() {
                     <p className="text-xl font-bold text-green-400">R$ {result.sale_value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">Total em Comissão (27%)</p>
+                    <p className="text-gray-400 text-sm">Total em Comissão (26%)</p>
                     <p className="text-xl font-bold text-yellow-400">
-                      R$ {(result.sale_value * 0.27).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      R$ {(result.sale_value * 0.26).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </div>
                 </div>
@@ -157,7 +157,7 @@ export default function CommissionDistributionFull() {
                     <tfoot>
                       <tr className="bg-gray-700/50 border-t-2 border-gray-600">
                         <td colSpan="3" className="py-3 px-4 text-white font-bold">TOTAL</td>
-                        <td className="py-3 px-4 text-right font-bold text-gray-300">27.00%</td>
+                        <td className="py-3 px-4 text-right font-bold text-gray-300">26.00%</td>
                         <td className="py-3 px-4 text-right font-bold text-yellow-400">
                           R$ {result.records.reduce((s, r) => s + r.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>

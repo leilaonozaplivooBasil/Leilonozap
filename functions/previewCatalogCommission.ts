@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
     }
 
     // Nova lógica: âncora recebe todos os cargos até o seu plano
-          const totalPercent = 27.0;
+          const totalPercent = 26.0;
           const assignments = []; // { role, user, percent }
           let companyPercent = 0; // Percentuais que ficam com a empresa
 
