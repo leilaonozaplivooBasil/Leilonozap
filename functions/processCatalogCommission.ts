@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
     const chain = isLicenseeSale ? await buildAncestorChain(base44, anchorUser) : [anchorUser];
     const allUsers = await base44.asServiceRole.entities.AppUser.list();
 
-    // Nova lógica: âncora recebe todos os cargos até o seu plano
+    // LÓGICA IDÊNTICA À PREVIEW (TESTE)
     const totalPercent = 27.0;
     const assignments = []; // { role, user, percent }
     let companyPercent = 0; // Percentuais que ficam com a empresa
@@ -159,32 +159,29 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Para cargos até distribuidor: distribui apenas na CADEIA do licensee
-              const roleHierarchy = ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor'];
-              const stepIndex = roleHierarchy.indexOf(step.id);
-              const anchorMaxIndex = anchorMaxRole ? roleHierarchy.indexOf(anchorMaxRole) : -1;
+      // Para cargos até distribuidor: âncora recebe tudo até o seu cargo máximo
+      const roleHierarchy = ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor'];
+      const stepIndex = roleHierarchy.indexOf(step.id);
+      const anchorMaxIndex = anchorMaxRole ? roleHierarchy.indexOf(anchorMaxRole) : -1;
 
-              if (stepIndex >= 0 && stepIndex <= anchorMaxIndex) {
-                // Cargo está no range da âncora: âncora recebe
-                assignments.push({ role: step.id, user: anchorUser, percent: step.percent });
-              } else if (stepIndex > anchorMaxIndex) {
-                // Cargo acima do max da âncora: procura na cadeia
-                let assignedUser = null;
-                for (const u of chain) {
-                  if (u.id !== anchorUser.id && hasRole(u, step.id)) {
-                    assignedUser = u;
-                    break;
-                  }
-                }
-                if (assignedUser) {
-                  assignments.push({ role: step.id, user: assignedUser, percent: step.percent });
-                } else {
-                  companyPercent += step.percent;
-                }
-              } else {
-                // Cargo abaixo: fica com empresa
-                companyPercent += step.percent;
-              }
+      if (stepIndex >= 0 && stepIndex <= anchorMaxIndex) {
+        // Âncora recebe este cargo
+        assignments.push({ role: step.id, user: anchorUser, percent: step.percent });
+      } else if (stepIndex > anchorMaxIndex) {
+        // Cargo acima do âncora: procura na cadeia
+        let assignedUser = null;
+        for (const u of chain) {
+          if (u.id !== anchorUser.id && hasRole(u, step.id)) { assignedUser = u; break; }
+        }
+        if (assignedUser) {
+          assignments.push({ role: step.id, user: assignedUser, percent: step.percent });
+        } else {
+          companyPercent += step.percent;
+        }
+      } else {
+        // Âncora não tem este cargo: fica com a empresa
+        companyPercent += step.percent;
+      }
     }
 
     if (companyPercent > 0.000001) {
