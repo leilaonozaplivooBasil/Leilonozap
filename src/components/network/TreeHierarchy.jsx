@@ -105,39 +105,22 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
       const maxX = childPositions[childPositions.length - 1].pos.x;
       const firstChildY = childPositions[0].pos.y;
 
-      // 1. Linha vertical do pai para baixo
-      const verticalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      verticalLine.setAttribute('x1', rootPos.x);
-      verticalLine.setAttribute('y1', rootPos.y + 40);
-      verticalLine.setAttribute('x2', rootPos.x);
-      verticalLine.setAttribute('y2', firstChildY - 50);
-      verticalLine.setAttribute('stroke', '#64748b');
-      verticalLine.setAttribute('stroke-width', '3');
-      verticalLine.setAttribute('stroke-linecap', 'round');
-      svg.appendChild(verticalLine);
-
-      // 2. Linha horizontal conectando todos os filhos
-      const horizontalLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      horizontalLine.setAttribute('x1', minX);
-      horizontalLine.setAttribute('y1', firstChildY - 50);
-      horizontalLine.setAttribute('x2', maxX);
-      horizontalLine.setAttribute('y2', firstChildY - 50);
-      horizontalLine.setAttribute('stroke', '#64748b');
-      horizontalLine.setAttribute('stroke-width', '3');
-      horizontalLine.setAttribute('stroke-linecap', 'round');
-      svg.appendChild(horizontalLine);
-
-      // 2.1 Pinos verticais ligando a barra a cada filho
+      // Conexões no estilo em 'L' pontilhadas do exemplo para cada filho direto
       childPositions.forEach(({ pos: cpos }) => {
-        const pin = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        pin.setAttribute('x1', cpos.x);
-        pin.setAttribute('y1', firstChildY - 50);
-        pin.setAttribute('x2', cpos.x);
-        pin.setAttribute('y2', cpos.y - 40);
-        pin.setAttribute('stroke', '#64748b');
-        pin.setAttribute('stroke-width', '3');
-        pin.setAttribute('stroke-linecap', 'round');
-        svg.appendChild(pin);
+        const rootBottomY = rootPos.y + 40;
+        const childTopY = cpos.y - 40;
+        const elbowY = Math.min(childTopY - 20, rootBottomY + 120);
+        const midX = rootPos.x + (cpos.x - rootPos.x) * 0.55;
+
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        const d = `M ${rootPos.x} ${rootBottomY} L ${midX} ${elbowY} L ${cpos.x} ${elbowY} L ${cpos.x} ${childTopY}`;
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', '#cbd5e1');
+        path.setAttribute('stroke-width', '3');
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-dasharray', '8 8');
+        svg.appendChild(path);
       });
 
       // 3. Linhas verticais dos filhos aos seus netos
