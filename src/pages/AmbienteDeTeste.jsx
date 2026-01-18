@@ -64,7 +64,7 @@ export default function AmbienteDeTeste() {
 
   const groupedRoles = useMemo(() => {
     if (!preview?.records) return [];
-    const ORDER = ['licenciado_catalogo','trainee','executivo','kit_start','plano_lider','plano_lojista','distribuidor','diretor','diretoria','ceo','conselheiro','fundador'];
+    const ORDER = ['fundador','conselheiro','ceo','diretoria','diretor','distribuidor','plano_lojista','plano_lider','kit_start','executivo','licenciado_catalogo','trainee'];
     const map = new Map();
     
     // Inicializa todos os cargos com valores zerados
