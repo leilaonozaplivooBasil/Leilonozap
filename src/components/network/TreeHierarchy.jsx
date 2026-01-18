@@ -65,44 +65,43 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
     const primaryLevel = node.primary_career_level || 'usuario';
-    const colorGradient = getCareerColor(primaryLevel);
-    const icon = getCareerIcon(primaryLevel);
+    const bgColor = getCareerColor(primaryLevel);
+    const initials = getInitials(node.full_name);
 
     return (
       <div className="flex flex-col items-center">
         {/* Nó/Bolha */}
-        <div className="relative">
-          {/* Bolha com gradiente */}
+        <div className="relative group">
+          {/* Bolha clean e minimalista */}
           <button
             onClick={() => hasChildren && toggleNode(node.id)}
             className={`
-              w-24 h-24 rounded-full bg-gradient-to-br ${colorGradient}
-              flex flex-col items-center justify-center gap-1
-              text-white font-semibold text-xs
-              hover:scale-110 transition-transform shadow-lg
-              cursor-pointer border-4 border-gray-900
-              relative group
+              w-20 h-20 rounded-full ${bgColor}
+              flex items-center justify-center
+              text-white font-bold text-sm
+              hover:shadow-xl transition-all duration-200
+              cursor-pointer shadow-md
+              relative
+              ${hasChildren ? 'hover:scale-105' : ''}
             `}
           >
-            <div className="text-xl">{icon}</div>
-            <div className="text-center line-clamp-2 text-[10px]">
-              {node.full_name?.split(' ')[0] || 'User'}
-            </div>
+            {initials}
 
             {/* Dropdown indicator */}
             {hasChildren && (
-              <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
-                <div className="bg-gray-900 rounded-full p-1">
-                  <ChevronDown className="w-3 h-3 text-green-400" />
+              <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                <div className="bg-gray-900 rounded-full p-0.5">
+                  <ChevronDown className="w-3 h-3 text-white" />
                 </div>
               </div>
             )}
-
-            {/* Tooltip */}
-            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-gray-900 text-white text-xs rounded px-2 py-1 whitespace-nowrap z-10 border border-gray-700">
-              {node.full_name}
-            </div>
           </button>
+
+          {/* Tooltip com info */}
+          <div className="absolute top-full mt-2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-10 border border-gray-700 whitespace-nowrap shadow-lg">
+            <div className="font-semibold">{node.full_name}</div>
+            <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
+          </div>
         </div>
 
         {/* Linha para baixo */}
