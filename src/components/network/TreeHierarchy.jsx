@@ -105,13 +105,12 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
       const maxX = childPositions[childPositions.length - 1].pos.x;
       const firstChildY = childPositions[0].pos.y;
 
-      // Conexões no estilo do exemplo: diagonal pontilhada do topo até um "cotovelo" acima do filho e descida vertical
+      // Conexões exatamente como o mock: diagonal do centro do nó raiz até um cotovelo fixo e depois descida vertical
       childPositions.forEach(({ pos: cpos }) => {
-        const rootBottomY = rootPos.y + 40;        // base do nó raiz
-        const childTopY = cpos.y - 40;             // topo do nó filho
-        const elbowY = rootBottomY + Math.min(160, Math.max(80, (childTopY - rootBottomY) * 0.6));
+        const rootBottomY = rootPos.y + 40;   // base do nó raiz
+        const childTopY = cpos.y - 36;        // topo do círculo do filho com folga
+        const elbowY = rootBottomY + 140;     // altura fixa do cotovelo para todas as linhas
 
-        // Caminho: raiz -> (x do filho, elbowY) -> (x do filho, topo do filho)
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const d = `M ${rootPos.x} ${rootBottomY} L ${cpos.x} ${elbowY} L ${cpos.x} ${childTopY}`;
         path.setAttribute('d', d);
@@ -119,7 +118,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
         path.setAttribute('stroke', '#cbd5e1');
         path.setAttribute('stroke-width', '4');
         path.setAttribute('stroke-linecap', 'round');
-        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-linejoin', 'bevel'); // evita "V"/setinhas nas junções
         path.setAttribute('stroke-dasharray', '10 8');
         svg.appendChild(path);
       });
