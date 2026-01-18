@@ -1284,6 +1284,91 @@ export default function NetworkOverview() {
                 </Card>
               </TabsContent>
 
+              {/* ABA 3: HIERARQUIA POR CARGO */}
+              <TabsContent value="hierarchy" className="mt-6">
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="text-green-400">Hierarquia Organizada por Cargo</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {CAREER_LEVELS.slice().reverse().map(level => {
+                        const usersWithLevel = allUsers.filter(u => {
+                          const levels = Array.isArray(u.career_levels) ? u.career_levels : [];
+                          return levels.includes(level.id);
+                        });
+
+                        if (usersWithLevel.length === 0) return null;
+
+                        return (
+                          <Accordion key={level.id} type="single" collapsible>
+                            <AccordionItem value={level.id}>
+                              <AccordionTrigger className="px-4 py-3 rounded-lg bg-gray-700/50 hover:bg-gray-700 border-l-4" style={{ borderColor: level.color.replace('bg-', '') }}>
+                                <div className="flex items-center gap-3 flex-1">
+                                  <Badge className={`${level.color} text-white`}>{level.name}</Badge>
+                                  <span className="text-gray-400 text-sm">{usersWithLevel.length} usuário(s)</span>
+                                </div>
+                              </AccordionTrigger>
+                              <AccordionContent className="pt-4 space-y-3">
+                                {usersWithLevel.map(user => {
+                                  const indicados = allUsers.filter(u => u.referred_by_id === user.id);
+                                  const hasIndicados = indicados.length > 0;
+
+                                  return (
+                                    <Card key={user.id} className="bg-gray-700/30 border-gray-600">
+                                      <CardContent className="p-4">
+                                        <div className="flex items-start justify-between gap-4">
+                                          <div className="flex-1">
+                                            <div className="font-semibold text-white">{user.full_name}</div>
+                                            <div className="text-xs text-gray-400 mt-1">{user.email}</div>
+                                            <div className="text-xs text-gray-500 mt-1">Indicados: <strong>{indicados.length}</strong></div>
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <Badge className="bg-green-600/30 text-green-300 text-xs">
+                                              V$ {(user.valora_pay_balance || 0).toFixed(0)}
+                                            </Badge>
+                                          </div>
+                                        </div>
+
+                                        {hasIndicados && (
+                                          <div className="mt-4 pt-4 border-t border-gray-600 space-y-2">
+                                            <p className="text-xs font-semibold text-gray-400">Pessoas que indicou:</p>
+                                            <div className="space-y-2">
+                                              {indicados.map(indicado => (
+                                                <div key={indicado.id} className="bg-gray-800/60 rounded p-2 text-xs">
+                                                  <div className="text-green-400 font-semibold">{indicado.full_name}</div>
+                                                  <div className="text-gray-500">{indicado.email}</div>
+                                                  {Array.isArray(indicado.career_levels) && indicado.career_levels.length > 0 && (
+                                                    <div className="mt-1 flex flex-wrap gap-1">
+                                                      {indicado.career_levels.map(lvl => {
+                                                        const lvlConfig = CAREER_LEVELS.find(l => l.id === lvl);
+                                                        return lvlConfig ? (
+                                                          <Badge key={lvl} className={`${lvlConfig.color} text-white text-[10px]`}>
+                                                            {lvlConfig.name}
+                                                          </Badge>
+                                                        ) : null;
+                                                      })}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </CardContent>
+                                    </Card>
+                                  );
+                                })}
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               {/* ABA 2: USUÁRIOS GERAIS */}
               <TabsContent value="users" className="mt-6">
                 <Card className="bg-gray-800 border-gray-700">
