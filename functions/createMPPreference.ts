@@ -181,11 +181,8 @@ Deno.serve(async (req) => {
 
         console.log('✅ Preferência criada:', result.id);
 
-        // Salvar no banco
-        await base44.entities.MercadoPagoPayment.create({
-            auction_id: auction_id || null,
-            product_id: product_id || null,
-            catalog_sale_id: catalog_sale_id || null,
+        // Salvar no banco - criar objeto sem campos null
+        const paymentData = {
             user_id: user.id,
             preference_id: result.id,
             amount: itemData.unit_price,
@@ -193,7 +190,14 @@ Deno.serve(async (req) => {
             status: 'pending',
             payment_method: 'pending',
             buyer_address: fullAddress
-        });
+        };
+
+        // Adicionar apenas os campos que existem
+        if (auction_id) paymentData.auction_id = auction_id;
+        if (product_id) paymentData.product_id = product_id;
+        if (catalog_sale_id) paymentData.catalog_sale_id = catalog_sale_id;
+
+        await base44.entities.MercadoPagoPayment.create(paymentData);
 
         const trimmedPublicKey = publicKey.trim();
 
