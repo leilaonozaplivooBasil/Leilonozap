@@ -42,7 +42,7 @@ const CAREER_LEVELS = [
   { id: 'fundador', name: 'Fundador', color: 'bg-amber-500', textColor: 'text-amber-400', borderColor: 'border-amber-500' }
 ];
 
-function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLinearView = false, allUsers = [], onEdit }) {
+function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLinearView = false, allUsers = [], onEdit, onDelete }) {
   const [showDetails, setShowDetails] = useState(false);
   const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
   const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
