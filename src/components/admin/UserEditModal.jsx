@@ -71,6 +71,23 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
         setUserData(prev => ({ ...prev, [field]: value }));
     };
 
+    const handleAvatarUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsUploadingAvatar(true);
+        try {
+            const { file_url } = await base44.integrations.Core.UploadFile({ file });
+            setUserData(prev => ({ ...prev, avatar_url: file_url }));
+            toast.success('Foto de perfil atualizada!');
+        } catch (error) {
+            console.error("Erro ao fazer upload:", error);
+            toast.error('Erro ao fazer upload da foto.');
+        } finally {
+            setIsUploadingAvatar(false);
+        }
+    };
+
     const toggleLevel = (levelId) => {
         setSelectedLevels(prev => {
             const newLevels = prev.includes(levelId) 
