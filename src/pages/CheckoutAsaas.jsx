@@ -36,6 +36,31 @@ export default function CheckoutAsaas() {
   }, [shippingOptions, selectedShipping]);
   const totalWithShipping = useMemo(() => Number(total) + Number(shippingCost || 0), [total, shippingCost]);
 
+  const searchCep = async (cep) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await res.json();
+      if (data.erro) { return; }
+      setAddress(prev => ({
+        ...prev,
+        street: data.logradouro || prev.street,
+        neighborhood: data.bairro || prev.neighborhood,
+        city: data.localidade || prev.city,
+        state: data.uf || prev.state,
+      }));
+    } catch {}
+  };
+
+  const handleCepChange = (e) => {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length > 8) v = v.slice(0,8);
+    if (v.length > 5) v = `${v.slice(0,5)}-${v.slice(5)}`;
+    setAddress(prev => ({ ...prev, zip: v }));
+    if (v.replace(/\D/g,'').length === 8) searchCep(v);
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -232,7 +257,7 @@ export default function CheckoutAsaas() {
                 <div className="grid sm:grid-cols-3 gap-4">
                   <div>
                     <Label className="text-gray-700">CEP</Label>
-                    <Input value={address.zip} onChange={(e)=>setAddress(v=>({...v, zip: e.target.value}))} placeholder="00000-000" className="mt-1 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400" />
+                    <Input value={address.zip} onChange={handleCepChange} placeholder="00000-000" maxLength={9} className="mt-1 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400" />
                   </div>
                   <div className="sm:col-span-2">
                     <Label className="text-gray-700">Rua</Label>

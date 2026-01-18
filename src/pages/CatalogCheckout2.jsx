@@ -30,7 +30,36 @@ export default function CatalogCheckout2() {
     const [addressCity, setAddressCity] = useState('');
     const [addressState, setAddressState] = useState('');
     const [addressZip, setAddressZip] = useState('');
+    const [isLoadingCep, setIsLoadingCep] = useState(false);
     const navigate = useNavigate();
+
+    const searchCep = async (cep) => {
+        const cleanCep = cep.replace(/\D/g, '');
+        if (cleanCep.length !== 8) return;
+        setIsLoadingCep(true);
+        try {
+            const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+            const data = await res.json();
+            if (data.erro) { toast.error('CEP não encontrado'); return; }
+            setAddressStreet(prev => data.logradouro || prev);
+            setAddressNeighborhood(prev => data.bairro || prev);
+            setAddressCity(prev => data.localidade || prev);
+            setAddressState(prev => data.uf || prev);
+            toast.success('Endereço preenchido pelo CEP');
+        } catch (e) {
+            toast.error('Erro ao buscar CEP');
+        } finally {
+            setIsLoadingCep(false);
+        }
+    };
+
+    const handleCepChange = (e) => {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 8) v = v.slice(0,8);
+        if (v.length > 5) v = `${v.slice(0,5)}-${v.slice(5)}`;
+        setAddressZip(v);
+        if (v.replace(/\D/g,'').length === 8) searchCep(v);
+    };
 
     const handleCreatePreference = async () => {
         // Validações básicas

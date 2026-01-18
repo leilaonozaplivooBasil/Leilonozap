@@ -20,6 +20,7 @@ export default function CatalogCheckout() {
   const [product, setProduct] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -75,6 +76,37 @@ export default function CatalogCheckout() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const searchCep = async (cep) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+    setIsLoadingCep(true);
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await res.json();
+      if (data.erro) { toast.error('CEP não encontrado'); return; }
+      setFormData(prev => ({
+        ...prev,
+        address_street: data.logradouro || prev.address_street,
+        address_neighborhood: data.bairro || prev.address_neighborhood,
+        address_city: data.localidade || prev.address_city,
+        address_state: data.uf || prev.address_state
+      }));
+      toast.success('Endereço preenchido pelo CEP');
+    } catch (e) {
+      toast.error('Erro ao buscar CEP');
+    } finally {
+      setIsLoadingCep(false);
+    }
+  };
+
+  const handleCepChange = (e) => {
+    let v = e.target.value.replace(/\D/g, '');
+    if (v.length > 8) v = v.slice(0,8);
+    if (v.length > 5) v = `${v.slice(0,5)}-${v.slice(5)}`;
+    setFormData(prev => ({ ...prev, address_zip_code: v }));
+    if (v.replace(/\D/g,'').length === 8) searchCep(v);
   };
 
   const handleInputChange = (e) => {
@@ -336,11 +368,13 @@ export default function CatalogCheckout() {
                 <div className="col-span-2">
                   <Label className="text-gray-300">CEP</Label>
                   <Input
-                    name="address_zip_code"
-                    value={formData.address_zip_code}
-                    onChange={handleInputChange}
-                    className="bg-gray-700 border-gray-600 text-white mt-1"
-                  />
+                     name="address_zip_code"
+                     value={formData.address_zip_code}
+                     onChange={handleCepChange}
+                     placeholder="00000-000"
+                     maxLength={9}
+                     className="bg-gray-700 border-gray-600 text-white mt-1"
+                   />
                 </div>
               </div>
             </CardContent>
