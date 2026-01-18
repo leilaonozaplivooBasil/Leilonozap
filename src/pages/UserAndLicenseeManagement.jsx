@@ -4,11 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { Search, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import CareerGroupBuilder from '@/components/admin/CareerGroupBuilder';
 
 const AppUser = base44.entities.AppUser;
 
@@ -17,7 +16,6 @@ export default function UserAndLicenseeManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [expandedCargo, setExpandedCargo] = useState(null);
-  const [showGroupBuilder, setShowGroupBuilder] = useState(false);
   const navigate = useNavigate();
 
   const allCareerLevels = [
@@ -114,13 +112,7 @@ export default function UserAndLicenseeManagement() {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
-
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-white">Gerenciamento de Usuários e Sistema de Alavancagem</h1>
-          <Button onClick={() => setShowGroupBuilder(true)} className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Criar Grupos por Cargo
-          </Button>
-        </div>
+        <h1 className="text-3xl font-bold text-white mb-6">Gerenciamento de Usuários e Sistema de Alavancagem</h1>
 
         <Tabs defaultValue="licensees" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-gray-800 border border-gray-700">
@@ -247,8 +239,6 @@ export default function UserAndLicenseeManagement() {
             </Card>
           </TabsContent>
         </Tabs>
-
-        {showGroupBuilder && <CareerGroupBuilder onClose={() => setShowGroupBuilder(false)} />}
       </div>
     </div>
   );
