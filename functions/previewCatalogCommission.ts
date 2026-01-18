@@ -164,7 +164,12 @@ Deno.serve(async (req) => {
             const stepPercent = step.percent;
 
             if (step.id === 'licenciado_catalogo') {
-              assignments.push({ role: step.id, user: anchor, percent: stepPercent });
+              // Só atribui se o âncora realmente tiver o cargo
+              if (hasRole(anchor, 'licenciado_catalogo')) {
+                assignments.push({ role: step.id, user: anchor, percent: stepPercent });
+              } else {
+                leftoverLow += stepPercent;
+              }
               continue;
             }
 
