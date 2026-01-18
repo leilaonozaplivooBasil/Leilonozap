@@ -210,14 +210,10 @@ Deno.serve(async (req) => {
                 }
             },
             external_reference: externalReference,
-            back_urls: product_id ? {
-                success: `${req.headers.get('origin')}/Catalog`,
-                failure: `${req.headers.get('origin')}/CatalogCheckout2?product_id=${product_id}`,
-                pending: `${req.headers.get('origin')}/Catalog`
-            } : {
-                success: `${req.headers.get('origin')}/MyWinnings`,
-                failure: `${req.headers.get('origin')}/Checkout?auction_id=${auction_id}`,
-                pending: `${req.headers.get('origin')}/MyWinnings`
+            back_urls: {
+                success: `${req.headers.get('origin')}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`,
+                failure: `${req.headers.get('origin')}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`,
+                pending: `${req.headers.get('origin')}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`
             },
             auto_return: 'all',
             notification_url: `${req.headers.get('origin')}/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,

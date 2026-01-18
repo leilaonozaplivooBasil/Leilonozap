@@ -56,11 +56,18 @@ Deno.serve(async (req) => {
 
                         // Se aprovado, marcar leilão como pago
                         if (payment.status === 'approved') {
-                            await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
-                                order_status: 'paid'
-                            });
-
-                            console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
+                            if (dbPayment.auction_id) {
+                                await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
+                                    order_status: 'paid'
+                                });
+                                console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
+                            }
+                            if (dbPayment.catalog_sale_id) {
+                                await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
+                                    status: 'paid'
+                                });
+                                console.log(`🛒 CatalogSale ${dbPayment.catalog_sale_id} marcada como paga`);
+                            }
                         }
                     } else {
                         console.log('⚠️ Pagamento não encontrado no banco:', externalRef);

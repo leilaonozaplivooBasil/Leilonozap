@@ -347,6 +347,29 @@ export default function CheckoutPage() {
         };
     }, [preferenceId, publicKey]);
 
+    // Monitorar a confirmação do pagamento via webhook e redirecionar
+    useEffect(() => {
+        if (!preferenceId) return;
+        let stopped = false;
+        const interval = setInterval(async () => {
+            try {
+                const list = await base44.entities.MercadoPagoPayment.filter({ preference_id: preferenceId });
+                if (list && list.length > 0) {
+                    const p = list[0];
+                    if (p.status === 'approved') {
+                        clearInterval(interval);
+                        if (!stopped) {
+                            toast.success('Pagamento aprovado!');
+                            const ref = encodeURIComponent(p.external_reference || '');
+                            navigate(createPageUrl('OrderStatusMP') + (ref ? `?ref=${ref}` : ''));
+                        }
+                    }
+                }
+            } catch (_) {}
+        }, 3000);
+        return () => { stopped = true; clearInterval(interval); };
+    }, [preferenceId]);
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-900 flex items-center justify-center">
