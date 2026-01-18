@@ -248,6 +248,8 @@ export default function UserAndLicenseeManagement() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {showGroupBuilder && <CareerGroupBuilder onClose={() => setShowGroupBuilder(false)} />}
       </div>
     </div>
   );
