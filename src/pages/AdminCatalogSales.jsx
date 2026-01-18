@@ -219,7 +219,7 @@ export default function AdminCatalogSales() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
             <Package className="w-8 h-8 text-green-400" />
-            Minhas Vendas
+            Painel de Alavancagem
           </h1>
           <p className="text-gray-400">Acompanhe suas vendas de leilão e catálogo</p>
           <div className="mt-3">
