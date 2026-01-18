@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export default function RotatingBanner({ banners }) {
+export default function RotatingBanner({ banners }) { if (!Array.isArray(banners) || banners.length === 0) return null;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
