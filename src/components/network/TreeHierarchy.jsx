@@ -1,24 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronDown, Users, Store, TrendingUp, Crown, Award, Zap, Target } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-const getCareerIcon = (level) => {
-  const icons = {
-    usuario: <Users className="w-6 h-6" />,
-    licenciado_aplicativo: <Zap className="w-6 h-6" />,
-    licenciado_catalogo: <Store className="w-6 h-6" />,
-    influencer: <Target className="w-6 h-6" />,
-    trainee: <Award className="w-6 h-6" />,
-    executivo: <Crown className="w-6 h-6" />,
-    kit_start: <TrendingUp className="w-6 h-6" />,
-    plano_lider: <Crown className="w-6 h-6" />,
-    plano_lojista: <Store className="w-6 h-6" />,
-    distribuidor: <TrendingUp className="w-6 h-6" />,
-    diretor: <Crown className="w-6 h-6" />,
-    diretoria: <Crown className="w-6 h-6" />,
-  };
-  return icons[level] || <Users className="w-6 h-6" />;
-};
 
 const getCareerColor = (level) => {
   const colors = {
