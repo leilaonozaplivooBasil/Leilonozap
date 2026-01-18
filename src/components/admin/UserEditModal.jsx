@@ -182,6 +182,40 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                     <div className="space-y-4">
                         <h3 className="text-sm font-semibold text-green-400">📋 Dados Básicos</h3>
                         
+                        {/* AVATAR UPLOAD */}
+                        <div className="flex items-center gap-4 p-4 bg-gray-700/30 rounded-lg border border-gray-600">
+                            <div className="w-16 h-16 rounded-full border-2 border-gray-600 overflow-hidden flex-shrink-0 bg-gray-700 flex items-center justify-center">
+                                {userData.avatar_url ? (
+                                    <img src={userData.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="text-gray-400 text-xs text-center px-1">Sem foto</span>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <Label htmlFor="avatar-upload" className="text-xs text-gray-400 mb-2 block">
+                                    Foto de Perfil
+                                </Label>
+                                <input
+                                    id="avatar-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleAvatarUpload}
+                                    disabled={isUploadingAvatar}
+                                    className="hidden"
+                                />
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700"
+                                    onClick={() => document.getElementById('avatar-upload')?.click()}
+                                    disabled={isUploadingAvatar}
+                                >
+                                    <Upload className="w-3 h-3 mr-2" />
+                                    {isUploadingAvatar ? 'Enviando...' : 'Escolher Foto'}
+                                </Button>
+                            </div>
+                        </div>
+                        
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="name" className="text-right text-gray-300">Nome</Label>
                             <Input 
