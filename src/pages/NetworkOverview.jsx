@@ -374,40 +374,53 @@ function NetworkTree({ users, onPromote, onEdit, onRelink }) {
           
           {/* Botões de ação */}
           <div className="flex items-center gap-2">
-            <Button 
-              size="sm" 
-              className="bg-green-600 hover:bg-green-700 h-8 px-3 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                onPromote(user);
-              }}
-            >
-              <Award className="w-3 h-3" />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="outline"
-              className="border-blue-500 text-blue-400 hover:bg-blue-500/10 h-8 px-3 text-xs"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(user);
-              }}
-            >
-              <Pencil className="w-3 h-3" />
-            </Button>
-            
-            {/* Botão expandir/recolher */}
-            {hasChildren && (
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleExpand(user.id);
-                }}
-                className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-700"
-              >
-                {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-              </button>
-            )}
+           <Button 
+             size="sm" 
+             className="bg-green-600 hover:bg-green-700 h-8 px-3 text-xs"
+             onClick={(e) => {
+               e.stopPropagation();
+               onPromote(user);
+             }}
+           >
+             <Award className="w-3 h-3" />
+           </Button>
+           <Button 
+             size="sm" 
+             variant="outline"
+             className="border-blue-500 text-blue-400 hover:bg-blue-500/10 h-8 px-3 text-xs"
+             onClick={(e) => {
+               e.stopPropagation();
+               onEdit(user);
+             }}
+           >
+             <Pencil className="w-3 h-3" />
+           </Button>
+
+           <Button 
+             size="sm" 
+             variant="destructive"
+             className="bg-red-600 hover:bg-red-700 h-8 px-3 text-xs"
+             onClick={(e) => {
+               e.stopPropagation();
+               onDelete && onDelete(user);
+             }}
+             title="Deletar usuário e todos os dados"
+           >
+             <Trash2 className="w-3 h-3" />
+           </Button>
+
+           {/* Botão expandir/recolher */}
+           {hasChildren && (
+             <button 
+               onClick={(e) => {
+                 e.stopPropagation();
+                 toggleExpand(user.id);
+               }}
+               className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-700"
+             >
+               {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+             </button>
+           )}
           </div>
         </div>
         
