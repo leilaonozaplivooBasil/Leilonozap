@@ -161,7 +161,7 @@ export default function Home() {
 
     // ORIGEM DO PRODUTO
     if (activeSourceFilter === "todos") {
-      filtered = filtered.filter((a) => a.product_source !== 'factory_new');
+      // mantém todos (inclusive factory) sem filtro pesado
     } else if (activeSourceFilter === "factory") {
       filtered = filtered.filter((a) => a.product_source === 'factory_new');
     }
