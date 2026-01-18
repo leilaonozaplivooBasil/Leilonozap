@@ -1228,30 +1228,8 @@ export default function NetworkOverview() {
               <TabsContent value="licensees" className="mt-6">
                 <Card className="bg-gray-800/50 border-gray-700">
                   <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-green-400">Visualização do Sistema de Alavancagem</CardTitle>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => setViewMode('network')}
-                          variant={viewMode === 'network' ? 'default' : 'outline'}
-                          className={viewMode === 'network' ? 'bg-green-600 hover:bg-green-700' : 'border-gray-600 text-gray-300'}
-                          size="sm"
-                        >
-                          <LayoutGrid className="w-4 h-4 mr-2" />
-                          Visão em Árvore
-                        </Button>
-                        <Button
-                          onClick={() => setViewMode('linear')}
-                          variant={viewMode === 'linear' ? 'default' : 'outline'}
-                          className={viewMode === 'linear' ? 'bg-green-600 hover:bg-green-700' : 'border-gray-600 text-gray-300'}
-                          size="sm"
-                        >
-                          <List className="w-4 h-4 mr-2" />
-                          Visão Linear
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
+                     <CardTitle className="text-green-400">Organograma Editável e Gerenciável</CardTitle>
+                   </CardHeader>
                   <CardContent className="overflow-x-auto">
                     {allUsers.length > 0 ? (
                       viewMode === 'network' ? (
