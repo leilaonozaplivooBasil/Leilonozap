@@ -119,8 +119,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
         path.setAttribute('stroke', '#cbd5e1');
         path.setAttribute('stroke-width', '4');
         path.setAttribute('stroke-linecap', 'round');
-        path.setAttribute('stroke-linejoin', 'bevel'); // evita "V"/setinhas nas junções
-        path.setAttribute('stroke-dasharray', '10 8');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-dasharray', '8 8');
         svg.appendChild(path);
       });
 
