@@ -27,6 +27,7 @@ const CAREER_LEVELS = [
 export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUsers = [] }) {
     const [userData, setUserData] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     
     // Estados para níveis de carreira
     const [selectedLevels, setSelectedLevels] = useState([]);
