@@ -11,6 +11,7 @@ import { createMPPreference } from '@/functions/createMPPreference';
 // Para reativar Asaas, trocar chamadas de createMPPreference por createAsaasOrder
 
 const Product = base44.entities.Product;
+const Auction = base44.entities.Auction;
 const CatalogSale = base44.entities.CatalogSale;
 
 export default function CatalogCheckout2() {
@@ -88,10 +89,11 @@ export default function CatalogCheckout2() {
 
             console.log('🛍️ Venda de catálogo criada:', sale.id);
 
-            // Criar preferência MP usando o product (não auction)
+            // Criar preferência MP usando o product (ou auction)
             console.log('🔄 Criando preferência MP para produto:', product.id);
             const response = await createMPPreference({ 
-                product_id: product.id,
+                product_id: product.is_auction ? null : product.id,
+                auction_id: product.is_auction ? product.id : null,
                 catalog_sale_id: sale.id,
                 user_data: {
                     id: savedUser.id,
@@ -152,21 +154,45 @@ export default function CatalogCheckout2() {
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const productId = urlParams.get('product_id');
+                const auctionId = urlParams.get('auction_id');
 
-                if (!productId) {
+                if (!productId && !auctionId) {
                     toast.error('Produto não encontrado');
                     navigate(createPageUrl('Catalog'));
                     return;
                 }
 
-                const products = await Product.filter({ id: productId });
-                if (products.length === 0) {
-                    toast.error('Produto não encontrado');
-                    navigate(createPageUrl('Catalog'));
-                    return;
+                let productData;
+                if (auctionId) {
+                    // Carregar leilão
+                    const auctions = await Auction.filter({ id: auctionId });
+                    if (auctions.length === 0) {
+                        toast.error('Leilão não encontrado');
+                        navigate(createPageUrl('MyWinnings'));
+                        return;
+                    }
+                    const auction = auctions[0];
+                    // Converter auction para formato de produto para compatibilidade
+                    productData = {
+                        id: auction.id,
+                        description: auction.title,
+                        image_urls: auction.image_urls,
+                        price_catalog: auction.current_price,
+                        quantity: 1,
+                        is_auction: true
+                    };
+                } else {
+                    // Carregar produto do catálogo
+                    const products = await Product.filter({ id: productId });
+                    if (products.length === 0) {
+                        toast.error('Produto não encontrado');
+                        navigate(createPageUrl('Catalog'));
+                        return;
+                    }
+                    productData = products[0];
                 }
 
-                setProduct(products[0]);
+                setProduct(productData);
                 setFirstName(savedUser.full_name ? savedUser.full_name.split(' ')[0] : '');
                 setLastName(savedUser.full_name ? savedUser.full_name.split(' ').slice(1).join(' ') : '');
                 setEmail(savedUser.email || '');
