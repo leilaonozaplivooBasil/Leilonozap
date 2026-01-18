@@ -64,9 +64,17 @@ export default function AmbienteDeTeste() {
 
   const groupedRoles = useMemo(() => {
     if (!preview?.records) return [];
+    const ORDER = ['licenciado_catalogo','trainee','executivo','kit_start','plano_lider','plano_lojista','distribuidor','diretor','diretoria','ceo','conselheiro','fundador'];
     const map = new Map();
+    
+    // Inicializa todos os cargos com valores zerados
+    ORDER.forEach(role => {
+      map.set(role, { role, percent: 0, amount: 0, members: [] });
+    });
+    
+    // Preenche com dados reais
     for (const r of preview.records) {
-      if (r.role === 'site_official_rollup') continue; // excluir sobra
+      if (r.role === 'site_official_rollup') continue;
       const key = r.role;
       if (!map.has(key)) {
         map.set(key, { role: key, percent: 0, amount: 0, members: [] });
@@ -76,8 +84,8 @@ export default function AmbienteDeTeste() {
       entry.amount += Number(r.amount || 0);
       entry.members.push({ name: r.user_full_name, percent: Number(r.percent || 0), amount: Number(r.amount || 0) });
     }
-    const ORDER = ['licenciado_catalogo','trainee','executivo','kit_start','plano_lider','plano_lojista','distribuidor','diretor','diretoria','ceo','conselheiro','fundador'];
-    return Array.from(map.values()).sort((a,b) => ORDER.indexOf(a.role) - ORDER.indexOf(b.role));
+    
+    return ORDER.map(role => map.get(role)).filter(Boolean);
   }, [preview]);
 
   const simulate = async () => {
@@ -226,26 +234,39 @@ export default function AmbienteDeTeste() {
                         {groupedRoles.map((g) => (
                           <AccordionItem key={g.role} value={g.role}>
                             <AccordionTrigger className="px-3 py-2 hover:no-underline">
-                              <div className="flex justify-between w-full">
+                              <div className="flex justify-between items-center w-full gap-2">
                                 <span className="font-medium">{roleLabel(g.role)}</span>
-                                <span className="text-right">{g.percent.toFixed(2)}%</span>
+                                <div className="flex items-center gap-2">
+                                  {g.percent === 0 && (
+                                    <span className="text-xs text-yellow-400">→ Repassado ao próximo</span>
+                                  )}
+                                  <span className="text-right">{g.percent.toFixed(2)}%</span>
+                                </div>
                               </div>
                             </AccordionTrigger>
                             <AccordionContent className="px-0 pb-3">
-                              <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide border-b border-gray-700">
-                                <div className="col-span-6">Usuário</div>
-                                <div className="col-span-3 text-right">%</div>
-                                <div className="col-span-3 text-right">Valor (R$)</div>
-                              </div>
-                              <div className="divide-y divide-gray-700">
-                                {g.members.map((m, idx) => (
-                                  <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">
-                                    <div className="col-span-6 truncate">{m.name}</div>
-                                    <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>
-                                    <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                              {g.members.length > 0 ? (
+                                <>
+                                  <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide border-b border-gray-700">
+                                    <div className="col-span-6">Usuário</div>
+                                    <div className="col-span-3 text-right">%</div>
+                                    <div className="col-span-3 text-right">Valor (R$)</div>
                                   </div>
-                                ))}
-                              </div>
+                                  <div className="divide-y divide-gray-700">
+                                    {g.members.map((m, idx) => (
+                                      <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">
+                                        <div className="col-span-6 truncate">{m.name}</div>
+                                        <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>
+                                        <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="px-3 py-4 text-sm text-gray-400 text-center">
+                                  Nenhum usuário neste cargo. Comissão repassada ao próximo nível.
+                                </div>
+                              )}
                             </AccordionContent>
                           </AccordionItem>
                         ))}
