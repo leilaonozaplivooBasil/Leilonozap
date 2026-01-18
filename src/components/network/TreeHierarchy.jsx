@@ -138,12 +138,14 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     return (
       <div className={`flex flex-col items-center gap-8 ${isRoot ? 'w-full' : ''}`} ref={nodeRef}>
         {/* Nó/Bolha */}
-        <div className="relative">
+        <div 
+          className="relative"
+          onMouseEnter={() => setShowTooltip(true)}
+          onMouseLeave={() => setShowTooltip(false)}
+        >
           {/* Bolha melhorada */}
           <button
             onClick={() => hasChildren && toggleNode(node.id)}
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
             className={`
               w-16 h-16 rounded-full ${bgColor}
               flex items-center justify-center
