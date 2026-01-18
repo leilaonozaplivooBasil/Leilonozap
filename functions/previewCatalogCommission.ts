@@ -144,9 +144,9 @@ Deno.serve(async (req) => {
 
           for (let i = 0; i < ROLE_ORDER.length; i++) {
             const step = ROLE_ORDER[i];
+            const stepPercent = step.percent + carryForward;
 
             if (DIRECTOR_PLUS.has(step.id)) {
-              const stepPercent = step.percent + carryForward;
               carryForward = 0; // Reseta o acumulador ao entrar em cargos de diretor+
               const eligible = users
           .filter(u => hasRole(u, step.id))
@@ -162,9 +162,6 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            const stepPercent = step.percent + carryForward;
-            carryForward = 0; // Reseta após adicionar ao percentual atual
-
             if (step.id === 'licenciado_catalogo') {
               // Procura na cadeia alguém com o cargo de licenciado_catalogo
               let assignedUser = null;
@@ -173,6 +170,7 @@ Deno.serve(async (req) => {
               }
               if (assignedUser) {
                 assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+                carryForward = 0; // Zera o acumulador pois foi atribuído
               } else {
                 carryForward = stepPercent; // Passa pro próximo
               }
@@ -186,6 +184,7 @@ Deno.serve(async (req) => {
             }
             if (assignedUser) {
               assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+              carryForward = 0; // Zera o acumulador pois foi atribuído
             } else {
               carryForward = stepPercent; // Acumula para o próximo cargo
             }
