@@ -114,7 +114,6 @@ export default function UserAndLicenseeManagement() {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-6">Gerenciamento de Usuários e Sistema de Alavancagem</h1>
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold text-white">Gerenciamento de Usuários e Sistema de Alavancagem</h1>
