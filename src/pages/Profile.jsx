@@ -208,24 +208,48 @@ export default function Profile() {
   };
 
   const searchCep = async (cep) => {
-    const cleanCep = cep.replace(/\D/g, "");
+    const cleanCep = (cep || '').replace(/\D/g, '');
     if (cleanCep.length !== 8) return;
 
     setIsLoadingCep(true);
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
-      const data = await response.json();
-      if (!data.erro) {
+      let street = '', neighborhood = '', city = '', state = '';
+
+      // ViaCEP (principal)
+      try {
+        const r1 = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const d1 = await r1.json();
+        if (!d1.erro) {
+          street = d1.logradouro || street;
+          neighborhood = d1.bairro || neighborhood;
+          city = d1.localidade || city;
+          state = d1.uf || state;
+        }
+      } catch {}
+
+      // BrasilAPI (fallback)
+      if (!street && !city) {
+        try {
+          const r2 = await fetch(`https://brasilapi.com.br/api/cep/v2/${cleanCep}`);
+          if (r2.ok) {
+            const d2 = await r2.json();
+            street = d2.street || street;
+            neighborhood = d2.neighborhood || neighborhood;
+            city = d2.city || city;
+            state = d2.state || state;
+          }
+        } catch {}
+      }
+
+      if (street || neighborhood || city || state) {
         setEditData(prev => ({
           ...prev,
-          address_street: data.logradouro || prev.address_street,
-          address_neighborhood: data.bairro || prev.address_neighborhood,
-          address_city: data.localidade || prev.address_city,
-          address_state: data.uf || prev.address_state
+          address_street: street || prev.address_street,
+          address_neighborhood: neighborhood || prev.address_neighborhood,
+          address_city: city || prev.address_city,
+          address_state: (state || prev.address_state).toUpperCase()
         }));
       }
-    } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
     } finally {
       setIsLoadingCep(false);
     }
@@ -614,6 +638,7 @@ export default function Profile() {
                         <Input
                           value={editData.address_zip_code}
                           onChange={(e) => handleCepChange(e.target.value)}
+                          onBlur={() => searchCep(editData.address_zip_code)}
                           placeholder="00000-000"
                           maxLength={9}
                           className={isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'}
