@@ -4,20 +4,27 @@ import { Button } from '@/components/ui/button';
 
 const getCareerColor = (level) => {
   const colors = {
-    usuario: 'from-gray-600 to-gray-700',
-    licenciado_aplicativo: 'from-yellow-600 to-yellow-700',
-    licenciado_catalogo: 'from-blue-600 to-blue-700',
-    influencer: 'from-pink-600 to-pink-700',
-    trainee: 'from-purple-600 to-purple-700',
-    executivo: 'from-indigo-600 to-indigo-700',
-    kit_start: 'from-green-600 to-green-700',
-    plano_lider: 'from-red-600 to-red-700',
-    plano_lojista: 'from-cyan-600 to-cyan-700',
-    distribuidor: 'from-orange-600 to-orange-700',
-    diretor: 'from-fuchsia-600 to-fuchsia-700',
-    diretoria: 'from-violet-600 to-violet-700',
+    usuario: 'bg-slate-500',
+    licenciado_aplicativo: 'bg-amber-500',
+    licenciado_catalogo: 'bg-blue-500',
+    influencer: 'bg-pink-500',
+    trainee: 'bg-purple-500',
+    executivo: 'bg-indigo-500',
+    kit_start: 'bg-emerald-500',
+    plano_lider: 'bg-red-500',
+    plano_lojista: 'bg-cyan-500',
+    distribuidor: 'bg-orange-500',
+    diretor: 'bg-fuchsia-500',
+    diretoria: 'bg-violet-500',
   };
-  return colors[level] || 'from-gray-600 to-gray-700';
+  return colors[level] || 'bg-slate-500';
+};
+
+const getInitials = (name) => {
+  if (!name) return '??';
+  const parts = name.trim().split(' ').filter(p => p);
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
 export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
