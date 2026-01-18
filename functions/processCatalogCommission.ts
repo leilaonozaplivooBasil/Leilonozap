@@ -126,10 +126,10 @@ Deno.serve(async (req) => {
     const chain = isLicenseeSale ? await buildAncestorChain(base44, anchorUser) : [anchorUser];
     const allUsers = await base44.asServiceRole.entities.AppUser.list();
 
-    // LÓGICA IDÊNTICA À PREVIEW (TESTE)
+    // CÓPIA EXATA DA LÓGICA DO PREVIEW
     const totalPercent = 27.0;
     const assignments = []; // { role, user, percent }
-    let companyPercent = 0; // Percentuais que ficam com a empresa
+    let companyPercent = 0;
 
     // Identifica o maior cargo do âncora (até distribuidor)
     const anchorMaxRole = (() => {
@@ -147,7 +147,7 @@ Deno.serve(async (req) => {
         // Cargos de diretor+: divide igualmente entre TODOS que possuem o cargo
         const eligible = (Array.isArray(allUsers) ? allUsers : [])
           .filter(u => hasRole(u, step.id))
-          .filter(u => (u.full_name !== 'Leilão NoZap - Site Oficial' && u.email !== 'site@leilaonozap.com' && u.referral_code !== 'site_official'));
+          .filter(u => u.full_name !== 'Leilão NoZap - Site Oficial');
         if (eligible.length > 0) {
           const share = step.percent / eligible.length;
           for (const u of eligible) {
