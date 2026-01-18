@@ -76,9 +76,9 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
           <button
             onClick={() => hasChildren && toggleNode(node.id)}
             className={`
-              w-20 h-20 rounded-full ${bgColor}
+              w-16 h-16 rounded-full ${bgColor}
               flex items-center justify-center
-              text-white font-bold text-sm
+              text-white font-bold text-xs
               hover:shadow-xl transition-all duration-200
               cursor-pointer shadow-md
               relative
