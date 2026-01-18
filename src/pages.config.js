@@ -69,7 +69,6 @@ import TransactionHistory from './pages/TransactionHistory';
 import UserAndLicenseeManagement from './pages/UserAndLicenseeManagement';
 import WalletHistory from './pages/WalletHistory';
 import CommissionDistributionFull from './pages/CommissionDistributionFull';
-import CommissionEligibleUsers from './pages/CommissionEligibleUsers';
 import __Layout from './Layout.jsx';
 
 
@@ -145,7 +144,6 @@ export const PAGES = {
     "UserAndLicenseeManagement": UserAndLicenseeManagement,
     "WalletHistory": WalletHistory,
     "CommissionDistributionFull": CommissionDistributionFull,
-    "CommissionEligibleUsers": CommissionEligibleUsers,
 }
 
 export const pagesConfig = {
