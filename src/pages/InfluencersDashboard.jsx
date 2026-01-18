@@ -169,7 +169,7 @@ export default function InfluencersDashboard() {
     <div className="min-h-screen bg-gray-900 text-white py-8 px-4">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Painel de Influenciadores</h1>
+          <h1 className="text-4xl font-bold mb-2">Painel de Alavancagem</h1>
           <p className="text-gray-400">Gerenciamento completo de indicações Sai de Baixo</p>
         </div>
 
