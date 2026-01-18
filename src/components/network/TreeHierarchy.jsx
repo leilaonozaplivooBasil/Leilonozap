@@ -61,15 +61,28 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     return roots;
   };
 
-  const TreeNode = ({ node, isRoot = false }) => {
+  const nodeRefs = useRef({});
+
+  const TreeNode = ({ node, isRoot = false, parentPos = null }) => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
     const primaryLevel = node.primary_career_level || 'usuario';
     const bgColor = getCareerColor(primaryLevel);
     const initials = getInitials(node.full_name);
+    const nodeRef = useRef(null);
+
+    useEffect(() => {
+      if (nodeRef.current) {
+        const rect = nodeRef.current.getBoundingClientRect();
+        nodeRefs.current[node.id] = {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        };
+      }
+    }, [node.id, isExpanded]);
 
     return (
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center gap-2" ref={nodeRef}>
         {/* Nó/Bolha */}
         <div className="relative group">
           {/* Bolha clean e minimalista */}
@@ -143,28 +156,10 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
 
         {/* Children */}
         {hasChildren && isExpanded && (
-          <div className="relative flex flex-col items-center gap-1">
-            {/* Linha vertical para baixo */}
-            <div className="w-0.5 h-3 bg-slate-400"></div>
-
-            {/* Container com linha horizontal e filhos */}
-            <div className="flex items-center justify-center gap-6 relative">
-              {/* Linha horizontal */}
-              <div className="absolute h-0.5 bg-slate-400" style={{
-                width: `${Math.max(node.children.length - 1, 0) * 80 + 20}px`,
-                top: '-12px'
-              }}></div>
-
-              {/* Filhos */}
-              {node.children.map((child, idx) => (
-                <div key={child.id} className="flex flex-col items-center">
-                  {/* Linha vertical do filho */}
-                  <div className="w-0.5 h-3 bg-slate-400"></div>
-                  {/* Nó filho */}
-                  <TreeNode node={child} />
-                </div>
-              ))}
-            </div>
+          <div className="flex items-center justify-center gap-6">
+            {node.children.map((child, idx) => (
+              <TreeNode key={child.id} node={child} parentPos={nodeRefs.current[node.id]} />
+            ))}
           </div>
         )}
       </div>
