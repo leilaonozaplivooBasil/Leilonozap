@@ -7,9 +7,9 @@ const ROLE_ORDER = [
   { id: 'trainee', percent: 0.5 },
   { id: 'executivo', percent: 0.5 },
   { id: 'kit_start', percent: 1.0 },
-  { id: 'plano_lider', percent: 2.5 },
+  { id: 'plano_lider', percent: 1.0 },
   { id: 'plano_lojista', percent: 3.0 },
-  { id: 'distribuidor', percent: 2.0 },
+  { id: 'distribuidor', percent: 1.0 },
   { id: 'diretor', percent: 0.5 },
   { id: 'diretoria', percent: 0.5 },
   { id: 'ceo', percent: 3.0 },
@@ -119,58 +119,68 @@ Deno.serve(async (req) => {
     const chain = await buildAncestorChain(base44, anchorUser);
     const allUsers = await base44.asServiceRole.entities.AppUser.list();
 
-    // Distribuição
-              const totalPercent = 27.0;
-              const assignments = []; // { role, user, percent }
-              let leftoverLow = 0; // percentuais sem elegível até distribuidor
-              let carryTop = 0; // acumula cargos executivos quando não há elegíveis
+    // Nova lógica: âncora recebe todos os cargos até o seu plano
+    const totalPercent = 27.0;
+    const assignments = []; // { role, user, percent }
+    let companyPercent = 0; // Percentuais que ficam com a empresa
 
-              for (let i = 0; i < ROLE_ORDER.length; i++) {
+    // Identifica o maior cargo do âncora (até distribuidor)
+    const anchorMaxRole = (() => {
+      const roleHierarchy = ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor'];
+      for (let i = roleHierarchy.length - 1; i >= 0; i--) {
+        if (hasRole(anchorUser, roleHierarchy[i])) return roleHierarchy[i];
+      }
+      return null;
+    })();
+
+    for (let i = 0; i < ROLE_ORDER.length; i++) {
       const step = ROLE_ORDER[i];
 
       if (DIRECTOR_PLUS.has(step.id)) {
-        // Cargos executivos: NUNCA consomem carryLow; pagam só o percentual próprio
-        const stepPercent = step.percent;
+        // Cargos de diretor+: divide igualmente entre TODOS que possuem o cargo
         const eligible = (Array.isArray(allUsers) ? allUsers : [])
-            .filter(u => hasRole(u, step.id))
-            .filter(u => (u.full_name !== 'Leilão NoZap - Site Oficial' && u.email !== 'site@leilaonozap.com' && u.referral_code !== 'site_official'));
+          .filter(u => hasRole(u, step.id))
+          .filter(u => (u.full_name !== 'Leilão NoZap - Site Oficial' && u.email !== 'site@leilaonozap.com' && u.referral_code !== 'site_official'));
         if (eligible.length > 0) {
-          const share = stepPercent / eligible.length;
+          const share = step.percent / eligible.length;
           for (const u of eligible) {
             assignments.push({ role: step.id, user: u, percent: share });
           }
         } else {
-          carryTop += stepPercent;
+          companyPercent += step.percent;
         }
         continue;
       }
 
-      // Até Distribuidor: paga exatamente o percentual do cargo ao primeiro na árvore
-      const stepPercent = step.percent;
+      // Para cargos até distribuidor: âncora recebe tudo até o seu cargo máximo
+      const roleHierarchy = ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor'];
+      const stepIndex = roleHierarchy.indexOf(step.id);
+      const anchorMaxIndex = anchorMaxRole ? roleHierarchy.indexOf(anchorMaxRole) : -1;
 
-      if (step.id === 'licenciado_catalogo') {
-        assignments.push({ role: step.id, user: anchorUser, percent: stepPercent });
-        continue;
-      }
-
-      // Paga para o primeiro na ÁRVORE que possua o cargo; se não houver, acumula em leftoverLow
-      let assignedUser = null;
-      for (const u of chain) {
-        if (hasRole(u, step.id)) { assignedUser = u; break; }
-      }
-      if (assignedUser) {
-        assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
+      if (stepIndex >= 0 && stepIndex <= anchorMaxIndex) {
+        // Âncora recebe este cargo
+        assignments.push({ role: step.id, user: anchorUser, percent: step.percent });
+      } else if (stepIndex > anchorMaxIndex) {
+        // Cargo acima do âncora: procura na cadeia
+        let assignedUser = null;
+        for (const u of chain) {
+          if (u.id !== anchorUser.id && hasRole(u, step.id)) { assignedUser = u; break; }
+        }
+        if (assignedUser) {
+          assignments.push({ role: step.id, user: assignedUser, percent: step.percent });
+        } else {
+          companyPercent += step.percent;
+        }
       } else {
-        leftoverLow += stepPercent;
+        // Âncora não tem este cargo: fica com a empresa
+        companyPercent += step.percent;
       }
     }
 
-    // Sobra no topo -> Site Oficial
-              const leftover = (leftoverLow + carryTop);
-              if (leftover > 0.000001) {
-                const site = await getOrCreateSiteOfficial(base44);
-                assignments.push({ role: 'site_official_rollup', user: site, percent: leftover });
-              }
+    if (companyPercent > 0.000001) {
+      const site = await getOrCreateSiteOfficial(base44);
+      assignments.push({ role: 'site_official_rollup', user: site, percent: companyPercent });
+    }
 
     // Calcula valores e consolida por usuário
     const records = [];
