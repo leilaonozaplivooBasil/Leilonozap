@@ -101,9 +101,10 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, skipped: true, reason: 'Sale not paid' });
     }
 
-    const totalAmount = Number((sale.total_amount ?? sale.sale_price ?? 0));
+    const totalAmount = Number((sale.total_amount ?? sale.sale_price ?? sale.amount ?? 0));
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
-      return Response.json({ error: 'Invalid or missing total_amount/sale_price on sale' }, { status: 400 });
+      console.log('Sale data:', sale);
+      return Response.json({ error: 'Invalid or missing total_amount/sale_price/amount on sale', sale_fields: Object.keys(sale.data || {}) }, { status: 400 });
     }
 
     // Resolve âncora
