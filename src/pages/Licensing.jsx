@@ -33,6 +33,7 @@ import UserEditModal from '../components/admin/UserEditModal';
 import UserPasswordModal from '../components/admin/UserPasswordModal';
 import EarningsSimulator from '../components/licensing/EarningsSimulator';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
+import DraggableUserHierarchy from '../components/licensing/DraggableUserHierarchy';
 import CatalogProductCard from '../components/catalog/CatalogProductCard';
 import RotatingBanner from '../components/banner/RotatingBanner';
 import CatalogHome from '../components/lojista/CatalogHome';
