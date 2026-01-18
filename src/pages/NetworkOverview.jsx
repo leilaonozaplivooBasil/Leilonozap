@@ -1230,25 +1230,9 @@ export default function NetworkOverview() {
                   <CardHeader>
                      <CardTitle className="text-green-400">Organograma Editável e Gerenciável</CardTitle>
                    </CardHeader>
-                  <CardContent className="overflow-x-auto">
+                  <CardContent>
                     {allUsers.length > 0 ? (
-                      viewMode === 'network' ? (
-                        <NetworkTree users={allUsers} onPromote={handlePromote} onEdit={handleEditUser} onRelink={handleRelink} />
-                      ) : (
-                        <div className="grid gap-4">
-                          {allUsers.map(user => (
-                            <UserCard
-                              key={user.id}
-                              user={user}
-                              level={0}
-                              onPromote={handlePromote}
-                              onEdit={handleEditUser}
-                              isLinearView={true}
-                              allUsers={allUsers}
-                            />
-                          ))}
-                        </div>
-                      )
+                      <EditableOrganigramTree users={allUsers} />
                     ) : (
                       <div className="text-center py-12 text-gray-500">
                         <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
