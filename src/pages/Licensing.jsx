@@ -1934,6 +1934,21 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </AccordionContent>
               </AccordionItem>
 
+              <AccordionItem value="reorganizar" className="bg-gray-800 border-gray-700 rounded-lg overflow-hidden">
+                <AccordionTrigger className="px-6 hover:bg-gray-700/50">
+                  <div className="flex items-center gap-3">
+                    <GripVertical className="w-5 h-5 text-purple-400" />
+                    <span className="text-white font-semibold">Reorganizar Hierarquia</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="px-6 pb-6">
+                  <DraggableUserHierarchy 
+                    users={allUsers} 
+                    isLoading={isLoadingUsers}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
               <AccordionItem value="clean" className="bg-gray-800 border-gray-700 rounded-lg overflow-hidden">
                 <AccordionTrigger className="px-6 hover:bg-gray-700/50">
                   <div className="flex items-center gap-3">
