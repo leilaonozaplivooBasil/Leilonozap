@@ -135,9 +135,7 @@ export default function DraggableUserHierarchy({ users, onReorder, isLoading }) 
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className={`space-y-2 transition-colors ${
-                    snapshot.isDraggingOver ? 'bg-gray-700/30 rounded-lg p-2' : ''
-                  }`}
+                  className="space-y-2"
                 >
                   {hierarchy.map((user, index) => (
                     <Draggable
@@ -147,21 +145,32 @@ export default function DraggableUserHierarchy({ users, onReorder, isLoading }) 
                       isDragDisabled={reordering}
                     >
                       {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                        >
-                          <UserCard
-                            user={user}
-                            index={index}
-                            isDragging={snapshot.isDragging}
-                          />
-                        </div>
+                        <>
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                          >
+                            <UserCard
+                              user={user}
+                              index={index}
+                              isDragging={snapshot.isDragging}
+                            />
+                          </div>
+                          {snapshot.isDraggingOver && (
+                            <div className="h-2 bg-blue-500/50 rounded-full my-1 animate-pulse" />
+                          )}
+                        </>
                       )}
                     </Draggable>
                   ))}
                   {provided.placeholder}
+                  
+                  {snapshot.isDraggingOver && (
+                    <div className="h-12 border-2 border-dashed border-blue-500 rounded-lg flex items-center justify-center bg-blue-500/10">
+                      <span className="text-blue-400 font-semibold">⬇️ Solte aqui</span>
+                    </div>
+                  )}
                 </div>
               )}
             </Droppable>
