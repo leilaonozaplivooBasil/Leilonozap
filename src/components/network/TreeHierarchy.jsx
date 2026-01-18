@@ -113,7 +113,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
         const elbowY = rootBottomY + 160;     // altura fixa do cotovelo para todas as linhas (um pouco mais baixo)
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const d = `M ${rootPos.x} ${rootBottomY} L ${cpos.x} ${elbowY} L ${cpos.x} ${childTopY}`;
+        const d = `M ${rootPos.x} ${rootBottomY} L ${cpos.x} ${elbowY} L ${cpos.x} ${childTopY - 10}`; // pequeno respiro antes do círculo
         path.setAttribute('d', d);
         path.setAttribute('fill', 'none');
         path.setAttribute('stroke', '#cbd5e1');
