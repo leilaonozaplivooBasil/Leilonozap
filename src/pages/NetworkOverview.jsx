@@ -3,8 +3,6 @@ import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
-const Group = base44.entities.Group;
-const GroupMember = base44.entities.GroupMember;
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +24,6 @@ import { cleanSiteDuplicates } from "@/functions/cleanSiteDuplicates"; // Update
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
-import GroupHierarchy from "../components/admin/GroupHierarchy";
 
 const CAREER_LEVELS = [
   { id: 'usuario', name: 'Usuário', color: 'bg-gray-500', textColor: 'text-gray-400', borderColor: 'border-gray-500' },
@@ -494,8 +491,6 @@ export default function NetworkOverview() {
   const [currentUser, setCurrentUser] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
   const [allAuctions, setAllAuctions] = useState([]);
-  const [allGroups, setAllGroups] = useState([]);
-  const [allGroupMembers, setAllGroupMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [promotingUser, setPromotingUser] = useState(null);
   const [selectedLevels, setSelectedLevels] = useState([]);
@@ -553,13 +548,9 @@ export default function NetworkOverview() {
     try {
       const users = await AppUser.list("-created_date", 1000);
       const auctions = await Auction.list("-created_date", 500);
-      const groups = await Group.list("-created_date", 500);
-      const groupMembers = await GroupMember.list("-created_date", 1000);
 
       setAllUsers(Array.isArray(users) ? users : []);
       setAllAuctions(Array.isArray(auctions) ? auctions : []);
-      setAllGroups(Array.isArray(groups) ? groups : []);
-      setAllGroupMembers(Array.isArray(groupMembers) ? groupMembers : []);
       
       // Auto-link órfãos (role=user) ao Site Oficial
       try {
@@ -1221,112 +1212,70 @@ export default function NetworkOverview() {
           <CardContent>
             {/* 🔧 AGORA SÓ 2 ABAS (removido Laboratório) */}
             <Tabs defaultValue="licensees" className="w-full">
-             <TabsList className="grid w-full grid-cols-3 bg-gray-700/50">
-               <TabsTrigger value="licensees">
-                 <Award className="w-4 h-4 mr-2" />
-                 Licenciados
-               </TabsTrigger>
-               <TabsTrigger value="users">
-                 <Users className="w-4 h-4 mr-2" />
-                 Usuários Gerais
-               </TabsTrigger>
-               <TabsTrigger value="hierarchy">
-                 <LayoutGrid className="w-4 h-4 mr-2" />
-                 Hierarquia por Cargo
-               </TabsTrigger>
-             </TabsList>
+              <TabsList className="grid w-full grid-cols-2 bg-gray-700/50">
+                <TabsTrigger value="licensees">
+                  <Award className="w-4 h-4 mr-2" />
+                  Licenciados
+                </TabsTrigger>
+                <TabsTrigger value="users">
+                  <Users className="w-4 h-4 mr-2" />
+                  Usuários Gerais
+                </TabsTrigger>
+              </TabsList>
 
-              {/* ABA 1: LICENCIADOS - GRUPOS */}
+              {/* ABA 1: LICENCIADOS */}
               <TabsContent value="licensees" className="mt-6">
-                <GroupHierarchy 
-                  groups={allGroups} 
-                  users={allUsers}
-                  groupMembers={allGroupMembers}
-                  onRefresh={fetchData}
-                />
-              </TabsContent>
-
-              {/* ABA 3: HIERARQUIA POR CARGO */}
-              <TabsContent value="hierarchy" className="mt-6">
-                <Card className="bg-gray-800 border-gray-700">
+                <Card className="bg-gray-800/50 border-gray-700">
                   <CardHeader>
-                    <CardTitle className="text-green-400">Hierarquia Organizada por Cargo</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {CAREER_LEVELS.slice().reverse().map(level => {
-                        const usersWithLevel = allUsers.filter(u => {
-                          const levels = Array.isArray(u.career_levels) ? u.career_levels : [];
-                          return levels.includes(level.id);
-                        });
-
-                        if (usersWithLevel.length === 0) return null;
-
-                        return (
-                          <Accordion key={level.id} type="single" collapsible>
-                            <AccordionItem value={level.id}>
-                              <AccordionTrigger className="px-4 py-3 rounded-lg bg-gray-700/50 hover:bg-gray-700 border-l-4" style={{ borderColor: level.color.replace('bg-', '') }}>
-                                <div className="flex items-center gap-3 flex-1">
-                                  <Badge className={`${level.color} text-white`}>{level.name}</Badge>
-                                  <span className="text-gray-400 text-sm">{usersWithLevel.length} usuário(s)</span>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent className="pt-4 space-y-3">
-                                {usersWithLevel.map(user => {
-                                  const indicados = allUsers.filter(u => u.referred_by_id === user.id);
-                                  const hasIndicados = indicados.length > 0;
-
-                                  return (
-                                    <Card key={user.id} className="bg-gray-700/30 border-gray-600">
-                                      <CardContent className="p-4">
-                                        <div className="flex items-start justify-between gap-4">
-                                          <div className="flex-1">
-                                            <div className="font-semibold text-white">{user.full_name}</div>
-                                            <div className="text-xs text-gray-400 mt-1">{user.email}</div>
-                                            <div className="text-xs text-gray-500 mt-1">Indicados: <strong>{indicados.length}</strong></div>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <Badge className="bg-green-600/30 text-green-300 text-xs">
-                                              V$ {(user.valora_pay_balance || 0).toFixed(0)}
-                                            </Badge>
-                                          </div>
-                                        </div>
-
-                                        {hasIndicados && (
-                                          <div className="mt-4 pt-4 border-t border-gray-600 space-y-2">
-                                            <p className="text-xs font-semibold text-gray-400">Pessoas que indicou:</p>
-                                            <div className="space-y-2">
-                                              {indicados.map(indicado => (
-                                                <div key={indicado.id} className="bg-gray-800/60 rounded p-2 text-xs">
-                                                  <div className="text-green-400 font-semibold">{indicado.full_name}</div>
-                                                  <div className="text-gray-500">{indicado.email}</div>
-                                                  {Array.isArray(indicado.career_levels) && indicado.career_levels.length > 0 && (
-                                                    <div className="mt-1 flex flex-wrap gap-1">
-                                                      {indicado.career_levels.map(lvl => {
-                                                        const lvlConfig = CAREER_LEVELS.find(l => l.id === lvl);
-                                                        return lvlConfig ? (
-                                                          <Badge key={lvl} className={`${lvlConfig.color} text-white text-[10px]`}>
-                                                            {lvlConfig.name}
-                                                          </Badge>
-                                                        ) : null;
-                                                      })}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
-                                      </CardContent>
-                                    </Card>
-                                  );
-                                })}
-                              </AccordionContent>
-                            </AccordionItem>
-                          </Accordion>
-                        );
-                      })}
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-green-400">Visualização do Sistema de Alavancagem</CardTitle>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => setViewMode('network')}
+                          variant={viewMode === 'network' ? 'default' : 'outline'}
+                          className={viewMode === 'network' ? 'bg-green-600 hover:bg-green-700' : 'border-gray-600 text-gray-300'}
+                          size="sm"
+                        >
+                          <LayoutGrid className="w-4 h-4 mr-2" />
+                          Visão em Árvore
+                        </Button>
+                        <Button
+                          onClick={() => setViewMode('linear')}
+                          variant={viewMode === 'linear' ? 'default' : 'outline'}
+                          className={viewMode === 'linear' ? 'bg-green-600 hover:bg-green-700' : 'border-gray-600 text-gray-300'}
+                          size="sm"
+                        >
+                          <List className="w-4 h-4 mr-2" />
+                          Visão Linear
+                        </Button>
+                      </div>
                     </div>
+                  </CardHeader>
+                  <CardContent className="overflow-x-auto">
+                    {allUsers.length > 0 ? (
+                      viewMode === 'network' ? (
+                        <NetworkTree users={allUsers} onPromote={handlePromote} onEdit={handleEditUser} onRelink={handleRelink} />
+                      ) : (
+                        <div className="grid gap-4">
+                          {allUsers.map(user => (
+                            <UserCard
+                              key={user.id}
+                              user={user}
+                              level={0}
+                              onPromote={handlePromote}
+                              onEdit={handleEditUser}
+                              isLinearView={true}
+                              allUsers={allUsers}
+                            />
+                          ))}
+                        </div>
+                      )
+                    ) : (
+                      <div className="text-center py-12 text-gray-500">
+                        <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                        <p>Nenhum usuário no sistema ainda.</p>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

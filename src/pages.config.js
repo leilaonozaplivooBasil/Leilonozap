@@ -17,7 +17,6 @@ import CatalogManagement from './pages/CatalogManagement';
 import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
 import CheckoutAsaas from './pages/CheckoutAsaas';
-import CommissionDistributionFull from './pages/CommissionDistributionFull';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
 import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
@@ -69,7 +68,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserAndLicenseeManagement from './pages/UserAndLicenseeManagement';
 import WalletHistory from './pages/WalletHistory';
-import HierarchyByCareerLevel from './pages/HierarchyByCareerLevel';
+import CommissionDistributionFull from './pages/CommissionDistributionFull';
 import __Layout from './Layout.jsx';
 
 
@@ -93,7 +92,6 @@ export const PAGES = {
     "CatalogProductDetails": CatalogProductDetails,
     "Checkout": Checkout,
     "CheckoutAsaas": CheckoutAsaas,
-    "CommissionDistributionFull": CommissionDistributionFull,
     "CreateAuction": CreateAuction,
     "CreateAuctionV2": CreateAuctionV2,
     "CreateLuxuryAuction": CreateLuxuryAuction,
@@ -145,7 +143,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserAndLicenseeManagement": UserAndLicenseeManagement,
     "WalletHistory": WalletHistory,
-    "HierarchyByCareerLevel": HierarchyByCareerLevel,
+    "CommissionDistributionFull": CommissionDistributionFull,
 }
 
 export const pagesConfig = {
