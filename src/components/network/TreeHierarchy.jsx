@@ -308,6 +308,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
         className="absolute inset-0 w-full h-full pointer-events-none"
         style={{ zIndex: 1, top: 0, left: 0 }}
         preserveAspectRatio="none"
+        shapeRendering="geometricPrecision"
       />
       <div className="relative" style={{ zIndex: 2 }}>
         {roots.map((root) => (
