@@ -82,13 +82,13 @@ export default function DraggableUserHierarchy({ users, onReorder, isLoading }) 
       <div
         className={`flex items-center gap-4 p-4 rounded-lg border-2 transition-all ${
           isDragging
-            ? 'bg-blue-500/20 border-blue-500/50 shadow-lg scale-105'
+            ? 'bg-blue-500/20 border-blue-500/50 shadow-lg scale-105 opacity-70'
             : isDirectorPlus
             ? 'bg-gradient-to-r from-red-900/30 to-orange-900/30 border-red-500/30 hover:border-red-500/60'
             : 'bg-gray-700 border-gray-600 hover:border-gray-500'
         }`}
       >
-        <GripVertical className={`w-5 h-5 flex-shrink-0 ${isDragging ? 'text-blue-400' : 'text-gray-400'}`} />
+        <GripVertical className={`w-5 h-5 flex-shrink-0 ${isDragging ? 'text-blue-400' : 'text-gray-400'} cursor-grab active:cursor-grabbing`} />
         
         <div className="flex-1 min-w-0">
           <h4 className="text-white font-semibold truncate">{user.full_name}</h4>
