@@ -107,20 +107,23 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid or missing total_amount/sale_price/amount on sale', sale_fields: Object.keys(sale.data || {}) }, { status: 400 });
     }
 
-    // Resolve âncora: primeiro tenta o licensee (vendedor), depois referral_code
+    // Resolve âncora: primeiro tenta referral_code, depois licensee
     let anchorUser = null;
-    if (sale.licensee_id) {
-      anchorUser = await findUserById(base44, sale.licensee_id);
+    let isLicenseeSale = false;
+
+    if (sale.referral_code) {
+     anchorUser = await findUserByReferralCode(base44, sale.referral_code);
     }
-    if (!anchorUser && sale.referral_code) {
-      anchorUser = await findUserByReferralCode(base44, sale.referral_code);
+    if (!anchorUser && sale.licensee_id) {
+     anchorUser = await findUserById(base44, sale.licensee_id);
+     isLicenseeSale = true;
     }
     if (!anchorUser) {
-      anchorUser = await getOrCreateSiteOfficial(base44);
+     anchorUser = await getOrCreateSiteOfficial(base44);
     }
 
     // Monta cadeia de ancestrais a partir do âncora
-    const chain = await buildAncestorChain(base44, anchorUser);
+    const chain = isLicenseeSale ? [anchorUser] : await buildAncestorChain(base44, anchorUser);
     const allUsers = await base44.asServiceRole.entities.AppUser.list();
 
     // Nova lógica: âncora recebe todos os cargos até o seu plano
