@@ -1285,50 +1285,16 @@ export default function NetworkOverview() {
               <TabsContent value="licensees" className="mt-6">
                 <Card className="bg-gray-800/50 border-gray-700">
                   <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-green-400">Visualização do Sistema de Alavancagem</CardTitle>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => setViewMode('network')}
-                          variant={viewMode === 'network' ? 'default' : 'outline'}
-                          className={viewMode === 'network' ? 'bg-green-600 hover:bg-green-700' : 'border-gray-600 text-gray-300'}
-                          size="sm"
-                        >
-                          <LayoutGrid className="w-4 h-4 mr-2" />
-                          Visão em Árvore
-                        </Button>
-                        <Button
-                          onClick={() => setViewMode('linear')}
-                          variant={viewMode === 'linear' ? 'default' : 'outline'}
-                          className={viewMode === 'linear' ? 'bg-green-600 hover:bg-green-700' : 'border-gray-600 text-gray-300'}
-                          size="sm"
-                        >
-                          <List className="w-4 h-4 mr-2" />
-                          Visão Linear
-                        </Button>
-                      </div>
-                    </div>
+                    <CardTitle className="text-green-400">Sistema Multinível - Visualização em Árvore</CardTitle>
                   </CardHeader>
                   <CardContent className="overflow-x-auto">
                     {allUsers.length > 0 ? (
-                      viewMode === 'network' ? (
-                        <NetworkTree users={allUsers} onPromote={handlePromote} onEdit={handleEditUser} onRelink={handleRelink} onDelete={handleDeleteUser} />
-                      ) : (
-                        <div className="grid gap-4">
-                          {allUsers.map(user => (
-                            <UserCard
-                                     key={user.id}
-                                     user={user}
-                                     level={0}
-                                     onPromote={handlePromote}
-                                     onEdit={handleEditUser}
-                                     onDelete={handleDeleteUser}
-                                     isLinearView={true}
-                                     allUsers={allUsers}
-                                   />
-                          ))}
-                        </div>
-                      )
+                      <HierarchyTreeVisualization 
+                        users={allUsers}
+                        onEdit={handleEditUser}
+                        onDelete={handleDeleteUser}
+                        onPromote={handlePromote}
+                      />
                     ) : (
                       <div className="text-center py-12 text-gray-500">
                         <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
