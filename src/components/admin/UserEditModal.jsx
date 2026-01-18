@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Award } from 'lucide-react';
+import { Loader2, Award, Upload } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from "sonner";
 
