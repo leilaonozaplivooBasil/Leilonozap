@@ -196,7 +196,21 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
               <Pencil className="w-3 h-3 mr-1" />
               Editar
             </Button>
-          </div>
+            </div>
+            {/* Botão deletar no painel expandido */}
+            {showDetails && (
+            <div className="mt-3 pt-3 border-t border-gray-700">
+              <Button
+                size="sm"
+                variant="destructive"
+                className="w-full text-xs h-8 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => onEdit && onEdit(user) || setEditingUserFull?.(user)}
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Deletar Usuário
+              </Button>
+            </div>
+            )}
         </CardContent>
       </Card>
 
