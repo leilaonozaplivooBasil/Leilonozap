@@ -2381,6 +2381,26 @@ export default function LicensingPage() {
     return labels[level] || 'um Influencer';
   };
 
+  // Mensagens motivacionais por cargo
+  const getMotivationalMessage = (level) => {
+    const messages = {
+      'influencer': 'Continue evoluindo! O próximo passo é se tornar Licenciado Catálogo e desbloquear ainda mais benefícios.',
+      'licenciado_catalogo': 'Você já tem acesso ao catálogo! Cresça sua rede para alcançar os níveis Trainee e Executivo.',
+      'trainee': 'Excelente progresso! Continue expandindo para atingir Executivo e Kit Start.',
+      'executivo': 'Ótimo trabalho! Os próximos níveis são Kit Start, Plano Líder e Plano Lojista.',
+      'kit_start': 'Continue crescendo! Avance para Plano Líder e aumente suas comissões.',
+      'plano_lider': 'Muito bem! Próximo objetivo: Plano Lojista e depois Distribuidor.',
+      'plano_lojista': 'Impressionante! Você está perto de se tornar Distribuidor.',
+      'distribuidor': 'Parabéns! Continue para alcançar Diretor e ingressar na liderança.',
+      'diretor': 'Liderança conquistada! Próximos passos: Diretoria e CEO.',
+      'diretoria': 'Você faz parte da alta direção! Avance para CEO.',
+      'ceo': 'Excelente! Você está quase no topo. Próximo nível: Conselheiro.',
+      'conselheiro': 'Incrível! Um passo do topo absoluto: Fundador.',
+      'fundador': '🏆 Você alcançou o topo absoluto! Como Fundador, você está no nível máximo do sistema. Agora é hora de consolidar seu império e mentorar novos líderes!'
+    };
+    return messages[level] || 'Continue crescendo seu sistema de alavancagem e maximizando seus ganhos.';
+  };
+
   return (
     <>
       <div className={`min-h-screen ${
