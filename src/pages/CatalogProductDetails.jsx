@@ -69,16 +69,21 @@ export default function CatalogProductDetails() {
   };
 
   const handleBuyNow = () => {
+    console.log('🛒 Botão Comprar clicado!');
+    console.log('👤 Current User:', currentUser);
+    console.log('📦 Product:', product);
+    
     if (!currentUser) {
-      const choice = confirm("Para comprar, você precisa estar logado.\n\nOK = Fazer Login\nCancelar = Voltar");
-      if (choice) {
-        navigate(createPageUrl("Register"));
-      }
+      toast.error('Faça login para continuar');
+      navigate(createPageUrl("Register"));
       return;
     }
 
+    const checkoutUrl = createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`;
+    console.log('🔗 Navegando para:', checkoutUrl);
+    
     sessionStorage.setItem('selectedProduct', JSON.stringify(product));
-    navigate(createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`);
+    navigate(checkoutUrl);
   };
 
   const handleShare = async () => {
