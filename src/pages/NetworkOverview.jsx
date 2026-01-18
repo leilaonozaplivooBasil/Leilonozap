@@ -1287,9 +1287,9 @@ export default function NetworkOverview() {
                   <CardHeader>
                     <CardTitle className="text-green-400">Sistema Multinível - Visualização em Árvore</CardTitle>
                   </CardHeader>
-                  <CardContent className="overflow-x-auto">
+                  <CardContent className="p-0">
                     {allUsers.length > 0 ? (
-                      <HierarchyTreeVisualization 
+                      <TreeHierarchy 
                         users={allUsers}
                         onEdit={handleEditUser}
                         onDelete={handleDeleteUser}
