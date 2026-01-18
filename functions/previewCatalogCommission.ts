@@ -135,18 +135,19 @@ Deno.serve(async (req) => {
     // Distribuição conforme a regra enviada:
     // - 27% no total
           // - 13% para o âncora (Licenciado Catálogo)
-          // - Até Distribuidor: paga 100% para o primeiro na ÁRVORE; se não houver, acumula (roll-up) em carryLow
+          // - Até Distribuidor: paga 100% para o primeiro na ÁRVORE; se não houver, acumula para o próximo cargo
           // - De Diretor em diante: dividir igualmente entre TODOS que possuem o cargo; se não houver ninguém, acumula em carryTop
           const totalPercent = 27.0;
           const assignments = []; // { role, user, percent }
-          let leftoverLow = 0;
+          let carryForward = 0; // Acumula percentuais não atribuídos para repassar ao próximo cargo
           let carryTop = 0;
 
           for (let i = 0; i < ROLE_ORDER.length; i++) {
             const step = ROLE_ORDER[i];
 
             if (DIRECTOR_PLUS.has(step.id)) {
-              const stepPercent = step.percent;
+              const stepPercent = step.percent + carryForward;
+              carryForward = 0; // Reseta o acumulador ao entrar em cargos de diretor+
               const eligible = users
           .filter(u => hasRole(u, step.id))
           .filter(u => u.full_name !== 'Leilão NoZap - Site Oficial');
@@ -161,7 +162,8 @@ Deno.serve(async (req) => {
               continue;
             }
 
-            const stepPercent = step.percent;
+            const stepPercent = step.percent + carryForward;
+            carryForward = 0; // Reseta após adicionar ao percentual atual
 
             if (step.id === 'licenciado_catalogo') {
               // Procura na cadeia alguém com o cargo de licenciado_catalogo
@@ -172,12 +174,12 @@ Deno.serve(async (req) => {
               if (assignedUser) {
                 assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
               } else {
-                leftoverLow += stepPercent;
+                carryForward = stepPercent; // Passa pro próximo
               }
               continue;
             }
 
-            // Até Distribuidor: paga exatamente ao primeiro na cadeia; se não houver, acumula para Site Oficial
+            // Até Distribuidor: paga exatamente ao primeiro na cadeia; se não houver, passa pro próximo cargo
             let assignedUser = null;
             for (const u of chain) {
               if (hasRole(u, step.id)) { assignedUser = u; break; }
@@ -185,11 +187,11 @@ Deno.serve(async (req) => {
             if (assignedUser) {
               assignments.push({ role: step.id, user: assignedUser, percent: stepPercent });
             } else {
-              leftoverLow += stepPercent;
+              carryForward = stepPercent; // Acumula para o próximo cargo
             }
           }
 
-          const leftover = (leftoverLow + carryTop);
+          const leftover = (carryForward + carryTop);
           if (leftover > 0.000001) {
             const site = await getOrCreateSiteOfficial(base44);
             assignments.push({ role: 'site_official_rollup', user: simplify(site), percent: leftover });
