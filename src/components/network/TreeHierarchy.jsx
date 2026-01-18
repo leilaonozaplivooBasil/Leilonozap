@@ -113,7 +113,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     return () => clearTimeout(timer);
   }, [expandedNodes, users]);
 
-  const TreeNode = ({ node, depth = 0 }) => {
+  const TreeNode = ({ node, depth = 0, isRoot = false }) => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
     const primaryLevel = node.primary_career_level || 'usuario';
@@ -135,7 +135,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     }, [node.id, isExpanded]);
 
     return (
-      <div className="flex flex-col items-start gap-4" ref={nodeRef}>
+      <div className={`flex flex-col items-center gap-8 ${isRoot ? 'w-full' : ''}`} ref={nodeRef}>
         {/* Nó/Bolha */}
         <div className="relative group">
           {/* Bolha melhorada */}
@@ -165,7 +165,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
           </button>
 
           {/* Tooltip com info e ações */}
-          <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-20 border border-gray-600 shadow-2xl whitespace-nowrap">
+          <div className={`absolute ${isRoot ? 'top-full mt-3' : 'left-full ml-3 top-1/2 -translate-y-1/2'} hidden group-hover:block bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-20 border border-gray-600 shadow-2xl whitespace-nowrap`}>
             <div className="font-bold">{node.full_name}</div>
             <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
 
@@ -208,11 +208,11 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
           </div>
         </div>
 
-        {/* Children - Renderizados em coluna abaixo */}
+        {/* Children - Renderizados em linha horizontal se for raiz, em cascata se for filho */}
         {hasChildren && isExpanded && (
-          <div className="flex flex-col gap-6 ml-12">
+          <div className={isRoot ? "flex flex-row gap-12 justify-center flex-wrap" : "flex flex-col gap-6 ml-12"}>
             {node.children.map((child) => (
-              <TreeNode key={child.id} node={child} depth={depth + 1} />
+              <TreeNode key={child.id} node={child} depth={depth + 1} isRoot={false} />
             ))}
           </div>
         )}
