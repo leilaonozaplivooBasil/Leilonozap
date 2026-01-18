@@ -399,16 +399,16 @@ export default function Layout({ children, currentPageName }) {
       pageName: "AmbienteDeTeste"
     },
     { 
-      title: "Leilões", 
-      isCategory: true,
-      items: [
-        { title: "Criar Leilão", pageName: "CreateAuction" },
-        { title: "👑 Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
-        { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
-        { title: "🔴 Live Shop Sai de Baixo", pageName: "LiveShopControl" },
-        { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
-      ]
-    },
+    title: "Leilões", 
+    isCategory: true,
+    items: [
+    { title: "Criar Leilão", pageName: "CreateAuction" },
+    { title: "👑 Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
+    { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
+    { title: "✨ Direto de Fábrica", pageName: "DiretoDeFabrica" },
+    { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
+    ]
+    }
     { 
     title: "Gestão do Aplicativo", 
     isCategory: true,
