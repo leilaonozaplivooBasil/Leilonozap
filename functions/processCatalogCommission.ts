@@ -159,29 +159,24 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Para cargos até distribuidor: âncora recebe tudo até o seu cargo máximo
-      const roleHierarchy = ['licenciado_catalogo', 'trainee', 'executivo', 'kit_start', 'plano_lider', 'plano_lojista', 'distribuidor'];
-      const stepIndex = roleHierarchy.indexOf(step.id);
-      const anchorMaxIndex = anchorMaxRole ? roleHierarchy.indexOf(anchorMaxRole) : -1;
+      // Para cargos até distribuidor: licensee recebe se tiver, senão divide entre quem tiver
+        const eligible = (Array.isArray(allUsers) ? allUsers : [])
+          .filter(u => hasRole(u, step.id))
+          .filter(u => (u.full_name !== 'Leilão NoZap - Site Oficial' && u.email !== 'site@leilaonozap.com' && u.referral_code !== 'site_official'));
 
-      if (stepIndex >= 0 && stepIndex <= anchorMaxIndex) {
-        // Âncora recebe este cargo
-        assignments.push({ role: step.id, user: anchorUser, percent: step.percent });
-      } else if (stepIndex > anchorMaxIndex) {
-        // Cargo acima do âncora: procura na cadeia (incluindo a âncora)
-        let assignedUser = null;
-        for (const u of chain) {
-          if (hasRole(u, step.id)) { assignedUser = u; break; }
-        }
-        if (assignedUser) {
-          assignments.push({ role: step.id, user: assignedUser, percent: step.percent });
+        if (hasRole(anchorUser, step.id)) {
+          // Licensee tem este cargo: recebe tudo
+          assignments.push({ role: step.id, user: anchorUser, percent: step.percent });
+        } else if (eligible.length > 0) {
+          // Licensee não tem: divide entre quem tiver
+          const share = step.percent / eligible.length;
+          for (const u of eligible) {
+            assignments.push({ role: step.id, user: u, percent: share });
+          }
         } else {
+          // Ninguém tem: fica com empresa
           companyPercent += step.percent;
         }
-      } else {
-        // Âncora não tem este cargo: fica com a empresa
-        companyPercent += step.percent;
-      }
     }
 
     if (companyPercent > 0.000001) {
