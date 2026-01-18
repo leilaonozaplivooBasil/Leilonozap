@@ -2461,7 +2461,7 @@ export default function LicensingPage() {
                     Parabéns! Você é {getLevelLabel(userLevel)} 🎉
                   </h1>
                   <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Você já evoluiu no sistema! Continue crescendo seu sistema de alavancagem e maximizando seus ganhos.
+                    {getMotivationalMessage(userLevel)}
                   </p>
                   <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
                     Ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>comissões em dinheiro real (R$)</strong> + bônus do seu sistema de alavancagem!
