@@ -153,7 +153,8 @@ Deno.serve(async (req) => {
               // Cargos de diretor+: divide igualmente entre TODOS que possuem o cargo
               const eligible = users
                 .filter(u => hasRole(u, step.id))
-                .filter(u => u.full_name !== 'Leilão NoZap - Site Oficial');
+                .filter(u => u.full_name !== 'Leilão NoZap - Site Oficial')
+                .filter(u => u.full_name !== 'Paulo Sergio' && u.full_name !== 'Anderson de Souza Moita');
               if (eligible.length > 0) {
                 const share = step.percent / eligible.length;
                 for (const u of eligible) {
