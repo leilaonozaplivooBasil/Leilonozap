@@ -107,9 +107,12 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Invalid or missing total_amount/sale_price/amount on sale', sale_fields: Object.keys(sale.data || {}) }, { status: 400 });
     }
 
-    // Resolve âncora
+    // Resolve âncora: primeiro tenta o licensee (vendedor), depois referral_code
     let anchorUser = null;
-    if (sale.referral_code) {
+    if (sale.licensee_id) {
+      anchorUser = await findUserById(base44, sale.licensee_id);
+    }
+    if (!anchorUser && sale.referral_code) {
       anchorUser = await findUserByReferralCode(base44, sale.referral_code);
     }
     if (!anchorUser) {
