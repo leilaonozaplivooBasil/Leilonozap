@@ -162,9 +162,18 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
   };
 
   useEffect(() => {
-    const timer = setTimeout(drawSVGConnections, 50);
+    const timer = setTimeout(() => {
+      requestAnimationFrame(() => {
+        drawSVGConnections();
+      });
+    }, 100);
     return () => clearTimeout(timer);
   }, [expandedNodes, users]);
+
+  useEffect(() => {
+    window.addEventListener('resize', drawSVGConnections);
+    return () => window.removeEventListener('resize', drawSVGConnections);
+  }, []);
 
   const TreeNode = ({ node, depth = 0, isRoot = false, parentId = null }) => {
     const isExpanded = expandedNodes.has(node.id);
