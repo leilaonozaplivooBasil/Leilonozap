@@ -60,12 +60,12 @@ const CatalogTab = ({ isSaiDeBaixo }) => {
   }, []);
 
   useEffect(() => {
-    base44.entities.BannerImage.filter({ is_active: true, context: 'catalog' })
-      .then((bannerData) => {
-        const sortedBanners = bannerData.sort((a,b)=>a.order-b.order);
-        setBanners(sortedBanners);
-      })
-      .catch(() => {});
+    base44.entities.BannerImage.filter({ is_active: true, context: 'catalog' }).
+    then((bannerData) => {
+      const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
+      setBanners(sortedBanners);
+    }).
+    catch(() => {});
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -83,11 +83,11 @@ const CatalogTab = ({ isSaiDeBaixo }) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {banners.length > 0 && (
-            <div className="-mt-2">
+          {banners.length > 0 &&
+        <div className="-mt-2">
               <RotatingBanner banners={banners} fit="contain" heightClass="h-56 md:h-72 lg:h-80" />
             </div>
-          )}
+        }
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input
@@ -1184,7 +1184,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     <div className="p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="flex flex-col gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Painel do Alavancagem
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-white">Painel de Alavancagem
 
           </h1>
           <p className="text-sm sm:text-base text-gray-400">
