@@ -113,7 +113,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     return () => clearTimeout(timer);
   }, [expandedNodes, users]);
 
-  const TreeNode = ({ node, depth = 0, isRoot = false }) => {
+  const TreeNode = ({ node, depth = 0, isRoot = false, parentId = null }) => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
     const primaryLevel = node.primary_career_level || 'usuario';
@@ -136,7 +136,11 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     }, [node.id, isExpanded]);
 
     return (
-      <div className={`flex flex-col items-center gap-8 ${isRoot ? 'w-full' : ''}`} ref={nodeRef}>
+      <div 
+        className={`flex flex-col items-center ${isRoot ? 'w-full' : ''}`} 
+        ref={nodeRef}
+        style={{ gap: isRoot ? '60px' : '30px' }}
+      >
         {/* Nó/Bolha */}
         <div 
           className="relative"
@@ -156,6 +160,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
               hover:scale-110
               border-2 border-white/20
               overflow-hidden
+              flex-shrink-0
             `}
           >
             {node.avatar_url ? (
@@ -220,11 +225,13 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
           </div>
         </div>
 
-        {/* Children - Renderizados em linha horizontal se for raiz, em cascata se for filho */}
+        {/* Children - Estrutura em cascata */}
         {hasChildren && isExpanded && (
-          <div className={isRoot ? "flex flex-row gap-12 justify-center flex-wrap" : "flex flex-col gap-6 ml-12"}>
+          <div className={isRoot ? "flex flex-row gap-16 justify-center flex-wrap w-full" : "flex flex-col gap-6"}>
             {node.children.map((child) => (
-              <TreeNode key={child.id} node={child} depth={depth + 1} isRoot={false} />
+              <div key={child.id} className="flex flex-col items-center">
+                <TreeNode node={child} depth={depth + 1} isRoot={false} parentId={node.id} />
+              </div>
             ))}
           </div>
         )}
