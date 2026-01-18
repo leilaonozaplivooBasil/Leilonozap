@@ -77,11 +77,11 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     defs.appendChild(style);
     svg.appendChild(defs);
 
-    // Definir dimensões do SVG
+    // Definir dimensões do SVG garantindo área extra para setas diagonais
     const containerRect = containerRef.current.getBoundingClientRect();
     const container = containerRef.current;
-    svg.setAttribute('width', container.scrollWidth);
-    svg.setAttribute('height', container.scrollHeight);
+    svg.setAttribute('width', Math.max(container.scrollWidth, containerRect.width));
+    svg.setAttribute('height', Math.max(container.scrollHeight, containerRect.height + 200));
 
     // Buscar nós raiz a partir da hierarquia calculada
     const roots = getHierarchy();
