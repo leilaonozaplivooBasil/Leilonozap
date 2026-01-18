@@ -9,6 +9,7 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
+import CareerLevelsReport from './pages/CareerLevelsReport';
 import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
@@ -65,9 +66,9 @@ import SystemDiagnostics from './pages/SystemDiagnostics';
 import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
-import WalletHistory from './pages/WalletHistory';
-import CareerLevelsReport from './pages/CareerLevelsReport';
 import UserAndLicenseeManagement from './pages/UserAndLicenseeManagement';
+import WalletHistory from './pages/WalletHistory';
+import CommissionDistributionFull from './pages/CommissionDistributionFull';
 import __Layout from './Layout.jsx';
 
 
@@ -83,6 +84,7 @@ export const PAGES = {
     "AuctionRoom": AuctionRoom,
     "BannerManagement": BannerManagement,
     "CRM": CRM,
+    "CareerLevelsReport": CareerLevelsReport,
     "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
@@ -139,9 +141,9 @@ export const PAGES = {
     "SystemTest": SystemTest,
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
-    "WalletHistory": WalletHistory,
-    "CareerLevelsReport": CareerLevelsReport,
     "UserAndLicenseeManagement": UserAndLicenseeManagement,
+    "WalletHistory": WalletHistory,
+    "CommissionDistributionFull": CommissionDistributionFull,
 }
 
 export const pagesConfig = {
