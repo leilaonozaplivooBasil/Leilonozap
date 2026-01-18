@@ -515,6 +515,8 @@ export default function NetworkOverview() {
   const [isLinkingOrphans, setIsLinkingOrphans] = useState(false);
   const [editingUserFull, setEditingUserFull] = useState(null);
   const [showMessageDispatcher, setShowMessageDispatcher] = useState(false);
+  const [deletingUserId, setDeletingUserId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
