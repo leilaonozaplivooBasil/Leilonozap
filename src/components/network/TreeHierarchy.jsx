@@ -182,9 +182,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     <div className="w-full overflow-x-auto overflow-y-auto p-8 bg-gray-900 rounded-lg">
       <div className="flex flex-col items-center gap-12 min-w-min">
         {roots.map((root) => (
-          <div key={root.id} className="group">
-            <TreeNode node={root} isRoot={true} />
-          </div>
+          <TreeNode key={root.id} node={root} isRoot={true} />
         ))}
       </div>
     </div>
