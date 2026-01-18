@@ -1212,16 +1212,20 @@ export default function NetworkOverview() {
           <CardContent>
             {/* 🔧 AGORA SÓ 2 ABAS (removido Laboratório) */}
             <Tabs defaultValue="licensees" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 bg-gray-700/50">
-                <TabsTrigger value="licensees">
-                  <Award className="w-4 h-4 mr-2" />
-                  Licenciados
-                </TabsTrigger>
-                <TabsTrigger value="users">
-                  <Users className="w-4 h-4 mr-2" />
-                  Usuários Gerais
-                </TabsTrigger>
-              </TabsList>
+             <TabsList className="grid w-full grid-cols-3 bg-gray-700/50">
+               <TabsTrigger value="licensees">
+                 <Award className="w-4 h-4 mr-2" />
+                 Licenciados
+               </TabsTrigger>
+               <TabsTrigger value="users">
+                 <Users className="w-4 h-4 mr-2" />
+                 Usuários Gerais
+               </TabsTrigger>
+               <TabsTrigger value="hierarchy">
+                 <LayoutGrid className="w-4 h-4 mr-2" />
+                 Hierarquia por Cargo
+               </TabsTrigger>
+             </TabsList>
 
               {/* ABA 1: LICENCIADOS */}
               <TabsContent value="licensees" className="mt-6">
