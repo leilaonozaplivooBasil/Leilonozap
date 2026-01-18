@@ -243,7 +243,7 @@ export default function AmbienteDeTeste() {
                                 <span className="font-medium">{roleLabel(g.role)}</span>
                                 <div className="flex items-center gap-2">
                                   {g.percent === 0 && (
-                                    <span className="text-xs text-yellow-400">→ Repassado ao próximo</span>
+                                    <span className="text-xs text-gray-400">(subiu para a empresa)</span>
                                   )}
                                   <span className="text-right">{g.percent.toFixed(2)}%</span>
                                 </div>
@@ -269,7 +269,7 @@ export default function AmbienteDeTeste() {
                                 </>
                               ) : (
                                 <div className="px-3 py-4 text-sm text-gray-400 text-center">
-                                  Nenhum usuário neste cargo. Comissão repassada ao próximo nível.
+                                  Nenhum usuário neste cargo. Comissão subiu para a empresa.
                                 </div>
                               )}
                             </AccordionContent>
