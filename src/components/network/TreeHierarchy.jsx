@@ -289,7 +289,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
       <svg
         ref={svgRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 1 }}
+        style={{ zIndex: 1, top: 0, left: 0 }}
+        preserveAspectRatio="none"
       />
       <div className="relative" style={{ zIndex: 2 }}>
         {roots.map((root) => (
