@@ -7,6 +7,9 @@ import { Loader2, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 import { createMPPreference } from '@/functions/createMPPreference';
 
+// 🔴 IMPORTANTE: Código Asaas mantido em standby - não remover
+// Para reativar Asaas, trocar chamadas de createMPPreference por createAsaasOrder
+
 const Product = base44.entities.Product;
 const CatalogSale = base44.entities.CatalogSale;
 
