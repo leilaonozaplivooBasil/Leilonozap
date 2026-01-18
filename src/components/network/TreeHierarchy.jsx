@@ -139,25 +139,24 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
         const maxGX = grandchildPositions[grandchildPositions.length - 1].x;
         const firstGrandchildY = grandchildPositions[0].y;
 
-        // Linha vertical do filho
+        // Conexões dos netos seguem padrão simples (linhas sólidas)
         const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         vLine.setAttribute('x1', childPos.x);
         vLine.setAttribute('y1', childPos.y + 40);
         vLine.setAttribute('x2', childPos.x);
         vLine.setAttribute('y2', firstGrandchildY - 50);
-        vLine.setAttribute('stroke', '#64748b');
-        vLine.setAttribute('stroke-width', '3');
+        vLine.setAttribute('stroke', '#475569');
+        vLine.setAttribute('stroke-width', '2');
         vLine.setAttribute('stroke-linecap', 'round');
         svg.appendChild(vLine);
 
-        // Linha horizontal dos netos
         const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         hLine.setAttribute('x1', minGX);
         hLine.setAttribute('y1', firstGrandchildY - 50);
         hLine.setAttribute('x2', maxGX);
         hLine.setAttribute('y2', firstGrandchildY - 50);
-        hLine.setAttribute('stroke', '#64748b');
-        hLine.setAttribute('stroke-width', '3');
+        hLine.setAttribute('stroke', '#475569');
+        hLine.setAttribute('stroke-width', '2');
         hLine.setAttribute('stroke-linecap', 'round');
         svg.appendChild(hLine);
       });
