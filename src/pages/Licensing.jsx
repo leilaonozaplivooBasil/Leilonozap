@@ -85,7 +85,7 @@ const CatalogTab = ({ isSaiDeBaixo }) => {
         <CardContent className="space-y-4">
           {banners.length > 0 && (
             <div className="-mt-2">
-              <RotatingBanner banners={banners} fit="contain" />
+              <RotatingBanner banners={banners} fit="contain" heightClass="h-56 md:h-72 lg:h-80" />
             </div>
           )}
         <div className="relative">

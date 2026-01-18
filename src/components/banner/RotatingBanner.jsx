@@ -65,13 +65,14 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''} cursor-pointer`
+                  className={`w-full h-full cursor-pointer ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}
                   loading="eager"
                   fetchpriority="high"
                   decoding="sync"
                   style={{
                     imageRendering: '-webkit-optimize-contrast',
-                    objectFit: 'cover',
+                    objectFit: fit,
+                    backgroundColor: fit === 'contain' ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
                       objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
                       transform: `scale(${banner.image_adjustments.scale || 1})`
@@ -84,13 +85,14 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                 <img
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
-                  className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`
+                  className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}
                   loading="eager"
                   fetchpriority="high"
                   decoding="sync"
                   style={{
                     imageRendering: '-webkit-optimize-contrast',
-                    objectFit: 'cover',
+                    objectFit: fit,
+                    backgroundColor: fit === 'contain' ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
                       objectPosition: `${banner.image_adjustments.position?.x || 0}px ${banner.image_adjustments.position?.y || 0}px`,
                       transform: `scale(${banner.image_adjustments.scale || 1})`
