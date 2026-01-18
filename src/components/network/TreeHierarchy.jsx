@@ -69,14 +69,14 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     const initials = getInitials(node.full_name);
 
     return (
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center gap-1">
         {/* Nó/Bolha */}
         <div className="relative group">
           {/* Bolha clean e minimalista */}
           <button
             onClick={() => hasChildren && toggleNode(node.id)}
             className={`
-              w-16 h-16 rounded-full ${bgColor}
+              w-14 h-14 rounded-full ${bgColor}
               flex items-center justify-center
               text-white font-bold text-xs
               hover:shadow-xl transition-all duration-200
@@ -91,7 +91,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
             {hasChildren && (
               <div className={`absolute -bottom-1 left-1/2 -translate-x-1/2 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
                 <div className="bg-gray-900 rounded-full p-0.5">
-                  <ChevronDown className="w-3 h-3 text-white" />
+                  <ChevronDown className="w-2.5 h-2.5 text-white" />
                 </div>
               </div>
             )}
@@ -101,7 +101,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
           <div className="absolute top-full mt-2 hidden group-hover:block bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-10 border border-gray-700 shadow-lg">
             <div className="font-semibold whitespace-nowrap">{node.full_name}</div>
             <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
-            
+
             {/* Botões de ação */}
             <div className="flex gap-1 mt-2 pt-2 border-t border-gray-700">
               <Button
@@ -141,30 +141,25 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
           </div>
         </div>
 
-        {/* Linha para baixo */}
-        {hasChildren && isExpanded && (
-          <div className="w-0.5 h-4 bg-gradient-to-b from-slate-400 to-slate-300"></div>
-        )}
-
         {/* Children */}
         {hasChildren && isExpanded && (
-          <div className="relative pt-2">
-            {/* Linha horizontal conectora */}
-            <div className="h-0.5 bg-slate-400 mb-4" style={{ width: `${Math.max(100, node.children.length * 100)}px`, marginLeft: `${-Math.max(50, (node.children.length - 1) * 50)}px` }}></div>
+          <div className="relative flex flex-col items-center gap-1">
+            {/* Linha vertical para baixo */}
+            <div className="w-0.5 h-3 bg-slate-400"></div>
 
-            {/* Grid de filhos */}
-            <div
-              className="flex gap-6 justify-center relative"
-              style={{
-                marginTop: '-1rem',
-              }}
-            >
-              {/* Linhas verticais de conexão */}
+            {/* Container com linha horizontal e filhos */}
+            <div className="flex items-center justify-center gap-6 relative">
+              {/* Linha horizontal */}
+              <div className="absolute h-0.5 bg-slate-400" style={{
+                width: `${Math.max(node.children.length - 1, 0) * 80 + 20}px`,
+                top: '-12px'
+              }}></div>
+
+              {/* Filhos */}
               {node.children.map((child, idx) => (
                 <div key={child.id} className="flex flex-col items-center">
-                  {/* Linha vertical */}
-                  <div className="w-0.5 h-4 bg-gradient-to-b from-slate-400 to-slate-300"></div>
-
+                  {/* Linha vertical do filho */}
+                  <div className="w-0.5 h-3 bg-slate-400"></div>
                   {/* Nó filho */}
                   <TreeNode node={child} />
                 </div>
