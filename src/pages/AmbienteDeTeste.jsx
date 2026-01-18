@@ -229,34 +229,32 @@ export default function AmbienteDeTeste() {
                     </div>
 
                     <div className="overflow-hidden rounded-lg border border-gray-700">
-                      <Accordion type="multiple" className="w-full">
-                        {groupedRoles.map((g) => (
-                          <AccordionItem key={g.role} value={g.role}>
-                            <AccordionTrigger className="px-3 py-2 hover:no-underline">
-                              <div className="flex justify-between w-full">
-                                <span className="font-medium">{roleLabel(g.role)}</span>
-                                <span className="text-right">{g.percent.toFixed(2)}%</span>
+                      <div className="space-y-0 border border-gray-700 rounded-lg overflow-hidden">
+                        {groupedRoles.map((g, idx) => (
+                          <div key={g.role} className={`border-b border-gray-700 last:border-b-0 ${g.members.length > 0 ? 'cursor-pointer hover:bg-gray-800/50' : ''}`}>
+                            <div className="grid grid-cols-12 px-3 py-2 items-center bg-gray-800/30">
+                              <div className="col-span-8 font-medium">{roleLabel(g.role)}</div>
+                              <div className="col-span-4 text-right flex items-center justify-end gap-2">
+                                <span className="font-semibold">{g.percent.toFixed(2)}%</span>
+                                {g.members.length === 0 && g.percent > 0 && (
+                                  <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded">Pulou</span>
+                                )}
                               </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-0 pb-3">
-                              <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-xs font-semibold uppercase tracking-wide border-b border-gray-700">
-                                <div className="col-span-6">Usuário</div>
-                                <div className="col-span-3 text-right">%</div>
-                                <div className="col-span-3 text-right">Valor (R$)</div>
-                              </div>
-                              <div className="divide-y divide-gray-700">
-                                {g.members.map((m, idx) => (
-                                  <div key={idx} className="grid grid-cols-12 px-3 py-2 text-sm items-center">
-                                    <div className="col-span-6 truncate">{m.name}</div>
-                                    <div className="col-span-3 text-right">{m.percent.toFixed(2)}%</div>
-                                    <div className="col-span-3 text-right">{Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
+                            </div>
+                            {g.members.length > 0 && (
+                              <div className="divide-y divide-gray-700 bg-gray-900/50">
+                                {g.members.map((m, midx) => (
+                                  <div key={midx} className="grid grid-cols-12 px-4 py-2 text-sm items-center">
+                                    <div className="col-span-6 truncate text-gray-300">{m.name}</div>
+                                    <div className="col-span-3 text-right text-gray-300">{m.percent.toFixed(2)}%</div>
+                                    <div className="col-span-3 text-right text-gray-300">R$ {Number(m.amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
                                   </div>
                                 ))}
                               </div>
-                            </AccordionContent>
-                          </AccordionItem>
+                            )}
+                          </div>
                         ))}
-                      </Accordion>
+                      </div>
                       <div className="grid grid-cols-12 bg-gray-900 text-white px-3 py-2 text-sm font-semibold border-t border-gray-700">
                         <div className="col-span-9">Total (cargos)</div>
                         <div className="col-span-3 text-right">{totalPercent.toFixed(2)}% • {Number(groupedRoles.reduce((s, g) => s + Number(g.amount || 0), 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div>
