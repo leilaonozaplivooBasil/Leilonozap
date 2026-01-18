@@ -109,8 +109,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
       // Conexões exatamente como o mock: diagonal do centro do nó raiz até um cotovelo fixo e depois descida vertical
       childPositions.forEach(({ pos: cpos }) => {
         const rootBottomY = rootPos.y + 40;   // base do nó raiz
-        const childTopY = cpos.y - 36;        // topo do círculo do filho com folga
-        const elbowY = rootBottomY + 140;     // altura fixa do cotovelo para todas as linhas
+        const childTopY = cpos.y - 44;        // topo do círculo do filho com folga
+        const elbowY = rootBottomY + 160;     // altura fixa do cotovelo para todas as linhas (um pouco mais baixo)
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         const d = `M ${rootPos.x} ${rootBottomY} L ${cpos.x} ${elbowY} L ${cpos.x} ${childTopY}`;
