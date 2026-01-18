@@ -226,7 +226,7 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
   );
 }
 
-function NetworkTree({ users, onPromote, onEdit, onRelink }) {
+function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
   const [expandedUsers, setExpandedUsers] = useState(new Set());
   // Drag & drop state
   const [draggingId, setDraggingId] = useState(null);
