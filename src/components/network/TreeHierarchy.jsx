@@ -87,82 +87,41 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     // Buscar nós raiz a partir da hierarquia calculada
     const roots = getHierarchy();
 
-    // Desenhar conexões para cada raiz
-    roots.forEach(root => {
-      const rootPos = nodePositions.current[root.id];
-      if (!rootPos || !root.children || root.children.length === 0) return;
+    // Função recursiva para desenhar conexões de qualquer nó para seus filhos
+    const drawNodeConnections = (node, isRootLevel = false) => {
+      const parentPos = nodePositions.current[node.id];
+      if (!parentPos || !node.children || node.children.length === 0) return;
 
-      // Encontrar posições de todos os filhos diretos
-      const childPositions = root.children
-        .map((child, idx) => ({ pos: nodePositions.current[child.id], child }))
+      const childPositions = node.children
+        .map(child => ({ pos: nodePositions.current[child.id], child }))
         .filter(item => item.pos !== undefined);
 
       if (childPositions.length === 0) return;
 
-      // Ordenar filhos por posição X (esquerda para direita)
-      childPositions.sort((a, b) => a.pos.x - b.pos.x);
+      childPositions.forEach(({ pos: cpos, child }) => {
+        const parentBottomY = parentPos.y + 32;
+        const childTopY = cpos.y - 32;
 
-      const minX = childPositions[0].pos.x;
-      const maxX = childPositions[childPositions.length - 1].pos.x;
-      const firstChildY = childPositions[0].pos.y;
+        // Linha vertical simples do pai para o filho
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', parentPos.x);
+        line.setAttribute('y1', parentBottomY);
+        line.setAttribute('x2', cpos.x);
+        line.setAttribute('y2', childTopY);
+        line.setAttribute('stroke', '#cbd5e1');
+        line.setAttribute('stroke-width', '3');
+        line.setAttribute('stroke-linecap', 'round');
+        line.setAttribute('stroke-dasharray', '8 6');
+        svg.appendChild(line);
 
-      // Conexões exatamente como o mock: diagonal do centro do nó raiz até um cotovelo fixo e depois descida vertical
-      childPositions.forEach(({ pos: cpos }) => {
-        const rootBottomY = rootPos.y + 40;   // base do nó raiz
-        const childTopY = cpos.y - 44;        // topo do círculo do filho com folga
-        const elbowY = rootBottomY + 160;     // altura fixa do cotovelo para todas as linhas (um pouco mais baixo)
-
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        const d = `M ${rootPos.x} ${rootBottomY} L ${cpos.x} ${elbowY} L ${cpos.x} ${childTopY - 10}`; // pequeno respiro antes do círculo
-        path.setAttribute('d', d);
-        path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', '#cbd5e1');
-        path.setAttribute('stroke-width', '4');
-        path.setAttribute('stroke-linecap', 'round');
-        path.setAttribute('stroke-linejoin', 'round');
-        path.setAttribute('stroke-dasharray', '8 8');
-        svg.appendChild(path);
+        // Recursivamente desenhar conexões dos filhos
+        drawNodeConnections(child, false);
       });
+    };
 
-      // 3. Linhas verticais dos filhos aos seus netos (desativado no layout de leque)
-      if (SHOW_GRANDCHILDREN) childPositions.forEach(({ pos: childPos, child }) => {
-        if (!child.children || child.children.length === 0) return;
-
-        const grandchildPositions = child.children
-          .map(gc => nodePositions.current[gc.id])
-          .filter(pos => pos !== undefined);
-
-        if (grandchildPositions.length === 0) return;
-
-        grandchildPositions.sort((a, b) => a.x - b.x);
-
-        const minGX = grandchildPositions[0].x;
-        const maxGX = grandchildPositions[grandchildPositions.length - 1].x;
-        const firstGrandchildY = grandchildPositions[0].y;
-
-        // Conexões dos netos seguem padrão simples (linhas sólidas)
-        const vLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        vLine.setAttribute('x1', childPos.x);
-        vLine.setAttribute('y1', childPos.y + 40);
-        vLine.setAttribute('x2', childPos.x);
-        vLine.setAttribute('y2', firstGrandchildY - 56);
-        vLine.setAttribute('stroke', '#cbd5e1');
-        vLine.setAttribute('stroke-width', '4');
-        vLine.setAttribute('stroke-linecap', 'round');
-        vLine.setAttribute('stroke-dasharray', '10 8');
-        svg.appendChild(vLine);
-
-        const hLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        hLine.setAttribute('x1', minGX);
-        hLine.setAttribute('y1', firstGrandchildY - 56);
-        hLine.setAttribute('x2', maxGX);
-        hLine.setAttribute('y2', firstGrandchildY - 56);
-        hLine.setAttribute('stroke', '#cbd5e1');
-        hLine.setAttribute('stroke-width', '4');
-        hLine.setAttribute('stroke-linecap', 'round');
-        hLine.setAttribute('stroke-dasharray', '10 8');
-        svg.appendChild(hLine);
-      });
+    // Desenhar conexões para cada raiz
+    roots.forEach(root => {
+      drawNodeConnections(root, true);
     });
   };
 
