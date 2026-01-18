@@ -2348,14 +2348,8 @@ export default function LicensingPage() {
   const getUserLevel = () => {
     if (!currentUser) return 'guest';
 
-    const userLevels = Array.isArray(currentUser.career_levels) ?
-    currentUser.career_levels :
-    currentUser.career_levels ? [currentUser.career_levels] : ['usuario'];
-
-    const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];
-    const highestLevel = careerHierarchy.find((level) => userLevels.includes(level)) || 'usuario';
-
-    return highestLevel;
+    // Usa o primary_career_level se disponível
+    return currentUser.primary_career_level || 'usuario';
   };
 
   const userLevel = getUserLevel();
