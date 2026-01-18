@@ -179,8 +179,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
   const roots = getHierarchy();
 
   return (
-    <div className="w-full overflow-x-auto overflow-y-auto p-8 bg-gray-900 rounded-lg">
-      <div className="flex flex-col items-center gap-12 min-w-min">
+    <div className="w-full p-8 bg-gray-900 rounded-lg">
+      <div className="flex flex-col items-center gap-12">
         {roots.map((root) => (
           <TreeNode key={root.id} node={root} isRoot={true} />
         ))}
