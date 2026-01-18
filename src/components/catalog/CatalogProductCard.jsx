@@ -210,7 +210,7 @@ ${categoryEmoji} ${product.description}
               key={index}
               src={img}
               alt={`${product.description} - imagem ${index + 1}`}
-              loading={index === 0 ? "eager" : "lazy"}
+              loading="lazy"
               decoding="async"
               className={`absolute top-0 left-0 w-full h-full object-contain transition-opacity duration-300 ease-in-out max-w-full ${
                 index === currentImageIndex ? 'opacity-100' : 'opacity-0'
