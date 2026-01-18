@@ -176,9 +176,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
 
           {/* Tooltip com info e ações */}
           <div 
-            className={`absolute ${isRoot ? 'top-full mt-3' : 'left-full ml-3 top-1/2 -translate-y-1/2'} ${showTooltip ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-20 border border-gray-600 shadow-2xl whitespace-nowrap`}
-            onMouseEnter={() => setShowTooltip(true)}
-            onMouseLeave={() => setShowTooltip(false)}
+            className={`absolute ${isRoot ? 'top-full mt-2' : 'left-full ml-1 top-1/2 -translate-y-1/2'} ${showTooltip ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-20 border border-gray-600 shadow-2xl whitespace-nowrap`}
           >
             <div className="font-bold">{node.full_name}</div>
             <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
