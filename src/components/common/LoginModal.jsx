@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, X, UserPlus, AlertCircle, Mail, Eye, EyeOff } from 'lucide-react';
+import { LogIn, X, UserPlus, AlertCircle, Mail, Eye, EyeOff, KeyRound, CheckCircle } from 'lucide-react';
 
 export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, theme }) {
   const navigate = useNavigate();
