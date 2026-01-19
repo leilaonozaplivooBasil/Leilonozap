@@ -28,9 +28,11 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
-export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
+export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRelink }) {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [lineKey, setLineKey] = useState(0);
+  const [draggedNode, setDraggedNode] = useState(null);
+  const [dropTarget, setDropTarget] = useState(null);
   const nodePositions = useRef({});
   const svgRef = useRef(null);
   const containerRef = useRef(null);
