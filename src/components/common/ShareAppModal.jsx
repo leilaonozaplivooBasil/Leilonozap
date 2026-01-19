@@ -85,7 +85,7 @@ export default function ShareAppModal({ isOpen, onClose }) {
               onClick={copyToClipboard}
               variant="outline"
               size="icon"
-              className="bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+              className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
             >
               <Copy className="w-4 h-4" />
             </Button>
@@ -106,7 +106,7 @@ export default function ShareAppModal({ isOpen, onClose }) {
             <Button
               onClick={shareEmail}
               variant="outline"
-              className="w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 flex items-center justify-center gap-2"
+              className="w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600 flex items-center justify-center gap-2"
             >
               <Mail className="w-4 h-4" />
               E-mail
@@ -117,7 +117,7 @@ export default function ShareAppModal({ isOpen, onClose }) {
                 onClick={shareFacebook}
                 variant="outline"
                 size="sm"
-                className="bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+                className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
               >
                 <Facebook className="w-4 h-4" />
               </Button>
@@ -126,7 +126,7 @@ export default function ShareAppModal({ isOpen, onClose }) {
                 onClick={shareTwitter}
                 variant="outline"
                 size="sm"
-                className="bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+                className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
               >
                 <Twitter className="w-4 h-4" />
               </Button>
@@ -135,7 +135,7 @@ export default function ShareAppModal({ isOpen, onClose }) {
                 onClick={shareLinkedIn}
                 variant="outline"
                 size="sm"
-                className="bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+                className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
               >
                 <Linkedin className="w-4 h-4" />
               </Button>
@@ -146,7 +146,7 @@ export default function ShareAppModal({ isOpen, onClose }) {
               <Button
                 onClick={shareNative}
                 variant="outline"
-                className="w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 flex items-center justify-center gap-2 mt-2"
+                className="w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600 flex items-center justify-center gap-2 mt-2"
               >
                 <Share2 className="w-4 h-4" />
                 Mais opções
