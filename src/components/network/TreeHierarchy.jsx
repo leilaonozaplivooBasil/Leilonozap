@@ -235,8 +235,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, node)}
         >
-          <button
-            draggable
+          <div
+            draggable="true"
             onDragStart={(e) => handleDragStart(e, node)}
             onDragEnd={handleDragEnd}
             onClick={() => hasChildren && toggleExpand(node.id)}
@@ -249,7 +249,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
               ${hasChildren ? 'hover:scale-110' : ''}
               shadow-lg border-2 ${isDropTarget ? 'border-green-400 ring-4 ring-green-400/50' : 'border-white/20'}
               overflow-hidden flex-shrink-0
-              relative
+              relative select-none
             `}
           >
             {node.avatar_url ? (
