@@ -379,7 +379,7 @@ Equipe Leilão NoZap 🎯`
           <Button 
             variant="ghost" 
             size="icon" 
-            onClick={() => setShowForgotPassword(false)} 
+            onClick={handleCancelReset} 
             className={isSaiDeBaixo ? 'absolute top-2 right-2 text-gray-600' : 'absolute top-2 right-2 text-gray-400'}
           >
             <X className="w-4 h-4" />
@@ -387,52 +387,165 @@ Equipe Leilão NoZap 🎯`
           
           <CardHeader>
             <CardTitle className={`flex items-center gap-2 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
-              <Mail />
-              Recuperar Senha
+              {resetStep === 'email' && <Mail />}
+              {resetStep === 'code' && <KeyRound />}
+              {resetStep === 'newPassword' && <CheckCircle />}
+              {resetStep === 'email' && 'Recuperar Senha'}
+              {resetStep === 'code' && 'Verificar Código'}
+              {resetStep === 'newPassword' && 'Nova Senha'}
             </CardTitle>
           </CardHeader>
           
           <CardContent className="space-y-5 sm:space-y-4">
-            <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-300'} text-sm sm:text-base`}>
-              Digite seu e-mail cadastrado. Enviaremos uma nova senha temporária.
-            </p>
-            <div>
-              <Label htmlFor="resetEmail" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail</Label>
-              <Input 
-                id="resetEmail" 
-                type="email" 
-                value={resetEmail} 
-                onChange={(e) => setResetEmail(e.target.value)} 
-                placeholder="seu@email.com" 
-                className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
-                disabled={isResetting}
-              />
+            {/* Indicador de passos */}
+            <div className="flex justify-center gap-2 mb-4">
+              <div className={`w-8 h-1 rounded ${resetStep === 'email' ? (isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500') : (isSaiDeBaixo ? 'bg-red-200' : 'bg-green-900')}`} />
+              <div className={`w-8 h-1 rounded ${resetStep === 'code' ? (isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500') : resetStep === 'newPassword' ? (isSaiDeBaixo ? 'bg-red-200' : 'bg-green-900') : 'bg-gray-600'}`} />
+              <div className={`w-8 h-1 rounded ${resetStep === 'newPassword' ? (isSaiDeBaixo ? 'bg-red-600' : 'bg-green-500') : 'bg-gray-600'}`} />
             </div>
+
+            {resetSuccessMessage && (
+              <div className={`${isSaiDeBaixo ? 'bg-green-100 border border-green-300' : 'bg-green-900/30 border border-green-500/50'} rounded-lg p-3 text-center`}>
+                <p className={`${isSaiDeBaixo ? 'text-green-700' : 'text-green-400'} text-sm`}>{resetSuccessMessage}</p>
+              </div>
+            )}
+
+            {/* PASSO 1: Email */}
+            {resetStep === 'email' && (
+              <>
+                <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-300'} text-sm sm:text-base`}>
+                  Digite seu e-mail cadastrado. Enviaremos um código de verificação.
+                </p>
+                <div>
+                  <Label htmlFor="resetEmail" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail</Label>
+                  <Input 
+                    id="resetEmail" 
+                    type="email" 
+                    value={resetEmail} 
+                    onChange={(e) => setResetEmail(e.target.value)} 
+                    placeholder="seu@email.com" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isResetting}
+                  />
+                </div>
+              </>
+            )}
+
+            {/* PASSO 2: Código */}
+            {resetStep === 'code' && (
+              <>
+                <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-300'} text-sm sm:text-base`}>
+                  Digite o código de 6 dígitos enviado para <strong>{resetEmail}</strong>
+                </p>
+                <div>
+                  <Label htmlFor="verificationCode" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Código de Verificação</Label>
+                  <Input 
+                    id="verificationCode" 
+                    type="text" 
+                    value={verificationCode} 
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} 
+                    placeholder="000000" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base text-center text-2xl tracking-widest font-mono`}
+                    maxLength={6}
+                  />
+                </div>
+                <button
+                  onClick={handleSendVerificationCode}
+                  disabled={isResetting}
+                  className={`${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'} text-sm hover:underline`}
+                >
+                  Não recebeu? Reenviar código
+                </button>
+              </>
+            )}
+
+            {/* PASSO 3: Nova Senha */}
+            {resetStep === 'newPassword' && (
+              <>
+                <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-300'} text-sm sm:text-base`}>
+                  Defina sua nova senha (mínimo 6 caracteres).
+                </p>
+                <div>
+                  <Label htmlFor="newPassword" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Nova Senha</Label>
+                  <Input 
+                    id="newPassword" 
+                    type="password" 
+                    value={newPassword} 
+                    onChange={(e) => setNewPassword(e.target.value)} 
+                    placeholder="Mínimo 6 caracteres" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isResetting}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="confirmPassword" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Confirmar Senha</Label>
+                  <Input 
+                    id="confirmPassword" 
+                    type="password" 
+                    value={confirmPassword} 
+                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                    placeholder="Digite novamente" 
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
+                    disabled={isResetting}
+                  />
+                </div>
+              </>
+            )}
           </CardContent>
           
           <CardFooter className="flex gap-2 sm:gap-3">
             <Button 
               variant="outline"
-              onClick={() => setShowForgotPassword(false)}
+              onClick={handleCancelReset}
               className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}`}
               disabled={isResetting}
             >
               Cancelar
             </Button>
-            <Button 
-              onClick={handleForgotPassword} 
-              disabled={isResetting || !resetEmail}
-              className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
-            >
-              {isResetting ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                  Enviando...
-                </>
-              ) : (
-                "Enviar Nova Senha"
-              )}
-            </Button>
+            
+            {resetStep === 'email' && (
+              <Button 
+                onClick={handleSendVerificationCode} 
+                disabled={isResetting || !resetEmail}
+                className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+              >
+                {isResetting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Enviando...
+                  </>
+                ) : (
+                  "Enviar Código"
+                )}
+              </Button>
+            )}
+
+            {resetStep === 'code' && (
+              <Button 
+                onClick={handleVerifyCode} 
+                disabled={verificationCode.length !== 6}
+                className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+              >
+                Verificar Código
+              </Button>
+            )}
+
+            {resetStep === 'newPassword' && (
+              <Button 
+                onClick={handleSetNewPassword} 
+                disabled={isResetting || !newPassword || newPassword !== confirmPassword}
+                className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+              >
+                {isResetting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar Nova Senha"
+                )}
+              </Button>
+            )}
           </CardFooter>
         </Card>
       </div>
