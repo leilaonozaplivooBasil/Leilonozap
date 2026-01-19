@@ -53,9 +53,17 @@ const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
     const saleType = record.sale_type || 'catalog';
     const saleTypeLabel = saleType === 'auction' ? '📱 App (3%)' : '🛍️ Catálogo (26%)';
 
+    const handleToggle = () => {
+        if (isExpanded) {
+            onToggleExpand(null);
+        } else {
+            onToggleExpand(record.id);
+        }
+    };
+
     return (
         <Card className="bg-gray-800 border-gray-700 mb-3">
-            <CardHeader className="pb-2 cursor-pointer hover:bg-gray-750 transition" onClick={() => onToggleExpand(record.id)}>
+            <CardHeader className="pb-2 cursor-pointer hover:bg-gray-700/50 transition" onClick={handleToggle}>
                 <div className="flex justify-between items-center text-xs text-gray-400">
                     <div className="flex items-center gap-2">
                         <Calendar className="w-3 h-3" />
