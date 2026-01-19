@@ -147,8 +147,7 @@ Deno.serve(async (req) => {
         // Cargos de diretor+: procura em TODOS os usuários
         const eligible = allUsers
           .filter(u => hasRole(u, step.id))
-          .filter(u => u.full_name !== 'Leilão NoZap - Site Oficial')
-          .filter(u => u.full_name !== 'Paulo Sergio' && u.full_name !== 'Anderson de Souza Moita');
+          .filter(u => u.full_name !== 'Leilão NoZap - Site Oficial');
         if (eligible.length > 0) {
           const share = step.percent / eligible.length;
           for (const u of eligible) {
@@ -197,7 +196,20 @@ Deno.serve(async (req) => {
     for (const a of assignments) {
       const amount = +(totalAmount * (a.percent / 100)).toFixed(2);
       if (amount <= 0) continue;
-      records.push({ sale_id: saleId, user_id: a.user.id, role: a.role, percent: a.percent, amount, status: 'pending' });
+      records.push({ 
+        sale_id: saleId, 
+        sale_type: 'catalog',
+        user_id: a.user.id, 
+        user_name: a.user.full_name,
+        role: a.role, 
+        percent: a.percent, 
+        amount, 
+        sale_amount: totalAmount,
+        product_title: sale.product_title || 'Produto do Catálogo',
+        anchor_user_id: anchorUser.id,
+        anchor_user_name: anchorUser.full_name,
+        status: 'confirmed' 
+      });
       perUserTotals.set(a.user.id, +(perUserTotals.get(a.user.id) || 0) + amount);
     }
 
@@ -206,14 +218,23 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.CommissionRecord.bulkCreate(records);
     }
 
-    // Atualiza saldos agregados dos usuários (catálogo)
+    // Atualiza saldos agregados dos usuários (catálogo + saldo geral)
     for (const [userId, amount] of perUserTotals.entries()) {
       const u = await findUserById(base44, userId);
-      const currentBal = Number(u?.catalog_commission_balance || 0);
-      const currentTotal = Number(u?.catalog_total_commissions_generated || 0);
+      const currentCatalogBal = Number(u?.catalog_commission_balance || 0);
+      const currentCatalogTotal = Number(u?.catalog_total_commissions_generated || 0);
+      const currentValoraBal = Number(u?.valora_pay_balance || 0);
+      const currentCommBal = Number(u?.commission_balance || 0);
+      const currentTotalGen = Number(u?.total_commissions_generated || 0);
+      
       await base44.asServiceRole.entities.AppUser.update(userId, {
-        catalog_commission_balance: +(currentBal + amount).toFixed(2),
-        catalog_total_commissions_generated: +(currentTotal + amount).toFixed(2)
+        // Saldos específicos do Catálogo
+        catalog_commission_balance: +(currentCatalogBal + amount).toFixed(2),
+        catalog_total_commissions_generated: +(currentCatalogTotal + amount).toFixed(2),
+        // Saldo GERAL (disponível para saque e uso)
+        valora_pay_balance: +(currentValoraBal + amount).toFixed(2),
+        commission_balance: +(currentCommBal + amount).toFixed(2),
+        total_commissions_generated: +(currentTotalGen + amount).toFixed(2)
       });
     }
 
