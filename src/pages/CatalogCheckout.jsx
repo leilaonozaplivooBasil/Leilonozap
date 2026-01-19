@@ -134,17 +134,18 @@ export default function CatalogCheckout() {
       const licenseeCode = sessionStorage.getItem('licenseeCode');
 
       // Cria registro de venda
+      // ⚠️ IMPORTANTE: licensee_id deve ser o CÓDIGO DO LICENCIADO que indicou
       const sale = await CatalogSale.create({
         product_id: product.id,
         product_title: product.description,
         product_image: product.image_urls?.[0] || '',
         sale_price: product.price_catalog,
+        total_amount: product.price_catalog, // ✅ Campo usado pelo processCatalogCommission
         buyer_id: currentUser?.id || 'guest',
         buyer_name: formData.name,
         buyer_email: formData.email,
         buyer_phone: formData.phone,
-        licensee_id: licenseeCode || 'direct',
-        licensee_name: licenseeCode || 'Venda Direta',
+        licensee_id: licenseeCode || 'site_official', // ✅ Licenciado âncora
         referred_by_code: licenseeCode || '',
         status: 'pending_payment'
       });
