@@ -137,6 +137,68 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     return () => window.removeEventListener('resize', drawAllConnections);
   }, [drawAllConnections]);
 
+  // Handlers de drag and drop
+  const handleDragStart = (e, node) => {
+    e.stopPropagation();
+    setDraggedNode(node);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, node) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (draggedNode && draggedNode.id !== node.id) {
+      setDropTarget(node.id);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setDropTarget(null);
+  };
+
+  const handleDrop = async (e, newParent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!draggedNode || draggedNode.id === newParent.id) {
+      setDraggedNode(null);
+      setDropTarget(null);
+      return;
+    }
+
+    // Não pode mover para um descendente
+    const isDescendant = (parent, childId) => {
+      if (!parent.children) return false;
+      for (const child of parent.children) {
+        if (child.id === childId) return true;
+        if (isDescendant(child, childId)) return true;
+      }
+      return false;
+    };
+
+    if (isDescendant(draggedNode, newParent.id)) {
+      toast.error('Não pode mover para um descendente!');
+      setDraggedNode(null);
+      setDropTarget(null);
+      return;
+    }
+
+    // Chama callback de relink
+    if (onRelink) {
+      await onRelink(draggedNode.id, newParent.id);
+      toast.success(`${draggedNode.full_name} agora está abaixo de ${newParent.full_name}`);
+    }
+
+    setDraggedNode(null);
+    setDropTarget(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedNode(null);
+    setDropTarget(null);
+  };
+
   // Componente do nó (círculo) com filhos expansíveis
   const TreeNode = ({ node, depth = 0 }) => {
     const primaryLevel = node.primary_career_level || 'usuario';
@@ -146,6 +208,8 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     const [showTooltip, setShowTooltip] = useState(false);
     const hasChildren = node.children && node.children.length > 0;
     const isExpanded = expandedNodes.has(node.id);
+    const isDragging = draggedNode?.id === node.id;
+    const isDropTarget = dropTarget === node.id;
 
     useEffect(() => {
       if (nodeRef.current && containerRef.current) {
@@ -163,11 +227,25 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
       <div className="flex flex-col items-center">
         {/* Círculo do nó */}
         <div 
-          className="relative flex flex-col items-center"
+          className={`relative flex flex-col items-center transition-all duration-200 ${isDragging ? 'opacity-50 scale-90' : ''} ${isDropTarget ? 'scale-125' : ''}`}
           ref={nodeRef}
-          onMouseEnter={() => setShowTooltip(true)}
+          onMouseEnter={() => !draggedNode && setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
+          onDragOver={(e) => handleDragOver(e, node)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, node)}
         >
+          {/* Handle de arraste */}
+          <div
+            draggable
+            onDragStart={(e) => handleDragStart(e, node)}
+            onDragEnd={handleDragEnd}
+            className="absolute -top-2 left-1/2 -translate-x-1/2 w-6 h-4 bg-gray-700 rounded-t-md flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-gray-600 z-10 border border-gray-600"
+            title="Arraste para reorganizar"
+          >
+            <GripVertical className="w-3 h-3 text-gray-400" />
+          </div>
+
           <button
             onClick={() => hasChildren && toggleExpand(node.id)}
             className={`
@@ -176,7 +254,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
               text-white font-bold text-sm
               hover:shadow-2xl transition-all duration-300
               ${hasChildren ? 'cursor-pointer hover:scale-110' : 'cursor-default'}
-              shadow-lg border-2 border-white/20
+              shadow-lg border-2 ${isDropTarget ? 'border-green-400 ring-4 ring-green-400/50' : 'border-white/20'}
               overflow-hidden flex-shrink-0
               relative
             `}
@@ -206,9 +284,18 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
             </div>
           )}
 
+          {/* Indicador de drop */}
+          {isDropTarget && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="text-green-400 text-xs font-bold bg-gray-900/90 px-2 py-1 rounded">
+                Soltar aqui
+              </div>
+            </div>
+          )}
+
           {/* Tooltip */}
           <div 
-            className={`absolute ${depth === 0 ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 ${showTooltip ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-30 border border-gray-600 shadow-2xl whitespace-nowrap`}
+            className={`absolute ${depth === 0 ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 ${showTooltip && !draggedNode ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-30 border border-gray-600 shadow-2xl whitespace-nowrap`}
           >
             <div className="font-bold">{node.full_name}</div>
             <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
