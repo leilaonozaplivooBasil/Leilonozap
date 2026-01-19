@@ -255,18 +255,18 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
       <div className="flex flex-col items-center">
         {/* Círculo do nó */}
         <div 
-          className={`relative flex flex-col items-center transition-all duration-200 ${isDragging ? 'opacity-50 scale-90' : ''} ${isDropTarget ? 'scale-110' : ''}`}
+          className={`relative flex flex-col items-center transition-all duration-200 ${isDragging ? 'opacity-50 scale-90' : ''} ${isDropTarget ? 'scale-125 z-50' : ''}`}
           ref={nodeRef}
           onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
           onDragOver={(e) => handleDragOver(e, node)}
-          onDragLeave={handleDragLeave}
+          onDragLeave={(e) => handleDragLeave(e)}
           onDrop={(e) => handleDrop(e, node)}
         >
           <div
             draggable="true"
             onDragStart={(e) => handleDragStart(e, node)}
-            onDragEnd={handleDragEnd}
+            onDragEnd={(e) => handleDragEnd(e)}
             onClick={() => hasChildren && toggleExpand(node.id)}
             className={`
               w-16 h-16 rounded-full ${bgColor}
@@ -275,7 +275,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
               hover:shadow-2xl transition-all duration-300
               cursor-grab active:cursor-grabbing
               ${hasChildren ? 'hover:scale-110' : ''}
-              shadow-lg border-2 ${isDropTarget ? 'border-green-400 ring-4 ring-green-400/50' : 'border-white/20'}
+              shadow-lg border-4 ${isDropTarget ? 'border-green-400 ring-4 ring-green-400/50 animate-pulse' : 'border-white/20'}
               overflow-hidden flex-shrink-0
               relative select-none
             `}
