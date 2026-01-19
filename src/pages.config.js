@@ -67,8 +67,8 @@ import SystemDiagnostics from './pages/SystemDiagnostics';
 import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
-import WalletHistory from './pages/WalletHistory';
 import UserManagement from './pages/UserManagement';
+import WalletHistory from './pages/WalletHistory';
 import __Layout from './Layout.jsx';
 
 
@@ -142,8 +142,8 @@ export const PAGES = {
     "SystemTest": SystemTest,
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
-    "WalletHistory": WalletHistory,
     "UserManagement": UserManagement,
+    "WalletHistory": WalletHistory,
 }
 
 export const pagesConfig = {
