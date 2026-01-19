@@ -297,32 +297,33 @@ ${categoryEmoji} ${product.description}
         )}
       </div>
       
-      <CardContent className="p-4 flex-1 flex flex-col">
-        <h3 className="font-bold text-white text-sm line-clamp-2 mb-3">
+      <CardContent className="p-2 sm:p-4 flex-1 flex flex-col">
+        <h3 className="font-bold text-white text-xs sm:text-sm line-clamp-2 mb-2">
           {product.description}
         </h3>
 
-        <div className="mb-4">
-          <p className="text-gray-400 text-xs mb-1">Preço</p>
-          <p className="text-2xl font-black text-green-400">
+        <div className="mb-2 sm:mb-4">
+          <p className="text-gray-400 text-[10px] sm:text-xs mb-0.5">Preço</p>
+          <p className="text-lg sm:text-2xl font-black text-green-400">
             R$ {product.price_catalog?.toFixed(2) || "0.00"}
           </p>
           {product.quantity && (
-            <p className="text-xs text-gray-400 mt-2">Estoque: {product.quantity}</p>
+            <p className="text-[10px] sm:text-xs text-gray-400 mt-1">Estoque: {product.quantity}</p>
           )}
         </div>
 
-        <div className="space-y-2 mt-auto">
+        <div className="space-y-1.5 sm:space-y-2 mt-auto">
           <Button
             onClick={(e) => {
               e.stopPropagation();
               navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
             }}
             variant="outline"
-            className="w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+            className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
           >
-            <Info className="w-4 h-4 mr-2" />
-            Mais Informações
+            <Info className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <span className="hidden sm:inline">Mais Informações</span>
+            <span className="sm:hidden">+ Info</span>
           </Button>
 
           <Button
@@ -330,14 +331,15 @@ ${categoryEmoji} ${product.description}
               e.stopPropagation();
               setShowComparai(true);
             }}
-            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold"
+            className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold"
           >
             <img 
               src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
               alt="Comparai"
-              className="w-4 h-4 mr-2"
+              className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2"
             />
-            Comparar Preços
+            <span className="hidden sm:inline">Comparar Preços</span>
+            <span className="sm:hidden">Comparar</span>
           </Button>
 
           <Button
@@ -345,12 +347,11 @@ ${categoryEmoji} ${product.description}
               e.stopPropagation();
               navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
             }}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold"
+            className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-orange-600 hover:bg-orange-700 text-white font-bold"
           >
-            ✅ Entrar e Comprar
+            <span className="hidden sm:inline">✅ Entrar e Comprar</span>
+            <span className="sm:hidden">✅ Comprar</span>
           </Button>
-
-
         </div>
       </CardContent>
     </Card>
