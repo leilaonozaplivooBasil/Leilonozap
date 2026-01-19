@@ -17,13 +17,31 @@ const ROLE_LABELS = {
   plano_lider: "Plano Líder",
   plano_lojista: "Plano Lojista",
   distribuidor: "Distribuidor",
-  diretoria: "Diretoria",
   diretor: "Diretor",
+  diretoria: "Diretoria",
   ceo: "CEO",
   conselheiro: "Conselheiro",
   fundador: "Fundador",
   site_official_rollup: "Empresa"
 };
+
+// Ordem hierárquica do Comando Mestre (menor → maior)
+const ROLE_ORDER = [
+  'licenciado_catalogo',
+  'trainee',
+  'executivo',
+  'kit_start',
+  'plano_lider',
+  'plano_lojista',
+  'distribuidor',
+  'diretor',
+  'diretoria',
+  'ceo',
+  'conselheiro',
+  'fundador',
+  'site_official_rollup',
+  'influencer_app'
+];
 
 // Card agrupado por venda - mostra todos os cargos que você ganhou nessa venda
 const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
