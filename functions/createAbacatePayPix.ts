@@ -6,7 +6,16 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { auction_id, user_name, user_email, user_phone, user_cpf } = body;
 
-    // Log inicial
+    // Verifica se há usuário autenticado (opcional para esta função)
+    let isAuthenticated = false;
+    try {
+      const user = await base44.auth.me();
+      isAuthenticated = !!user;
+    } catch {
+      isAuthenticated = false;
+    }
+
+    // Log inicial - usa asServiceRole para funcionar mesmo sem auth
     await base44.asServiceRole.entities.SystemLog.create({
       step: 'PIX_PAYMENT_INIT',
       status: 'info',
