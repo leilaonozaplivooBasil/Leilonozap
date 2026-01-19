@@ -69,8 +69,8 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
     ? allUsers.find(u => u.id === user.referred_by_id) 
     : null;
 
-  // 🔧 CORREÇÃO 2: Saldo formatado corretamente
-  const valoraBalance = user.valora_pay_balance || 0;
+  // 🔧 CORREÇÃO 2: Saldo formatado corretamente (agora em R$)
+  const saldoReais = user.valora_pay_balance || 0;
 
   return (
     <div className={isLinearView ? "w-full" : "flex flex-col items-center"}>
@@ -368,8 +368,8 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
               <div className="text-white font-bold">{user.indicated_clients_count || 0}</div>
             </div>
             <div className="text-center">
-              <div className="text-gray-400">Valora</div>
-              <div className="text-green-400 font-bold">V$ {(user.valora_pay_balance || 0).toFixed(0)}</div>
+              <div className="text-gray-400">Saldo</div>
+              <div className="text-green-400 font-bold">R$ {(user.valora_pay_balance || 0).toFixed(2)}</div>
             </div>
           </div>
           
@@ -750,7 +750,7 @@ export default function NetworkOverview() {
         valora_pay_balance: (licensee.valora_pay_balance || 0) + amount
       });
 
-      toast.success(`V$ ${amount.toFixed(2)} creditados!`);
+      toast.success(`R$ ${amount.toFixed(2)} creditados!`);
       await fetchData();
       setSelectedLicenseeId('');
       setCommissionAmount('');
@@ -1140,9 +1140,9 @@ export default function NetworkOverview() {
 
           <Card className="bg-gradient-to-br from-green-900/30 to-green-800/20 border-green-500/30">
             <CardContent className="p-4">
-              <div className="text-sm text-green-400 mb-1">Volume V$</div>
+              <div className="text-sm text-green-400 mb-1">Volume R$</div>
               <div className="text-2xl font-bold text-white">
-                {stats.totalVolume.toFixed(0)}
+                R$ {stats.totalVolume.toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -1172,7 +1172,7 @@ export default function NetworkOverview() {
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
                           {licensees.map(lic => (
                             <SelectItem key={lic.id} value={lic.id}>
-                              {lic.full_name} - V$ {(lic.valora_pay_balance || 0).toFixed(2)}
+                              {lic.full_name} - R$ {(lic.valora_pay_balance || 0).toFixed(2)}
                             </SelectItem>
                           ))}
                         </SelectContent>
