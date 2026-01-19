@@ -580,8 +580,119 @@ export default function InvestorDashboard() {
               </p>
             </DialogHeader>
 
-            {/* Seleção do Plano e Formulário PIX */}
-            {!selectedPlan ? (
+            {/* Visualização do Contrato */}
+            {showContract ? (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+              >
+                <div className="text-center mb-4">
+                  <img 
+                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+                    alt="Leilão NoZap"
+                    className="h-16 mx-auto mb-4"
+                  />
+                  <h3 className="text-xl font-bold text-green-400">CONTRATO DE PARCERIA</h3>
+                  <p className="text-gray-400 text-sm">Leia atentamente antes de prosseguir</p>
+                </div>
+
+                <ScrollArea className="h-[50vh] bg-gray-800 rounded-lg border border-gray-700 p-4">
+                  <div className="text-gray-300 text-sm space-y-4 pr-4">
+                    <h4 className="text-green-400 font-bold text-center text-base">CONTRATO DE PARCERIA DE COMPRA E OPERAÇÃO COMERCIAL</h4>
+                    
+                    <p>Pelo presente instrumento particular, de um lado <strong className="text-white">LEILÃO NOZAP</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 51.544.091/0001-67, com sede em Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102, doravante denominada PLATAFORMA, e de outro lado <strong className="text-white">PARCEIRO DE COMPRA</strong>, pessoa física ou jurídica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria de Compra e Operação Comercial, que se regerá pelas cláusulas e condições abaixo.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">1. OBJETO</h5>
+                    <p>1.1. O presente contrato tem por objeto a formalização da parceria comercial entre a PLATAFORMA e o PARCEIRO para a aquisição de produtos selecionados, disponibilizados no catálogo digital da PLATAFORMA, com finalidade de operações comerciais estruturadas, sob gestão integral da PLATAFORMA.</p>
+                    <p>1.2. O PARCEIRO participa das operações por meio da compra de produtos, os quais são destinados à comercialização conforme a estratégia operacional da PLATAFORMA.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">2. NATUREZA DA PARCERIA</h5>
+                    <p>2.1. As partes reconhecem que esta relação possui natureza estritamente comercial, não caracterizando, em nenhuma hipótese:</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>investimento financeiro;</li>
+                      <li>contrato de investimento coletivo;</li>
+                      <li>sociedade;</li>
+                      <li>joint venture;</li>
+                      <li>relação trabalhista;</li>
+                      <li>captação pública de recursos;</li>
+                      <li>promessa de rendimento financeiro.</li>
+                    </ul>
+                    <p>2.2. O PARCEIRO atua como parceiro comercial de compra, participando de operações reais de circulação de mercadorias.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">3. FUNCIONAMENTO DA PARCERIA</h5>
+                    <p>3.1. O PARCEIRO selecionará produtos disponíveis no catálogo da PLATAFORMA e realizará a compra mínima definida no momento da adesão.</p>
+                    <p>3.2. A PLATAFORMA será responsável por:</p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>curadoria e seleção dos produtos;</li>
+                      <li>validação de qualidade e procedência;</li>
+                      <li>gestão comercial e logística;</li>
+                      <li>acompanhamento operacional via painel digital;</li>
+                      <li>comercialização dos produtos nos canais próprios.</li>
+                    </ul>
+                    <p>3.3. O PARCEIRO poderá acompanhar, em tempo real, por meio do painel exclusivo: status das operações; evolução comercial; valores a receber; histórico das compras realizadas.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">4. RETORNO COMERCIAL AO PARCEIRO</h5>
+                    <p>4.1. Em contrapartida à compra realizada, o PARCEIRO fará jus a um retorno comercial previamente estabelecido, calculado sobre o valor da compra, conforme condições apresentadas no momento da adesão.</p>
+                    <p>4.2. O retorno comercial não está vinculado a volume de vendas individuais do PARCEIRO, mas sim à execução operacional da PLATAFORMA, dentro de seu modelo de negócios.</p>
+                    <p>4.3. O prazo estimado para encerramento da operação e disponibilização do retorno será informado no painel, respeitando o ciclo comercial de cada produto.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">5. PAGAMENTOS</h5>
+                    <p>5.1. Os pagamentos ao PARCEIRO ocorrerão por meio eletrônico, em conta de titularidade do PARCEIRO, conforme dados cadastrados.</p>
+                    <p>5.2. Os valores serão liberados após a conclusão do ciclo operacional correspondente à compra realizada.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">6. RISCOS OPERACIONAIS</h5>
+                    <p>6.1. A PLATAFORMA adota critérios rigorosos de seleção, controle e gestão, reduzindo riscos operacionais.</p>
+                    <p>6.2. Ainda assim, o PARCEIRO declara estar ciente de que toda operação comercial envolve variáveis de mercado, logística e fornecedores.</p>
+                    <p>6.3. A PLATAFORMA compromete-se a atuar com diligência máxima, transparência e boa-fé.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">7. OBRIGAÇÕES DO PARCEIRO</h5>
+                    <p>7.1. Realizar o cadastro com informações verdadeiras;</p>
+                    <p>7.2. Efetuar as compras conforme as regras da plataforma;</p>
+                    <p>7.3. Acompanhar as informações disponibilizadas no painel;</p>
+                    <p>7.4. Manter seus dados atualizados.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">8. OBRIGAÇÕES DA PLATAFORMA</h5>
+                    <p>8.1. Disponibilizar produtos de alta liquidez;</p>
+                    <p>8.2. Operar a logística e comercialização;</p>
+                    <p>8.3. Garantir transparência total via painel;</p>
+                    <p>8.4. Efetuar os repasses conforme estabelecido.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">9. VIGÊNCIA, PRAZO E CICLO OPERACIONAL</h5>
+                    <p>9.1. O presente contrato terá vigência de 12 (doze) meses, contados a partir da data de aceite eletrônico pelo PARCEIRO.</p>
+                    <p>9.2. Durante a vigência, o valor correspondente ao plano de parceria adquirido pelo PARCEIRO será integralmente alocado em operações sucessivas de compra e recompra de produtos, dentro da estratégia operacional da PLATAFORMA.</p>
+                    <p>9.3. O ciclo financeiro da parceria observará as seguintes regras:</p>
+                    <p className="ml-4">a) O primeiro retorno comercial será disponibilizado ao PARCEIRO em até 60 (sessenta) dias contados da data da compra inicial;</p>
+                    <p className="ml-4">b) Após o primeiro ciclo, os retornos subsequentes ocorrerão em ciclos mensais, com disponibilização a cada 30 (trinta) dias;</p>
+                    <p className="ml-4">c) O valor principal do plano adquirido permanecerá reaplicado continuamente em novas operações de compra, enquanto vigente o contrato.</p>
+                    <p>9.4. Os valores de retorno comercial apurados após o período inicial de 60 (sessenta) dias poderão ser sacados mensalmente pelo PARCEIRO, até o término da vigência contratual.</p>
+                    <p>9.5. Ao final do prazo de 12 (doze) meses, a parceria será automaticamente encerrada, salvo manifestação expressa das partes para celebração de novo acordo, o qual poderá conter condições, prazos e critérios distintos.</p>
+                    <p>9.6. Encerrada a vigência contratual, o valor integral correspondente à compra realizada pelo PARCEIRO será disponibilizado para saque em até 60 (sessenta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">10. CONFIDENCIALIDADE</h5>
+                    <p>10.1. As partes comprometem-se a manter sigilo absoluto sobre informações estratégicas, comerciais e operacionais.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">11. DISPOSIÇÕES GERAIS</h5>
+                    <p>11.1. O aceite eletrônico deste contrato possui plena validade jurídica.</p>
+                    <p>11.2. Este contrato representa a totalidade do acordo entre as partes.</p>
+
+                    <h5 className="text-green-400 font-bold mt-4">12. FORO</h5>
+                    <p>12.1. Fica eleito o foro da comarca do Rio de Janeiro/RJ para dirimir quaisquer questões oriundas deste contrato.</p>
+
+                    <div className="border-t border-gray-600 mt-6 pt-4 text-center">
+                      <p className="text-gray-400 italic">E, por estarem de pleno acordo, o PARCEIRO manifesta seu aceite eletrônico aos termos acima.</p>
+                    </div>
+                  </div>
+                </ScrollArea>
+
+                <Button
+                  onClick={() => setShowContract(false)}
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-4"
+                >
+                  Voltar
+                </Button>
+              </motion.div>
+            ) : !selectedPlan ? (
               <>
                 {/* Carousel para todos os tamanhos */}
                 <div className="relative py-2"
