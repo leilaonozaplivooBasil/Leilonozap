@@ -98,7 +98,7 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
                 <p className="text-xs text-gray-500 uppercase tracking-wide mt-3 mb-2">Suas comissões nesta venda:</p>
                 <div className="space-y-2">
                     {[...records]
-                        .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
+                        .sort((a, b) => ROLE_ORDER.indexOf(b.role) - ROLE_ORDER.indexOf(a.role))
                         .map((record, idx) => (
                         <div key={record.id || idx} className="flex items-center justify-between py-2 px-3 bg-gray-900/50 rounded-lg">
                             <div className="flex items-center gap-3">
