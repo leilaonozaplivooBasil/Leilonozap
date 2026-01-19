@@ -143,18 +143,24 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     setDraggedNode(node);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', node.id);
+    // Visual feedback
+    if (e.target) {
+      e.target.style.opacity = '0.5';
+    }
   };
 
   const handleDragOver = (e, node) => {
     e.preventDefault();
     e.stopPropagation();
     if (draggedNode && draggedNode.id !== node.id) {
+      e.dataTransfer.dropEffect = 'move';
       setDropTarget(node.id);
     }
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setDropTarget(null);
   };
 
@@ -162,40 +168,61 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     e.preventDefault();
     e.stopPropagation();
     
-    if (!draggedNode || draggedNode.id === newParent.id) {
+    const draggedId = e.dataTransfer.getData('text/plain') || draggedNode?.id;
+    
+    if (!draggedId || draggedId === newParent.id) {
       setDraggedNode(null);
       setDropTarget(null);
       return;
     }
 
-    // Não pode mover para um descendente
-    const isDescendant = (parent, childId) => {
-      if (!parent.children) return false;
-      for (const child of parent.children) {
-        if (child.id === childId) return true;
-        if (isDescendant(child, childId)) return true;
+    const draggedUser = users.find(u => u.id === draggedId);
+    if (!draggedUser) {
+      setDraggedNode(null);
+      setDropTarget(null);
+      return;
+    }
+
+    // Verifica se o alvo é descendente do arrastado (causaria ciclo)
+    const isDescendantOf = (ancestorId, maybeDescendantId) => {
+      const queue = [ancestorId];
+      const seen = new Set();
+      while (queue.length > 0) {
+        const currentId = queue.shift();
+        for (const u of users) {
+          if (u.referred_by_id === currentId && !seen.has(u.id)) {
+            if (u.id === maybeDescendantId) return true;
+            seen.add(u.id);
+            queue.push(u.id);
+          }
+        }
       }
       return false;
     };
 
-    if (isDescendant(draggedNode, newParent.id)) {
-      toast.error('Não pode mover para um descendente!');
-      setDraggedNode(null);
-      setDropTarget(null);
-      return;
+    if (isDescendantOf(draggedId, newParent.id)) {
+      toast.error('Não pode mover para um descendente! O ciclo será resolvido automaticamente.');
     }
 
-    // Chama callback de relink
+    // Chama callback de relink (com flag para resolver ciclos)
     if (onRelink) {
-      await onRelink(draggedNode.id, newParent.id);
-      toast.success(`${draggedNode.full_name} agora está abaixo de ${newParent.full_name}`);
+      try {
+        await onRelink(draggedId, newParent.id, true);
+        toast.success(`${draggedUser.full_name} agora está abaixo de ${newParent.full_name}`);
+      } catch (err) {
+        toast.error('Erro ao mover: ' + err.message);
+      }
     }
 
     setDraggedNode(null);
     setDropTarget(null);
   };
 
-  const handleDragEnd = () => {
+  const handleDragEnd = (e) => {
+    // Reset visual feedback
+    if (e.target) {
+      e.target.style.opacity = '1';
+    }
     setDraggedNode(null);
     setDropTarget(null);
   };
