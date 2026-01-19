@@ -700,14 +700,28 @@ export default function InvestorDashboard() {
                         const response = await generateContractPDF();
                         const blob = new Blob([response.data], { type: 'application/pdf' });
                         const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
-                        document.body.appendChild(a);
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                        a.remove();
-                        toast.success("Contrato PDF baixado com sucesso!");
+                        
+                        // Detecta se é mobile
+                        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                        
+                        if (isMobile) {
+                          // Em mobile, abre em nova aba para permitir download nativo
+                          window.open(url, '_blank');
+                          toast.success("PDF aberto! Use o menu do navegador para salvar.");
+                        } else {
+                          // Em desktop, força download
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
+                          a.style.display = 'none';
+                          document.body.appendChild(a);
+                          a.click();
+                          setTimeout(() => {
+                            window.URL.revokeObjectURL(url);
+                            a.remove();
+                          }, 100);
+                          toast.success("Contrato PDF baixado com sucesso!");
+                        }
                       } catch (error) {
                         console.error('Erro ao baixar PDF:', error);
                         toast.error("Erro ao gerar PDF do contrato");
