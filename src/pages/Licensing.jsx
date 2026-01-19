@@ -1764,14 +1764,14 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}`}>
                   <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>📱 Comissões App (3%)</p>
                   <p className={`text-xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
-                    R$ {((user.commission_balance || 0) - (user.catalog_commission_balance || 0)).toFixed(2)}
+                    R$ {Math.max(0, (user.total_commissions_generated || user.commission_balance || 0) - (user.catalog_total_commissions_generated || user.catalog_commission_balance || 0)).toFixed(2)}
                   </p>
                   <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Arremates dos seus indicados</p>
                 </div>
                 <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
                   <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>🛍️ Comissões Catálogo (26%)</p>
                   <p className={`text-xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
-                    R$ {(user.catalog_commission_balance || 0).toFixed(2)}
+                    R$ {(user.catalog_total_commissions_generated || user.catalog_commission_balance || 0).toFixed(2)}
                   </p>
                   <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Vendas do catálogo + hierarquia</p>
                 </div>
