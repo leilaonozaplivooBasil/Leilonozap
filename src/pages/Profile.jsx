@@ -413,7 +413,7 @@ export default function Profile() {
                   variant="outline" 
                   size="sm"
                   onClick={() => setIsEditing(!isEditing)}
-                  className="bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+                  className={isSaiDeBaixo ? "bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
                 >
                   {isEditing ? "Cancelar" : <><Edit3 className="w-4 h-4 mr-2" />Editar</>}
                 </Button>
@@ -476,7 +476,7 @@ export default function Profile() {
                                         {isGeneratingAvatar ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
                                         Gerar Avatar
                                     </Button>
-                                    <Button onClick={cancelGeneration} variant="outline" className="bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900">
+                                    <Button onClick={cancelGeneration} variant="outline" className={isSaiDeBaixo ? "bg-white border-gray-300 text-gray-900 hover:bg-gray-100" : "bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}>
                                         <X className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -775,7 +775,7 @@ export default function Profile() {
               <CardContent className="space-y-3">
                 <Button 
                   variant="outline" 
-                  className="w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+                  className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
                   onClick={() => navigate(createPageUrl(isSaiDeBaixo ? "SaiDeBaixo" : "Home") + "?favorites=true")}
                 >
                   <span className="text-red-500 mr-2">❤️</span>
@@ -783,7 +783,7 @@ export default function Profile() {
                 </Button>
                 <Button 
                   variant="outline" 
-                  className={`w-full ${isSaiDeBaixo ? 'border-red-300 text-red-600 hover:bg-red-50' : 'border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300'}`}
+                  className={`w-full ${isSaiDeBaixo ? 'bg-white border-red-300 text-red-600 hover:bg-red-50' : 'bg-gray-700 border-red-500/50 text-red-400 hover:bg-gray-600'}`}
                   onClick={handleLogout}
                 >
                   <LogOut className="w-4 h-4 mr-2" />
