@@ -122,149 +122,143 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
       requestAnimationFrame(() => {
         drawSVGConnections();
       });
-    }, 100);
+    }, 150);
     return () => clearTimeout(timer);
-  }, [expandedNodes, users]);
+  }, [currentRootId, users]);
 
   useEffect(() => {
     window.addEventListener('resize', drawSVGConnections);
     return () => window.removeEventListener('resize', drawSVGConnections);
   }, []);
 
-  const TreeNode = ({ node, depth = 0, isRoot = false, parentId = null }) => {
-    const isExpanded = expandedNodes.has(node.id);
-    const hasChildren = node.children && node.children.length > 0;
+  // Componente do nó (círculo)
+  const NodeCircle = ({ node, isRoot = false, onClick }) => {
     const primaryLevel = node.primary_career_level || 'usuario';
     const bgColor = getCareerColor(primaryLevel);
     const initials = getInitials(node.full_name);
     const nodeRef = useRef(null);
     const [showTooltip, setShowTooltip] = useState(false);
+    const hasChildren = node.children && node.children.length > 0;
 
     useEffect(() => {
-      if (nodeRef.current) {
+      if (nodeRef.current && containerRef.current) {
         const rect = nodeRef.current.getBoundingClientRect();
-        const container = containerRef.current?.getBoundingClientRect();
-        if (container) {
-          nodePositions.current[node.id] = {
-            x: rect.left - container.left + rect.width / 2,
-            y: rect.top - container.top + rect.height / 2
-          };
-        }
+        const container = containerRef.current.getBoundingClientRect();
+        nodePositions.current[node.id] = {
+          x: rect.left - container.left + rect.width / 2,
+          y: rect.top - container.top + rect.height / 2
+        };
+        // Redesenhar linhas após posicionar
+        setTimeout(drawSVGConnections, 50);
       }
-    }, [node.id, isExpanded]);
+    }, [node.id]);
 
     return (
       <div 
-        className={`flex flex-col items-center ${isRoot ? 'w-full' : ''}`} 
+        className="relative flex flex-col items-center"
         ref={nodeRef}
-        style={{ gap: isRoot ? '60px' : '30px' }}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
       >
-        {/* Nó/Bolha */}
-        <div 
-          className="relative"
-          onMouseEnter={() => setShowTooltip(true)}
-          onMouseLeave={() => setShowTooltip(false)}
+        <button
+          onClick={() => hasChildren && onClick && onClick(node.id)}
+          className={`
+            w-16 h-16 rounded-full ${bgColor}
+            flex items-center justify-center
+            text-white font-bold text-sm
+            hover:shadow-2xl transition-all duration-300
+            ${hasChildren ? 'cursor-pointer hover:scale-110' : 'cursor-default'}
+            shadow-lg border-2 border-white/20
+            overflow-hidden flex-shrink-0
+          `}
         >
-          {/* Bolha melhorada */}
-          <button
-            onClick={() => hasChildren && toggleNode(node.id)}
-            className={`
-              w-16 h-16 rounded-full ${bgColor}
-              flex items-center justify-center
-              text-white font-bold text-sm
-              hover:shadow-2xl transition-all duration-300
-              cursor-pointer shadow-lg
-              relative group/btn
-              hover:scale-110
-              border-2 border-white/20
-              overflow-hidden
-              flex-shrink-0
-            `}
-          >
-            {node.avatar_url ? (
-              <img src={node.avatar_url} alt={node.full_name} className="w-full h-full object-cover" />
-            ) : (
-              initials
-            )}
+          {node.avatar_url ? (
+            <img src={node.avatar_url} alt={node.full_name} className="w-full h-full object-cover" />
+          ) : (
+            initials
+          )}
+        </button>
 
-            {/* Dropdown indicator removido para visual mais limpo */}
-          </button>
+        {/* Tooltip */}
+        <div 
+          className={`absolute ${isRoot ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 ${showTooltip ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-30 border border-gray-600 shadow-2xl whitespace-nowrap`}
+        >
+          <div className="font-bold">{node.full_name}</div>
+          <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
+          {hasChildren && <div className="text-green-400 text-[10px] mt-1">👆 Clique para ver {node.children.length} indicados</div>}
 
-          {/* Tooltip com info e ações */}
-          <div 
-            className={`absolute ${isRoot ? 'top-full mt-2' : 'left-full ml-1 top-1/2 -translate-y-1/2'} ${showTooltip ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-20 border border-gray-600 shadow-2xl whitespace-nowrap`}
-          >
-            <div className="font-bold">{node.full_name}</div>
-            <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
-
-            {/* Botões de ação */}
-            <div className="flex gap-1 mt-2 pt-2 border-t border-gray-700">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 px-1.5 text-xs text-blue-400 hover:bg-blue-500/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(node);
-                }}
-              >
-                ✏️
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 px-1.5 text-xs text-green-400 hover:bg-green-500/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onPromote(node);
-                }}
-              >
-                ⭐
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 px-1.5 text-xs text-red-400 hover:bg-red-500/20"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(node);
-                }}
-              >
-                🗑️
-              </Button>
-            </div>
+          <div className="flex gap-1 mt-2 pt-2 border-t border-gray-700">
+            <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs text-blue-400 hover:bg-blue-500/20"
+              onClick={(e) => { e.stopPropagation(); onEdit(node); }}>✏️</Button>
+            <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs text-green-400 hover:bg-green-500/20"
+              onClick={(e) => { e.stopPropagation(); onPromote(node); }}>⭐</Button>
+            <Button size="sm" variant="ghost" className="h-6 px-1.5 text-xs text-red-400 hover:bg-red-500/20"
+              onClick={(e) => { e.stopPropagation(); onDelete(node); }}>🗑️</Button>
           </div>
         </div>
-
-        {/* Children - Estrutura em cascata */}
-        {hasChildren && isExpanded && (
-          <div className={isRoot ? "flex flex-row gap-16 justify-center flex-wrap w-full" : "flex flex-col gap-6"}>
-            {node.children.map((child) => (
-              <div key={child.id} className="flex flex-col items-center">
-                <TreeNode node={child} depth={depth + 1} isRoot={false} parentId={node.id} />
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
 
-  const roots = getHierarchy();
+  const root = getCurrentRoot();
+
+  if (!root) {
+    return (
+      <div className="w-full p-8 bg-gray-900 rounded-lg text-center text-gray-400">
+        Nenhum usuário encontrado na hierarquia.
+      </div>
+    );
+  }
+
+  const children = root.children || [];
 
   return (
-    <div className="w-full p-8 bg-gray-900 rounded-lg relative overflow-auto min-h-screen flex items-center justify-center" ref={containerRef}>
+    <div className="w-full p-8 bg-gray-900 rounded-lg relative min-h-[500px]" ref={containerRef}>
+      {/* Botão Voltar */}
+      {navigationHistory.length > 0 && (
+        <Button
+          onClick={navigateBack}
+          variant="ghost"
+          className="absolute top-4 left-4 z-20 text-gray-400 hover:text-white"
+        >
+          <ChevronLeft className="w-5 h-5 mr-1" />
+          Voltar
+        </Button>
+      )}
+
+      {/* SVG para linhas */}
       <svg
         ref={svgRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
-        style={{ zIndex: 1, top: 0, left: 0 }}
-        preserveAspectRatio="none"
-        shapeRendering="geometricPrecision"
+        style={{ zIndex: 1 }}
       />
-      <div className="relative" style={{ zIndex: 2 }}>
-        {roots.map((root) => (
-          <TreeNode key={root.id} node={root} depth={0} isRoot={true} />
-        ))}
+
+      {/* Layout: Raiz no topo, filhos embaixo */}
+      <div className="relative flex flex-col items-center" style={{ zIndex: 2 }}>
+        {/* Raiz */}
+        <div className="mb-48">
+          <NodeCircle node={root} isRoot={true} />
+        </div>
+
+        {/* Filhos diretos - alinhados horizontalmente */}
+        {children.length > 0 && (
+          <div className="flex flex-row gap-12 justify-center flex-wrap">
+            {children.map(child => (
+              <NodeCircle 
+                key={child.id} 
+                node={child} 
+                isRoot={false}
+                onClick={navigateToChild}
+              />
+            ))}
+          </div>
+        )}
+
+        {children.length === 0 && (
+          <div className="text-gray-500 text-sm">
+            Este usuário não possui indicados diretos.
+          </div>
+        )}
       </div>
     </div>
   );
