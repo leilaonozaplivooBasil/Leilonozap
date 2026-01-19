@@ -22,7 +22,11 @@ export default function UserPasswordModal({ user, isOpen, onClose, onSave }) {
         }
         setIsSaving(true);
         try {
-            await AppUser.update(user.id, { password: newPassword });
+            // Usa função backend para bypass de RLS
+            await base44.functions.invoke('updateUserPassword', {
+                user_id: user.id,
+                new_password: newPassword
+            });
             onSave();
             onClose();
             setNewPassword(''); // Limpa o campo
