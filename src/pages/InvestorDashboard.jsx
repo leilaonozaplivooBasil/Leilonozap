@@ -1120,7 +1120,7 @@ export default function InvestorDashboard() {
                     setSelectedPlan(null);
                   }}
                   variant="outline"
-                  className="w-full border-gray-600 text-gray-300"
+                  className="w-full bg-gray-700 hover:bg-gray-600 border-gray-600 text-gray-300"
                 >
                   Cancelar
                 </Button>
