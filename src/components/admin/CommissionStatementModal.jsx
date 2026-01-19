@@ -98,9 +98,9 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
 
 export default function CommissionStatementModal({ licensee, isOpen, onClose }) {
      const [commissionRecords, setCommissionRecords] = useState([]);
+     const [salesById, setSalesById] = useState({});
      const [isLoading, setIsLoading] = useState(false);
-     const [roleTotals, setRoleTotals] = useState({});
-     const [expandedId, setExpandedId] = useState(null);
+     const [expandedSaleId, setExpandedSaleId] = useState(null);
      const [activeTab, setActiveTab] = useState('todos');
 
      useEffect(() => {
@@ -108,11 +108,8 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
              const fetchCommissionRecords = async () => {
                  setIsLoading(true);
                  setCommissionRecords([]);
-                 setRoleTotals({});
+                 setSalesById({});
                  try {
-                     console.log(`🔍 Buscando comissões para ${licensee.full_name}...`);
-
-                     // Busca comissões do usuário específico
                      const records = await CommissionRecord.filter(
                          { user_id: licensee.id },
                          "-created_date",
@@ -120,14 +117,12 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                      );
 
                      if (!Array.isArray(records)) {
-                         console.warn("CommissionRecord não retornou um array:", records);
                          setIsLoading(false);
                          return;
                      }
 
-                     // Buscar vendas relacionadas
                      const saleIds = Array.from(new Set(records.map(r => r.sale_id).filter(Boolean)));
-                     let salesById = {};
+                     let salesMap = {};
                      if (saleIds.length > 0) {
                          const sales = await CatalogSale.filter(
                              { id: { $in: saleIds } },
@@ -135,25 +130,14 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                              saleIds.length
                          );
                          if (Array.isArray(sales)) {
-                             salesById = Object.fromEntries(sales.map(s => [s.id, s]));
+                             salesMap = Object.fromEntries(sales.map(s => [s.id, s]));
                          }
                      }
 
-                     const enriched = records.map(r => ({ record: r, sale: salesById[r.sale_id] || null }));
-                     setCommissionRecords(enriched);
-
-                     // Totais por cargo
-                     const totals = records.reduce((acc, r) => {
-                         const role = r.role || "outro";
-                         acc[role] = (acc[role] || 0) + (r.amount || 0);
-                         return acc;
-                     }, {});
-                     setRoleTotals(totals);
-
-                     console.log(`✅ ${enriched.length} registros carregados.`);
+                     setCommissionRecords(records);
+                     setSalesById(salesMap);
                  } catch (error) {
                      console.error("Failed to fetch commission records:", error);
-                     alert("Erro ao buscar extrato de comissões.");
                  } finally {
                      setIsLoading(false);
                  }
@@ -162,23 +146,48 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
          }
      }, [isOpen, licensee]);
 
+     // Agrupar registros por sale_id
+     const groupedBySale = useMemo(() => {
+         const groups = {};
+         commissionRecords.forEach(record => {
+             const saleId = record.sale_id || 'unknown';
+             if (!groups[saleId]) {
+                 groups[saleId] = [];
+             }
+             groups[saleId].push(record);
+         });
+         // Ordenar por data mais recente
+         return Object.entries(groups).sort((a, b) => {
+             const dateA = new Date(a[1][0]?.created_date || 0);
+             const dateB = new Date(b[1][0]?.created_date || 0);
+             return dateB - dateA;
+         });
+     }, [commissionRecords]);
+
      // Filtrar por tipo
-     const filteredRecords = useMemo(() => {
-         if (activeTab === 'todos') return commissionRecords;
-         if (activeTab === 'app') return commissionRecords.filter(r => r.record.sale_type === 'auction');
-         if (activeTab === 'catalogo') return commissionRecords.filter(r => r.record.sale_type === 'catalog' || !r.record.sale_type);
-         return commissionRecords;
-     }, [commissionRecords, activeTab]);
+     const filteredGroups = useMemo(() => {
+         if (activeTab === 'todos') return groupedBySale;
+         if (activeTab === 'app') return groupedBySale.filter(([_, records]) => records[0]?.sale_type === 'auction');
+         if (activeTab === 'catalogo') return groupedBySale.filter(([_, records]) => records[0]?.sale_type === 'catalog' || !records[0]?.sale_type);
+         return groupedBySale;
+     }, [groupedBySale, activeTab]);
 
      // Totais por tipo
      const totals = useMemo(() => {
          const appTotal = commissionRecords
-             .filter(r => r.record.sale_type === 'auction')
-             .reduce((sum, r) => sum + (r.record.amount || 0), 0);
+             .filter(r => r.sale_type === 'auction')
+             .reduce((sum, r) => sum + (r.amount || 0), 0);
          const catalogTotal = commissionRecords
-             .filter(r => r.record.sale_type === 'catalog' || !r.record.sale_type)
-             .reduce((sum, r) => sum + (r.record.amount || 0), 0);
+             .filter(r => r.sale_type === 'catalog' || !r.sale_type)
+             .reduce((sum, r) => sum + (r.amount || 0), 0);
          return { app: appTotal, catalog: catalogTotal, total: appTotal + catalogTotal };
+     }, [commissionRecords]);
+
+     // Contagem de vendas por tipo
+     const saleCounts = useMemo(() => {
+         const appSales = new Set(commissionRecords.filter(r => r.sale_type === 'auction').map(r => r.sale_id)).size;
+         const catalogSales = new Set(commissionRecords.filter(r => r.sale_type === 'catalog' || !r.sale_type).map(r => r.sale_id)).size;
+         return { app: appSales, catalog: catalogSales, total: appSales + catalogSales };
      }, [commissionRecords]);
 
     return (
