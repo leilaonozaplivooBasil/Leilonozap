@@ -1069,7 +1069,7 @@ export default function InvestorDashboard() {
                     }}
                     size="icon"
                     variant="outline"
-                    className="border-gray-600"
+                    className="bg-gray-700 hover:bg-gray-600 border-gray-600"
                   >
                     <Copy className="w-4 h-4" />
                   </Button>
