@@ -142,6 +142,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
     e.stopPropagation();
     setDraggedNode(node);
     e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', node.id);
   };
 
   const handleDragOver = (e, node) => {
