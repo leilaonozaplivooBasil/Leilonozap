@@ -227,33 +227,26 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
       <div className="flex flex-col items-center">
         {/* Círculo do nó */}
         <div 
-          className={`relative flex flex-col items-center transition-all duration-200 ${isDragging ? 'opacity-50 scale-90' : ''} ${isDropTarget ? 'scale-125' : ''}`}
+          className={`relative flex flex-col items-center transition-all duration-200 ${isDragging ? 'opacity-50 scale-90' : ''} ${isDropTarget ? 'scale-110' : ''}`}
           ref={nodeRef}
-          onMouseEnter={() => !draggedNode && setShowTooltip(true)}
+          onMouseEnter={() => setShowTooltip(true)}
           onMouseLeave={() => setShowTooltip(false)}
           onDragOver={(e) => handleDragOver(e, node)}
           onDragLeave={handleDragLeave}
           onDrop={(e) => handleDrop(e, node)}
         >
-          {/* Handle de arraste */}
-          <div
+          <button
             draggable
             onDragStart={(e) => handleDragStart(e, node)}
             onDragEnd={handleDragEnd}
-            className="absolute -top-2 left-1/2 -translate-x-1/2 w-6 h-4 bg-gray-700 rounded-t-md flex items-center justify-center cursor-grab active:cursor-grabbing hover:bg-gray-600 z-10 border border-gray-600"
-            title="Arraste para reorganizar"
-          >
-            <GripVertical className="w-3 h-3 text-gray-400" />
-          </div>
-
-          <button
             onClick={() => hasChildren && toggleExpand(node.id)}
             className={`
               w-16 h-16 rounded-full ${bgColor}
               flex items-center justify-center
               text-white font-bold text-sm
               hover:shadow-2xl transition-all duration-300
-              ${hasChildren ? 'cursor-pointer hover:scale-110' : 'cursor-default'}
+              cursor-grab active:cursor-grabbing
+              ${hasChildren ? 'hover:scale-110' : ''}
               shadow-lg border-2 ${isDropTarget ? 'border-green-400 ring-4 ring-green-400/50' : 'border-white/20'}
               overflow-hidden flex-shrink-0
               relative
