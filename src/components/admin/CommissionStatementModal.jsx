@@ -94,21 +94,23 @@ const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
 
             {/* Detalhes expandidos - lista de cargos */}
             {isExpanded && (
-                <div className="px-4 pb-4 border-t border-gray-700/50">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mt-3 mb-2">Suas comissões nesta venda:</p>
-                    <div className="space-y-2">
-                        {records.map((record, idx) => (
-                            <div key={record.id || idx} className="flex items-center justify-between py-2 px-3 bg-gray-900/50 rounded-lg">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                    <span className="text-sm text-gray-300">{ROLE_LABELS[record.role] || record.role}</span>
-                                    <span className="text-xs text-gray-500">({Number(record.percent || 0).toFixed(1)}%)</span>
-                                </div>
-                                <span className="text-sm font-semibold text-green-400">+R$ {Number(record.amount || 0).toFixed(2)}</span>
+            <div className="px-4 pb-4 border-t border-gray-700/50">
+                <p className="text-xs text-gray-500 uppercase tracking-wide mt-3 mb-2">Suas comissões nesta venda:</p>
+                <div className="space-y-2">
+                    {[...records]
+                        .sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role))
+                        .map((record, idx) => (
+                        <div key={record.id || idx} className="flex items-center justify-between py-2 px-3 bg-gray-900/50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                <span className="text-sm text-gray-300">{ROLE_LABELS[record.role] || record.role}</span>
+                                <span className="text-xs text-gray-500">({Number(record.percent || 0).toFixed(1)}%)</span>
                             </div>
-                        ))}
-                    </div>
+                            <span className="text-sm font-semibold text-green-400">+R$ {Number(record.amount || 0).toFixed(2)}</span>
+                        </div>
+                    ))}
                 </div>
+            </div>
             )}
         </Card>
     );
