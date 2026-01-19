@@ -81,8 +81,8 @@ Deno.serve(async (req) => {
 
     // Header com logo real
     if (logoBase64) {
-      doc.addImage(logoBase64, 'PNG', pageWidth/2 - 20, y, 40, 20);
-      y += 28;
+      doc.addImage(logoBase64, 'PNG', pageWidth/2 - 25, y, 50, 50);
+      y += 58;
     } else {
       // Fallback: retangulo verde com texto
       doc.setFillColor(34, 139, 34);
