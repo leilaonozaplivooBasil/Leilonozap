@@ -192,121 +192,83 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-4xl bg-gray-900 border-gray-700 text-white max-h-[90vh] overflow-hidden flex flex-col">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3 text-green-400">
-                        <DollarSign className="w-6 h-6"/>
-                        Histórico Detalhado de Comissões
+            <DialogContent className="sm:max-w-2xl bg-gray-900 border-gray-800 text-white max-h-[90vh] overflow-hidden flex flex-col">
+                <DialogHeader className="pb-0">
+                    <DialogTitle className="flex items-center gap-2 text-white text-lg">
+                        <DollarSign className="w-5 h-5 text-green-400"/>
+                        Histórico de Comissões
                     </DialogTitle>
-                    <DialogDescription className="text-gray-400">
-                        Comissões de {licensee?.full_name} separadas por canal de venda
+                    <DialogDescription className="text-gray-500 text-sm">
+                        {licensee?.full_name}
                     </DialogDescription>
                 </DialogHeader>
 
-                {/* Cards de Resumo por Canal */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-4">
-                    {/* Saldo Disponível */}
-                    <div className="p-4 bg-gradient-to-br from-green-900/40 to-emerald-900/40 rounded-xl border border-green-500/30">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Wallet className="w-5 h-5 text-green-400" />
-                            <span className="text-sm text-gray-300">Saldo Disponível</span>
-                        </div>
-                        <p className="text-2xl font-bold text-green-400">
+                {/* Cards de Resumo - Design Minimalista */}
+                <div className="grid grid-cols-3 gap-2 my-4">
+                    <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+                        <p className="text-xs text-gray-500 mb-1">Disponível</p>
+                        <p className="text-lg font-bold text-green-400">
                             R$ {(licensee?.commission_balance || 0).toFixed(2)}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">Valor disponível para saque</p>
                     </div>
-
-                    {/* App (3%) */}
-                    <div className="p-4 bg-gradient-to-br from-cyan-900/40 to-blue-900/40 rounded-xl border border-cyan-500/30">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Smartphone className="w-5 h-5 text-cyan-400" />
-                            <span className="text-sm text-gray-300">📱 App (3%)</span>
-                        </div>
-                        <p className="text-2xl font-bold text-cyan-400">
+                    <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+                        <p className="text-xs text-gray-500 mb-1">📱 App</p>
+                        <p className="text-lg font-bold text-cyan-400">
                             R$ {totals.app.toFixed(2)}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {commissionRecords.filter(r => r.record.sale_type === 'auction').length} arremates
-                        </p>
                     </div>
-
-                    {/* Catálogo (26%) */}
-                    <div className="p-4 bg-gradient-to-br from-blue-900/40 to-purple-900/40 rounded-xl border border-blue-500/30">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Package className="w-5 h-5 text-blue-400" />
-                            <span className="text-sm text-gray-300">🛍️ Catálogo (26%)</span>
-                        </div>
-                        <p className="text-2xl font-bold text-blue-400">
+                    <div className="p-3 bg-gray-800/50 rounded-lg text-center">
+                        <p className="text-xs text-gray-500 mb-1">🛍️ Catálogo</p>
+                        <p className="text-lg font-bold text-blue-400">
                             R$ {totals.catalog.toFixed(2)}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {commissionRecords.filter(r => r.record.sale_type === 'catalog' || !r.record.sale_type).length} vendas
                         </p>
                     </div>
                 </div>
 
                 {/* Tabs por Canal */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-                    <TabsList className="bg-gray-800 border-gray-700 w-full justify-start">
-                        <TabsTrigger value="todos" className="flex-1">
-                            📊 Todos ({commissionRecords.length})
+                    <TabsList className="bg-gray-800/50 border-0 w-full grid grid-cols-3 h-9">
+                        <TabsTrigger value="todos" className="text-xs data-[state=active]:bg-gray-700">
+                            Todos ({saleCounts.total})
                         </TabsTrigger>
-                        <TabsTrigger value="app" className="flex-1">
-                            📱 App ({commissionRecords.filter(r => r.record.sale_type === 'auction').length})
+                        <TabsTrigger value="app" className="text-xs data-[state=active]:bg-gray-700">
+                            App ({saleCounts.app})
                         </TabsTrigger>
-                        <TabsTrigger value="catalogo" className="flex-1">
-                            🛍️ Catálogo ({commissionRecords.filter(r => r.record.sale_type === 'catalog' || !r.record.sale_type).length})
+                        <TabsTrigger value="catalogo" className="text-xs data-[state=active]:bg-gray-700">
+                            Catálogo ({saleCounts.catalog})
                         </TabsTrigger>
                     </TabsList>
 
-                    <div className="flex-1 overflow-hidden mt-4">
-                        {/* Resumo por cargo (apenas na aba Todos) */}
-                        {activeTab === 'todos' && Object.keys(roleTotals).length > 0 && (
-                            <div className="mb-4 p-3 bg-gray-800 rounded-lg">
-                                <div className="text-sm text-gray-300 mb-2">Resumo por cargo</div>
-                                <div className="flex flex-wrap gap-2">
-                                    {Object.entries(roleTotals).map(([role, total]) => (
-                                        <Badge key={role} className={`${ROLE_COLORS[role] ?? 'bg-gray-700 text-gray-300 border-gray-600'}`}>
-                                            {(ROLE_LABELS[role] ?? role)} · R$ {Number(total).toFixed(2)}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Lista de Comissões */}
-                        <div className="max-h-[40vh] overflow-y-auto pr-2">
+                    <div className="flex-1 overflow-hidden mt-3">
+                        {/* Lista de Vendas Agrupadas */}
+                        <div className="max-h-[50vh] overflow-y-auto pr-1">
                             {isLoading ? (
                                 <div className="flex justify-center items-center h-40">
-                                    <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+                                    <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
                                 </div>
-                            ) : filteredRecords.length > 0 ? (
-                                filteredRecords.map(({ record, sale }) => (
-                                    <CommissionRecordItem 
-                                        key={record.id} 
-                                        record={record} 
-                                        sale={sale}
-                                        expandedId={expandedId}
-                                        onToggleExpand={setExpandedId}
+                            ) : filteredGroups.length > 0 ? (
+                                filteredGroups.map(([saleId, records]) => (
+                                    <SaleCard 
+                                        key={saleId} 
+                                        saleId={saleId}
+                                        records={records}
+                                        sale={salesById[saleId]}
+                                        isExpanded={expandedSaleId === saleId}
+                                        onToggle={() => setExpandedSaleId(expandedSaleId === saleId ? null : saleId)}
                                     />
                                 ))
                             ) : (
-                                <div className="text-center py-16 bg-gray-800 rounded-lg">
-                                    <TrendingUp className="w-12 h-12 mx-auto text-gray-500 mb-4" />
-                                    <p className="text-gray-400 font-semibold">
-                                        {activeTab === 'app' 
-                                            ? 'Nenhuma comissão do App ainda.' 
-                                            : activeTab === 'catalogo'
-                                            ? 'Nenhuma comissão do Catálogo ainda.'
-                                            : 'Nenhuma comissão registrada ainda.'}
+                                <div className="text-center py-12 bg-gray-800/30 rounded-lg">
+                                    <TrendingUp className="w-10 h-10 mx-auto text-gray-600 mb-3" />
+                                    <p className="text-gray-400 font-medium">
+                                        Nenhuma comissão ainda
                                     </p>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-gray-600 mt-1">
                                         {activeTab === 'app' 
-                                            ? 'Compartilhe seu link do App para ganhar 3% dos arremates dos seus indicados.' 
+                                            ? 'Compartilhe seu link do App' 
                                             : activeTab === 'catalogo'
-                                            ? 'Venda pelo seu link do Catálogo para ganhar comissões.'
-                                            : 'Quando suas vendas gerarem comissões, elas aparecerão aqui.'}
+                                            ? 'Venda pelo Catálogo'
+                                            : 'Suas comissões aparecerão aqui'}
                                     </p>
                                 </div>
                             )}
