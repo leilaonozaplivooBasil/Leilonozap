@@ -1359,7 +1359,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         <StatCard
           icon={BarChart}
-          label="Comissões Geradas"
+          label="Total Comissões (App + Catálogo)"
           value={`R$ ${(user.commission_balance || 0).toFixed(2)}`}
           onClick={() => setViewingCommissionsFor(user)}
           isSaiDeBaixo={isSaiDeBaixo} />
@@ -1416,7 +1416,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                               <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
                               <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Arrematante</TableHead>
                               <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Valor</TableHead>
-                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (10%)</TableHead>
+                              <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Comissão (3%)</TableHead>
                               <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
                             </TableRow>
                           </TableHeader>
@@ -1426,7 +1426,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
-                                <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.10).toFixed(2)}</TableCell>
+                                <TableCell className="text-green-400 font-semibold">R$ {(auction.current_price * 0.03).toFixed(2)}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-600 text-sm' : 'text-gray-400 text-sm'}>
                                   {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
                                 </TableCell>
@@ -1568,9 +1568,9 @@ const DashboardContent = ({ user, isAdmin }) => {
         <TabsContent value="visao-geral" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Link de Indicação</CardTitle>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🎯 Link Influencer (App) - 3% por arremate</CardTitle>
               <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Compartilhe este link para indicar novos clientes
+                Ganhe 3% em R$ sobre cada arremate feito pelos seus indicados no App
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -1585,10 +1585,10 @@ const DashboardContent = ({ user, isAdmin }) => {
                   Copiar
                 </Button>
               </div>
-              <Alert className={isSaiDeBaixo ? 'bg-red-50 border-red-300' : 'bg-green-900/20 border-green-500/30'}>
-                <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`} />
+              <Alert className={isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}>
+                <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`} />
                 <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>
-                  Quando alguém usar seu link, será automaticamente seu indicado!
+                  <strong>App (3%):</strong> Você ganha 3% sobre cada arremate dos seus indicados no aplicativo.
                 </AlertDescription>
               </Alert>
             </CardContent>
@@ -1597,9 +1597,9 @@ const DashboardContent = ({ user, isAdmin }) => {
           {userLevels.includes('licenciado_catalogo') &&
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Link do Catálogo</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Link Licenciado (Catálogo) - 26% distribuídos</CardTitle>
                 <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                  Compartilhe este link para vender pelo seu catálogo
+                  Você é o ÂNCORA da venda e recebe 13% + bônus da hierarquia
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -1614,12 +1614,18 @@ const DashboardContent = ({ user, isAdmin }) => {
                     navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`);
                     toast.success('Link copiado!');
                   }}
-                  className="bg-green-600 hover:bg-green-700">
+                  className="bg-blue-600 hover:bg-blue-700">
 
                     <Copy className="w-4 h-4 mr-2" />
                     Copiar
                   </Button>
                 </div>
+                <Alert className={isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}>
+                  <Info className={`w-4 h-4 ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`} />
+                  <AlertDescription className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>
+                    <strong>Catálogo (26%):</strong> Como Licenciado Âncora, você recebe 13% + comissões dos seus outros cargos ativos na hierarquia.
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
           }
@@ -1669,8 +1675,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <span className="text-white font-bold">3</span>
                 </div>
                 <div>
-                  <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Você Ganha 3% em R$</h4>
-                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>A cada arremate deles, você recebe 3% em dinheiro real!</p>
+                  <h4 className={`font-semibold mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Você Ganha Comissões em R$</h4>
+                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>App: 3% por arremate | Catálogo: até 26% distribuídos na rede!</p>
                 </div>
               </div>
             </CardContent>
@@ -1752,12 +1758,30 @@ const DashboardContent = ({ user, isAdmin }) => {
                 Total acumulado: R$ {(user.commission_balance || 0).toFixed(2)}
               </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Resumo por tipo */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}`}>
+                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>📱 Comissões App (3%)</p>
+                  <p className={`text-xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
+                    R$ {((user.commission_balance || 0) - (user.catalog_commission_balance || 0)).toFixed(2)}
+                  </p>
+                  <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Arremates dos seus indicados</p>
+                </div>
+                <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
+                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>🛍️ Comissões Catálogo (26%)</p>
+                  <p className={`text-xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
+                    R$ {(user.catalog_commission_balance || 0).toFixed(2)}
+                  </p>
+                  <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Vendas do catálogo + hierarquia</p>
+                </div>
+              </div>
+              
               <Button
                 onClick={() => setViewingCommissionsFor(user)}
                 className={isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}>
 
-                Ver Detalhes
+                Ver Histórico Detalhado
               </Button>
             </CardContent>
           </Card>

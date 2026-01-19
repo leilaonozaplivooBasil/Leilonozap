@@ -44,11 +44,13 @@ const ROLE_COLORS = {
 };
 
 const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
-    const orderTotal = sale?.total_amount ?? sale?.sale_price ?? 0;
+    const orderTotal = record.sale_amount || sale?.total_amount || sale?.sale_price || 0;
     const roleLabel = ROLE_LABELS[record.role] || record.role;
     const roleColor = ROLE_COLORS[record.role] || "bg-gray-700 text-gray-300 border-gray-600";
     const dateStr = new Date(record.created_date || sale?.created_date || Date.now()).toLocaleDateString('pt-BR');
     const isExpanded = expandedId === record.id;
+    const saleType = record.sale_type || 'catalog';
+    const saleTypeLabel = saleType === 'auction' ? '📱 App (3%)' : '🛍️ Catálogo (26%)';
 
     return (
         <Card className="bg-gray-800 border-gray-700 mb-3">
@@ -59,6 +61,9 @@ const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
                         <span>{dateStr}</span>
                     </div>
                     <div className="flex items-center gap-2">
+                        <Badge className={saleType === 'auction' ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-blue-500/15 text-blue-300 border-blue-500/30'}>
+                            {saleTypeLabel}
+                        </Badge>
                         <Badge className={`${roleColor} font-semibold`}>
                             {roleLabel}
                         </Badge>
@@ -74,7 +79,7 @@ const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
                         </div>
                         <div className="flex-1">
                             <p className="font-semibold text-white line-clamp-1">
-                                {sale?.product_title || (sale ? `Venda ${sale.product_id}` : 'Comissão de venda')}
+                                {record.product_title || sale?.product_title || (sale ? `Venda ${sale.product_id}` : 'Comissão de venda')}
                             </p>
                             {orderTotal ? (
                                 <p className="text-sm text-gray-400">Valor da venda: R$ {Number(orderTotal).toFixed(2)}</p>
@@ -90,6 +95,10 @@ const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
                     <div className="mt-4 pt-4 border-t border-gray-700 space-y-3">
                         <div className="grid grid-cols-2 gap-3 text-sm">
                             <div>
+                                <p className="text-gray-500 text-xs mb-1">Tipo de Venda</p>
+                                <p className="font-semibold text-white">{saleTypeLabel}</p>
+                            </div>
+                            <div>
                                 <p className="text-gray-500 text-xs mb-1">Cargo</p>
                                 <p className="font-semibold text-white">{roleLabel}</p>
                             </div>
@@ -101,10 +110,16 @@ const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
                                 <p className="text-gray-500 text-xs mb-1">Comissão Recebida</p>
                                 <p className="font-semibold text-green-400">R$ {Number(record.amount || 0).toFixed(2)}</p>
                             </div>
+                            {record.anchor_user_name && (
+                            <div className="col-span-2">
+                                <p className="text-gray-500 text-xs mb-1">Licenciado Âncora</p>
+                                <p className="font-semibold text-blue-400">{record.anchor_user_name}</p>
+                            </div>
+                            )}
                             <div>
                                 <p className="text-gray-500 text-xs mb-1">Status</p>
                                 <Badge className={record.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-green-500/20 text-green-300'}>
-                                    {record.status === 'pending' ? 'Pendente' : 'Processado'}
+                                    {record.status === 'pending' ? 'Pendente' : record.status === 'confirmed' ? 'Confirmado' : 'Processado'}
                                 </Badge>
                             </div>
                         </div>
