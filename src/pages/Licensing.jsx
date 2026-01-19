@@ -2460,9 +2460,25 @@ export default function LicensingPage() {
     }
   }, []);
 
-  const handleRegistrationSuccess = (user) => {
+  const handleRegistrationSuccess = async (user) => {
     console.log("✅ Login/Cadastro bem-sucedido:", user.full_name);
-    setCurrentUser(user);
+    
+    // Busca dados atualizados do usuário no banco para garantir que temos os career_levels corretos
+    try {
+      const freshUsers = await AppUser.filter({ id: user.id });
+      if (freshUsers && freshUsers.length > 0) {
+        const freshUser = freshUsers[0];
+        localStorage.setItem('currentUser', JSON.stringify(freshUser));
+        setCurrentUser(freshUser);
+        console.log("✅ Dados atualizados carregados:", freshUser.career_levels, freshUser.role);
+      } else {
+        setCurrentUser(user);
+      }
+    } catch (err) {
+      console.warn("Não foi possível atualizar dados do usuário:", err);
+      setCurrentUser(user);
+    }
+    
     setShowLicenseeRegisterModal(false);
     setShowLoginModal(false);
   };
