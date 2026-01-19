@@ -172,9 +172,9 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
               </div>
             </div>
             <div className="bg-green-900/30 rounded-lg p-2 text-center">
-              <div className="text-gray-400 mb-1">ValoraPay</div>
+              <div className="text-gray-400 mb-1">Saldo R$</div>
               <div className="text-green-400 font-bold text-lg">
-                V$ {valoraBalance.toFixed(2)}
+                R$ {saldoReais.toFixed(2)}
               </div>
             </div>
           </div>
