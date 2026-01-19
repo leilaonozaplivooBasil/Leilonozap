@@ -694,126 +694,28 @@ export default function InvestorDashboard() {
                     Voltar
                   </Button>
                   <Button
-                    onClick={() => {
-                      const contractText = `CONTRATO DE PARCERIA DE COMPRA E OPERAÇÃO COMERCIAL
-
-Pelo presente instrumento particular, de um lado LEILÃO NOZAP, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 51.544.091/0001-67, com sede em Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102, doravante denominada PLATAFORMA, e de outro lado PARCEIRO DE COMPRA, pessoa física ou jurídica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria de Compra e Operação Comercial, que se regerá pelas cláusulas e condições abaixo.
-
-1. OBJETO
-
-1.1. O presente contrato tem por objeto a formalização da parceria comercial entre a PLATAFORMA e o PARCEIRO para a aquisição de produtos selecionados, disponibilizados no catálogo digital da PLATAFORMA, com finalidade de operações comerciais estruturadas, sob gestão integral da PLATAFORMA.
-
-1.2. O PARCEIRO participa das operações por meio da compra de produtos, os quais são destinados à comercialização conforme a estratégia operacional da PLATAFORMA.
-
-2. NATUREZA DA PARCERIA
-
-2.1. As partes reconhecem que esta relação possui natureza estritamente comercial, não caracterizando, em nenhuma hipótese:
-- investimento financeiro;
-- contrato de investimento coletivo;
-- sociedade;
-- joint venture;
-- relação trabalhista;
-- captação pública de recursos;
-- promessa de rendimento financeiro.
-
-2.2. O PARCEIRO atua como parceiro comercial de compra, participando de operações reais de circulação de mercadorias.
-
-3. FUNCIONAMENTO DA PARCERIA
-
-3.1. O PARCEIRO selecionará produtos disponíveis no catálogo da PLATAFORMA e realizará a compra mínima definida no momento da adesão.
-
-3.2. A PLATAFORMA será responsável por:
-- curadoria e seleção dos produtos;
-- validação de qualidade e procedência;
-- gestão comercial e logística;
-- acompanhamento operacional via painel digital;
-- comercialização dos produtos nos canais próprios.
-
-3.3. O PARCEIRO poderá acompanhar, em tempo real, por meio do painel exclusivo: status das operações; evolução comercial; valores a receber; histórico das compras realizadas.
-
-4. RETORNO COMERCIAL AO PARCEIRO
-
-4.1. Em contrapartida à compra realizada, o PARCEIRO fará jus a um retorno comercial previamente estabelecido, calculado sobre o valor da compra, conforme condições apresentadas no momento da adesão.
-
-4.2. O retorno comercial não está vinculado a volume de vendas individuais do PARCEIRO, mas sim à execução operacional da PLATAFORMA, dentro de seu modelo de negócios.
-
-4.3. O prazo estimado para encerramento da operação e disponibilização do retorno será informado no painel, respeitando o ciclo comercial de cada produto.
-
-5. PAGAMENTOS
-
-5.1. Os pagamentos ao PARCEIRO ocorrerão por meio eletrônico, em conta de titularidade do PARCEIRO, conforme dados cadastrados.
-
-5.2. Os valores serão liberados após a conclusão do ciclo operacional correspondente à compra realizada.
-
-6. RISCOS OPERACIONAIS
-
-6.1. A PLATAFORMA adota critérios rigorosos de seleção, controle e gestão, reduzindo riscos operacionais.
-
-6.2. Ainda assim, o PARCEIRO declara estar ciente de que toda operação comercial envolve variáveis de mercado, logística e fornecedores.
-
-6.3. A PLATAFORMA compromete-se a atuar com diligência máxima, transparência e boa-fé.
-
-7. OBRIGAÇÕES DO PARCEIRO
-
-7.1. Realizar o cadastro com informações verdadeiras;
-7.2. Efetuar as compras conforme as regras da plataforma;
-7.3. Acompanhar as informações disponibilizadas no painel;
-7.4. Manter seus dados atualizados.
-
-8. OBRIGAÇÕES DA PLATAFORMA
-
-8.1. Disponibilizar produtos de alta liquidez;
-8.2. Operar a logística e comercialização;
-8.3. Garantir transparência total via painel;
-8.4. Efetuar os repasses conforme estabelecido.
-
-9. VIGÊNCIA, PRAZO E CICLO OPERACIONAL
-
-9.1. O presente contrato terá vigência de 12 (doze) meses, contados a partir da data de aceite eletrônico pelo PARCEIRO.
-
-9.2. Durante a vigência, o valor correspondente ao plano de parceria adquirido pelo PARCEIRO será integralmente alocado em operações sucessivas de compra e recompra de produtos, dentro da estratégia operacional da PLATAFORMA.
-
-9.3. O ciclo financeiro da parceria observará as seguintes regras:
-a) O primeiro retorno comercial será disponibilizado ao PARCEIRO em até 60 (sessenta) dias contados da data da compra inicial;
-b) Após o primeiro ciclo, os retornos subsequentes ocorrerão em ciclos mensais, com disponibilização a cada 30 (trinta) dias;
-c) O valor principal do plano adquirido permanecerá reaplicado continuamente em novas operações de compra, enquanto vigente o contrato.
-
-9.4. Os valores de retorno comercial apurados após o período inicial de 60 (sessenta) dias poderão ser sacados mensalmente pelo PARCEIRO, até o término da vigência contratual.
-
-9.5. Ao final do prazo de 12 (doze) meses, a parceria será automaticamente encerrada, salvo manifestação expressa das partes para celebração de novo acordo, o qual poderá conter condições, prazos e critérios distintos.
-
-9.6. Encerrada a vigência contratual, o valor integral correspondente à compra realizada pelo PARCEIRO será disponibilizado para saque em até 60 (sessenta) dias, contados da data formal de encerramento do contrato, respeitados os ciclos operacionais e financeiros em andamento.
-
-10. CONFIDENCIALIDADE
-
-10.1. As partes comprometem-se a manter sigilo absoluto sobre informações estratégicas, comerciais e operacionais.
-
-11. DISPOSIÇÕES GERAIS
-
-11.1. O aceite eletrônico deste contrato possui plena validade jurídica.
-
-11.2. Este contrato representa a totalidade do acordo entre as partes.
-
-12. FORO
-
-12.1. Fica eleito o foro da comarca do Rio de Janeiro/RJ para dirimir quaisquer questões oriundas deste contrato.
-
-E, por estarem de pleno acordo, o PARCEIRO manifesta seu aceite eletrônico aos termos acima.`;
-
-                      const blob = new Blob([contractText], { type: 'text/plain;charset=utf-8' });
-                      const url = window.URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = 'Contrato_Parceria_LeilaoNoZap.txt';
-                      document.body.appendChild(a);
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                      a.remove();
-                      toast.success("Contrato baixado com sucesso!");
+                    onClick={async () => {
+                      try {
+                        toast.info("Gerando PDF do contrato...");
+                        const response = await generateContractPDF();
+                        const blob = new Blob([response.data], { type: 'application/pdf' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        a.remove();
+                        toast.success("Contrato PDF baixado com sucesso!");
+                      } catch (error) {
+                        console.error('Erro ao baixar PDF:', error);
+                        toast.error("Erro ao gerar PDF do contrato");
+                      }
                     }}
                     className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-4"
                   >
-                    📥 Baixar Contrato
+                    📥 Baixar PDF
                   </Button>
                 </div>
               </motion.div>
