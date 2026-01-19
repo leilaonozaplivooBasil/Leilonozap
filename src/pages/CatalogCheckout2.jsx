@@ -118,18 +118,20 @@ export default function CatalogCheckout2() {
             const referralCode = sessionStorage.getItem('referralCode'); // Pega ?ref do URL
 
             // Criar registro de venda no catálogo
+            // ⚠️ IMPORTANTE: licensee_id deve ser o LICENCIADO que vendeu, não o comprador!
+            // O referralCode vem do ?ref=CODIGO_DO_LICENCIADO no URL
             const sale = await CatalogSale.create({
                 product_id: product.id,
                 product_title: product.description,
                 product_image: product.image_urls?.[0] || '',
                 sale_price: product.price_catalog,
+                total_amount: product.price_catalog, // ✅ Campo usado pelo processCatalogCommission
                 buyer_id: savedUser.id,
                 buyer_name: savedUser.full_name,
                 buyer_email: email.trim(),
                 buyer_phone: phone.trim(),
-                licensee_id: savedUser.id,
-                licensee_name: savedUser.full_name,
-                referral_code: referralCode || '', // ✅ Campo correto com ?ref
+                licensee_id: referralCode || 'site_official', // ✅ CORRIGIDO: Licenciado âncora é quem indicou
+                referred_by_code: referralCode || '', // ✅ Campo correto com ?ref
                 status: 'pending_payment'
             });
 
