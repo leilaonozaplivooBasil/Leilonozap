@@ -268,7 +268,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
                 )}
               </div>
             )}
-          </button>
+          </div>
 
           {/* Badge de quantidade de filhos */}
           {hasChildren && !isExpanded && (
