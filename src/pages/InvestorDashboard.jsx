@@ -881,7 +881,32 @@ export default function InvestorDashboard() {
                     <Label className="text-gray-300">CPF</Label>
                     <Input
                       value={pixFormData.cpf}
-                      onChange={(e) => setPixFormData({...pixFormData, cpf: e.target.value})}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setPixFormData({...pixFormData, cpf: value});
+                        
+                        // Valida CPF em tempo real
+                        const cleanCpf = value.replace(/\D/g, '');
+                        if (cleanCpf.length === 11) {
+                          const validateCPF = (cpf) => {
+                            if (/^(\d)\1+$/.test(cpf)) return false;
+                            let sum = 0;
+                            for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+                            let remainder = (sum * 10) % 11;
+                            if (remainder === 10 || remainder === 11) remainder = 0;
+                            if (remainder !== parseInt(cpf[9])) return false;
+                            sum = 0;
+                            for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+                            remainder = (sum * 10) % 11;
+                            if (remainder === 10 || remainder === 11) remainder = 0;
+                            if (remainder !== parseInt(cpf[10])) return false;
+                            return true;
+                          };
+                          if (!validateCPF(cleanCpf)) {
+                            toast.error("CPF inválido. Verifique os números.");
+                          }
+                        }
+                      }}
                       placeholder="000.000.000-00"
                       className="bg-gray-700 border-gray-600 text-white"
                     />
