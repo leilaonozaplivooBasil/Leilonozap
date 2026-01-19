@@ -441,11 +441,11 @@ export default function Catalog() {
           }
 
           {isLoading ?
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {Array(6).fill(0).map((_, i) =>
-            <div key={i} className="bg-gray-800 rounded-2xl p-4 sm:p-6 animate-pulse">
-                  <div className="w-full aspect-square bg-gray-700 rounded-xl mb-4"></div>
-                  <div className="h-6 bg-gray-700 rounded mb-2"></div>
+            <div key={i} className="bg-gray-800 rounded-2xl p-3 sm:p-6 animate-pulse">
+                  <div className="w-full aspect-square bg-gray-700 rounded-xl mb-3"></div>
+                  <div className="h-5 bg-gray-700 rounded mb-2"></div>
                   <div className="h-4 bg-gray-700 rounded w-2/3"></div>
                 </div>
             )}
@@ -461,7 +461,7 @@ export default function Catalog() {
               </p>
             </div> :
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {filteredProducts.map((product) => {
                 if (!product || !product.id) {
                   console.warn('⚠️ Product inválido detectado:', product);
