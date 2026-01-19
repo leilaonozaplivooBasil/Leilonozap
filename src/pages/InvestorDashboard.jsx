@@ -697,57 +697,41 @@ export default function InvestorDashboard() {
                     onClick={async () => {
                       try {
                         toast.info("Gerando PDF do contrato...");
-                        const response = await generateContractPDF();
-                        const blob = new Blob([response.data], { type: 'application/pdf' });
                         
                         // Detecta dispositivo
                         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                        const isAndroid = /Android/.test(navigator.userAgent);
-                        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
                         
-                        if (isIOS || (isSafari && !isAndroid)) {
-                          // iOS/Safari: usa FileReader para converter em data URL e abrir
-                          const reader = new FileReader();
-                          reader.onloadend = () => {
-                            const newWindow = window.open();
-                            if (newWindow) {
-                              newWindow.document.write(`
-                                <html>
-                                  <head>
-                                    <title>Contrato de Parceria - Leilão NoZap</title>
-                                    <meta name="viewport" content="width=device-width, initial-scale=1">
-                                  </head>
-                                  <body style="margin:0;padding:0;">
-                                    <embed src="${reader.result}" type="application/pdf" width="100%" height="100%" style="position:absolute;top:0;left:0;right:0;bottom:0;">
-                                  </body>
-                                </html>
-                              `);
-                              newWindow.document.close();
+                        if (isIOS || isMobile) {
+                          // Mobile: pede base64 do servidor
+                          const response = await base44.functions.invoke('generateContractPDF', {}, { params: { format: 'base64' } });
+                          
+                          if (response?.pdf_base64) {
+                            // Cria link com data URI
+                            const link = document.createElement('a');
+                            link.href = response.pdf_base64;
+                            link.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
+                            link.target = '_blank';
+                            
+                            // Em iOS, precisamos abrir em nova aba
+                            if (isIOS) {
+                              // Abre o PDF diretamente no navegador
+                              window.location.href = response.pdf_base64;
+                              toast.success("PDF aberto! Toque em 'Compartilhar' para salvar.");
                             } else {
-                              // Fallback: link direto
-                              const link = document.createElement('a');
-                              link.href = reader.result;
-                              link.target = '_blank';
+                              // Android e outros mobile
+                              document.body.appendChild(link);
                               link.click();
+                              document.body.removeChild(link);
+                              toast.success("PDF baixado!");
                             }
-                            toast.success("PDF aberto! Toque e segure para salvar.");
-                          };
-                          reader.readAsDataURL(blob);
-                        } else if (isAndroid) {
-                          // Android: abre blob URL em nova aba
-                          const url = window.URL.createObjectURL(blob);
-                          const newWindow = window.open(url, '_blank');
-                          if (!newWindow) {
-                            // Fallback para Android com bloqueador de popup
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'Contrato_Parceria_LeilaoNoZap.pdf';
-                            a.click();
+                          } else {
+                            throw new Error('Erro ao gerar PDF');
                           }
-                          setTimeout(() => window.URL.revokeObjectURL(url), 10000);
-                          toast.success("PDF aberto! Use o menu para salvar.");
                         } else {
-                          // Desktop: download direto
+                          // Desktop: download direto via arraybuffer
+                          const response = await generateContractPDF();
+                          const blob = new Blob([response.data], { type: 'application/pdf' });
                           const url = window.URL.createObjectURL(blob);
                           const a = document.createElement('a');
                           a.href = url;
