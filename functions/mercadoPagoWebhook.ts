@@ -61,6 +61,16 @@ Deno.serve(async (req) => {
                                      order_status: 'paid'
                                  });
                                  console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
+
+                                 // ✅ Processa comissão 3% para Influencer do App
+                                 try {
+                                     await base44.asServiceRole.functions.invoke('processAuctionInfluencerCommission', {
+                                         auction_id: dbPayment.auction_id
+                                     });
+                                     console.log(`✅ Comissão 3% processada para leilão ${dbPayment.auction_id}`);
+                                 } catch (commErr) {
+                                     console.error(`❌ Erro ao processar comissão do leilão:`, commErr.message);
+                                 }
                              }
                              if (dbPayment.catalog_sale_id) {
                                  await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
