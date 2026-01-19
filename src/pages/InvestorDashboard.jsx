@@ -57,6 +57,8 @@ export default function InvestorDashboard() {
   const [pixData, setPixData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
+  const [showContract, setShowContract] = useState(false);
+  const [acceptedContract, setAcceptedContract] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
