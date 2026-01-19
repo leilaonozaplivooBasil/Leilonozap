@@ -1753,35 +1753,108 @@ const DashboardContent = ({ user, isAdmin }) => {
         <TabsContent value="comissoes" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Extrato de Comissões</CardTitle>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>💰 Extrato de Comissões</CardTitle>
               <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Total acumulado: R$ {(user.commission_balance || 0).toFixed(2)}
+                Acompanhe seus ganhos por canal de venda
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Resumo por tipo */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}`}>
-                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>📱 Comissões App (3%)</p>
-                  <p className={`text-xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
-                    R$ {Math.max(0, (user.total_commissions_generated || user.commission_balance || 0) - (user.catalog_total_commissions_generated || user.catalog_commission_balance || 0)).toFixed(2)}
-                  </p>
-                  <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Arremates dos seus indicados</p>
+            <CardContent className="space-y-6">
+              
+              {/* Saldo Total Disponível */}
+              <div className={`p-5 rounded-xl border-2 ${isSaiDeBaixo ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400' : 'bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-green-500/50'}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-sm font-medium ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>💵 Saldo Disponível para Saque</p>
+                    <p className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
+                      R$ {(user.commission_balance || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <Wallet className={`w-10 h-10 ${isSaiDeBaixo ? 'text-green-500' : 'text-green-400'}`} />
                 </div>
-                <div className={`p-4 rounded-lg border ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
-                  <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>🛍️ Comissões Catálogo (26%)</p>
-                  <p className={`text-xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
-                    R$ {(user.catalog_total_commissions_generated || user.catalog_commission_balance || 0).toFixed(2)}
-                  </p>
-                  <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Vendas do catálogo + hierarquia</p>
+                <p className={`text-xs mt-2 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Este é o valor que você pode sacar agora. Após saques, este valor diminui.
+                </p>
+              </div>
+
+              {/* Explicação dos Canais */}
+              <div className={`p-4 rounded-lg ${isSaiDeBaixo ? 'bg-gray-100' : 'bg-gray-700/50'}`}>
+                <h4 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>📊 Como funcionam suas comissões:</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500">📱</span>
+                    <div>
+                      <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>App (3%):</strong>
+                      <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> Você ganha 3% sobre cada arremate feito pelos seus indicados no aplicativo.</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-500">🛍️</span>
+                    <div>
+                      <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo (26%):</strong>
+                      <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> 26% de cada venda é distribuído entre os cargos da hierarquia. Você recebe de acordo com seus cargos ativos.</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              
+
+              {/* Cards por Canal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Card App */}
+                <div className={`p-5 rounded-xl border-2 ${isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <Smartphone className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>📱 App (Influencer)</p>
+                      <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>3% por arremate dos indicados</p>
+                    </div>
+                  </div>
+                  <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
+                    R$ {Math.max(0, (user.total_commissions_generated || 0) - (user.catalog_total_commissions_generated || 0)).toFixed(2)}
+                  </p>
+                  <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
+                  
+                  <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-green-200' : 'border-green-500/30'}`}>
+                    <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                      ✅ Compartilhe seu link do App<br/>
+                      ✅ Quando seu indicado arremata, você ganha 3%
+                    </p>
+                  </div>
+                </div>
+
+                {/* Card Catálogo */}
+                <div className={`p-5 rounded-xl border-2 ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <Package className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🛍️ Catálogo (Licenciado)</p>
+                      <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>26% distribuídos na hierarquia</p>
+                    </div>
+                  </div>
+                  <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
+                    R$ {(user.catalog_total_commissions_generated || 0).toFixed(2)}
+                  </p>
+                  <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
+                  
+                  <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-blue-200' : 'border-blue-500/30'}`}>
+                    <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                      ✅ Âncora: 13% direto<br/>
+                      ✅ Cargos ativos: bônus extras
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão Ver Histórico */}
               <Button
                 onClick={() => setViewingCommissionsFor(user)}
-                className={isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}>
-
-                Ver Histórico Detalhado
+                className={`w-full ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700'}`}
+                size="lg">
+                <BarChart className="w-5 h-5 mr-2" />
+                Ver Histórico Detalhado por Venda
               </Button>
             </CardContent>
           </Card>
