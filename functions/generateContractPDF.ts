@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     // Buscar a logo como base64
     let logoBase64 = null;
     try {
-      const logoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      const logoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/b6c1c0177_LogoLeiloNoZap.PNG';
       const logoResponse = await fetch(logoUrl);
       if (logoResponse.ok) {
         const logoBuffer = await logoResponse.arrayBuffer();
