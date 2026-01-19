@@ -328,7 +328,11 @@ Equipe Leilão NoZap 🎯`
     setIsResetting(true);
 
     try {
-      await AppUser.update(resetUserId, { password: newPassword });
+      // Usa função backend para atualizar senha (bypass de RLS)
+      await base44.functions.invoke('updateUserPassword', { 
+        user_id: resetUserId, 
+        new_password: newPassword 
+      });
 
       await base44.entities.SystemLog.create({
         step: 'Password_Reset_Complete',
@@ -336,7 +340,7 @@ Equipe Leilão NoZap 🎯`
         message: 'Password changed successfully via verification code',
         component_name: 'LoginModal',
         payload: { user_id: resetUserId }
-      });
+      }).catch(() => {});
 
       alert("✅ Senha alterada com sucesso! Faça login com sua nova senha.");
       
