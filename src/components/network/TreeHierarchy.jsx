@@ -86,59 +86,34 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
 
     const svg = svgRef.current;
     svg.innerHTML = '';
-    const SHOW_GRANDCHILDREN = false;
 
-    // Garante stroke visível e não escalonado
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    style.textContent = `line { vector-effect: non-scaling-stroke; }`;
-    defs.appendChild(style);
-    svg.appendChild(defs);
-
-    // Definir dimensões do SVG garantindo área extra para setas diagonais
     const containerRect = containerRef.current.getBoundingClientRect();
-    const container = containerRef.current;
-    svg.setAttribute('width', Math.max(container.scrollWidth, containerRect.width));
-    svg.setAttribute('height', Math.max(container.scrollHeight, containerRect.height + 200));
+    svg.setAttribute('width', containerRect.width);
+    svg.setAttribute('height', containerRect.height);
 
-    // Buscar nós raiz a partir da hierarquia calculada
-    const roots = getHierarchy();
+    const root = getCurrentRoot();
+    if (!root) return;
 
-    // Função recursiva para desenhar conexões de qualquer nó para seus filhos
-    const drawNodeConnections = (node, isRootLevel = false) => {
-      const parentPos = nodePositions.current[node.id];
-      if (!parentPos || !node.children || node.children.length === 0) return;
+    const rootPos = nodePositions.current[root.id];
+    if (!rootPos) return;
 
-      const childPositions = node.children
-        .map(child => ({ pos: nodePositions.current[child.id], child }))
-        .filter(item => item.pos !== undefined);
+    // Só desenhar linhas da raiz para filhos diretos (SEM netos)
+    const children = root.children || [];
+    children.forEach(child => {
+      const childPos = nodePositions.current[child.id];
+      if (!childPos) return;
 
-      if (childPositions.length === 0) return;
-
-      childPositions.forEach(({ pos: cpos, child }) => {
-        const parentBottomY = parentPos.y + 32;
-        const childTopY = cpos.y - 32;
-
-        // Linha vertical simples do pai para o filho
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', parentPos.x);
-        line.setAttribute('y1', parentBottomY);
-        line.setAttribute('x2', cpos.x);
-        line.setAttribute('y2', childTopY);
-        line.setAttribute('stroke', '#cbd5e1');
-        line.setAttribute('stroke-width', '3');
-        line.setAttribute('stroke-linecap', 'round');
-        line.setAttribute('stroke-dasharray', '8 6');
-        svg.appendChild(line);
-
-        // Recursivamente desenhar conexões dos filhos
-        drawNodeConnections(child, false);
-      });
-    };
-
-    // Desenhar conexões para cada raiz
-    roots.forEach(root => {
-      drawNodeConnections(root, true);
+      // Linha RETA diagonal do centro inferior da raiz até centro superior do filho
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', rootPos.x);
+      line.setAttribute('y1', rootPos.y + 32); // base do círculo raiz
+      line.setAttribute('x2', childPos.x);
+      line.setAttribute('y2', childPos.y - 32); // topo do círculo filho
+      line.setAttribute('stroke', '#cbd5e1');
+      line.setAttribute('stroke-width', '3');
+      line.setAttribute('stroke-linecap', 'round');
+      line.setAttribute('stroke-dasharray', '8 6');
+      svg.appendChild(line);
     });
   };
 
