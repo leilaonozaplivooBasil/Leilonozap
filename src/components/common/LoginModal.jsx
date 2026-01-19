@@ -22,6 +22,15 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
   const [isResetting, setIsResetting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
+  // Estados para recuperação de senha com código
+  const [resetStep, setResetStep] = useState('email'); // 'email', 'code', 'newPassword'
+  const [verificationCode, setVerificationCode] = useState('');
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [resetUserId, setResetUserId] = useState(null);
+  const [resetSuccessMessage, setResetSuccessMessage] = useState('');
+  
   const isSaiDeBaixo = theme === 'saidebaixo';
 
   const handleLogin = async () => {
