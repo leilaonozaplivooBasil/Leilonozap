@@ -1,6 +1,26 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 import { jsPDF } from 'npm:jspdf@2.5.1';
 
+// Funcao para remover acentos e caracteres especiais
+function removeAccents(str) {
+  const accentsMap = {
+    'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a', 'ä': 'a',
+    'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+    'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+    'ó': 'o', 'ò': 'o', 'õ': 'o', 'ô': 'o', 'ö': 'o',
+    'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+    'ç': 'c', 'ñ': 'n',
+    'Á': 'A', 'À': 'A', 'Ã': 'A', 'Â': 'A', 'Ä': 'A',
+    'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
+    'Í': 'I', 'Ì': 'I', 'Î': 'I', 'Ï': 'I',
+    'Ó': 'O', 'Ò': 'O', 'Õ': 'O', 'Ô': 'O', 'Ö': 'O',
+    'Ú': 'U', 'Ù': 'U', 'Û': 'U', 'Ü': 'U',
+    'Ç': 'C', 'Ñ': 'N',
+    'º': 'o', 'ª': 'a'
+  };
+  return str.split('').map(char => accentsMap[char] || char).join('');
+}
+
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -10,19 +30,34 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Buscar a logo como base64
+    let logoBase64 = null;
+    try {
+      const logoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      const logoResponse = await fetch(logoUrl);
+      if (logoResponse.ok) {
+        const logoBuffer = await logoResponse.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(logoBuffer)));
+        logoBase64 = 'data:image/png;base64,' + base64;
+      }
+    } catch (e) {
+      console.log('Erro ao carregar logo:', e);
+    }
+
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
     const maxWidth = pageWidth - (margin * 2);
-    let y = 20;
+    let y = 15;
 
-    // Helper function to add text with word wrap
+    // Helper function to add text with word wrap (sem acentos)
     const addText = (text, fontSize = 10, isBold = false, color = [51, 51, 51]) => {
       doc.setFontSize(fontSize);
       doc.setFont('helvetica', isBold ? 'bold' : 'normal');
       doc.setTextColor(color[0], color[1], color[2]);
       
-      const lines = doc.splitTextToSize(text, maxWidth);
+      const cleanText = removeAccents(text);
+      const lines = doc.splitTextToSize(cleanText, maxWidth);
       
       for (const line of lines) {
         if (y > 270) {
@@ -44,14 +79,20 @@ Deno.serve(async (req) => {
       addText(text, 11, true, [34, 139, 34]);
     };
 
-    // Header with logo placeholder (green rectangle as logo representation)
-    doc.setFillColor(34, 139, 34);
-    doc.rect(pageWidth/2 - 25, y, 50, 15, 'F');
-    doc.setFontSize(10);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.text('LEILÃO NOZAP', pageWidth/2, y + 10, { align: 'center' });
-    y += 25;
+    // Header com logo real
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', pageWidth/2 - 20, y, 40, 20);
+      y += 28;
+    } else {
+      // Fallback: retangulo verde com texto
+      doc.setFillColor(34, 139, 34);
+      doc.rect(pageWidth/2 - 25, y, 50, 15, 'F');
+      doc.setFontSize(10);
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LEILAO NOZAP', pageWidth/2, y + 10, { align: 'center' });
+      y += 25;
+    }
 
     // Title
     doc.setFontSize(14);
