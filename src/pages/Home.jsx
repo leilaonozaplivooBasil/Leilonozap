@@ -40,32 +40,32 @@ export default function Home() {
 
   // 🚀 INICIALIZA COM CACHE IMEDIATO
   const [auctions, setAuctions] = useState(() => {
-        const cached = sessionStorage.getItem('auctions_cache');
-        const cacheTime = sessionStorage.getItem('auctions_cache_time');
-        if (cached && cacheTime && (Date.now() - parseInt(cacheTime) < 300000)) {
-          try {
-            const parsed = JSON.parse(cached);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              return parsed;
-            }
-          } catch (e) {}
+    const cached = sessionStorage.getItem('auctions_cache');
+    const cacheTime = sessionStorage.getItem('auctions_cache_time');
+    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 300000) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
-        // Fallback rápido entre sessões
-        try {
-          const persisted = localStorage.getItem('auctions_cache_persistent');
-          if (persisted) {
-            const parsed = JSON.parse(persisted);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              return parsed;
-            }
-          }
-        } catch (e) {}
-        return [];
-      });
+      } catch (e) {}
+    }
+    // Fallback rápido entre sessões
+    try {
+      const persisted = localStorage.getItem('auctions_cache_persistent');
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {}
+    return [];
+  });
   const [isLoading, setIsLoading] = useState(() => {
     const cached = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
-    const hasFreshSession = cached && cacheTime && (Date.now() - parseInt(cacheTime) < 300000);
+    const hasFreshSession = cached && cacheTime && Date.now() - parseInt(cacheTime) < 300000;
     if (hasFreshSession) return false;
     const persisted = localStorage.getItem('auctions_cache_persistent');
     return !persisted;
@@ -167,9 +167,9 @@ export default function Home() {
 
     // ORIGEM DO PRODUTO
     if (activeSourceFilter === "todos") {
+
       // mantém todos (inclusive factory) sem filtro pesado
-    } else if (activeSourceFilter === "factory") {
-      filtered = filtered.filter((a) => a.product_source === 'factory_new');
+    } else if (activeSourceFilter === "factory") {filtered = filtered.filter((a) => a.product_source === 'factory_new');
     }
 
     // CATEGORIA
@@ -189,7 +189,7 @@ export default function Home() {
 
   const loadUserFavorites = React.useCallback(async (userId, retryCount = 0) => {
     if (!userId) return;
-    
+
     // Cache de 5 segundos para favoritos
     const cacheKey = `favorites_${userId}_nozap`;
     const cached = sessionStorage.getItem(cacheKey);
@@ -202,7 +202,7 @@ export default function Home() {
       console.log('⚡ Favoritos do cache');
       return;
     }
-    
+
     try {
       const nozapFavorites = await base44.entities.FavoriteAuction.filter({ user_id: userId, context: 'nozap' });
       const nozapFavoriteIds = nozapFavorites.map((f) => f.auction_id);
@@ -214,11 +214,11 @@ export default function Home() {
         const allAuctions = await Auction.list("-created_date", 80);
         const favAuctions = allAuctions.filter((a) => nozapFavoriteIds.includes(a.id));
         setFavoriteAuctions(favAuctions);
-        
+
         // Salva no cache
         sessionStorage.setItem(cacheKey, JSON.stringify({ ids: nozapFavoriteIds, auctions: favAuctions }));
         sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-        
+
         console.log('✅ [NoZap] Leilões favoritos encontrados:', favAuctions.length);
       } else {
         setFavoriteAuctions([]);
@@ -227,7 +227,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error('❌ Erro ao carregar favoritos NoZap:', error);
-      
+
       // Usa cache mesmo expirado em caso de erro
       if (cached) {
         const cachedData = JSON.parse(cached);
@@ -235,12 +235,12 @@ export default function Home() {
         setFavoriteAuctions(cachedData.auctions);
         return;
       }
-      
+
       if (error.message?.includes('Rate limit') && retryCount < 2) {
         // 🆕 BACKOFF EXPONENCIAL: 2s, 4s, 8s
         const delay = Math.pow(2, retryCount + 1) * 2000;
-        console.debug(`⏳ Retry favoritos em ${delay/1000}s`);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        console.debug(`⏳ Retry favoritos em ${delay / 1000}s`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
         return loadUserFavorites(userId, retryCount + 1);
       }
     }
@@ -280,20 +280,20 @@ export default function Home() {
             localStorage.setItem('currentUser', JSON.stringify(freshUser));
             sessionStorage.setItem('lastUserValidation', now.toString());
             setCurrentUser(freshUser);
-            
+
             // Carrega favoritos com delay
             setTimeout(() => loadUserFavorites(freshUser.id), 500);
-            
+
             console.log("✅ Usuário validado na Home:", freshUser.full_name, "Role:", freshUser.role);
             return;
           }
         } catch (dbError) {
           console.error("⚠️ Erro ao validar usuário no DB, usando cache:", dbError);
           setCurrentUser(userFromStorage);
-          
+
           // Carrega favoritos com delay mesmo em erro
           setTimeout(() => loadUserFavorites(userFromStorage.id), 1000);
-          
+
           if (dbError.message?.includes('Rate limit') && retryCount < 1) {
             const delay = 3000;
             setTimeout(() => loadCurrentUser(retryCount + 1), delay);
@@ -361,9 +361,9 @@ export default function Home() {
     // Se não tem cache válido, busca do servidor
     try {
       const data = await Promise.race([
-        Auction.list("-created_date", 20),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000))
-      ]);
+      Auction.list("-created_date", 20),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000))]
+      );
       if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
         const serialized = JSON.stringify(data);
@@ -398,19 +398,19 @@ export default function Home() {
 
 
   useEffect(() => {
-    
+
     const loadInitialData = async () => {
       // Verifica cache ANTES de ativar loading
       const cachedData = sessionStorage.getItem('auctions_cache');
       const cacheTime = sessionStorage.getItem('auctions_cache_time');
-      const hasValidCache = cachedData && cacheTime && (Date.now() - parseInt(cacheTime) < 300000);
+      const hasValidCache = cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 300000;
 
       if (!hasValidCache) {
         setIsLoading(true);
       }
 
       const urlParams = new URLSearchParams(window.location.search);
-      
+
       if (urlParams.get('filter') === 'ativos') {
         setActiveCategory('ativos');
       }
@@ -432,7 +432,7 @@ export default function Home() {
       // Banners do cache imediatamente
       const cachedBanners = sessionStorage.getItem('home_banners_cache');
       const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
-      
+
       if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 120000) {
         setBanners(JSON.parse(cachedBanners));
       } else {
@@ -694,8 +694,8 @@ export default function Home() {
                   "bg-green-600 text-white shadow-lg shadow-green-500/30 scale-105" :
                   "bg-gray-800 text-gray-300 hover:bg-green-700 hover:text-white hover:scale-105 border border-gray-700 shadow-lg"}`
                   }
-                  aria-label="Direto de Fábrica"
-                  >
+                  aria-label="Direto de Fábrica">
+
                   <CheckCircle className="w-4 h-4" />
                   ✨ Direto de Fábrica
                 </button>
@@ -719,12 +719,12 @@ export default function Home() {
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => {setActiveSourceFilter("todos");setShowFavoritesOnly(false);}}
-                  className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 text-sm ${
-                  activeSourceFilter === "todos" && !showFavoritesOnly ?
-                  "bg-orange-600 text-white shadow-lg shadow-orange-500/30 scale-105" :
-                  "bg-gray-800 text-gray-300 hover:bg-orange-700 hover:text-white hover:scale-105 border border-gray-700 shadow-lg"}`
-                  }>
+                  onClick={() => {setActiveSourceFilter("todos");setShowFavoritesOnly(false);}} className="bg-orange-600 text-white py-3 text-sm font-bold rounded-lg w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shadow-orange-500/30 scale-105">
+
+
+
+
+
 
                   <Percent className="w-4 h-4" />
                   % 🔥 Arremate & Devoluções
@@ -811,7 +811,7 @@ export default function Home() {
           }
 
             {isLoading ?
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {Array(9).fill(0).map((_, i) =>
             <div key={i} className="bg-gray-800/70 backdrop-blur rounded-2xl p-4 sm:p-6 animate-pulse">
                     <div className="w-full aspect-square bg-gray-700/80 rounded-xl mb-4"></div>
@@ -840,22 +840,22 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {filteredAuctions.map((auction) => {
-                  // 🛡️ PROTEÇÃO: Valida se auction tem dados mínimos necessários
-                  if (!auction || !auction.id) {
-                    console.warn('⚠️ Auction inválido detectado:', auction);
-                    return null;
-                  }
-                  return (
-                    <AuctionCard
-                      key={auction.id}
-                      auction={auction}
-                      isAdmin={currentUser?.role === 'admin'}
-                      showFavoriteButton={true}
-                      userId={currentUser?.id}
-                      favoriteContext="nozap"
-                    />
-                  );
-                })}
+              // 🛡️ PROTEÇÃO: Valida se auction tem dados mínimos necessários
+              if (!auction || !auction.id) {
+                console.warn('⚠️ Auction inválido detectado:', auction);
+                return null;
+              }
+              return (
+                <AuctionCard
+                  key={auction.id}
+                  auction={auction}
+                  isAdmin={currentUser?.role === 'admin'}
+                  showFavoriteButton={true}
+                  userId={currentUser?.id}
+                  favoriteContext="nozap" />);
+
+
+            })}
               </div>
           }
         </div>
@@ -863,6 +863,6 @@ export default function Home() {
 
       <ComparaiFloatingButton auctions={filteredAuctions} mode="home" />
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
-    </div>
-  );
+    </div>);
+
 }
