@@ -71,7 +71,7 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
                     <Button 
                         onClick={() => onTrackClick(auction)}
                         variant="outline"
-                        className="flex-1 bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+                        className={`flex-1 ${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 hover:bg-gray-100' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
                     >
                         <Eye className="w-4 h-4 mr-2" />
                         Acompanhar Pedido
