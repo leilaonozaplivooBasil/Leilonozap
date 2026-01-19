@@ -277,18 +277,9 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
             </div>
           )}
 
-          {/* Indicador de drop */}
-          {isDropTarget && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-green-400 text-xs font-bold bg-gray-900/90 px-2 py-1 rounded">
-                Soltar aqui
-              </div>
-            </div>
-          )}
-
           {/* Tooltip */}
           <div 
-            className={`absolute ${depth === 0 ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 ${showTooltip && !draggedNode ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-30 border border-gray-600 shadow-2xl whitespace-nowrap`}
+            className={`absolute ${depth === 0 ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 ${showTooltip ? 'block' : 'hidden'} bg-gray-950 text-white text-xs rounded-lg px-3 py-2 z-30 border border-gray-600 shadow-2xl whitespace-nowrap`}
           >
             <div className="font-bold">{node.full_name}</div>
             <div className="text-gray-400 text-[10px] mt-1">{node.email}</div>
