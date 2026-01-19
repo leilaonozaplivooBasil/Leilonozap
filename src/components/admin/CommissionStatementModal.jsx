@@ -10,6 +10,7 @@ import { Loader2, DollarSign, User, ShoppingBag, Calendar, TrendingUp, ChevronDo
 import { Badge } from "@/components/ui/badge";
 
 const ROLE_LABELS = {
+  influencer_app: "Influencer (App 3%)",
   licenciado_catalogo: "Licenciado Catálogo",
   trainee: "Trainee",
   executivo: "Executivo",
@@ -21,10 +22,12 @@ const ROLE_LABELS = {
   diretor: "Diretor",
   ceo: "CEO",
   conselheiro: "Conselheiro",
-  fundador: "Fundador"
+  fundador: "Fundador",
+  site_official_rollup: "Empresa (NoZap)"
 };
 
 const ROLE_COLORS = {
+  influencer_app: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
   licenciado_catalogo: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   trainee: "bg-blue-500/15 text-blue-300 border-blue-500/30",
   executivo: "bg-sky-500/15 text-sky-300 border-sky-500/30",
@@ -36,7 +39,8 @@ const ROLE_COLORS = {
   diretor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
   ceo: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
   conselheiro: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-  fundador: "bg-lime-500/15 text-lime-300 border-lime-500/30"
+  fundador: "bg-lime-500/15 text-lime-300 border-lime-500/30",
+  site_official_rollup: "bg-gray-500/15 text-gray-300 border-gray-500/30"
 };
 
 const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
@@ -142,9 +146,9 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                  try {
                      console.log(`🔍 Buscando comissões para ${licensee.full_name} e sua hierarquia...`);
 
-                     const chain = await buildHierarchyChain(licensee);
+                     // Busca comissões do usuário específico
                      const records = await CommissionRecord.filter(
-                         { user_id: { $in: chain } },
+                         { user_id: licensee.id },
                          "-created_date",
                          500
                      );
