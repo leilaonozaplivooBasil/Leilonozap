@@ -239,86 +239,137 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     }
   };
 
-  const handleForgotPassword = async () => {
+  // Passo 1: Enviar código de verificação por email
+  const handleSendVerificationCode = async () => {
     if (!resetEmail || !resetEmail.includes('@')) {
       alert("❌ Por favor, insira um e-mail válido.");
       return;
     }
 
     setIsResetting(true);
+    setResetSuccessMessage('');
 
     try {
       const normalizedResetEmail = resetEmail.toLowerCase().trim();
+      const users = await AppUser.filter({ email: normalizedResetEmail });
 
-      try {
-        const users = await AppUser.filter({ email: normalizedResetEmail });
-
-        if (users.length > 0) {
-          const user = users[0];
-
-          const newPassword = Math.random().toString(36).slice(-8);
-
-          await AppUser.update(user.id, { password: newPassword });
-
-          await SendEmail({
-            to: user.email,
-            subject: "🔐 Nova Senha - Leilão NoZap",
-            body: `Olá ${user.full_name},
-
-  Você solicitou a recuperação de senha.
-
-  📧 Nova Senha Temporária: ${newPassword}
-
-  ⚠️ IMPORTANTE: Por segurança, recomendamos que você altere esta senha assim que fizer login.
-
-  Entre no app e faça login com esta senha.
-
-  ---
-  Equipe Leilão NoZap 🎯`
-          });
-
-          await base44.entities.SystemLog.create({
-            step: 'Password_Reset_Success',
-            status: 'success',
-            message: 'Password reset email sent successfully',
-            component_name: 'LoginModal',
-            payload: { email: normalizedResetEmail }
-          });
-        }
-      } catch (error) {
-        console.error("Erro ao processar reset:", error);
-
-        await base44.entities.SystemLog.create({
-          step: 'Password_Reset_Failed',
-          status: 'error',
-          message: `Password reset failed: ${error.message}`,
-          component_name: 'LoginModal',
-          error_details: { message: error.message, stack: error.stack },
-          payload: { email: normalizedResetEmail }
-        });
+      if (users.length === 0) {
+        // Por segurança, não revelamos se o email existe ou não
+        alert("✅ Se o seu e-mail estiver registrado, você receberá um código de verificação.");
+        setIsResetting(false);
+        return;
       }
 
-      alert("✅ Se o seu e-mail estiver registrado em nosso sistema, enviaremos uma nova senha temporária. Por favor, verifique sua caixa de entrada (e spam).");
-      setShowForgotPassword(false);
-      setResetEmail('');
+      const user = users[0];
+      
+      // Gera código de 6 dígitos
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setGeneratedCode(code);
+      setResetUserId(user.id);
 
-    } catch (error) {
-      console.error("Erro crítico ao resetar senha:", error);
+      await SendEmail({
+        to: user.email,
+        subject: "🔐 Código de Verificação - Leilão NoZap",
+        body: `Olá ${user.full_name},
 
-      await base44.entities.SystemLog.create({
-        step: 'Password_Reset_Critical_Error',
-        status: 'error',
-        message: `Critical error in password reset: ${error.message}`,
-        component_name: 'LoginModal',
-        error_details: { message: error.message, stack: error.stack }
+Você solicitou a recuperação de senha.
+
+🔑 Seu código de verificação é: ${code}
+
+⚠️ Este código é válido por 10 minutos.
+
+Se você não solicitou esta recuperação, ignore este e-mail.
+
+---
+Equipe Leilão NoZap 🎯`
       });
 
-      alert("✅ Se o seu e-mail estiver registrado em nosso sistema, enviaremos uma nova senha temporária. Por favor, verifique sua caixa de entrada (e spam).");
-      setShowForgotPassword(false);
-      setResetEmail('');
+      await base44.entities.SystemLog.create({
+        step: 'Password_Reset_Code_Sent',
+        status: 'success',
+        message: 'Verification code sent successfully',
+        component_name: 'LoginModal',
+        payload: { email: normalizedResetEmail }
+      });
+
+      setResetStep('code');
+      setResetSuccessMessage('✅ Código enviado! Verifique seu e-mail.');
+
+    } catch (error) {
+      console.error("Erro ao enviar código:", error);
+      alert("❌ Erro ao enviar código. Tente novamente.");
     } finally {
       setIsResetting(false);
     }
+  };
+
+  // Passo 2: Verificar código
+  const handleVerifyCode = () => {
+    if (verificationCode === generatedCode) {
+      setResetStep('newPassword');
+      setResetSuccessMessage('✅ Código verificado! Defina sua nova senha.');
+    } else {
+      alert("❌ Código incorreto. Verifique e tente novamente.");
+    }
+  };
+
+  // Passo 3: Definir nova senha
+  const handleSetNewPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      alert("❌ A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      alert("❌ As senhas não coincidem.");
+      return;
+    }
+
+    setIsResetting(true);
+
+    try {
+      await AppUser.update(resetUserId, { password: newPassword });
+
+      await base44.entities.SystemLog.create({
+        step: 'Password_Reset_Complete',
+        status: 'success',
+        message: 'Password changed successfully via verification code',
+        component_name: 'LoginModal',
+        payload: { user_id: resetUserId }
+      });
+
+      alert("✅ Senha alterada com sucesso! Faça login com sua nova senha.");
+      
+      // Reset todos os estados
+      setShowForgotPassword(false);
+      setResetStep('email');
+      setResetEmail('');
+      setVerificationCode('');
+      setGeneratedCode('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setResetUserId(null);
+      setResetSuccessMessage('');
+
+    } catch (error) {
+      console.error("Erro ao alterar senha:", error);
+      alert("❌ Erro ao alterar senha. Tente novamente.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
+  // Cancelar recuperação
+  const handleCancelReset = () => {
+    setShowForgotPassword(false);
+    setResetStep('email');
+    setResetEmail('');
+    setVerificationCode('');
+    setGeneratedCode('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setResetUserId(null);
+    setResetSuccessMessage('');
   };
 
   if (showForgotPassword) {
