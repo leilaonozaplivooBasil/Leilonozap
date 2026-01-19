@@ -861,9 +861,37 @@ export default function InvestorDashboard() {
                   </div>
                 </div>
 
+                {/* Botão Ler Contrato */}
+                <Button
+                  onClick={() => setShowContract(true)}
+                  variant="outline"
+                  className="w-full bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 mb-3"
+                >
+                  📄 Ler Contrato de Parceria
+                </Button>
+
+                {/* Checkbox Aceitar Contrato */}
+                <div className="flex items-center space-x-3 bg-gray-800 rounded-lg p-3 border border-gray-700 mb-3">
+                  <Checkbox 
+                    id="accept-contract" 
+                    checked={acceptedContract}
+                    onCheckedChange={(checked) => setAcceptedContract(checked)}
+                    className="border-green-500 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                  />
+                  <label 
+                    htmlFor="accept-contract" 
+                    className="text-sm text-gray-300 cursor-pointer leading-tight"
+                  >
+                    Li e aceito os termos do <span className="text-green-400 font-semibold">Contrato de Parceria</span>
+                  </label>
+                </div>
+
                 <div className="flex gap-3">
                   <Button
-                    onClick={() => setSelectedPlan(null)}
+                    onClick={() => {
+                      setSelectedPlan(null);
+                      setAcceptedContract(false);
+                    }}
                     variant="outline"
                     className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
                   >
@@ -917,8 +945,8 @@ export default function InvestorDashboard() {
                         setIsProcessing(false);
                       }
                     }}
-                    disabled={isProcessing}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    disabled={isProcessing || !acceptedContract}
+                    className={`flex-1 ${acceptedContract ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 cursor-not-allowed'}`}
                   >
                     {isProcessing ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
