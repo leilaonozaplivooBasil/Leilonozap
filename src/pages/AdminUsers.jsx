@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, EyeOff, Mail, Key, Loader2 } from 'lucide-react';
+import { Search, Eye, EyeOff, Mail, Key, Loader2, Pencil, Save, X, User, Shield } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -18,6 +21,10 @@ export default function AdminUsers() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showPasswords, setShowPasswords] = useState({});
+  const [editingUser, setEditingUser] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
   const navigate = useNavigate();
 
   const loadData = useCallback(async () => {
@@ -103,6 +110,71 @@ Equipe Leilão NoZap 🎯
     }));
   };
 
+  const openEditModal = (user) => {
+    setEditingUser(user);
+    setEditFormData({
+      full_name: user.full_name || '',
+      email: user.email || '',
+      nickname: user.nickname || '',
+      password: user.password || '',
+      role: user.role || 'user'
+    });
+    setShowEditPassword(false);
+  };
+
+  const closeEditModal = () => {
+    setEditingUser(null);
+    setEditFormData({});
+    setShowEditPassword(false);
+  };
+
+  const handleSaveUser = async () => {
+    if (!editFormData.full_name?.trim()) {
+      alert("❌ Nome é obrigatório");
+      return;
+    }
+    if (!editFormData.email?.trim() || !editFormData.email.includes('@')) {
+      alert("❌ Email inválido");
+      return;
+    }
+    if (editFormData.password && editFormData.password.length < 6) {
+      alert("❌ Senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Atualiza senha se foi alterada
+      if (editFormData.password && editFormData.password !== editingUser.password) {
+        await base44.functions.invoke('updateUserPassword', {
+          user_id: editingUser.id,
+          new_password: editFormData.password
+        });
+      }
+
+      // Atualiza outros dados
+      await base44.functions.invoke('updateUserData', {
+        user_id: editingUser.id,
+        data: {
+          full_name: editFormData.full_name.trim(),
+          email: editFormData.email.toLowerCase().trim(),
+          nickname: editFormData.nickname?.trim() || null,
+          role: editFormData.role
+        }
+      });
+
+      alert("✅ Usuário atualizado com sucesso!");
+      closeEditModal();
+      await loadData();
+
+    } catch (error) {
+      console.error("Erro ao atualizar usuário:", error);
+      alert("❌ Erro ao atualizar: " + error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -167,6 +239,15 @@ Equipe Leilão NoZap 🎯
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => openEditModal(user)}
+                      className="border-green-600 text-green-400 hover:bg-green-600/20"
+                    >
+                      <Pencil className="w-4 h-4 mr-2" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleResetPassword(user)}
                       className="border-gray-600 text-gray-300 hover:bg-gray-600"
                     >
@@ -186,6 +267,142 @@ Equipe Leilão NoZap 🎯
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal de Edição */}
+      <Dialog open={!!editingUser} onOpenChange={(open) => { if (!open) closeEditModal(); }}>
+        <DialogContent className="sm:max-w-[500px] bg-gray-800 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-400">
+              <User className="w-5 h-5" />
+              Editar Usuário
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Editando: <span className="font-semibold text-white">{editingUser?.full_name}</span>
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Nome */}
+            <div className="space-y-2">
+              <Label htmlFor="full_name" className="text-gray-300 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Nome Completo
+              </Label>
+              <Input 
+                id="full_name" 
+                value={editFormData.full_name || ''} 
+                onChange={(e) => setEditFormData(prev => ({ ...prev, full_name: e.target.value }))} 
+                className="bg-gray-700 border-gray-600 text-white"
+                placeholder="Nome do usuário"
+              />
+            </div>
+
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-gray-300 flex items-center gap-2">
+                <Mail className="w-4 h-4" />
+                E-mail
+              </Label>
+              <Input 
+                id="email" 
+                type="email"
+                value={editFormData.email || ''} 
+                onChange={(e) => setEditFormData(prev => ({ ...prev, email: e.target.value }))} 
+                className="bg-gray-700 border-gray-600 text-white"
+                placeholder="email@exemplo.com"
+              />
+            </div>
+
+            {/* Apelido */}
+            <div className="space-y-2">
+              <Label htmlFor="nickname" className="text-gray-300">
+                Apelido (Nickname)
+              </Label>
+              <Input 
+                id="nickname" 
+                value={editFormData.nickname || ''} 
+                onChange={(e) => setEditFormData(prev => ({ ...prev, nickname: e.target.value }))} 
+                className="bg-gray-700 border-gray-600 text-white"
+                placeholder="Apelido público"
+              />
+            </div>
+
+            {/* Senha */}
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-gray-300 flex items-center gap-2">
+                <Key className="w-4 h-4" />
+                Senha
+              </Label>
+              <div className="relative">
+                <Input 
+                  id="password" 
+                  type={showEditPassword ? "text" : "password"}
+                  value={editFormData.password || ''} 
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, password: e.target.value }))} 
+                  className="bg-gray-700 border-gray-600 text-white pr-10"
+                  placeholder="Nova senha (mínimo 6 caracteres)"
+                />
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-gray-400 hover:text-white"
+                  onClick={() => setShowEditPassword(!showEditPassword)}
+                  type="button"
+                >
+                  {showEditPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            {/* Role */}
+            <div className="space-y-2">
+              <Label htmlFor="role" className="text-gray-300 flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Função
+              </Label>
+              <Select value={editFormData.role || 'user'} onValueChange={(value) => setEditFormData(prev => ({ ...prev, role: value }))}>
+                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-700 border-gray-600">
+                  <SelectItem value="user" className="text-white">Usuário</SelectItem>
+                  <SelectItem value="licensee" className="text-white">Licenciado</SelectItem>
+                  <SelectItem value="admin" className="text-white">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={closeEditModal}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveUser} 
+              disabled={isSaving}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Salvar Alterações
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
