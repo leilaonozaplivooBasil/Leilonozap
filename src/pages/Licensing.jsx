@@ -2512,9 +2512,20 @@ export default function LicensingPage() {
 
   }
 
+  // Verifica se usuário tem algum cargo que permite ver o dashboard
+  const hasAnyCareerLevel = currentUser && Array.isArray(currentUser.career_levels) && currentUser.career_levels.length > 0;
+  const isInfluencer = hasAnyCareerLevel && (
+    currentUser.career_levels.includes('influencer') ||
+    currentUser.career_levels.includes('licenciado_aplicativo') ||
+    currentUser.career_levels.includes('licenciado_catalogo')
+  );
+  
   const isLicensee = currentUser && (
-  currentUser.role === 'licensee' ||
-  currentUser.role === 'admin' && currentUser.referral_code);
+    currentUser.role === 'licensee' ||
+    currentUser.role === 'admin' ||
+    isInfluencer ||
+    hasAnyCareerLevel // Qualquer usuário com career_levels pode ver o dashboard
+  );
 
 
   const isAdmin = currentUser?.role === 'admin';
