@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const getCareerColor = (level) => {
@@ -28,21 +28,13 @@ const getInitials = (name) => {
 };
 
 export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
-  const [expandedNodes, setExpandedNodes] = useState(new Set());
+  const [currentRootId, setCurrentRootId] = useState(null); // null = raiz principal
+  const [navigationHistory, setNavigationHistory] = useState([]);
   const nodePositions = useRef({});
   const svgRef = useRef(null);
   const containerRef = useRef(null);
 
-  const toggleNode = (userId) => {
-    const newExpanded = new Set(expandedNodes);
-    if (newExpanded.has(userId)) {
-      newExpanded.delete(userId);
-    } else {
-      newExpanded.add(userId);
-    }
-    setExpandedNodes(newExpanded);
-  };
-
+  // Monta hierarquia completa
   const getHierarchy = () => {
     const usersMap = new Map(users.map(u => [u.id, { ...u, children: [] }]));
     const roots = [];
@@ -61,7 +53,32 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote }) {
     }
 
     roots.sort((a, b) => b.children.length - a.children.length);
-    return roots;
+    return { roots, usersMap };
+  };
+
+  // Encontra o nó atual baseado no currentRootId
+  const getCurrentRoot = () => {
+    const { roots, usersMap } = getHierarchy();
+    if (!currentRootId) {
+      return roots[0] || null; // Primeira raiz
+    }
+    return usersMap.get(currentRootId) || roots[0];
+  };
+
+  // Navegar para um filho (ele vira a nova raiz)
+  const navigateToChild = (childId) => {
+    setNavigationHistory(prev => [...prev, currentRootId]);
+    setCurrentRootId(childId);
+  };
+
+  // Voltar para o nível anterior
+  const navigateBack = () => {
+    if (navigationHistory.length > 0) {
+      const newHistory = [...navigationHistory];
+      const previousId = newHistory.pop();
+      setNavigationHistory(newHistory);
+      setCurrentRootId(previousId);
+    }
   };
 
   const drawSVGConnections = () => {
