@@ -3,16 +3,14 @@ import { base44 } from '@/api/base44Client';
 
 const CommissionRecord = base44.entities.CommissionRecord;
 const CatalogSale = base44.entities.CatalogSale;
-const AppUser = base44.entities.AppUser;
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, DollarSign, User, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp, Smartphone, Package, Wallet } from 'lucide-react';
-import { Badge } from "@/components/ui/badge";
+import { Loader2, DollarSign, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp, Smartphone, Package, Wallet } from 'lucide-react';
 
 const ROLE_LABELS = {
-  influencer_app: "Influencer (App 3%)",
-  licenciado_catalogo: "Licenciado Catálogo",
+  influencer_app: "Influencer",
+  licenciado_catalogo: "Licenciado",
   trainee: "Trainee",
   executivo: "Executivo",
   kit_start: "Kit Start",
@@ -24,117 +22,76 @@ const ROLE_LABELS = {
   ceo: "CEO",
   conselheiro: "Conselheiro",
   fundador: "Fundador",
-  site_official_rollup: "Empresa (NoZap)"
+  site_official_rollup: "Empresa"
 };
 
-const ROLE_COLORS = {
-  influencer_app: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
-  licenciado_catalogo: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  trainee: "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  executivo: "bg-sky-500/15 text-sky-300 border-sky-500/30",
-  kit_start: "bg-teal-500/15 text-teal-300 border-teal-500/30",
-  plano_lider: "bg-indigo-500/15 text-indigo-300 border-indigo-500/30",
-  plano_lojista: "bg-purple-500/15 text-purple-300 border-purple-500/30",
-  distribuidor: "bg-pink-500/15 text-pink-300 border-pink-500/30",
-  diretoria: "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  diretor: "bg-amber-500/15 text-amber-300 border-amber-500/30",
-  ceo: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
-  conselheiro: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-  fundador: "bg-lime-500/15 text-lime-300 border-lime-500/30",
-  site_official_rollup: "bg-gray-500/15 text-gray-300 border-gray-500/30"
-};
-
-const CommissionRecordItem = ({ record, sale, expandedId, onToggleExpand }) => {
-    const orderTotal = record.sale_amount || sale?.total_amount || sale?.sale_price || 0;
-    const roleLabel = ROLE_LABELS[record.role] || record.role;
-    const roleColor = ROLE_COLORS[record.role] || "bg-gray-700 text-gray-300 border-gray-600";
-    const dateStr = new Date(record.created_date || sale?.created_date || Date.now()).toLocaleDateString('pt-BR');
-    const isExpanded = expandedId === record.id;
-    const saleType = record.sale_type || 'catalog';
-    const saleTypeLabel = saleType === 'auction' ? '📱 App (3%)' : '🛍️ Catálogo (26%)';
-
-    const handleToggle = () => {
-        if (isExpanded) {
-            onToggleExpand(null);
-        } else {
-            onToggleExpand(record.id);
-        }
-    };
+// Card agrupado por venda - mostra todos os cargos que você ganhou nessa venda
+const SaleCard = ({ saleId, records, sale, isExpanded, onToggle }) => {
+    const totalAmount = records.reduce((sum, r) => sum + (r.amount || 0), 0);
+    const saleAmount = records[0]?.sale_amount || sale?.total_amount || 0;
+    const productTitle = records[0]?.product_title || sale?.product_title || 'Produto';
+    const dateStr = new Date(records[0]?.created_date || Date.now()).toLocaleDateString('pt-BR');
+    const saleType = records[0]?.sale_type || 'catalog';
 
     return (
-        <Card className="bg-gray-800 border-gray-700 mb-3">
-            <CardHeader className="pb-2 cursor-pointer hover:bg-gray-700/50 transition" onClick={handleToggle}>
-                <div className="flex justify-between items-center text-xs text-gray-400">
-                    <div className="flex items-center gap-2">
-                        <Calendar className="w-3 h-3" />
+        <Card className="bg-gray-800/50 border-gray-700/50 mb-3 overflow-hidden">
+            <div 
+                className="p-4 cursor-pointer hover:bg-gray-700/30 transition-colors"
+                onClick={onToggle}
+            >
+                {/* Header da venda */}
+                <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <Calendar className="w-3.5 h-3.5" />
                         <span>{dateStr}</span>
+                        <span className="mx-1">•</span>
+                        <span className={saleType === 'auction' ? 'text-cyan-400' : 'text-blue-400'}>
+                            {saleType === 'auction' ? '📱 App' : '🛍️ Catálogo'}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Badge className={saleType === 'auction' ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-blue-500/15 text-blue-300 border-blue-500/30'}>
-                            {saleTypeLabel}
-                        </Badge>
-                        <Badge className={`${roleColor} font-semibold`}>
-                            {roleLabel}
-                        </Badge>
-                        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {isExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-gray-500" />
+                    ) : (
+                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                    )}
+                </div>
+
+                {/* Produto e valor */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-lg bg-gray-700/50 flex items-center justify-center flex-shrink-0">
+                            <ShoppingBag className="w-5 h-5 text-gray-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="font-medium text-white truncate">{productTitle}</p>
+                            <p className="text-sm text-gray-500">Venda: R$ {Number(saleAmount).toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div className="text-right ml-3">
+                        <p className="text-xl font-bold text-green-400">+R$ {totalAmount.toFixed(2)}</p>
+                        <p className="text-xs text-gray-500">{records.length} cargo{records.length > 1 ? 's' : ''}</p>
                     </div>
                 </div>
-            </CardHeader>
-            <CardContent className="pb-3">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <div className="flex items-center gap-3 flex-1">
-                        <div className="p-2 bg-gray-700 rounded-lg">
-                            <ShoppingBag className="w-5 h-5 text-gray-300" />
-                        </div>
-                        <div className="flex-1">
-                            <p className="font-semibold text-white line-clamp-1">
-                                {record.product_title || sale?.product_title || (sale ? `Venda ${sale.product_id}` : 'Comissão de venda')}
-                            </p>
-                            {orderTotal ? (
-                                <p className="text-sm text-gray-400">Valor da venda: R$ {Number(orderTotal).toFixed(2)}</p>
-                            ) : null}
-                        </div>
+            </div>
+
+            {/* Detalhes expandidos - lista de cargos */}
+            {isExpanded && (
+                <div className="px-4 pb-4 border-t border-gray-700/50">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mt-3 mb-2">Suas comissões nesta venda:</p>
+                    <div className="space-y-2">
+                        {records.map((record, idx) => (
+                            <div key={record.id || idx} className="flex items-center justify-between py-2 px-3 bg-gray-900/50 rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                    <span className="text-sm text-gray-300">{ROLE_LABELS[record.role] || record.role}</span>
+                                    <span className="text-xs text-gray-500">({Number(record.percent || 0).toFixed(1)}%)</span>
+                                </div>
+                                <span className="text-sm font-semibold text-green-400">+R$ {Number(record.amount || 0).toFixed(2)}</span>
+                            </div>
+                        ))}
                     </div>
-                    <Badge className="bg-green-500/10 text-green-400 border-green-500/30 font-bold text-base mt-2 sm:mt-0 whitespace-nowrap">
-                        + R$ {Number(record.amount || 0).toFixed(2)}
-                    </Badge>
                 </div>
-                
-                {isExpanded && (
-                    <div className="mt-4 pt-4 border-t border-gray-700 space-y-3">
-                        <div className="grid grid-cols-2 gap-3 text-sm">
-                            <div>
-                                <p className="text-gray-500 text-xs mb-1">Tipo de Venda</p>
-                                <p className="font-semibold text-white">{saleTypeLabel}</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500 text-xs mb-1">Cargo</p>
-                                <p className="font-semibold text-white">{roleLabel}</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500 text-xs mb-1">Percentual</p>
-                                <p className="font-semibold text-green-400">{Number(record.percent || 0).toFixed(2)}%</p>
-                            </div>
-                            <div>
-                                <p className="text-gray-500 text-xs mb-1">Comissão Recebida</p>
-                                <p className="font-semibold text-green-400">R$ {Number(record.amount || 0).toFixed(2)}</p>
-                            </div>
-                            {record.anchor_user_name && (
-                            <div className="col-span-2">
-                                <p className="text-gray-500 text-xs mb-1">Licenciado Âncora</p>
-                                <p className="font-semibold text-blue-400">{record.anchor_user_name}</p>
-                            </div>
-                            )}
-                            <div>
-                                <p className="text-gray-500 text-xs mb-1">Status</p>
-                                <Badge className={record.status === 'pending' ? 'bg-yellow-500/20 text-yellow-300' : 'bg-green-500/20 text-green-300'}>
-                                    {record.status === 'pending' ? 'Pendente' : record.status === 'confirmed' ? 'Confirmado' : 'Processado'}
-                                </Badge>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </CardContent>
+            )}
         </Card>
     );
 };
