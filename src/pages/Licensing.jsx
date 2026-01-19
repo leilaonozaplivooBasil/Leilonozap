@@ -1206,7 +1206,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               onClick={handleForceSync}
               disabled={isSyncing}
               variant="outline"
-              className="border-green-500 text-green-400"
+              className="bg-gray-700 border-green-500 text-green-400 hover:bg-gray-600"
               size="sm">
 
                 {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
@@ -1216,7 +1216,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               onClick={handleResetTestData}
               disabled={isResetting}
               variant="outline"
-              className="border-red-500 text-red-400"
+              className="bg-gray-700 border-red-500 text-red-400 hover:bg-gray-600"
               size="sm">
 
                 {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
@@ -1226,7 +1226,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               onClick={handleResetAllBalances}
               disabled={isResetting}
               variant="outline"
-              className="border-orange-500 text-orange-400"
+              className="bg-gray-700 border-orange-500 text-orange-400 hover:bg-gray-600"
               size="sm">
 
                 {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
