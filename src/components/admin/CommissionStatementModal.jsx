@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 
 const CommissionRecord = base44.entities.CommissionRecord;
@@ -6,7 +6,8 @@ const CatalogSale = base44.entities.CatalogSale;
 const AppUser = base44.entities.AppUser;
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Loader2, DollarSign, User, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, DollarSign, User, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp, Smartphone, Package, Wallet } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 
 const ROLE_LABELS = {
@@ -135,22 +136,7 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
      const [isLoading, setIsLoading] = useState(false);
      const [roleTotals, setRoleTotals] = useState({});
      const [expandedId, setExpandedId] = useState(null);
-
-     async function buildHierarchyChain(user) {
-         const chain = [user.id];
-         let current = user;
-         while (current?.referred_by_id) {
-             const parent = await AppUser.filter({ id: current.referred_by_id });
-             if (Array.isArray(parent) && parent.length > 0) {
-                 const p = parent[0];
-                 chain.push(p.id);
-                 current = p;
-             } else {
-                 break;
-             }
-         }
-         return chain;
-     }
+     const [activeTab, setActiveTab] = useState('todos');
 
      useEffect(() => {
          if (isOpen && licensee) {
@@ -159,7 +145,7 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                  setCommissionRecords([]);
                  setRoleTotals({});
                  try {
-                     console.log(`🔍 Buscando comissões para ${licensee.full_name} e sua hierarquia...`);
+                     console.log(`🔍 Buscando comissões para ${licensee.full_name}...`);
 
                      // Busca comissões do usuário específico
                      const records = await CommissionRecord.filter(
@@ -199,7 +185,7 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                      }, {});
                      setRoleTotals(totals);
 
-                     console.log(`✅ ${enriched.length} registros carregados da cadeia.`);
+                     console.log(`✅ ${enriched.length} registros carregados.`);
                  } catch (error) {
                      console.error("Failed to fetch commission records:", error);
                      alert("Erro ao buscar extrato de comissões.");
@@ -211,62 +197,148 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
          }
      }, [isOpen, licensee]);
 
+     // Filtrar por tipo
+     const filteredRecords = useMemo(() => {
+         if (activeTab === 'todos') return commissionRecords;
+         if (activeTab === 'app') return commissionRecords.filter(r => r.record.sale_type === 'auction');
+         if (activeTab === 'catalogo') return commissionRecords.filter(r => r.record.sale_type === 'catalog' || !r.record.sale_type);
+         return commissionRecords;
+     }, [commissionRecords, activeTab]);
+
+     // Totais por tipo
+     const totals = useMemo(() => {
+         const appTotal = commissionRecords
+             .filter(r => r.record.sale_type === 'auction')
+             .reduce((sum, r) => sum + (r.record.amount || 0), 0);
+         const catalogTotal = commissionRecords
+             .filter(r => r.record.sale_type === 'catalog' || !r.record.sale_type)
+             .reduce((sum, r) => sum + (r.record.amount || 0), 0);
+         return { app: appTotal, catalog: catalogTotal, total: appTotal + catalogTotal };
+     }, [commissionRecords]);
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-3xl bg-gray-900 border-gray-700 text-white">
+            <DialogContent className="sm:max-w-4xl bg-gray-900 border-gray-700 text-white max-h-[90vh] overflow-hidden flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-3 text-green-400">
                         <DollarSign className="w-6 h-6"/>
-                        Extrato de Comissões e Arremates do Sistema
+                        Histórico Detalhado de Comissões
                     </DialogTitle>
                     <DialogDescription className="text-gray-400">
-                        Detalhes de todas as comissões geradas pelo seu sistema de alavancagem para o licenciado {licensee?.full_name}.
+                        Comissões de {licensee?.full_name} separadas por canal de venda
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="my-4 p-4 bg-gray-800 rounded-lg flex justify-between items-center">
-                    <span className="font-medium text-gray-300">Saldo Total de Comissões:</span>
-                    <span className="text-2xl font-bold text-green-400">V$ {((licensee?.catalog_commission_balance ?? licensee?.commission_balance ?? 0)).toFixed(2)}</span>
-                </div>
-
-                <div className="mt-4">
-                    {Object.keys(roleTotals).length > 0 && (
-                        <div className="mb-4 p-3 bg-gray-800 rounded-lg">
-                            <div className="text-sm text-gray-300 mb-2">Resumo por cargo</div>
-                            <div className="flex flex-wrap gap-2">
-                                {Object.entries(roleTotals).map(([role, total]) => (
-                                    <Badge key={role} className={`${ROLE_COLORS[role] ?? 'bg-gray-700 text-gray-300 border-gray-600'}`}>
-                                        {(ROLE_LABELS[role] ?? role)} · R$ {Number(total).toFixed(2)}
-                                    </Badge>
-                                ))}
-                            </div>
+                {/* Cards de Resumo por Canal */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 my-4">
+                    {/* Saldo Disponível */}
+                    <div className="p-4 bg-gradient-to-br from-green-900/40 to-emerald-900/40 rounded-xl border border-green-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Wallet className="w-5 h-5 text-green-400" />
+                            <span className="text-sm text-gray-300">Saldo Disponível</span>
                         </div>
-                    )}
+                        <p className="text-2xl font-bold text-green-400">
+                            R$ {(licensee?.commission_balance || 0).toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">Valor disponível para saque</p>
+                    </div>
 
-                    <div className="max-h-[55vh] overflow-y-auto pr-2">
-                        {isLoading ? (
-                            <div className="flex justify-center items-center h-40">
-                                <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
-                            </div>
-                        ) : commissionRecords.length > 0 ? (
-                             commissionRecords.map(({ record, sale }) => (
-                                 <CommissionRecordItem 
-                                     key={record.id} 
-                                     record={record} 
-                                     sale={sale}
-                                     expandedId={expandedId}
-                                     onToggleExpand={setExpandedId}
-                                 />
-                             ))
-                         ) : (
-                            <div className="text-center py-16 bg-gray-800 rounded-lg">
-                                <TrendingUp className="w-12 h-12 mx-auto text-gray-500 mb-4" />
-                                <p className="text-gray-400 font-semibold">Nenhuma comissão registrada ainda.</p>
-                                <p className="text-sm text-gray-500">Quando suas vendas gerarem comissões, elas aparecerão aqui.</p>
-                            </div>
-                        )}
+                    {/* App (3%) */}
+                    <div className="p-4 bg-gradient-to-br from-cyan-900/40 to-blue-900/40 rounded-xl border border-cyan-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Smartphone className="w-5 h-5 text-cyan-400" />
+                            <span className="text-sm text-gray-300">📱 App (3%)</span>
+                        </div>
+                        <p className="text-2xl font-bold text-cyan-400">
+                            R$ {totals.app.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {commissionRecords.filter(r => r.record.sale_type === 'auction').length} arremates
+                        </p>
+                    </div>
+
+                    {/* Catálogo (26%) */}
+                    <div className="p-4 bg-gradient-to-br from-blue-900/40 to-purple-900/40 rounded-xl border border-blue-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Package className="w-5 h-5 text-blue-400" />
+                            <span className="text-sm text-gray-300">🛍️ Catálogo (26%)</span>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-400">
+                            R$ {totals.catalog.toFixed(2)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                            {commissionRecords.filter(r => r.record.sale_type === 'catalog' || !r.record.sale_type).length} vendas
+                        </p>
                     </div>
                 </div>
+
+                {/* Tabs por Canal */}
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+                    <TabsList className="bg-gray-800 border-gray-700 w-full justify-start">
+                        <TabsTrigger value="todos" className="flex-1">
+                            📊 Todos ({commissionRecords.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="app" className="flex-1">
+                            📱 App ({commissionRecords.filter(r => r.record.sale_type === 'auction').length})
+                        </TabsTrigger>
+                        <TabsTrigger value="catalogo" className="flex-1">
+                            🛍️ Catálogo ({commissionRecords.filter(r => r.record.sale_type === 'catalog' || !r.record.sale_type).length})
+                        </TabsTrigger>
+                    </TabsList>
+
+                    <div className="flex-1 overflow-hidden mt-4">
+                        {/* Resumo por cargo (apenas na aba Todos) */}
+                        {activeTab === 'todos' && Object.keys(roleTotals).length > 0 && (
+                            <div className="mb-4 p-3 bg-gray-800 rounded-lg">
+                                <div className="text-sm text-gray-300 mb-2">Resumo por cargo</div>
+                                <div className="flex flex-wrap gap-2">
+                                    {Object.entries(roleTotals).map(([role, total]) => (
+                                        <Badge key={role} className={`${ROLE_COLORS[role] ?? 'bg-gray-700 text-gray-300 border-gray-600'}`}>
+                                            {(ROLE_LABELS[role] ?? role)} · R$ {Number(total).toFixed(2)}
+                                        </Badge>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Lista de Comissões */}
+                        <div className="max-h-[40vh] overflow-y-auto pr-2">
+                            {isLoading ? (
+                                <div className="flex justify-center items-center h-40">
+                                    <Loader2 className="w-8 h-8 animate-spin text-gray-500" />
+                                </div>
+                            ) : filteredRecords.length > 0 ? (
+                                filteredRecords.map(({ record, sale }) => (
+                                    <CommissionRecordItem 
+                                        key={record.id} 
+                                        record={record} 
+                                        sale={sale}
+                                        expandedId={expandedId}
+                                        onToggleExpand={setExpandedId}
+                                    />
+                                ))
+                            ) : (
+                                <div className="text-center py-16 bg-gray-800 rounded-lg">
+                                    <TrendingUp className="w-12 h-12 mx-auto text-gray-500 mb-4" />
+                                    <p className="text-gray-400 font-semibold">
+                                        {activeTab === 'app' 
+                                            ? 'Nenhuma comissão do App ainda.' 
+                                            : activeTab === 'catalogo'
+                                            ? 'Nenhuma comissão do Catálogo ainda.'
+                                            : 'Nenhuma comissão registrada ainda.'}
+                                    </p>
+                                    <p className="text-sm text-gray-500">
+                                        {activeTab === 'app' 
+                                            ? 'Compartilhe seu link do App para ganhar 3% dos arremates dos seus indicados.' 
+                                            : activeTab === 'catalogo'
+                                            ? 'Venda pelo seu link do Catálogo para ganhar comissões.'
+                                            : 'Quando suas vendas gerarem comissões, elas aparecerão aqui.'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </Tabs>
             </DialogContent>
         </Dialog>
     );
