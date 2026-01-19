@@ -196,14 +196,29 @@ Deno.serve(async (req) => {
     const finalText = 'E, por estarem de pleno acordo, o PARCEIRO manifesta seu aceite eletronico aos termos acima.';
     doc.text(finalText, pageWidth/2, y, { align: 'center', maxWidth: maxWidth });
 
-    // Generate PDF
+    // Generate PDF as base64 for better mobile compatibility
+    const pdfBase64 = doc.output('datauristring');
     const pdfBytes = doc.output('arraybuffer');
+
+    // Check if client wants base64 (for mobile)
+    const url = new URL(req.url);
+    const format = url.searchParams.get('format');
+    
+    if (format === 'base64') {
+      return Response.json({ 
+        success: true,
+        pdf_base64: pdfBase64,
+        filename: 'Contrato_Parceria_LeilaoNoZap.pdf'
+      });
+    }
 
     return new Response(pdfBytes, {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename=Contrato_Parceria_LeilaoNoZap.pdf'
+        'Content-Disposition': 'inline; filename="Contrato_Parceria_LeilaoNoZap.pdf"',
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*'
       }
     });
 
