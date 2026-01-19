@@ -1294,6 +1294,7 @@ export default function NetworkOverview() {
                         onEdit={handleEditUser}
                         onDelete={handleDeleteUser}
                         onPromote={handlePromote}
+                        onRelink={handleRelink}
                       />
                     ) : (
                       <div className="text-center py-12 text-gray-500">

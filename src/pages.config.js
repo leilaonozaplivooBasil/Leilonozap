@@ -31,6 +31,7 @@ import Influencers from './pages/Influencers';
 import InfluencersDashboard from './pages/InfluencersDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
+import Licensing from './pages/Licensing';
 import LicensorCRM from './pages/LicensorCRM';
 import LiveShop from './pages/LiveShop';
 import LiveShopControlNoZap from './pages/LiveShopControlNoZap';
@@ -41,6 +42,7 @@ import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
 import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyWinnings from './pages/MyWinnings';
+import NetworkOverview from './pages/NetworkOverview';
 import OrderStatus from './pages/OrderStatus';
 import OrderStatusMP from './pages/OrderStatusMP';
 import OrderTracking from './pages/OrderTracking';
@@ -66,8 +68,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import WalletHistory from './pages/WalletHistory';
-import NetworkOverview from './pages/NetworkOverview';
-import Licensing from './pages/Licensing';
 import __Layout from './Layout.jsx';
 
 
@@ -105,6 +105,7 @@ export const PAGES = {
     "InfluencersDashboard": InfluencersDashboard,
     "InvestorDashboard": InvestorDashboard,
     "Landing": Landing,
+    "Licensing": Licensing,
     "LicensorCRM": LicensorCRM,
     "LiveShop": LiveShop,
     "LiveShopControlNoZap": LiveShopControlNoZap,
@@ -115,6 +116,7 @@ export const PAGES = {
     "LuxuryCollection": LuxuryCollection,
     "MemoryBackup": MemoryBackup,
     "MyWinnings": MyWinnings,
+    "NetworkOverview": NetworkOverview,
     "OrderStatus": OrderStatus,
     "OrderStatusMP": OrderStatusMP,
     "OrderTracking": OrderTracking,
@@ -140,8 +142,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "WalletHistory": WalletHistory,
-    "NetworkOverview": NetworkOverview,
-    "Licensing": Licensing,
 }
 
 export const pagesConfig = {
