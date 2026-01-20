@@ -607,6 +607,17 @@ export default function NetworkOverview() {
     fetchData();
   }, [fetchData]);
 
+  // Escuta atualizações de usuários (ex: quando alguém muda a foto de perfil)
+  useEffect(() => {
+    const handleUserDataUpdated = () => {
+      console.log('🔄 Dados de usuário atualizados - recarregando lista...');
+      fetchData();
+    };
+    
+    window.addEventListener('userDataUpdated', handleUserDataUpdated);
+    return () => window.removeEventListener('userDataUpdated', handleUserDataUpdated);
+  }, [fetchData]);
+
   const stats = useMemo(() => {
     const total = allUsers.length;
     const byLevel = CAREER_LEVELS.slice().reverse().map(level => ({
