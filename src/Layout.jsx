@@ -550,7 +550,13 @@ export default function Layout({ children, currentPageName }) {
                   Compartilhar
                 </button>
 
-
+                {/* CARRINHO - ÍCONE */}
+                <Link
+                  to={createPageUrl("Cart")}
+                  className="flex items-center gap-2 text-sm font-semibold transition-colors text-gray-300 hover:text-white"
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                </Link>
 
                 {/* PAINEL DE CONTROLE - SÓ ADMIN */}
                 {isAdmin && (
