@@ -20,6 +20,7 @@ import CreateLicenseeModal from "@/components/licensing/CreateLicenseeModal";
 
 const AppUser = base44.entities.AppUser;
 const CatalogSale = base44.entities.CatalogSale;
+const CatalogVisit = base44.entities.CatalogVisit;
 
 export default function LicenseeManagement() {
   const [licensees, setLicensees] = useState([]);
@@ -64,7 +65,7 @@ export default function LicenseeManagement() {
       // Se houver licenciados, seleciona o primeiro
       if (catalogLicensees.length > 0) {
         setSelectedLicensee(catalogLicensees[0]);
-        loadLicenseeStats(catalogLicensees[0].id);
+        loadLicenseeStats(catalogLicensees[0].id, catalogLicensees[0].referral_code);
       }
     } catch (error) {
       console.error("Erro ao carregar licenciados:", error);
@@ -74,22 +75,28 @@ export default function LicenseeManagement() {
     }
   };
 
-  const loadLicenseeStats = async (licenseeId) => {
+  const loadLicenseeStats = async (licenseeId, referralCode) => {
     try {
-      // Busca vendas do licenciado nos últimos 30 dias
+      // Busca vendas do licenciado
       const sales = await CatalogSale.filter({ licensee_id: licenseeId });
+      
+      // Busca visitas do licenciado
+      const visits = await CatalogVisit.filter({ licensee_id: licenseeId });
       
       const now = new Date();
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       
       const recentSales = sales.filter(s => new Date(s.created_date) >= thirtyDaysAgo);
+      const recentVisits = visits.filter(v => new Date(v.created_date) >= thirtyDaysAgo);
       const lastSale = sales.length > 0 ? sales.sort((a, b) => new Date(b.created_date) - new Date(a.created_date))[0] : null;
       
       setLicenseeStats({
         totalSales: sales.length,
         recentSales: recentSales.length,
         lastSaleDate: lastSale?.created_date,
-        totalRevenue: sales.reduce((sum, s) => sum + (s.total_amount || 0), 0)
+        totalRevenue: sales.reduce((sum, s) => sum + (s.total_amount || 0), 0),
+        totalVisits: visits.length,
+        recentVisits: recentVisits.length
       });
     } catch (error) {
       console.error("Erro ao carregar estatísticas:", error);
@@ -98,7 +105,7 @@ export default function LicenseeManagement() {
 
   const handleSelectLicensee = (licensee) => {
     setSelectedLicensee(licensee);
-    loadLicenseeStats(licensee.id);
+    loadLicenseeStats(licensee.id, licensee.referral_code);
   };
 
   const copyLink = (code) => {
@@ -292,15 +299,14 @@ export default function LicenseeManagement() {
                 <div className="mb-6">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm text-gray-400">Visitas no catálogo</span>
-                    <button className="text-xs text-green-400 hover:underline">Ver tudo</button>
                   </div>
-                  <div className="flex items-center gap-2 text-gray-500">
-                    <Eye className="w-4 h-4" />
-                    <span>0 visitas</span>
+                  <div className="flex items-center gap-2 text-white">
+                    <Eye className="w-4 h-4 text-green-400" />
+                    <span>{licenseeStats.recentVisits || 0} visitas</span>
                   </div>
                   <div className="flex items-center gap-2 text-gray-500 mt-1">
                     <Users className="w-4 h-4" />
-                    <span>0 contatos</span>
+                    <span>{licenseeStats.totalSales || 0} vendas</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-2">Últimos 30 dias</p>
                 </div>

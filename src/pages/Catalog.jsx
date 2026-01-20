@@ -312,6 +312,30 @@ export default function Catalog() {
         setReferralCode(refCode);
         // Salva na session para manter durante a navegação
         sessionStorage.setItem('catalogReferralCode', refCode);
+        
+        // Registra visita no catálogo (apenas uma vez por sessão)
+        const visitKey = `catalog_visit_${refCode}`;
+        if (!sessionStorage.getItem(visitKey)) {
+          sessionStorage.setItem(visitKey, 'true');
+          // Registra a visita em background
+          (async () => {
+            try {
+              // Busca o licenciado pelo código
+              const licensees = await AppUser.filter({ referral_code: refCode });
+              if (licensees.length > 0) {
+                await base44.entities.CatalogVisit.create({
+                  licensee_id: licensees[0].id,
+                  referral_code: refCode,
+                  user_agent: navigator.userAgent,
+                  is_mobile: /Mobi|Android/i.test(navigator.userAgent)
+                });
+                console.log('✅ Visita registrada para:', refCode);
+              }
+            } catch (err) {
+              console.debug('Erro ao registrar visita:', err.message);
+            }
+          })();
+        }
       } else {
         // Verifica se já tem um código salvo na session
         const savedRef = sessionStorage.getItem('catalogReferralCode');
