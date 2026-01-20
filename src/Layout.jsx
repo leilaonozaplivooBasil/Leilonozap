@@ -672,6 +672,31 @@ export default function Layout({ children, currentPageName }) {
                   {/* BOTÃO MOBILE */}
                   {!isLojistaPage && (
                   <div className="flex md:hidden items-center gap-2">
+                    {/* COMPARTILHAR MOBILE */}
+                    <button
+                      onClick={() => setShowShareModal(true)}
+                      className="p-2 text-gray-300 hover:text-white transition-colors"
+                    >
+                      <Share2 className="h-5 w-5" />
+                    </button>
+
+                    {/* PERFIL MOBILE */}
+                    {isLoggedIn ? (
+                      <Link
+                        to={createPageUrl("Profile")}
+                        className="p-2 text-gray-300 hover:text-white transition-colors"
+                      >
+                        <UserIcon className="h-5 w-5" />
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => setShowLoginModal(true)}
+                        className="p-2 text-gray-300 hover:text-white transition-colors"
+                      >
+                        <UserIcon className="h-5 w-5" />
+                      </button>
+                    )}
+
                     {/* CARRINHO MOBILE - APENAS EM PÁGINAS DO CATÁLOGO */}
                     {isCatalogPage && (
                       <Link
@@ -686,11 +711,11 @@ export default function Layout({ children, currentPageName }) {
                         )}
                       </Link>
                     )}
-                <button
+                  <button
                   type="button"
                   onClick={() => setMobileMenuOpen(true)}
                   className="inline-flex items-center justify-center rounded-md p-2.5 text-gray-400 hover:text-white"
-                >
+                  >
                   <Menu className="h-6 w-6" />
                   </button>
                   </div>
