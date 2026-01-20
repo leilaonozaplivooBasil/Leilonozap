@@ -470,7 +470,10 @@ export default function Layout({ children, currentPageName }) {
   const isLicensee = isLoggedIn && currentUser.role === 'licensee';
 
   // Determina se estamos em páginas do catálogo
-  const isCatalogPage = currentPageName === 'Catalog' || currentPageName === 'CatalogProductDetails' || currentPageName === 'Cart' || currentPageName === 'CatalogCheckout';
+  // Também verifica se veio do catálogo via parâmetro de URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromCatalog = urlParams.get('from') === 'catalog';
+  const isCatalogPage = currentPageName === 'Catalog' || currentPageName === 'CatalogProductDetails' || currentPageName === 'Cart' || currentPageName === 'CatalogCheckout' || (currentPageName === 'Profile' && fromCatalog);
 
   const finalMenuItems = isCatalogPage 
     ? [{ title: "Catálogo", pageName: "Catalog" }]  // Carrinho vai aparecer separado antes do Compartilhar
