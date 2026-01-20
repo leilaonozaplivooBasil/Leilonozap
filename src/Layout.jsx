@@ -473,7 +473,7 @@ export default function Layout({ children, currentPageName }) {
   const isCatalogPage = currentPageName === 'Catalog' || currentPageName === 'CatalogProductDetails' || currentPageName === 'Cart' || currentPageName === 'CatalogCheckout';
 
   const finalMenuItems = isCatalogPage 
-    ? [{ title: "Catálogo", pageName: "Catalog" }]  // Carrinho vai aparecer separado antes do Compartilhar
+    ? [{ title: "Catálogo", pageName: "Catalog" }]  // Nas páginas do catálogo só mostra Catálogo
     : [
         { title: "Leilões", pageName: "Home" },
         { title: "Lojista", pageName: "LojistaDashboard" },
@@ -594,8 +594,8 @@ export default function Layout({ children, currentPageName }) {
                     Compartilhar
                   </button>
 
-                  {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado) */}
-                  {isLoggedIn && (
+                  {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado e NÃO em páginas do catálogo) */}
+                  {isLoggedIn && !isCatalogPage && (
                   <Link
                     to={createPageUrl("Profile")}
                     className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
