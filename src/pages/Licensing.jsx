@@ -426,8 +426,8 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
   const referralLink = isSaiDeBaixo ?
-  `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code || user.id}` :
-  `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code || user.id}`;
+  `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}` :
+  `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}`;
 
   const userLevels = Array.isArray(user.career_levels) ? user.career_levels : user.career_levels ? [user.career_levels] : ['usuario'];
   const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
@@ -1605,13 +1605,13 @@ const DashboardContent = ({ user, isAdmin }) => {
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                  value={`https://leilaonozap.net/Catalog?ref=${user.referral_code || user.id}`}
+                  value={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`}
                   readOnly
                   className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
 
                   <Button
                   onClick={() => {
-                    navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code || user.id}`);
+                    navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`);
                     toast.success('Link copiado!');
                   }}
                   className="bg-blue-600 hover:bg-blue-700">

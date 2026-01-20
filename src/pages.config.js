@@ -11,6 +11,7 @@ import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CareerLevelsReport from './pages/CareerLevelsReport';
 import Cart from './pages/Cart';
+import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
 import CatalogManagement from './pages/CatalogManagement';
@@ -21,7 +22,6 @@ import CheckoutAsaas from './pages/CheckoutAsaas';
 import CommissionDistributionFull from './pages/CommissionDistributionFull';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
-import CreateCatalogProduct from './pages/CreateCatalogProduct';
 import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
 import CustomerDetails from './pages/CustomerDetails';
 import DiretoDeFabrica from './pages/DiretoDeFabrica';
@@ -33,6 +33,7 @@ import Influencers from './pages/Influencers';
 import InfluencersDashboard from './pages/InfluencersDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
+import Licensing from './pages/Licensing';
 import LicensorCRM from './pages/LicensorCRM';
 import LiveShop from './pages/LiveShop';
 import LiveShopControlNoZap from './pages/LiveShopControlNoZap';
@@ -71,9 +72,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import Licensing from './pages/Licensing';
-import Catalog from './pages/Catalog';
-import LicenseeManager from './pages/LicenseeManager';
+import CreateCatalogProduct from './pages/CreateCatalogProduct';
 import __Layout from './Layout.jsx';
 
 
@@ -91,6 +90,7 @@ export const PAGES = {
     "CRM": CRM,
     "CareerLevelsReport": CareerLevelsReport,
     "Cart": Cart,
+    "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
     "CatalogManagement": CatalogManagement,
@@ -101,7 +101,6 @@ export const PAGES = {
     "CommissionDistributionFull": CommissionDistributionFull,
     "CreateAuction": CreateAuction,
     "CreateAuctionV2": CreateAuctionV2,
-    "CreateCatalogProduct": CreateCatalogProduct,
     "CreateLuxuryAuction": CreateLuxuryAuction,
     "CustomerDetails": CustomerDetails,
     "DiretoDeFabrica": DiretoDeFabrica,
@@ -113,6 +112,7 @@ export const PAGES = {
     "InfluencersDashboard": InfluencersDashboard,
     "InvestorDashboard": InvestorDashboard,
     "Landing": Landing,
+    "Licensing": Licensing,
     "LicensorCRM": LicensorCRM,
     "LiveShop": LiveShop,
     "LiveShopControlNoZap": LiveShopControlNoZap,
@@ -151,9 +151,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "Licensing": Licensing,
-    "Catalog": Catalog,
-    "LicenseeManager": LicenseeManager,
+    "CreateCatalogProduct": CreateCatalogProduct,
 }
 
 export const pagesConfig = {

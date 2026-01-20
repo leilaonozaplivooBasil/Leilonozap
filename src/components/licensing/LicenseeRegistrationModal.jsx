@@ -9,9 +9,9 @@ import { Label } from '@/components/ui/label';
 import { X, CheckCircle, User as UserIcon, AlertCircle, Sparkles, Star } from 'lucide-react';
 
 const generateReferralCode = (name) => {
-    const namePart = name.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '').slice(0, 4);
-    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
-    return `${namePart.toUpperCase()}${randomPart}`;
+    const namePart = name.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '').slice(0, 8);
+    const randomPart = Math.random().toString(36).substring(2, 6);
+    return `${namePart}${randomPart}`;
 };
 
 export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
@@ -178,9 +178,9 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
                 phone: phone.trim(),
                 password: password,
                 role: 'licensee',
-                career_levels: ['usuario', 'influencer', 'licenciado_aplicativo'], // Updated to array
+                career_levels: ['licenciado_aplicativo'], // Updated to array
                 primary_career_level: 'licenciado_aplicativo', // New field
-                referral_code: generatedCode, // This is the new user's own referral code - AGORA SEMPRE GERA
+                referral_code: generatedCode, // This is the new user's own referral code
                 referred_by_id: referredById, // 🏢 SEMPRE TEM INDICAÇÃO AGORA!
                 valora_pay_balance: 0,
                 commission_balance: 0,

@@ -14,14 +14,9 @@ const AppUser = base44.entities.AppUser;
 
 const CAREER_LEVELS = [
   { id: 'usuario', name: 'Usuário', color: 'bg-gray-500' },
-  { id: 'influencer', name: 'Influencer', color: 'bg-green-500' },
+  { id: 'licenciado_aplicativo', name: 'Influencer', color: 'bg-green-500' },
   { id: 'licenciado_catalogo', name: 'Licenciado Catálogo', color: 'bg-yellow-500' },
-  { id: 'trainee', name: 'Trainee', color: 'bg-lime-500' },
   { id: 'executivo', name: 'Executivo', color: 'bg-purple-500' },
-  { id: 'kit_start', name: 'Kit Start', color: 'bg-teal-500' },
-  { id: 'plano_lider', name: 'Plano Líder', color: 'bg-blue-500' },
-  { id: 'plano_lojista', name: 'Plano Lojista', color: 'bg-indigo-500' },
-  { id: 'distribuidor', name: 'Distribuidor', color: 'bg-pink-500' },
   { id: 'diretor', name: 'Diretor', color: 'bg-orange-500' },
   { id: 'diretoria', name: 'Diretoria', color: 'bg-fuchsia-500' },
   { id: 'ceo', name: 'CEO', color: 'bg-red-500' },
@@ -311,6 +306,29 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                             <p className="col-span-2 text-xs text-gray-400 italic">
                                 Como aparecerá: "<strong className="text-white">{displayFirstName} {displayLastName}</strong>"
                             </p>
+                        </div>
+                    </div>
+
+                    {/* HIERARQUIA / INDICADOR */}
+                    <div className="space-y-4 pt-4 border-t border-gray-700">
+                        <h3 className="text-sm font-semibold text-emerald-400">📈 Hierarquia (Sistema de Alavancagem)</h3>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label className="text-right text-gray-300">Indicador</Label>
+                            <div className="col-span-3">
+                                <Select value={referrerId} onValueChange={setReferrerId}>
+                                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                                        <SelectValue placeholder="Selecione o indicador (opcional)" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-gray-800 border-gray-700 text-white max-h-72">
+                                        <SelectItem value={null}>Sem indicação</SelectItem>
+                                        {(Array.isArray(allUsers) ? allUsers.filter(u => u.id !== user.id) : []).map(u => (
+                                            <SelectItem key={u.id} value={u.id}>
+                                                {u.full_name} — {u.email}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                     </div>
 
