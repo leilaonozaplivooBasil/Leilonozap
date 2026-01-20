@@ -97,14 +97,21 @@ export default function LicenseeManager() {
   };
 
   const copyLink = (licensee) => {
-    const code = licensee.referral_code || licensee.id;
-    const link = `https://leilaonozap.net/Catalog?ref=${code}`;
+    // Mantém o ?ref= funcionando internamente, mas exibe visualmente /s/nome
+    const link = `https://leilaonozap.net/Catalog?ref=${licensee.referral_code || licensee.id}`;
     navigator.clipboard.writeText(link);
     toast.success('Link copiado!');
   };
 
-  const getDisplayCode = (licensee) => {
-    return licensee.referral_code || licensee.id || '...';
+  // Gera o nome visual do link (sem afetar o código real)
+  const getDisplaySlug = (licensee) => {
+    if (licensee.nickname) {
+      return licensee.nickname.toLowerCase().replace(/\s+/g, '');
+    }
+    if (licensee.full_name) {
+      return licensee.full_name.split(' ')[0].toLowerCase();
+    }
+    return 'catalogo';
   };
 
   const getInitials = (name) => {
@@ -216,7 +223,7 @@ export default function LicenseeManager() {
                             </p>
                             <p className="text-xs text-green-400 truncate flex items-center gap-1">
                               <Link2 className="w-3 h-3" />
-                              .../Catalog?ref={getDisplayCode(licensee)}
+                              leilaonozap.net/s/{getDisplaySlug(licensee)}
                             </p>
                           </div>
 
@@ -255,8 +262,7 @@ export default function LicenseeManager() {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const code = licensee.referral_code || licensee.id;
-                                window.open(`https://leilaonozap.net/Catalog?ref=${code}`, '_blank');
+                                window.open(`https://leilaonozap.net/Catalog?ref=${licensee.referral_code || licensee.id}`, '_blank');
                               }}
                               className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
                             >
@@ -309,7 +315,7 @@ export default function LicenseeManager() {
                     </Badge>
                     <p className="text-xs text-green-400 mt-2 flex items-center justify-center gap-1">
                       <Link2 className="w-3 h-3" />
-                      .../Catalog?ref={getDisplayCode(selectedLicensee)}
+                      leilaonozap.net/s/{getDisplaySlug(selectedLicensee)}
                     </p>
                   </div>
 
@@ -331,10 +337,7 @@ export default function LicenseeManager() {
                       <Copy className="w-5 h-5 text-gray-400" />
                     </button>
                     <button 
-                      onClick={() => {
-                        const code = selectedLicensee.referral_code || selectedLicensee.id;
-                        window.open(`https://leilaonozap.net/Catalog?ref=${code}`, '_blank');
-                      }}
+                      onClick={() => window.open(`https://leilaonozap.net/Catalog?ref=${selectedLicensee.referral_code || selectedLicensee.id}`, '_blank')}
                       className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
                     >
                       <ExternalLink className="w-5 h-5 text-gray-400" />

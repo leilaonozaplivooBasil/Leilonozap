@@ -232,8 +232,6 @@ export default function Layout({ children, currentPageName }) {
       }
     }
 
-    // Link detection logic removed to restore simpler ?ref= functionality
-
     const initApp = async () => {
             if (hasInitializedRef.current) {
               return;
