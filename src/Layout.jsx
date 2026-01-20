@@ -856,7 +856,7 @@ export default function Layout({ children, currentPageName }) {
 
         {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} />}
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
-        {showShareModal && <ShareAppModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} />}
+        {showShareModal && <ShareAppModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} context={isCatalogPage ? "catalog" : "default"} />}
         {showLoginModal && (
           <LoginModal 
             onClose={() => setShowLoginModal(false)} 
