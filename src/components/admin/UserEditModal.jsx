@@ -337,29 +337,6 @@ export default function UserEditModal({ user, isOpen, onClose, onSuccess, allUse
                         </div>
                     </div>
 
-                    {/* HIERARQUIA / INDICADOR */}
-                    <div className="space-y-4 pt-4 border-t border-gray-700">
-                        <h3 className="text-sm font-semibold text-emerald-400">📈 Hierarquia (Sistema de Alavancagem)</h3>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label className="text-right text-gray-300">Indicador</Label>
-                            <div className="col-span-3">
-                                <Select value={referrerId} onValueChange={setReferrerId}>
-                                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
-                                        <SelectValue placeholder="Selecione o indicador (opcional)" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-gray-800 border-gray-700 text-white max-h-72">
-                                        <SelectItem value={null}>Sem indicação</SelectItem>
-                                        {(Array.isArray(allUsers) ? allUsers.filter(u => u.id !== user.id) : []).map(u => (
-                                            <SelectItem key={u.id} value={u.id}>
-                                                {u.full_name} — {u.email}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                    </div>
-
                     {/* NÍVEIS DE CARREIRA */}
                     <div className="space-y-4 pt-4 border-t border-gray-700">
                         <h3 className="text-sm font-semibold text-purple-400">🏆 Níveis de Carreira</h3>
