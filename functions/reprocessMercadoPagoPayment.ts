@@ -74,8 +74,8 @@ Deno.serve(async (req) => {
       } catch (_) {}
 
       // If still not found, we may receive optional hints: buyer_email or catalog_sale_id
-      let hints = { buyer_email: undefined, catalog_sale_id: undefined };
-      try { hints = await req.json(); } catch (_) {}
+      // Hints already parsed above from request body
+      const hints = { buyer_email, catalog_sale_id };
 
       // Apply directly to a provided sale id
       if (!updated && hints.catalog_sale_id && status === 'approved') {
