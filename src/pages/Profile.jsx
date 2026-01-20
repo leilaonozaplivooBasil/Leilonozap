@@ -778,14 +778,16 @@ export default function Profile() {
                 <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Ações</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Button 
-                  variant="outline" 
-                  className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
-                  onClick={() => navigate(createPageUrl(isSaiDeBaixo ? "SaiDeBaixo" : "Home") + "?favorites=true")}
-                >
-                  <span className="text-red-500 mr-2">❤️</span>
-                  Meus Favoritos
-                </Button>
+                {!fromCatalog && (
+                  <Button 
+                    variant="outline" 
+                    className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
+                    onClick={() => navigate(createPageUrl(isSaiDeBaixo ? "SaiDeBaixo" : "Home") + "?favorites=true")}
+                  >
+                    <span className="text-red-500 mr-2">❤️</span>
+                    Meus Favoritos
+                  </Button>
+                )}
                 <Button 
                   variant="outline" 
                   className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
