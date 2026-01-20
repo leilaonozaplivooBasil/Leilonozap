@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingBag, CreditCard, Package, Truck, CheckCircle, Eye, ArrowLeft } from 'lucide-react';
+import { Loader2, ShoppingBag, Package, Truck, CheckCircle, Eye, ArrowLeft } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -53,22 +53,13 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
           {config.text}
         </Badge>
         <div className="flex flex-col sm:flex-row gap-2 w-full">
-          {order.status === 'pending_payment' && (
-            <Button 
-              onClick={() => onTrackClick(order)}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold"
-            >
-              <CreditCard className="w-4 h-4 mr-2" />
-              Pagar Agora
-            </Button>
-          )}
           <Button 
             onClick={() => onTrackClick(order)}
             variant="outline"
             className="flex-1 bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
           >
             <Eye className="w-4 h-4 mr-2" />
-            Ver Detalhes
+            Acompanhar Pedido
           </Button>
         </div>
         {order.tracking_code && (
