@@ -78,6 +78,16 @@ export default function MyCatalogOrders() {
   const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
 
+  // Adiciona parâmetro from=catalog na URL para o layout mostrar o menu correto
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.has('from')) {
+      urlParams.set('from', 'catalog');
+      const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       try {
