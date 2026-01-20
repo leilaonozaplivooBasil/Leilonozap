@@ -133,20 +133,33 @@ export default function CatalogCheckout() {
     try {
       const licenseeCode = sessionStorage.getItem('licenseeCode');
 
+      // Busca o ID real do licenciado pelo referral_code
+      let licenseeId = null;
+      if (licenseeCode) {
+        try {
+          const licensees = await base44.entities.AppUser.filter({ referral_code: licenseeCode });
+          if (licensees && licensees.length > 0) {
+            licenseeId = licensees[0].id;
+            console.log(`✅ Licenciado encontrado: ${licensees[0].full_name} (ID: ${licenseeId})`);
+          }
+        } catch (err) {
+          console.warn('Erro ao buscar licenciado:', err);
+        }
+      }
+
       // Cria registro de venda
-      // ⚠️ IMPORTANTE: licensee_id deve ser o CÓDIGO DO LICENCIADO que indicou
       const sale = await CatalogSale.create({
         product_id: product.id,
         product_title: product.description,
         product_image: product.image_urls?.[0] || '',
         sale_price: product.price_catalog,
-        total_amount: product.price_catalog, // ✅ Campo usado pelo processCatalogCommission
+        total_amount: product.price_catalog,
         buyer_id: currentUser?.id || 'guest',
         buyer_name: formData.name,
         buyer_email: formData.email,
         buyer_phone: formData.phone,
-        licensee_id: licenseeCode || 'site_official', // ✅ Licenciado âncora
-        referred_by_code: licenseeCode || '',
+        licensee_id: licenseeId || null, // ✅ ID REAL do licenciado (não o código!)
+        referred_by_code: licenseeCode || '', // ✅ Código de referência separado
         status: 'pending_payment'
       });
 
