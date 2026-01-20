@@ -178,9 +178,9 @@ export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
                 phone: phone.trim(),
                 password: password,
                 role: 'licensee',
-                career_levels: ['licenciado_aplicativo'], // Updated to array
+                career_levels: ['usuario', 'influencer', 'licenciado_aplicativo'], // Updated to array
                 primary_career_level: 'licenciado_aplicativo', // New field
-                referral_code: generatedCode, // This is the new user's own referral code
+                referral_code: generatedCode, // This is the new user's own referral code - AGORA SEMPRE GERA
                 referred_by_id: referredById, // 🏢 SEMPRE TEM INDICAÇÃO AGORA!
                 valora_pay_balance: 0,
                 commission_balance: 0,
