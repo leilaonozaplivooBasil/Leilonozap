@@ -423,18 +423,7 @@ export default function Catalog() {
                 </div>
               </div>
 
-              {/* Botão para Leilões - Direita */}
-              <Link
-                to={createPageUrl("Home")}
-                className="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-all border border-gray-600"
-              >
-                <img 
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
-                  alt="Leilão NoZap"
-                  className="w-6 h-6 object-contain"
-                />
-                Ir para Leilões
-              </Link>
+
             </div>
           </div>
         </div>
