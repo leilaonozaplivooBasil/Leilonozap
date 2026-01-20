@@ -47,6 +47,10 @@ export default function Profile() {
   
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
   
+  // Verifica se veio do catálogo
+  const urlParams = new URLSearchParams(window.location.search);
+  const fromCatalog = urlParams.get('from') === 'catalog';
+  
   // ESTADOS MELHORADOS PARA O GERADOR DE AVATAR
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
