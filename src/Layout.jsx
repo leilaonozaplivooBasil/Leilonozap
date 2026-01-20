@@ -553,15 +553,30 @@ export default function Layout({ children, currentPageName }) {
                       {item.title}
                     </Link>
                   ))}
-                
-                {/* COMPARTILHAR - SEMPRE VISÍVEL */}
-                <button
-                  onClick={() => setShowShareModal(true)}
-                  className="flex items-center gap-2 text-sm font-semibold transition-colors text-gray-300 hover:text-white"
-                >
-                  <Share2 className="h-4 w-4" />
-                  Compartilhar
-                </button>
+
+                  {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO */}
+                  {isCatalogPage && (
+                    <Link
+                      to={createPageUrl("Cart")}
+                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                        currentPageName === "Cart"
+                          ? "text-green-400"
+                          : "text-gray-300 hover:text-white"
+                      }`}
+                    >
+                      <CartIcon className="w-4 h-4" />
+                      Carrinho
+                    </Link>
+                  )}
+
+                  {/* COMPARTILHAR - SEMPRE VISÍVEL */}
+                  <button
+                    onClick={() => setShowShareModal(true)}
+                    className="flex items-center gap-2 text-sm font-semibold transition-colors text-gray-300 hover:text-white"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Compartilhar
+                  </button>
 
 
 
