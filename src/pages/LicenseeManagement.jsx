@@ -5,9 +5,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Search, 
   Plus, 
-  Pencil, 
   Copy, 
-  BarChart3, 
   Trash2, 
   Eye,
   ShoppingBag,
@@ -209,25 +207,11 @@ export default function LicenseeManagement() {
                       {/* Ações */}
                       <div className="flex items-center gap-1">
                         <button 
-                          onClick={(e) => { e.stopPropagation(); /* editar */ }}
-                          className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
-                          title="Editar"
-                        >
-                          <Pencil className="w-4 h-4 text-yellow-400" />
-                        </button>
-                        <button 
                           onClick={(e) => { e.stopPropagation(); copyLink(licensee.referral_code || licensee.id); }}
                           className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
                           title="Copiar link"
                         >
                           <Copy className="w-4 h-4 text-blue-400" />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); /* stats */ }}
-                          className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
-                          title="Estatísticas"
-                        >
-                          <BarChart3 className="w-4 h-4 text-green-400" />
                         </button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); /* deletar */ }}
