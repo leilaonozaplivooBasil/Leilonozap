@@ -188,7 +188,7 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
      const filteredGroups = useMemo(() => {
          if (activeTab === 'todos') return groupedBySale;
          if (activeTab === 'app') return groupedBySale.filter(([_, records]) => records[0]?.sale_type === 'auction');
-         if (activeTab === 'catalogo') return groupedBySale.filter(([_, records]) => records[0]?.sale_type === 'catalog' || !records[0]?.sale_type);
+         if (activeTab === 'catalogo') return groupedBySale.filter(([_, records]) => records[0]?.sale_type === 'catalog' || !records[0]?.sale_type || records[0]?.sale_type === undefined);
          return groupedBySale;
      }, [groupedBySale, activeTab]);
 
