@@ -181,14 +181,14 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
           <div className="bg-gray-700 rounded-lg p-4 mb-6 text-left">
             <p className="text-sm text-gray-400 mb-1">Link do catálogo:</p>
             <p className="text-green-400 text-sm break-all">
-              https://leilaonozap.app/Catalog?ref={createdUser.referral_code}
+              https://leilaonozap.net/Catalog?ref={createdUser.referral_code}
             </p>
           </div>
 
           <div className="flex gap-3">
             <Button
               onClick={() => {
-                navigator.clipboard.writeText(`https://leilaonozap.app/Catalog?ref=${createdUser.referral_code}`);
+                navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${createdUser.referral_code}`);
                 toast.success("Link copiado!");
               }}
               className="flex-1 bg-green-600 hover:bg-green-700"
@@ -304,7 +304,7 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
               </Label>
               <div className="flex mt-1">
                 <div className="flex items-center bg-gray-600 border border-gray-500 rounded-l-md px-3 border-r-0">
-                  <span className="text-gray-300 text-sm whitespace-nowrap">leilaonozap.app/Catalog?ref=</span>
+                  <span className="text-gray-300 text-sm whitespace-nowrap">leilaonozap.net/Catalog?ref=</span>
                 </div>
                 <div className="relative flex-1">
                   <Input

@@ -104,7 +104,7 @@ export default function LicenseeManagement() {
   };
 
   const copyLink = (code) => {
-    const link = `https://leilaonozap.app/Catalog?ref=${code}`;
+    const link = `https://leilaonozap.net/Catalog?ref=${code}`;
     navigator.clipboard.writeText(link);
     toast.success("Link copiado!");
   };
@@ -202,7 +202,7 @@ export default function LicenseeManagement() {
                         <p className="font-semibold text-white truncate">{licensee.full_name}</p>
                         <p className="text-xs text-gray-400 truncate flex items-center gap-1">
                           <ExternalLink className="w-3 h-3" />
-                          leilaonozap.app/Catalog?ref={licensee.referral_code || licensee.id}
+                          leilaonozap.net/Catalog?ref={licensee.referral_code || licensee.id}
                         </p>
                       </div>
 
@@ -274,7 +274,7 @@ export default function LicenseeManagement() {
                   <div className="flex items-center gap-2 bg-gray-700 rounded-lg p-2">
                     <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <span className="text-sm text-gray-300 truncate flex-1">
-                      leilaonozap.app/Catalog?ref={selectedLicensee.referral_code || selectedLicensee.id}
+                      leilaonozap.net/Catalog?ref={selectedLicensee.referral_code || selectedLicensee.id}
                     </span>
                     <button 
                       onClick={() => copyLink(selectedLicensee.referral_code || selectedLicensee.id)}
