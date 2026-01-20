@@ -210,15 +210,15 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
             />
           </div>
 
-          {/* Código de Referência (Link do Catálogo) */}
+          {/* Link do Catálogo */}
           <div>
             <Label className="text-gray-300 flex items-center gap-1 mb-2">
-              Código do link do catálogo (?ref=)
+              Link do Catálogo
               <HelpCircle className="w-3 h-3 text-gray-500" />
             </Label>
             <div className="flex">
               <div className="bg-gray-600 border border-gray-600 border-r-0 rounded-l-lg px-3 flex items-center text-gray-300 text-sm whitespace-nowrap">
-                .../Catalog?ref=
+                leilaonozap.net/s/
               </div>
               <Input
                 placeholder="Ex.: joaosilva"
@@ -229,7 +229,7 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
             </div>
             {referralCode && (
               <p className="text-xs text-green-400 mt-1">
-                Link completo: leilaonozap.net/Catalog?ref={referralCode}
+                Visualização: leilaonozap.net/s/{referralCode}
               </p>
             )}
           </div>

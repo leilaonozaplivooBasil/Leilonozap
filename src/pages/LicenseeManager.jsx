@@ -216,7 +216,7 @@ export default function LicenseeManager() {
                             </p>
                             <p className="text-xs text-green-400 truncate flex items-center gap-1">
                               <Link2 className="w-3 h-3" />
-                              .../Catalog?ref={getDisplayCode(licensee)}
+                              leilaonozap.net/s/{getDisplayCode(licensee)}
                             </p>
                           </div>
 
@@ -309,7 +309,7 @@ export default function LicenseeManager() {
                     </Badge>
                     <p className="text-xs text-green-400 mt-2 flex items-center justify-center gap-1">
                       <Link2 className="w-3 h-3" />
-                      .../Catalog?ref={getDisplayCode(selectedLicensee)}
+                      leilaonozap.net/s/{getDisplayCode(selectedLicensee)}
                     </p>
                   </div>
 
