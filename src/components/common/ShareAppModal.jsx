@@ -4,17 +4,29 @@ import { Button } from "@/components/ui/button";
 import { Share2, Copy, MessageCircle, Mail, Facebook, Twitter, Linkedin } from 'lucide-react';
 import { toast } from "sonner";
 
-export default function ShareAppModal({ isOpen, onClose }) {
+export default function ShareAppModal({ isOpen, onClose, context = "default" }) {
   // Verifica se há um código de licenciado na URL atual
   const urlParams = new URLSearchParams(window.location.search);
   const refCode = urlParams.get('ref');
   
-  // Se tiver ref na URL, usa o link do licenciado, senão usa o padrão
   const baseUrl = "https://leilaonozap.net";
-  const appUrl = refCode ? `${baseUrl}/Catalog?ref=${refCode}` : baseUrl;
   
-  const appTitle = "Leilão NoZap - Arremate Produtos Incríveis!";
-  const appDescription = "Participe de leilões emocionantes e arremate produtos com preços imperdíveis no Leilão NoZap!";
+  // Determina o link baseado no contexto
+  let appUrl;
+  if (context === "catalog") {
+    // No catálogo: usa link do licenciado se tiver, senão link do catálogo
+    appUrl = refCode ? `${baseUrl}/Catalog?ref=${refCode}` : `${baseUrl}/Catalog`;
+  } else {
+    // Fora do catálogo: usa link do licenciado se tiver, senão link padrão
+    appUrl = refCode ? `${baseUrl}/Catalog?ref=${refCode}` : baseUrl;
+  }
+  
+  const appTitle = context === "catalog" 
+    ? "Catálogo Leilão NoZap - Produtos Incríveis!" 
+    : "Leilão NoZap - Arremate Produtos Incríveis!";
+  const appDescription = context === "catalog"
+    ? "Confira os melhores produtos do Catálogo Leilão NoZap com preços imperdíveis!"
+    : "Participe de leilões emocionantes e arremate produtos com preços imperdíveis no Leilão NoZap!";
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(appUrl);
