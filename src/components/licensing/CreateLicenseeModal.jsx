@@ -68,10 +68,35 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
     }
   }, [searchName, allUsers]);
 
-  const handleSelectUser = (user) => {
+  const handleSelectUser = async (user) => {
     setFoundUser(user);
     setSearchName(user.full_name);
     setShowDropdown(false);
+    
+    // Ativa automaticamente como licenciado ao selecionar
+    setIsLoading(true);
+    try {
+      const referralCode = user.referral_code || generateReferralCode(user.full_name);
+      
+      const updatedUser = await AppUser.update(user.id, {
+        role: 'licensee',
+        referral_code: referralCode,
+        career_levels: [...(user.career_levels || []), 'licenciado_catalogo'],
+        primary_career_level: 'licenciado_catalogo',
+        catalog_commission_balance: user.catalog_commission_balance || 0,
+        catalog_total_commissions_generated: user.catalog_total_commissions_generated || 0
+      });
+
+      setCreatedUser({ ...user, ...updatedUser, referral_code: referralCode });
+      setIsSuccess(true);
+      toast.success(`${user.full_name} agora é licenciado!`);
+    } catch (error) {
+      console.error('Erro ao ativar licenciado:', error);
+      toast.error('Erro ao ativar licenciado: ' + error.message);
+      setFoundUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleConvert = async () => {
@@ -219,30 +244,15 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Usuário selecionado */}
-          {foundUser && (
-            <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center overflow-hidden">
-                  {foundUser.avatar_url ? (
-                    <img src={foundUser.avatar_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <span className="text-white font-bold">{getInitials(foundUser.full_name)}</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="font-semibold text-white">{foundUser.full_name}</p>
-                  <p className="text-sm text-gray-400">{foundUser.email}</p>
-                  {foundUser.phone && (
-                    <p className="text-xs text-gray-500">{foundUser.phone}</p>
-                  )}
-                </div>
-                <CheckCircle className="w-5 h-5 text-green-500" />
-              </div>
+          {/* Loading ao selecionar */}
+          {isLoading && (
+            <div className="flex items-center justify-center gap-2 py-4">
+              <Loader2 className="w-5 h-5 animate-spin text-green-500" />
+              <span className="text-gray-400">Ativando licenciado...</span>
             </div>
           )}
 
-          {/* Botões */}
+          {/* Botão cancelar */}
           <div className="flex gap-3">
             <Button
               type="button"
@@ -252,20 +262,6 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
               disabled={isLoading}
             >
               Cancelar
-            </Button>
-            <Button
-              onClick={handleConvert}
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              disabled={isLoading || !foundUser}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ativando...
-                </>
-              ) : (
-                'Tornar Licenciado'
-              )}
             </Button>
           </div>
         </div>
