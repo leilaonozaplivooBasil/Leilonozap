@@ -22,7 +22,6 @@ import {
 } from 'lucide-react';
 import { toast } from "sonner";
 import AddLicenseeModal from '../components/licensing/AddLicenseeModal';
-import EditLicenseeModal from '../components/licensing/EditLicenseeModal';
 
 const AppUser = base44.entities.AppUser;
 
@@ -32,8 +31,6 @@ export default function LicenseeManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLicensee, setSelectedLicensee] = useState(null);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingLicensee, setEditingLicensee] = useState(null);
   const [catalogSales, setCatalogSales] = useState([]);
 
   // Carrega licenciados
@@ -243,8 +240,7 @@ export default function LicenseeManager() {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setEditingLicensee(licensee);
-                                setShowEditModal(true);
+                                // Editar
                               }}
                               className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
                             >
@@ -321,13 +317,7 @@ export default function LicenseeManager() {
 
                   {/* Ações rápidas */}
                   <div className="flex justify-center gap-2 mb-6">
-                    <button 
-                      onClick={() => {
-                        setEditingLicensee(selectedLicensee);
-                        setShowEditModal(true);
-                      }}
-                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-                    >
+                    <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
                       <Pencil className="w-5 h-5 text-gray-400" />
                     </button>
                     <button 
@@ -402,14 +392,7 @@ export default function LicenseeManager() {
                     <Button variant="outline" className="flex-1 text-sm border-gray-600 text-gray-300 hover:bg-gray-700">
                       Ver pedidos
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      className="flex-1 text-sm border-gray-600 text-gray-300 hover:bg-gray-700"
-                      onClick={() => {
-                        setEditingLicensee(selectedLicensee);
-                        setShowEditModal(true);
-                      }}
-                    >
+                    <Button variant="outline" className="flex-1 text-sm border-gray-600 text-gray-300 hover:bg-gray-700">
                       Editar cadastro
                     </Button>
                   </div>
@@ -434,26 +417,6 @@ export default function LicenseeManager() {
           onSuccess={() => {
             setShowRegisterModal(false);
             loadLicensees();
-          }}
-        />
-      )}
-
-      {/* Modal de Edição de Vendedor */}
-      {showEditModal && editingLicensee && (
-        <EditLicenseeModal
-          licensee={editingLicensee}
-          onClose={() => {
-            setShowEditModal(false);
-            setEditingLicensee(null);
-          }}
-          onSuccess={() => {
-            setShowEditModal(false);
-            setEditingLicensee(null);
-            loadLicensees();
-            // Atualiza o selectedLicensee se for o mesmo
-            if (selectedLicensee?.id === editingLicensee.id) {
-              setSelectedLicensee(null);
-            }
           }}
         />
       )}

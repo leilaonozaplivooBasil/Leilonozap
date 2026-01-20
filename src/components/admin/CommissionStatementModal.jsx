@@ -124,17 +124,17 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
      const [activeTab, setActiveTab] = useState('todos');
 
      useEffect(() => {
-          if (isOpen && licensee?.id) {
-              const fetchCommissionRecords = async () => {
-                  setIsLoading(true);
-                  setCommissionRecords([]);
-                  setSalesById({});
-                  try {
-                      const records = await CommissionRecord.filter(
-                          { user_id: licensee.id, status: 'confirmed' },
-                          "-created_date",
-                          500
-                      );
+         if (isOpen && licensee) {
+             const fetchCommissionRecords = async () => {
+                 setIsLoading(true);
+                 setCommissionRecords([]);
+                 setSalesById({});
+                 try {
+                     const records = await CommissionRecord.filter(
+                         { user_id: licensee.id },
+                         "-created_date",
+                         500
+                     );
 
                      if (!Array.isArray(records)) {
                          setIsLoading(false);
@@ -163,8 +163,8 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                  }
              };
              fetchCommissionRecords();
-             }
-             }, [isOpen, licensee?.id]);
+         }
+     }, [isOpen, licensee]);
 
      // Agrupar registros por sale_id
      const groupedBySale = useMemo(() => {
@@ -188,7 +188,7 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
      const filteredGroups = useMemo(() => {
          if (activeTab === 'todos') return groupedBySale;
          if (activeTab === 'app') return groupedBySale.filter(([_, records]) => records[0]?.sale_type === 'auction');
-         if (activeTab === 'catalogo') return groupedBySale.filter(([_, records]) => records[0]?.sale_type === 'catalog' || !records[0]?.sale_type || records[0]?.sale_type === undefined);
+         if (activeTab === 'catalogo') return groupedBySale.filter(([_, records]) => records[0]?.sale_type === 'catalog' || !records[0]?.sale_type);
          return groupedBySale;
      }, [groupedBySale, activeTab]);
 
