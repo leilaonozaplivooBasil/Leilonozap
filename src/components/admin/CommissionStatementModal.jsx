@@ -131,7 +131,7 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                  setSalesById({});
                  try {
                      const records = await CommissionRecord.filter(
-                         { user_id: licensee.id },
+                         { user_id: licensee.id, status: 'confirmed' },
                          "-created_date",
                          500
                      );
