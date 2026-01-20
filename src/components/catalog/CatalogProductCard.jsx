@@ -378,57 +378,54 @@ ${categoryEmoji} ${product.description}
         </div>
 
         <div className="space-y-1.5 sm:space-y-2 mt-auto">
+          {/* BOTÃO ADICIONAR - PRINCIPAL */}
           <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
-            }}
-            variant="outline"
-            className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
+            onClick={addToCart}
+            className={`w-full h-10 sm:h-11 text-sm sm:text-base font-bold transition-all ${
+              isInCart 
+                ? 'bg-green-600 hover:bg-green-700' 
+                : 'bg-green-600 hover:bg-green-700'
+            } text-white rounded-lg`}
           >
-            <Info className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-            <span className="hidden sm:inline">Mais Informações</span>
-            <span className="sm:hidden">+ Info</span>
+            {isInCart ? (
+              <>
+                <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span>NO CARRINHO</span>
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                <span>ADICIONAR</span>
+              </>
+            )}
           </Button>
 
+          {/* COMPARAR PREÇOS */}
           <Button
             onClick={(e) => {
               e.stopPropagation();
               setShowComparai(true);
             }}
-            className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold"
+            className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg"
           >
             <img 
               src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
               alt="Comparai"
               className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2"
             />
-            <span className="hidden sm:inline">Comparar Preços</span>
-            <span className="sm:hidden">Comparar</span>
+            <span>COMPARAR PREÇOS</span>
           </Button>
 
-          <Button
-            onClick={addToCart}
-            className={`w-full h-8 sm:h-9 text-xs sm:text-sm font-bold transition-all ${
-              isInCart 
-                ? 'bg-green-600 hover:bg-green-700' 
-                : 'bg-orange-600 hover:bg-orange-700'
-            } text-white`}
+          {/* MAIS INFORMAÇÕES - LINK */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
+            }}
+            className="w-full text-center text-xs sm:text-sm text-green-400 hover:text-green-300 font-semibold py-1 underline underline-offset-2"
           >
-            {isInCart ? (
-              <>
-                <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">No Carrinho</span>
-                <span className="sm:hidden">✓ Carrinho</span>
-              </>
-            ) : (
-              <>
-                <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Adicionar ao Carrinho</span>
-                <span className="sm:hidden">+ Carrinho</span>
-              </>
-            )}
-          </Button>
+            MAIS INFORMAÇÕES
+          </button>
         </div>
       </CardContent>
     </Card>
