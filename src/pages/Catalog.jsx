@@ -6,7 +6,7 @@ import { base44 } from "@/api/base44Client";
 const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
-import { Eye, TrendingUp, Zap, Filter, CheckCircle, Package, Smartphone, Percent, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign } from "lucide-react";
+import { Eye, TrendingUp, Zap, Filter, CheckCircle, Package, Smartphone, Percent, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -37,6 +37,10 @@ export default function Catalog() {
   const [loadError, setLoadError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const [banners, setBanners] = useState([]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [priceRange, setPriceRange] = useState({ min: "", max: "" });
+  const [sortBy, setSortBy] = useState("recent");
+  const [stockFilter, setStockFilter] = useState("all");
 
   useEffect(() => {
     const slider = scrollerRef.current;
@@ -93,14 +97,41 @@ export default function Catalog() {
 
     let filtered = products;
 
+    // Filtro por texto
     if (searchTerm) {
       filtered = filtered.filter((p) =>
         p.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
+    // Filtro por preço mínimo
+    if (priceRange.min) {
+      filtered = filtered.filter((p) => (p.price_catalog || 0) >= parseFloat(priceRange.min));
+    }
+
+    // Filtro por preço máximo
+    if (priceRange.max) {
+      filtered = filtered.filter((p) => (p.price_catalog || 0) <= parseFloat(priceRange.max));
+    }
+
+    // Filtro por estoque
+    if (stockFilter === "inStock") {
+      filtered = filtered.filter((p) => p.quantity > 0);
+    } else if (stockFilter === "outOfStock") {
+      filtered = filtered.filter((p) => !p.quantity || p.quantity === 0);
+    }
+
+    // Ordenação
+    if (sortBy === "priceAsc") {
+      filtered = [...filtered].sort((a, b) => (a.price_catalog || 0) - (b.price_catalog || 0));
+    } else if (sortBy === "priceDesc") {
+      filtered = [...filtered].sort((a, b) => (b.price_catalog || 0) - (a.price_catalog || 0));
+    } else if (sortBy === "nameAsc") {
+      filtered = [...filtered].sort((a, b) => (a.description || "").localeCompare(b.description || ""));
+    }
+
     setFilteredProducts(filtered);
-  }, [products, searchTerm]);
+  }, [products, searchTerm, priceRange, sortBy, stockFilter]);
 
   const loadCurrentUser = React.useCallback(async (retryCount = 0) => {
     try {
@@ -320,7 +351,7 @@ export default function Catalog() {
     if (products.length > 0) {
       filterProducts();
     }
-  }, [products, searchTerm, filterProducts]);
+  }, [products, searchTerm, priceRange, sortBy, stockFilter, filterProducts]);
 
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
@@ -402,15 +433,99 @@ export default function Catalog() {
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
-          {/* Busca */}
-          <div className="mb-8 flex gap-2">
-            <input
-              type="text"
-              placeholder="Buscar produtos..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
-            />
+          {/* Busca e Filtros */}
+          <div className="mb-8 space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Buscar produtos..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+              />
+              <Button
+                onClick={() => setShowFilters(!showFilters)}
+                className={`px-4 ${showFilters ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-700 hover:bg-gray-600'} text-white`}
+              >
+                <SlidersHorizontal className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Painel de Filtros */}
+            {showFilters && (
+              <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Filter className="w-4 h-4" />
+                    Filtros
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setPriceRange({ min: "", max: "" });
+                      setSortBy("recent");
+                      setStockFilter("all");
+                    }}
+                    className="text-sm text-gray-400 hover:text-white"
+                  >
+                    Limpar filtros
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Faixa de Preço */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Preço mínimo</label>
+                    <input
+                      type="number"
+                      placeholder="R$ 0"
+                      value={priceRange.min}
+                      onChange={(e) => setPriceRange({ ...priceRange, min: e.target.value })}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Preço máximo</label>
+                    <input
+                      type="number"
+                      placeholder="R$ 9999"
+                      value={priceRange.max}
+                      onChange={(e) => setPriceRange({ ...priceRange, max: e.target.value })}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:border-green-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Ordenação */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Ordenar por</label>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="recent">Mais recentes</option>
+                      <option value="priceAsc">Menor preço</option>
+                      <option value="priceDesc">Maior preço</option>
+                      <option value="nameAsc">Nome A-Z</option>
+                    </select>
+                  </div>
+
+                  {/* Estoque */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Disponibilidade</label>
+                    <select
+                      value={stockFilter}
+                      onChange={(e) => setStockFilter(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="all">Todos</option>
+                      <option value="inStock">Em estoque</option>
+                      <option value="outOfStock">Esgotados</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {loadError && retryCount >= 3 &&
