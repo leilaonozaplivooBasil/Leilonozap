@@ -97,8 +97,9 @@ export default function LicenseeManager() {
   };
 
   const copyLink = (licensee) => {
-    // Mantém o ?ref= funcionando internamente, mas exibe visualmente /s/nome
-    const link = `https://leilaonozap.net/Catalog?ref=${licensee.referral_code || licensee.id}`;
+    // Link bonito /s/nome - o sistema resolve internamente
+    const slug = getDisplaySlug(licensee);
+    const link = `https://leilaonozap.net/s/${slug}`;
     navigator.clipboard.writeText(link);
     toast.success('Link copiado!');
   };
@@ -262,7 +263,8 @@ export default function LicenseeManager() {
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                window.open(`https://leilaonozap.net/Catalog?ref=${licensee.referral_code || licensee.id}`, '_blank');
+                                const slug = getDisplaySlug(licensee);
+                                window.open(`https://leilaonozap.net/s/${slug}`, '_blank');
                               }}
                               className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
                             >
@@ -337,7 +339,10 @@ export default function LicenseeManager() {
                       <Copy className="w-5 h-5 text-gray-400" />
                     </button>
                     <button 
-                      onClick={() => window.open(`https://leilaonozap.net/Catalog?ref=${selectedLicensee.referral_code || selectedLicensee.id}`, '_blank')}
+                      onClick={() => {
+                        const slug = getDisplaySlug(selectedLicensee);
+                        window.open(`https://leilaonozap.net/s/${slug}`, '_blank');
+                      }}
                       className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
                     >
                       <ExternalLink className="w-5 h-5 text-gray-400" />

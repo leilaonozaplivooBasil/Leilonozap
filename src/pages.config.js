@@ -74,6 +74,7 @@ import WalletHistory from './pages/WalletHistory';
 import Licensing from './pages/Licensing';
 import Catalog from './pages/Catalog';
 import LicenseeManager from './pages/LicenseeManager';
+import CatalogStore from './pages/CatalogStore';
 import __Layout from './Layout.jsx';
 
 
@@ -154,6 +155,7 @@ export const PAGES = {
     "Licensing": Licensing,
     "Catalog": Catalog,
     "LicenseeManager": LicenseeManager,
+    "CatalogStore": CatalogStore,
 }
 
 export const pagesConfig = {
