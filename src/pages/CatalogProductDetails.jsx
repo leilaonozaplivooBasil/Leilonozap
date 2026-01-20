@@ -165,6 +165,9 @@ export default function CatalogProductDetails() {
     
     localStorage.setItem('catalogCart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
+    
+    // Abre o popup do carrinho
+    window.dispatchEvent(new Event('openCartPopup'));
   };
 
   const handleWhatsApp = () => {
