@@ -71,6 +71,7 @@ import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
 import MyCatalogOrders from './pages/MyCatalogOrders';
 import CatalogOrderTracking from './pages/CatalogOrderTracking';
+import Cart from './pages/Cart';
 import __Layout from './Layout.jsx';
 
 
@@ -148,6 +149,7 @@ export const PAGES = {
     "WalletHistory": WalletHistory,
     "MyCatalogOrders": MyCatalogOrders,
     "CatalogOrderTracking": CatalogOrderTracking,
+    "Cart": Cart,
 }
 
 export const pagesConfig = {
