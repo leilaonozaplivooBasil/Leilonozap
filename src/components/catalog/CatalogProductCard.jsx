@@ -379,26 +379,35 @@ ${categoryEmoji} ${product.description}
 
         <div className="space-y-1.5 sm:space-y-2 mt-auto">
           {/* BOTÃO ADICIONAR - PRINCIPAL */}
-          <Button
-            onClick={addToCart}
-            className={`w-full h-10 sm:h-11 text-sm sm:text-base font-bold transition-all ${
-              isInCart 
-                ? 'bg-green-600 hover:bg-green-700' 
-                : 'bg-green-600 hover:bg-green-700'
-            } text-white rounded-lg`}
-          >
-            {isInCart ? (
-              <>
-                <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                <span>NO CARRINHO</span>
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                <span>ADICIONAR</span>
-              </>
-            )}
-          </Button>
+          {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
+            <Button
+              disabled
+              className="w-full h-10 sm:h-11 text-sm sm:text-base font-bold bg-yellow-600 hover:bg-yellow-600 text-white rounded-lg cursor-not-allowed opacity-90"
+            >
+              <span>ESGOTADO</span>
+            </Button>
+          ) : (
+            <Button
+              onClick={addToCart}
+              className={`w-full h-10 sm:h-11 text-sm sm:text-base font-bold transition-all ${
+                isInCart 
+                  ? 'bg-green-600 hover:bg-green-700' 
+                  : 'bg-green-600 hover:bg-green-700'
+              } text-white rounded-lg`}
+            >
+              {isInCart ? (
+                <>
+                  <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  <span>NO CARRINHO</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                  <span>ADICIONAR</span>
+                </>
+              )}
+            </Button>
+          )}
 
           {/* COMPARAR PREÇOS */}
           <Button
