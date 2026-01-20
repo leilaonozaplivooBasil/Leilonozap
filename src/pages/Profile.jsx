@@ -28,7 +28,8 @@ import {
   MapPin,
   Lock,
   Eye,
-  EyeOff
+  EyeOff,
+  Package
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
@@ -780,6 +781,14 @@ export default function Profile() {
                 >
                   <span className="text-red-500 mr-2">❤️</span>
                   Meus Favoritos
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
+                  onClick={() => navigate(createPageUrl("MyCatalogOrders"))}
+                >
+                  <Package className="w-4 h-4 mr-2 text-green-400" />
+                  Meus Pedidos
                 </Button>
                 <Button 
                   variant="outline" 
