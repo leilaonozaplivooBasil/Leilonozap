@@ -21,12 +21,14 @@ Deno.serve(async (req) => {
     // Carrega todos os registros de comissão
     const allRecords = await base44.asServiceRole.entities.CommissionRecord.list();
 
-    // Filtra por status confirmado e até a data limite
+    // Filtra por status confirmado e até a data limite (tolerante a datas ausentes)
     const asOfDate = new Date(asOf);
     const filtered = (allRecords || []).filter((r) => {
       if (r?.data?.status && r.data.status !== 'confirmed') return false;
-      const created = r?.created_date ? new Date(r.created_date) : null;
-      return created && created <= asOfDate;
+      const createdRaw = r?.created_date || r?.updated_date || r?.data?.created_date || r?.data?.updated_date;
+      const created = createdRaw ? new Date(createdRaw) : null;
+      // Se não houver data, considera dentro do corte
+      return !created || (created <= asOfDate);
     });
 
     // Soma por usuário: catálogo e total (todos os tipos)
