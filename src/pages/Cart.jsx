@@ -249,9 +249,9 @@ export default function Cart() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Coluna Esquerda - Formulários */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-4">
             
             {/* Seção 1 - Seus Dados */}
             <Card className="bg-gray-800 border-gray-700 p-4">
@@ -465,7 +465,7 @@ export default function Cart() {
           </div>
 
           {/* Coluna Direita - Resumo do Pedido */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="space-y-4">
             {/* Seu Pedido */}
             <Card className="bg-gray-800 border-gray-700 border-2 border-green-600/30 p-6">
               <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
