@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Share2, ChevronLeft, ChevronRight, Loader2, ShoppingCart, Minus, Plus, Maximize2 } from "lucide-react";
+import { ArrowLeft, Share2, ChevronLeft, ChevronRight, Loader2, ShoppingCart, Minus, Plus, MessageCircle, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import ComparaiButton from "../components/comparai/ComparaiButton";
 import { createPageUrl } from "@/utils";
@@ -167,7 +167,11 @@ export default function CatalogProductDetails() {
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-
+  const handleWhatsApp = () => {
+    const productUrl = window.location.href;
+    const message = `Olá! Tenho interesse no produto:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n${productUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
