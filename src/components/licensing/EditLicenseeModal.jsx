@@ -27,15 +27,8 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
   const [phone, setPhone] = useState(licensee?.phone || '');
   const [email, setEmail] = useState(licensee?.email || '');
   const [nickname, setNickname] = useState(licensee?.nickname || '');
+  const [referralCode, setReferralCode] = useState(licensee?.referral_code || licensee?.id || '');
   const [avatarUrl, setAvatarUrl] = useState(licensee?.avatar_url || '');
-
-  // Gera o slug automaticamente baseado no nickname
-  const catalogSlug = (nickname || fullName?.split(' ')[0] || 'catalogo')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '')
-    .replace(/[^a-z0-9]/g, '');
 
   // Upload de foto
   const handlePhotoUpload = async (e) => {
@@ -68,7 +61,8 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
         full_name: fullName,
         phone: phone,
         email: email,
-        nickname: nickname || catalogSlug,
+        nickname: nickname,
+        referral_code: referralCode,
         avatar_url: avatarUrl
       });
 
@@ -216,26 +210,26 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
             />
           </div>
 
-          {/* Endereço do catálogo */}
+          {/* Código de Referência (Link do Catálogo) */}
           <div>
             <Label className="text-gray-300 flex items-center gap-1 mb-2">
-              Endereço do catálogo do vendedor
+              Código do link do catálogo (?ref=)
               <HelpCircle className="w-3 h-3 text-gray-500" />
             </Label>
             <div className="flex">
               <div className="bg-gray-600 border border-gray-600 border-r-0 rounded-l-lg px-3 flex items-center text-gray-300 text-sm whitespace-nowrap">
-                https://www.leilaonozap.net/s/
+                .../Catalog?ref=
               </div>
               <Input
-                placeholder="Ex.: Nome do vendedor"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, ''))}
+                placeholder="Ex.: joaosilva"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.replace(/\s+/g, ''))}
                 className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 rounded-l-none"
               />
             </div>
-            {catalogSlug && (
+            {referralCode && (
               <p className="text-xs text-green-400 mt-1">
-                Link do catálogo: leilaonozap.net/s/{catalogSlug}
+                Link completo: leilaonozap.net/Catalog?ref={referralCode}
               </p>
             )}
           </div>

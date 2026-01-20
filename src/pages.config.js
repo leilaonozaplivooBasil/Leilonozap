@@ -1,4 +1,3 @@
-import _404 from './pages/404';
 import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
@@ -50,7 +49,6 @@ import MemoryBackup from './pages/MemoryBackup';
 import MyCatalogOrders from './pages/MyCatalogOrders';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
-import NotFound from './pages/NotFound';
 import OrderStatus from './pages/OrderStatus';
 import OrderStatusMP from './pages/OrderStatusMP';
 import OrderTracking from './pages/OrderTracking';
@@ -81,7 +79,6 @@ import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "404": _404,
     "AdminCatalogSales": AdminCatalogSales,
     "AdminUsers": AdminUsers,
     "AdminWithdrawals": AdminWithdrawals,
@@ -133,7 +130,6 @@ export const PAGES = {
     "MyCatalogOrders": MyCatalogOrders,
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
-    "NotFound": NotFound,
     "OrderStatus": OrderStatus,
     "OrderStatusMP": OrderStatusMP,
     "OrderTracking": OrderTracking,
