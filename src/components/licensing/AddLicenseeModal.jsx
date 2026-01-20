@@ -26,6 +26,8 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
   const [isSearching, setIsSearching] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
 
   // Campos do formulário
   const [catalogSlug, setCatalogSlug] = useState('');
@@ -73,6 +75,7 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
     setSelectedUser(user);
     setSearchResults([]);
     setSearchTerm(user.full_name);
+    setCustomAvatarUrl(user.avatar_url || '');
     
     // Gera slug automático baseado no nickname ou primeiro nome
     const autoSlug = (user.nickname || user.full_name?.split(' ')[0] || 'vendedor')
@@ -82,6 +85,24 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
       .replace(/\s+/g, '')
       .replace(/[^a-z0-9]/g, '');
     setCatalogSlug(autoSlug);
+  };
+
+  // Upload de foto
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+    try {
+      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      setCustomAvatarUrl(file_url);
+      toast.success('Foto carregada!');
+    } catch (error) {
+      console.error('Erro no upload:', error);
+      toast.error('Erro ao carregar foto');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   // Salva o licenciado
@@ -102,11 +123,17 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
       const currentLevels = selectedUser.career_levels || ['usuario'];
       const newLevels = [...new Set([...currentLevels, 'licenciado_catalogo'])];
 
-      await AppUser.update(selectedUser.id, {
+      const updateData = {
         career_levels: newLevels,
-        // Atualiza o nickname com o slug se não tiver
         nickname: selectedUser.nickname || catalogSlug
-      });
+      };
+
+      // Atualiza avatar se foi alterado
+      if (customAvatarUrl && customAvatarUrl !== selectedUser.avatar_url) {
+        updateData.avatar_url = customAvatarUrl;
+      }
+
+      await AppUser.update(selectedUser.id, updateData);
 
       setSuccess(true);
       toast.success('Licenciado cadastrado com sucesso!');
@@ -169,19 +196,35 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
         <CardContent className="p-6 space-y-6">
           {/* Área de busca e foto */}
           <div className="flex gap-6">
-            {/* Foto/Avatar */}
+            {/* Foto/Avatar com Upload */}
             <div className="flex-shrink-0">
-              <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center border-2 border-dashed border-gray-500">
-                {selectedUser?.avatar_url ? (
-                  <img 
-                    src={selectedUser.avatar_url} 
-                    alt={selectedUser.full_name}
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <Camera className="w-8 h-8 text-gray-400" />
-                )}
-              </div>
+              <label className="cursor-pointer group">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  disabled={isUploadingPhoto}
+                />
+                <div className="w-20 h-20 bg-gray-700 rounded-full flex items-center justify-center border-2 border-dashed border-gray-500 hover:border-green-500 transition-colors relative overflow-hidden">
+                  {isUploadingPhoto ? (
+                    <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+                  ) : customAvatarUrl ? (
+                    <>
+                      <img 
+                        src={customAvatarUrl} 
+                        alt="Avatar"
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera className="w-6 h-6 text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    <Camera className="w-8 h-8 text-gray-400 group-hover:text-green-400 transition-colors" />
+                  )}
+                </div>
+              </label>
             </div>
 
             {/* Campos de busca */}
