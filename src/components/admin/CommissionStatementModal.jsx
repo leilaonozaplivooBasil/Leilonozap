@@ -124,17 +124,17 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
      const [activeTab, setActiveTab] = useState('todos');
 
      useEffect(() => {
-         if (isOpen && licensee) {
-             const fetchCommissionRecords = async () => {
-                 setIsLoading(true);
-                 setCommissionRecords([]);
-                 setSalesById({});
-                 try {
-                     const records = await CommissionRecord.filter(
-                         { user_id: licensee.id, status: 'confirmed' },
-                         "-created_date",
-                         500
-                     );
+          if (isOpen && licensee?.id) {
+              const fetchCommissionRecords = async () => {
+                  setIsLoading(true);
+                  setCommissionRecords([]);
+                  setSalesById({});
+                  try {
+                      const records = await CommissionRecord.filter(
+                          { user_id: licensee.id, status: 'confirmed' },
+                          "-created_date",
+                          500
+                      );
 
                      if (!Array.isArray(records)) {
                          setIsLoading(false);
@@ -163,8 +163,8 @@ export default function CommissionStatementModal({ licensee, isOpen, onClose }) 
                  }
              };
              fetchCommissionRecords();
-         }
-     }, [isOpen, licensee]);
+             }
+             }, [isOpen, licensee?.id]);
 
      // Agrupar registros por sale_id
      const groupedBySale = useMemo(() => {
