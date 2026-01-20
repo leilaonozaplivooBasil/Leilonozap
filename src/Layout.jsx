@@ -442,7 +442,7 @@ export default function Layout({ children, currentPageName }) {
   const isCatalogPage = currentPageName === 'Catalog' || currentPageName === 'CatalogProductDetails' || currentPageName === 'Cart' || currentPageName === 'CatalogCheckout';
 
   const finalMenuItems = isCatalogPage 
-    ? catalogMenuItems
+    ? [{ title: "Catálogo", pageName: "Catalog" }]  // Carrinho vai aparecer separado antes do Compartilhar
     : [
         { title: "Leilões", pageName: "Home" },
         { title: "Lojista", pageName: "LojistaDashboard" },
