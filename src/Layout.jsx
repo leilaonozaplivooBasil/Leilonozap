@@ -481,15 +481,15 @@ export default function Layout({ children, currentPageName }) {
   // Verifica se está na página de Licensing vindo do catálogo
   const isLicensingFromCatalog = currentPageName === 'Licensing' && fromCatalog;
 
-  const finalMenuItems = (isCatalogPage && !isProfileFromCatalog)
+  const finalMenuItems = (isCatalogPage && !isProfileFromCatalog && !isLicensingFromCatalog)
     ? [
         { title: "Catálogo", pageName: "Catalog" },
-        { title: "Sistema de Alavancagem", pageName: "Licensing" }
+        { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
       ]
-    : isProfileFromCatalog
+    : (isProfileFromCatalog || isLicensingFromCatalog)
     ? [
         { title: "Catálogo", pageName: "Catalog" },
-        { title: "Sistema de Alavancagem", pageName: "Licensing" }
+        { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
       ]
     : [
         { title: "Leilões", pageName: "Home" },
