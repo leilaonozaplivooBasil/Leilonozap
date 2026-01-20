@@ -710,18 +710,34 @@ export default function Layout({ children, currentPageName }) {
                         {item.title}
                       </Link>
                     ))}
-              
-                  {/* COMPARTILHAR */}
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      setShowShareModal(true);
-                      }}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
-                  >
-                    <Share2 className="h-5 w-5" />
-                    Compartilhar
-                  </button>
+
+                    {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO */}
+                    {isCatalogPage && (
+                      <Link
+                        to={createPageUrl("Cart")}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
+                          currentPageName === "Cart"
+                            ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                            : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                        }`}
+                      >
+                        <CartIcon className="w-5 h-5" />
+                        Carrinho
+                      </Link>
+                    )}
+
+                    {/* COMPARTILHAR */}
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setShowShareModal(true);
+                        }}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
+                    >
+                      <Share2 className="h-5 w-5" />
+                      Compartilhar
+                    </button>
               
 
 
