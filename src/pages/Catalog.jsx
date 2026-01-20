@@ -441,7 +441,7 @@ export default function Catalog() {
           }
 
           {isLoading ?
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {Array(6).fill(0).map((_, i) =>
             <div key={i} className="bg-gray-800 rounded-2xl p-3 sm:p-6 animate-pulse">
                   <div className="w-full aspect-square bg-gray-700 rounded-xl mb-3"></div>
@@ -461,7 +461,7 @@ export default function Catalog() {
               </p>
             </div> :
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {filteredProducts.map((product) => {
                 if (!product || !product.id) {
                   console.warn('⚠️ Product inválido detectado:', product);
