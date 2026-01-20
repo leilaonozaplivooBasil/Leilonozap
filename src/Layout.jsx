@@ -590,7 +590,7 @@ export default function Layout({ children, currentPageName }) {
                   {finalMenuItems.map((item) => (
                     <Link
                       key={item.title}
-                      to={createPageUrl(item.pageName)}
+                      to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
                       className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
                         currentPageName === item.pageName
                           ? "text-green-400"
