@@ -324,7 +324,7 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
             </Label>
             <div className="flex">
               <div className="bg-gray-600 border border-gray-600 border-r-0 rounded-l-lg px-3 flex items-center text-gray-300 text-sm whitespace-nowrap">
-                https://www.leilaonozap.com/s/
+                https://www.leilaonozap.net/s/
               </div>
               <Input
                 placeholder="Ex.: Nome do vendedor"
@@ -335,7 +335,7 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
             </div>
             {catalogSlug && (
               <p className="text-xs text-green-400 mt-1">
-                Link do catálogo: leilaonozap.com/s/{catalogSlug}
+                Link do catálogo: leilaonozap.net/s/{catalogSlug}
               </p>
             )}
           </div>
