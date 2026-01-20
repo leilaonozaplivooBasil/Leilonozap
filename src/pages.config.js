@@ -68,8 +68,8 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import CatalogProductDetails from './pages/CatalogProductDetails';
 import Cart from './pages/Cart';
+import CatalogProductDetails from './pages/CatalogProductDetails';
 import __Layout from './Layout.jsx';
 
 
@@ -144,8 +144,8 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "CatalogProductDetails": CatalogProductDetails,
     "Cart": Cart,
+    "CatalogProductDetails": CatalogProductDetails,
 }
 
 export const pagesConfig = {

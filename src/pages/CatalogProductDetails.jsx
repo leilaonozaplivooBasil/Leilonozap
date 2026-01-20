@@ -190,16 +190,7 @@ export default function CatalogProductDetails() {
           <span className="text-lg font-bold text-green-400">LeilãoNoZap</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleShare}
-            className="border-gray-600 text-white hover:bg-gray-800"
-          >
-            Compartilhar
-          </Button>
-        </div>
+        <div className="w-10"></div>
       </header>
 
       {/* MAIN CONTENT - DESKTOP LAYOUT */}
