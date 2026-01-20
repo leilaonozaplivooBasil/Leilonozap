@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
     const updateValora = payload.updateValora !== undefined ? !!payload.updateValora : true;
 
     // Carrega todos os registros de comissão
-    const allRecords = await base44.asServiceRole.entities.CommissionRecord.list();
+    const allRecords = await base44.asServiceRole.entities.CommissionRecord.list('-created_date', 10000);
 
     // Filtra por status confirmado e até a data limite (tolerante a datas ausentes)
     const asOfDate = new Date(asOf);
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     }
 
     // Carrega usuários para aplicar
-    const users = await base44.asServiceRole.entities.AppUser.list();
+    const users = await base44.asServiceRole.entities.AppUser.list(undefined, 10000);
 
     const updates = [];
     for (const u of users) {
