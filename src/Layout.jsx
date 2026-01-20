@@ -381,6 +381,11 @@ export default function Layout({ children, currentPageName }) {
     { title: "Lucre Conosco", pageName: "Partners" },
   ];
 
+  const catalogMenuItems = [
+    { title: "Catálogo", pageName: "Catalog" },
+    { title: "Carrinho", pageName: "Cart", icon: "cart" },
+  ];
+
   const noZapLoggedItems = [];
 
   const loggedMenuItems = [
@@ -433,12 +438,17 @@ export default function Layout({ children, currentPageName }) {
   const isAdmin = isLoggedIn && currentUser.role === 'admin';
   const isLicensee = isLoggedIn && currentUser.role === 'licensee';
 
-  const finalMenuItems = [
-            { title: "Leilões", pageName: "Home" },
-            { title: "Lojista", pageName: "LojistaDashboard" },
-            { title: "Sistema de Alavancagem", pageName: "Licensing" },
-            ...(isLoggedIn ? loggedMenuItems : [])
-          ];
+  // Determina se estamos em páginas do catálogo
+  const isCatalogPage = currentPageName === 'Catalog' || currentPageName === 'CatalogProductDetails' || currentPageName === 'Cart' || currentPageName === 'CatalogCheckout';
+
+  const finalMenuItems = isCatalogPage 
+    ? catalogMenuItems
+    : [
+        { title: "Leilões", pageName: "Home" },
+        { title: "Lojista", pageName: "LojistaDashboard" },
+        { title: "Sistema de Alavancagem", pageName: "Licensing" },
+        ...(isLoggedIn ? loggedMenuItems : [])
+      ];
 
   const isLojistaPage = currentPageName === 'LojistaDashboard';
 
