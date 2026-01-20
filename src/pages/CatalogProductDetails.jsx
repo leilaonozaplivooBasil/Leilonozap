@@ -141,6 +141,38 @@ export default function CatalogProductDetails() {
   const images = product.image_urls && Array.isArray(product.image_urls) ? product.image_urls : [];
   const currentImage = images.length > 0 ? images[currentImageIndex] : null;
 
+  const handleAddToCart = () => {
+    const savedCart = localStorage.getItem('catalogCart');
+    let cart = savedCart ? JSON.parse(savedCart) : [];
+    
+    const existingIndex = cart.findIndex(item => item.id === product.id);
+    
+    if (existingIndex >= 0) {
+      cart[existingIndex].quantity += quantity;
+      toast.success(`Quantidade atualizada: ${cart[existingIndex].quantity}x`);
+    } else {
+      cart.push({
+        id: product.id,
+        description: product.description,
+        price_catalog: product.price_catalog,
+        selling_price_wholesale: product.selling_price_wholesale,
+        image_urls: product.image_urls,
+        quantity: quantity,
+        availableStock: product.quantity || 999
+      });
+      toast.success('Produto adicionado ao carrinho!');
+    }
+    
+    localStorage.setItem('catalogCart', JSON.stringify(cart));
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
+
+  const handleWhatsApp = () => {
+    const productUrl = window.location.href;
+    const message = `Olá! Tenho interesse no produto:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n${productUrl}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* HEADER */}
@@ -154,121 +186,212 @@ export default function CatalogProductDetails() {
           <ArrowLeft className="w-5 h-5" />
         </Button>
 
-        <h1 className="text-lg font-bold flex-1 text-center px-4 line-clamp-1">
-          {product.description}
-        </h1>
+        <div className="flex-1 text-center">
+          <span className="text-lg font-bold text-green-400">LeilãoNoZap</span>
+        </div>
 
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={handleShare}
-          className="text-green-400 hover:bg-gray-800"
-        >
-          <Share2 className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleShare}
+            className="border-gray-600 text-white hover:bg-gray-800"
+          >
+            Compartilhar
+          </Button>
+        </div>
       </header>
 
-      {/* MAIN CONTENT */}
-      <main className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-        {/* CARROSSEL DE IMAGENS */}
-        <div className="relative bg-gray-800 rounded-2xl overflow-hidden aspect-square md:aspect-video">
-          {currentImage ? (
-            <img 
-              src={currentImage} 
-              alt={product.description}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-700">
-              <span className="text-gray-400">Sem imagem</span>
+      {/* MAIN CONTENT - DESKTOP LAYOUT */}
+      <main className="max-w-6xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          
+          {/* COLUNA ESQUERDA - IMAGENS */}
+          <div className="space-y-4">
+            {/* IMAGEM PRINCIPAL */}
+            <div className="relative bg-white rounded-lg overflow-hidden aspect-square">
+              {currentImage ? (
+                <img 
+                  src={currentImage} 
+                  alt={product.description}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                  <span className="text-gray-400">Sem imagem</span>
+                </div>
+              )}
+
+              {/* NAVEGAÇÃO DE IMAGENS */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={handlePrevImage}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all z-10"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-700" />
+                  </button>
+                  <button
+                    onClick={handleNextImage}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full shadow-md transition-all z-10"
+                  >
+                    <ChevronRight className="w-5 h-5 text-gray-700" />
+                  </button>
+                </>
+              )}
+
+              {/* BOTÃO FULLSCREEN */}
+              <button
+                onClick={() => setShowFullscreen(true)}
+                className="absolute bottom-3 left-3 bg-white/80 hover:bg-white p-2 rounded-md shadow-md transition-all z-10"
+              >
+                <Maximize2 className="w-4 h-4 text-gray-700" />
+              </button>
             </div>
-          )}
 
-          {/* NAVEGAÇÃO DE IMAGENS */}
-          {images.length > 1 && (
-            <>
-              <button
-                onClick={handlePrevImage}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full transition-all z-10"
-              >
-                <ChevronLeft className="w-6 h-6 text-white" />
-              </button>
-              <button
-                onClick={handleNextImage}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 rounded-full transition-all z-10"
-              >
-                <ChevronRight className="w-6 h-6 text-white" />
-              </button>
-
-              {/* INDICADORES */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                {images.map((_, idx) => (
+            {/* THUMBNAILS */}
+            {images.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2">
+                {images.map((img, idx) => (
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      idx === currentImageIndex ? 'bg-white w-6' : 'bg-white/50'
+                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
+                      idx === currentImageIndex ? 'border-green-500' : 'border-gray-600 hover:border-gray-400'
                     }`}
-                  />
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
                 ))}
               </div>
+            )}
+          </div>
+
+          {/* COLUNA DIREITA - INFORMAÇÕES */}
+          <div className="space-y-6">
+            {/* TÍTULO */}
+            <h1 className="text-2xl lg:text-3xl font-bold text-white leading-tight">
+              {product.description}
+            </h1>
+
+            {/* PREÇO */}
+            <div className="text-3xl lg:text-4xl font-black text-green-400">
+              R${product.price_catalog?.toFixed(2) || "0.00"}
+            </div>
+
+            {/* QUANTIDADE E ADICIONAR */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center border border-gray-600 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="p-3 hover:bg-gray-800 transition-colors"
+                >
+                  <Minus className="w-4 h-4 text-white" />
+                </button>
+                <span className="px-4 py-2 text-white font-medium min-w-[50px] text-center">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity(Math.min(product.quantity || 99, quantity + 1))}
+                  className="p-3 hover:bg-gray-800 transition-colors"
+                >
+                  <Plus className="w-4 h-4 text-white" />
+                </button>
+              </div>
+
+              <Button
+                onClick={handleAddToCart}
+                className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
+              >
+                <ShoppingCart className="w-5 h-5 mr-2" />
+                ADICIONAR AO PEDIDO
+              </Button>
+            </div>
+
+            {/* ESTOQUE */}
+            {product.quantity && (
+              <p className="text-gray-400 text-sm">
+                Estoque disponível: {product.quantity}
+              </p>
+            )}
+
+            {/* BOTÃO WHATSAPP */}
+            <Button
+              onClick={handleWhatsApp}
+              variant="outline"
+              className="w-full h-12 border-green-500 text-green-400 hover:bg-green-500/10 font-semibold text-base rounded-lg"
+            >
+              <MessageCircle className="w-5 h-5 mr-2" />
+              PEDIR PELO WHATSAPP
+            </Button>
+
+            {/* DESCRIÇÃO */}
+            <div className="border-t border-gray-700 pt-6">
+              <h3 className="text-lg font-bold text-white mb-4">Descrição</h3>
+              <div className="text-gray-300 text-sm leading-relaxed space-y-3">
+                <p>{product.description}</p>
+                {product.notes && (
+                  <p className="text-gray-400">{product.notes}</p>
+                )}
+              </div>
+            </div>
+
+            {/* CARACTERÍSTICAS (se houver) */}
+            {(product.peso || product.comprimento || product.altura || product.largura) && (
+              <div className="border-t border-gray-700 pt-6">
+                <h3 className="text-lg font-bold text-white mb-4">Principais características</h3>
+                <div className="space-y-2 text-sm text-gray-300">
+                  {product.peso && <p>Peso: {product.peso} kg</p>}
+                  {(product.comprimento || product.altura || product.largura) && (
+                    <p>Dimensões aproximadas: {product.altura && `${product.altura} cm altura`}{product.largura && ` × ${product.largura} cm largura`}{product.comprimento && ` × ${product.comprimento} cm profundidade`}</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </main>
+
+      {/* MODAL FULLSCREEN */}
+      {showFullscreen && currentImage && (
+        <div 
+          className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
+          onClick={() => setShowFullscreen(false)}
+        >
+          <button
+            onClick={() => setShowFullscreen(false)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300"
+          >
+            <ArrowLeft className="w-8 h-8" />
+          </button>
+          <img 
+            src={currentImage} 
+            alt={product.description}
+            className="max-w-full max-h-full object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); handlePrevImage(); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-3 rounded-full"
+              >
+                <ChevronLeft className="w-8 h-8 text-white" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleNextImage(); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-3 rounded-full"
+              >
+                <ChevronRight className="w-8 h-8 text-white" />
+              </button>
             </>
           )}
         </div>
-
-        {/* INFORMAÇÕES DO PRODUTO */}
-        <div className="bg-gray-800/50 rounded-xl p-6 space-y-4">
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-              {product.description}
-            </h2>
-            <p className="text-gray-400 text-sm">
-              {images.length > 0 && `${currentImageIndex + 1} de ${images.length} imagens`}
-            </p>
-          </div>
-
-          {/* PREÇO */}
-          <div className="border-t border-gray-700 pt-4">
-            <p className="text-gray-400 text-sm mb-1">Preço de Venda</p>
-            <p className="text-4xl font-black text-green-400">
-              R$ {product.price_catalog?.toFixed(2) || "0.00"}
-            </p>
-          </div>
-
-          {/* ESTOQUE */}
-          {product.quantity && (
-            <div className="border-t border-gray-700 pt-4">
-              <p className="text-gray-400 text-sm">Estoque Disponível</p>
-              <p className="text-xl font-semibold text-white">{product.quantity} unidade(s)</p>
-            </div>
-          )}
-
-          {/* DESCRIÇÃO ADICIONAL */}
-          {product.notes && (
-            <div className="border-t border-gray-700 pt-4">
-              <p className="text-gray-400 text-sm mb-2">Informações Adicionais</p>
-              <p className="text-white text-sm">{product.notes}</p>
-            </div>
-          )}
-        </div>
-
-        {/* BOTÕES DE AÇÃO */}
-        <div className="space-y-3 pb-6">
-          <Button
-            onClick={() => handleBuyNow()}
-            className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-lg"
-          >
-            ✅ Entrar e Comprar
-          </Button>
-
-          {/* Comparai será renderizado como floating button */}
-        </div>
-      </main>
+      )}
 
       {/* COMPARAI BUTTON FLUTUANTE */}
       {product && (
         <div className="fixed bottom-4 right-4 z-40">
-          {/* Wrapper para compatibilidade com ComparaiButton */}
           <ComparaiButton 
             auction={{
               id: product.id,
