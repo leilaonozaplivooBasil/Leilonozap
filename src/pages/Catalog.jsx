@@ -19,7 +19,6 @@ import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import RotatingBanner from '../components/banner/RotatingBanner';
-import LicenseeHeader from '../components/catalog/LicenseeHeader';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -42,7 +41,6 @@ export default function Catalog() {
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [sortBy, setSortBy] = useState("recent");
   const [stockFilter, setStockFilter] = useState("all");
-  const [referralCode, setReferralCode] = useState(null);
 
   useEffect(() => {
     const slider = scrollerRef.current;
@@ -306,44 +304,6 @@ export default function Catalog() {
         setSearchTerm(urlParams.get('search'));
       }
 
-      // Captura código do licenciado da URL
-      const refCode = urlParams.get('ref');
-      if (refCode) {
-        setReferralCode(refCode);
-        // Salva na session para manter durante a navegação
-        sessionStorage.setItem('catalogReferralCode', refCode);
-        
-        // Registra visita no catálogo (apenas uma vez por sessão)
-        const visitKey = `catalog_visit_${refCode}`;
-        if (!sessionStorage.getItem(visitKey)) {
-          sessionStorage.setItem(visitKey, 'true');
-          // Registra a visita em background
-          (async () => {
-            try {
-              // Busca o licenciado pelo código
-              const licensees = await AppUser.filter({ referral_code: refCode });
-              if (licensees.length > 0) {
-                await base44.entities.CatalogVisit.create({
-                  licensee_id: licensees[0].id,
-                  referral_code: refCode,
-                  user_agent: navigator.userAgent,
-                  is_mobile: /Mobi|Android/i.test(navigator.userAgent)
-                });
-                console.log('✅ Visita registrada para:', refCode);
-              }
-            } catch (err) {
-              console.debug('Erro ao registrar visita:', err.message);
-            }
-          })();
-        }
-      } else {
-        // Verifica se já tem um código salvo na session
-        const savedRef = sessionStorage.getItem('catalogReferralCode');
-        if (savedRef) {
-          setReferralCode(savedRef);
-        }
-      }
-
       await loadProducts();
       await loadCurrentUser();
 
@@ -439,9 +399,6 @@ export default function Catalog() {
       `}</style>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header Personalizado do Licenciado */}
-        {referralCode && <LicenseeHeader referralCode={referralCode} />}
-
         {/* Hero Section */}
         <div className="mb-8">
           <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
