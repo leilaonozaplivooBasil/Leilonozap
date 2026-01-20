@@ -214,10 +214,6 @@ export default function LicenseeManager() {
                             <p className="font-medium text-white truncate">
                               {licensee.full_name}
                             </p>
-                            <p className="text-xs text-green-400 truncate flex items-center gap-1">
-                              <Link2 className="w-3 h-3" />
-                              .../Catalog?ref={getDisplayCode(licensee)}
-                            </p>
                           </div>
 
                           {/* Status */}
@@ -307,10 +303,6 @@ export default function LicenseeManager() {
                     <Badge className="bg-green-900/50 text-green-400 border border-green-500/30 mt-2">
                       Catálogo ativo
                     </Badge>
-                    <p className="text-xs text-green-400 mt-2 flex items-center justify-center gap-1">
-                      <Link2 className="w-3 h-3" />
-                      .../Catalog?ref={getDisplayCode(selectedLicensee)}
-                    </p>
                   </div>
 
                   {/* Ações rápidas */}
