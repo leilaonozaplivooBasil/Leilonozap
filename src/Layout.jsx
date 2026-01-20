@@ -15,7 +15,7 @@ import Footer from "@/components/common/Footer";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
-import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon } from "lucide-react";
+import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon, ShoppingCart } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
