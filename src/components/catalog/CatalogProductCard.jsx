@@ -418,8 +418,8 @@ ${categoryEmoji} ${product.description}
             {isInCart ? (
               <>
                 <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">No Carrinho ({cartQuantity}x) - Adicionar +1</span>
-                <span className="sm:hidden">✓ {cartQuantity}x</span>
+                <span className="hidden sm:inline">No Carrinho</span>
+                <span className="sm:hidden">✓ Carrinho</span>
               </>
             ) : (
               <>
