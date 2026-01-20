@@ -33,6 +33,7 @@ export default function Cart() {
   const removeItem = (productId) => {
     const newCart = cartItems.filter(item => item.id !== productId);
     updateCart(newCart);
+    window.dispatchEvent(new Event('cartUpdated'));
     toast.success('Produto removido do carrinho');
   };
 
