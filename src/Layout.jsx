@@ -15,7 +15,7 @@ import Footer from "@/components/common/Footer";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
-import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon } from "lucide-react";
+import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon, ShoppingCart as CartIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -539,19 +539,20 @@ export default function Layout({ children, currentPageName }) {
               <div className="hidden md:flex md:gap-x-6 items-center">
                 
                 {/* ITENS DO MENU */}
-                {finalMenuItems.map((item) => (
-                  <Link
-                    key={item.title}
-                    to={createPageUrl(item.pageName)}
-                    className={`text-sm font-semibold transition-colors ${
-                      currentPageName === item.pageName
-                        ? "text-green-400"
-                        : "text-gray-300 hover:text-white"
-                    }`}
-                  >
-                    {item.title}
-                  </Link>
-                ))}
+                  {finalMenuItems.map((item) => (
+                    <Link
+                      key={item.title}
+                      to={createPageUrl(item.pageName)}
+                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
+                        currentPageName === item.pageName
+                          ? "text-green-400"
+                          : "text-gray-300 hover:text-white"
+                      }`}
+                    >
+                      {item.icon === 'cart' && <CartIcon className="w-4 h-4" />}
+                      {item.title}
+                    </Link>
+                  ))}
                 
                 {/* COMPARTILHAR - SEMPRE VISÍVEL */}
                 <button
@@ -679,20 +680,21 @@ export default function Layout({ children, currentPageName }) {
                 <div className="flex-1 overflow-y-auto p-4 space-y-1">
               
                   {/* ITENS DO MENU */}
-                  {finalMenuItems.map((item) => (
-                    <Link
-                      key={item.title}
-                      to={createPageUrl(item.pageName)}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
-                        currentPageName === item.pageName
-                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
-                      }`}
-                    >
-                      {item.title}
-                    </Link>
-                  ))}
+                    {finalMenuItems.map((item) => (
+                      <Link
+                        key={item.title}
+                        to={createPageUrl(item.pageName)}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
+                          currentPageName === item.pageName
+                            ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                            : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                        }`}
+                      >
+                        {item.icon === 'cart' && <CartIcon className="w-5 h-5" />}
+                        {item.title}
+                      </Link>
+                    ))}
               
                   {/* COMPARTILHAR */}
                   <button
