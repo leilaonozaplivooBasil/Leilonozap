@@ -607,8 +607,7 @@ export default function Cart() {
                     className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-10"
                   />
                   <Button 
-                    variant="outline" 
-                    className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white h-10"
+                    className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white h-10"
                   >
                     Aplicar
                   </Button>
