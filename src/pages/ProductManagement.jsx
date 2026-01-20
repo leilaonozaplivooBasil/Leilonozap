@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
-  Download, Save, X, PackagePlus, Calculator, ShoppingCart
+  Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen
 } from 'lucide-react';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
@@ -388,6 +388,13 @@ export default function ProductManagement() {
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
+              onClick={() => navigate(createPageUrl("CreateCatalogProduct"))}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
+              Novo Produto Catálogo
+            </Button>
+            <Button
               onClick={() => setShowAddForm(!showAddForm)}
               className="bg-gray-800 hover:bg-gray-700 text-white"
             >
@@ -689,7 +696,7 @@ export default function ProductManagement() {
                       <td className="p-3 text-right text-blue-600 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
                       <td className="p-3 text-right text-green-600 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.profit || 0).toFixed(2)}</td>
                       <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-2">
+                        <div className="flex items-center justify-center gap-1">
                           <Button
                             size="sm"
                             onClick={(e) => {
@@ -698,6 +705,7 @@ export default function ProductManagement() {
                               setShowCalculator(true);
                             }}
                             className="bg-green-600 hover:bg-green-700 text-white"
+                            title="Calculadora de Preço"
                           >
                             <Calculator className="w-4 h-4" />
                           </Button>
@@ -709,8 +717,20 @@ export default function ProductManagement() {
                               setShowGoogleShopping(true);
                             }}
                             className="bg-blue-600 hover:bg-blue-700 text-white"
+                            title="Pesquisar Google Shopping"
                           >
                             <ShoppingCart className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(createPageUrl("EditCatalogProduct") + `?product_id=${product.id}`);
+                            }}
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
+                            title="Editar no Catálogo"
+                          >
+                            <BookOpen className="w-4 h-4" />
                           </Button>
                         </div>
                       </td>
