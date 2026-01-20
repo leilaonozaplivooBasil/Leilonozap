@@ -725,7 +725,7 @@ export default function ProductManagement() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(createPageUrl("EditCatalogProduct") + `?product_id=${product.id}`);
+                              navigate(createPageUrl("EditCatalogProduct") + `?id=${product.id}`);
                             }}
                             className="bg-purple-600 hover:bg-purple-700 text-white"
                             title="Editar no Catálogo"
