@@ -110,8 +110,8 @@ export default function MyCatalogOrders() {
   }, []);
 
   const handleTrackClick = (order) => {
-    // Navega para página de status do pedido
-    navigate(createPageUrl('OrderStatus') + `?sale_id=${order.id}`);
+    // Navega para página de acompanhamento do pedido do catálogo
+    navigate(createPageUrl('CatalogOrderTracking') + `?sale_id=${order.id}`);
   };
 
   if (isLoading) {
