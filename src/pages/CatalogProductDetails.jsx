@@ -18,6 +18,8 @@ export default function CatalogProductDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
+  const [quantity, setQuantity] = useState(1);
+  const [showFullscreen, setShowFullscreen] = useState(false);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
