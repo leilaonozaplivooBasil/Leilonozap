@@ -62,6 +62,21 @@ Deno.serve(async (req) => {
 
     const result = await preference.create({ body: preferenceData });
 
+    // Busca licenciado pelo referral_code se existir
+    let licenseeId = null;
+    const licenseeCode = user_data?.licensee_code || user_data?.referral_code;
+    if (licenseeCode) {
+      try {
+        const licensees = await base44.asServiceRole.entities.AppUser.filter({ referral_code: licenseeCode });
+        if (licensees && licensees.length > 0) {
+          licenseeId = licensees[0].id;
+          console.log(`✅ Licenciado encontrado: ${licensees[0].full_name} (ID: ${licenseeId})`);
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar licenciado:', err);
+      }
+    }
+
     // Salva a venda pendente no banco
     try {
       await base44.asServiceRole.entities.CatalogSale.create({
@@ -75,7 +90,9 @@ Deno.serve(async (req) => {
         total_amount: total,
         status: 'pending',
         payment_method: 'mercadopago',
-        mp_preference_id: result.id
+        mp_preference_id: result.id,
+        licensee_id: licenseeId, // ✅ ID REAL do licenciado (não o código!)
+        referred_by_code: licenseeCode || '' // ✅ Código de referência separado
       });
     } catch (dbError) {
       console.error('Erro ao salvar venda pendente:', dbError);
