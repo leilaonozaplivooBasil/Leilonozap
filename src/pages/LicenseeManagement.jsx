@@ -326,10 +326,10 @@ export default function LicenseeManagement() {
 
                 {/* Botões */}
                 <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700">
+                  <Button className="flex-1 bg-gray-600 hover:bg-gray-500 text-white">
                     Ver pedidos
                   </Button>
-                  <Button variant="outline" className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700">
+                  <Button className="flex-1 bg-gray-600 hover:bg-gray-500 text-white">
                     Editar cadastro
                   </Button>
                 </div>
