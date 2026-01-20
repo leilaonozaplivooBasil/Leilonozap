@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { X, Search, Loader2, CheckCircle, User, Mail } from 'lucide-react';
+import { X, Search, Loader2, CheckCircle, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 const AppUser = base44.entities.AppUser;
@@ -20,45 +20,56 @@ const generateReferralCode = (fullName) => {
 };
 
 export default function CreateLicenseeModal({ onClose, onSuccess }) {
-  const [searchEmail, setSearchEmail] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchName, setSearchName] = useState('');
+  const [allUsers, setAllUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [foundUser, setFoundUser] = useState(null);
-  const [searchError, setSearchError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdUser, setCreatedUser] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const inputRef = useRef(null);
 
-  const handleSearch = async () => {
-    if (!searchEmail.trim()) {
-      setSearchError('Digite um email para buscar');
-      return;
-    }
-
-    setIsSearching(true);
-    setSearchError('');
-    setFoundUser(null);
-
-    try {
-      const users = await AppUser.filter({ email: searchEmail.toLowerCase().trim() });
-      
-      if (users.length === 0) {
-        setSearchError('Nenhum usuário encontrado com este email');
-      } else {
-        const user = users[0];
-        
-        // Verifica se já é licenciado do catálogo
-        if (user.career_levels?.includes('licenciado_catalogo') || user.primary_career_level === 'licenciado_catalogo') {
-          setSearchError('Este usuário já é um licenciado do catálogo');
-        } else {
-          setFoundUser(user);
-        }
+  // Carrega todos os usuários ao abrir o modal
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const users = await AppUser.list('-created_date', 500);
+        // Filtra apenas usuários que NÃO são licenciados do catálogo
+        const nonLicensees = users.filter(u => 
+          !u.career_levels?.includes('licenciado_catalogo') && 
+          u.primary_career_level !== 'licenciado_catalogo'
+        );
+        setAllUsers(nonLicensees);
+      } catch (error) {
+        console.error('Erro ao carregar usuários:', error);
+      } finally {
+        setIsLoadingUsers(false);
       }
-    } catch (error) {
-      console.error('Erro ao buscar usuário:', error);
-      setSearchError('Erro ao buscar usuário');
-    } finally {
-      setIsSearching(false);
+    };
+    loadUsers();
+  }, []);
+
+  // Filtra usuários conforme digita
+  useEffect(() => {
+    if (searchName.trim().length >= 2) {
+      const search = searchName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const filtered = allUsers.filter(u => 
+        u.full_name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(search)
+      ).slice(0, 8);
+      setFilteredUsers(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredUsers([]);
+      setShowDropdown(false);
     }
+  }, [searchName, allUsers]);
+
+  const handleSelectUser = (user) => {
+    setFoundUser(user);
+    setSearchName(user.full_name);
+    setShowDropdown(false);
   };
 
   const handleConvert = async () => {
@@ -154,47 +165,59 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
         {/* Conteúdo */}
         <div className="p-6">
           <p className="text-gray-400 text-sm mb-4">
-            Pesquise pelo email de um usuário já cadastrado para torná-lo um licenciado do catálogo.
+            Pesquise pelo nome de um usuário já cadastrado para torná-lo um licenciado do catálogo.
           </p>
 
-          {/* Campo de busca */}
-          <div className="flex gap-2 mb-4">
-            <div className="relative flex-1">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                type="email"
-                value={searchEmail}
-                onChange={(e) => {
-                  setSearchEmail(e.target.value);
-                  setSearchError('');
-                  setFoundUser(null);
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                placeholder="Digite o email do usuário"
-                className="pl-10 bg-gray-700 border-gray-600 text-white"
-              />
-            </div>
-            <Button
-              onClick={handleSearch}
-              disabled={isSearching}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              {isSearching ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
-            </Button>
+          {/* Campo de busca com autocomplete */}
+          <div className="relative mb-4">
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 z-10" />
+            <Input
+              ref={inputRef}
+              type="text"
+              value={searchName}
+              onChange={(e) => {
+                setSearchName(e.target.value);
+                setFoundUser(null);
+              }}
+              onFocus={() => searchName.length >= 2 && setShowDropdown(true)}
+              placeholder={isLoadingUsers ? "Carregando usuários..." : "Digite o nome do usuário"}
+              className="pl-10 bg-gray-700 border-gray-600 text-white"
+              disabled={isLoadingUsers}
+            />
+            
+            {/* Dropdown de resultados */}
+            {showDropdown && filteredUsers.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-gray-700 border border-gray-600 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+                {filteredUsers.map((user) => (
+                  <button
+                    key={user.id}
+                    onClick={() => handleSelectUser(user)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-gray-600 transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-green-600 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {user.avatar_url ? (
+                        <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-white font-bold text-sm">{getInitials(user.full_name)}</span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-white truncate">{user.full_name}</p>
+                      <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            
+            {showDropdown && searchName.length >= 2 && filteredUsers.length === 0 && !isLoadingUsers && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-gray-700 border border-gray-600 rounded-lg p-3 z-50">
+                <p className="text-gray-400 text-sm text-center">Nenhum usuário encontrado</p>
+              </div>
+            )}
           </div>
 
-          {/* Erro de busca */}
-          {searchError && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
-              <p className="text-red-400 text-sm">{searchError}</p>
-            </div>
-          )}
-
-          {/* Usuário encontrado */}
+          {/* Usuário selecionado */}
           {foundUser && (
             <div className="bg-gray-700/50 border border-gray-600 rounded-lg p-4 mb-4">
               <div className="flex items-center gap-3">
