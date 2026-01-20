@@ -406,14 +406,14 @@ ${categoryEmoji} ${product.description}
               e.stopPropagation();
               setShowComparai(true);
             }}
-            className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg"
+            className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg px-2 sm:px-4"
           >
             <img 
               src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
               alt="Comparai"
-              className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2"
+              className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0"
             />
-            <span>COMPARAR PREÇOS</span>
+            <span className="truncate">COMPARAR PREÇOS</span>
           </Button>
 
           {/* MAIS INFORMAÇÕES - LINK */}
