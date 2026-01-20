@@ -27,7 +27,6 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
   const [phone, setPhone] = useState(licensee?.phone || '');
   const [email, setEmail] = useState(licensee?.email || '');
   const [nickname, setNickname] = useState(licensee?.nickname || '');
-  const [referralCode, setReferralCode] = useState(licensee?.referral_code || licensee?.id || '');
   const [avatarUrl, setAvatarUrl] = useState(licensee?.avatar_url || '');
 
   // Upload de foto
@@ -62,7 +61,6 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
         phone: phone,
         email: email,
         nickname: nickname,
-        referral_code: referralCode,
         avatar_url: avatarUrl
       });
 
@@ -210,10 +208,10 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
             />
           </div>
 
-          {/* Link do Catálogo */}
+          {/* Slug do Catálogo (Link Bonito) */}
           <div>
             <Label className="text-gray-300 flex items-center gap-1 mb-2">
-              Link do Catálogo
+              Endereço personalizado (Slug)
               <HelpCircle className="w-3 h-3 text-gray-500" />
             </Label>
             <div className="flex">
@@ -221,15 +219,15 @@ export default function EditLicenseeModal({ licensee, onClose, onSuccess }) {
                 leilaonozap.net/s/
               </div>
               <Input
-                placeholder="Ex.: joaosilva"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value.replace(/\s+/g, ''))}
+                placeholder="Ex.: nomevendedor"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value.toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, ''))}
                 className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400 rounded-l-none"
               />
             </div>
-            {referralCode && (
+            {nickname && (
               <p className="text-xs text-green-400 mt-1">
-                Visualização: leilaonozap.net/s/{referralCode}
+                Link: leilaonozap.net/s/{nickname}
               </p>
             )}
           </div>
