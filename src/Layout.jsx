@@ -594,8 +594,8 @@ export default function Layout({ children, currentPageName }) {
                     Compartilhar
                   </button>
 
-                  {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado) */}
-                  {isLoggedIn && (
+                  {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado e NÃO em páginas do catálogo) */}
+                  {isLoggedIn && !isCatalogPage && (
                   <Link
                     to={createPageUrl("Profile")}
                     className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
@@ -751,82 +751,51 @@ export default function Layout({ children, currentPageName }) {
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-1">
+              
+                  {/* ITENS DO MENU */}
+                    {finalMenuItems.map((item) => (
+                      <Link
+                        key={item.title}
+                        to={createPageUrl(item.pageName)}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
+                          currentPageName === item.pageName
+                            ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                            : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                        }`}
+                      >
+                        {item.icon === 'cart' && <CartIcon className="w-5 h-5" />}
+                        {item.title}
+                      </Link>
+                    ))}
 
-                  {/* ITENS DO MENU - NÃO MOSTRA LEILÕES/LOJISTA/ETC NO CATÁLOGO */}
-                  {!isCatalogPage && finalMenuItems.map((item) => (
-                    <Link
-                      key={item.title}
-                      to={createPageUrl(item.pageName)}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
-                        currentPageName === item.pageName
-                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
-                      }`}
+                    {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO */}
+                    {isCatalogPage && (
+                      <Link
+                        to={createPageUrl("Cart")}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
+                          currentPageName === "Cart"
+                            ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                            : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                        }`}
+                      >
+                        <CartIcon className="w-5 h-5" />
+                        Carrinho
+                      </Link>
+                    )}
+
+                    {/* COMPARTILHAR */}
+                    <button
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setShowShareModal(true);
+                        }}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
                     >
-                      {item.icon === 'cart' && <CartIcon className="w-5 h-5" />}
-                      {item.title}
-                    </Link>
-                  ))}
-
-                  {/* CATÁLOGO - APENAS EM PÁGINAS DO CATÁLOGO */}
-                  {isCatalogPage && (
-                    <Link
-                      to={createPageUrl("Catalog")}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
-                        currentPageName === "Catalog"
-                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
-                      }`}
-                    >
-                      Catálogo
-                    </Link>
-                  )}
-
-                  {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO */}
-                  {isCatalogPage && (
-                    <Link
-                      to={createPageUrl("Cart")}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
-                        currentPageName === "Cart"
-                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
-                      }`}
-                    >
-                      <CartIcon className="w-5 h-5" />
-                      Carrinho
-                    </Link>
-                  )}
-
-                  {/* COMPARTILHAR */}
-                  <button
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      setShowShareModal(true);
-                      }}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
-                  >
-                    <Share2 className="h-5 w-5" />
-                    Compartilhar
-                  </button>
-
-                  {/* PERFIL - APENAS EM PÁGINAS DO CATÁLOGO */}
-                  {isCatalogPage && isLoggedIn && (
-                    <Link
-                      to={createPageUrl("Profile")}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
-                        currentPageName === "Profile"
-                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
-                      }`}
-                    >
-                      <UserIcon className="w-5 h-5" />
-                      Perfil
-                    </Link>
-                  )}
+                      <Share2 className="h-5 w-5" />
+                      Compartilhar
+                    </button>
               
 
 
