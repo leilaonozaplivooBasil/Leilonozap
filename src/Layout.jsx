@@ -898,7 +898,7 @@ export default function Layout({ children, currentPageName }) {
           </>
         )}
 
-        <main>{children}</main>
+        <main className="pt-16">{children}</main>
         <Footer />
 
         {/* 🆕 BOTÃO FLUTUANTE WHATSAPP - SÓ NA SALA DE LEILÃO (AuctionRoom) */}
