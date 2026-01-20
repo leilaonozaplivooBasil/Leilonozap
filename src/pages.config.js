@@ -14,7 +14,6 @@ import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
 import CatalogManagement from './pages/CatalogManagement';
-import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
 import CheckoutAsaas from './pages/CheckoutAsaas';
 import CommissionDistributionFull from './pages/CommissionDistributionFull';
@@ -69,6 +68,8 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
+import CatalogProductDetails from './pages/CatalogProductDetails';
+import Cart from './pages/Cart';
 import __Layout from './Layout.jsx';
 
 
@@ -89,7 +90,6 @@ export const PAGES = {
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
     "CatalogManagement": CatalogManagement,
-    "CatalogProductDetails": CatalogProductDetails,
     "Checkout": Checkout,
     "CheckoutAsaas": CheckoutAsaas,
     "CommissionDistributionFull": CommissionDistributionFull,
@@ -144,6 +144,8 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
+    "CatalogProductDetails": CatalogProductDetails,
+    "Cart": Cart,
 }
 
 export const pagesConfig = {
