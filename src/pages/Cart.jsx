@@ -50,30 +50,75 @@ export default function Cart() {
   });
 
   useEffect(() => {
-    const savedCart = localStorage.getItem('catalogCart');
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
-    }
+    const loadUserData = async () => {
+      const savedCart = localStorage.getItem('catalogCart');
+      if (savedCart) {
+        setCartItems(JSON.parse(savedCart));
+      }
 
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      setCurrentUser(user);
-      setFormData(prev => ({
-        ...prev,
-        name: user.full_name || '',
-        phone: user.phone || '',
-        email: user.email || '',
-        cpf: user.cpf || '',
-        cep: user.address_zip_code || '',
-        street: user.address_street || '',
-        number: user.address_number || '',
-        complement: user.address_complement || '',
-        neighborhood: user.address_neighborhood || '',
-        city: user.address_city || '',
-        state: user.address_state || ''
-      }));
-    }
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+
+        // Tenta buscar dados mais completos do AppUser
+        try {
+          const appUsers = await base44.entities.AppUser.filter({ id: user.id });
+          if (appUsers && appUsers.length > 0) {
+            const fullUser = appUsers[0];
+            setFormData(prev => ({
+              ...prev,
+              name: fullUser.full_name || user.full_name || '',
+              phone: fullUser.phone || user.phone || '',
+              email: fullUser.email || user.email || '',
+              cpf: fullUser.cpf || user.cpf || '',
+              cep: fullUser.address_zip_code || user.address_zip_code || '',
+              street: fullUser.address_street || user.address_street || '',
+              number: fullUser.address_number || user.address_number || '',
+              complement: fullUser.address_complement || user.address_complement || '',
+              neighborhood: fullUser.address_neighborhood || user.address_neighborhood || '',
+              city: fullUser.address_city || user.address_city || '',
+              state: fullUser.address_state || user.address_state || ''
+            }));
+          } else {
+            // Fallback para dados do localStorage
+            setFormData(prev => ({
+              ...prev,
+              name: user.full_name || '',
+              phone: user.phone || '',
+              email: user.email || '',
+              cpf: user.cpf || '',
+              cep: user.address_zip_code || '',
+              street: user.address_street || '',
+              number: user.address_number || '',
+              complement: user.address_complement || '',
+              neighborhood: user.address_neighborhood || '',
+              city: user.address_city || '',
+              state: user.address_state || ''
+            }));
+          }
+        } catch (error) {
+          console.debug('Erro ao buscar dados do AppUser:', error);
+          // Fallback para dados do localStorage
+          setFormData(prev => ({
+            ...prev,
+            name: user.full_name || '',
+            phone: user.phone || '',
+            email: user.email || '',
+            cpf: user.cpf || '',
+            cep: user.address_zip_code || '',
+            street: user.address_street || '',
+            number: user.address_number || '',
+            complement: user.address_complement || '',
+            neighborhood: user.address_neighborhood || '',
+            city: user.address_city || '',
+            state: user.address_state || ''
+          }));
+        }
+      }
+    };
+
+    loadUserData();
   }, []);
 
   const updateCart = (newCart) => {
@@ -176,6 +221,10 @@ export default function Cart() {
     }
     if (!formData.cpf.trim()) {
       toast.error('Preencha seu CPF');
+      return;
+    }
+    if (!formData.email.trim()) {
+      toast.error('Preencha seu email');
       return;
     }
 
@@ -302,7 +351,7 @@ export default function Cart() {
                 </div>
 
                 <div>
-                  <Label className="text-gray-300 text-sm">Email (opcional)</Label>
+                  <Label className="text-gray-300 text-sm">Email</Label>
                   <Input
                     type="email"
                     placeholder="seu.email@provedor.com"
