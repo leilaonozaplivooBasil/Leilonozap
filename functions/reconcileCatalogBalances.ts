@@ -37,10 +37,10 @@ Deno.serve(async (req) => {
     const perUserAll = new Map();
 
     for (const r of filtered) {
-      const uid = r?.data?.user_id;
-      const amt = Number(r?.data?.amount || 0);
-      const type = r?.data?.sale_type || 'catalog';
-      if (!uid || !Number.isFinite(amt)) continue;
+      const uid = (r && (r.user_id ?? r?.data?.user_id)) || null;
+      const amt = Number((r && (r.amount ?? r?.data?.amount)) || 0);
+      const type = (r && (r.sale_type ?? r?.data?.sale_type)) || 'catalog';
+      if (!uid || !Number.isFinite(amt) || amt === 0) continue;
 
       // total geral
       perUserAll.set(uid, round2((perUserAll.get(uid) || 0) + amt));
