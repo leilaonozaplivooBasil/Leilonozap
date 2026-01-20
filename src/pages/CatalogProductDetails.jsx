@@ -315,16 +315,6 @@ export default function CatalogProductDetails() {
               </p>
             )}
 
-            {/* BOTÃO WHATSAPP */}
-            <Button
-              onClick={handleWhatsApp}
-              variant="outline"
-              className="w-full h-12 border-green-500 text-green-400 hover:bg-green-500/10 font-semibold text-base rounded-lg"
-            >
-              <MessageCircle className="w-5 h-5 mr-2" />
-              PEDIR PELO WHATSAPP
-            </Button>
-
             {/* DESCRIÇÃO */}
             <div className="border-t border-gray-700 pt-6">
               <h3 className="text-lg font-bold text-white mb-4">Descrição</h3>
