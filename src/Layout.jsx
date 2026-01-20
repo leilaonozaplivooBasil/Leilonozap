@@ -475,8 +475,13 @@ export default function Layout({ children, currentPageName }) {
   const fromCatalog = urlParams.get('from') === 'catalog';
   const isCatalogPage = currentPageName === 'Catalog' || currentPageName === 'CatalogProductDetails' || currentPageName === 'Cart' || currentPageName === 'CatalogCheckout' || (currentPageName === 'Profile' && fromCatalog);
 
-  const finalMenuItems = isCatalogPage 
+  // Verifica se está na página de Perfil vindo do catálogo
+  const isProfileFromCatalog = currentPageName === 'Profile' && fromCatalog;
+
+  const finalMenuItems = (isCatalogPage && !isProfileFromCatalog)
     ? [{ title: "Catálogo", pageName: "Catalog" }]  // Carrinho vai aparecer separado antes do Compartilhar
+    : isProfileFromCatalog
+    ? [{ title: "Catálogo", pageName: "Catalog" }]  // Perfil vindo do catálogo só mostra Catálogo
     : [
         { title: "Leilões", pageName: "Home" },
         { title: "Lojista", pageName: "LojistaDashboard" },
