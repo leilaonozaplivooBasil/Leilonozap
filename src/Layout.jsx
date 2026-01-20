@@ -42,6 +42,7 @@ export default function Layout({ children, currentPageName }) {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [cartCount, setCartCount] = useState(0);
+  const [showCartPopup, setShowCartPopup] = useState(false);
 
   // Atualiza contador do carrinho
   useEffect(() => {
@@ -58,7 +59,17 @@ export default function Layout({ children, currentPageName }) {
 
     updateCartCount();
     window.addEventListener('cartUpdated', updateCartCount);
-    return () => window.removeEventListener('cartUpdated', updateCartCount);
+    
+    // Evento para abrir popup do carrinho
+    const handleOpenCartPopup = () => {
+      setShowCartPopup(true);
+    };
+    window.addEventListener('openCartPopup', handleOpenCartPopup);
+    
+    return () => {
+      window.removeEventListener('cartUpdated', updateCartCount);
+      window.removeEventListener('openCartPopup', handleOpenCartPopup);
+    };
   }, []);
 
   const handleLogout = React.useCallback(() => {
