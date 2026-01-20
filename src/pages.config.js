@@ -75,6 +75,8 @@ import Licensing from './pages/Licensing';
 import Catalog from './pages/Catalog';
 import LicenseeManager from './pages/LicenseeManager';
 import CatalogStore from './pages/CatalogStore';
+import NotFound from './pages/NotFound';
+import _404 from './pages/404';
 import __Layout from './Layout.jsx';
 
 
@@ -156,6 +158,8 @@ export const PAGES = {
     "Catalog": Catalog,
     "LicenseeManager": LicenseeManager,
     "CatalogStore": CatalogStore,
+    "NotFound": NotFound,
+    "404": _404,
 }
 
 export const pagesConfig = {
