@@ -27,8 +27,9 @@ Deno.serve(async (req) => {
       if (r?.data?.status && r.data.status !== 'confirmed') return false;
       const createdRaw = r?.created_date || r?.updated_date || r?.data?.created_date || r?.data?.updated_date;
       const created = createdRaw ? new Date(createdRaw) : null;
-      // Se não houver data, considera dentro do corte
-      return !created || (created <= asOfDate);
+      const invalidDate = created && Number.isNaN(created.getTime());
+      // Sem data OU data inválida → inclui; caso contrário, respeita o corte
+      return !created || invalidDate || (created <= asOfDate);
     });
 
     // Soma por usuário: catálogo e total (todos os tipos)
