@@ -611,21 +611,6 @@ export default function Layout({ children, currentPageName }) {
                     Compartilhar
                   </button>
 
-                  {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado) */}
-                  {isLoggedIn && (
-                  <Link
-                    to={createPageUrl("Profile") + (isCatalogPage ? "?from=catalog" : "")}
-                    className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                      currentPageName === "Profile"
-                        ? "text-green-400"
-                        : "text-gray-300 hover:text-white"
-                    }`}
-                  >
-                    <UserIcon className="w-4 h-4" />
-                    Perfil
-                  </Link>
-                  )}
-
                   {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO (antes do Painel/Sair) */}
                   {isCatalogPage && (
                   <Link
