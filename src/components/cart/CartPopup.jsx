@@ -167,12 +167,12 @@ export default function CartPopup({ isOpen, onClose }) {
             </div>
             
             <Link
-              to={createPageUrl("CatalogCheckout")}
+              to={createPageUrl("Cart")}
               onClick={onClose}
               className="block w-full"
             >
               <Button className="w-full bg-gray-900 hover:bg-gray-800 text-white font-semibold py-3 rounded-full">
-                Preparar pedido
+                Ver carrinho
               </Button>
             </Link>
           </div>
