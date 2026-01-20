@@ -53,6 +53,7 @@ export default function Cart() {
       return item;
     });
     updateCart(newCart);
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const clearCart = () => {
