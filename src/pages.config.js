@@ -10,7 +10,6 @@ import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CareerLevelsReport from './pages/CareerLevelsReport';
-import Cart from './pages/Cart';
 import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
@@ -88,7 +87,6 @@ export const PAGES = {
     "BannerManagement": BannerManagement,
     "CRM": CRM,
     "CareerLevelsReport": CareerLevelsReport,
-    "Cart": Cart,
     "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
