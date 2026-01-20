@@ -460,6 +460,7 @@ export default function Layout({ children, currentPageName }) {
     { title: "💰 PDV", pageName: "PDV" },
     { title: "📊 CRM", pageName: "CRM" },
     { title: "🏪 Registrar Lojista", pageName: "StoreRegistration" },
+    { title: "👥 Registrar Licenciados", pageName: "LicenseeManager" },
     { title: "👥 Influenciadores", pageName: "InfluencersDashboard" },
     { title: "Painel de Controle", pageName: "NetworkOverview" },
     { title: "Gerenciar Senhas", pageName: "AdminUsers" },
