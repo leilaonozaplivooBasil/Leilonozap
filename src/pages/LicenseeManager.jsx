@@ -109,7 +109,7 @@ export default function LicenseeManager() {
 
   const getInitials = (name) => {
     if (!name) return '??';
-    const parts = name.split(' ');
+    const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) {
       return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     }
