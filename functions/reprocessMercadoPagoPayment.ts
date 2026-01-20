@@ -54,6 +54,26 @@ Deno.serve(async (req) => {
     }
 
     if (!updated) {
+      // Fallback: try to find by payment_id
+      try {
+        const byId = await base44.asServiceRole.entities.MercadoPagoPayment.filter({ payment_id: String(payment_id) });
+        if (byId && byId.length > 0) {
+          const dbPayment = byId[0];
+          updated = await base44.asServiceRole.entities.MercadoPagoPayment.update(dbPayment.id, { status, payment_method: method, ...(amount ? { amount } : {}) });
+          if (status === 'approved') {
+            if (dbPayment.catalog_sale_id) {
+              await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, { status: 'paid' });
+              try { await base44.asServiceRole.functions.invoke('processCatalogCommission', { sale_id: dbPayment.catalog_sale_id }); } catch (_) {}
+            }
+            if (dbPayment.auction_id) {
+              await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, { order_status: 'paid' });
+              try { await base44.asServiceRole.functions.invoke('processAuctionInfluencerCommission', { auction_id: dbPayment.auction_id }); } catch (_) {}
+            }
+          }
+        }
+      } catch (_) {}
+      
+      if (!updated) {
       let inferredUserId = null;
       try {
         const payerEmail = payment?.payer?.email;
