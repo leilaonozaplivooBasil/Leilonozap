@@ -111,15 +111,37 @@ Deno.serve(async (req) => {
     let anchorUser = null;
     let isLicenseeSale = false;
 
+    // Tenta buscar por ID primeiro
     if (sale.licensee_id) {
-     anchorUser = await findUserById(base44, sale.licensee_id);
-     isLicenseeSale = true;
+      anchorUser = await findUserById(base44, sale.licensee_id);
+      if (anchorUser) {
+        isLicenseeSale = true;
+        console.log(`✅ Âncora encontrada por licensee_id: ${anchorUser.full_name}`);
+      } else {
+        // Se não achou por ID, pode ser que licensee_id contenha um referral_code (bug antigo)
+        console.log(`⚠️ licensee_id '${sale.licensee_id}' não é um ID válido, tentando como referral_code...`);
+        anchorUser = await findUserByReferralCode(base44, sale.licensee_id);
+        if (anchorUser) {
+          isLicenseeSale = true;
+          console.log(`✅ Âncora encontrada por referral_code (fallback): ${anchorUser.full_name}`);
+        }
+      }
     }
-    if (!anchorUser && sale.referral_code) {
-     anchorUser = await findUserByReferralCode(base44, sale.referral_code);
+    
+    // Tenta pelo referral_code ou referred_by_code
+    if (!anchorUser && (sale.referral_code || sale.referred_by_code)) {
+      const refCode = sale.referral_code || sale.referred_by_code;
+      anchorUser = await findUserByReferralCode(base44, refCode);
+      if (anchorUser) {
+        isLicenseeSale = true;
+        console.log(`✅ Âncora encontrada por referral_code: ${anchorUser.full_name}`);
+      }
     }
+    
+    // Fallback para Site Oficial
     if (!anchorUser) {
-     anchorUser = await getOrCreateSiteOfficial(base44);
+      anchorUser = await getOrCreateSiteOfficial(base44);
+      console.log(`ℹ️ Nenhum licenciado encontrado, usando Site Oficial como âncora`);
     }
 
     // Monta cadeia de ancestrais a partir do âncora
