@@ -18,8 +18,18 @@ const ROLE_ORDER = [
 ];
 
 async function findUserById(base44, id) {
-  const rows = await base44.asServiceRole.entities.AppUser.filter({ id });
-  return Array.isArray(rows) && rows.length ? rows[0] : null;
+  // Valida se o ID parece ser um ID válido (formato ObjectId MongoDB)
+  if (!id || typeof id !== 'string' || id.length < 20) {
+    console.log(`⚠️ ID inválido ignorado: '${id}'`);
+    return null;
+  }
+  try {
+    const rows = await base44.asServiceRole.entities.AppUser.filter({ id });
+    return Array.isArray(rows) && rows.length ? rows[0] : null;
+  } catch (err) {
+    console.log(`⚠️ Erro ao buscar por ID '${id}': ${err.message}`);
+    return null;
+  }
 }
 
 async function findUserByReferralCode(base44, ref) {
