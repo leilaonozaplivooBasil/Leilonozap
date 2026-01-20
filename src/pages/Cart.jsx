@@ -3,8 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft, ShoppingBag, Loader2 } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  ArrowLeft, 
+  Loader2, 
+  User, 
+  Truck, 
+  MapPin,
+  Store,
+  CheckCircle2,
+  Trash2,
+  Plus,
+  Minus,
+  MessageCircle
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Cart() {
@@ -12,39 +33,67 @@ export default function Cart() {
   const [cartItems, setCartItems] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState('delivery');
+  const [coupon, setCoupon] = useState('');
+  const [observation, setObservation] = useState('');
+  
+  // Form data
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    cpf: '',
+    cep: '',
+    street: '',
+    number: '',
+    complement: '',
+    neighborhood: '',
+    city: '',
+    state: ''
+  });
 
   useEffect(() => {
-    // Carregar usuário
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      setCurrentUser(JSON.parse(savedUser));
-    }
-
-    // Carregar carrinho do localStorage
     const savedCart = localStorage.getItem('catalogCart');
     if (savedCart) {
       setCartItems(JSON.parse(savedCart));
+    }
+
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setCurrentUser(user);
+      setFormData(prev => ({
+        ...prev,
+        name: user.full_name || '',
+        phone: user.phone || '',
+        email: user.email || '',
+        cpf: user.cpf || '',
+        cep: user.address_zip_code || '',
+        street: user.address_street || '',
+        number: user.address_number || '',
+        complement: user.address_complement || '',
+        neighborhood: user.address_neighborhood || '',
+        city: user.address_city || '',
+        state: user.address_state || ''
+      }));
     }
   }, []);
 
   const updateCart = (newCart) => {
     setCartItems(newCart);
     localStorage.setItem('catalogCart', JSON.stringify(newCart));
+    window.dispatchEvent(new Event('cartUpdated'));
   };
 
   const removeItem = (productId) => {
     const newCart = cartItems.filter(item => item.id !== productId);
     updateCart(newCart);
-    window.dispatchEvent(new Event('cartUpdated'));
-    toast.success('Produto removido do carrinho');
   };
 
   const updateQuantity = (productId, newQuantity) => {
     if (newQuantity < 1) return;
-    
     const newCart = cartItems.map(item => {
       if (item.id === productId) {
-        // Verificar estoque disponível
         const maxQty = item.availableStock || 999;
         if (newQuantity > maxQty) {
           toast.error(`Apenas ${maxQty} unidades disponíveis`);
@@ -55,20 +104,62 @@ export default function Cart() {
       return item;
     });
     updateCart(newCart);
-    window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  const clearCart = () => {
-    updateCart([]);
-    window.dispatchEvent(new Event('cartUpdated'));
-    toast.success('Carrinho limpo');
-  };
-
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return cartItems.reduce((total, item) => {
       const price = item.price_catalog || item.selling_price_wholesale || 0;
-      return total + (price * item.quantity);
+      return total + (price * (item.quantity || 1));
     }, 0);
+  };
+
+  const searchCep = async (cep) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      if (!data.erro) {
+        setFormData(prev => ({
+          ...prev,
+          street: data.logradouro || '',
+          neighborhood: data.bairro || '',
+          city: data.localidade || '',
+          state: data.uf || ''
+        }));
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+    }
+  };
+
+  const handleCepChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 8) value = value.slice(0, 8);
+    if (value.length > 5) {
+      value = value.slice(0, 5) + '-' + value.slice(5);
+    }
+    setFormData(prev => ({ ...prev, cep: value }));
+    if (value.replace(/\D/g, '').length === 8) {
+      searchCep(value);
+    }
+  };
+
+  const formatPhone = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    }
+    return value;
+  };
+
+  const formatCpf = (value) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 11) {
+      return numbers.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    }
+    return value;
   };
 
   const handleCheckout = async () => {
@@ -77,19 +168,41 @@ export default function Cart() {
       return;
     }
 
-    if (!currentUser) {
-      toast.error('Faça login para continuar');
-      navigate(createPageUrl('Register'));
+    // Validações
+    if (!formData.name.trim()) {
+      toast.error('Preencha seu nome');
       return;
+    }
+    if (!formData.phone.trim()) {
+      toast.error('Preencha seu telefone');
+      return;
+    }
+    if (!formData.cpf.trim()) {
+      toast.error('Preencha seu CPF');
+      return;
+    }
+
+    if (deliveryMethod === 'delivery') {
+      if (!formData.cep.trim() || !formData.street.trim() || !formData.number.trim() || !formData.city.trim()) {
+        toast.error('Preencha o endereço completo para entrega');
+        return;
+      }
     }
 
     setIsProcessing(true);
     
     try {
-      // Criar preferência no Mercado Pago
+      const userData = {
+        id: currentUser?.id,
+        full_name: formData.name,
+        email: formData.email || currentUser?.email,
+        phone: formData.phone,
+        cpf: formData.cpf
+      };
+
       const response = await base44.functions.invoke('createMPCartPreference', {
         cart_items: cartItems,
-        user_data: currentUser
+        user_data: userData
       });
 
       if (response.data?.error) {
@@ -99,7 +212,6 @@ export default function Cart() {
       }
 
       if (response.data?.init_point) {
-        // Redirecionar para o checkout do Mercado Pago
         window.location.href = response.data.init_point;
       } else {
         toast.error('Erro ao gerar link de pagamento');
@@ -112,166 +224,358 @@ export default function Cart() {
     }
   };
 
+  const openWhatsApp = () => {
+    const message = encodeURIComponent('Olá! Gostaria de negociar sobre meu pedido do catálogo.');
+    window.open(`https://wa.me/5521999999999?text=${message}`, '_blank');
+  };
+
+  const states = [
+    'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+    'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(createPageUrl('Catalog'))}
-                className="text-gray-400 hover:text-white"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Voltar
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5 text-green-400" />
-              <h1 className="text-lg font-bold">Meu Carrinho</h1>
-              {cartItems.length > 0 && (
-                <span className="bg-green-600 text-white text-xs px-2 py-0.5 rounded-full">
-                  {cartItems.length}
-                </span>
-              )}
-            </div>
-            {cartItems.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearCart}
-                className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
-              >
-                Limpar
-              </Button>
-            )}
+      <div className="bg-gray-800 border-b border-gray-700 sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(createPageUrl('Catalog'))}
+              className="text-gray-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="text-xl font-bold text-white">Finalizar Pedido</h1>
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {cartItems.length === 0 ? (
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-12 text-center">
-              <ShoppingBag className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-              <h2 className="text-xl font-semibold text-white mb-2">Seu carrinho está vazio</h2>
-              <p className="text-gray-400 mb-6">Adicione produtos do catálogo para continuar</p>
-              <Button
-                onClick={() => navigate(createPageUrl('Catalog'))}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                <ShoppingCart className="w-4 h-4 mr-2" />
-                Ver Catálogo
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {/* Lista de produtos */}
-            {cartItems.map((item) => {
-              const price = item.price_catalog || item.selling_price_wholesale || 0;
-              const imageUrl = item.image_urls?.[0] || 'https://via.placeholder.com/100';
-              
-              return (
-                <Card key={item.id} className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-4">
-                    <div className="flex gap-4">
-                      {/* Imagem */}
-                      <div className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-700">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Coluna Esquerda - Formulários */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Seção 1 - Seus Dados */}
+            <Card className="bg-gray-800 border-gray-700 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm">
+                  1
+                </div>
+                <h2 className="text-lg font-semibold text-white">Seus dados</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-gray-300 text-sm">Nome</Label>
+                  <Input
+                    placeholder="Informe o seu nome"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-gray-300 text-sm">Celular</Label>
+                  <div className="flex gap-2 mt-1">
+                    <div className="flex items-center gap-1 bg-gray-700 border border-gray-600 rounded-md px-3 text-gray-300">
+                      <span>🇧🇷</span>
+                      <span>+55</span>
+                    </div>
+                    <Input
+                      placeholder="Telefone"
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-gray-300 text-sm">Email (opcional)</Label>
+                  <Input
+                    type="email"
+                    placeholder="seu.email@provedor.com"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-gray-300 text-sm">CPF</Label>
+                  <Input
+                    placeholder="000.000.000-00"
+                    value={formData.cpf}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cpf: formatCpf(e.target.value) }))}
+                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                    maxLength={14}
+                  />
+                </div>
+              </div>
+            </Card>
+
+            {/* Seção 2 - Forma de Entrega */}
+            <Card className="bg-gray-800 border-gray-700 p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm">
+                  2
+                </div>
+                <h2 className="text-lg font-semibold text-white">Como gostaria de receber o pedido</h2>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-gray-300 text-sm">Escolha a forma de entrega</Label>
+                  <Select value={deliveryMethod} onValueChange={setDeliveryMethod}>
+                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700">
+                      <SelectItem value="delivery" className="text-white hover:bg-gray-700">
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-4 h-4" />
+                          Entrega em domicílio
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pickup" className="text-white hover:bg-gray-700">
+                        <div className="flex items-center gap-2">
+                          <Store className="w-4 h-4" />
+                          Retirada na Loja
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {deliveryMethod === 'pickup' && (
+                  <div className="bg-gray-700/50 rounded-lg p-4 mt-4">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-5 h-5 text-green-500 mt-0.5" />
+                      <div>
+                        <p className="text-gray-300 text-sm font-medium">Endereço para retirada:</p>
+                        <p className="text-gray-400 text-sm mt-1">
+                          Estrada do Pontal, 6500, 6500 - Recreio dos Bandeirantes, Rio de Janeiro - RJ<br />
+                          22790877
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {deliveryMethod === 'delivery' && (
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <Label className="text-gray-300 text-sm">CEP</Label>
+                      <Input
+                        placeholder="00000-000"
+                        value={formData.cep}
+                        onChange={handleCepChange}
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                        maxLength={9}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-300 text-sm">Endereço</Label>
+                      <Input
+                        placeholder="Nome da rua ou avenida"
+                        value={formData.street}
+                        onChange={(e) => setFormData(prev => ({ ...prev, street: e.target.value }))}
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-gray-300 text-sm">Número</Label>
+                        <Input
+                          placeholder="Número"
+                          value={formData.number}
+                          onChange={(e) => setFormData(prev => ({ ...prev, number: e.target.value }))}
+                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-300 text-sm">Complemento</Label>
+                        <Input
+                          placeholder="Complemento"
+                          value={formData.complement}
+                          onChange={(e) => setFormData(prev => ({ ...prev, complement: e.target.value }))}
+                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-300 text-sm">Bairro</Label>
+                      <Input
+                        placeholder="Bairro"
+                        value={formData.neighborhood}
+                        onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-gray-300 text-sm">Cidade</Label>
+                        <Input
+                          placeholder="Cidade"
+                          value={formData.city}
+                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-300 text-sm">Estado</Label>
+                        <Select 
+                          value={formData.state} 
+                          onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}
+                        >
+                          <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-1">
+                            <SelectValue placeholder="Estado" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
+                            {states.map(state => (
+                              <SelectItem key={state} value={state} className="text-white hover:bg-gray-700">
+                                {state}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Banner WhatsApp */}
+                <div 
+                  onClick={openWhatsApp}
+                  className="bg-gradient-to-r from-green-600/20 to-green-500/10 border border-green-600/30 rounded-lg p-4 mt-6 cursor-pointer hover:from-green-600/30 transition-all"
+                >
+                  <p className="text-green-400 text-sm">
+                    <span className="font-semibold">A gente adora negociar!</span>{' '}
+                    <span className="text-green-300">
+                      Chama no Zap que a gente conversa sobre tudo — inclusive o frete. 
+                      Aqui é sem frescura, é papo reto pra fechar negócio bom pros dois.
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Coluna Direita - Resumo do Pedido */}
+          <div className="space-y-6">
+            {/* Seu Pedido */}
+            <Card className="bg-gray-800 border-gray-700 p-6">
+              <h2 className="text-lg font-semibold text-white mb-4">Seu pedido</h2>
+
+              {cartItems.length === 0 ? (
+                <p className="text-gray-400 text-center py-8">Seu carrinho está vazio</p>
+              ) : (
+                <div className="space-y-4">
+                  {cartItems.map((item) => {
+                    const price = item.price_catalog || item.selling_price_wholesale || 0;
+                    const imageUrl = item.image_urls?.[0] || 'https://via.placeholder.com/60';
+                    
+                    return (
+                      <div key={item.id} className="flex gap-3">
                         <img
                           src={imageUrl}
                           alt={item.description}
-                          className="w-full h-full object-cover"
+                          className="w-16 h-16 object-cover rounded-lg bg-gray-700"
                         />
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-medium text-sm line-clamp-2 mb-1">
-                          {item.description}
-                        </h3>
-                        <p className="text-green-400 font-bold">
-                          R$ {price.toFixed(2)}
-                        </p>
-                      </div>
-
-                      {/* Quantidade e remover */}
-                      <div className="flex flex-col items-end justify-between">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeItem(item.id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 w-8 p-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-
-                        <div className="flex items-center gap-2 bg-gray-700 rounded-lg p-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            className="h-7 w-7 p-0 text-gray-400 hover:text-white"
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span className="text-white font-medium w-6 text-center text-sm">
-                            {item.quantity}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            className="h-7 w-7 p-0 text-gray-400 hover:text-white"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-white text-sm font-medium line-clamp-2">
+                            {item.description}
+                          </h4>
+                          <p className="text-green-400 font-semibold text-sm mt-1">
+                            R$ {price.toFixed(2)}
+                          </p>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
+                                className="w-6 h-6 rounded bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600"
+                              >
+                                <Minus className="w-3 h-3" />
+                              </button>
+                              <span className="text-white text-sm w-6 text-center">{item.quantity || 1}</span>
+                              <button
+                                onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
+                                className="w-6 h-6 rounded bg-gray-700 flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            </div>
+                            <button
+                              onClick={() => removeItem(item.id)}
+                              className="text-gray-500 hover:text-red-400 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    );
+                  })}
 
-                    {/* Subtotal do item */}
-                    <div className="mt-3 pt-3 border-t border-gray-700 flex justify-between items-center">
-                      <span className="text-gray-400 text-sm">Subtotal:</span>
-                      <span className="text-white font-semibold">
-                        R$ {(price * item.quantity).toFixed(2)}
-                      </span>
+                  <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Total de itens ({cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0)} itens)</span>
+                      <span className="text-white">R$ {calculateSubtotal().toFixed(2)}</span>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-
-            {/* Resumo */}
-            <Card className="bg-gradient-to-br from-green-900/30 to-gray-800 border-green-500/30">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400">Itens ({cartItems.length})</span>
-                    <span className="text-white">R$ {calculateTotal().toFixed(2)}</span>
-                  </div>
-                  
-                  <div className="border-t border-gray-700 pt-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-white">Total</span>
-                      <span className="text-2xl font-bold text-green-400">
-                        R$ {calculateTotal().toFixed(2)}
-                      </span>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Valor do frete</span>
+                      <span className="text-green-400">A combinar</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-semibold pt-2">
+                      <span className="text-white">Valor total</span>
+                      <span className="text-green-400">R$ {calculateSubtotal().toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
-              </CardContent>
+              )}
             </Card>
 
-            {/* Botão de checkout */}
+            {/* Aplicar Cupom */}
+            <Card className="bg-gray-800 border-gray-700 p-6">
+              <h3 className="text-white font-medium mb-3">Aplicar cupom</h3>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Insira o cupom aqui"
+                  value={coupon}
+                  onChange={(e) => setCoupon(e.target.value)}
+                  className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1"
+                />
+                <Button 
+                  variant="outline" 
+                  className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
+                >
+                  Aplicar
+                </Button>
+              </div>
+            </Card>
+
+            {/* Observação */}
+            <Card className="bg-gray-800 border-gray-700 p-6">
+              <h3 className="text-white font-medium mb-3">Adicionar uma observação</h3>
+              <textarea
+                placeholder="Adicione suas observações sobre esse pedido aqui"
+                value={observation}
+                onChange={(e) => setObservation(e.target.value)}
+                className="w-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white placeholder:text-gray-500 min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </Card>
+
+            {/* Botão Enviar Pedido */}
             <Button
               onClick={handleCheckout}
-              disabled={isProcessing}
-              className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg font-semibold disabled:opacity-70"
+              disabled={isProcessing || cartItems.length === 0}
+              className="w-full bg-gray-900 hover:bg-gray-950 text-white h-14 text-lg font-semibold rounded-full disabled:opacity-50"
             >
               {isProcessing ? (
                 <>
@@ -279,14 +583,11 @@ export default function Cart() {
                   Processando...
                 </>
               ) : (
-                <>
-                  <ShoppingBag className="w-5 h-5 mr-2" />
-                  Finalizar Compra
-                </>
+                'ENVIAR PEDIDO'
               )}
             </Button>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
