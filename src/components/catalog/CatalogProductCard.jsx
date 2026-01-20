@@ -55,7 +55,6 @@ function CatalogProductCard({ product, currentUser }) {
       // Incrementar quantidade
       cart[existingIndex].quantity += 1;
       setCartQuantity(cart[existingIndex].quantity);
-      toast.success(`Quantidade atualizada: ${cart[existingIndex].quantity}x`);
     } else {
       // Adicionar novo item
       cart.push({
@@ -68,7 +67,6 @@ function CatalogProductCard({ product, currentUser }) {
         availableStock: product.quantity || 999
       });
       setCartQuantity(1);
-      toast.success('Produto adicionado ao carrinho!');
     }
     
     // Salvar no localStorage
@@ -79,6 +77,9 @@ function CatalogProductCard({ product, currentUser }) {
     
     // Dispara evento para atualizar contador no header
     window.dispatchEvent(new Event('cartUpdated'));
+    
+    // Abre popup do carrinho
+    window.dispatchEvent(new Event('openCartPopup'));
   };
 
   const images = (product.image_urls && product.image_urls.length > 0)
