@@ -40,6 +40,25 @@ export default function Layout({ children, currentPageName }) {
   const [showTerms, setShowTerms] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState(null);
+  const [cartCount, setCartCount] = useState(0);
+
+  // Atualiza contador do carrinho
+  useEffect(() => {
+    const updateCartCount = () => {
+      const savedCart = localStorage.getItem('catalogCart');
+      if (savedCart) {
+        const cart = JSON.parse(savedCart);
+        const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
+        setCartCount(totalItems);
+      } else {
+        setCartCount(0);
+      }
+    };
+
+    updateCartCount();
+    window.addEventListener('cartUpdated', updateCartCount);
+    return () => window.removeEventListener('cartUpdated', updateCartCount);
+  }, []);
 
   const handleLogout = React.useCallback(() => {
     console.log("🚪 INICIANDO LOGOUT...");
