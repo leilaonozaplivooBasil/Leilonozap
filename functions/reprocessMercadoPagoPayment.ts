@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
-    const { payment_id } = await req.json();
+    const { payment_id, buyer_email, catalog_sale_id } = await req.json();
     if (!payment_id) {
       return Response.json({ error: 'payment_id is required' }, { status: 400 });
     }
