@@ -290,13 +290,22 @@ export default function CatalogProductDetails() {
                 </button>
               </div>
 
-              <Button
-                onClick={handleAddToCart}
-                className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
-              >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                ADICIONAR AO PEDIDO
-              </Button>
+              {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
+                <Button
+                  disabled
+                  className="flex-1 h-12 bg-yellow-600 hover:bg-yellow-600 text-white font-bold text-base rounded-lg cursor-not-allowed opacity-90"
+                >
+                  ESGOTADO
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleAddToCart}
+                  className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  ADICIONAR AO PEDIDO
+                </Button>
+              )}
             </div>
 
             {/* ESTOQUE */}
