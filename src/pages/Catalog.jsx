@@ -420,6 +420,21 @@ export default function Catalog() {
                   <span>{products.length} em estoque</span>
                 </div>
               </div>
+
+              {/* Botão para Leilões */}
+              <div className="mt-4">
+                <Link
+                  to={createPageUrl("Home")}
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold px-4 py-2 rounded-lg transition-all shadow-lg shadow-green-600/30"
+                >
+                  <img 
+                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+                    alt="Leilão NoZap"
+                    className="w-5 h-5 object-contain"
+                  />
+                  Ir para Leilões
+                </Link>
+              </div>
             </div>
           </div>
         </div>
