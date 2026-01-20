@@ -773,7 +773,7 @@ export default function Layout({ children, currentPageName }) {
                     {finalMenuItems.map((item) => (
                       <Link
                         key={item.title}
-                        to={createPageUrl(item.pageName)}
+                        to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
                           currentPageName === item.pageName
