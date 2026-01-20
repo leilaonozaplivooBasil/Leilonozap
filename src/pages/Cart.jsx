@@ -638,7 +638,7 @@ export default function Cart() {
                   Processando...
                 </>
               ) : (
-                'ENVIAR PEDIDO'
+                'PAGAR AGORA'
               )}
             </Button>
           </div>
