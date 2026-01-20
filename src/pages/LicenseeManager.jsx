@@ -21,7 +21,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { toast } from "sonner";
-import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
+import AddLicenseeModal from '../components/licensing/AddLicenseeModal';
 
 const AppUser = base44.entities.AppUser;
 
@@ -410,14 +410,13 @@ export default function LicenseeManager() {
         </div>
       </div>
 
-      {/* Modal de Registro */}
+      {/* Modal de Cadastro de Vendedor */}
       {showRegisterModal && (
-        <LicenseeRegistrationModal
+        <AddLicenseeModal
           onClose={() => setShowRegisterModal(false)}
-          onSuccess={(user) => {
+          onSuccess={() => {
             setShowRegisterModal(false);
             loadLicensees();
-            toast.success('Licenciado cadastrado com sucesso!');
           }}
         />
       )}
