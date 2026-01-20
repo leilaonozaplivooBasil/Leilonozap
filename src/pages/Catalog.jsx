@@ -405,36 +405,36 @@ export default function Catalog() {
             <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
             <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
 
-            <div className="relative lg:pr-80">
-              <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
-                <Flame className="w-9 h-9 text-orange-400 animate-fire" />
-                <span>Catálogo <span className="text-green-400">Especial</span>!</span>
-              </h1>
-              <p className="text-gray-300 mb-4 text-base lg:text-lg">
-                {products.length} produtos incríveis com preços imbatíveis!
-              </p>
+            <div className="relative flex items-start justify-between">
+              <div>
+                <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
+                  <Flame className="w-9 h-9 text-orange-400 animate-fire" />
+                  <span>Catálogo <span className="text-green-400">Especial</span>!</span>
+                </h1>
+                <p className="text-gray-300 mb-4 text-base lg:text-lg">
+                  {products.length} produtos incríveis com preços imbatíveis!
+                </p>
 
-              <div className="flex items-center gap-4 text-sm text-gray-400">
-                <div className="flex items-center gap-1.5">
-                  <Package className="w-4 h-4" />
-                  <span>{products.length} em estoque</span>
+                <div className="flex items-center gap-4 text-sm text-gray-400">
+                  <div className="flex items-center gap-1.5">
+                    <Package className="w-4 h-4" />
+                    <span>{products.length} em estoque</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Botão para Leilões */}
-              <div className="mt-4">
-                <Link
-                  to={createPageUrl("Home")}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-white font-semibold px-4 py-2 rounded-lg transition-all shadow-lg shadow-green-600/30"
-                >
-                  <img 
-                    src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
-                    alt="Leilão NoZap"
-                    className="w-5 h-5 object-contain"
-                  />
-                  Ir para Leilões
-                </Link>
-              </div>
+              {/* Botão para Leilões - Direita */}
+              <Link
+                to={createPageUrl("Home")}
+                className="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold px-4 py-2.5 rounded-lg transition-all border border-gray-600"
+              >
+                <img 
+                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+                  alt="Leilão NoZap"
+                  className="w-6 h-6 object-contain"
+                />
+                Ir para Leilões
+              </Link>
             </div>
           </div>
         </div>
