@@ -435,7 +435,6 @@ export default function Layout({ children, currentPageName }) {
   const finalMenuItems = [
             { title: "Catálogo", pageName: "Catalog" },
             { title: "Sistema de Alavancagem", pageName: "Licensing" },
-            { title: "Carrinho", pageName: "Cart" },
             ...(isLoggedIn ? [{ title: "Perfil", pageName: "Profile" }] : [])
           ];
 
