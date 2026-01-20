@@ -56,6 +56,7 @@ export default function Cart() {
 
   const clearCart = () => {
     updateCart([]);
+    window.dispatchEvent(new Event('cartUpdated'));
     toast.success('Carrinho limpo');
   };
 
