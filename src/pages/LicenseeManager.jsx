@@ -94,9 +94,21 @@ export default function LicenseeManager() {
   };
 
   const copyLink = (licensee) => {
+    // Mantém o ?ref= funcionando internamente, mas exibe visualmente /s/nome
     const link = `https://leilaonozap.net/Catalog?ref=${licensee.referral_code || licensee.id}`;
     navigator.clipboard.writeText(link);
     toast.success('Link copiado!');
+  };
+
+  // Gera o nome visual do link (sem afetar o código real)
+  const getDisplaySlug = (licensee) => {
+    if (licensee.nickname) {
+      return licensee.nickname.toLowerCase().replace(/\s+/g, '');
+    }
+    if (licensee.full_name) {
+      return licensee.full_name.split(' ')[0].toLowerCase();
+    }
+    return 'catalogo';
   };
 
   const getInitials = (name) => {
@@ -208,7 +220,7 @@ export default function LicenseeManager() {
                             </p>
                             <p className="text-xs text-green-400 truncate flex items-center gap-1">
                               <Link2 className="w-3 h-3" />
-                              leilaonozap.net/s/{licensee.referral_code || licensee.id.substring(0, 8)}
+                              leilaonozap.net/s/{getDisplaySlug(licensee)}
                             </p>
                           </div>
 
@@ -299,7 +311,7 @@ export default function LicenseeManager() {
                     </Badge>
                     <p className="text-xs text-green-400 mt-2 flex items-center justify-center gap-1">
                       <Link2 className="w-3 h-3" />
-                      leilaonozap.net/s/{selectedLicensee.referral_code || selectedLicensee.id.substring(0, 8)}
+                      leilaonozap.net/s/{getDisplaySlug(selectedLicensee)}
                     </p>
                   </div>
 
