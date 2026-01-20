@@ -426,8 +426,8 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
   const referralLink = isSaiDeBaixo ?
-  `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}` :
-  `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}`;
+  `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code || user.id}` :
+  `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code || user.id}`;
 
   const userLevels = Array.isArray(user.career_levels) ? user.career_levels : user.career_levels ? [user.career_levels] : ['usuario'];
   const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
