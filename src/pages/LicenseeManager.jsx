@@ -121,17 +121,17 @@ export default function LicenseeManager() {
   const stats = selectedLicensee ? getStats(selectedLicensee) : null;
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-6">
+    <div className="min-h-screen bg-gray-900 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Gerenciar Licenciados</h1>
-            <p className="text-gray-500 text-sm">Gerencie os seus catálogos de vendedores</p>
+            <h1 className="text-2xl font-bold text-white">Gerenciar Licenciados</h1>
+            <p className="text-gray-400 text-sm">Gerencie os seus catálogos de vendedores</p>
           </div>
           <Button 
             onClick={() => setShowRegisterModal(true)}
-            className="bg-green-500 hover:bg-green-600 text-white"
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
             Cadastrar vendedor
@@ -141,7 +141,7 @@ export default function LicenseeManager() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Lista de Licenciados */}
           <div className="lg:col-span-2">
-            <Card className="bg-white shadow-sm">
+            <Card className="bg-gray-800 border-gray-700 shadow-lg">
               <CardContent className="p-4">
                 {/* Busca */}
                 <div className="flex gap-2 mb-4">
@@ -151,13 +151,13 @@ export default function LicenseeManager() {
                       placeholder="Pesquisar por vendedores"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 bg-gray-50 border-gray-200"
+                      className="pl-10 bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
                     />
                   </div>
                 </div>
 
                 {/* Contador */}
-                <p className="text-sm text-gray-500 mb-4">
+                <p className="text-sm text-gray-400 mb-4">
                   {filteredLicensees.length}/{licensees.length} vendedores
                 </p>
 
@@ -167,7 +167,7 @@ export default function LicenseeManager() {
                     <Loader2 className="w-8 h-8 animate-spin text-green-500" />
                   </div>
                 ) : filteredLicensees.length === 0 ? (
-                  <div className="text-center py-12 text-gray-500">
+                  <div className="text-center py-12 text-gray-400">
                     <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>Nenhum licenciado encontrado</p>
                   </div>
@@ -183,8 +183,8 @@ export default function LicenseeManager() {
                           onClick={() => setSelectedLicensee(licensee)}
                           className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
                             isSelected 
-                              ? 'bg-blue-50 border border-blue-200' 
-                              : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
+                              ? 'bg-green-900/30 border border-green-500/50' 
+                              : 'bg-gray-700/50 hover:bg-gray-700 border border-transparent'
                           }`}
                         >
                           {/* Avatar */}
@@ -204,10 +204,10 @@ export default function LicenseeManager() {
 
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-gray-900 truncate">
+                            <p className="font-medium text-white truncate">
                               {licensee.full_name}
                             </p>
-                            <p className="text-xs text-blue-500 truncate flex items-center gap-1">
+                            <p className="text-xs text-green-400 truncate flex items-center gap-1">
                               <Link2 className="w-3 h-3" />
                               leilaonozap.net/s/{licensee.referral_code || licensee.id.substring(0, 8)}
                             </p>
@@ -215,12 +215,12 @@ export default function LicenseeManager() {
 
                           {/* Status */}
                           {licenseeStats.sales > 0 && (
-                            <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                            <Badge className="bg-green-900/50 text-green-400 border border-green-500/30 text-xs">
                               {licenseeStats.sales} vendas
                             </Badge>
                           )}
 
-                          <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                          <Badge className="bg-green-900/50 text-green-400 border border-green-500/30 text-xs">
                             Catálogo ativo
                           </Badge>
 
@@ -231,36 +231,36 @@ export default function LicenseeManager() {
                                 e.stopPropagation();
                                 // Editar
                               }}
-                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                              className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
                             >
-                              <Pencil className="w-4 h-4 text-gray-500" />
+                              <Pencil className="w-4 h-4 text-gray-400" />
                             </button>
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
                                 copyLink(licensee);
                               }}
-                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                              className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
                             >
-                              <Copy className="w-4 h-4 text-gray-500" />
+                              <Copy className="w-4 h-4 text-gray-400" />
                             </button>
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
                                 window.open(`https://leilaonozap.net/Catalog?ref=${licensee.referral_code || licensee.id}`, '_blank');
                               }}
-                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                              className="p-2 hover:bg-gray-600 rounded-lg transition-colors"
                             >
-                              <ExternalLink className="w-4 h-4 text-gray-500" />
+                              <ExternalLink className="w-4 h-4 text-gray-400" />
                             </button>
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
                                 // Deletar
                               }}
-                              className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                              className="p-2 hover:bg-red-900/50 rounded-lg transition-colors"
                             >
-                              <Trash2 className="w-4 h-4 text-gray-500" />
+                              <Trash2 className="w-4 h-4 text-gray-400" />
                             </button>
                           </div>
                         </div>
@@ -275,7 +275,7 @@ export default function LicenseeManager() {
           {/* Detalhes do Licenciado */}
           <div className="lg:col-span-1">
             {selectedLicensee ? (
-              <Card className="bg-white shadow-sm sticky top-4">
+              <Card className="bg-gray-800 border-gray-700 shadow-lg sticky top-4">
                 <CardContent className="p-6">
                   {/* Header do perfil */}
                   <div className="text-center mb-6">
@@ -292,13 +292,13 @@ export default function LicenseeManager() {
                         getInitials(selectedLicensee.full_name)
                       )}
                     </div>
-                    <h3 className="font-bold text-lg text-gray-900">
+                    <h3 className="font-bold text-lg text-white">
                       {selectedLicensee.full_name}
                     </h3>
-                    <Badge className="bg-green-100 text-green-700 border-0 mt-2">
+                    <Badge className="bg-green-900/50 text-green-400 border border-green-500/30 mt-2">
                       Catálogo ativo
                     </Badge>
-                    <p className="text-xs text-blue-500 mt-2 flex items-center justify-center gap-1">
+                    <p className="text-xs text-green-400 mt-2 flex items-center justify-center gap-1">
                       <Link2 className="w-3 h-3" />
                       leilaonozap.net/s/{selectedLicensee.referral_code || selectedLicensee.id.substring(0, 8)}
                     </p>
@@ -306,71 +306,71 @@ export default function LicenseeManager() {
 
                   {/* Ações rápidas */}
                   <div className="flex justify-center gap-2 mb-6">
-                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                      <Pencil className="w-5 h-5 text-gray-500" />
+                    <button className="p-2 hover:bg-gray-700 rounded-lg transition-colors">
+                      <Pencil className="w-5 h-5 text-gray-400" />
                     </button>
                     <button 
                       onClick={() => copyLink(selectedLicensee)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
                     >
-                      <Copy className="w-5 h-5 text-gray-500" />
+                      <Copy className="w-5 h-5 text-gray-400" />
                     </button>
                     <button 
                       onClick={() => window.open(`https://leilaonozap.net/Catalog?ref=${selectedLicensee.referral_code || selectedLicensee.id}`, '_blank')}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
                     >
-                      <ExternalLink className="w-5 h-5 text-gray-500" />
+                      <ExternalLink className="w-5 h-5 text-gray-400" />
                     </button>
-                    <button className="p-2 hover:bg-red-100 rounded-lg transition-colors">
-                      <Trash2 className="w-5 h-5 text-gray-500" />
+                    <button className="p-2 hover:bg-red-900/50 rounded-lg transition-colors">
+                      <Trash2 className="w-5 h-5 text-gray-400" />
                     </button>
                   </div>
 
                   {/* Estatísticas */}
                   <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-2xl font-bold text-gray-900">{stats?.sales || 0}</p>
-                      <p className="text-xs text-gray-500">Vendas</p>
-                      <p className="text-xs text-gray-400">Mês passado</p>
+                    <div className="text-center p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+                      <p className="text-2xl font-bold text-white">{stats?.sales || 0}</p>
+                      <p className="text-xs text-gray-400">Vendas</p>
+                      <p className="text-xs text-gray-500">Mês passado</p>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-lg">
-                      <p className="text-sm font-medium text-gray-900">
+                    <div className="text-center p-3 bg-gray-700/50 rounded-lg border border-gray-600">
+                      <p className="text-sm font-medium text-white">
                         {stats?.lastSale ? new Date(stats.lastSale).toLocaleDateString('pt-BR') : '-'}
                       </p>
-                      <p className="text-xs text-gray-500">Última venda</p>
+                      <p className="text-xs text-gray-400">Última venda</p>
                     </div>
                   </div>
 
                   {/* Visitas no catálogo */}
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-gray-700">Visitas no catálogo</p>
-                      <button className="text-xs text-blue-500 hover:underline">Ver tudo</button>
+                      <p className="text-sm font-medium text-gray-300">Visitas no catálogo</p>
+                      <button className="text-xs text-green-400 hover:underline">Ver tudo</button>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="bg-gray-700/50 rounded-lg p-3 space-y-2 border border-gray-600">
+                      <div className="flex items-center gap-2 text-sm text-gray-300">
                         <Eye className="w-4 h-4" />
                         <span>{stats?.visits || 0} visitas</span>
                       </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2 text-sm text-gray-300">
                         <Users className="w-4 h-4" />
                         <span>{stats?.contacts || 0} contatos</span>
                       </div>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1 text-right">Últimos 30 dias</p>
+                    <p className="text-xs text-gray-500 mt-1 text-right">Últimos 30 dias</p>
                   </div>
 
                   {/* Produtos mais visitados */}
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm font-medium text-gray-700">Produtos mais visitados</p>
-                      <button className="text-xs text-blue-500 hover:underline">Ver tudo</button>
+                      <p className="text-sm font-medium text-gray-300">Produtos mais visitados</p>
+                      <button className="text-xs text-green-400 hover:underline">Ver tudo</button>
                     </div>
-                    <div className="bg-gray-50 rounded-lg p-4 text-center">
-                      <p className="text-sm text-gray-500">
+                    <div className="bg-gray-700/50 rounded-lg p-4 text-center border border-gray-600">
+                      <p className="text-sm text-gray-400">
                         {selectedLicensee.full_name} não teve visitas em seu catálogo nos últimos 30 dias
                       </p>
-                      <p className="text-xs text-gray-400 mt-2">
+                      <p className="text-xs text-gray-500 mt-2">
                         As visitas aos produtos do vendedor são registradas quando um cliente acessa o catálogo do vendedor e visualiza os produtos.
                       </p>
                     </div>
@@ -378,20 +378,20 @@ export default function LicenseeManager() {
 
                   {/* Botões de ação */}
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1 text-sm">
+                    <Button variant="outline" className="flex-1 text-sm border-gray-600 text-gray-300 hover:bg-gray-700">
                       Ver pedidos
                     </Button>
-                    <Button variant="outline" className="flex-1 text-sm">
+                    <Button variant="outline" className="flex-1 text-sm border-gray-600 text-gray-300 hover:bg-gray-700">
                       Editar cadastro
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             ) : (
-              <Card className="bg-white shadow-sm">
+              <Card className="bg-gray-800 border-gray-700 shadow-lg">
                 <CardContent className="p-6 text-center">
-                  <Users className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                  <p className="text-gray-500">Selecione um licenciado para ver os detalhes</p>
+                  <Users className="w-12 h-12 mx-auto text-gray-600 mb-4" />
+                  <p className="text-gray-400">Selecione um licenciado para ver os detalhes</p>
                 </CardContent>
               </Card>
             )}
