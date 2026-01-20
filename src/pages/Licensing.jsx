@@ -1605,13 +1605,13 @@ const DashboardContent = ({ user, isAdmin }) => {
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                  value={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`}
+                  value={`https://leilaonozap.net/Catalog?ref=${user.referral_code || user.id}`}
                   readOnly
                   className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
 
                   <Button
                   onClick={() => {
-                    navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`);
+                    navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code || user.id}`);
                     toast.success('Link copiado!');
                   }}
                   className="bg-blue-600 hover:bg-blue-700">
