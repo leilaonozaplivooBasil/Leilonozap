@@ -477,7 +477,7 @@ export default function Cart() {
                 <p className="text-gray-400 text-center py-8">Seu carrinho está vazio</p>
               ) : (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
                     {cartItems.map((item) => {
                       const price = item.price_catalog || item.selling_price_wholesale || 0;
                       const imageUrl = item.image_urls?.[0] || 'https://via.placeholder.com/80';
