@@ -123,6 +123,8 @@ Deno.serve(async (req) => {
         payment_method: method,
         ...(externalRef ? { external_reference: String(externalRef) } : {}),
       };
+      // Ensure no null user_id field is sent
+      if (!payload.user_id) delete payload.user_id;
       const created = await base44.asServiceRole.entities.MercadoPagoPayment.create(payload);
       updated = created;
     }
