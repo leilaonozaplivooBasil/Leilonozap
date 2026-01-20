@@ -551,7 +551,7 @@ export default function Layout({ children, currentPageName }) {
       <GlobalMonitor />
       
       <div className="min-h-screen bg-gray-900">
-        <nav className="shadow-lg border-b bg-gray-800 border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <nav className="fixed top-0 left-0 right-0 z-50 shadow-lg border-b bg-gray-800 border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
               
