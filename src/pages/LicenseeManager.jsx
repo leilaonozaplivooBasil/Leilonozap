@@ -42,10 +42,9 @@ export default function LicenseeManager() {
     setIsLoading(true);
     try {
       const users = await AppUser.list('-created_date', 500);
-      // Filtra apenas licenciados (role = licensee ou tem licenciado_catalogo nos career_levels)
+      // Filtra SOMENTE usuários que têm licenciado_catalogo nos career_levels
       const licenseeUsers = users.filter(u => 
-        u.role === 'licensee' || 
-        (u.career_levels && u.career_levels.includes('licenciado_catalogo'))
+        u.career_levels && u.career_levels.includes('licenciado_catalogo')
       );
       setLicensees(licenseeUsers);
 
