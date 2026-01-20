@@ -1270,6 +1270,51 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <Zap className="w-4 h-4 mr-2" />
                   Usar em Leilões
                 </Button>
+                {/* Indicador de dias restantes do catálogo */}
+                {userLevels.includes('licenciado_catalogo') && (() => {
+                  const expiry = user.catalog_license_expiry ? new Date(user.catalog_license_expiry) : null;
+                  const now = new Date();
+                  const daysLeft = expiry ? Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)) : null;
+                  const isActive = user.catalog_license_active !== false && (!expiry || expiry > now);
+                  const balance = user.catalog_commission_balance || 0;
+                  
+                  if (!isActive) {
+                    return (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-red-900/30 border border-red-500/50 rounded-lg">
+                        <Clock className="w-4 h-4 text-red-400" />
+                        <span className="text-xs text-red-400 font-semibold">Catálogo expirado</span>
+                      </div>
+                    );
+                  } else if (daysLeft !== null && daysLeft <= 10) {
+                    return (
+                      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${
+                        daysLeft <= 5 
+                          ? 'bg-red-900/30 border border-red-500/50' 
+                          : 'bg-yellow-900/30 border border-yellow-500/50'
+                      }`}>
+                        <Clock className={`w-4 h-4 ${daysLeft <= 5 ? 'text-red-400' : 'text-yellow-400'}`} />
+                        <div className="flex flex-col">
+                          <span className={`text-xs font-semibold ${daysLeft <= 5 ? 'text-red-400' : 'text-yellow-400'}`}>
+                            {daysLeft} dias restantes
+                          </span>
+                          {balance < 25 && (
+                            <span className="text-[10px] text-gray-400">
+                              Saldo: R${balance.toFixed(2)} (mín: R$25)
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  } else if (daysLeft !== null) {
+                    return (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-900/30 border border-green-500/50 rounded-lg">
+                        <Clock className="w-4 h-4 text-green-400" />
+                        <span className="text-xs text-green-400 font-semibold">{daysLeft} dias restantes</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
                 <Button
                   onClick={() => setShowWithdrawalModal(true)}
                   className="w-full sm:flex-1 bg-gray-700 hover:bg-gray-600 text-white text-sm sm:text-base">
