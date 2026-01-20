@@ -249,9 +249,9 @@ export default function Cart() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
           {/* Coluna Esquerda - Formulários */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4">
             
             {/* Seção 1 - Seus Dados */}
             <Card className="bg-gray-800 border-gray-700 p-4">
@@ -465,73 +465,78 @@ export default function Cart() {
           </div>
 
           {/* Coluna Direita - Resumo do Pedido */}
-          <div className="space-y-6">
+          <div className="lg:col-span-3 space-y-4">
             {/* Seu Pedido */}
-            <Card className="bg-gray-800 border-gray-700 p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Seu pedido</h2>
+            <Card className="bg-gray-800 border-gray-700 border-2 border-green-600/30 p-6">
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-white text-sm">🛒</span>
+                Seu pedido
+              </h2>
 
               {cartItems.length === 0 ? (
                 <p className="text-gray-400 text-center py-8">Seu carrinho está vazio</p>
               ) : (
                 <div className="space-y-4">
-                  {cartItems.map((item) => {
-                    const price = item.price_catalog || item.selling_price_wholesale || 0;
-                    const imageUrl = item.image_urls?.[0] || 'https://via.placeholder.com/80';
-                    
-                    return (
-                      <div key={item.id} className="flex gap-4 p-3 bg-gray-700/30 rounded-lg">
-                        <img
-                          src={imageUrl}
-                          alt={item.description}
-                          className="w-24 h-24 object-cover rounded-lg bg-gray-700"
-                        />
-                        <div className="flex-1 min-w-0 flex flex-col justify-between">
-                          <div>
-                            <h4 className="text-white text-sm font-medium line-clamp-2">
-                              {item.description}
-                            </h4>
-                            <p className="text-green-400 font-bold text-base mt-1">
-                              R$ {price.toFixed(2)}
-                            </p>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1 bg-gray-700 rounded-lg p-1">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {cartItems.map((item) => {
+                      const price = item.price_catalog || item.selling_price_wholesale || 0;
+                      const imageUrl = item.image_urls?.[0] || 'https://via.placeholder.com/80';
+                      
+                      return (
+                        <div key={item.id} className="flex gap-4 p-4 bg-gray-700/40 rounded-xl border border-gray-600/50">
+                          <img
+                            src={imageUrl}
+                            alt={item.description}
+                            className="w-28 h-28 object-cover rounded-xl bg-gray-700"
+                          />
+                          <div className="flex-1 min-w-0 flex flex-col justify-between">
+                            <div>
+                              <h4 className="text-white font-medium line-clamp-2">
+                                {item.description}
+                              </h4>
+                              <p className="text-green-400 font-bold text-lg mt-2">
+                                R$ {price.toFixed(2)}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1 bg-gray-600 rounded-lg p-1">
+                                <button
+                                  onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
+                                  className="w-8 h-8 rounded flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-500"
+                                >
+                                  <Minus className="w-4 h-4" />
+                                </button>
+                                <span className="text-white text-base w-10 text-center font-bold">{item.quantity || 1}</span>
+                                <button
+                                  onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
+                                  className="w-8 h-8 rounded flex items-center justify-center text-gray-300 hover:text-white hover:bg-gray-500"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </button>
+                              </div>
                               <button
-                                onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
-                                className="w-7 h-7 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600"
+                                onClick={() => removeItem(item.id)}
+                                className="text-gray-500 hover:text-red-400 transition-colors p-2"
                               >
-                                <Minus className="w-3 h-3" />
-                              </button>
-                              <span className="text-white text-sm w-8 text-center font-medium">{item.quantity || 1}</span>
-                              <button
-                                onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
-                                className="w-7 h-7 rounded flex items-center justify-center text-gray-400 hover:text-white hover:bg-gray-600"
-                              >
-                                <Plus className="w-3 h-3" />
+                                <Trash2 className="w-5 h-5" />
                               </button>
                             </div>
-                            <button
-                              onClick={() => removeItem(item.id)}
-                              className="text-gray-500 hover:text-red-400 transition-colors p-2"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
 
-                  <div className="border-t border-gray-700 pt-4 mt-4 space-y-2">
-                    <div className="flex justify-between text-sm">
+                  <div className="border-t border-gray-600 pt-6 mt-6 space-y-3">
+                    <div className="flex justify-between text-base">
                       <span className="text-gray-400">Total de itens ({cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0)} itens)</span>
-                      <span className="text-white">R$ {calculateSubtotal().toFixed(2)}</span>
+                      <span className="text-white font-medium">R$ {calculateSubtotal().toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-base">
                       <span className="text-gray-400">Valor do frete</span>
-                      <span className="text-green-400">A combinar</span>
+                      <span className="text-green-400 font-medium">A combinar</span>
                     </div>
-                    <div className="flex justify-between text-lg font-semibold pt-2">
+                    <div className="flex justify-between text-xl font-bold pt-3 border-t border-gray-600">
                       <span className="text-white">Valor total</span>
                       <span className="text-green-400">R$ {calculateSubtotal().toFixed(2)}</span>
                     </div>
@@ -540,41 +545,44 @@ export default function Cart() {
               )}
             </Card>
 
-            {/* Aplicar Cupom */}
-            <Card className="bg-gray-800 border-gray-700 p-6">
-              <h3 className="text-white font-medium mb-3">Aplicar cupom</h3>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Insira o cupom aqui"
-                  value={coupon}
-                  onChange={(e) => setCoupon(e.target.value)}
-                  className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1"
-                />
-                <Button 
-                  variant="outline" 
-                  className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white"
-                >
-                  Aplicar
-                </Button>
-              </div>
-            </Card>
+            {/* Cupom e Observação lado a lado */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Aplicar Cupom */}
+              <Card className="bg-gray-800 border-gray-700 p-4">
+                <h3 className="text-white font-medium mb-3">Aplicar cupom</h3>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Insira o cupom aqui"
+                    value={coupon}
+                    onChange={(e) => setCoupon(e.target.value)}
+                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-10"
+                  />
+                  <Button 
+                    variant="outline" 
+                    className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white h-10"
+                  >
+                    Aplicar
+                  </Button>
+                </div>
+              </Card>
 
-            {/* Observação */}
-            <Card className="bg-gray-800 border-gray-700 p-6">
-              <h3 className="text-white font-medium mb-3">Adicionar uma observação</h3>
-              <textarea
-                placeholder="Adicione suas observações sobre esse pedido aqui"
-                value={observation}
-                onChange={(e) => setObservation(e.target.value)}
-                className="w-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white placeholder:text-gray-500 min-h-[80px] resize-none focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </Card>
+              {/* Observação */}
+              <Card className="bg-gray-800 border-gray-700 p-4">
+                <h3 className="text-white font-medium mb-3">Adicionar uma observação</h3>
+                <textarea
+                  placeholder="Observações sobre o pedido"
+                  value={observation}
+                  onChange={(e) => setObservation(e.target.value)}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-md p-3 text-white placeholder:text-gray-500 min-h-[60px] resize-none focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
+              </Card>
+            </div>
 
             {/* Botão Enviar Pedido */}
             <Button
               onClick={handleCheckout}
               disabled={isProcessing || cartItems.length === 0}
-              className="w-full bg-gray-900 hover:bg-gray-950 text-white h-14 text-lg font-semibold rounded-full disabled:opacity-50"
+              className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
             >
               {isProcessing ? (
                 <>
