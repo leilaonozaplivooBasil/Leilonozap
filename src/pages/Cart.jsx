@@ -254,30 +254,30 @@ export default function Cart() {
           <div className="space-y-4">
             
             {/* Seção 1 - Seus Dados */}
-            <Card className="bg-gray-800 border-gray-700 p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-xs">
+            <Card className="bg-gray-800 border-gray-700 p-5">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm">
                   1
                 </div>
-                <h2 className="text-base font-semibold text-white">Seus dados</h2>
+                <h2 className="text-lg font-semibold text-white">Seus dados</h2>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <Label className="text-gray-300 text-xs">Nome</Label>
+                  <Label className="text-gray-300 text-sm">Nome</Label>
                   <Input
                     placeholder="Informe o seu nome"
                     value={formData.name}
                     onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-gray-300 text-xs">Celular</Label>
-                    <div className="flex gap-1 mt-1">
-                      <div className="flex items-center gap-1 bg-gray-700 border border-gray-600 rounded-md px-2 text-gray-300 text-xs h-9">
+                    <Label className="text-gray-300 text-sm">Celular</Label>
+                    <div className="flex gap-2 mt-1.5">
+                      <div className="flex items-center gap-1 bg-gray-700 border border-gray-600 rounded-md px-3 text-gray-300 text-sm h-11">
                         <span>BR</span>
                         <span>+55</span>
                       </div>
@@ -285,49 +285,49 @@ export default function Cart() {
                         placeholder="Telefone"
                         value={formData.phone}
                         onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
-                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-9 text-sm"
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-11"
                       />
                     </div>
                   </div>
                   <div>
-                    <Label className="text-gray-300 text-xs">CPF</Label>
+                    <Label className="text-gray-300 text-sm">CPF</Label>
                     <Input
                       placeholder="000.000.000-00"
                       value={formData.cpf}
                       onChange={(e) => setFormData(prev => ({ ...prev, cpf: formatCpf(e.target.value) }))}
-                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                       maxLength={14}
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-gray-300 text-xs">Email (opcional)</Label>
+                  <Label className="text-gray-300 text-sm">Email (opcional)</Label>
                   <Input
                     type="email"
                     placeholder="seu.email@provedor.com"
                     value={formData.email}
                     onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                   />
                 </div>
               </div>
             </Card>
 
             {/* Seção 2 - Forma de Entrega */}
-            <Card className="bg-gray-800 border-gray-700 p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-6 h-6 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-xs">
+            <Card className="bg-gray-800 border-gray-700 p-5">
+              <div className="flex items-center gap-2 mb-5">
+                <div className="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center text-white font-bold text-sm">
                   2
                 </div>
-                <h2 className="text-base font-semibold text-white">Como gostaria de receber o pedido</h2>
+                <h2 className="text-lg font-semibold text-white">Como gostaria de receber o pedido</h2>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <Label className="text-gray-300 text-xs">Escolha a forma de entrega</Label>
+                  <Label className="text-gray-300 text-sm">Escolha a forma de entrega</Label>
                   <Select value={deliveryMethod} onValueChange={setDeliveryMethod}>
-                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-1 h-9 text-sm">
+                    <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-1.5 h-11">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-700">
@@ -348,12 +348,12 @@ export default function Cart() {
                 </div>
 
                 {deliveryMethod === 'pickup' && (
-                  <div className="bg-gray-700/50 rounded-lg p-3">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="w-4 h-4 text-green-500 mt-0.5" />
+                  <div className="bg-gray-700/50 rounded-lg p-4">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="w-5 h-5 text-green-500 mt-0.5" />
                       <div>
-                        <p className="text-gray-300 text-xs font-medium">Endereço para retirada:</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-gray-300 text-sm font-medium">Endereço para retirada:</p>
+                        <p className="text-gray-400 text-sm mt-1">
                           Estrada do Pontal, 6500 - Recreio dos Bandeirantes, Rio de Janeiro - RJ, 22790877
                         </p>
                       </div>
@@ -362,77 +362,77 @@ export default function Cart() {
                 )}
 
                 {deliveryMethod === 'delivery' && (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-gray-300 text-xs">CEP</Label>
+                        <Label className="text-gray-300 text-sm">CEP</Label>
                         <Input
                           placeholder="00000-000"
                           value={formData.cep}
                           onChange={handleCepChange}
-                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                           maxLength={9}
                         />
                       </div>
                       <div>
-                        <Label className="text-gray-300 text-xs">Número</Label>
+                        <Label className="text-gray-300 text-sm">Número</Label>
                         <Input
                           placeholder="Número"
                           value={formData.number}
                           onChange={(e) => setFormData(prev => ({ ...prev, number: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <Label className="text-gray-300 text-xs">Endereço</Label>
+                      <Label className="text-gray-300 text-sm">Endereço</Label>
                       <Input
                         placeholder="Nome da rua ou avenida"
                         value={formData.street}
                         onChange={(e) => setFormData(prev => ({ ...prev, street: e.target.value }))}
-                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-gray-300 text-xs">Bairro</Label>
+                        <Label className="text-gray-300 text-sm">Bairro</Label>
                         <Input
                           placeholder="Bairro"
                           value={formData.neighborhood}
                           onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                         />
                       </div>
                       <div>
-                        <Label className="text-gray-300 text-xs">Complemento</Label>
+                        <Label className="text-gray-300 text-sm">Complemento</Label>
                         <Input
                           placeholder="Complemento"
                           value={formData.complement}
                           onChange={(e) => setFormData(prev => ({ ...prev, complement: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <Label className="text-gray-300 text-xs">Cidade</Label>
+                        <Label className="text-gray-300 text-sm">Cidade</Label>
                         <Input
                           placeholder="Cidade"
                           value={formData.city}
                           onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1 h-9 text-sm"
+                          className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-11"
                         />
                       </div>
                       <div>
-                        <Label className="text-gray-300 text-xs">Estado</Label>
+                        <Label className="text-gray-300 text-sm">Estado</Label>
                         <Select 
                           value={formData.state} 
                           onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}
                         >
-                          <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-1 h-9 text-sm">
+                          <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-1.5 h-11">
                             <SelectValue placeholder="UF" />
                           </SelectTrigger>
                           <SelectContent className="bg-gray-800 border-gray-700 max-h-60">
@@ -451,9 +451,9 @@ export default function Cart() {
                 {/* Banner WhatsApp */}
                 <div 
                   onClick={openWhatsApp}
-                  className="bg-gradient-to-r from-green-600/20 to-green-500/10 border border-green-600/30 rounded-lg p-3 cursor-pointer hover:from-green-600/30 transition-all"
+                  className="bg-gradient-to-r from-green-600/20 to-green-500/10 border border-green-600/30 rounded-lg p-4 cursor-pointer hover:from-green-600/30 transition-all"
                 >
-                  <p className="text-green-400 text-xs">
+                  <p className="text-green-400 text-sm">
                     <span className="font-semibold">A gente adora negociar!</span>{' '}
                     <span className="text-green-300">
                       Chama no Zap que a gente conversa sobre tudo — inclusive o frete.
