@@ -51,13 +51,15 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
     loadUsers();
   }, []);
 
-  // Filtra usuários conforme digita
+  // Filtra usuários conforme digita (por nome ou CPF)
   useEffect(() => {
     if (searchName.trim().length >= 2) {
-      const search = searchName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-      const filtered = allUsers.filter(u => 
-        u.full_name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(search)
-      ).slice(0, 8);
+      const search = searchName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[.\-]/g, '');
+      const filtered = allUsers.filter(u => {
+        const nameMatch = u.full_name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(search);
+        const cpfMatch = u.cpf?.replace(/[.\-]/g, '').includes(search);
+        return nameMatch || cpfMatch;
+      }).slice(0, 8);
       setFilteredUsers(filtered);
       setShowDropdown(true);
     } else {
@@ -180,7 +182,7 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
                 setFoundUser(null);
               }}
               onFocus={() => searchName.length >= 2 && setShowDropdown(true)}
-              placeholder={isLoadingUsers ? "Carregando usuários..." : "Digite o nome do usuário"}
+              placeholder={isLoadingUsers ? "Carregando usuários..." : "Digite o nome ou CPF do usuário"}
               className="pl-10 bg-gray-700 border-gray-600 text-white"
               disabled={isLoadingUsers}
             />
