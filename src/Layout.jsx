@@ -699,6 +699,16 @@ export default function Layout({ children, currentPageName }) {
                     <Share2 className="h-5 w-5" />
                     Compartilhar
                   </button>
+
+                  {/* CARRINHO MOBILE */}
+                  <Link
+                    to={createPageUrl("Cart")}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
+                  >
+                    <ShoppingCart className="h-5 w-5" />
+                    Carrinho
+                  </Link>
               
 
 
