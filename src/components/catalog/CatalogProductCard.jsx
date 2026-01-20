@@ -14,9 +14,32 @@ function CatalogProductCard({ product, currentUser }) {
     const [isPaused, setIsPaused] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
     const [showComparai, setShowComparai] = useState(false);
-    const [addedToCart, setAddedToCart] = useState(false);
+    const [isInCart, setIsInCart] = useState(false);
+    const [cartQuantity, setCartQuantity] = useState(0);
     const intervalRef = useRef(null);
     const navigate = useNavigate();
+
+    // Verifica se o produto já está no carrinho ao montar e quando o carrinho muda
+    useEffect(() => {
+      const checkCart = () => {
+        const savedCart = localStorage.getItem('catalogCart');
+        if (savedCart) {
+          const cart = JSON.parse(savedCart);
+          const item = cart.find(item => item.id === product.id);
+          setIsInCart(!!item);
+          setCartQuantity(item?.quantity || 0);
+        } else {
+          setIsInCart(false);
+          setCartQuantity(0);
+        }
+      };
+      
+      checkCart();
+      
+      // Escuta evento de atualização do carrinho
+      window.addEventListener('cartUpdated', checkCart);
+      return () => window.removeEventListener('cartUpdated', checkCart);
+    }, [product.id]);
 
   const addToCart = (e) => {
     e.stopPropagation();
@@ -31,6 +54,7 @@ function CatalogProductCard({ product, currentUser }) {
     if (existingIndex >= 0) {
       // Incrementar quantidade
       cart[existingIndex].quantity += 1;
+      setCartQuantity(cart[existingIndex].quantity);
       toast.success(`Quantidade atualizada: ${cart[existingIndex].quantity}x`);
     } else {
       // Adicionar novo item
@@ -43,15 +67,15 @@ function CatalogProductCard({ product, currentUser }) {
         quantity: 1,
         availableStock: product.quantity || 999
       });
+      setCartQuantity(1);
       toast.success('Produto adicionado ao carrinho!');
     }
     
     // Salvar no localStorage
     localStorage.setItem('catalogCart', JSON.stringify(cart));
     
-    // Feedback visual
-    setAddedToCart(true);
-    setTimeout(() => setAddedToCart(false), 2000);
+    // Atualiza estado local
+    setIsInCart(true);
     
     // Dispara evento para atualizar contador no header
     window.dispatchEvent(new Event('cartUpdated'));
@@ -386,16 +410,16 @@ ${categoryEmoji} ${product.description}
           <Button
             onClick={addToCart}
             className={`w-full h-8 sm:h-9 text-xs sm:text-sm font-bold transition-all ${
-              addedToCart 
+              isInCart 
                 ? 'bg-green-600 hover:bg-green-700' 
                 : 'bg-orange-600 hover:bg-orange-700'
             } text-white`}
           >
-            {addedToCart ? (
+            {isInCart ? (
               <>
                 <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Adicionado!</span>
-                <span className="sm:hidden">✓</span>
+                <span className="hidden sm:inline">No Carrinho ({cartQuantity}x) - Adicionar +1</span>
+                <span className="sm:hidden">✓ {cartQuantity}x</span>
               </>
             ) : (
               <>
