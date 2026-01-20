@@ -230,32 +230,9 @@ export default function LicenseeManagement() {
                       </div>
 
                       {/* Badge status */}
-                      {(() => {
-                        const now = new Date();
-                        const expiry = licensee.catalog_license_expiry ? new Date(licensee.catalog_license_expiry) : null;
-                        const isActive = licensee.catalog_license_active !== false && (!expiry || expiry > now);
-                        const daysLeft = expiry ? Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)) : null;
-                        
-                        if (!isActive) {
-                          return (
-                            <span className="px-3 py-1 bg-red-600/20 text-red-400 text-xs rounded-full border border-red-500/30">
-                              Expirado
-                            </span>
-                          );
-                        } else if (daysLeft !== null && daysLeft <= 5) {
-                          return (
-                            <span className="px-3 py-1 bg-yellow-600/20 text-yellow-400 text-xs rounded-full border border-yellow-500/30">
-                              Expira em {daysLeft}d
-                            </span>
-                          );
-                        } else {
-                          return (
-                            <span className="px-3 py-1 bg-green-600/20 text-green-400 text-xs rounded-full border border-green-500/30">
-                              Catálogo ativo
-                            </span>
-                          );
-                        }
-                      })()}
+                      <span className="px-3 py-1 bg-green-600/20 text-green-400 text-xs rounded-full border border-green-500/30">
+                        Catálogo ativo
+                      </span>
                     </div>
                   </div>
                 ))
@@ -277,39 +254,9 @@ export default function LicenseeManagement() {
                     )}
                   </div>
                   <h2 className="text-xl font-bold text-white">{selectedLicensee.full_name}</h2>
-                  {(() => {
-                    const now = new Date();
-                    const expiry = selectedLicensee.catalog_license_expiry ? new Date(selectedLicensee.catalog_license_expiry) : null;
-                    const isActive = selectedLicensee.catalog_license_active !== false && (!expiry || expiry > now);
-                    const daysLeft = expiry ? Math.ceil((expiry - now) / (1000 * 60 * 60 * 24)) : null;
-                    
-                    if (!isActive) {
-                      return (
-                        <span className="inline-block mt-2 px-3 py-1 bg-red-600/20 text-red-400 text-xs rounded-full border border-red-500/30">
-                          Catálogo expirado
-                        </span>
-                      );
-                    } else if (daysLeft !== null && daysLeft <= 5) {
-                      return (
-                        <span className="inline-block mt-2 px-3 py-1 bg-yellow-600/20 text-yellow-400 text-xs rounded-full border border-yellow-500/30">
-                          Expira em {daysLeft} dias
-                        </span>
-                      );
-                    } else {
-                      return (
-                        <>
-                          <span className="inline-block mt-2 px-3 py-1 bg-green-600/20 text-green-400 text-xs rounded-full border border-green-500/30">
-                            Catálogo ativo
-                          </span>
-                          {expiry && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Válido até {expiry.toLocaleDateString('pt-BR')}
-                            </p>
-                          )}
-                        </>
-                      );
-                    }
-                  })()}
+                  <span className="inline-block mt-2 px-3 py-1 bg-green-600/20 text-green-400 text-xs rounded-full border border-green-500/30">
+                    Catálogo ativo
+                  </span>
                 </div>
 
                 {/* Link do catálogo */}
