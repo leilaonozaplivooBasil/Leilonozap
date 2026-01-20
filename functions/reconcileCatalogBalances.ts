@@ -18,13 +18,18 @@ Deno.serve(async (req) => {
     const asOf = payload.asOf || new Date(Date.now() - hoursAgo * 3600 * 1000).toISOString();
     const updateValora = payload.updateValora !== undefined ? !!payload.updateValora : true;
 
-    // Carrega todos os registros de comissão
-    const allRecords = await base44.asServiceRole.entities.CommissionRecord.list('-created_date', 10000);
+    // Carrega registros de comissão (dupla estratégia)
+    let allRecords = await base44.asServiceRole.entities.CommissionRecord.list('-created_date', 10000);
+    if (!allRecords || allRecords.length === 0) {
+      // Fallback por filtro explícito
+      allRecords = await base44.asServiceRole.entities.CommissionRecord.filter({ status: 'confirmed' }, '-created_date', 10000);
+    }
 
     // Filtra por status confirmado e até a data limite (tolerante a datas ausentes)
     const asOfDate = new Date(asOf);
     const filtered = (allRecords || []).filter((r) => {
-      if (r?.data?.status && r.data.status !== 'confirmed') return false;
+      const status = r?.status ?? r?.data?.status;
+      if (status && status !== 'confirmed') return false;
       const createdRaw = r?.created_date || r?.updated_date || r?.data?.created_date || r?.data?.updated_date;
       const created = createdRaw ? new Date(createdRaw) : null;
       const invalidDate = created && Number.isNaN(created.getTime());
