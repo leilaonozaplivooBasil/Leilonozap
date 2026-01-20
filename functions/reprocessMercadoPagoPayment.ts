@@ -125,8 +125,13 @@ Deno.serve(async (req) => {
       };
       // Ensure no null user_id field is sent
       if (!payload.user_id) delete payload.user_id;
-      const created = await base44.asServiceRole.entities.MercadoPagoPayment.create(payload);
-      updated = created;
+      if (payload.user_id) {
+        const created = await base44.asServiceRole.entities.MercadoPagoPayment.create(payload);
+        updated = created;
+      } else {
+        // Skip creating record when user_id is unknown to avoid validation error
+        updated = { note: 'skipped_create_no_user' };
+      }
     }
 
     try {
