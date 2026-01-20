@@ -15,7 +15,7 @@ import Footer from "@/components/common/Footer";
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
-import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon, ShoppingCart } from "lucide-react";
+import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -384,6 +384,7 @@ export default function Layout({ children, currentPageName }) {
   const noZapLoggedItems = [];
 
   const loggedMenuItems = [
+    { title: "Meus Arremates", pageName: "MyWinnings" },
     { title: "Perfil", pageName: "Profile" },
   ];
 
@@ -433,9 +434,10 @@ export default function Layout({ children, currentPageName }) {
   const isLicensee = isLoggedIn && currentUser.role === 'licensee';
 
   const finalMenuItems = [
-            { title: "Catálogo", pageName: "Catalog" },
+            { title: "Leilões", pageName: "Home" },
+            { title: "Lojista", pageName: "LojistaDashboard" },
             { title: "Sistema de Alavancagem", pageName: "Licensing" },
-            ...(isLoggedIn ? [{ title: "Perfil", pageName: "Profile" }] : [])
+            ...(isLoggedIn ? loggedMenuItems : [])
           ];
 
   const isLojistaPage = currentPageName === 'LojistaDashboard';
@@ -550,13 +552,7 @@ export default function Layout({ children, currentPageName }) {
                   Compartilhar
                 </button>
 
-                {/* CARRINHO - ÍCONE */}
-                <Link
-                  to={createPageUrl("Cart")}
-                  className="flex items-center gap-2 text-sm font-semibold transition-colors text-gray-300 hover:text-white"
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                </Link>
+
 
                 {/* PAINEL DE CONTROLE - SÓ ADMIN */}
                 {isAdmin && (
@@ -699,16 +695,6 @@ export default function Layout({ children, currentPageName }) {
                     <Share2 className="h-5 w-5" />
                     Compartilhar
                   </button>
-
-                  {/* CARRINHO MOBILE */}
-                  <Link
-                    to={createPageUrl("Cart")}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
-                  >
-                    <ShoppingCart className="h-5 w-5" />
-                    Carrinho
-                  </Link>
               
 
 

@@ -2,13 +2,12 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Share2, X, ChevronLeft, ChevronRight, Loader2, ShoppingCart } from "lucide-react";
+import { ArrowLeft, Share2, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ComparaiButton from "../components/comparai/ComparaiButton";
 import { createPageUrl } from "@/utils";
 
 const Product = base44.entities.Product;
-const CartItem = base44.entities.CartItem;
 
 export default function CatalogProductDetails() {
   const [searchParams] = useSearchParams();
@@ -69,47 +68,22 @@ export default function CatalogProductDetails() {
     );
   };
 
-  const [addingToCart, setAddingToCart] = useState(false);
-
-  const handleAddToCart = async () => {
+  const handleBuyNow = () => {
+    console.log('🛒 Botão Comprar clicado!');
+    console.log('👤 Current User:', currentUser);
+    console.log('📦 Product:', product);
+    
     if (!currentUser) {
-      toast.error('Faça login para adicionar ao carrinho');
+      toast.error('Faça login para continuar');
       navigate(createPageUrl("Register"));
       return;
     }
 
-    setAddingToCart(true);
-    try {
-      // Verifica se já existe no carrinho
-      const existingItems = await CartItem.filter({ 
-        user_id: currentUser.id, 
-        product_id: product.id 
-      });
-
-      if (existingItems && existingItems.length > 0) {
-        // Atualiza quantidade
-        await CartItem.update(existingItems[0].id, {
-          quantity: (existingItems[0].quantity || 1) + 1
-        });
-        toast.success('Quantidade atualizada no carrinho!');
-      } else {
-        // Adiciona novo item
-        await CartItem.create({
-          user_id: currentUser.id,
-          product_id: product.id,
-          product_title: product.description,
-          product_image: product.image_urls?.[0] || '',
-          product_price: product.price_catalog || 0,
-          quantity: 1
-        });
-        toast.success('Produto adicionado ao carrinho!');
-      }
-    } catch (error) {
-      console.error('Erro ao adicionar ao carrinho:', error);
-      toast.error('Erro ao adicionar ao carrinho');
-    } finally {
-      setAddingToCart(false);
-    }
+    const checkoutUrl = createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`;
+    console.log('🔗 Navegando para:', checkoutUrl);
+    
+    sessionStorage.setItem('selectedProduct', JSON.stringify(product));
+    navigate(checkoutUrl);
   };
 
   const handleShare = async () => {
@@ -279,16 +253,10 @@ export default function CatalogProductDetails() {
         {/* BOTÕES DE AÇÃO */}
         <div className="space-y-3 pb-6">
           <Button
-            onClick={handleAddToCart}
-            disabled={addingToCart}
+            onClick={() => handleBuyNow()}
             className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-lg rounded-lg"
           >
-            {addingToCart ? (
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
-            ) : (
-              <ShoppingCart className="w-5 h-5 mr-2" />
-            )}
-            {addingToCart ? 'Adicionando...' : 'Adicionar ao Carrinho'}
+            ✅ Entrar e Comprar
           </Button>
 
           {/* Comparai será renderizado como floating button */}
