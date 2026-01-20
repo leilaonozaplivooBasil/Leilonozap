@@ -42,6 +42,7 @@ export default function Catalog() {
   const [priceRange, setPriceRange] = useState({ min: "", max: "" });
   const [sortBy, setSortBy] = useState("recent");
   const [stockFilter, setStockFilter] = useState("all");
+  const [referralCode, setReferralCode] = useState(null);
 
   useEffect(() => {
     const slider = scrollerRef.current;
