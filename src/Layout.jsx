@@ -600,7 +600,7 @@ export default function Layout({ children, currentPageName }) {
                   {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado) */}
                   {isLoggedIn && (
                   <Link
-                    to={createPageUrl("Profile")}
+                    to={createPageUrl("Profile") + (isCatalogPage ? "?from=catalog" : "")}
                     className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
                       currentPageName === "Profile"
                         ? "text-green-400"
