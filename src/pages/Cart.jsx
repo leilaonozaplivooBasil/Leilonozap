@@ -246,21 +246,26 @@ export default function Cart() {
         cpf: formData.cpf
       };
 
+      console.log('Enviando para MP:', { cart_items: cartItems, user_data: userData });
+
       const response = await base44.functions.invoke('createMPCartPreference', {
         cart_items: cartItems,
         user_data: userData
       });
 
-      if (response.data?.error) {
-        toast.error(response.data.error);
+      console.log('Resposta MP:', response);
+
+      if (response?.error) {
+        toast.error(response.error);
         setIsProcessing(false);
         return;
       }
 
-      if (response.data?.init_point) {
-        window.location.href = response.data.init_point;
+      if (response?.init_point) {
+        window.location.href = response.init_point;
       } else {
         toast.error('Erro ao gerar link de pagamento');
+        console.error('Resposta sem init_point:', response);
         setIsProcessing(false);
       }
     } catch (error) {
