@@ -232,6 +232,57 @@ export default function Layout({ children, currentPageName }) {
       }
     }
 
+    // 🆕 DETECTA LINK BONITO /s/nome E RESOLVE O CÓDIGO DE REFERÊNCIA
+    const currentPath = window.location.pathname;
+    if (currentPath.startsWith('/s/')) {
+      const slug = currentPath.replace('/s/', '').toLowerCase();
+      if (slug && slug.length > 0) {
+        console.log('🔗 Link de catálogo detectado:', slug);
+        
+        // Busca o licenciado pelo slug de forma assíncrona
+        (async () => {
+          try {
+            const users = await AppUser.list('-created_date', 500);
+            const licenseeUser = users.find(u => {
+              if (!u.career_levels?.includes('licenciado_catalogo')) return false;
+              
+              // Verifica nickname
+              const userNickname = (u.nickname || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, '');
+              if (userNickname === slug) return true;
+              
+              // Verifica primeiro nome
+              const firstName = (u.full_name?.split(' ')[0] || '')
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/\s+/g, '');
+              return firstName === slug;
+            });
+
+            if (licenseeUser) {
+              const refCodeFromLicensee = licenseeUser.referral_code || licenseeUser.id;
+              sessionStorage.setItem('referralCode', refCodeFromLicensee);
+              sessionStorage.setItem('catalogLicenseeSlug', slug);
+              sessionStorage.setItem('catalogLicenseeName', licenseeUser.full_name);
+              console.log('✅ Licenciado encontrado:', licenseeUser.full_name, '- Ref:', refCodeFromLicensee);
+            } else {
+              console.warn('⚠️ Licenciado não encontrado para slug:', slug);
+            }
+          } catch (err) {
+            console.error('Erro ao buscar licenciado:', err);
+          }
+        })();
+
+        // Redireciona para o Catálogo (mantendo a funcionalidade)
+        window.location.href = '/Catalog';
+        return;
+      }
+    }
+
     const initApp = async () => {
             if (hasInitializedRef.current) {
               return;
