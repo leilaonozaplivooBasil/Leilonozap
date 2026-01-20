@@ -941,6 +941,12 @@ export default function Layout({ children, currentPageName }) {
           />
         )}
 
+        {/* Cart Popup */}
+        <CartPopup 
+          isOpen={showCartPopup} 
+          onClose={() => setShowCartPopup(false)} 
+        />
+
 
       </div>
       
