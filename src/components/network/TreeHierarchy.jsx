@@ -373,7 +373,7 @@ export default function TreeHierarchy({ users, onEdit, onDelete, onPromote, onRe
           }}
           variant="outline"
           size="sm"
-          className="text-xs border-green-600 text-green-400 hover:bg-green-600/20"
+          className="text-xs bg-green-700 border-green-700 text-white hover:bg-green-800"
         >
           Expandir Todos
         </Button>
