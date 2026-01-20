@@ -253,16 +253,24 @@ export default function Cart() {
         user_data: userData
       });
 
-      console.log('Resposta MP:', response);
+      console.log('Resposta MP completa:', JSON.stringify(response, null, 2));
 
-      if (response?.error) {
-        toast.error(response.error);
+      // A resposta pode vir direto ou dentro de .data dependendo do SDK
+      const data = response?.data || response;
+
+      console.log('Data extraído:', JSON.stringify(data, null, 2));
+
+      if (data?.error) {
+        toast.error(data.error);
         setIsProcessing(false);
         return;
       }
 
-      if (response?.init_point) {
-        window.location.href = response.init_point;
+      const initPoint = data?.init_point;
+
+      if (initPoint) {
+        console.log('Redirecionando para:', initPoint);
+        window.location.href = initPoint;
       } else {
         toast.error('Erro ao gerar link de pagamento');
         console.error('Resposta sem init_point:', response);
