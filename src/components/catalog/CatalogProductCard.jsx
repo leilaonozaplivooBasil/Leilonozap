@@ -311,33 +311,9 @@ ${categoryEmoji} ${product.description}
           </div>
         )}
         
-        {/* Badge de categoria - CANTO SUPERIOR ESQUERDO */}
-        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1">
-          <Badge className="bg-black/80 text-white text-xs">
-            {categoryEmojis[product.category] || '📦'} Catálogo
-          </Badge>
-        </div>
-
-        {/* Botões de ação - CANTO SUPERIOR DIREITO */}
-        <div className="absolute top-2 right-2 z-20 flex gap-2">
-          {currentUser && (
-            <FavoriteButton 
-              auctionId={product.id} 
-              userId={currentUser.id} 
-              size="sm"
-            />
-          )}
-
-          <button
-            onClick={handleShare}
-            onMouseDown={(e) => e.stopPropagation()} 
-            onTouchStart={(e) => e.stopPropagation()}
-            className="min-h-[40px] min-w-[40px] h-9 px-2 gap-1 shadow-md bg-blue-600/90 hover:bg-blue-500 text-white rounded-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95"
-          >
-            <Share2 className="w-4 h-4" />
-          </button>
-
-          {currentUser?.role === 'admin' && (
+        {/* Botão de edição - CANTO SUPERIOR DIREITO (apenas admin) */}
+        {currentUser?.role === 'admin' && (
+          <div className="absolute top-2 right-2 z-20">
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -349,8 +325,8 @@ ${categoryEmoji} ${product.description}
             >
               <Edit className="w-4 h-4" />
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Indicadores de imagem - EMBAIXO */}
         {hasMultipleImages && (
