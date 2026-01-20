@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+
 import { 
   X, 
   Search, 
@@ -29,7 +29,7 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
 
   // Campos do formulário
   const [catalogSlug, setCatalogSlug] = useState('');
-  const [useStoreWhatsApp, setUseStoreWhatsApp] = useState(true);
+
 
   // Busca usuários por nome ou CPF
   useEffect(() => {
@@ -254,14 +254,7 @@ export default function AddLicenseeModal({ onClose, onSuccess }) {
                     className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-400"
                   />
                 </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-gray-400">Usar o mesmo WhatsApp da loja</span>
-                  <Switch 
-                    checked={useStoreWhatsApp} 
-                    onCheckedChange={setUseStoreWhatsApp}
-                    className="data-[state=checked]:bg-green-500"
-                  />
-                </div>
+
               </div>
             </div>
           </div>
