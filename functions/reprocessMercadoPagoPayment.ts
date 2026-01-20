@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
         const byId = await base44.asServiceRole.entities.MercadoPagoPayment.filter({ payment_id: String(payment_id) });
         if (byId && byId.length > 0) {
           const dbPayment = byId[0];
-          updated = await base44.asServiceRole.entities.MercadoPagoPayment.update(dbPayment.id, { status, payment_method: method, ...(amount ? { amount } : {}) });
+          updated = await base44.asServiceRole.entities.MercadoPagoPayment.update(dbPayment.id, { status, payment_method: method, ...(typeof amount === 'number' ? { amount } : {}) });
           if (status === 'approved') {
             if (dbPayment.catalog_sale_id) {
               await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, { status: 'paid' });
@@ -72,7 +72,38 @@ Deno.serve(async (req) => {
           }
         }
       } catch (_) {}
-      
+
+      // If still not found, we may receive optional hints: buyer_email or catalog_sale_id
+      let hints = { buyer_email: undefined, catalog_sale_id: undefined };
+      try { hints = await req.json(); } catch (_) {}
+
+      // Apply directly to a provided sale id
+      if (!updated && hints.catalog_sale_id && status === 'approved') {
+        try {
+          await base44.asServiceRole.entities.CatalogSale.update(hints.catalog_sale_id, { status: 'paid' });
+          try { await base44.asServiceRole.functions.invoke('processCatalogCommission', { sale_id: hints.catalog_sale_id }); } catch (_) {}
+          updated = { applied_to_sale: hints.catalog_sale_id };
+        } catch (_) {}
+      }
+
+      // As last resort, try to locate the most recent pending sale by buyer_email and amount
+      if (!updated && hints.buyer_email && typeof amount === 'number') {
+        try {
+          const sales = await base44.asServiceRole.entities.CatalogSale.filter({ buyer_email: hints.buyer_email });
+          if (Array.isArray(sales) && sales.length > 0) {
+            // pick most recent not-paid matching amount (sale_price or total_amount)
+            const candidate = [...sales]
+              .filter(s => (s.status !== 'paid') && (Math.abs((s.total_amount ?? s.sale_price ?? 0) - amount) < 0.01))
+              .sort((a,b) => new Date(b.created_date) - new Date(a.created_date))[0];
+            if (candidate) {
+              await base44.asServiceRole.entities.CatalogSale.update(candidate.id, { status: 'paid' });
+              try { await base44.asServiceRole.functions.invoke('processCatalogCommission', { sale_id: candidate.id }); } catch (_) {}
+              updated = { inferred_sale_id: candidate.id };
+            }
+          }
+        } catch (_) {}
+      }
+
       if (!updated) {
       let inferredUserId = null;
       try {
