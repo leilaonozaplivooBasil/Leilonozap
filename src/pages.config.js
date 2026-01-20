@@ -1,3 +1,4 @@
+import _404 from './pages/404';
 import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
@@ -11,11 +12,13 @@ import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CareerLevelsReport from './pages/CareerLevelsReport';
 import Cart from './pages/Cart';
+import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
 import CatalogManagement from './pages/CatalogManagement';
 import CatalogOrderTracking from './pages/CatalogOrderTracking';
 import CatalogProductDetails from './pages/CatalogProductDetails';
+import CatalogStore from './pages/CatalogStore';
 import Checkout from './pages/Checkout';
 import CheckoutAsaas from './pages/CheckoutAsaas';
 import CommissionDistributionFull from './pages/CommissionDistributionFull';
@@ -33,6 +36,8 @@ import Influencers from './pages/Influencers';
 import InfluencersDashboard from './pages/InfluencersDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
+import LicenseeManager from './pages/LicenseeManager';
+import Licensing from './pages/Licensing';
 import LicensorCRM from './pages/LicensorCRM';
 import LiveShop from './pages/LiveShop';
 import LiveShopControlNoZap from './pages/LiveShopControlNoZap';
@@ -45,6 +50,7 @@ import MemoryBackup from './pages/MemoryBackup';
 import MyCatalogOrders from './pages/MyCatalogOrders';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
+import NotFound from './pages/NotFound';
 import OrderStatus from './pages/OrderStatus';
 import OrderStatusMP from './pages/OrderStatusMP';
 import OrderTracking from './pages/OrderTracking';
@@ -71,16 +77,11 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import Licensing from './pages/Licensing';
-import Catalog from './pages/Catalog';
-import LicenseeManager from './pages/LicenseeManager';
-import CatalogStore from './pages/CatalogStore';
-import NotFound from './pages/NotFound';
-import _404 from './pages/404';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "404": _404,
     "AdminCatalogSales": AdminCatalogSales,
     "AdminUsers": AdminUsers,
     "AdminWithdrawals": AdminWithdrawals,
@@ -94,11 +95,13 @@ export const PAGES = {
     "CRM": CRM,
     "CareerLevelsReport": CareerLevelsReport,
     "Cart": Cart,
+    "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
     "CatalogManagement": CatalogManagement,
     "CatalogOrderTracking": CatalogOrderTracking,
     "CatalogProductDetails": CatalogProductDetails,
+    "CatalogStore": CatalogStore,
     "Checkout": Checkout,
     "CheckoutAsaas": CheckoutAsaas,
     "CommissionDistributionFull": CommissionDistributionFull,
@@ -116,6 +119,8 @@ export const PAGES = {
     "InfluencersDashboard": InfluencersDashboard,
     "InvestorDashboard": InvestorDashboard,
     "Landing": Landing,
+    "LicenseeManager": LicenseeManager,
+    "Licensing": Licensing,
     "LicensorCRM": LicensorCRM,
     "LiveShop": LiveShop,
     "LiveShopControlNoZap": LiveShopControlNoZap,
@@ -128,6 +133,7 @@ export const PAGES = {
     "MyCatalogOrders": MyCatalogOrders,
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
+    "NotFound": NotFound,
     "OrderStatus": OrderStatus,
     "OrderStatusMP": OrderStatusMP,
     "OrderTracking": OrderTracking,
@@ -154,12 +160,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "Licensing": Licensing,
-    "Catalog": Catalog,
-    "LicenseeManager": LicenseeManager,
-    "CatalogStore": CatalogStore,
-    "NotFound": NotFound,
-    "404": _404,
 }
 
 export const pagesConfig = {
