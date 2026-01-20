@@ -9,9 +9,9 @@ import { Label } from '@/components/ui/label';
 import { X, CheckCircle, User as UserIcon, AlertCircle, Sparkles, Star } from 'lucide-react';
 
 const generateReferralCode = (name) => {
-    const namePart = name.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '').slice(0, 8);
-    const randomPart = Math.random().toString(36).substring(2, 6);
-    return `${namePart}${randomPart}`;
+    const namePart = name.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '').slice(0, 4);
+    const randomPart = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `${namePart.toUpperCase()}${randomPart}`;
 };
 
 export default function LicenseeRegistrationModal({ onClose, onSuccess }) {
