@@ -1,0 +1,415 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { base44 } from '@/api/base44Client';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Search, 
+  Plus, 
+  Pencil, 
+  Copy, 
+  Trash2, 
+  Eye,
+  Users,
+  ShoppingBag,
+  Calendar,
+  X,
+  Loader2,
+  Check,
+  Link2,
+  ExternalLink
+} from 'lucide-react';
+import { toast } from "sonner";
+import LicenseeRegistrationModal from '../components/licensing/LicenseeRegistrationModal';
+
+const AppUser = base44.entities.AppUser;
+
+export default function LicenseeManager() {
+  const [licensees, setLicensees] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedLicensee, setSelectedLicensee] = useState(null);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [catalogSales, setCatalogSales] = useState([]);
+
+  // Carrega licenciados
+  useEffect(() => {
+    loadLicensees();
+  }, []);
+
+  const loadLicensees = async () => {
+    setIsLoading(true);
+    try {
+      const users = await AppUser.list('-created_date', 500);
+      // Filtra apenas licenciados (role = licensee ou tem licenciado_catalogo nos career_levels)
+      const licenseeUsers = users.filter(u => 
+        u.role === 'licensee' || 
+        (u.career_levels && u.career_levels.includes('licenciado_catalogo'))
+      );
+      setLicensees(licenseeUsers);
+
+      // Carrega vendas do catálogo
+      try {
+        const sales = await base44.entities.CatalogSale.list('-created_date', 500);
+        setCatalogSales(Array.isArray(sales) ? sales : []);
+      } catch (e) {
+        console.log('CatalogSale não disponível');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar licenciados:', error);
+      toast.error('Erro ao carregar licenciados');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Filtra licenciados pela busca
+  const filteredLicensees = useMemo(() => {
+    if (!searchTerm) return licensees;
+    const term = searchTerm.toLowerCase();
+    return licensees.filter(l => 
+      l.full_name?.toLowerCase().includes(term) ||
+      l.email?.toLowerCase().includes(term) ||
+      l.referral_code?.toLowerCase().includes(term)
+    );
+  }, [licensees, searchTerm]);
+
+  // Calcula estatísticas do licenciado selecionado
+  const getStats = (licensee) => {
+    if (!licensee) return { sales: 0, lastSale: null, visits: 0, contacts: 0 };
+    
+    const sales = catalogSales.filter(s => 
+      s.licensee_id === licensee.id || 
+      s.referred_by_code === licensee.referral_code
+    );
+    
+    const lastSale = sales.length > 0 ? sales[0] : null;
+    
+    return {
+      sales: sales.length,
+      lastSale: lastSale?.created_date,
+      visits: 0, // Pode ser implementado com tracking
+      contacts: 0 // Pode ser implementado com tracking
+    };
+  };
+
+  const copyLink = (licensee) => {
+    const link = `https://leilaonozap.net/Catalog?ref=${licensee.referral_code || licensee.id}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Link copiado!');
+  };
+
+  const getInitials = (name) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const getAvatarColor = (name) => {
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-pink-500',
+      'bg-orange-500', 'bg-teal-500', 'bg-red-500', 'bg-indigo-500'
+    ];
+    const index = name ? name.charCodeAt(0) % colors.length : 0;
+    return colors[index];
+  };
+
+  const stats = selectedLicensee ? getStats(selectedLicensee) : null;
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4 md:p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Gerenciar Licenciados</h1>
+            <p className="text-gray-500 text-sm">Gerencie os seus catálogos de vendedores</p>
+          </div>
+          <Button 
+            onClick={() => setShowRegisterModal(true)}
+            className="bg-green-500 hover:bg-green-600 text-white"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Cadastrar vendedor
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Lista de Licenciados */}
+          <div className="lg:col-span-2">
+            <Card className="bg-white shadow-sm">
+              <CardContent className="p-4">
+                {/* Busca */}
+                <div className="flex gap-2 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      placeholder="Pesquisar por vendedores"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 bg-gray-50 border-gray-200"
+                    />
+                  </div>
+                </div>
+
+                {/* Contador */}
+                <p className="text-sm text-gray-500 mb-4">
+                  {filteredLicensees.length}/{licensees.length} vendedores
+                </p>
+
+                {/* Lista */}
+                {isLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+                  </div>
+                ) : filteredLicensees.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhum licenciado encontrado</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredLicensees.map((licensee) => {
+                      const isSelected = selectedLicensee?.id === licensee.id;
+                      const licenseeStats = getStats(licensee);
+                      
+                      return (
+                        <div
+                          key={licensee.id}
+                          onClick={() => setSelectedLicensee(licensee)}
+                          className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                            isSelected 
+                              ? 'bg-blue-50 border border-blue-200' 
+                              : 'bg-gray-50 hover:bg-gray-100 border border-transparent'
+                          }`}
+                        >
+                          {/* Avatar */}
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm ${
+                            licensee.avatar_url ? '' : getAvatarColor(licensee.full_name)
+                          }`}>
+                            {licensee.avatar_url ? (
+                              <img 
+                                src={licensee.avatar_url} 
+                                alt={licensee.full_name}
+                                className="w-10 h-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              getInitials(licensee.full_name)
+                            )}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-gray-900 truncate">
+                              {licensee.full_name}
+                            </p>
+                            <p className="text-xs text-blue-500 truncate flex items-center gap-1">
+                              <Link2 className="w-3 h-3" />
+                              leilaonozap.net/s/{licensee.referral_code || licensee.id.substring(0, 8)}
+                            </p>
+                          </div>
+
+                          {/* Status */}
+                          {licenseeStats.sales > 0 && (
+                            <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                              {licenseeStats.sales} vendas
+                            </Badge>
+                          )}
+
+                          <Badge className="bg-green-100 text-green-700 border-0 text-xs">
+                            Catálogo ativo
+                          </Badge>
+
+                          {/* Ações */}
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Editar
+                              }}
+                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                            >
+                              <Pencil className="w-4 h-4 text-gray-500" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyLink(licensee);
+                              }}
+                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                            >
+                              <Copy className="w-4 h-4 text-gray-500" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`https://leilaonozap.net/Catalog?ref=${licensee.referral_code || licensee.id}`, '_blank');
+                              }}
+                              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4 text-gray-500" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Deletar
+                              }}
+                              className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4 text-gray-500" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Detalhes do Licenciado */}
+          <div className="lg:col-span-1">
+            {selectedLicensee ? (
+              <Card className="bg-white shadow-sm sticky top-4">
+                <CardContent className="p-6">
+                  {/* Header do perfil */}
+                  <div className="text-center mb-6">
+                    <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center text-white font-bold text-2xl mb-3 ${
+                      selectedLicensee.avatar_url ? '' : getAvatarColor(selectedLicensee.full_name)
+                    }`}>
+                      {selectedLicensee.avatar_url ? (
+                        <img 
+                          src={selectedLicensee.avatar_url} 
+                          alt={selectedLicensee.full_name}
+                          className="w-20 h-20 rounded-full object-cover"
+                        />
+                      ) : (
+                        getInitials(selectedLicensee.full_name)
+                      )}
+                    </div>
+                    <h3 className="font-bold text-lg text-gray-900">
+                      {selectedLicensee.full_name}
+                    </h3>
+                    <Badge className="bg-green-100 text-green-700 border-0 mt-2">
+                      Catálogo ativo
+                    </Badge>
+                    <p className="text-xs text-blue-500 mt-2 flex items-center justify-center gap-1">
+                      <Link2 className="w-3 h-3" />
+                      leilaonozap.net/s/{selectedLicensee.referral_code || selectedLicensee.id.substring(0, 8)}
+                    </p>
+                  </div>
+
+                  {/* Ações rápidas */}
+                  <div className="flex justify-center gap-2 mb-6">
+                    <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                      <Pencil className="w-5 h-5 text-gray-500" />
+                    </button>
+                    <button 
+                      onClick={() => copyLink(selectedLicensee)}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <Copy className="w-5 h-5 text-gray-500" />
+                    </button>
+                    <button 
+                      onClick={() => window.open(`https://leilaonozap.net/Catalog?ref=${selectedLicensee.referral_code || selectedLicensee.id}`, '_blank')}
+                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <ExternalLink className="w-5 h-5 text-gray-500" />
+                    </button>
+                    <button className="p-2 hover:bg-red-100 rounded-lg transition-colors">
+                      <Trash2 className="w-5 h-5 text-gray-500" />
+                    </button>
+                  </div>
+
+                  {/* Estatísticas */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-2xl font-bold text-gray-900">{stats?.sales || 0}</p>
+                      <p className="text-xs text-gray-500">Vendas</p>
+                      <p className="text-xs text-gray-400">Mês passado</p>
+                    </div>
+                    <div className="text-center p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm font-medium text-gray-900">
+                        {stats?.lastSale ? new Date(stats.lastSale).toLocaleDateString('pt-BR') : '-'}
+                      </p>
+                      <p className="text-xs text-gray-500">Última venda</p>
+                    </div>
+                  </div>
+
+                  {/* Visitas no catálogo */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-gray-700">Visitas no catálogo</p>
+                      <button className="text-xs text-blue-500 hover:underline">Ver tudo</button>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Eye className="w-4 h-4" />
+                        <span>{stats?.visits || 0} visitas</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Users className="w-4 h-4" />
+                        <span>{stats?.contacts || 0} contatos</span>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1 text-right">Últimos 30 dias</p>
+                  </div>
+
+                  {/* Produtos mais visitados */}
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-medium text-gray-700">Produtos mais visitados</p>
+                      <button className="text-xs text-blue-500 hover:underline">Ver tudo</button>
+                    </div>
+                    <div className="bg-gray-50 rounded-lg p-4 text-center">
+                      <p className="text-sm text-gray-500">
+                        {selectedLicensee.full_name} não teve visitas em seu catálogo nos últimos 30 dias
+                      </p>
+                      <p className="text-xs text-gray-400 mt-2">
+                        As visitas aos produtos do vendedor são registradas quando um cliente acessa o catálogo do vendedor e visualiza os produtos.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Botões de ação */}
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1 text-sm">
+                      Ver pedidos
+                    </Button>
+                    <Button variant="outline" className="flex-1 text-sm">
+                      Editar cadastro
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="bg-white shadow-sm">
+                <CardContent className="p-6 text-center">
+                  <Users className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                  <p className="text-gray-500">Selecione um licenciado para ver os detalhes</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Registro */}
+      {showRegisterModal && (
+        <LicenseeRegistrationModal
+          onClose={() => setShowRegisterModal(false)}
+          onSuccess={(user) => {
+            setShowRegisterModal(false);
+            loadLicensees();
+            toast.success('Licenciado cadastrado com sucesso!');
+          }}
+        />
+      )}
+    </div>
+  );
+}

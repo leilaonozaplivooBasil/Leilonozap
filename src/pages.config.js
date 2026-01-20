@@ -11,7 +11,6 @@ import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CareerLevelsReport from './pages/CareerLevelsReport';
 import Cart from './pages/Cart';
-import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
 import CatalogManagement from './pages/CatalogManagement';
@@ -34,7 +33,6 @@ import Influencers from './pages/Influencers';
 import InfluencersDashboard from './pages/InfluencersDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
-import Licensing from './pages/Licensing';
 import LicensorCRM from './pages/LicensorCRM';
 import LiveShop from './pages/LiveShop';
 import LiveShopControlNoZap from './pages/LiveShopControlNoZap';
@@ -73,6 +71,9 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
+import Licensing from './pages/Licensing';
+import Catalog from './pages/Catalog';
+import LicenseeManager from './pages/LicenseeManager';
 import __Layout from './Layout.jsx';
 
 
@@ -90,7 +91,6 @@ export const PAGES = {
     "CRM": CRM,
     "CareerLevelsReport": CareerLevelsReport,
     "Cart": Cart,
-    "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
     "CatalogManagement": CatalogManagement,
@@ -113,7 +113,6 @@ export const PAGES = {
     "InfluencersDashboard": InfluencersDashboard,
     "InvestorDashboard": InvestorDashboard,
     "Landing": Landing,
-    "Licensing": Licensing,
     "LicensorCRM": LicensorCRM,
     "LiveShop": LiveShop,
     "LiveShopControlNoZap": LiveShopControlNoZap,
@@ -152,6 +151,9 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
+    "Licensing": Licensing,
+    "Catalog": Catalog,
+    "LicenseeManager": LicenseeManager,
 }
 
 export const pagesConfig = {
