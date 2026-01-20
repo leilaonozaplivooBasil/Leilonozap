@@ -167,11 +167,7 @@ export default function CatalogProductDetails() {
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  const handleWhatsApp = () => {
-    const productUrl = window.location.href;
-    const message = `Olá! Tenho interesse no produto:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n${productUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-  };
+
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
