@@ -306,6 +306,20 @@ export default function Catalog() {
         setSearchTerm(urlParams.get('search'));
       }
 
+      // Captura código do licenciado da URL
+      const refCode = urlParams.get('ref');
+      if (refCode) {
+        setReferralCode(refCode);
+        // Salva na session para manter durante a navegação
+        sessionStorage.setItem('catalogReferralCode', refCode);
+      } else {
+        // Verifica se já tem um código salvo na session
+        const savedRef = sessionStorage.getItem('catalogReferralCode');
+        if (savedRef) {
+          setReferralCode(savedRef);
+        }
+      }
+
       await loadProducts();
       await loadCurrentUser();
 
