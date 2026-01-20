@@ -71,15 +71,45 @@ export default function Cart() {
     }, 0);
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cartItems.length === 0) {
       toast.error('Seu carrinho está vazio');
       return;
     }
+
+    if (!currentUser) {
+      toast.error('Faça login para continuar');
+      navigate(createPageUrl('Register'));
+      return;
+    }
+
+    setIsProcessing(true);
     
-    // Salvar carrinho e redirecionar para checkout
-    localStorage.setItem('catalogCart', JSON.stringify(cartItems));
-    navigate(createPageUrl('CatalogCheckout'));
+    try {
+      // Criar preferência no Mercado Pago
+      const response = await base44.functions.invoke('createMPCartPreference', {
+        cart_items: cartItems,
+        user_data: currentUser
+      });
+
+      if (response.data?.error) {
+        toast.error(response.data.error);
+        setIsProcessing(false);
+        return;
+      }
+
+      if (response.data?.init_point) {
+        // Redirecionar para o checkout do Mercado Pago
+        window.location.href = response.data.init_point;
+      } else {
+        toast.error('Erro ao gerar link de pagamento');
+        setIsProcessing(false);
+      }
+    } catch (error) {
+      console.error('Erro no checkout:', error);
+      toast.error('Erro ao processar pagamento. Tente novamente.');
+      setIsProcessing(false);
+    }
   };
 
   return (
