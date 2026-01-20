@@ -457,17 +457,10 @@ const DashboardContent = ({ user, isAdmin }) => {
   const shortName = user.display_first_name && user.display_last_name ?
   `${user.display_first_name} ${user.display_last_name}` :
   (() => {
-    const nameParts = user.full_name.trim().split(/\s+/);
-    if (nameParts.length === 1) return nameParts[0];
-
-    const lastPart = nameParts[nameParts.length - 1].toUpperCase();
-    const suffixes = ['FILHO', 'JUNIOR', 'JÚNIOR', 'NETO', 'SOBRINHO', 'SEGUNDO', 'TERCEIRO'];
-
-    if (nameParts.length > 2 && suffixes.includes(lastPart)) {
-      return `${nameParts[0]} ${nameParts[nameParts.length - 2]}`;
-    }
-
-    return `${nameParts[0]} ${nameParts[nameParts.length - 1]}`;
+    const nameParts = user.full_name.split(' ');
+    return nameParts.length > 1 ?
+    `${nameParts[0]} ${nameParts[nameParts.length - 1]}` :
+    nameParts[0];
   })();
 
   const highestLevelName = careerLevelsMap[highestLevel];
