@@ -5,7 +5,14 @@ import { Share2, Copy, MessageCircle, Mail, Facebook, Twitter, Linkedin } from '
 import { toast } from "sonner";
 
 export default function ShareAppModal({ isOpen, onClose }) {
-  const appUrl = "https://leilaonozap.net";
+  // Verifica se há um código de licenciado na URL atual
+  const urlParams = new URLSearchParams(window.location.search);
+  const refCode = urlParams.get('ref');
+  
+  // Se tiver ref na URL, usa o link do licenciado, senão usa o padrão
+  const baseUrl = "https://leilaonozap.net";
+  const appUrl = refCode ? `${baseUrl}/Catalog?ref=${refCode}` : baseUrl;
+  
   const appTitle = "Leilão NoZap - Arremate Produtos Incríveis!";
   const appDescription = "Participe de leilões emocionantes e arremate produtos com preços imperdíveis no Leilão NoZap!";
 
