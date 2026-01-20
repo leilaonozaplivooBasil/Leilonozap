@@ -473,10 +473,13 @@ export default function Layout({ children, currentPageName }) {
   // Também verifica se veio do catálogo via parâmetro de URL
   const urlParams = new URLSearchParams(window.location.search);
   const fromCatalog = urlParams.get('from') === 'catalog';
-  const isCatalogPage = currentPageName === 'Catalog' || currentPageName === 'CatalogProductDetails' || currentPageName === 'Cart' || currentPageName === 'CatalogCheckout' || currentPageName === 'MyCatalogOrders' || currentPageName === 'CatalogOrderTracking' || (currentPageName === 'Profile' && fromCatalog);
+  const isCatalogPage = currentPageName === 'Catalog' || currentPageName === 'CatalogProductDetails' || currentPageName === 'Cart' || currentPageName === 'CatalogCheckout' || currentPageName === 'MyCatalogOrders' || currentPageName === 'CatalogOrderTracking' || (currentPageName === 'Profile' && fromCatalog) || (currentPageName === 'Licensing' && fromCatalog);
 
   // Verifica se está na página de Perfil vindo do catálogo
   const isProfileFromCatalog = currentPageName === 'Profile' && fromCatalog;
+
+  // Verifica se está na página de Licensing vindo do catálogo
+  const isLicensingFromCatalog = currentPageName === 'Licensing' && fromCatalog;
 
   const finalMenuItems = (isCatalogPage && !isProfileFromCatalog)
     ? [
