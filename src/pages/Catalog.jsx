@@ -19,6 +19,7 @@ import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import LicenseeHeader from '../components/catalog/LicenseeHeader';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
