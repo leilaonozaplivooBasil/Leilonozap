@@ -671,7 +671,21 @@ export default function Layout({ children, currentPageName }) {
 
                   {/* BOTÃO MOBILE */}
                   {!isLojistaPage && (
-                  <div className="flex md:hidden">
+                  <div className="flex md:hidden items-center gap-2">
+                    {/* CARRINHO MOBILE - APENAS EM PÁGINAS DO CATÁLOGO */}
+                    {isCatalogPage && (
+                      <Link
+                        to={createPageUrl("Cart")}
+                        className="relative p-2 text-gray-300 hover:text-white transition-colors"
+                      >
+                        <CartIcon className="h-6 w-6" />
+                        {cartCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                            {cartCount > 99 ? '99+' : cartCount}
+                          </span>
+                        )}
+                      </Link>
+                    )}
                 <button
                   type="button"
                   onClick={() => setMobileMenuOpen(true)}
