@@ -334,6 +334,11 @@ export default function Profile() {
         localStorage.setItem('currentUser', JSON.stringify({ ...baseUser, ...finalData }));
       } catch (_) {}
       
+      // Dispara evento global para notificar que o usuário foi atualizado (ex: árvore de hierarquia)
+      window.dispatchEvent(new CustomEvent('userDataUpdated', { 
+        detail: { userId: currentUser.id, updatedData: finalData } 
+      }));
+      
       if (passwordData.newPassword) {
         alert("✅ Senha alterada com sucesso!");
       }
