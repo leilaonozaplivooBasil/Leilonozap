@@ -191,6 +191,16 @@ export default function Register() {
         }
       }
 
+      // 🆕 GERA CÓDIGO DE REFERRAL ÚNICO
+      const generateReferralCode = () => {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 8; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+
       const newUser = await AppUser.create({
         full_name: fullName.trim(),
         display_first_name: firstName || null,
@@ -207,7 +217,9 @@ export default function Register() {
         address_city: addressCity,
         address_state: addressState,
         address_zip_code: addressZipCode,
-        referred_by_id: referredById
+        referred_by_id: referredById,
+        referral_code: generateReferralCode(),
+        career_levels: ['usuario', 'influencer']
       });
 
       localStorage.setItem('currentUser', JSON.stringify(newUser));
