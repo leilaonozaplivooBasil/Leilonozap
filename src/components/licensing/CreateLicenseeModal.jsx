@@ -78,18 +78,24 @@ export default function CreateLicenseeModal({ onClose, onSuccess }) {
     try {
       const referralCode = user.referral_code || generateReferralCode(user.full_name);
       
+      // Calcula data de expiração (30 dias a partir de agora)
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 30);
+      
       const updatedUser = await AppUser.update(user.id, {
         role: 'licensee',
         referral_code: referralCode,
         career_levels: [...(user.career_levels || []), 'licenciado_catalogo'],
         primary_career_level: 'licenciado_catalogo',
         catalog_commission_balance: user.catalog_commission_balance || 0,
-        catalog_total_commissions_generated: user.catalog_total_commissions_generated || 0
+        catalog_total_commissions_generated: user.catalog_total_commissions_generated || 0,
+        catalog_license_expiry: expiryDate.toISOString(),
+        catalog_license_active: true
       });
 
       setCreatedUser({ ...user, ...updatedUser, referral_code: referralCode });
       setIsSuccess(true);
-      toast.success(`${user.full_name} agora é licenciado!`);
+      toast.success(`${user.full_name} agora é licenciado! Válido por 30 dias.`);
     } catch (error) {
       console.error('Erro ao ativar licenciado:', error);
       toast.error('Erro ao ativar licenciado: ' + error.message);
