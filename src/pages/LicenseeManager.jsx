@@ -217,12 +217,6 @@ export default function LicenseeManager() {
                           </div>
 
                           {/* Status */}
-                          {licenseeStats.sales > 0 && (
-                            <Badge className="bg-green-900/50 text-green-400 border border-green-500/30 text-xs">
-                              {licenseeStats.sales} vendas
-                            </Badge>
-                          )}
-
                           <Badge className="bg-green-900/50 text-green-400 border border-green-500/30 text-xs">
                             Catálogo ativo
                           </Badge>
