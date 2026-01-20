@@ -4,17 +4,58 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Share2, Info, Edit } from "lucide-react";
+import { ShoppingCart, Play, Pause, Share2, Info, Edit, Plus, Check } from "lucide-react";
 import FavoriteButton from '../recommendations/FavoriteButton';
 import ComparaiModal from '../comparai/ComparaiModal';
+import { toast } from 'sonner';
 
 function CatalogProductCard({ product, currentUser }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [isHovering, setIsHovering] = useState(false);
     const [showComparai, setShowComparai] = useState(false);
+    const [addedToCart, setAddedToCart] = useState(false);
     const intervalRef = useRef(null);
     const navigate = useNavigate();
+
+  const addToCart = (e) => {
+    e.stopPropagation();
+    
+    // Pegar carrinho atual
+    const savedCart = localStorage.getItem('catalogCart');
+    let cart = savedCart ? JSON.parse(savedCart) : [];
+    
+    // Verificar se já existe no carrinho
+    const existingIndex = cart.findIndex(item => item.id === product.id);
+    
+    if (existingIndex >= 0) {
+      // Incrementar quantidade
+      cart[existingIndex].quantity += 1;
+      toast.success(`Quantidade atualizada: ${cart[existingIndex].quantity}x`);
+    } else {
+      // Adicionar novo item
+      cart.push({
+        id: product.id,
+        description: product.description,
+        price_catalog: product.price_catalog,
+        selling_price_wholesale: product.selling_price_wholesale,
+        image_urls: product.image_urls,
+        quantity: 1,
+        availableStock: product.quantity || 999
+      });
+      toast.success('Produto adicionado ao carrinho!');
+    }
+    
+    // Salvar no localStorage
+    localStorage.setItem('catalogCart', JSON.stringify(cart));
+    
+    // Feedback visual
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2000);
+    
+    // Dispara evento para atualizar contador no header
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
 
   const images = (product.image_urls && product.image_urls.length > 0)
     ? product.image_urls
@@ -343,14 +384,26 @@ ${categoryEmoji} ${product.description}
           </Button>
 
           <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
-            }}
-            className="w-full h-8 sm:h-9 text-xs sm:text-sm bg-orange-600 hover:bg-orange-700 text-white font-bold"
+            onClick={addToCart}
+            className={`w-full h-8 sm:h-9 text-xs sm:text-sm font-bold transition-all ${
+              addedToCart 
+                ? 'bg-green-600 hover:bg-green-700' 
+                : 'bg-orange-600 hover:bg-orange-700'
+            } text-white`}
           >
-            <span className="hidden sm:inline">✅ Entrar e Comprar</span>
-            <span className="sm:hidden">✅ Comprar</span>
+            {addedToCart ? (
+              <>
+                <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Adicionado!</span>
+                <span className="sm:hidden">✓</span>
+              </>
+            ) : (
+              <>
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Adicionar ao Carrinho</span>
+                <span className="sm:hidden">+ Carrinho</span>
+              </>
+            )}
           </Button>
         </div>
       </CardContent>
