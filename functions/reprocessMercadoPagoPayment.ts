@@ -83,15 +83,16 @@ Deno.serve(async (req) => {
         }
       } catch (_) {}
 
-      const created = await base44.asServiceRole.entities.MercadoPagoPayment.create({
-        user_id: inferredUserId,
-        preference_id: payment?.order?.id || null,
+      const payload = {
+        ...(inferredUserId ? { user_id: inferredUserId } : {}),
+        ...(payment?.order?.id ? { preference_id: payment.order.id } : {}),
         payment_id: String(payment_id),
-        amount: amount ?? null,
+        ...(typeof amount === 'number' ? { amount } : {}),
         status,
         payment_method: method,
-        external_reference: externalRef,
-      });
+        ...(externalRef ? { external_reference: externalRef } : {}),
+      };
+      const created = await base44.asServiceRole.entities.MercadoPagoPayment.create(payload);
       updated = created;
     }
 
