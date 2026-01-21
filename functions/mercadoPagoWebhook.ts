@@ -103,6 +103,20 @@ Deno.serve(async (req) => {
 
                         // Se aprovado, marcar leilão como pago e processar comissões
                          if (payment.status === 'approved') {
+                              // 🔒 PROTEÇÃO #4: Validar correspondência Sale ↔ Payment
+                              if (dbPayment.catalog_sale_id || updatePayload.catalog_sale_id) {
+                                  const saleId = dbPayment.catalog_sale_id || updatePayload.catalog_sale_id;
+                                  const sales = await base44.asServiceRole.entities.CatalogSale.filter({ id: saleId });
+                                  if (sales.length === 0) {
+                                      console.error(`❌ CatalogSale ${saleId} não existe! Payment órfã detectada.`);
+                                      return;
+                                  }
+                                  if (sales[0].buyer_id !== dbPayment.user_id) {
+                                      console.error(`❌ Mismatch: Sale buyer_id != Payment user_id`);
+                                      return;
+                                  }
+                              }
+
                               // 🔒 PROTEÇÃO #6: Atualizar Payment E Sale ATOMICAMENTE
                               let updateErrors = [];
 
