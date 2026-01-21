@@ -15,6 +15,14 @@ import LicenseeListItem from "../components/licensees/LicenseeListItem";
 function copyToClipboard(text){
   navigator.clipboard.writeText(text);
 }
+function shareLink(url, name){
+  if (navigator.share) {
+    navigator.share({ title: name ? `Catálogo de ${name}` : "Catálogo", url });
+  } else {
+    navigator.clipboard.writeText(url);
+    alert("Link copiado!");
+  }
+}
 
 export default function RegisterLicensee() {
   const qc = useQueryClient();
@@ -118,23 +126,20 @@ export default function RegisterLicensee() {
                 )}
                 {selected && (
                   <div className="flex items-center gap-3 mt-1">
-                    <Button size="icon" variant="ghost" className="rounded-full">
+                    <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => setShowModal(true)}>
                       <Edit className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="rounded-full">
+                    <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => shareLink(catalogLink, selected?.full_name)}>
                       <Share2 className="w-4 h-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" className="rounded-full" onClick={() => copyToClipboard(catalogLink)}>
+                    <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400" onClick={() => copyToClipboard(catalogLink)}>
                       <Copy className="w-4 h-4" />
                     </Button>
                     <a href={catalogLink} target="_blank" rel="noreferrer">
-                      <Button size="icon" variant="ghost" className="rounded-full">
+                      <Button size="icon" variant="ghost" className="rounded-full text-white hover:text-green-400">
                         <ExternalLink className="w-4 h-4" />
                       </Button>
                     </a>
-                    <Button size="icon" variant="ghost" className="rounded-full">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
                   </div>
                 )}
               </div>
@@ -228,6 +233,7 @@ export default function RegisterLicensee() {
           qc.invalidateQueries({ queryKey: ["licensees"] });
           setShowModal(false);
         }}
+        initialUser={selected}
       />
     </div>
   );

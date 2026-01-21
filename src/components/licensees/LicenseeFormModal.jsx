@@ -14,7 +14,7 @@ function slugify(str) {
     .replace(/^-+|-+$/g, "");
 }
 
-export default function LicenseeFormModal({ open, onClose, onCreated }) {
+export default function LicenseeFormModal({ open, onClose, onCreated, initialUser }) {
   const [cpf, setCpf] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,6 +33,17 @@ const fileInputRef = useRef(null);
   }, [fullName]);
 
   const suggestedSlug = useMemo(() => slug || slugify(fullName), [slug, fullName]);
+
+  React.useEffect(() => {
+    if (open && initialUser) {
+      setFoundUser(initialUser);
+      setFullName(initialUser.full_name || "");
+      setEmail(initialUser.email || "");
+      setPhone(initialUser.phone || "");
+      setAvatarUrl(initialUser.avatar_url || "");
+      if (initialUser.nickname) setSlug(initialUser.nickname);
+    }
+  }, [open, initialUser]);
 
   const normalizeCpf = (v) => (v || "").replace(/\D/g, "");
   const handleCpfSearch = async () => {
