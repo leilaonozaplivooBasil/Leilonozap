@@ -93,10 +93,31 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing sale_id' }, { status: 400 });
     }
 
-    // Idempotência: já processado?
+    // Idempotência: já processado? (MAS ainda atualiza saldos se necessário)
     const existing = await base44.asServiceRole.entities.CommissionRecord.filter({ sale_id: saleId });
-    if (Array.isArray(existing) && existing.length > 0) {
-      return Response.json({ success: true, already_processed: true, records: existing });
+    const alreadyProcessed = Array.isArray(existing) && existing.length > 0;
+
+    if (alreadyProcessed) {
+      // Verifica se os saldos já foram atualizados
+      // Se existem records mas nenhum usuário tem saldo, processa os saldos
+      let needsBalanceUpdate = false;
+      try {
+        const firstRecord = existing[0];
+        if (firstRecord?.user_id) {
+          const user = await findUserById(base44, firstRecord.user_id);
+          // Se saldo do catálogo é zero mas tem comissões, precisa atualizar
+          if (user && Number(user.catalog_commission_balance || 0) === 0 && Number(firstRecord.amount || 0) > 0) {
+            needsBalanceUpdate = true;
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ Erro ao verificar balance:', e.message);
+      }
+
+      if (!needsBalanceUpdate) {
+        return Response.json({ success: true, already_processed: true, records: existing });
+      }
+      // Continua para atualizar saldos...
     }
 
     // Carrega venda
