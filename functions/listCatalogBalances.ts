@@ -20,17 +20,16 @@ Deno.serve(async (req) => {
         const bal = Number(u.catalog_commission_balance || 0);
         const total = Number(u.catalog_total_commissions_generated || 0);
         return {
-          id: u.id,
-          full_name: u.full_name,
+          name: u.full_name,
           email: u.email,
-          catalog_commission_balance: Math.round(bal * 100) / 100,
-          catalog_total_commissions_generated: Math.round(total * 100) / 100,
+          balance: Math.round(bal * 100) / 100,
+          total_generated: Math.round(total * 100) / 100,
         };
       })
-      .filter((x) => x.catalog_commission_balance > 0)
-      .sort((a, b) => b.catalog_commission_balance - a.catalog_commission_balance);
+      .filter((x) => x.balance > 0)
+      .sort((a, b) => b.balance - a.balance);
 
-    const total_balance = items.reduce((sum, x) => sum + x.catalog_commission_balance, 0);
+    const total_balance = items.reduce((sum, x) => sum + x.balance, 0);
 
     return Response.json({
       success: true,
