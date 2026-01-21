@@ -1118,6 +1118,14 @@ export default function NetworkOverview() {
               </svg>
               Disparar Mensagens
             </Button>
+
+            <Button
+              onClick={() => setShowRegisterLicensee(true)}
+              className="bg-green-600 hover:bg-green-700"
+              size="sm"
+            >
+              Registrar licenciado
+            </Button>
           </div>
         </div>
 
