@@ -25,8 +25,8 @@ export default function LicenseeListItem({ licensee, selected, onSelect }) {
     <button
       onClick={() => onSelect?.(licensee)}
       className={`w-full text-left px-4 py-3 rounded-xl border transition-all shadow-sm ${
-        selected ? "bg-sky-50 border-sky-200" : "bg-white border-slate-200 hover:border-slate-300"
-      }`}
+                    selected ? "bg-gray-700/60 border-green-500/40" : "bg-gray-800 border-gray-700 hover:border-gray-600"
+                  }`}
     >
       <div className="flex items-center gap-3">
         {licensee.avatar_url ? (

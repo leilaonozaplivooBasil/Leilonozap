@@ -46,6 +46,7 @@ import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyCatalogOrders from './pages/MyCatalogOrders';
 import MyWinnings from './pages/MyWinnings';
+import NetworkOverview from './pages/NetworkOverview';
 import OrderStatus from './pages/OrderStatus';
 import OrderStatusMP from './pages/OrderStatusMP';
 import OrderTracking from './pages/OrderTracking';
@@ -61,6 +62,7 @@ import ProtecaoCriacao from './pages/ProtecaoCriacao';
 import ProtectionDashboard from './pages/ProtectionDashboard';
 import Register from './pages/Register';
 import RegisterBatches from './pages/RegisterBatches';
+import RegisterLicensee from './pages/RegisterLicensee';
 import ShippingSettings from './pages/ShippingSettings';
 import StockPosition from './pages/StockPosition';
 import StoreRegistration from './pages/StoreRegistration';
@@ -72,8 +74,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import NetworkOverview from './pages/NetworkOverview';
-import RegisterLicensee from './pages/RegisterLicensee';
 import __Layout from './Layout.jsx';
 
 
@@ -126,6 +126,7 @@ export const PAGES = {
     "MemoryBackup": MemoryBackup,
     "MyCatalogOrders": MyCatalogOrders,
     "MyWinnings": MyWinnings,
+    "NetworkOverview": NetworkOverview,
     "OrderStatus": OrderStatus,
     "OrderStatusMP": OrderStatusMP,
     "OrderTracking": OrderTracking,
@@ -141,6 +142,7 @@ export const PAGES = {
     "ProtectionDashboard": ProtectionDashboard,
     "Register": Register,
     "RegisterBatches": RegisterBatches,
+    "RegisterLicensee": RegisterLicensee,
     "ShippingSettings": ShippingSettings,
     "StockPosition": StockPosition,
     "StoreRegistration": StoreRegistration,
@@ -152,8 +154,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "NetworkOverview": NetworkOverview,
-    "RegisterLicensee": RegisterLicensee,
 }
 
 export const pagesConfig = {

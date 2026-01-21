@@ -51,9 +51,9 @@ export default function RegisterLicensee() {
 
 
   return (
-    <div className="min-h-screen bg-[#f5f7fb] text-slate-800">
+    <div className="min-h-screen bg-gray-900 text-gray-100">
       {/* Top bar */}
-      <div className="border-b border-slate-200 bg-white">
+      <div className="border-b border-gray-700 bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-5 flex items-center gap-3">
           <div className="relative flex-1 max-w-xl">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -61,16 +61,16 @@ export default function RegisterLicensee() {
               placeholder="Pesquise por licenciados..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-[#f2f5fb] border-slate-200 text-slate-700 placeholder:text-slate-400 rounded-full"
+              className="pl-9 bg-gray-900/60 border-gray-700 text-gray-100 placeholder:text-gray-400 rounded-full"
             />
           </div>
-          <Button onClick={() => setShowModal(true)} className="bg-rose-500 hover:bg-rose-600 gap-2 rounded-full">
+          <Button onClick={() => setShowModal(true)} className="bg-green-600 hover:bg-green-700 gap-2 rounded-full">
             <Plus className="w-4 h-4" /> Cadastrar vendedor
           </Button>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 pt-3 text-sm text-slate-500 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 pt-3 text-sm text-gray-400 flex items-center justify-between">
         <p>Gerencie os seus catálogos de vendedores</p>
         <span>{licensees.length} vendedores</span>
       </div>
@@ -103,16 +103,16 @@ export default function RegisterLicensee() {
                 {selected?.avatar_url ? (
                   <img src={selected.avatar_url} alt={selected.full_name} className="h-16 w-16 rounded-full object-cover" />
                 ) : (
-                  <div className="h-16 w-16 rounded-full bg-emerald-100 text-emerald-700 font-semibold grid place-items-center">
+                  <div className="h-16 w-16 rounded-full bg-green-500/20 text-green-400 font-semibold grid place-items-center">
                     {(selected?.full_name || "?").slice(0,2).toUpperCase()}
                   </div>
                 )}
-                <div className="text-xl font-semibold text-slate-900">{selected?.full_name || "Selecione um licenciado"}</div>
+                <div className="text-xl font-semibold text-white">{selected?.full_name || "Selecione um licenciado"}</div>
                 {selected && (
-                  <Badge className="bg-emerald-100 text-emerald-700 flex items-center gap-1">Catálogo ativo <ShoppingBag className="w-3.5 h-3.5" /></Badge>
+                  <Badge className="bg-green-500/20 text-green-400 flex items-center gap-1">Catálogo ativo <ShoppingBag className="w-3.5 h-3.5" /></Badge>
                 )}
                 {selected && (
-                  <a href={catalogLink} target="_blank" rel="noreferrer" className="text-slate-600 hover:underline break-all">
+                  <a href={catalogLink} target="_blank" rel="noreferrer" className="text-gray-300 hover:underline break-all">
                     {catalogLink}
                   </a>
                 )}
@@ -142,41 +142,41 @@ export default function RegisterLicensee() {
             <CardContent className="pt-4 space-y-6">
               {selected ? (
                 <>
-                  <Separator className="bg-slate-200" />
+                  <Separator className="bg-gray-700" />
 
                   <div className="grid grid-cols-2 gap-6">
-                    <div className="flex items-center gap-2 text-slate-600">
+                    <div className="flex items-center gap-2 text-gray-300">
                       <Calendar className="w-4 h-4 text-slate-400" />
                       <div>
-                        <div className="text-sm font-medium text-slate-800">0 vendas</div>
-                        <div className="text-xs text-slate-500">Mês passado</div>
+                        <div className="text-sm font-medium text-white">0 vendas</div>
+                        <div className="text-xs text-gray-400">Mês passado</div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-slate-600">
+                    <div className="flex items-center gap-2 text-gray-300">
                       <Clock className="w-4 h-4 text-slate-400" />
                       <div>
-                        <div className="text-sm font-medium text-slate-800">Última venda</div>
-                        <div className="text-xs text-slate-500">-</div>
+                        <div className="text-sm font-medium text-white">Última venda</div>
+                        <div className="text-xs text-gray-400">-</div>
                       </div>
                     </div>
                   </div>
 
-                  <Separator className="bg-slate-200" />
+                  <Separator className="bg-gray-700" />
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <div className="text-sm text-slate-600 font-medium">Visitas no catálogo</div>
+                      <div className="text-sm text-gray-300 font-medium">Visitas no catálogo</div>
                       <button className="text-xs text-rose-500 hover:underline">Ver tudo</button>
                     </div>
                     <div className="grid grid-cols-2 gap-4 items-center">
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-slate-600">
+                        <div className="flex items-center gap-2 text-gray-300">
                           <User className="w-4 h-4 text-slate-400" />
-                          <span className="text-slate-800 font-semibold">132 visitas</span>
+                          <span className="text-white font-semibold">132 visitas</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-600">
+                        <div className="flex items-center gap-2 text-gray-300">
                           <Clock className="w-4 h-4 text-slate-400" />
-                          <span className="text-slate-600">4 contatos</span>
+                          <span className="text-gray-300">4 contatos</span>
                         </div>
                       </div>
                       <div className="w-full">
@@ -187,30 +187,30 @@ export default function RegisterLicensee() {
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
-                        <div className="text-[10px] text-slate-400 text-right mt-1">Últimos 30 dias</div>
+                        <div className="text-[10px] text-gray-400 text-right mt-1">Últimos 30 dias</div>
                       </div>
                     </div>
                   </div>
 
                   <div>
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-slate-600 font-medium">Produtos mais visitados</div>
+                      <div className="text-sm text-gray-300 font-medium">Produtos mais visitados</div>
                       <button className="text-xs text-rose-500 hover:underline">Ver tudo</button>
                     </div>
-                    <div className="flex flex-col items-center justify-center text-slate-400 text-sm h-28 gap-2">
+                    <div className="flex flex-col items-center justify-center text-gray-400 text-sm h-28 gap-2">
                       <span className="text-2xl">📱</span>
                       <span className="text-center">—</span>
                     </div>
                   </div>
 
                   <div className="text-center">
-                    <div className="font-semibold text-slate-700">{selected?.full_name} não teve visitas em seu catálogo nos últimos 30 dias</div>
-                    <p className="text-slate-500 text-sm mt-1">As visitas aos produtos do vendedor são registradas quando um cliente acessa o catálogo do vendedor e visualiza os produtos. Assim que houver visitas, elas serão exibidas aqui.</p>
+                    <div className="font-semibold text-gray-100">{selected?.full_name} não teve visitas em seu catálogo nos últimos 30 dias</div>
+                    <p className="text-gray-400 text-sm mt-1">As visitas aos produtos do vendedor são registradas quando um cliente acessa o catálogo do vendedor e visualiza os produtos. Assim que houver visitas, elas serão exibidas aqui.</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <Button variant="ghost" className="text-rose-500 hover:text-rose-600">Ver pedidos</Button>
-                    <Button variant="ghost" className="text-rose-500 hover:text-rose-600">Editar cadastro</Button>
+                    <Button variant="ghost" className="text-green-400 hover:text-green-500">Ver pedidos</Button>
+                    <Button variant="ghost" className="text-green-400 hover:text-green-500">Editar cadastro</Button>
                   </div>
                 </>
               ) : (
