@@ -216,12 +216,34 @@ export default function Layout({ children, currentPageName }) {
 
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get('ref');
-    if (refCode) {
-      if (!sessionStorage.getItem('referralCode')) {
-        sessionStorage.setItem('referralCode', refCode);
-        console.log(`Código de indicação '${refCode}' capturado.`);
-      }
-    }
+              if (refCode) {
+                if (!sessionStorage.getItem('referralCode')) {
+                  sessionStorage.setItem('referralCode', refCode);
+                  console.log(`Código de indicação '${refCode}' capturado.`);
+                }
+                // Registra visita ao catálogo (uma vez por sessão por ref)
+                const visitKey = `catalog_visit_logged_${refCode}`;
+                if (!sessionStorage.getItem(visitKey)) {
+                  sessionStorage.setItem(visitKey, 'true');
+                  (async () => {
+                    try {
+                      const users = await base44.entities.AppUser.filter({ referral_code: refCode });
+                      const licensee = users && users[0];
+                      if (licensee && (licensee.career_levels || []).includes('licenciado_catalogo')) {
+                        await base44.entities.CatalogVisit.create({
+                          licensee_id: licensee.id,
+                          referral_code: refCode,
+                          page: window.location.pathname + window.location.search,
+                          user_agent: navigator.userAgent,
+                          visited_at: new Date().toISOString()
+                        });
+                      }
+                    } catch (e) {
+                      console.debug('CatalogVisit log skipped');
+                    }
+                  })();
+                }
+              }
 
     // Captura código de influenciador (para Sai de Baixo)
     const infCode = urlParams.get('inf');

@@ -39,9 +39,10 @@ export default function RegisterLicensee() {
   });
 
   const filtered = useMemo(() => {
+    const onlyCatalog = (licensees || []).filter(l => (l.career_levels || []).includes("licenciado_catalogo"));
     const t = searchTerm.trim().toLowerCase();
-    if (!t) return licensees;
-    return licensees.filter((l) =>
+    if (!t) return onlyCatalog;
+    return onlyCatalog.filter((l) =>
       (l.full_name || "").toLowerCase().includes(t) ||
       (l.email || "").toLowerCase().includes(t) ||
       (l.referral_code || "").toLowerCase().includes(t)
@@ -55,7 +56,26 @@ export default function RegisterLicensee() {
   const referral = selected?.referral_code || "";
   const catalogLink = referral ? `https://leilaonozap.net/catalog?ref=${referral}` : "";
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
-  const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
+  const { data: visits = [] } = useQuery({
+  queryKey: ["catalogVisits", selected?.id],
+  enabled: !!selected?.id,
+  queryFn: async () => await base44.entities.CatalogVisit.filter({ licensee_id: selected.id }, "-visited_at", 10000),
+});
+const visitsData = useMemo(() => {
+  const days = Array.from({ length: 30 }).map((_, idx) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (29 - idx));
+    const key = d.toISOString().slice(0, 10);
+    return { key, i: idx, v: 0 };
+  });
+  const counts = (visits || []).reduce((acc, v) => {
+    const key = (v.visited_at || v.created_date || "").slice(0, 10);
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  days.forEach(d => { d.v = counts[d.key] || 0; });
+  return days.map(d => ({ i: d.i, v: d.v }));
+}, [visits]);
 
 
   return (
@@ -177,7 +197,7 @@ export default function RegisterLicensee() {
                       <div className="space-y-2">
                         <div className="flex items-center gap-2 text-gray-300">
                           <User className="w-4 h-4 text-slate-400" />
-                          <span className="text-white font-semibold">132 visitas</span>
+                          <span className="text-white font-semibold">{(visits && visits.length) || 0} visitas</span>
                         </div>
                         <div className="flex items-center gap-2 text-gray-300">
                           <Clock className="w-4 h-4 text-slate-400" />
