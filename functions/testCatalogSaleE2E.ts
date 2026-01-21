@@ -46,9 +46,7 @@ Deno.serve(async (req) => {
 
     // PASSO 2: Buscar um usuário comum indicado pelo licenciado
     console.log('\n📍 PASSO 2: Buscando usuário indicado...');
-    const indicated = await base44.asServiceRole.entities.AppUser.filter({ 
-      referred_by_id: licensee.id 
-    });
+    const indicated = licensees.filter(u => u.referred_by_id === licensee.id);
 
     let buyer = indicated.find(u => u.role === 'user');
     
@@ -63,7 +61,7 @@ Deno.serve(async (req) => {
 
     // PASSO 3: Buscar um produto do catálogo
     console.log('\n📍 PASSO 3: Buscando produto do catálogo...');
-    const products = await base44.asServiceRole.entities.Product.filter({});
+    const products = await base44.entities.Product.list();
     const catalogProducts = products.filter(p => p.catalog_active === true && p.price_catalog > 0);
 
     if (catalogProducts.length === 0) {
@@ -82,7 +80,7 @@ Deno.serve(async (req) => {
     console.log('\n📍 PASSO 4: Criando CatalogSale de R$ 100...');
     const salePrice = 100.00;
     
-    const sale = await base44.asServiceRole.entities.CatalogSale.create({
+    const sale = await base44.entities.CatalogSale.create({
       product_id: product.id,
       product_title: product.description,
       product_image: product.image_urls?.[0] || '',
