@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Search, Plus, Copy, Edit, Link2, ExternalLink } from "lucide-react";
+import { Search, Plus, Copy, Edit, Link2, ExternalLink, Share2, Trash2, Calendar, Clock, User } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 import LicenseeFormModal from "../components/licensees/LicenseeFormModal";
@@ -98,90 +98,116 @@ export default function RegisterLicensee() {
         {/* Details */}
         <div className="lg:col-span-1">
           <Card className="bg-white border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <div className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-700 font-semibold flex items-center justify-center">
-                  {(selected?.full_name || "?").slice(0,2).toUpperCase()}
-                </div>
-                <div>
-                  <div className="text-slate-900 font-semibold">{selected?.full_name || "Selecione um licenciado"}</div>
-                  {selected && (
-                    <Badge className={isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}>
-                      {isActive ? "Catálogo ativo" : "Configurar catálogo"}
-                    </Badge>
-                  )}
-                </div>
-              </CardTitle>
+            <CardHeader className="pb-0">
+              <div className="flex flex-col items-center text-center gap-3">
+                {selected?.avatar_url ? (
+                  <img src={selected.avatar_url} alt={selected.full_name} className="h-16 w-16 rounded-full object-cover" />
+                ) : (
+                  <div className="h-16 w-16 rounded-full bg-emerald-100 text-emerald-700 font-semibold grid place-items-center">
+                    {(selected?.full_name || "?").slice(0,2).toUpperCase()}
+                  </div>
+                )}
+                <div className="text-xl font-semibold text-slate-900">{selected?.full_name || "Selecione um licenciado"}</div>
+                {selected && (
+                  <Badge className="bg-emerald-100 text-emerald-700">Catálogo ativo</Badge>
+                )}
+                {selected && (
+                  <a href={catalogLink} target="_blank" rel="noreferrer" className="text-slate-600 hover:underline break-all">
+                    {catalogLink}
+                  </a>
+                )}
+                {selected && (
+                  <div className="flex items-center gap-3 mt-1">
+                    <Button size="icon" variant="ghost" className="rounded-full">
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="rounded-full">
+                      <Share2 className="w-4 h-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" className="rounded-full" onClick={() => copyToClipboard(catalogLink)}>
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <a href={catalogLink} target="_blank" rel="noreferrer">
+                      <Button size="icon" variant="ghost" className="rounded-full">
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </a>
+                    <Button size="icon" variant="ghost" className="rounded-full">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="pt-4 space-y-6">
               {selected ? (
                 <>
-                  <div className="p-4 rounded-xl bg-white border border-slate-200">
-                    <div className="text-xs text-slate-500 mb-1">Link do catálogo</div>
-                    <div className="flex items-center gap-2">
-                      <Link2 className="w-4 h-4 text-gray-400" />
-                      <a href={catalogLink} target="_blank" rel="noreferrer" className="text-sm text-emerald-600 hover:underline truncate">
-                        {catalogLink}
-                      </a>
-                      <Button size="icon" variant="ghost" className="text-slate-500 hover:text-slate-700" onClick={() => copyToClipboard(catalogLink)}>
-                        <Copy className="w-4 h-4" />
-                      </Button>
-                      <a href={catalogLink} target="_blank" rel="noreferrer">
-                        <Button size="icon" variant="ghost" className="text-slate-500 hover:text-slate-700">
-                          <ExternalLink className="w-4 h-4" />
-                        </Button>
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-4 rounded-xl bg-white border border-slate-200">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs text-slate-500">Visitas no catálogo</div>
-                        <button className="text-xs text-rose-500 hover:underline">Ver tudo</button>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-semibold text-slate-800">182 visitas</span>
-                        <div className="w-28 h-8">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={visitsData}>
-                              <Line type="monotone" dataKey="v" stroke="#22c55e" strokeWidth={2} dot={false} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-white border border-slate-200">
-                      <div className="text-xs text-slate-500">Última venda</div>
-                      <div className="flex items-center justify-between mt-1">
-                        <span className="text-lg font-semibold text-slate-800">182 visitas</span>
-                        <div className="w-28 h-8">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={visitsData}>
-                              <Line type="monotone" dataKey="v" stroke="#22c55e" strokeWidth={2} dot={false} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </div>
-                      <div className="text-xs text-slate-500 mt-2">4 contatos</div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-white border border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs text-slate-500">Produtos mais visitados</div>
-                      <button className="text-xs text-rose-500 hover:underline">Ver tudo</button>
-                    </div>
-                    <div className="flex items-center justify-center text-slate-400 text-sm h-24">—</div>
-                  </div>
                   <Separator className="bg-slate-200" />
 
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm">{selected?.full_name} não teve visitas em seu catálogo nos últimos 30 dias. Assim que houver visitas, este gráfico será exibido aqui.</div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      <div>
+                        <div className="text-sm font-medium text-slate-800">0 vendas</div>
+                        <div className="text-xs text-slate-500">Mês passado</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <Clock className="w-4 h-4 text-slate-400" />
+                      <div>
+                        <div className="text-sm font-medium text-slate-800">Última venda</div>
+                        <div className="text-xs text-slate-500">-</div>
+                      </div>
+                    </div>
+                  </div>
 
-                  <div className="flex justify-between gap-3">
-                    <Button variant="outline" className="border-slate-300 text-slate-700">
-                      Ver pedidos
-                    </Button>
+                  <Separator className="bg-slate-200" />
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-sm text-slate-600 font-medium">Visitas no catálogo</div>
+                      <button className="text-xs text-rose-500 hover:underline">Ver tudo</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 items-center">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <User className="w-4 h-4 text-slate-400" />
+                          <span className="text-slate-800 font-semibold">132 visitas</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Clock className="w-4 h-4 text-slate-400" />
+                          <span className="text-slate-600">4 contatos</span>
+                        </div>
+                      </div>
+                      <div className="w-full h-16">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={visitsData}>
+                            <Line type="monotone" dataKey="v" stroke="#22c55e" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm text-slate-600 font-medium">Produtos mais visitados</div>
+                      <button className="text-xs text-rose-500 hover:underline">Ver tudo</button>
+                    </div>
+                    <div className="flex flex-col items-center justify-center text-slate-400 text-sm h-28 gap-2">
+                      <span className="text-2xl">📱</span>
+                      <span className="text-center">—</span>
+                    </div>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="font-semibold text-slate-700">{selected?.full_name} não teve visitas em seu catálogo nos últimos 30 dias</div>
+                    <p className="text-slate-500 text-sm mt-1">As visitas aos produtos do vendedor são registradas quando um cliente acessa o catálogo do vendedor e visualiza os produtos. Assim que houver visitas, elas serão exibidas aqui.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button variant="ghost" className="text-rose-500 hover:text-rose-600">Ver pedidos</Button>
+                    <Button variant="ghost" className="text-rose-500 hover:text-rose-600">Editar cadastro</Button>
                   </div>
                 </>
               ) : (
