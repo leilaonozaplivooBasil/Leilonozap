@@ -135,17 +135,17 @@ export default function CartPopup({ isOpen, onClose }) {
                             
                             <div className="flex items-center border border-gray-300 rounded-lg bg-gray-50">
                               <button
-                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                onClick={() => updateQuantity(item.id, (item.quantity || 1) - 1)}
                                 className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-all disabled:opacity-50"
-                                disabled={item.quantity <= 1}
+                                disabled={(item.quantity || 1) <= 1}
                               >
                                 <Minus className="w-3 h-3" />
                               </button>
                               <span className="px-3 text-sm font-semibold text-gray-900">
-                                {item.quantity}
+                                {item.quantity || 1}
                               </span>
                               <button
-                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                onClick={() => updateQuantity(item.id, (item.quantity || 1) + 1)}
                                 className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-all"
                               >
                                 <Plus className="w-3 h-3" />
