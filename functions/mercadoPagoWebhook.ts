@@ -1,9 +1,22 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
-    // 🔒 PROTEÇÃO #0: Validar método POST
+    // 🔒 PROTEÇÃO #0: Aceitar OPTIONS para CORS preflight
+    if (req.method === 'OPTIONS') {
+        return new Response(null, {
+            status: 204,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            }
+        });
+    }
+
+    // 🔒 PROTEÇÃO #1: Validar método POST (mas aceitar)
     if (req.method !== 'POST') {
-        return Response.json({ error: 'Method not allowed' }, { status: 405 });
+        console.warn(`⚠️ Requisição com método inválido: ${req.method}`);
+        return Response.json({ error: 'Only POST allowed' }, { status: 405 });
     }
 
     try {
@@ -20,7 +33,8 @@ Deno.serve(async (req) => {
             action: body.action,
             type: body.type,
             payment_id: body.data?.id,
-            live_mode: body.live_mode
+            live_mode: body.live_mode,
+            user_id: body.user_id
         });
 
         const base44 = createClientFromRequest(req);
