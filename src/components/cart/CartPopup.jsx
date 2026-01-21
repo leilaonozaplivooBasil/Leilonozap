@@ -39,26 +39,24 @@ export default function CartPopup({ isOpen, onClose }) {
     }
   }, [cartItems, updateCart, onClose]);
 
-  const updateQuantity = useCallback((productId, newQuantity) => {
+  const updateQuantity = (productId, newQuantity) => {
     if (newQuantity < 1) return;
     
-    setCartItems(prevItems => {
-      const newCart = prevItems.map(item => {
-        if (item.id === productId) {
-          const maxQty = item.availableStock || 999;
-          if (newQuantity > maxQty) {
-            toast.error(`Apenas ${maxQty} unidades disponíveis`);
-            return { ...item, quantity: maxQty };
-          }
-          return { ...item, quantity: newQuantity };
+    const newCart = cartItems.map(item => {
+      if (item.id === productId) {
+        const maxQty = item.availableStock || 999;
+        if (newQuantity > maxQty) {
+          toast.error(`Apenas ${maxQty} unidades disponíveis`);
+          return { ...item, quantity: maxQty };
         }
-        return item;
-      });
-      localStorage.setItem('catalogCart', JSON.stringify(newCart));
-      window.dispatchEvent(new Event('cartUpdated'));
-      return newCart;
+        return { ...item, quantity: newQuantity };
+      }
+      return item;
     });
-  }, []);
+    setCartItems(newCart);
+    localStorage.setItem('catalogCart', JSON.stringify(newCart));
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
 
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
