@@ -42,12 +42,18 @@ Deno.serve(async (req) => {
             };
             entityId = product_id;
         } else {
-            // Checkout de leilão
+            // 🔒 PROTEÇÃO #0b: Validar existência do leilão ANTES de criar Payment
             const auctions = await base44.entities.Auction.filter({ id: auction_id });
             if (auctions.length === 0) {
                 return Response.json({ error: 'Leilão não encontrado' }, { status: 404 });
             }
             const auction = auctions[0];
+
+            // Valida price antes de usar
+            if (!Number.isFinite(auction.current_price) || auction.current_price <= 0) {
+                return Response.json({ error: 'Leilão com preço inválido' }, { status: 400 });
+            }
+
             itemData = {
                 id: auction_id,
                 title: auction.title,
@@ -59,6 +65,52 @@ Deno.serve(async (req) => {
                 unit_price: auction.current_price
             };
             entityId = auction_id;
+        }
+
+        // Aceita user_data do frontend (domínio customizado) ou tenta pegar via auth.me()
+        let user = user_data;
+        if (!user) {
+            try {
+                user = await base44.auth.me();
+            } catch (authError) {
+                console.log('⚠️ Não foi possível autenticar via base44.auth.me(), usando user_data do payload');
+            }
+        }
+
+        if (!user || !user.email) {
+            return Response.json({ error: 'Dados do usuário não fornecidos' }, { status: 401 });
+        }
+
+        if (!user.last_name || user.last_name.trim() === '') {
+            return Response.json({ error: 'Sobrenome é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.phone || user.phone.trim() === '') {
+            return Response.json({ error: 'Telefone é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.cpf || user.cpf.trim() === '') {
+        return Response.json({ error: 'CPF é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.address_street || user.address_street.trim() === '') {
+        return Response.json({ error: 'Endereço é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.address_number || user.address_number.trim() === '') {
+        return Response.json({ error: 'Número do endereço é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.address_city || user.address_city.trim() === '') {
+        return Response.json({ error: 'Cidade é obrigatória' }, { status: 400 });
+        }
+
+        if (!user.address_state || user.address_state.trim() === '') {
+        return Response.json({ error: 'Estado é obrigatório' }, { status: 400 });
+        }
+
+        if (!user.address_zip_code || user.address_zip_code.trim() === '') {
+        return Response.json({ error: 'CEP é obrigatório' }, { status: 400 });
         }
 
         // Inicializar SDK do Mercado Pago
