@@ -321,7 +321,8 @@ export default function CatalogProductDetails() {
             </div>
 
             {/* QUANTIDADE E ADICIONAR */}
-            <div className="flex items-center gap-4">
+            <div className="grid grid-cols-[auto,1fr] gap-4 items-center">
+              {/* Controle de quantidade (coluna 1) */}
               <div className="flex items-center border border-gray-600 rounded-lg overflow-hidden">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -340,31 +341,36 @@ export default function CatalogProductDetails() {
                 </button>
               </div>
 
+              {/* Botão Adicionar ao Pedido (coluna 2) */}
               {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
                 <Button
                   disabled
-                  className="flex-1 h-12 bg-yellow-600 hover:bg-yellow-600 text-white font-bold text-base rounded-lg cursor-not-allowed opacity-90"
+                  className="h-12 bg-yellow-600 hover:bg-yellow-600 text-white font-bold text-base rounded-lg cursor-not-allowed opacity-90"
                 >
                   ESGOTADO
                 </Button>
               ) : (
                 <Button
                   onClick={handleAddToCart}
-                  className="flex-1 h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
+                  className="h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
                 >
                   <ShoppingCart className="w-5 h-5 mr-2" />
                   ADICIONAR AO PEDIDO
                 </Button>
               )}
-              <Button
-                onClick={handleWhatsAppToLicensee}
-                variant="outline"
-                className="h-12 border-green-600 text-green-400 hover:bg-green-600/10 rounded-lg"
-              >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                FALAR NO WHATSAPP
-              </Button>
+
+              {/* Botão WhatsApp na linha de baixo, alinhado à direita (mesma largura do botão acima) */}
+              <div className="col-start-2 flex justify-end">
+                <Button
+                  onClick={handleWhatsAppToLicensee}
+                  variant="outline"
+                  className="h-12 border-green-600 text-green-400 hover:bg-green-600/10 rounded-lg w-full"
+                >
+                  <MessageCircle className="w-5 h-5 mr-2" />
+                  FALAR NO WHATSAPP
+                </Button>
               </div>
+            </div>
 
             {/* ESTOQUE */}
             {product.quantity && (
