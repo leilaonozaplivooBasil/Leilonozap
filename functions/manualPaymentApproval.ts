@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
         });
         console.log('💳 MercadoPagoPayment criado:', mpPayment.id);
 
-        // 4️⃣ Criar CatalogSale
+        // 4️⃣ Criar CatalogSale com service role
         const referralCode = 'site_official';
         const sale = await base44.asServiceRole.entities.CatalogSale.create({
             product_id: product_id,
