@@ -32,29 +32,29 @@ export default function LicenseeListItem({ licensee, selected, onSelect }) {
         {licensee.avatar_url ? (
           <img src={licensee.avatar_url} alt={licensee.full_name} className="h-10 w-10 rounded-full object-cover" />
         ) : (
-          <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-700 font-semibold flex items-center justify-center">
+          <div className="h-10 w-10 rounded-full bg-green-500/20 text-green-400 font-semibold flex items-center justify-center">
             {initials(licensee.full_name)}
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-slate-900 truncate">{licensee.full_name}</p>
-          <div className="text-xs text-slate-500 truncate flex items-center gap-1">
+          <p className="font-medium text-white truncate">{licensee.full_name}</p>
+          <div className="text-xs text-gray-400 truncate flex items-center gap-1">
             <Link2 className="w-3.5 h-3.5" /> {link}
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <span title="Copiar link" onClick={copy} className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 grid place-items-center cursor-pointer">
+          <span title="Copiar link" onClick={copy} className="h-8 w-8 rounded-full bg-gray-700 text-gray-200 grid place-items-center cursor-pointer">
             <Copy className="w-4 h-4" />
           </span>
-          <span title="Abrir" onClick={open} className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 grid place-items-center cursor-pointer">
+          <span title="Abrir" onClick={open} className="h-8 w-8 rounded-full bg-gray-700 text-gray-200 grid place-items-center cursor-pointer">
             <ExternalLink className="w-4 h-4" />
           </span>
-          <span title="Editar" className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 grid place-items-center">
+          <span title="Editar" className="h-8 w-8 rounded-full bg-gray-700 text-gray-200 grid place-items-center">
             <Edit className="w-4 h-4" />
           </span>
         </div>
         <div className="ml-2">
-          <Badge className={isActive ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}>
+          <Badge className={isActive ? "bg-green-500/20 text-green-400" : "bg-gray-700 text-gray-300"}>
             {isActive ? "Catálogo ativo" : "Catálogo inativo"}
           </Badge>
         </div>
