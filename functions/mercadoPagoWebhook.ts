@@ -76,11 +76,15 @@ Deno.serve(async (req) => {
         });
     }
 
-    // 🔒 PROTEÇÃO #1: Validar método POST (mas aceitar)
-    if (req.method !== 'POST') {
-        console.warn(`⚠️ Requisição com método inválido: ${req.method}`);
-        return Response.json({ error: 'Only POST allowed' }, { status: 405 });
-    }
+    // 🔒 PROTEÇÃO #1: Aceitar POST (ignore outros métodos graciosamente)
+     if (req.method !== 'POST' && req.method !== 'GET') {
+         console.warn(`⚠️ Método não suportado: ${req.method}. Headers: ${JSON.stringify(Object.fromEntries(req.headers))}`);
+         return Response.json({ received: true }, { status: 200 }); // Aceita mesmo assim
+     }
+
+     if (req.method === 'GET') {
+         return Response.json({ status: 'webhook_active', ready: true }, { status: 200 });
+     }
 
     try {
         // 📥 Parse body com segurança
