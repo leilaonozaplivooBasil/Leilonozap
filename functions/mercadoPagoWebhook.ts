@@ -17,8 +17,11 @@ Deno.serve(async (req) => {
                     return;
                 }
 
-                // MP envia notificações de payment e merchant_order
-                if (body.type === 'payment') {
+                // MP envia notificações com "type" como payment
+                // Compatível com: body.type === 'payment' OU body.action === 'payment.updated'
+                const isPaymentEvent = body.type === 'payment' || body.action?.startsWith('payment');
+                
+                if (isPaymentEvent) {
                     const paymentId = body.data.id;
 
                     // 🔒 PROTEÇÃO #3: Validar resposta do MP antes de qualquer operação
@@ -180,12 +183,17 @@ Deno.serve(async (req) => {
                 }
 
                 // Salvar log do webhook
-                await base44.asServiceRole.entities.WebhookLog.create({
-                    source: 'mercadopago',
-                    event_type: body.type,
-                    payload: body,
-                    processed: true
-                });
+                try {
+                    await base44.asServiceRole.entities.WebhookLog.create({
+                        provider: 'mercadopago',
+                        event_type: body.type || body.action || 'unknown',
+                        resource_id: body.data?.id?.toString() || 'unknown',
+                        body: body,
+                        processed: true
+                    });
+                } catch (logErr) {
+                    console.warn('⚠️ Erro ao salvar log (não crítico):', logErr.message);
+                }
 
             } catch (error) {
                 console.error('❌ Erro ao processar webhook:', error);
@@ -193,14 +201,15 @@ Deno.serve(async (req) => {
                 // Salvar erro no log
                 try {
                     await base44.asServiceRole.entities.WebhookLog.create({
-                        source: 'mercadopago',
-                        event_type: body.type,
-                        payload: body,
+                        provider: 'mercadopago',
+                        event_type: body.type || body.action || 'unknown',
+                        resource_id: body.data?.id?.toString() || 'unknown',
+                        body: body,
                         processed: false,
-                        error_message: error.message
+                        error: error.message || String(error)
                     });
                 } catch (logError) {
-                    console.error('❌ Erro ao salvar log:', logError);
+                    console.error('❌ Erro ao salvar log:', logError.message);
                 }
             }
         })();
