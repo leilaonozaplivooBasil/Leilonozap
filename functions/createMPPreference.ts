@@ -140,6 +140,15 @@ Deno.serve(async (req) => {
         user.address_zip_code
         ].filter(x => x && x.trim()).join(', ');
 
+        // 🔒 PROTEÇÃO #7: Validar valores antes de processar
+        if (!Number.isFinite(itemData.unit_price) || itemData.unit_price <= 0) {
+            console.error(`❌ Preço inválido: ${itemData.unit_price}`);
+            return Response.json({ 
+                error: 'Preço do produto inválido', 
+                debug: { price: itemData.unit_price }
+            }, { status: 400 });
+        }
+
         // Validações e logs detalhados dos dados
         const cpfClean = user.cpf.replace(/\D/g, '');
         const cepClean = user.address_zip_code.replace(/\D/g, '');
@@ -222,7 +231,33 @@ Deno.serve(async (req) => {
 
         console.log('📤 Criando preferência MP:', JSON.stringify(preferenceData, null, 2));
 
-        const result = await preference.create({ body: preferenceData });
+        // 🔒 PROTEÇÃO #4: Timeout de 10s para MP responder
+        let result;
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+            
+            result = await Promise.race([
+                preference.create({ body: preferenceData }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout criando preferência MP')), 10000))
+            ]);
+            
+            clearTimeout(timeoutId);
+        } catch (timeoutErr) {
+            console.error(`❌ Timeout ou erro ao criar preferência: ${timeoutErr.message}`);
+            return Response.json({ 
+                error: 'Timeout ao conectar com Mercado Pago. Tente novamente.',
+                debug: { message: timeoutErr.message }
+            }, { status: 504 });
+        }
+
+        if (!result || !result.id) {
+            console.error(`❌ MP não retornou preference_id válido`);
+            return Response.json({ 
+                error: 'Mercado Pago não retornou preferência válida',
+                debug: { result }
+            }, { status: 500 });
+        }
 
         console.log('✅ Preferência criada:', result.id);
 

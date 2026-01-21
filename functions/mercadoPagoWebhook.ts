@@ -45,6 +45,21 @@ Deno.serve(async (req) => {
                     if (payments.length > 0) {
                         const dbPayment = payments[0];
 
+                        // 🔒 PROTEÇÃO #2: Validar correspondência Payment → Sale
+                        if (dbPayment.catalog_sale_id) {
+                            const sales = await base44.asServiceRole.entities.CatalogSale.filter({ id: dbPayment.catalog_sale_id });
+                            if (sales.length === 0) {
+                                console.error(`❌ CatalogSale ${dbPayment.catalog_sale_id} não existe! Payment órfã detectada.`);
+                                return;
+                            }
+                        }
+
+                        // 🔒 PROTEÇÃO #3 & #6: Verificar se já foi processado (idempotência)
+                        if (dbPayment.status === 'approved' && payment.status === 'approved') {
+                            console.log(`⚠️ Payment já processado anteriormente. Ignorando duplicata.`);
+                            return;
+                        }
+
                         // Atualizar status
                         await base44.asServiceRole.entities.MercadoPagoPayment.update(dbPayment.id, {
                             payment_id: String(paymentId),
@@ -56,39 +71,63 @@ Deno.serve(async (req) => {
 
                         // Se aprovado, marcar leilão como pago e processar comissões
                          if (payment.status === 'approved') {
-                             if (dbPayment.auction_id) {
-                                 await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
-                                     order_status: 'paid'
-                                 });
-                                 console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
+                              // 🔒 PROTEÇÃO #6: Atualizar Payment E Sale ATOMICAMENTE
+                              let updateErrors = [];
 
-                                 // ✅ Processa comissão de 3% para o Influencer
-                                 try {
-                                     await base44.asServiceRole.functions.invoke('processAuctionInfluencerCommission', {
-                                         auction_id: dbPayment.auction_id
-                                     });
-                                     console.log(`✅ Comissão 3% do Influencer processada para leilão ${dbPayment.auction_id}`);
-                                 } catch (commErr) {
-                                     console.error(`❌ Erro ao processar comissão do Influencer:`, commErr.message);
-                                 }
-                             }
-                             if (dbPayment.catalog_sale_id) {
-                                 await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
-                                     status: 'paid'
-                                 });
-                                 console.log(`🛒 CatalogSale ${dbPayment.catalog_sale_id} marcada como paga`);
+                              if (dbPayment.auction_id) {
+                                  try {
+                                      await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
+                                          order_status: 'paid'
+                                      });
+                                      console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
 
-                                 // ✅ Processa distribuição de comissões automaticamente
-                                 try {
-                                     await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-                                         sale_id: dbPayment.catalog_sale_id
-                                     });
-                                     console.log(`✅ Comissões processadas para sale ${dbPayment.catalog_sale_id}`);
-                                 } catch (commErr) {
-                                     console.error(`❌ Erro ao processar comissões:`, commErr.message);
-                                 }
-                             }
-                         }
+                                      // ✅ Processa comissão de 3% para o Influencer
+                                      try {
+                                          await base44.asServiceRole.functions.invoke('processAuctionInfluencerCommission', {
+                                              auction_id: dbPayment.auction_id
+                                          });
+                                          console.log(`✅ Comissão 3% do Influencer processada para leilão ${dbPayment.auction_id}`);
+                                      } catch (commErr) {
+                                          // 🔒 PROTEÇÃO #5: Se comissão falha, REGISTRA mas não silencia
+                                          updateErrors.push(`Comissão Influencer falhou: ${commErr.message}`);
+                                          console.error(`❌ Erro ao processar comissão do Influencer:`, commErr.message);
+                                      }
+                                  } catch (auctionErr) {
+                                      updateErrors.push(`Atualização de Auction falhou: ${auctionErr.message}`);
+                                      console.error(`❌ Erro ao atualizar Auction:`, auctionErr.message);
+                                  }
+                              }
+
+                              if (dbPayment.catalog_sale_id) {
+                                  try {
+                                      await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
+                                          status: 'paid'
+                                      });
+                                      console.log(`🛒 CatalogSale ${dbPayment.catalog_sale_id} marcada como paga`);
+
+                                      // ✅ Processa distribuição de comissões automaticamente
+                                      try {
+                                          await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                                              sale_id: dbPayment.catalog_sale_id
+                                          });
+                                          console.log(`✅ Comissões processadas para sale ${dbPayment.catalog_sale_id}`);
+                                      } catch (commErr) {
+                                          // 🔒 PROTEÇÃO #5: Se comissão falha, REGISTRA erro e RELANÇA
+                                          updateErrors.push(`Comissão Catálogo falhou: ${commErr.message}`);
+                                          console.error(`❌ Erro ao processar comissões:`, commErr.message);
+                                          throw new Error(`Comissão catálogo falhou - Sale pode ficar inconsistente: ${commErr.message}`);
+                                      }
+                                  } catch (saleErr) {
+                                      updateErrors.push(`Atualização de Sale falhou: ${saleErr.message}`);
+                                      console.error(`❌ Erro ao atualizar CatalogSale:`, saleErr.message);
+                                      throw saleErr;
+                                  }
+                              }
+
+                              if (updateErrors.length > 0) {
+                                  console.warn(`⚠️ Erros detectados no processamento:`, updateErrors);
+                              }
+                          }
                     } else {
                         console.log('⚠️ Pagamento não encontrado no banco:', externalRef);
                     }

@@ -117,32 +117,12 @@ export default function CatalogCheckout2() {
             const savedUser = JSON.parse(savedUserJSON);
             const referralCode = sessionStorage.getItem('referralCode'); // Pega ?ref do URL
 
-            // Criar registro de venda no catálogo
-            // ⚠️ IMPORTANTE: licensee_id deve ser o LICENCIADO que vendeu, não o comprador!
-            // O referralCode vem do ?ref=CODIGO_DO_LICENCIADO no URL
-            const sale = await CatalogSale.create({
-                product_id: product.id,
-                product_title: product.description,
-                product_image: product.image_urls?.[0] || '',
-                sale_price: product.price_catalog,
-                total_amount: product.price_catalog, // ✅ Campo usado pelo processCatalogCommission
-                buyer_id: savedUser.id,
-                buyer_name: savedUser.full_name,
-                buyer_email: email.trim(),
-                buyer_phone: phone.trim(),
-                licensee_id: referralCode || 'site_official', // ✅ CORRIGIDO: Licenciado âncora é quem indicou
-                referred_by_code: referralCode || '', // ✅ Campo correto com ?ref
-                status: 'pending_payment'
-            });
-
-            console.log('🛍️ Venda de catálogo criada:', sale.id);
-
-            // Criar preferência MP usando o product (ou auction)
+            // 🔒 PROTEÇÃO #1: Criar preferência MP PRIMEIRO, depois CatalogSale
+            // Evita race condition (sale órfã se MP falhar)
             console.log('🔄 Criando preferência MP para produto:', product.id);
             const response = await createMPPreference({ 
                 product_id: product.is_auction ? null : product.id,
                 auction_id: product.is_auction ? product.id : null,
-                catalog_sale_id: sale.id,
                 user_data: {
                     id: savedUser.id,
                     email: email.trim(),
@@ -159,32 +139,45 @@ export default function CatalogCheckout2() {
                     address_zip_code: addressZip.trim()
                 }
             });
+
+            // Validar resposta de MP ANTES de criar Sale
+            if (!response?.data?.success || !response?.data?.init_point) {
+                console.error('❌ MP não retornou preference_id válido');
+                toast.dismiss('checkout-loading');
+                toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
+                return;
+            }
+
+            // AGORA criar registro de venda no catálogo (DEPOIS de confirmação MP)
+            const sale = await CatalogSale.create({
+                product_id: product.id,
+                product_title: product.description,
+                product_image: product.image_urls?.[0] || '',
+                sale_price: product.price_catalog,
+                total_amount: product.price_catalog,
+                buyer_id: savedUser.id,
+                buyer_name: savedUser.full_name,
+                buyer_email: email.trim(),
+                buyer_phone: phone.trim(),
+                licensee_id: referralCode || 'site_official',
+                referred_by_code: referralCode || '',
+                status: 'pending_payment'
+            });
+
+            console.log('🛍️ Venda de catálogo criada:', sale.id);
             
             console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
             
             toast.dismiss('checkout-loading');
             
-            if (response?.data?.success) {
-                console.log('✅ Init Point:', response.data.init_point);
-                
-                if (!response.data.init_point) {
-                    toast.error('Erro: Link de pagamento não retornado');
-                    return;
-                }
-                
-                // 🔥 REDIRECIONAMENTO DIRETO PARA O MERCADO PAGO
-                console.log('🚀 Redirecionando para checkout MP:', response.data.init_point);
-                toast.success('Redirecionando para pagamento...');
-                
-                // Aguarda 500ms para usuário ver a mensagem
-                setTimeout(() => {
-                    window.location.href = response.data.init_point;
-                }, 500);
-                
-            } else {
-                console.error('❌ Erro na resposta:', response);
-                toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
-            }
+            // 🔥 REDIRECIONAMENTO DIRETO PARA O MERCADO PAGO
+            console.log('🚀 Redirecionando para checkout MP:', response.data.init_point);
+            toast.success('Redirecionando para pagamento...');
+            
+            // Aguarda 500ms para usuário ver a mensagem
+            setTimeout(() => {
+                window.location.href = response.data.init_point;
+            }, 500);
 
         } catch (error) {
             console.error('Erro:', error);
