@@ -105,96 +105,98 @@ const fileInputRef = useRef(null);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose?.()}>
-      <DialogContent className="sm:max-w-2xl bg-white border border-slate-200 text-slate-800">
+      <DialogContent className="sm:max-w-2xl bg-gray-900 border border-gray-700 text-gray-100">
         <DialogHeader>
           <DialogTitle>Catálogo do Vendedor</DialogTitle>
         </DialogHeader>
 
         {/* Busca por CPF */}
         <div className="mb-4 flex gap-2">
-          <Input placeholder="CPF do vendedor" value={cpf} onChange={(e) => setCpf(e.target.value)} />
-          <Button type="button" variant="outline" onClick={handleCpfSearch} className="gap-2">
+                        <Input placeholder="CPF do vendedor" value={cpf} onChange={(e) => setCpf(e.target.value)} className="bg-gray-800 border-gray-700 text-gray-100 placeholder:text-gray-400" />
+                        <Button type="button" variant="outline" onClick={handleCpfSearch} className="gap-2 bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-800">
             <Search className="w-4 h-4" /> Buscar
           </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-xl border border-gray-700 bg-gray-800 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Avatar */}
               <div className="col-span-1 md:col-span-2 flex items-center gap-3">
-                <button type="button" onClick={handleAvatarClick} className="relative h-14 w-14 rounded-full overflow-hidden border border-slate-200 bg-white grid place-items-center hover:ring-2 hover:ring-slate-300 transition">
+                <button type="button" onClick={handleAvatarClick} className="relative h-14 w-14 rounded-full overflow-hidden border border-gray-700 bg-gray-900 grid place-items-center hover:ring-2 hover:ring-gray-600 transition">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Foto do vendedor" className="h-full w-full object-cover" />
                   ) : (
                     <Camera className="w-6 h-6 text-slate-400" />
                   )}
                   {isUploading && (
-                    <div className="absolute inset-0 bg-white/60 grid place-items-center text-[10px] text-slate-600">Enviando...</div>
+                    <div className="absolute inset-0 bg-white/60 grid place-items-center text-[10px] text-gray-300">Enviando...</div>
                   )}
                 </button>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-                <div className="text-slate-700 font-medium">Catálogo do Vendedor</div>
+                <div className="text-gray-200 font-semibold">Catálogo do Vendedor</div>
               </div>
 
               {/* Nome */}
               <div>
-                <Label className="text-slate-600">Nome do vendedor</Label>
+                <Label className="text-gray-300">Nome do vendedor</Label>
                 <Input
-                  placeholder="Digite o nome dele aqui"
-                  value={fullName}
-                  onChange={(e) => {
-                    setFullName(e.target.value);
-                    if (!slug) setSlug(slugify(e.target.value));
-                  }}
-                  required
-                />
+                                        className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
+                                        placeholder="Digite o nome dele aqui"
+                                        value={fullName}
+                                        onChange={(e) => {
+                                          setFullName(e.target.value);
+                                          if (!slug) setSlug(slugify(e.target.value));
+                                        }}
+                                        required
+                                      />
               </div>
 
               {/* WhatsApp */}
               <div>
-                <Label className="text-slate-600">WhatsApp do vendedor</Label>
+                <Label className="text-gray-300">WhatsApp do vendedor</Label>
                 <div className="flex">
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200 bg-white text-slate-500">+55</span>
                   <Input
-                    className="rounded-l-none"
-                    placeholder="(21) 98407-2064"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    
-                  />
+                                            className="rounded-l-none bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
+                                            placeholder="(21) 98407-2064"
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
+
+                                          />
                 </div>
               </div>
 
               {/* Email */}
               <div className="md:col-span-2">
-                <Label className="text-slate-600">E-mail para contato (opcional)</Label>
+                <Label className="text-gray-300">E-mail para contato (opcional)</Label>
                 <Input
-                  type="email"
-                  placeholder="vendedor@provedor.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                                        type="email"
+                                        placeholder="vendedor@provedor.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
+                                      />
               </div>
 
               {/* Endereço do catálogo */}
               <div className="md:col-span-2">
-                <Label className="text-slate-600">Endereço do catálogo do vendedor</Label>
+                <Label className="text-gray-300">Endereço do catálogo do vendedor</Label>
                 <div className="flex flex-nowrap items-stretch">
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200 bg-white text-slate-500 whitespace-nowrap shrink-0 text-sm">https://leilaonozap.net/catalog?ref=</span>
                   <Input
-                    className="rounded-l-none flex-1 min-w-0"
-                    placeholder="Ex: nome-do-vendedor"
-                    value={suggestedSlug}
-                    onChange={(e) => setSlug(slugify(e.target.value))}
-                  />
+                                            className="rounded-l-none flex-1 min-w-0 bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
+                                            placeholder="Ex: nome-do-vendedor"
+                                            value={suggestedSlug}
+                                            onChange={(e) => setSlug(slugify(e.target.value))}
+                                          />
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={onClose} className="bg-gray-900 border-gray-700 text-gray-100 hover:bg-gray-800">Cancelar</Button>
             <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
               {isSubmitting ? "Salvando..." : "Salvar"}
             </Button>
