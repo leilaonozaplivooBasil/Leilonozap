@@ -84,11 +84,12 @@ Deno.serve(async (req) => {
     const isAutomation = !!payload?.event;
     const user = await base44.auth.me().catch(() => null);
 
-    // Permite: automação, user admin, ou qualquer função backend (service role)
-    const isServiceRoleCall = !user; // Quando chamado via functions.invoke(), sem auth
+    // Permite: automação, user admin, ou chamada interna via functions.invoke()
     const isAdmin = user?.role === 'admin';
-    const isAllowed = isAutomation || isAdmin || isServiceRoleCall;
+    const isAllowed = isAutomation || isAdmin;
 
+    // Se não é automação e não é admin, rejeita
+    // (functions.invoke() do asServiceRole passa por aqui, mas com admin)
     if (!isAllowed) {
       return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
