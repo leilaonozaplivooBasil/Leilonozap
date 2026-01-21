@@ -44,12 +44,13 @@ export default function CartPopup({ isOpen, onClose }) {
     
     const newCart = cartItems.map(item => {
       if (item.id === productId) {
+        const currentQty = item.quantity || 1;
         const maxQty = item.availableStock || 999;
+        const finalQuantity = Math.min(newQuantity, maxQty);
         if (newQuantity > maxQty) {
           toast.error(`Apenas ${maxQty} unidades disponíveis`);
-          return { ...item, quantity: maxQty };
         }
-        return { ...item, quantity: newQuantity };
+        return { ...item, quantity: finalQuantity };
       }
       return item;
     });
