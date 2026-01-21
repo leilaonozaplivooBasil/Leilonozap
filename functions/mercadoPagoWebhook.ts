@@ -124,54 +124,76 @@ Deno.serve(async (req) => {
                               let updateErrors = [];
 
                               if (dbPayment.auction_id) {
-                                  try {
-                                      await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
-                                          order_status: 'paid'
-                                      });
-                                      console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
-
-                                      // ✅ Processa comissão de 3% para o Influencer
                                       try {
-                                          await base44.asServiceRole.functions.invoke('processAuctionInfluencerCommission', {
-                                              auction_id: dbPayment.auction_id
+                                          await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
+                                              order_status: 'paid'
                                           });
-                                          console.log(`✅ Comissão 3% do Influencer processada para leilão ${dbPayment.auction_id}`);
-                                      } catch (commErr) {
-                                          // 🔒 PROTEÇÃO #5: Se comissão falha, REGISTRA mas não silencia
-                                          updateErrors.push(`Comissão Influencer falhou: ${commErr.message}`);
-                                          console.error(`❌ Erro ao processar comissão do Influencer:`, commErr.message);
+                                          console.log(`💰 Leilão ${dbPayment.auction_id} marcado como pago`);
+
+                                          // ✅ Processa comissão de 3% para o Influencer
+                                          try {
+                                              await base44.asServiceRole.functions.invoke('processAuctionInfluencerCommission', {
+                                                  auction_id: dbPayment.auction_id
+                                              });
+                                              console.log(`✅ Comissão 3% do Influencer processada para leilão ${dbPayment.auction_id}`);
+                                          } catch (commErr) {
+                                              // 🔒 PROTEÇÃO #5: Se comissão falha, REGISTRA mas não silencia
+                                              updateErrors.push(`Comissão Influencer falhou: ${commErr.message}`);
+                                              console.error(`❌ Erro ao processar comissão do Influencer:`, commErr.message);
+                                          }
+                                      } catch (auctionErr) {
+                                          updateErrors.push(`Atualização de Auction falhou: ${auctionErr.message}`);
+                                          console.error(`❌ Erro ao atualizar Auction:`, auctionErr.message);
                                       }
-                                  } catch (auctionErr) {
-                                      updateErrors.push(`Atualização de Auction falhou: ${auctionErr.message}`);
-                                      console.error(`❌ Erro ao atualizar Auction:`, auctionErr.message);
                                   }
-                              }
 
-                              if (dbPayment.catalog_sale_id) {
-                                  try {
-                                      await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
-                                          status: 'paid'
-                                      });
-                                      console.log(`🛒 CatalogSale ${dbPayment.catalog_sale_id} marcada como paga`);
-
-                                      // ✅ Processa distribuição de comissões automaticamente
+                                  if (dbPayment.catalog_sale_id) {
                                       try {
-                                          await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-                                              sale_id: dbPayment.catalog_sale_id
+                                          await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
+                                              status: 'paid',
+                                              payment_id: String(paymentId)
                                           });
-                                          console.log(`✅ Comissões processadas para sale ${dbPayment.catalog_sale_id}`);
-                                      } catch (commErr) {
-                                          // 🔒 PROTEÇÃO #5: Se comissão falha, REGISTRA erro e RELANÇA
-                                          updateErrors.push(`Comissão Catálogo falhou: ${commErr.message}`);
-                                          console.error(`❌ Erro ao processar comissões:`, commErr.message);
-                                          throw new Error(`Comissão catálogo falhou - Sale pode ficar inconsistente: ${commErr.message}`);
+                                          console.log(`🛒 CatalogSale ${dbPayment.catalog_sale_id} marcada como paga`);
+
+                                          // ✅ Processa distribuição de comissões automaticamente
+                                          try {
+                                              const commissionResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                                                  sale_id: dbPayment.catalog_sale_id
+                                              });
+                                              console.log(`✅ Comissões processadas para sale ${dbPayment.catalog_sale_id}`);
+
+                                              // 📊 Registrar rastreamento completo com comissões
+                                              try {
+                                                  const sale = (await base44.asServiceRole.entities.CatalogSale.filter({ id: dbPayment.catalog_sale_id }))[0];
+                                                  await base44.asServiceRole.functions.invoke('trackPaymentFlow', {
+                                                      payment_id: String(paymentId),
+                                                      product_id: dbPayment.product_id,
+                                                      buyer_id: dbPayment.user_id,
+                                                      licensee_id: sale?.licensee_id,
+                                                      referral_code: sale?.referred_by_code,
+                                                      catalog_sale_id: dbPayment.catalog_sale_id,
+                                                      mercadopago_payment_id: dbPayment.id,
+                                                      amount: dbPayment.amount,
+                                                      status: 'approved',
+                                                      stage: 'commissions_processed',
+                                                      event: 'payment_approved_and_commissions_distributed',
+                                                      commissions: commissionResult?.data?.assignments || []
+                                                  });
+                                              } catch (trackErr) {
+                                                  console.warn('⚠️ Erro ao registrar rastreamento final:', trackErr.message);
+                                              }
+                                          } catch (commErr) {
+                                              // 🔒 PROTEÇÃO #5: Se comissão falha, REGISTRA erro e RELANÇA
+                                              updateErrors.push(`Comissão Catálogo falhou: ${commErr.message}`);
+                                              console.error(`❌ Erro ao processar comissões:`, commErr.message);
+                                              throw new Error(`Comissão catálogo falhou - Sale pode ficar inconsistente: ${commErr.message}`);
+                                          }
+                                      } catch (saleErr) {
+                                          updateErrors.push(`Atualização de Sale falhou: ${saleErr.message}`);
+                                          console.error(`❌ Erro ao atualizar CatalogSale:`, saleErr.message);
+                                          throw saleErr;
                                       }
-                                  } catch (saleErr) {
-                                      updateErrors.push(`Atualização de Sale falhou: ${saleErr.message}`);
-                                      console.error(`❌ Erro ao atualizar CatalogSale:`, saleErr.message);
-                                      throw saleErr;
                                   }
-                              }
 
                               if (updateErrors.length > 0) {
                                   console.warn(`⚠️ Erros detectados no processamento:`, updateErrors);

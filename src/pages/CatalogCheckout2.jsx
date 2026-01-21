@@ -167,6 +167,24 @@ export default function CatalogCheckout2() {
 
             console.log(`🛍️ CatalogSale criada com ID: ${sale.id} | Licensee: ${licenseeId}`);
 
+            // 📊 Registrar rastreamento inicial
+            try {
+                await base44.functions.invoke('trackPaymentFlow', {
+                    payment_id: `checkout_${sale.id}`,
+                    product_id: product.id,
+                    buyer_id: savedUser.id,
+                    licensee_id: licenseeId,
+                    referral_code: referralCode || null,
+                    catalog_sale_id: sale.id,
+                    amount: product.price_catalog,
+                    status: 'pending',
+                    stage: 'sale_created',
+                    event: 'catalog_sale_created'
+                });
+            } catch (trackErr) {
+                console.warn('⚠️ Erro ao registrar rastreamento:', trackErr.message);
+            }
+
             // 🔒 PASSO 3: Criar preferência MP com catalog_sale_id vinculado
             console.log('📤 Enviando para Mercado Pago...');
             const response = await createMPPreference({
