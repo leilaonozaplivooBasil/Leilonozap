@@ -439,7 +439,18 @@ export default function Catalog() {
                 </div>
               </div>
 
-
+              {licenseePhone && (
+                <a
+                  href={`https://wa.me/55${licenseePhone.replace(/\D/g, '')}?text=Olá! Gostaria de saber mais sobre os produtos do catálogo.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+                  title="Falar com o licenciado"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span className="hidden sm:inline">Falar com Licenciado</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
