@@ -10,6 +10,7 @@ import { Search, Plus, Copy, Edit, Link2, ExternalLink } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 import LicenseeFormModal from "../components/licensees/LicenseeFormModal";
 import LicenseeListItem from "../components/licensees/LicenseeListItem";
 
@@ -48,6 +49,7 @@ export default function RegisterLicensee() {
   const referral = selected?.referral_code || "";
   const catalogLink = referral ? `https://leilaonozap.app/catalog?ref=${referral}` : "";
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
+  const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
   const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
   const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
   const visitsData = useMemo(() => (
@@ -154,7 +156,17 @@ export default function RegisterLicensee() {
                     </div>
                     <div className="p-4 rounded-xl bg-white border border-slate-200">
                       <div className="text-xs text-slate-500">Última venda</div>
-                      <div className="text-lg">—</div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-lg font-semibold text-slate-800">182 visitas</span>
+                        <div className="w-28 h-8">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={visitsData}>
+                              <Line type="monotone" dataKey="v" stroke="#22c55e" strokeWidth={2} dot={false} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                      <div className="text-xs text-slate-500 mt-2">4 contatos</div>
                     </div>
                   </div>
 
