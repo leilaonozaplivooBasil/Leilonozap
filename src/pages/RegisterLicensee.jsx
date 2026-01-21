@@ -11,6 +11,8 @@ import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 import LicenseeFormModal from "../components/licensees/LicenseeFormModal";
 import LicenseeListItem from "../components/licensees/LicenseeListItem";
+import { useNavigate } from "react-router-dom";
+import { createPageUrl } from "@/utils";
 
 function copyToClipboard(text){
   navigator.clipboard.writeText(text);
@@ -26,6 +28,7 @@ function shareLink(url, name){
 
 export default function RegisterLicensee() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -234,8 +237,26 @@ const visitsData = useMemo(() => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <Button variant="ghost" className="text-green-400 hover:text-green-500">Ver pedidos</Button>
-                    <Button variant="ghost" className="text-green-400 hover:text-green-500">Editar cadastro</Button>
+                    <Button
+                      variant="ghost"
+                      className="text-green-400 hover:text-green-500"
+                      disabled={!selected}
+                      onClick={() => {
+                        if (!selected) return;
+                        const url = createPageUrl("LicenseeOrders") + `?licenseeId=${selected.id}&ref=${encodeURIComponent(selected.referral_code || "")}&name=${encodeURIComponent(selected.full_name || "")}`;
+                        navigate(url);
+                      }}
+                    >
+                      Ver pedidos
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className="text-green-400 hover:text-green-500"
+                      disabled={!selected}
+                      onClick={() => setShowModal(true)}
+                    >
+                      Editar cadastro
+                    </Button>
                   </div>
                 </>
               ) : (
