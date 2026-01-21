@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Search, Plus, Copy, Edit, Link2, ExternalLink } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 import LicenseeFormModal from "../components/licensees/LicenseeFormModal";
 import LicenseeListItem from "../components/licensees/LicenseeListItem";
 
@@ -46,6 +47,7 @@ export default function RegisterLicensee() {
   const referral = selected?.referral_code || "";
   const catalogLink = referral ? `https://leilaonozap.app/catalog?ref=${referral}` : "";
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
+  const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
   const visitsData = useMemo(() => (
     [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v }))
   ), []);
@@ -161,7 +163,9 @@ export default function RegisterLicensee() {
                   </div>
                   <Separator className="bg-slate-200" />
 
-                  <div className="flex justify-end">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-sm">{selected?.full_name} não teve visitas em seu catálogo nos últimos 30 dias. Assim que houver visitas, este gráfico será exibido aqui.</div>
+
+                  <div className="flex justify-between gap-3">
                     <Button variant="outline" className="border-slate-300 text-slate-700 gap-2">
                       <Edit className="w-4 h-4" /> Editar cadastro
                     </Button>
