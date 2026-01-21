@@ -98,6 +98,25 @@ Deno.serve(async (req) => {
                             if (sales.length > 0) {
                                 updatePayload.catalog_sale_id = sales[0].id;
                                 console.log(`🔗 Vinculando catalog_sale_id: ${sales[0].id}`);
+
+                                // 📊 Registrar rastreamento quando encontra sale
+                                try {
+                                    await base44.asServiceRole.functions.invoke('trackPaymentFlow', {
+                                        payment_id: String(paymentId),
+                                        product_id: dbPayment.product_id,
+                                        buyer_id: dbPayment.user_id,
+                                        licensee_id: sales[0].licensee_id,
+                                        referral_code: sales[0].referred_by_code,
+                                        catalog_sale_id: sales[0].id,
+                                        mercadopago_payment_id: dbPayment.id,
+                                        amount: dbPayment.amount,
+                                        status: payment.status,
+                                        stage: 'sale_found',
+                                        event: 'catalog_sale_linked_to_payment'
+                                    });
+                                } catch (trackErr) {
+                                    console.warn('⚠️ Erro ao registrar rastreamento:', trackErr.message);
+                                }
                             }
                         }
 
