@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         if (!acc[role]) acc[role] = [];
         acc[role].push(r);
         return acc;
-      }, {} as Record<string, any[]>);
+      }, {});
 
       for (const role of Object.keys(byRole)) {
         const arr = byRole[role];
