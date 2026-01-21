@@ -420,6 +420,10 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [isLoadingSales, setIsLoadingSales] = useState(false);
   const [myCatalogSales, setMyCatalogSales] = useState([]);
 
+  // Comissões
+  const [myCommissionRecords, setMyCommissionRecords] = useState([]);
+  const [isLoadingCommissions, setIsLoadingCommissions] = useState(false);
+
   // 🆕 REF PARA EVITAR MÚLTIPLAS CHAMADAS SIMULTÂNEAS
   const isFetchingRef = useRef(false);
   const lastFetchTimeRef = useRef(0);
@@ -659,6 +663,21 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   }, [user, isLoadingSales]);
 
+  const fetchMyCommissionRecords = useCallback(async () => {
+    if (!user || !user.id || isLoadingCommissions) return;
+    setIsLoadingCommissions(true);
+    try {
+      await delay(500);
+      const records = await base44.entities.CommissionRecord.filter({ user_id: user.id }, "-created_date", 200);
+      setMyCommissionRecords(Array.isArray(records) ? records : []);
+    } catch (error) {
+      console.error("Erro ao buscar comissões:", error);
+      setMyCommissionRecords([]);
+    } finally {
+      setIsLoadingCommissions(false);
+    }
+  }, [user, isLoadingCommissions]);
+
   const loadAllUsers = useCallback(async () => {
     if (isLoadingUsers) return;
 
@@ -698,6 +717,10 @@ const DashboardContent = ({ user, isAdmin }) => {
       // 4️⃣ Aguarda mais 2s e busca vendas
       await delay(2000);
       await fetchMySales();
+
+      // 4.1️⃣ Aguarda mais 2s e busca comissões
+      await delay(2000);
+      await fetchMyCommissionRecords();
 
       // 5️⃣ Aguarda mais 3s e busca todos usuários (se admin)
       if (isAdmin) {
@@ -1250,6 +1273,16 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <span className="text-5xl font-bold text-white">
                   R$ {(user.valora_pay_balance || 0).toFixed(2)}
                 </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
+                  <p className="text-xs text-green-300">Saldo para Saque</p>
+                  <p className="text-lg font-bold text-green-400">R$ {(user.commission_balance || 0).toFixed(2)}</p>
+                </div>
+                <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
+                  <p className="text-xs text-blue-300">Saldo Catálogo</p>
+                  <p className="text-lg font-bold text-blue-400">R$ {(user.catalog_commission_balance || 0).toFixed(2)}</p>
+                </div>
               </div>
               {pendingWithdrawalAmount > 0 &&
               <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4">
@@ -1856,6 +1889,52 @@ const DashboardContent = ({ user, isAdmin }) => {
                 <BarChart className="w-5 h-5 mr-2" />
                 Ver Histórico Detalhado por Venda
               </Button>
+
+              {/* Histórico de Comissões */}
+              <div className={`mt-6 rounded-xl border ${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}`}>
+                <div className="p-4 border-b border-gray-700/50">
+                  <h4 className={`${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} font-semibold`}>Histórico de Comissões</h4>
+                  <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm`}>Últimos lançamentos de App e Catálogo</p>
+                </div>
+                {isLoadingCommissions ? (
+                  <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-green-500" /></div>
+                ) : myCommissionRecords.length === 0 ? (
+                  <div className={`text-center py-10 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Nenhuma comissão encontrada.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Canal</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Cargo</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700 text-right' : 'text-gray-400 text-right'}>%</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700 text-right' : 'text-gray-400 text-right'}>Valor (R$)</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {myCommissionRecords.map((rec) => (
+                          <TableRow key={rec.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>
+                              {new Date(rec.created_date).toLocaleString('pt-BR')}
+                            </TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>
+                              {rec.sale_type === 'catalog' ? 'Catálogo' : 'App'}
+                            </TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.role}</TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.product_title || '-'}</TableCell>
+                            <TableCell className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-right text-sm`}>{(rec.percent || 0).toFixed(2)}%</TableCell>
+                            <TableCell className="text-green-400 text-right font-semibold">R$ {(rec.amount || 0).toFixed(2)}</TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.status || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

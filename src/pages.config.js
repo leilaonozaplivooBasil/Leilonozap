@@ -22,6 +22,7 @@ import CheckoutAsaas from './pages/CheckoutAsaas';
 import CommissionDistributionFull from './pages/CommissionDistributionFull';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
+import CreateCatalogProduct from './pages/CreateCatalogProduct';
 import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
 import CustomerDetails from './pages/CustomerDetails';
 import DiretoDeFabrica from './pages/DiretoDeFabrica';
@@ -72,7 +73,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import CreateCatalogProduct from './pages/CreateCatalogProduct';
 import __Layout from './Layout.jsx';
 
 
@@ -101,6 +101,7 @@ export const PAGES = {
     "CommissionDistributionFull": CommissionDistributionFull,
     "CreateAuction": CreateAuction,
     "CreateAuctionV2": CreateAuctionV2,
+    "CreateCatalogProduct": CreateCatalogProduct,
     "CreateLuxuryAuction": CreateLuxuryAuction,
     "CustomerDetails": CustomerDetails,
     "DiretoDeFabrica": DiretoDeFabrica,
@@ -151,7 +152,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "CreateCatalogProduct": CreateCatalogProduct,
 }
 
 export const pagesConfig = {
