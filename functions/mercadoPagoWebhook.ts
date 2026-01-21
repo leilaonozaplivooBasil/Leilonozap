@@ -78,13 +78,27 @@ Deno.serve(async (req) => {
                             return;
                         }
 
-                        // Atualizar status
-                        await base44.asServiceRole.entities.MercadoPagoPayment.update(dbPayment.id, {
+                        // 🔒 PROTEÇÃO #3c: Atualizar catalog_sale_id se vem do catálogo
+                        const updatePayload = {
                             payment_id: String(paymentId),
                             status: payment.status,
                             payment_method: payment.payment_type_id || payment.payment_method_id
-                        });
+                        };
 
+                        // Se tem product_id mas não tem catalog_sale_id, procura a sale
+                        if (dbPayment.product_id && !dbPayment.catalog_sale_id) {
+                            const sales = await base44.asServiceRole.entities.CatalogSale.filter({
+                                product_id: dbPayment.product_id,
+                                buyer_id: dbPayment.user_id,
+                                status: 'pending_payment'
+                            });
+                            if (sales.length > 0) {
+                                updatePayload.catalog_sale_id = sales[0].id;
+                                console.log(`🔗 Vinculando catalog_sale_id: ${sales[0].id}`);
+                            }
+                        }
+
+                        await base44.asServiceRole.entities.MercadoPagoPayment.update(dbPayment.id, updatePayload);
                         console.log(`✅ Status atualizado: ${payment.status}`);
 
                         // Se aprovado, marcar leilão como pago e processar comissões
