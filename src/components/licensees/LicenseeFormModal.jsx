@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,9 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
     const [slug, setSlug] = useState("");
   const [foundUser, setFoundUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+const [avatarUrl, setAvatarUrl] = useState("");
+const [isUploading, setIsUploading] = useState(false);
+const fileInputRef = useRef(null);
 
   const suggestedCode = useMemo(() => {
     const base = slugify(fullName).replace(/-/g, "");
@@ -42,10 +45,21 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
       setFullName(u.full_name || "");
       setEmail(u.email || "");
       setPhone(u.phone || "");
+      setAvatarUrl(u.avatar_url || "");
       if (u.nickname) setSlug(u.nickname);
     } else {
       setFoundUser(null);
     }
+  };
+
+  const handleAvatarClick = () => fileInputRef.current?.click();
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    setAvatarUrl(file_url);
+    setIsUploading(false);
   };
 
   const handleSubmit = async (e) => {
@@ -62,6 +76,7 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
       terms_accepted: true,
       referral_code: (foundUser && foundUser.referral_code) ? foundUser.referral_code : suggestedCode,
       nickname: suggestedSlug,
+      avatar_url: avatarUrl,
     };
 
     let res;
@@ -97,9 +112,17 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Avatar */}
               <div className="col-span-1 md:col-span-2 flex items-center gap-3">
-                <div className="h-14 w-14 rounded-full bg-white grid place-items-center border border-slate-200">
-                  <Camera className="w-6 h-6 text-slate-400" />
-                </div>
+                <button type="button" onClick={handleAvatarClick} className="relative h-14 w-14 rounded-full overflow-hidden border border-slate-200 bg-white grid place-items-center hover:ring-2 hover:ring-slate-300 transition">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Foto do vendedor" className="h-full w-full object-cover" />
+                  ) : (
+                    <Camera className="w-6 h-6 text-slate-400" />
+                  )}
+                  {isUploading && (
+                    <div className="absolute inset-0 bg-white/60 grid place-items-center text-[10px] text-slate-600">Enviando...</div>
+                  )}
+                </button>
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
                 <div className="text-slate-700 font-medium">Catálogo do Vendedor</div>
               </div>
 
