@@ -112,15 +112,42 @@ export default function CatalogCheckout2() {
         console.log('✅ Validações OK, processando...');
         toast.loading('Processando compra...', { id: 'checkout-loading' });
 
+        let sale = null;
         try {
             const savedUserJSON = localStorage.getItem('currentUser');
             const savedUser = JSON.parse(savedUserJSON);
-            const referralCode = sessionStorage.getItem('referralCode'); // Pega ?ref do URL
+            const referralCode = sessionStorage.getItem('referralCode');
 
-            // 🔒 PROTEÇÃO #1: Criar CatalogSale PRIMEIRO, depois preferência MP
-            // Garante que catalog_sale_id existe antes de enviar para MP
-            console.log('🔄 Criando registro de venda no catálogo...');
-            const sale = await CatalogSale.create({
+            // 🔒 PASSO 1: Resolver licensee_id (ID real, não string)
+            let licenseeId = null;
+            let licenseeData = null;
+
+            if (referralCode) {
+                try {
+                    // Buscar usuário pelo referral_code
+                    const AppUser = base44.entities.AppUser;
+                    const licensees = await AppUser.filter({ referral_code: referralCode });
+                    if (licensees && licensees.length > 0) {
+                        licenseeData = licensees[0];
+                        licenseeId = licenseeData.id;
+                        console.log(`✅ Licensee encontrado: ${licenseeData.full_name} (${licenseeId})`);
+                    } else {
+                        console.warn(`⚠️ Nenhum licensee encontrado para código: ${referralCode}`);
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Erro ao buscar licensee:', e.message);
+                }
+            }
+
+            // Fallback: site_official se não encontrar licensee
+            if (!licenseeId) {
+                licenseeId = 'site_official';
+                console.log('📍 Usando site_official como padrão');
+            }
+
+            // 🔒 PASSO 2: Criar CatalogSale com licensee_id correto
+            console.log('🔄 Criando venda com licensee_id:', licenseeId);
+            sale = await CatalogSale.create({
                 product_id: product.id,
                 product_title: product.description,
                 product_image: product.image_urls?.[0] || '',
@@ -130,19 +157,22 @@ export default function CatalogCheckout2() {
                 buyer_name: savedUser.full_name,
                 buyer_email: email.trim(),
                 buyer_phone: phone.trim(),
-                licensee_id: referralCode || 'site_official',
+                licensee_id: licenseeId,
+                licensee_name: licenseeData?.full_name || null,
+                licensee_plan: licenseeData?.primary_career_level || null,
                 referred_by_code: referralCode || '',
+                referral_code: referralCode || null,
                 status: 'pending_payment'
             });
 
-            console.log('🛍️ Venda de catálogo criada:', sale.id);
+            console.log(`🛍️ CatalogSale criada com ID: ${sale.id} | Licensee: ${licenseeId}`);
 
-            // Agora criar preferência MP com catalog_sale_id vinculado
-            console.log('🔄 Criando preferência MP para produto:', product.id);
-            const response = await createMPPreference({ 
+            // 🔒 PASSO 3: Criar preferência MP com catalog_sale_id vinculado
+            console.log('📤 Enviando para Mercado Pago...');
+            const response = await createMPPreference({
                 product_id: product.is_auction ? null : product.id,
                 auction_id: product.is_auction ? product.id : null,
-                catalog_sale_id: product.is_auction ? null : sale.id, // ✅ Vincula a venda
+                catalog_sale_id: product.is_auction ? null : sale.id,
                 user_data: {
                     id: savedUser.id,
                     email: email.trim(),
@@ -162,42 +192,40 @@ export default function CatalogCheckout2() {
 
             // Validar resposta de MP
             if (!response?.data?.success || !response?.data?.init_point) {
-                console.error('❌ MP não retornou preference_id válido');
+                console.error('❌ MP falhou');
                 toast.dismiss('checkout-loading');
-                toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
-                
-                // Se falhou, deletar a sale órfã
+                toast.error(response?.data?.error || 'Erro ao processar pagamento');
+
+                // Limpar sale órfã
                 try {
                     await base44.entities.CatalogSale.delete(sale.id);
-                    console.log('🧹 Venda órfã deletada:', sale.id);
+                    console.log('🧹 CatalogSale deletada');
                 } catch (delErr) {
-                    console.warn('⚠️ Erro ao deletar sale:', delErr.message);
+                    console.warn('⚠️ Erro ao limpar:', delErr.message);
                 }
                 return;
             }
-            
-            console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
-            
+
+            console.log('✅ Mercado Pago pronto');
             toast.dismiss('checkout-loading');
-            toast.success('Redirecionando para pagamento...');
-            
-            // 🔥 REDIRECIONAMENTO IMEDIATO (sem delay)
-            console.log('🚀 Redirecionando para checkout MP:', response.data.init_point);
+            toast.success('Redirecionando...');
+
+            // 🔥 Redirecionar para checkout
             window.location.href = response.data.init_point;
 
         } catch (error) {
-            console.error('Erro:', error);
+            console.error('❌ Erro:', error.message);
             toast.dismiss('checkout-loading');
             toast.error('Erro ao processar compra');
-            
-            // Se houver erro, tentar deletar sale órfã
-            try {
-                if (typeof sale !== 'undefined' && sale?.id) {
+
+            // Limpar sale em caso de erro
+            if (sale?.id) {
+                try {
                     await base44.entities.CatalogSale.delete(sale.id);
-                    console.log('🧹 Venda órfã deletada por erro:', sale.id);
+                    console.log('🧹 CatalogSale deletada após erro');
+                } catch (delErr) {
+                    console.warn('⚠️ Erro ao limpar:', delErr.message);
                 }
-            } catch (delErr) {
-                console.warn('⚠️ Erro ao deletar sale órfã:', delErr.message);
             }
         }
     };
