@@ -1,14 +1,35 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+    // 🔒 PROTEÇÃO #0: Validar método POST
+    if (req.method !== 'POST') {
+        return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    }
+
     try {
+        // 📥 Parse body com segurança
+        let body;
+        try {
+            body = await req.json();
+        } catch (parseErr) {
+            console.error('❌ Erro ao fazer parse do JSON:', parseErr.message);
+            return Response.json({ received: true }, { status: 200 }); // Retorna 200 mesmo com erro
+        }
+
+        console.log('📥 Webhook recebido (POST):', {
+            action: body.action,
+            type: body.type,
+            payment_id: body.data?.id,
+            live_mode: body.live_mode
+        });
+
         const base44 = createClientFromRequest(req);
+        
+        // ✅ Retorna 200 imediatamente (sem autenticação)
+        // Processamento acontece em background
+        const responseReturned = Response.json({ received: true }, { status: 200 });
 
-        // Responder imediatamente para o MP
-        const body = await req.json();
-        console.log('📥 Webhook recebido:', JSON.stringify(body, null, 2));
-
-        // Processar em background
+        // 🔄 Processar em background (não bloqueia resposta 200)
         (async () => {
             try {
                 const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
@@ -255,10 +276,12 @@ Deno.serve(async (req) => {
             }
         })();
 
-        return Response.json({ success: true });
+        // ✅ Retorna 200 imediatamente (MP deixa de dar 405)
+        return responseReturned;
 
     } catch (error) {
-        console.error('❌ Erro no webhook:', error);
-        return Response.json({ success: true }); // Sempre retornar 200 para o MP
+        console.error('❌ Erro crítico no webhook:', error.message);
+        // Sempre retorna 200 para o MP não ficar tentando (não quebra retry)
+        return Response.json({ received: true }, { status: 200 });
     }
 });
