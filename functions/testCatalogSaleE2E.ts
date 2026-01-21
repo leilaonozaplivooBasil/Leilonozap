@@ -201,8 +201,9 @@ Deno.serve(async (req) => {
 
     // PASSO 12: Buscar CommissionRecords
     console.log('\n📍 PASSO 12: Buscando CommissionRecords...');
-    const records = await base44.asServiceRole.entities.CommissionRecord.filter({ sale_id: sale.id });
-    console.log(`✅ ${records.length} registro(s) de comissão encontrado(s)`);
+    const records = await base44.entities.CommissionRecord.list();
+    const saleRecords = records.filter(r => r.sale_id === sale.id);
+    console.log(`✅ ${saleRecords.length} registro(s) de comissão encontrado(s)`);
     
     records.forEach((record, idx) => {
       console.log(`\n  📌 Comissão #${idx + 1}:`);
