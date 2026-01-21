@@ -107,7 +107,7 @@ const fileInputRef = useRef(null);
     <Dialog open={open} onOpenChange={(v) => !v && onClose?.()}>
       <DialogContent className="sm:max-w-2xl bg-gray-900 border border-gray-700 text-gray-100">
         <DialogHeader>
-          <DialogTitle>Catálogo do Vendedor</DialogTitle>
+          <DialogTitle className="text-gray-100">Catálogo do Vendedor</DialogTitle>
         </DialogHeader>
 
         {/* Busca por CPF */}
@@ -127,7 +127,7 @@ const fileInputRef = useRef(null);
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Foto do vendedor" className="h-full w-full object-cover" />
                   ) : (
-                    <Camera className="w-6 h-6 text-slate-400" />
+                    <Camera className="w-6 h-6 text-gray-400" />
                   )}
                   {isUploading && (
                     <div className="absolute inset-0 bg-gray-900/60 grid place-items-center text-[10px] text-gray-300">Enviando...</div>
@@ -156,7 +156,7 @@ const fileInputRef = useRef(null);
               <div>
                 <Label className="text-gray-300">WhatsApp do vendedor</Label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-700 bg-gray-900 text-gray-400">+55</span>
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-700 bg-gray-800 text-gray-300">+55</span>
                   <Input
                                             className="rounded-l-none bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
                                             placeholder="(21) 98407-2064"
@@ -183,7 +183,7 @@ const fileInputRef = useRef(null);
               <div className="md:col-span-2">
                 <Label className="text-gray-300">Endereço do catálogo do vendedor</Label>
                 <div className="flex flex-nowrap items-stretch">
-                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-700 bg-gray-900 text-gray-400 whitespace-nowrap shrink-0 text-sm">https://leilaonozap.net/catalog?ref=</span>
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-700 bg-gray-800 text-gray-300 whitespace-nowrap shrink-0 text-sm">https://leilaonozap.net/catalog?ref=</span>
                   <Input
                                             className="rounded-l-none flex-1 min-w-0 bg-gray-900 border-gray-700 text-gray-100 placeholder:text-gray-400"
                                             placeholder="Ex: nome-do-vendedor"
