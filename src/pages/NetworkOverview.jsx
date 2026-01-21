@@ -24,6 +24,7 @@ import { cleanSiteDuplicates } from "@/functions/cleanSiteDuplicates"; // Update
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
+import RegisterLicenseeModal from "../components/admin/RegisterLicenseeModal";
 import TreeHierarchy from "../components/network/TreeHierarchy";
 
 const CAREER_LEVELS = [
