@@ -16,12 +16,6 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me().catch(() => null);
-    
-    // Aceita qualquer usuário autenticado para teste
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
 
     console.log('\n🧪 ═══════════════════════════════════════════════════════════');
     console.log('🧪 INICIANDO TESTE E2E DE VENDA DE CATÁLOGO');
@@ -34,7 +28,7 @@ Deno.serve(async (req) => {
 
     // PASSO 1: Buscar um licenciado_catalogo
     console.log('📍 PASSO 1: Buscando licenciado_catalogo...');
-    const licensees = await base44.asServiceRole.entities.AppUser.filter({});
+    const licensees = await base44.entities.AppUser.list();
     const licensee = licensees.find(u => 
       Array.isArray(u.career_levels) && u.career_levels.includes('licenciado_catalogo')
     );
