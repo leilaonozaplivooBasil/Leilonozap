@@ -635,7 +635,7 @@ export default function Layout({ children, currentPageName }) {
                   </button>
 
                   {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado) */}
-                  {isLoggedIn && (
+                  {isLoggedIn && isCatalogPage && (
                   <Link
                     to={createPageUrl("Profile") + (isCatalogPage ? "?from=catalog" : "")}
                     className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
