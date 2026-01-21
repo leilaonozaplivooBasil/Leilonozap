@@ -24,7 +24,6 @@ import { cleanSiteDuplicates } from "@/functions/cleanSiteDuplicates"; // Update
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import UserEditModal from "../components/admin/UserEditModal";
 import MessageDispatcher from "../components/admin/MessageDispatcher";
-import RegisterLicenseeModal from "../components/admin/RegisterLicenseeModal";
 import TreeHierarchy from "../components/network/TreeHierarchy";
 
 const CAREER_LEVELS = [
@@ -546,7 +545,6 @@ export default function NetworkOverview() {
   const [showMessageDispatcher, setShowMessageDispatcher] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [showRegisterLicensee, setShowRegisterLicensee] = useState(false);
   
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
@@ -1120,14 +1118,6 @@ export default function NetworkOverview() {
               </svg>
               Disparar Mensagens
             </Button>
-
-            <Button
-              onClick={() => setShowRegisterLicensee(true)}
-              className="bg-green-600 hover:bg-green-700"
-              size="sm"
-            >
-              Registrar licenciado
-            </Button>
           </div>
         </div>
 
@@ -1577,14 +1567,6 @@ export default function NetworkOverview() {
           allUsers={allUsers}
         />
       )}
-
-      {showRegisterLicensee && (
-        <RegisterLicenseeModal
-          isOpen={showRegisterLicensee}
-          onClose={() => setShowRegisterLicensee(false)}
-          onSuccess={async () => { setShowRegisterLicensee(false); await fetchData(); }}
-        />
-      )}
-      </div>
-      );
-      }
+    </div>
+  );
+}
