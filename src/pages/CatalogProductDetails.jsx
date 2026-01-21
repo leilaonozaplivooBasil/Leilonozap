@@ -20,6 +20,7 @@ export default function CatalogProductDetails() {
   const [currentUser, setCurrentUser] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [showFullscreen, setShowFullscreen] = useState(false);
+  const [licenseePhone, setLicenseePhone] = useState(null);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
@@ -55,6 +56,24 @@ export default function CatalogProductDetails() {
 
     loadProduct();
   }, [productId, navigate]);
+
+  // Busca telefone do licenciado âncora a partir do referral (?ref=)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref') || sessionStorage.getItem('referralCode');
+    if (!ref) return;
+    (async () => {
+      try {
+        const users = await base44.entities.AppUser.filter({ referral_code: ref });
+        const lic = users && users[0];
+        if (lic && (lic.career_levels || []).includes('licenciado_catalogo')) {
+          setLicenseePhone(lic.phone || null);
+        }
+      } catch (e) {
+        console.debug('Licensee fetch skipped');
+      }
+    })();
+  }, []);
 
   const handlePrevImage = () => {
     if (!product?.image_urls || product.image_urls.length === 0) return;
@@ -174,6 +193,25 @@ export default function CatalogProductDetails() {
     const productUrl = window.location.href;
     const message = `Olá! Tenho interesse no produto:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n${productUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const normalizeToWaNumber = (phone) => {
+    const digits = (phone || '').replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.startsWith('55')) return digits; // já no formato internacional BR
+    return `55${digits}`; // assume Brasil
+  };
+
+  const handleWhatsAppToLicensee = () => {
+    const productUrl = window.location.href;
+    const message = `Olá! Tenho interesse neste produto do Catálogo:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n🔗 ${productUrl}`;
+    const number = normalizeToWaNumber(licenseePhone);
+    if (number) {
+      window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank');
+    } else {
+      // fallback genérico caso não exista telefone do licenciado
+      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+    }
   };
 
   return (
@@ -309,7 +347,15 @@ export default function CatalogProductDetails() {
                   ADICIONAR AO PEDIDO
                 </Button>
               )}
-            </div>
+              <Button
+                onClick={handleWhatsAppToLicensee}
+                variant="outline"
+                className="h-12 border-green-600 text-green-400 hover:bg-green-600/10 rounded-lg"
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                FALAR NO WHATSAPP
+              </Button>
+              </div>
 
             {/* ESTOQUE */}
             {product.quantity && (

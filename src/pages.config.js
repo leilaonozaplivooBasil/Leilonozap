@@ -34,6 +34,7 @@ import Influencers from './pages/Influencers';
 import InfluencersDashboard from './pages/InfluencersDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
+import LicenseeOrders from './pages/LicenseeOrders';
 import Licensing from './pages/Licensing';
 import LicensorCRM from './pages/LicensorCRM';
 import LiveShop from './pages/LiveShop';
@@ -74,7 +75,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import LicenseeOrders from './pages/LicenseeOrders';
 import __Layout from './Layout.jsx';
 
 
@@ -115,6 +115,7 @@ export const PAGES = {
     "InfluencersDashboard": InfluencersDashboard,
     "InvestorDashboard": InvestorDashboard,
     "Landing": Landing,
+    "LicenseeOrders": LicenseeOrders,
     "Licensing": Licensing,
     "LicensorCRM": LicensorCRM,
     "LiveShop": LiveShop,
@@ -155,7 +156,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "LicenseeOrders": LicenseeOrders,
 }
 
 export const pagesConfig = {
