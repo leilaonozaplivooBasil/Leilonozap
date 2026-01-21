@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Search, Plus, Copy, Edit, Link2, ExternalLink, Share2, Trash2, Calendar, Clock, User } from "lucide-react";
+import { Search, Plus, Copy, Edit, Link2, ExternalLink, Share2, Trash2, Calendar, Clock, User, ShoppingBag } from "lucide-react";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 
 import LicenseeFormModal from "../components/licensees/LicenseeFormModal";
@@ -109,7 +109,7 @@ export default function RegisterLicensee() {
                 )}
                 <div className="text-xl font-semibold text-slate-900">{selected?.full_name || "Selecione um licenciado"}</div>
                 {selected && (
-                  <Badge className="bg-emerald-100 text-emerald-700">Catálogo ativo</Badge>
+                  <Badge className="bg-emerald-100 text-emerald-700 flex items-center gap-1">Catálogo ativo <ShoppingBag className="w-3.5 h-3.5" /></Badge>
                 )}
                 {selected && (
                   <a href={catalogLink} target="_blank" rel="noreferrer" className="text-slate-600 hover:underline break-all">
@@ -179,12 +179,15 @@ export default function RegisterLicensee() {
                           <span className="text-slate-600">4 contatos</span>
                         </div>
                       </div>
-                      <div className="w-full h-16">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={visitsData}>
-                            <Line type="monotone" dataKey="v" stroke="#22c55e" strokeWidth={2} dot={false} />
-                          </LineChart>
-                        </ResponsiveContainer>
+                      <div className="w-full">
+                        <div className="h-16">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={visitsData}>
+                              <Line type="monotone" dataKey="v" stroke="#22c55e" strokeWidth={2} dot={false} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="text-[10px] text-slate-400 text-right mt-1">Últimos 30 dias</div>
                       </div>
                     </div>
                   </div>
