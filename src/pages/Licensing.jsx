@@ -2485,7 +2485,7 @@ export default function LicensingPage() {
 
           try {
             const usersFromDB = await fetchWithRetryInLicensingPage(
-              () => AppUser.filter({ id: user.id }),
+              () => AppUser.filter({ email: user.email }),
               3,
               1000
             );
@@ -2536,7 +2536,7 @@ export default function LicensingPage() {
     
     // Busca dados atualizados do usuário no banco para garantir que temos os career_levels corretos
     try {
-      const freshUsers = await AppUser.filter({ id: user.id });
+      const freshUsers = await AppUser.filter({ email: user.email });
       if (freshUsers && freshUsers.length > 0) {
         const freshUser = freshUsers[0];
         localStorage.setItem('currentUser', JSON.stringify(freshUser));

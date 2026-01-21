@@ -260,7 +260,7 @@ export default function Layout({ children, currentPageName }) {
             }
 
             try {
-              const usersInDB = await AppUser.filter({ id: userFromStorage.id });
+              const usersInDB = await AppUser.filter({ email: userFromStorage.email });
               if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
                 const freshUser = usersInDB[0];
 
@@ -321,7 +321,7 @@ export default function Layout({ children, currentPageName }) {
               const platformUser = await User.me();
               if (platformUser && platformUser.email) {
                   try {
-                    const usersInDB = await AppUser.filter({ id: platformUser.id });
+                    const usersInDB = await AppUser.filter({ email: platformUser.email });
                     let finalUser = platformUser;
                     if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
                       finalUser = usersInDB[0];
