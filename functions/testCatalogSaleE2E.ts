@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
     console.log('\n📍 PASSO 5: Criando MercadoPagoPayment...');
     const externalRef = `TEST_${sale.id}_${Date.now()}`;
     
-    const payment = await base44.asServiceRole.entities.MercadoPagoPayment.create({
+    const payment = await base44.entities.MercadoPagoPayment.create({
       product_id: product.id,
       catalog_sale_id: sale.id,
       user_id: buyer.id,
