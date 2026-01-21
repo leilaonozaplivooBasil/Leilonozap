@@ -145,7 +145,7 @@ export default function Layout({ children, currentPageName }) {
     updateOrCreateMeta('property', 'og:description', 'Arremate produtos incríveis com até 90% de desconto! Leilões diários de eletrônicos, eletrodomésticos, móveis e muito mais. Entre e dê seu lance agora!');
     updateOrCreateMeta('property', 'og:image', 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png');
     updateOrCreateMeta('property', 'og:type', 'website');
-    updateOrCreateMeta('property', 'og:url', 'https://leilaonozap.app');
+    updateOrCreateMeta('property', 'og:url', 'https://leilaonozap.net');
 
     // Twitter Card Tags
     updateOrCreateMeta('name', 'twitter:card', 'summary_large_image');
