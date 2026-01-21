@@ -117,12 +117,32 @@ export default function CatalogCheckout2() {
             const savedUser = JSON.parse(savedUserJSON);
             const referralCode = sessionStorage.getItem('referralCode'); // Pega ?ref do URL
 
-            // 🔒 PROTEÇÃO #1: Criar preferência MP PRIMEIRO, depois CatalogSale
-            // Evita race condition (sale órfã se MP falhar)
+            // 🔒 PROTEÇÃO #1: Criar CatalogSale PRIMEIRO, depois preferência MP
+            // Garante que catalog_sale_id existe antes de enviar para MP
+            console.log('🔄 Criando registro de venda no catálogo...');
+            const sale = await CatalogSale.create({
+                product_id: product.id,
+                product_title: product.description,
+                product_image: product.image_urls?.[0] || '',
+                sale_price: product.price_catalog,
+                total_amount: product.price_catalog,
+                buyer_id: savedUser.id,
+                buyer_name: savedUser.full_name,
+                buyer_email: email.trim(),
+                buyer_phone: phone.trim(),
+                licensee_id: referralCode || 'site_official',
+                referred_by_code: referralCode || '',
+                status: 'pending_payment'
+            });
+
+            console.log('🛍️ Venda de catálogo criada:', sale.id);
+
+            // Agora criar preferência MP com catalog_sale_id vinculado
             console.log('🔄 Criando preferência MP para produto:', product.id);
             const response = await createMPPreference({ 
                 product_id: product.is_auction ? null : product.id,
                 auction_id: product.is_auction ? product.id : null,
+                catalog_sale_id: product.is_auction ? null : sale.id, // ✅ Vincula a venda
                 user_data: {
                     id: savedUser.id,
                     email: email.trim(),
