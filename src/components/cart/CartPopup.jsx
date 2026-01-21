@@ -123,20 +123,20 @@ export default function CartPopup({ isOpen, onClose }) {
                               <Trash2 className="w-4 h-4" />
                             </button>
                             
-                            <div className="flex items-center border border-gray-200 rounded-lg">
+                            <div className="flex items-center border border-gray-300 rounded-lg bg-gray-50">
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                                className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-all disabled:opacity-50"
                                 disabled={item.quantity <= 1}
                               >
                                 <Minus className="w-3 h-3" />
                               </button>
-                              <span className="px-3 text-sm font-medium text-gray-900">
+                              <span className="px-3 text-sm font-semibold text-gray-900">
                                 {item.quantity}
                               </span>
                               <button
                                 onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                className="p-1.5 text-gray-400 hover:text-gray-600 transition-colors"
+                                className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-all"
                               >
                                 <Plus className="w-3 h-3" />
                               </button>
