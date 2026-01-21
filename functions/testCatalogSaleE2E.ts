@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
         licensee: licensee.full_name,
         buyer: buyer.full_name,
         amount: salePrice,
-        commissions_created: records.length,
+        commissions_created: saleRecords.length,
         total_distributed: commissionResult?.data?.total_assigned || 0,
         balance_before: balanceBefore,
         balance_after: balanceAfter,
