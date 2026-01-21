@@ -134,6 +134,20 @@ export default function Catalog() {
     setFilteredProducts(filtered);
   }, [products, searchTerm, priceRange, sortBy, stockFilter]);
 
+  const loadLicenseePhone = React.useCallback(async () => {
+    try {
+      const refCode = sessionStorage.getItem('referralCode');
+      if (!refCode) return;
+
+      const licensees = await AppUser.filter({ referral_code: refCode });
+      if (licensees && licensees.length > 0 && licensees[0].phone) {
+        setLicenseePhone(licensees[0].phone);
+      }
+    } catch (error) {
+      console.debug('Erro ao buscar phone do licenciado:', error);
+    }
+  }, []);
+
   const loadCurrentUser = React.useCallback(async (retryCount = 0) => {
     try {
       const savedUserJSON = localStorage.getItem('currentUser');
