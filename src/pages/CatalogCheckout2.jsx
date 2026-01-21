@@ -165,6 +165,14 @@ export default function CatalogCheckout2() {
                 console.error('❌ MP não retornou preference_id válido');
                 toast.dismiss('checkout-loading');
                 toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
+                
+                // Se falhou, deletar a sale órfã
+                try {
+                    await base44.entities.CatalogSale.delete(sale.id);
+                    console.log('🧹 Venda órfã deletada:', sale.id);
+                } catch (delErr) {
+                    console.warn('⚠️ Erro ao deletar sale:', delErr.message);
+                }
                 return;
             }
             
@@ -181,6 +189,16 @@ export default function CatalogCheckout2() {
             console.error('Erro:', error);
             toast.dismiss('checkout-loading');
             toast.error('Erro ao processar compra');
+            
+            // Se houver erro, tentar deletar sale órfã
+            try {
+                if (typeof sale !== 'undefined' && sale?.id) {
+                    await base44.entities.CatalogSale.delete(sale.id);
+                    console.log('🧹 Venda órfã deletada por erro:', sale.id);
+                }
+            } catch (delErr) {
+                console.warn('⚠️ Erro ao deletar sale órfã:', delErr.message);
+            }
         }
     };
 
