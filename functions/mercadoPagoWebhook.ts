@@ -1,8 +1,8 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
-    // 🔴 DEBUG MODE ATIVO - Captura TODAS as requisições
-    const DEBUG_MODE = true;
+    // 🔴 DEBUG MODE DESATIVADO - Produção
+    const DEBUG_MODE = false;
     
     if (DEBUG_MODE) {
         console.log('═══════════════════════════════════════════════════════════════');
@@ -272,14 +272,37 @@ Deno.serve(async (req) => {
                                           });
                                           console.log(`🛒 CatalogSale ${dbPayment.catalog_sale_id} marcada como paga`);
 
-                                          // ✅ Processa distribuição de comissões automaticamente
-                                          try {
-                                              const commissionResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-                                                  sale_id: dbPayment.catalog_sale_id
-                                              });
-                                              console.log(`✅ Comissões processadas para sale ${dbPayment.catalog_sale_id}`);
+                                          // ✅ Processa distribuição de comissões automaticamente com RETRY
+                                          let commissionResult = null;
+                                          let commissionAttempts = 0;
+                                          const MAX_COMMISSION_ATTEMPTS = 3;
+                                          let commissionSucceeded = false;
 
-                                              // 📊 Registrar rastreamento completo com comissões
+                                          while (commissionAttempts < MAX_COMMISSION_ATTEMPTS && !commissionSucceeded) {
+                                              try {
+                                                  commissionAttempts++;
+                                                  commissionResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                                                      sale_id: dbPayment.catalog_sale_id
+                                                  });
+
+                                                  if (commissionResult?.data?.success) {
+                                                      commissionSucceeded = true;
+                                                      console.log(`✅ Comissões processadas para sale ${dbPayment.catalog_sale_id} (tentativa ${commissionAttempts})`);
+                                                  } else {
+                                                      throw new Error('Comissão retornou sucesso=false');
+                                                  }
+                                              } catch (retryErr) {
+                                                  console.warn(`⚠️ Tentativa ${commissionAttempts} falhou:`, retryErr.message);
+                                                  if (commissionAttempts < MAX_COMMISSION_ATTEMPTS) {
+                                                      await new Promise(resolve => setTimeout(resolve, 1000 * commissionAttempts)); // backoff exponencial
+                                                  }
+                                              }
+                                          }
+
+                                          if (!commissionSucceeded) {
+                                              throw new Error(`Falha ao processar comissões após ${MAX_COMMISSION_ATTEMPTS} tentativas`);
+
+                                              // 📊 Registrar rastreamento completo com comissões (OBRIGATÓRIO)
                                               try {
                                                   const sale = (await base44.asServiceRole.entities.CatalogSale.filter({ id: dbPayment.catalog_sale_id }))[0];
                                                   await base44.asServiceRole.functions.invoke('trackPaymentFlow', {
@@ -294,16 +317,27 @@ Deno.serve(async (req) => {
                                                       status: 'approved',
                                                       stage: 'commissions_processed',
                                                       event: 'payment_approved_and_commissions_distributed',
+                                                      commission_success: commissionSucceeded,
+                                                      commission_attempts: commissionAttempts,
                                                       commissions: commissionResult?.data?.assignments || []
                                                   });
                                               } catch (trackErr) {
-                                                  console.warn('⚠️ Erro ao registrar rastreamento final:', trackErr.message);
+                                                  console.error('❌ FALHA CRÍTICA ao registrar rastreamento final:', trackErr.message);
+                                                  updateErrors.push(`Falha ao registrar rastreamento: ${trackErr.message}`);
+                                                  throw trackErr; // Relança para capturar na camada superior
                                               }
                                           } catch (commErr) {
-                                              // 🔒 PROTEÇÃO #5: Se comissão falha, REGISTRA erro e RELANÇA
+                                              // 🔒 PROTEÇÃO #5: Se comissão falha CRÍTICO - REGISTRA e REVERIFICA
                                               updateErrors.push(`Comissão Catálogo falhou: ${commErr.message}`);
-                                              console.error(`❌ Erro ao processar comissões:`, commErr.message);
-                                              throw new Error(`Comissão catálogo falhou - Sale pode ficar inconsistente: ${commErr.message}`);
+                                              console.error(`❌ ERRO CRÍTICO ao processar comissões:`, commErr.message);
+
+                                              // Verifica se sale foi marcada como paid mesmo assim
+                                              const currentSale = (await base44.asServiceRole.entities.CatalogSale.filter({ id: dbPayment.catalog_sale_id }))[0];
+                                              if (currentSale?.status === 'paid') {
+                                                  console.error(`❌ ALERTA: CatalogSale ${dbPayment.catalog_sale_id} está PAGA mas comissões falharam!`);
+                                              }
+
+                                              throw new Error(`Comissão catálogo falhou - Inconsistência detectada: ${commErr.message}`);
                                           }
                                       } catch (saleErr) {
                                           updateErrors.push(`Atualização de Sale falhou: ${saleErr.message}`);
