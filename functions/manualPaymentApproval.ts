@@ -29,11 +29,27 @@ Deno.serve(async (req) => {
         const product = products[0];
         console.log('📦 Produto encontrado:', product.description);
 
-        // 3️⃣ Criar MercadoPagoPayment
+        // 3️⃣ Buscar CatalogSale existente (pending_payment)
+        const sales = await base44.asServiceRole.entities.CatalogSale.filter({
+            product_id: product_id,
+            buyer_id: user_id,
+            status: 'pending_payment'
+        });
+
+        let saleId = null;
+        if (sales.length > 0) {
+            saleId = sales[0].id;
+            console.log('✅ CatalogSale pendente encontrada:', saleId);
+        } else {
+            console.log('⚠️ Nenhuma CatalogSale pendente encontrada');
+        }
+
+        // 4️⃣ Criar MercadoPagoPayment com aprovação manual
         const externalRef = `CATALOG_${product_id}_${user_id}_${Date.now()}`;
         const mpPayment = await base44.asServiceRole.entities.MercadoPagoPayment.create({
             user_id: user_id,
             product_id: product_id,
+            catalog_sale_id: saleId,
             preference_id: `manual_${payment_id}`,
             payment_id: String(payment_id),
             amount: amount,
@@ -43,42 +59,28 @@ Deno.serve(async (req) => {
         });
         console.log('💳 MercadoPagoPayment criado:', mpPayment.id);
 
-        // 4️⃣ Criar CatalogSale com service role
-        const referralCode = 'site_official';
-        const sale = await base44.asServiceRole.entities.CatalogSale.create({
-            product_id: product_id,
-            product_title: product.description,
-            product_image: product.image_urls?.[0] || '',
-            sale_price: amount,
-            total_amount: amount,
-            buyer_id: user_id,
-            buyer_name: buyer.full_name,
-            buyer_email: buyer.email,
-            buyer_phone: buyer.phone,
-            licensee_id: referralCode,
-            referred_by_code: referralCode,
-            status: 'paid',
-            payment_id: String(payment_id)
-        });
-        console.log('🛒 CatalogSale criada:', sale.id);
-
-        // 5️⃣ Atualizar MercadoPagoPayment com catalog_sale_id
-        await base44.asServiceRole.entities.MercadoPagoPayment.update(mpPayment.id, {
-            catalog_sale_id: sale.id
-        });
-        console.log('🔗 MercadoPagoPayment vinculado à CatalogSale');
-
-        // 6️⃣ Processar comissões
-        console.log('💰 Processando comissões...');
-        try {
-            const commissionResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-                sale_id: sale.id
+        // 5️⃣ Atualizar CatalogSale se existir
+        if (saleId) {
+            await base44.asServiceRole.entities.CatalogSale.update(saleId, {
+                status: 'paid',
+                payment_id: String(payment_id)
             });
-            console.log('✅ Comissões processadas com sucesso');
-            console.log('📊 Resultado:', JSON.stringify(commissionResult, null, 2));
-        } catch (commErr) {
-            console.error('❌ Erro ao processar comissões:', commErr.message);
-            throw commErr;
+            console.log('✅ CatalogSale marcada como paid');
+
+            // 6️⃣ Processar comissões
+            console.log('💰 Processando comissões...');
+            try {
+                const commissionResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                    sale_id: saleId
+                });
+                console.log('✅ Comissões processadas com sucesso');
+                console.log('📊 Resultado:', JSON.stringify(commissionResult, null, 2));
+            } catch (commErr) {
+                console.error('❌ Erro ao processar comissões:', commErr.message);
+                throw commErr;
+            }
+        } else {
+            console.log('⚠️ Comissões não processadas - nenhuma CatalogSale vinculada');
         }
 
         return Response.json({
