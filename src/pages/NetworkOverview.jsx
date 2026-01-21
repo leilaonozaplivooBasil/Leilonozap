@@ -1576,6 +1576,14 @@ export default function NetworkOverview() {
           allUsers={allUsers}
         />
       )}
-    </div>
-  );
-}
+
+      {showRegisterLicensee && (
+        <RegisterLicenseeModal
+          isOpen={showRegisterLicensee}
+          onClose={() => setShowRegisterLicensee(false)}
+          onSuccess={async () => { setShowRegisterLicensee(false); await fetchData(); }}
+        />
+      )}
+      </div>
+      );
+      }
