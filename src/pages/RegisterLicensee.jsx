@@ -11,6 +11,7 @@ import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
 import { LineChart, Line, ResponsiveContainer } from "recharts";
+import { LineChart, Line, ResponsiveContainer } from "recharts";
 import LicenseeFormModal from "../components/licensees/LicenseeFormModal";
 import LicenseeListItem from "../components/licensees/LicenseeListItem";
 
@@ -49,6 +50,7 @@ export default function RegisterLicensee() {
   const referral = selected?.referral_code || "";
   const catalogLink = referral ? `https://leilaonozap.app/catalog?ref=${referral}` : "";
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
+  const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
   const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
   const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
   const visitsData = useMemo(() => [12,14,13,15,18,22,20,24,23,26].map((v,i)=>({ i, v })), []);
