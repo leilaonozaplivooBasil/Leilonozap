@@ -19,8 +19,15 @@ Deno.serve(async (req) => {
 
         if (product_id) {
             // 🔒 PROTEÇÃO #0a: Validar existência do produto ANTES de criar Payment
-            const products = await base44.entities.Product.filter({ id: product_id });
-            if (products.length === 0) {
+            let products;
+            try {
+                products = await base44.entities.Product.filter({ id: product_id });
+            } catch (err) {
+                console.error(`❌ Erro ao buscar produto ${product_id}:`, err.message);
+                return Response.json({ error: 'Produto não encontrado' }, { status: 404 });
+            }
+
+            if (!products || products.length === 0) {
                 return Response.json({ error: 'Produto não encontrado' }, { status: 404 });
             }
             const product = products[0];
