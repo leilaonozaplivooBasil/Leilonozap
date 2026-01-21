@@ -3,7 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { base44 } from "@/api/base44Client";
 import { Camera, Search } from "lucide-react";
 
@@ -20,8 +19,7 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [useShopWhatsapp, setUseShopWhatsapp] = useState(true);
-  const [slug, setSlug] = useState("");
+    const [slug, setSlug] = useState("");
   const [foundUser, setFoundUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -129,12 +127,8 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
                     placeholder="(21) 98407-2064"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    disabled={useShopWhatsapp}
+                    
                   />
-                </div>
-                <div className="flex items-center gap-2 mt-2 text-sm text-slate-600">
-                  <span>Usar o mesmo WhatsApp da loja</span>
-                  <Switch checked={useShopWhatsapp} onCheckedChange={setUseShopWhatsapp} />
                 </div>
               </div>
 
