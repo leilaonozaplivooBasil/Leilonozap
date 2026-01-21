@@ -154,10 +154,11 @@ Deno.serve(async (req) => {
 
         const preference = new Preference(client);
 
-        // Criar referência externa
+        // Criar referência externa DETERMINÍSTICA
+        // ⚠️ CRÍTICO: Usar apenas timestamp + ID para garantir que MP receba a mesma referência
         const externalReference = product_id 
-            ? `catalog_${product_id}_${Date.now()}`
-            : `auction_${auction_id}_${Date.now()}`;
+            ? `CATALOG_${product_id}_${user.id}_${Date.now()}`
+            : `AUCTION_${auction_id}_${user.id}_${Date.now()}`;
 
         // Montar endereço completo
         const fullAddress = [
