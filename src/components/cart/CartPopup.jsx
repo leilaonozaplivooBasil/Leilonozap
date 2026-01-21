@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
@@ -8,45 +8,57 @@ import { toast } from "sonner";
 export default function CartPopup({ isOpen, onClose }) {
   const [cartItems, setCartItems] = useState([]);
 
-  useEffect(() => {
-    if (isOpen) {
-      const savedCart = localStorage.getItem('catalogCart');
-      if (savedCart) {
+  const loadCart = useCallback(() => {
+    const savedCart = localStorage.getItem('catalogCart');
+    if (savedCart) {
+      try {
         setCartItems(JSON.parse(savedCart));
+      } catch (e) {
+        console.error('Erro ao carregar carrinho:', e);
       }
     }
-  }, [isOpen]);
+  }, []);
 
-  const updateCart = (newCart) => {
+  useEffect(() => {
+    if (isOpen) {
+      loadCart();
+    }
+  }, [isOpen, loadCart]);
+
+  const updateCart = useCallback((newCart) => {
     setCartItems(newCart);
     localStorage.setItem('catalogCart', JSON.stringify(newCart));
     window.dispatchEvent(new Event('cartUpdated'));
-  };
+  }, []);
 
-  const removeItem = (productId) => {
+  const removeItem = useCallback((productId) => {
     const newCart = cartItems.filter(item => item.id !== productId);
     updateCart(newCart);
     if (newCart.length === 0) {
       onClose();
     }
-  };
+  }, [cartItems, updateCart, onClose]);
 
-  const updateQuantity = (productId, newQuantity) => {
+  const updateQuantity = useCallback((productId, newQuantity) => {
     if (newQuantity < 1) return;
     
-    const newCart = cartItems.map(item => {
-      if (item.id === productId) {
-        const maxQty = item.availableStock || 999;
-        if (newQuantity > maxQty) {
-          toast.error(`Apenas ${maxQty} unidades disponíveis`);
-          return { ...item, quantity: maxQty };
+    setCartItems(prevItems => {
+      const newCart = prevItems.map(item => {
+        if (item.id === productId) {
+          const maxQty = item.availableStock || 999;
+          if (newQuantity > maxQty) {
+            toast.error(`Apenas ${maxQty} unidades disponíveis`);
+            return { ...item, quantity: maxQty };
+          }
+          return { ...item, quantity: newQuantity };
         }
-        return { ...item, quantity: newQuantity };
-      }
-      return item;
+        return item;
+      });
+      localStorage.setItem('catalogCart', JSON.stringify(newCart));
+      window.dispatchEvent(new Event('cartUpdated'));
+      return newCart;
     });
-    updateCart(newCart);
-  };
+  }, []);
 
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
