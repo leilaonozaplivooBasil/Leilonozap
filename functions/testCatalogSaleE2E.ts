@@ -205,7 +205,7 @@ Deno.serve(async (req) => {
     const saleRecords = records.filter(r => r.sale_id === sale.id);
     console.log(`✅ ${saleRecords.length} registro(s) de comissão encontrado(s)`);
     
-    records.forEach((record, idx) => {
+    saleRecords.forEach((record, idx) => {
       console.log(`\n  📌 Comissão #${idx + 1}:`);
       console.log(`     Usuário: ${record.user_name}`);
       console.log(`     Cargo: ${record.role}`);
@@ -213,8 +213,8 @@ Deno.serve(async (req) => {
       console.log(`     Valor: R$ ${record.amount.toFixed(2)}`);
     });
 
-    test.steps.push(`✅ ${records.length} CommissionRecord(s) criado(s)`);
-    test.values.commissions = records;
+    test.steps.push(`✅ ${saleRecords.length} CommissionRecord(s) criado(s)`);
+    test.values.commissions = saleRecords;
 
     console.log('\n🧪 ═══════════════════════════════════════════════════════════');
     console.log('🧪 ✅ TESTE E2E CONCLUÍDO COM SUCESSO');
