@@ -1,6 +1,69 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+    // 🔴 DEBUG MODE ATIVO - Captura TODAS as requisições
+    const DEBUG_MODE = true;
+    
+    if (DEBUG_MODE) {
+        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('🔍 MERCADO PAGO WEBHOOK - DEBUG MODE');
+        console.log('═══════════════════════════════════════════════════════════════');
+        console.log('⏰ Timestamp:', new Date().toISOString());
+        console.log('📍 Method:', req.method);
+        console.log('🔗 URL:', req.url);
+        console.log('📦 Content-Type:', req.headers.get('content-type'));
+        console.log('🔐 X-Signature:', req.headers.get('x-signature') ? '✅ Present' : '❌ Missing');
+        console.log('📋 X-Request-ID:', req.headers.get('x-request-id') || 'N/A');
+        console.log('🌐 User-Agent:', req.headers.get('user-agent') || 'N/A');
+        console.log('🔗 Referer:', req.headers.get('referer') || 'N/A');
+        
+        // Captura body
+        let rawBody = '';
+        let parsedBody = null;
+        try {
+            const bodyText = await req.text();
+            rawBody = bodyText;
+            console.log('📊 Raw Body Size:', bodyText.length, 'bytes');
+            console.log('📊 Body Hash:', new TextEncoder().encode(bodyText).length);
+            console.log('📄 Raw Body:', bodyText.substring(0, 500));
+            
+            try {
+                parsedBody = JSON.parse(bodyText);
+                console.log('✅ Parsed Body:', JSON.stringify(parsedBody, null, 2));
+            } catch (parseErr) {
+                console.log('❌ Parse Error:', parseErr.message);
+            }
+        } catch (readErr) {
+            console.log('❌ Read Error:', readErr.message);
+        }
+        
+        // Recria req com body já lido
+        const newReq = new Request(req.url, {
+            method: req.method,
+            headers: req.headers,
+            body: rawBody
+        });
+        
+        // ⚠️ MODO DEBUG: Retorna 200 imediatamente
+        console.log('✅ DEBUG: Retornando 200 imediatamente');
+        console.log('═══════════════════════════════════════════════════════════════\n');
+        
+        // Retorna 200 já
+        const debugResponse = Response.json({ received: true, debug: true }, { status: 200 });
+        
+        // Continua processamento em background
+        (async () => {
+            try {
+                console.log('🔄 Processamento em background iniciado...');
+                // Aqui continuaria o processamento normal
+            } catch (bgErr) {
+                console.error('❌ Background error:', bgErr.message);
+            }
+        })();
+        
+        return debugResponse;
+    }
+    
     // 🔒 PROTEÇÃO #0: Aceitar OPTIONS para CORS preflight
     if (req.method === 'OPTIONS') {
         return new Response(null, {
