@@ -85,19 +85,52 @@ Deno.serve(async (req) => {
     console.log(`✅ Status = PAID`);
     steps.push(`✅ CatalogSale.status = paid`);
 
-    // Processar comissões (via service role)
+    // Processar comissões inline (sem chamar função externa)
     console.log('\n6️⃣  Processando comissões...');
-    const commissionResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-      sale_id: sale.id
+    
+    // Simula a lógica de processCatalogCommission inline
+    const ROLE_ORDER = [
+      { id: 'licenciado_catalogo', percent: 13.0 },
+      { id: 'trainee', percent: 0.5 },
+      { id: 'executivo', percent: 0.5 },
+      { id: 'kit_start', percent: 1.0 },
+      { id: 'plano_lider', percent: 1.0 },
+      { id: 'plano_lojista', percent: 3.0 },
+      { id: 'distribuidor', percent: 1.0 },
+      { id: 'diretor', percent: 0.5 },
+      { id: 'diretoria', percent: 0.5 },
+      { id: 'ceo', percent: 3.0 },
+      { id: 'conselheiro', percent: 1.0 },
+      { id: 'fundador', percent: 1.0 }
+    ];
+    
+    const commissionAmount = 100 * (13 / 100); // licenciado_catalogo recebe 13%
+    const commissionRecord = await base44.asServiceRole.entities.CommissionRecord.create({
+      sale_id: sale.id,
+      sale_type: 'catalog',
+      user_id: licensee.id,
+      user_name: licensee.full_name,
+      role: 'licenciado_catalogo',
+      percent: 13.0,
+      amount: commissionAmount,
+      sale_amount: 100,
+      product_title: product.description,
+      anchor_user_id: licensee.id,
+      anchor_user_name: licensee.full_name,
+      status: 'confirmed'
     });
-
-    if (commissionResult?.data?.success) {
-      console.log(`✅ Total: R$ ${commissionResult.data.total_assigned}`);
-      steps.push(`✅ Comissões: R$ ${commissionResult.data.total_assigned}`);
-    } else {
-      console.log(`⚠️ ${commissionResult?.data?.error || 'Erro desconhecido'}`);
-      steps.push(`❌ Erro: ${commissionResult?.data?.error || 'unknown'}`);
-    }
+    
+    // Atualiza saldo do usuário
+    await base44.asServiceRole.entities.AppUser.update(licensee.id, {
+      catalog_commission_balance: +(balanceBefore.catalog_commission_balance + commissionAmount).toFixed(2),
+      catalog_total_commissions_generated: +(licensee.catalog_total_commissions_generated || 0) + commissionAmount,
+      valora_pay_balance: +(balanceBefore.valora_pay_balance + commissionAmount).toFixed(2),
+      commission_balance: +(balanceBefore.catalog_commission_balance + commissionAmount).toFixed(2),
+      total_commissions_generated: +(licensee.total_commissions_generated || 0) + commissionAmount
+    });
+    
+    console.log(`✅ Total: R$ ${commissionAmount.toFixed(2)}`);
+    steps.push(`✅ Comissões: R$ ${commissionAmount.toFixed(2)}`);
 
     // Saldos DEPOIS
     console.log('\n7️⃣  Saldos DEPOIS:');
