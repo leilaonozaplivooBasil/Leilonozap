@@ -360,14 +360,14 @@ export default function CatalogProductDetails() {
               )}
 
               {/* Botão WhatsApp na linha de baixo, alinhado à direita (mesma largura do botão acima) */}
-              <div className="col-start-2 flex justify-end">
+              <div className="col-start-2 w-full">
                 <Button
                   onClick={handleWhatsAppToLicensee}
                   variant="outline"
-                  className="h-12 border-green-600 text-green-400 hover:bg-green-600/10 rounded-lg w-full"
+                  className="h-12 w-full border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-500/10 rounded-full font-semibold bg-transparent"
                 >
                   <MessageCircle className="w-5 h-5 mr-2" />
-                  FALAR NO WHATSAPP
+                  PEDIR PELO WHATSAPP
                 </Button>
               </div>
             </div>
