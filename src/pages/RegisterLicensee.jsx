@@ -95,7 +95,7 @@ export default function RegisterLicensee() {
           ) : (
             <div className="space-y-3">
               {filtered.map((l) => (
-                <LicenseeListItem key={l.id} licensee={l} selected={selected?.id === l.id} onSelect={setSelected} />
+                <LicenseeListItem key={l.id} licensee={l} selected={selected?.id === l.id} onSelect={setSelected} onEdit={(u) => { setSelected(u); setShowModal(true); }} />
               ))}
             </div>
               )}

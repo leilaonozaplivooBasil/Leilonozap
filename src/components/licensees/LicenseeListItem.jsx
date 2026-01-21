@@ -7,7 +7,7 @@ function initials(name = "") {
   return (parts[0]?.[0] || "?") + (parts[1]?.[0] || "");
 }
 
-export default function LicenseeListItem({ licensee, selected, onSelect }) {
+export default function LicenseeListItem({ licensee, selected, onSelect, onEdit }) {
   const isActive = (licensee.career_levels || []).includes("licenciado_catalogo");
   const referral = licensee.referral_code || "";
   const link = `https://leilaonozap.app/catalog?ref=${referral}`;
