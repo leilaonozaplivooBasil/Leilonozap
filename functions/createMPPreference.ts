@@ -9,66 +9,27 @@ Deno.serve(async (req) => {
         // 🔧 BASE_URL fixo para novo domínio
         const BASE_URL = 'https://leilaonozap.net';
 
-        // Aceita user_data do frontend (domínio customizado) ou tenta pegar via auth.me()
-        let user = user_data;
-        if (!user) {
-            try {
-                user = await base44.auth.me();
-            } catch (authError) {
-                console.log('⚠️ Não foi possível autenticar via base44.auth.me(), usando user_data do payload');
-            }
-        }
-
-        if (!user || !user.email) {
-            return Response.json({ error: 'Dados do usuário não fornecidos' }, { status: 401 });
-        }
-
-        if (!user.last_name || user.last_name.trim() === '') {
-            return Response.json({ error: 'Sobrenome é obrigatório' }, { status: 400 });
-        }
-
-        if (!user.phone || user.phone.trim() === '') {
-            return Response.json({ error: 'Telefone é obrigatório' }, { status: 400 });
-        }
-
-        if (!user.cpf || user.cpf.trim() === '') {
-        return Response.json({ error: 'CPF é obrigatório' }, { status: 400 });
-        }
-
-        if (!user.address_street || user.address_street.trim() === '') {
-        return Response.json({ error: 'Endereço é obrigatório' }, { status: 400 });
-        }
-
-        if (!user.address_number || user.address_number.trim() === '') {
-        return Response.json({ error: 'Número do endereço é obrigatório' }, { status: 400 });
-        }
-
-        if (!user.address_city || user.address_city.trim() === '') {
-        return Response.json({ error: 'Cidade é obrigatória' }, { status: 400 });
-        }
-
-        if (!user.address_state || user.address_state.trim() === '') {
-        return Response.json({ error: 'Estado é obrigatório' }, { status: 400 });
-        }
-
-        if (!user.address_zip_code || user.address_zip_code.trim() === '') {
-        return Response.json({ error: 'CEP é obrigatório' }, { status: 400 });
-        }
-
+        // 🔒 PROTEÇÃO #0: Validar product_id/auction_id ANTES de qualquer registro
         if (!auction_id && !product_id) {
             return Response.json({ error: 'auction_id ou product_id é obrigatório' }, { status: 400 });
         }
 
         let itemData;
         let entityId;
-        
+
         if (product_id) {
-            // Checkout de catálogo
+            // 🔒 PROTEÇÃO #0a: Validar existência do produto ANTES de criar Payment
             const products = await base44.entities.Product.filter({ id: product_id });
             if (products.length === 0) {
                 return Response.json({ error: 'Produto não encontrado' }, { status: 404 });
             }
             const product = products[0];
+
+            // Valida price_catalog antes de usar
+            if (!Number.isFinite(product.price_catalog) || product.price_catalog <= 0) {
+                return Response.json({ error: 'Produto com preço inválido' }, { status: 400 });
+            }
+
             itemData = {
                 id: product_id,
                 title: product.description,
