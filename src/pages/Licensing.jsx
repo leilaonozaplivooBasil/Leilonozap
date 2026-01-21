@@ -469,6 +469,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const highestLevelName = careerLevelsMap[highestLevel];
   const primaryLevelName = careerLevelsMap[primaryLevel];
+  const totalAvailable = ((user.valora_pay_balance || 0) + (user.commission_balance || 0) + (user.catalog_commission_balance || 0));
 
   const rolesText = highestLevel === primaryLevel ?
   highestLevelName :
@@ -1271,19 +1272,10 @@ const DashboardContent = ({ user, isAdmin }) => {
               <h3 className="text-2xl font-bold text-white mb-2">Saldo Disponível</h3>
               <div className="flex items-baseline gap-3 mb-2">
                 <span className="text-5xl font-bold text-white">
-                  R$ {(user.valora_pay_balance || 0).toFixed(2)}
+                  R$ {totalAvailable.toFixed(2)}
                 </span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-                <div className="bg-green-900/30 border border-green-500/30 rounded-lg p-3">
-                  <p className="text-xs text-green-300">Saldo para Saque</p>
-                  <p className="text-lg font-bold text-green-400">R$ {(user.commission_balance || 0).toFixed(2)}</p>
-                </div>
-                <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-3">
-                  <p className="text-xs text-blue-300">Saldo Catálogo</p>
-                  <p className="text-lg font-bold text-blue-400">R$ {(user.catalog_commission_balance || 0).toFixed(2)}</p>
-                </div>
-              </div>
+
               {pendingWithdrawalAmount > 0 &&
               <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4">
                   <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
@@ -1372,7 +1364,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <StatCard
           icon={DollarSign}
           label="Saldo Disponível"
-          value={`R$ ${(user.valora_pay_balance || 0).toFixed(2)}`}
+          value={`R$ ${totalAvailable.toFixed(2)}`}
           onClick={() => setIsAuctionSelectionModalOpen(true)}
           isSaiDeBaixo={isSaiDeBaixo} />
 
