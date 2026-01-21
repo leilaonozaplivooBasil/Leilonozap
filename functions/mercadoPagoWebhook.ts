@@ -21,15 +21,26 @@ Deno.serve(async (req) => {
                 if (body.type === 'payment') {
                     const paymentId = body.data.id;
 
-                    // Buscar detalhes do pagamento
+                    // 🔒 PROTEÇÃO #3: Validar resposta do MP antes de qualquer operação
                     const response = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
                         headers: {
                             'Authorization': `Bearer ${accessToken.trim()}`
                         }
                     });
 
+                    if (!response.ok) {
+                        console.error(`❌ MP retornou ${response.status} ao buscar payment ${paymentId}`);
+                        return;
+                    }
+
                     const payment = await response.json();
                     console.log('💳 Detalhes do pagamento:', JSON.stringify(payment, null, 2));
+
+                    // 🔒 PROTEÇÃO #3a: Validar campos críticos antes de processar
+                    if (!payment.id || !payment.status) {
+                        console.error('❌ Payment faltando id ou status:', payment);
+                        return;
+                    }
 
                     // Buscar registro no banco pela external_reference
                     const externalRef = payment.external_reference;
@@ -44,6 +55,13 @@ Deno.serve(async (req) => {
 
                     if (payments.length > 0) {
                         const dbPayment = payments[0];
+
+                        // 🔒 PROTEÇÃO #3b: Validar status válido antes de processar
+                        const validStatuses = ['approved', 'pending', 'authorized', 'in_process', 'rejected', 'cancelled', 'refunded'];
+                        if (!validStatuses.includes(payment.status)) {
+                            console.error(`❌ Status inválido do MP: '${payment.status}'`);
+                            return;
+                        }
 
                         // 🔒 PROTEÇÃO #2: Validar correspondência Payment → Sale
                         if (dbPayment.catalog_sale_id) {
