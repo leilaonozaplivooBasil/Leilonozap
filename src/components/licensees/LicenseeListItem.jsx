@@ -43,13 +43,13 @@ export default function LicenseeListItem({ licensee, selected, onSelect, onEdit 
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <span title="Copiar link" onClick={copy} className="h-8 w-8 rounded-full bg-gray-700 text-gray-200 grid place-items-center cursor-pointer">
+          <span title="Copiar link" onClick={copy} className="h-8 w-8 rounded-full bg-gray-700/60 text-white hover:text-green-400 grid place-items-center cursor-pointer">
             <Copy className="w-4 h-4" />
           </span>
-          <span title="Abrir" onClick={open} className="h-8 w-8 rounded-full bg-gray-700 text-gray-200 grid place-items-center cursor-pointer">
+          <span title="Abrir" onClick={open} className="h-8 w-8 rounded-full bg-gray-700/60 text-white hover:text-green-400 grid place-items-center cursor-pointer">
             <ExternalLink className="w-4 h-4" />
           </span>
-          <span title="Editar" className="h-8 w-8 rounded-full bg-gray-700 text-gray-200 grid place-items-center">
+          <span title="Editar" onClick={(e)=>{ e.stopPropagation(); onEdit?.(licensee); }} className="h-8 w-8 rounded-full bg-gray-700/60 text-white hover:text-green-400 grid place-items-center cursor-pointer">
             <Edit className="w-4 h-4" />
           </span>
         </div>
