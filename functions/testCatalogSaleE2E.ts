@@ -123,13 +123,12 @@ Deno.serve(async (req) => {
 
     // PASSO 6: Saldos ANTES
     console.log('\n📍 PASSO 6: Capturando saldos ANTES da aprovação...');
-    const buyerBefore = await base44.asServiceRole.entities.AppUser.filter({ id: buyer.id });
-    const buyerBeforeData = buyerBefore[0] || {};
+    const buyerBefore = licensees.find(u => u.id === buyer.id) || {};
     
     const balanceBefore = {
-      catalog_commission_balance: Number(buyerBeforeData.catalog_commission_balance || 0),
-      valora_pay_balance: Number(buyerBeforeData.valora_pay_balance || 0),
-      commission_balance: Number(buyerBeforeData.commission_balance || 0)
+      catalog_commission_balance: Number(buyerBefore.catalog_commission_balance || 0),
+      valora_pay_balance: Number(buyerBefore.valora_pay_balance || 0),
+      commission_balance: Number(buyerBefore.commission_balance || 0)
     };
 
     console.log(`  💰 catalog_commission_balance: R$ ${balanceBefore.catalog_commission_balance.toFixed(2)}`);
@@ -139,13 +138,13 @@ Deno.serve(async (req) => {
 
     // PASSO 7: Atualizar venda para 'paid'
     console.log('\n📍 PASSO 7: Marcando CatalogSale como PAID...');
-    await base44.asServiceRole.entities.CatalogSale.update(sale.id, { status: 'paid' });
+    await base44.entities.CatalogSale.update(sale.id, { status: 'paid' });
     console.log(`✅ CatalogSale.status = 'paid'`);
     test.steps.push(`✅ CatalogSale status = paid`);
 
     // PASSO 8: Atualizar payment para 'approved'
     console.log('\n📍 PASSO 8: Marcando MercadoPagoPayment como APPROVED...');
-    await base44.asServiceRole.entities.MercadoPagoPayment.update(payment.id, { 
+    await base44.entities.MercadoPagoPayment.update(payment.id, { 
       status: 'approved'
     });
     console.log(`✅ MercadoPagoPayment.status = 'approved'`);
@@ -155,7 +154,7 @@ Deno.serve(async (req) => {
     console.log('\n📍 PASSO 9: Processando comissões...');
     let commissionResult = null;
     try {
-      commissionResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+      commissionResult = await base44.functions.invoke('processCatalogCommission', {
         sale_id: sale.id
       });
       console.log(`✅ Comissões processadas com sucesso`);
@@ -169,8 +168,8 @@ Deno.serve(async (req) => {
 
     // PASSO 10: Saldos DEPOIS
     console.log('\n📍 PASSO 10: Capturando saldos DEPOIS...');
-    const buyerAfter = await base44.asServiceRole.entities.AppUser.filter({ id: buyer.id });
-    const buyerAfterData = buyerAfter[0] || {};
+    const allUsersAfter = await base44.entities.AppUser.list();
+    const buyerAfterData = allUsersAfter.find(u => u.id === buyer.id) || {};
     
     const balanceAfter = {
       catalog_commission_balance: Number(buyerAfterData.catalog_commission_balance || 0),
