@@ -125,7 +125,7 @@ export default function LicenseeOrders(){
             <p className="text-sm text-gray-400">Resumo e gestão de pedidos originados pelo catálogo</p>
           </div>
           <Link to={createPageUrl("RegisterLicensee")}> 
-            <Button variant="outline" className="border-gray-700 text-gray-300 hover:text-white">Voltar</Button>
+            <Button variant="outline" className="bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white">Voltar</Button>
           </Link>
         </div>
 
@@ -206,7 +206,7 @@ export default function LicenseeOrders(){
                 </SelectContent>
               </Select>
 
-              <Button variant="outline" className="border-gray-700 text-gray-300 hover:text-white" onClick={()=>{ setSearch(""); setStatus("all"); setStart(""); setEnd(""); }}>
+              <Button variant="outline" className="bg-gray-900 border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white" onClick={()=>{ setSearch(""); setStatus("all"); setStart(""); setEnd(""); }}>
                 Limpar filtros
               </Button>
             </div>
