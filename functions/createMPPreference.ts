@@ -5,6 +5,9 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         const { auction_id, product_id, catalog_sale_id, user_data } = await req.json();
+        
+        // 🔧 BASE_URL fixo para novo domínio
+        const BASE_URL = 'https://leilaonozap.net';
 
         // Aceita user_data do frontend (domínio customizado) ou tenta pegar via auth.me()
         let user = user_data;
@@ -220,12 +223,12 @@ Deno.serve(async (req) => {
             },
             external_reference: externalReference,
             back_urls: {
-                success: `${req.headers.get('origin')}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`,
-                failure: `${req.headers.get('origin')}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`,
-                pending: `${req.headers.get('origin')}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`
+                success: `${BASE_URL}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`,
+                failure: `${BASE_URL}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`,
+                pending: `${BASE_URL}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`
             },
             auto_return: 'all',
-            notification_url: `${req.headers.get('origin')}/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,
+            notification_url: `${BASE_URL}/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,
             statement_descriptor: 'LEILAO NOZAP'
         };
 
