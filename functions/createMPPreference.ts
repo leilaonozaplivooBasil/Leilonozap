@@ -50,8 +50,15 @@ Deno.serve(async (req) => {
             entityId = product_id;
         } else {
             // 🔒 PROTEÇÃO #0b: Validar existência do leilão ANTES de criar Payment
-            const auctions = await base44.entities.Auction.filter({ id: auction_id });
-            if (auctions.length === 0) {
+            let auctions;
+            try {
+                auctions = await base44.entities.Auction.filter({ id: auction_id });
+            } catch (err) {
+                console.error(`❌ Erro ao buscar leilão ${auction_id}:`, err.message);
+                return Response.json({ error: 'Leilão não encontrado' }, { status: 404 });
+            }
+
+            if (!auctions || auctions.length === 0) {
                 return Response.json({ error: 'Leilão não encontrado' }, { status: 404 });
             }
             const auction = auctions[0];
