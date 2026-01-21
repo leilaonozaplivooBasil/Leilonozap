@@ -3,7 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { base44 } from "@/api/base44Client";
+import { Camera, Search } from "lucide-react";
 
 function slugify(str) {
   return (str || "")
@@ -14,10 +16,13 @@ function slugify(str) {
 }
 
 export default function LicenseeFormModal({ open, onClose, onCreated }) {
+  const [cpf, setCpf] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
+  const [useShopWhatsapp, setUseShopWhatsapp] = useState(true);
+  const [slug, setSlug] = useState("");
+  const [foundUser, setFoundUser] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const suggestedCode = useMemo(() => {
@@ -26,61 +31,142 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
     return (base || "licenciado") + rand;
   }, [fullName]);
 
+  const suggestedSlug = useMemo(() => slug || slugify(fullName), [slug, fullName]);
+
+  const normalizeCpf = (v) => (v || "").replace(/\D/g, "");
+  const handleCpfSearch = async () => {
+    const doc = normalizeCpf(cpf);
+    if (!doc) return;
+    const rows = await base44.entities.AppUser.filter({ cpf: doc });
+    if (rows && rows.length > 0) {
+      const u = rows[0];
+      setFoundUser(u);
+      setFullName(u.full_name || "");
+      setEmail(u.email || "");
+      setPhone(u.phone || "");
+      if (u.nickname) setSlug(u.nickname);
+    } else {
+      setFoundUser(null);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload = {
+    const common = {
       full_name: fullName.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone.trim(),
-      password: password,
+      email: (email || "").trim().toLowerCase(),
+      phone: (phone || "").trim(),
       role: "licensee",
       career_levels: ["licenciado_catalogo"],
       primary_career_level: "licenciado_catalogo",
       terms_accepted: true,
-      referral_code: suggestedCode,
+      referral_code: (foundUser && foundUser.referral_code) ? foundUser.referral_code : suggestedCode,
+      nickname: suggestedSlug,
     };
 
-    const user = await base44.entities.AppUser.create(payload);
+    let res;
+    if (foundUser) {
+      res = await base44.entities.AppUser.update(foundUser.id, common);
+    } else {
+      const genPass = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      res = await base44.entities.AppUser.create({ ...common, password: genPass });
+    }
+
     setIsSubmitting(false);
-    onCreated?.(user);
+    onCreated?.(res);
     onClose?.();
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose?.()}>
-      <DialogContent className="sm:max-w-lg bg-white border-slate-200 text-slate-800">
+      <DialogContent className="sm:max-w-2xl bg-white border border-slate-200 text-slate-800">
         <DialogHeader>
-          <DialogTitle>Cadastrar Licenciado</DialogTitle>
+          <DialogTitle>Catálogo do Vendedor</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label className="text-gray-300">Nome completo</Label>
-            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} required className="bg-gray-800 border-gray-700 text-white"/>
-          </div>
-          <div>
-            <Label className="text-gray-300">E-mail</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="bg-gray-800 border-gray-700 text-white"/>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-gray-300">Telefone</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-gray-800 border-gray-700 text-white"/>
-            </div>
-            <div>
-              <Label className="text-gray-300">Senha</Label>
-              <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-gray-800 border-gray-700 text-white"/>
+
+        {/* Busca por CPF */}
+        <div className="mb-4 flex gap-2">
+          <Input placeholder="CPF do vendedor" value={cpf} onChange={(e) => setCpf(e.target.value)} />
+          <Button type="button" variant="outline" onClick={handleCpfSearch} className="gap-2">
+            <Search className="w-4 h-4" /> Buscar
+          </Button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Avatar */}
+              <div className="col-span-1 md:col-span-2 flex items-center gap-3">
+                <div className="h-14 w-14 rounded-full bg-white grid place-items-center border border-slate-200">
+                  <Camera className="w-6 h-6 text-slate-400" />
+                </div>
+                <div className="text-slate-700 font-medium">Catálogo do Vendedor</div>
+              </div>
+
+              {/* Nome */}
+              <div>
+                <Label className="text-slate-600">Nome do vendedor</Label>
+                <Input
+                  placeholder="Digite o nome dele aqui"
+                  value={fullName}
+                  onChange={(e) => {
+                    setFullName(e.target.value);
+                    if (!slug) setSlug(slugify(e.target.value));
+                  }}
+                  required
+                />
+              </div>
+
+              {/* WhatsApp */}
+              <div>
+                <Label className="text-slate-600">WhatsApp do vendedor</Label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200 bg-white text-slate-500">+55</span>
+                  <Input
+                    className="rounded-l-none"
+                    placeholder="(21) 98407-2064"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={useShopWhatsapp}
+                  />
+                </div>
+                <div className="flex items-center gap-2 mt-2 text-sm text-slate-600">
+                  <span>Usar o mesmo WhatsApp da loja</span>
+                  <Switch checked={useShopWhatsapp} onCheckedChange={setUseShopWhatsapp} />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div className="md:col-span-2">
+                <Label className="text-slate-600">E-mail para contato (opcional)</Label>
+                <Input
+                  type="email"
+                  placeholder="vendedor@provedor.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
+              </div>
+
+              {/* Endereço do catálogo */}
+              <div className="md:col-span-2">
+                <Label className="text-slate-600">Endereço do catálogo do vendedor</Label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200 bg-white text-slate-500">https://www.leilaonozap.com/s/</span>
+                  <Input
+                    className="rounded-l-none"
+                    placeholder="Ex: nome-do-vendedor"
+                    value={suggestedSlug}
+                    onChange={(e) => setSlug(slugify(e.target.value))}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div>
-            <Label className="text-gray-300">Código de indicação (auto)</Label>
-            <Input value={suggestedCode} readOnly className="bg-gray-800 border-gray-700 text-gray-400"/>
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} className="border-gray-600 text-gray-200">Cancelar</Button>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
             <Button type="submit" disabled={isSubmitting} className="bg-green-600 hover:bg-green-700">
               {isSubmitting ? "Salvando..." : "Salvar"}
             </Button>
