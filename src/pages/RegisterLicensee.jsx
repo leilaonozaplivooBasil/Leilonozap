@@ -100,7 +100,7 @@ const visitsData = useMemo(() => {
 
       <div className="max-w-7xl mx-auto px-4 pt-3 text-sm text-gray-400 flex items-center justify-between">
         <p>Gerencie os seus catálogos de vendedores</p>
-        <span>{licensees.length} vendedores</span>
+        <span>{(licensees || []).filter(l => (l.career_levels || []).includes("licenciado_catalogo")).length} vendedores</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
