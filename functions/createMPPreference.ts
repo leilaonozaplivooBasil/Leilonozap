@@ -264,6 +264,7 @@ Deno.serve(async (req) => {
 
         console.log('✅ Preferência criada:', result.id);
 
+        // 🔒 PROTEÇÃO #8: Vincular catalog_sale_id obrigatoriamente se vem do catálogo
         // Salvar no banco - criar objeto sem campos null
         const paymentData = {
             user_id: user.id,
@@ -278,7 +279,7 @@ Deno.serve(async (req) => {
         // Adicionar apenas os campos que existem
         if (auction_id) paymentData.auction_id = auction_id;
         if (product_id) paymentData.product_id = product_id;
-        if (catalog_sale_id) paymentData.catalog_sale_id = catalog_sale_id;
+        if (catalog_sale_id) paymentData.catalog_sale_id = catalog_sale_id; // ✅ Vem do checkout
 
         await base44.entities.MercadoPagoPayment.create(paymentData);
 
