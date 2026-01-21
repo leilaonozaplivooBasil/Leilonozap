@@ -545,6 +545,7 @@ export default function NetworkOverview() {
   const [showMessageDispatcher, setShowMessageDispatcher] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showRegisterLicensee, setShowRegisterLicensee] = useState(false);
   
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
