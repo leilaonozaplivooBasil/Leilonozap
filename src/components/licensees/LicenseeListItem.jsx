@@ -10,7 +10,7 @@ function initials(name = "") {
 export default function LicenseeListItem({ licensee, selected, onSelect, onEdit }) {
   const isActive = (licensee.career_levels || []).includes("licenciado_catalogo");
   const referral = licensee.referral_code || "";
-  const link = `https://leilaonozap.app/catalog?ref=${referral}`;
+  const link = `https://leilaonozap.net/catalog?ref=${referral}`;
 
   const copy = (e) => {
     e.stopPropagation();
