@@ -364,7 +364,7 @@ export default function CatalogProductDetails() {
                 <Button
                   onClick={handleWhatsAppToLicensee}
                   variant="outline"
-                  className="h-12 w-full border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-500/10 rounded-full font-semibold bg-transparent shadow-[inset_0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[inset_0_0_18px_rgba(16,185,129,0.6)] transition-shadow duration-300"
+                  className="h-12 w-full border-2 border-emerald-500 text-emerald-600 hover:text-white hover:bg-emerald-500/10 rounded-full font-bold bg-transparent shadow-[inset_0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[inset_0_0_18px_rgba(16,185,129,0.6)] transition-shadow duration-300 transition-colors"
                 >
                   <MessageCircle className="w-5 h-5 mr-2" />
                   PEDIR PELO WHATSAPP
