@@ -77,7 +77,9 @@ export default function RegisterLicensee() {
 
       <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* List */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="lg:col-span-2">
+          <Card className="bg-white border-slate-200 shadow-sm">
+            <CardContent className="p-2 sm:p-3">
           {isLoading ? (
             <div className="text-gray-400">Carregando...</div>
           ) : filtered.length === 0 ? (
@@ -145,11 +147,18 @@ export default function RegisterLicensee() {
                       </div>
                     </div>
                     <div className="p-4 rounded-xl bg-white border border-slate-200">
-                      <div className="text-xs text-gray-400">Última venda</div>
+                      <div className="text-xs text-slate-500">Última venda</div>
                       <div className="text-lg">—</div>
                     </div>
                   </div>
 
+                  <div className="p-4 rounded-xl bg-white border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-slate-500">Produtos mais visitados</div>
+                      <button className="text-xs text-rose-500 hover:underline">Ver tudo</button>
+                    </div>
+                    <div className="flex items-center justify-center text-slate-400 text-sm h-24">—</div>
+                  </div>
                   <Separator className="bg-slate-200" />
 
                   <div className="flex justify-end">
