@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       auto_return: 'approved',
       external_reference: referenceId,
       statement_descriptor: 'LEILAO NOZAP',
-      notification_url: `https://leilaonozap.app/api/mercadoPagoWebhook`
+      notification_url: `https://leilaonozap.net/api/mercadoPagoWebhook`
     };
 
     const result = await preference.create({ body: preferenceData });
