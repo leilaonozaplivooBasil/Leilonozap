@@ -107,10 +107,19 @@ export default function CatalogProductDetails() {
     navigate(checkoutUrl);
   };
 
+  const getCanonicalProductUrl = () => {
+    const url = new URL(window.location.href);
+    const ref = url.searchParams.get('ref') || sessionStorage.getItem('referralCode');
+    url.protocol = 'https:';
+    url.hostname = 'leilaonozap.net';
+    if (ref) url.searchParams.set('ref', ref);
+    return url.toString();
+  };
+
   const handleShare = async () => {
     if (!product) return;
 
-    const productUrl = window.location.href;
+    const productUrl = getCanonicalProductUrl();
     const shareText = `🛍️ CATÁLOGO NOZAP!\n\n📱 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n🛒 Compre agora: ${productUrl}`;
 
     if (navigator.share) {
@@ -190,7 +199,7 @@ export default function CatalogProductDetails() {
   };
 
   const handleWhatsApp = () => {
-    const productUrl = window.location.href;
+    const productUrl = getCanonicalProductUrl();
     const message = `Olá! Tenho interesse no produto:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n${productUrl}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
   };
@@ -203,7 +212,7 @@ export default function CatalogProductDetails() {
   };
 
   const handleWhatsAppToLicensee = () => {
-    const productUrl = window.location.href;
+    const productUrl = getCanonicalProductUrl();
     const message = `Olá! Tenho interesse neste produto do Catálogo:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n🔗 ${productUrl}`;
     const number = normalizeToWaNumber(licenseePhone);
     if (number) {
