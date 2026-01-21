@@ -321,6 +321,7 @@ export default function Catalog() {
 
       await loadProducts();
       await loadCurrentUser();
+      await loadLicenseePhone();
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
