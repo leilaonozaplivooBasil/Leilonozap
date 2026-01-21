@@ -147,7 +147,7 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
               <div className="md:col-span-2">
                 <Label className="text-slate-600">Endereço do catálogo do vendedor</Label>
                 <div className="flex">
-                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200 bg-white text-slate-500">https://www.leilaonozap.com/s/</span>
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-200 bg-white text-slate-500">https://leilaonozap.app/catalog?ref=</span>
                   <Input
                     className="rounded-l-none"
                     placeholder="Ex: nome-do-vendedor"
