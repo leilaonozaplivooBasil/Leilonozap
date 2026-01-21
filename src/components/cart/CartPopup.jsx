@@ -39,25 +39,27 @@ export default function CartPopup({ isOpen, onClose }) {
     }
   }, [cartItems, updateCart, onClose]);
 
-  const updateQuantity = (productId, newQuantity) => {
+  const updateQuantity = useCallback((productId, newQuantity) => {
     if (newQuantity < 1) return;
     
-    const newCart = cartItems.map(item => {
-      if (item.id === productId) {
-        const currentQty = item.quantity || 1;
-        const maxQty = item.availableStock || 999;
-        const finalQuantity = Math.min(newQuantity, maxQty);
-        if (newQuantity > maxQty) {
-          toast.error(`Apenas ${maxQty} unidades disponíveis`);
+    setCartItems((prevItems) => {
+      const newCart = prevItems.map(item => {
+        if (item.id === productId) {
+          const maxQty = item.availableStock || 999;
+          const finalQuantity = Math.min(newQuantity, maxQty);
+          if (newQuantity > maxQty) {
+            toast.error(`Apenas ${maxQty} unidades disponíveis`);
+          }
+          return { ...item, quantity: finalQuantity };
         }
-        return { ...item, quantity: finalQuantity };
-      }
-      return item;
+        return item;
+      });
+      
+      localStorage.setItem('catalogCart', JSON.stringify(newCart));
+      window.dispatchEvent(new Event('cartUpdated'));
+      return newCart;
     });
-    setCartItems(newCart);
-    localStorage.setItem('catalogCart', JSON.stringify(newCart));
-    window.dispatchEvent(new Event('cartUpdated'));
-  };
+  }, []);
 
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => {
