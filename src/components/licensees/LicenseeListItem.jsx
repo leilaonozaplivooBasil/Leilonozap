@@ -1,5 +1,6 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
+import { Link2, Copy, Edit, ExternalLink } from "lucide-react";
 
 function initials(name = "") {
   const parts = name.trim().split(/\s+/);

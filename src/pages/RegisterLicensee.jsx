@@ -47,9 +47,9 @@ export default function RegisterLicensee() {
   const isActive = (selected?.career_levels || []).includes("licenciado_catalogo");
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-[#f5f7fb] text-slate-800">
       {/* Top bar */}
-      <div className="border-b border-gray-800 bg-gradient-to-r from-green-700/20 via-green-600/10 to-transparent">
+      <div className="border-b border-slate-200 bg-white">
         <div className="max-w-7xl mx-auto px-4 py-5 flex items-center gap-3">
           <div className="relative flex-1 max-w-xl">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -57,11 +57,11 @@ export default function RegisterLicensee() {
               placeholder="Pesquise por licenciados..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400"
+              className="pl-9 bg-[#f2f5fb] border-slate-200 text-slate-700 placeholder:text-slate-400 rounded-full"
             />
           </div>
-          <Button onClick={() => setShowModal(true)} className="bg-green-600 hover:bg-green-700 gap-2">
-            <Plus className="w-4 h-4" /> Cadastrar licenciado
+          <Button onClick={() => setShowModal(true)} className="bg-rose-500 hover:bg-rose-600 gap-2 rounded-full">
+            <Plus className="w-4 h-4" /> Cadastrar vendedor
           </Button>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function RegisterLicensee() {
 
         {/* Details */}
         <div className="lg:col-span-1">
-          <Card className="bg-gray-900 border-gray-800">
+          <Card className="bg-white border-slate-200 shadow-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <div className="h-10 w-10 rounded-full bg-green-600/20 text-green-400 font-semibold flex items-center justify-center">

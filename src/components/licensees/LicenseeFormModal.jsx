@@ -50,7 +50,7 @@ export default function LicenseeFormModal({ open, onClose, onCreated }) {
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose?.()}>
-      <DialogContent className="sm:max-w-lg bg-gray-900 border-gray-700 text-white">
+      <DialogContent className="sm:max-w-lg bg-white border-slate-200 text-slate-800">
         <DialogHeader>
           <DialogTitle>Cadastrar Licenciado</DialogTitle>
         </DialogHeader>
