@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
                 pending: `${BASE_URL}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`
             },
             auto_return: 'all',
-            notification_url: `${BASE_URL}/api/apps/${Deno.env.get('BASE44_APP_ID')}/functions/mercadoPagoWebhook`,
+            notification_url: `https://leilaonozap.net/api/mercadoPagoWebhook`,
             statement_descriptor: 'LEILAO NOZAP'
         };
 
