@@ -651,7 +651,7 @@ export default function CheckoutPage() {
                                  </div>
                              )}
 
-                             {(!preferenceId || !publicKey) && selectedGateway === 'mercadopago' ? (
+                             {(!preferenceId || !publicKey) && selectedGateway === 'mercadopago' && (
                                  <>
                                      <p className="text-gray-400 text-sm">
                                          Escolha seu método de pagamento preferido:
@@ -663,9 +663,9 @@ export default function CheckoutPage() {
                                          <li>✓ Boleto bancário</li>
                                      </ul>
                                  </>
-                             ) : null}
+                             )}
 
-                             {(preferenceId && publicKey) ? (
+                             {(preferenceId && publicKey) && (
                                  /* Container para o Wallet Brick do Mercado Pago */
                                  <div 
                                      id="walletBrick_container" 
