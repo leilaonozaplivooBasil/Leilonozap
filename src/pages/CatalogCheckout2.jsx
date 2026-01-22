@@ -668,7 +668,7 @@ export default function CatalogCheckout2() {
                                      className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
                                  >
                                      <ShoppingCart className="w-5 h-5" />
-                                     Confirmar Compra
+                                     Comprar Agora
                                  </button>
                                  {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()) && (
                                      <p className="text-xs text-yellow-400 text-center">
