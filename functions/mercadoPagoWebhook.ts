@@ -1,16 +1,19 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, PATCH, DELETE',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Signature, X-MercadoPago-Request-Id',
+    'Access-Control-Max-Age': '86400'
+};
+
 Deno.serve(async (req) => {
     // 🔴 REGRA #1: SEMPRE responde 200 imediatamente (não importa o método)
     // MP precisa de confirmação ANTES de processar
     const respondNow = (status = 200, data = { received: true }) => {
         return Response.json(data, { 
             status,
-            headers: {
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, PATCH, DELETE',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Signature'
-            }
+            headers: corsHeaders
         });
     };
 
