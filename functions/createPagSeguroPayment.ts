@@ -108,16 +108,30 @@ Deno.serve(async (req) => {
       }, { status: 500 });
     }
 
-    if (!result.id || !result.links) {
+    if (!result.id) {
       return Response.json({ 
-        error: 'Erro na resposta do PagSeguro - checkout_url não retornada',
+        error: 'Erro na resposta do PagSeguro',
         details: result 
       }, { status: 400 });
     }
 
-    // Encontra link de redirecionamento
-    const checkoutLink = result.links.find(l => l.rel === 'PAY');
-    if (!checkoutLink) {
+    // Encontra link de redirecionamento - pode estar em diferentes formatos
+    let checkoutUrl = null;
+    
+    if (result.links && Array.isArray(result.links)) {
+      const payLink = result.links.find(l => l.rel === 'PAY');
+      if (payLink) {
+        checkoutUrl = payLink.href;
+      }
+    }
+    
+    // Fallback: tenta construir URL se não encontrou
+    if (!checkoutUrl && result.id) {
+      checkoutUrl = `https://checkout.pagseguro.com/${result.id}`;
+    }
+
+    if (!checkoutUrl) {
+      console.error('❌ Erro: checkout_url não retornada pela API PagSeguro', JSON.stringify(result, null, 2));
       return Response.json({ 
         error: 'Erro ao gerar link de pagamento',
         details: result 
