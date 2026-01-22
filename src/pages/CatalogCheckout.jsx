@@ -198,9 +198,12 @@ export default function CatalogCheckout() {
         }
       });
 
-      if (!response?.data?.success || !response?.data?.preference_id) {
+      const responseData = response?.data || response;
+      
+      if (!responseData?.success || !responseData?.preference_id) {
+        console.error('❌ Resposta inválida de MP:', responseData);
         toast.dismiss('checkout-loading');
-        toast.error(response?.data?.error || 'Erro ao processar pagamento');
+        toast.error(responseData?.error || 'Erro ao processar pagamento');
         try {
           await CatalogSale.delete(sale.id);
         } catch (delErr) {
@@ -209,8 +212,9 @@ export default function CatalogCheckout() {
         return;
       }
 
+      console.log('✅ Redirecionando para:', responseData.init_point || responseData.sandbox_init_point);
       toast.dismiss('checkout-loading');
-      const checkoutUrl = response.data.init_point || response.data.sandbox_init_point;
+      const checkoutUrl = responseData.init_point || responseData.sandbox_init_point;
       if (checkoutUrl) {
         window.location.href = checkoutUrl;
       } else {
