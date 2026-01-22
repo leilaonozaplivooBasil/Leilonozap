@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
 
     // Salva a venda pendente no banco
     try {
-      await base44.asServiceRole.entities.CatalogSale.create({
+      const catalogSale = await base44.asServiceRole.entities.CatalogSale.create({
         reference_id: referenceId,
         buyer_id: user_data?.id || '',
         buyer_name: user_data?.full_name || '',
@@ -91,9 +91,25 @@ Deno.serve(async (req) => {
         status: 'pending',
         payment_method: 'mercadopago',
         mp_preference_id: result.id,
-        licensee_id: licenseeId, // ✅ ID REAL do licenciado (não o código!)
-        referred_by_code: licenseeCode || '' // ✅ Código de referência separado
+        licensee_id: licenseeId,
+        referred_by_code: licenseeCode || ''
       });
+
+      // ✅ CRÍTICO: Cria registro de MercadoPagoPayment linkado à venda
+      try {
+        await base44.asServiceRole.entities.MercadoPagoPayment.create({
+          catalog_sale_id: catalogSale.id,
+          user_id: user_data?.id || '',
+          preference_id: result.id,
+          amount: total,
+          status: 'pending',
+          external_reference: referenceId
+        });
+        console.log(`✅ MercadoPagoPayment criado:`, referenceId);
+      } catch (mpErr) {
+        console.error('❌ Erro ao criar MercadoPagoPayment:', mpErr);
+      }
+
     } catch (dbError) {
       console.error('Erro ao salvar venda pendente:', dbError);
     }
