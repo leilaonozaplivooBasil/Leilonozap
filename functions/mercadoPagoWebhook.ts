@@ -72,10 +72,20 @@ async function handleWebhook(req) {
     const method = (req.method || 'UNKNOWN').toUpperCase();
     
     console.log(`[${timestamp}] ${method} ${req.url}`);
-    console.log(`Headers:`, {
+    
+    // Helper: lê header case-insensitive
+    const getHeaderCI = (name) => {
+        for (const [key, value] of req.headers.entries()) {
+            if (key.toLowerCase() === name.toLowerCase()) return value;
+        }
+        return null;
+    };
+    
+    console.log(`Headers recebidos:`, {
         'content-type': req.headers.get('content-type'),
         'user-agent': req.headers.get('user-agent'),
-        'x-signature': req.headers.get('x-signature') ? '✓' : '✗'
+        'x-signature': getHeaderCI('x-signature') ? '✓' : '✗',
+        'x-request-id': getHeaderCI('x-request-id') ? '✓' : '✗'
     });
     
     // CORS Preflight - SEMPRE 204
@@ -91,7 +101,7 @@ async function handleWebhook(req) {
         // Tenta ler o body
         bodyText = await req.text();
         body = bodyText ? JSON.parse(bodyText) : {};
-        console.log(`✓ Body:`, { type: body.type, action: body.action });
+        console.log(`✓ Body:`, { type: body.type, action: body.action, data_id: body.data?.id });
     } catch (e) {
         console.error(`✗ Parse:`, e.message);
         body = {};
@@ -112,8 +122,8 @@ async function handleWebhook(req) {
     try {
         // Valida assinatura (CRÍTICO para segurança)
         if (method === 'POST' || method === 'PUT') {
-            const xSignature = req.headers.get('x-signature');
-            const xRequestId = req.headers.get('x-request-id');
+            const xSignature = getHeaderCI('x-signature');
+            const xRequestId = getHeaderCI('x-request-id');
 
             if (!xSignature || !xRequestId) {
                 console.error(`❌ Headers críticos faltando: x-signature=${!!xSignature}, x-request-id=${!!xRequestId}`);
