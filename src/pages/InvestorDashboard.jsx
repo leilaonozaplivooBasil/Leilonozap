@@ -143,6 +143,18 @@ export default function InvestorDashboard() {
 
   const portfolios = [
     {
+      id: 0,
+      name: "Plano de Teste",
+      minInvestment: 10,
+      expectedReturn: 3,
+      duration: 60,
+      products: ["Teste"],
+      risk: "Teste",
+      description: "Plano de teste para validar fluxo de pagamento com AbacatePay.",
+      features: ["Teste de PIX", "Validação de webhook", "Retorno em 60 dias"],
+      imageKey: "eletronicos"
+    },
+    {
       id: 1,
       name: "Plano Visionário",
       minInvestment: 5000,
