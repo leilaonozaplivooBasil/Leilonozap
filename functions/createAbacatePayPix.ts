@@ -143,8 +143,7 @@ Deno.serve(async (req) => {
         error_details: {
           api_error: result.error || 'Sem error field',
           api_response: result
-        },
-        payload: { auction_id }
+        }
       }).catch(() => {});
 
       return Response.json({ 
