@@ -1129,24 +1129,26 @@ export default function InvestorDashboard() {
                   ✅ Copiar Código PIX e Ir para Banco
                 </Button>
 
-                <p className="text-sm text-gray-300 text-center">Ou copie o código PIX:</p>
-                <div className="flex gap-2">
-                  <Input
-                    value={pixData.pix_code}
-                    readOnly
-                    className="text-xs bg-gray-700 border-gray-600 text-white"
-                  />
-                  <Button
-                    onClick={() => {
-                      navigator.clipboard.writeText(pixData.pix_code);
-                      toast.success("Código copiado!");
-                    }}
-                    size="icon"
-                    variant="outline"
-                    className="bg-gray-700 hover:bg-gray-600 border-gray-600"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
+                <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+                  <p className="text-xs text-gray-400 mb-2 font-semibold">CÓDIGO PIX (Copia e Cola):</p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={pixData.pix_code}
+                      readOnly
+                      className="text-xs bg-gray-700 border-gray-600 text-white font-mono"
+                    />
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(pixData.pix_code);
+                        toast.success("Código copiado!");
+                      }}
+                      size="icon"
+                      variant="outline"
+                      className="bg-green-700 hover:bg-green-600 border-green-600 flex-shrink-0"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
                 <p className="text-2xl font-bold text-green-400 text-center">
                   R$ {selectedPlan.minInvestment.toLocaleString('pt-BR')}
