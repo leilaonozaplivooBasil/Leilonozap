@@ -30,11 +30,17 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'API Token PagSeguro não configurado' }, { status: 500 });
     }
 
-    // Prepara dados para PagSeguro
+    // Prepara dados para PagSeguro Checkout (múltiplos métodos)
+    const returnUrl = `${Deno.env.get('BASE_URL') || 'https://leilaonozap.net'}/catalog/order-status?sale_id=${catalog_sale_id}`;
+    
     const pagseguroPayload = {
       reference_id: catalog_sale_id || auction_id || product_id,
       description: user_data.full_name ? `Compra de ${user_data.full_name}` : 'Compra',
       amount_in_cents: Math.round(amount * 100),
+      payment_method: {
+        type: 'PAYMENT_METHOD',
+        installments: 12 // Permite parcelamento no cartão
+      },
       customer: {
         name: user_data.full_name || `${user_data.first_name || ''} ${user_data.last_name || ''}`.trim(),
         email: user_data.email,
@@ -55,13 +61,17 @@ Deno.serve(async (req) => {
           region_code: user_data.address_state,
           postal_code: user_data.address_zip_code ? user_data.address_zip_code.replace(/\D/g, '') : null
         }
-      } : null
+      } : null,
+      redirect_url: returnUrl,
+      notification_urls: [
+        `${Deno.env.get('PAGSEGURO_WEBHOOK_URL') || 'https://api.leilaonozap.net/webhook/pagseguro'}`
+      ]
     };
 
-    console.log('📤 Enviando para PagSeguro:', JSON.stringify(pagseguroPayload, null, 2));
+    console.log('📤 Enviando para PagSeguro Checkout:', { reference_id: pagseguroPayload.reference_id, amount });
 
-    // Chamada para PagSeguro - criar QR Code PIX
-    const pagseguroResponse = await fetch('https://api.pagseguro.com/orders', {
+    // Chamada para PagSeguro - criar Checkout (PIX, Cartão, Boleto)
+    const pagseguroResponse = await fetch('https://api.pagseguro.com/checkouts', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiToken}`,
@@ -109,18 +119,39 @@ Deno.serve(async (req) => {
       }, { status: 500 });
     }
 
-    if (!result.id) {
+    if (!result.id || !result.links) {
       return Response.json({ 
-        error: 'Erro na resposta do PagSeguro - ID não retornado',
+        error: 'Erro na resposta do PagSeguro - checkout_url não retornada',
         details: result 
       }, { status: 400 });
     }
 
+    // Encontra link de redirecionamento
+    const checkoutLink = result.links.find(l => l.rel === 'PAY');
+    if (!checkoutLink) {
+      return Response.json({ 
+        error: 'Erro ao gerar link de pagamento',
+        details: result 
+      }, { status: 400 });
+    }
+
+    // Atualiza CatalogSale com order_id para rastreamento
+    try {
+      if (catalog_sale_id) {
+        await base44.asServiceRole.entities.CatalogSale.update(catalog_sale_id, {
+          pagseguro_order_id: result.id,
+          status: 'pending_payment'
+        });
+      }
+    } catch (e) {
+      console.warn('⚠️ Erro ao atualizar CatalogSale:', e.message);
+    }
+
     // Log de sucesso
     await base44.asServiceRole.entities.SystemLog.create({
-      step: 'PAGSEGURO_PAYMENT_CREATED',
+      step: 'PAGSEGURO_CHECKOUT_CREATED',
       status: 'success',
-      message: `Ordem criada no PagSeguro: ${result.id}`,
+      message: `Checkout criado no PagSeguro: ${result.id}`,
       component_name: 'createPagSeguroPayment',
       payload: { order_id: result.id, catalog_sale_id }
     }).catch(() => {});
@@ -128,9 +159,10 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       order_id: result.id,
+      checkout_url: checkoutLink.href,
+      // Compatibilidade: retorna QR Code se tiver PIX
       qr_code: result.qr_codes?.[0]?.text || null,
-      qr_code_url: result.qr_codes?.[0]?.url || null,
-      charges: result.charges || []
+      qr_code_url: result.qr_codes?.[0]?.url || null
     });
 
   } catch (error) {
