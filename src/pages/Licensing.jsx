@@ -1555,15 +1555,18 @@ const DashboardContent = ({ user, isAdmin }) => {
               </TabsList>
 
               <TabsContent value="catalogo-home" className="mt-6">
-                <CatalogHome currentStore={null} catalogSales={myCatalogSales} />
+                {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
+                <CatalogHome currentStore={null} catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []} />
               </TabsContent>
 
               <TabsContent value="catalogo-pedidos" className="mt-6">
-                <CatalogOrders catalogSales={myCatalogSales} />
+                {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
+                <CatalogOrders catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []} />
               </TabsContent>
 
               <TabsContent value="catalogo-clientes" className="mt-6">
-                <CatalogClients catalogSales={myCatalogSales} />
+                {/* ✅ ISOLAMENTO: Passar APENAS vendas do usuário logado */}
+                <CatalogClients catalogSales={Array.isArray(myCatalogSales) ? myCatalogSales : []} />
               </TabsContent>
 
               <TabsContent value="catalogo-produtos" className="mt-6">
