@@ -1057,20 +1057,8 @@ export default function InvestorDashboard() {
                       try {
                         toast.info("Gerando QR Code PIX...");
 
-                        const tempAuction = await base44.entities.Auction.create({
-                          title: selectedPlan.name,
-                          description: selectedPlan.description,
-                          starting_price: selectedPlan.minInvestment,
-                          current_price: selectedPlan.minInvestment,
-                          increment: 0,
-                          end_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                          status: 'sold',
-                          winner_id: currentUser.id,
-                          winner_name: currentUser.full_name,
-                          order_status: 'awaiting_payment',
-                          is_investment_plan: true,
-                          image_urls: productImages[selectedPlan.imageKey] ? [productImages[selectedPlan.imageKey]] : []
-                        });
+                        // ✅ ISOLAMENTO: Passa licensee_id para createAbacatePayPix
+                        // Não precisa criar Auction para investimentos (AbacatePay é isolado)
 
                         const response = await createAbacatePayPix({
                           auction_id: tempAuction.id,
