@@ -320,57 +320,48 @@ export default function CatalogProductDetails() {
               R${product.price_catalog?.toFixed(2) || "0.00"}
             </div>
 
-            {/* QUANTIDADE E ADICIONAR */}
-            <div className="grid grid-cols-[auto,1fr] gap-4 items-center">
-              {/* Controle de quantidade (coluna 1) */}
-              <div className="flex items-center border border-gray-600 rounded-lg overflow-hidden">
-                <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="p-3 hover:bg-gray-800 transition-colors"
-                >
-                  <Minus className="w-4 h-4 text-white" />
-                </button>
-                <span className="px-4 py-2 text-white font-medium min-w-[50px] text-center">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => setQuantity(Math.min(product.quantity || 99, quantity + 1))}
-                  className="p-3 hover:bg-gray-800 transition-colors"
-                >
-                  <Plus className="w-4 h-4 text-white" />
-                </button>
-              </div>
+            {/* BOTÕES DE AÇÃO */}
+             <div className="space-y-3">
+               {/* COMPRAR AGORA */}
+               {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
+                 <Button
+                   disabled
+                   className="w-full h-12 bg-yellow-600 hover:bg-yellow-600 text-white font-bold text-base rounded-lg cursor-not-allowed opacity-90"
+                 >
+                   ESGOTADO
+                 </Button>
+               ) : (
+                 <Button
+                   onClick={handleBuyNow}
+                   className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
+                 >
+                   <ShoppingCart className="w-5 h-5 mr-2" />
+                   PAGAR AGORA
+                 </Button>
+               )}
 
-              {/* Botão Adicionar ao Pedido (coluna 2) */}
-              {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
-                <Button
-                  disabled
-                  className="h-12 bg-yellow-600 hover:bg-yellow-600 text-white font-bold text-base rounded-lg cursor-not-allowed opacity-90"
-                >
-                  ESGOTADO
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleAddToCart}
-                  className="h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
-                >
-                  <ShoppingCart className="w-5 h-5 mr-2" />
-                  ADICIONAR AO PEDIDO
-                </Button>
-              )}
+               {/* ADICIONAR AO CARRINHO */}
+               {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? null : (
+                 <Button
+                   onClick={handleAddToCart}
+                   variant="outline"
+                   className="w-full h-12 border-2 border-green-600 text-green-400 hover:bg-green-600/10 text-white font-bold text-base rounded-lg"
+                 >
+                   <ShoppingCart className="w-5 h-5 mr-2" />
+                   ADICIONAR AO CARRINHO
+                 </Button>
+               )}
 
-              {/* Botão WhatsApp na linha de baixo, alinhado à direita (mesma largura do botão acima) */}
-              <div className="col-start-2 w-full">
-                <Button
-                  onClick={handleWhatsAppToLicensee}
-                  variant="outline"
-                  className="h-12 w-full border-2 border-emerald-500 text-emerald-600 hover:text-white hover:bg-emerald-500/10 rounded-full font-bold bg-transparent shadow-[inset_0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[inset_0_0_18px_rgba(16,185,129,0.6)] transition-shadow duration-300 transition-colors"
-                >
-                  <MessageCircle className="w-5 h-5 mr-2" />
-                  PEDIR PELO WHATSAPP
-                </Button>
-              </div>
-            </div>
+               {/* PEDIR PELO WHATSAPP */}
+               <Button
+                 onClick={handleWhatsAppToLicensee}
+                 variant="outline"
+                 className="w-full h-12 border-2 border-emerald-500 text-emerald-600 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent shadow-[inset_0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[inset_0_0_18px_rgba(16,185,129,0.6)] transition-shadow duration-300 transition-colors"
+               >
+                 <MessageCircle className="w-5 h-5 mr-2" />
+                 PEDIR PELO WHATSAPP
+               </Button>
+             </div>
 
             {/* ESTOQUE */}
             {product.quantity && (
