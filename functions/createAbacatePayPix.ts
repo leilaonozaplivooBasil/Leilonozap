@@ -100,8 +100,7 @@ Deno.serve(async (req) => {
           http_status: response.status,
           api_response: responseText.substring(0, 1000),
           request_payload: abacatePayload
-        },
-        payload: { auction_id }
+        }
       }).catch(() => {});
 
       return Response.json({ 
