@@ -94,26 +94,25 @@ export default function InvestorDashboard() {
             console.error('Erro ao carregar imagens:', error);
           }
           
-          // ✅ ISOLAMENTO: Busca investimentos APENAS do usuário logado
+          // ✅ ISOLAMENTO: Busca plano ativo do usuário
           try {
-            const AbacatePayPayment = base44.entities.AbacatePayPayment;
-            const investments = await AbacatePayPayment.filter(
-              { licensee_id: user.id },
-              '-created_date',
-              50
-            );
-            // Mapeia dados de AbacatePay para formato de exibição
-            const formatted = (investments || []).map((inv) => ({
-              id: inv.id,
-              plan: inv.plan_code,
-              amount: inv.amount,
-              startDate: inv.created_date,
-              currentStep: 0,
-              products: [],
-              estimatedProfit: Math.round(inv.amount * 0.03), // 3% estimado
-              estimatedReturn: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
-            }));
-            setActiveInvestments(formatted);
+            const investments = [];
+            
+            // Se o usuário tem um plano ativo
+            if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
+              investments.push({
+                id: user.id,
+                plan: user.active_partner_plan,
+                amount: user.partner_plan_amount,
+                startDate: user.partner_plan_activated_at,
+                currentStep: 0,
+                products: [],
+                estimatedProfit: Math.round(user.partner_plan_amount * 0.03), // 3% estimado
+                estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
+              });
+            }
+            
+            setActiveInvestments(investments);
           } catch (error) {
             console.warn('Erro ao carregar investimentos:', error);
             setActiveInvestments([]);

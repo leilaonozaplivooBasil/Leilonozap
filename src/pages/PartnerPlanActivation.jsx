@@ -78,15 +78,12 @@ export default function PartnerPlanActivation() {
     try {
       toast.loading('Ativando plano...');
 
-      // Criar registro de plano na entidade AbacatePayPayment
-      const planRecord = await base44.entities.AbacatePayPayment.create({
-        licensee_id: foundUser.id,
-        licensee_email: foundUser.email,
-        licensee_name: foundUser.full_name,
-        plan_code: selectedPlan.name,
-        amount: selectedPlan.minInvestment,
-        status: 'active',
-        created_date: new Date().toISOString()
+      // Atualizar usuário com plano ativo
+      const AppUser = base44.entities.AppUser;
+      await AppUser.update(foundUser.id, {
+        active_partner_plan: selectedPlan.name,
+        partner_plan_amount: selectedPlan.minInvestment,
+        partner_plan_activated_at: new Date().toISOString()
       });
 
       // Log da ativação
@@ -109,7 +106,7 @@ export default function PartnerPlanActivation() {
       // Adicionar ao histórico
       setActivationHistory([
         {
-          id: planRecord.id,
+          id: foundUser.id,
           userName: foundUser.full_name,
           userEmail: foundUser.email,
           planName: selectedPlan.name,
