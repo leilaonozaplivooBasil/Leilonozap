@@ -158,35 +158,25 @@ Deno.serve(async (req) => {
     const pixData = result.data;
 
     // ✅ ISOLAMENTO CRÍTICO: Registra em AbacatePayPayment (NUNCA em Payment)
-    await base44.asServiceRole.entities.AbacatePayPayment.create({
-      licensee_id: licensee_id,
-      licensee_email: user_email,
-      transaction_id: pixData.id,
-      amount: amount,
-      status: 'pending',
-      pix_code: pixData.brCode,
-      plan_code: plan_code,
-      plan_price: amount,
-      expires_at: pixData.expiresAt,
-      webhook_received: false,
-      notes: `PIX criado para ${user_name} (CPF: ${user_cpf})`
-    });
-
-    console.log('QR Code PIX criado com sucesso:', pixData.id);
-
-    // Log de sucesso
-    await base44.asServiceRole.entities.SystemLog.create({
-      step: 'PIX_PAYMENT_SUCCESS',
-      status: 'success',
-      message: 'PIX gerado com sucesso',
-      component_name: 'createAbacatePayPix',
-      entity_id: pixData.id,
-      payload: { 
-        auction_id,
-        billing_id: pixData.id,
-        amount 
-      }
-    }).catch(() => {});
+    try {
+      await base44.asServiceRole.entities.AbacatePayPayment.create({
+        licensee_id: licensee_id,
+        licensee_email: user_email,
+        transaction_id: pixData.id,
+        amount: amount,
+        status: 'pending',
+        pix_code: pixData.brCode,
+        plan_code: plan_code,
+        plan_price: amount,
+        expires_at: pixData.expiresAt,
+        webhook_received: false,
+        notes: `PIX criado para ${user_name} (CPF: ${user_cpf})`
+      });
+      console.log('✅ Registro AbacatePayPayment criado:', pixData.id);
+    } catch (dbError) {
+      console.warn('⚠️ Erro ao registrar em AbacatePayPayment:', dbError.message);
+      // Continua mesmo se não registrar (PIX foi gerado)
+    }
 
     return Response.json({
       success: true,
