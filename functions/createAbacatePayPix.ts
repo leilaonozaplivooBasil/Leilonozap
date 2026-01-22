@@ -163,18 +163,19 @@ Deno.serve(async (req) => {
 
     const pixData = result.data;
 
-    // Registra pagamento no banco
-    await base44.asServiceRole.entities.Payment.create({
-      auction_id: auction_id,
-      buyer_id: auction.winner_id || user_email,
-      buyer_name: user_name,
-      buyer_email: user_email,
-      amount: amount,
-      payment_method: 'pix',
-      status: 'pending',
+    // ✅ ISOLAMENTO CRÍTICO: Registra em AbacatePayPayment (não em Payment)
+    await base44.asServiceRole.entities.AbacatePayPayment.create({
+      licensee_id: auction.winner_id || user_email,
+      licensee_email: user_email,
       transaction_id: pixData.id,
-      gateway_name: 'abacatepay',
-      notes: `CPF: ${user_cpf}, Tel: ${user_phone}`
+      amount: amount,
+      status: 'pending',
+      pix_code: pixData.brCode,
+      plan_code: auction.title,
+      plan_price: amount,
+      expires_at: pixData.expiresAt,
+      webhook_received: false,
+      notes: `PIX criado para ${user_name} (CPF: ${user_cpf})`
     });
 
     console.log('QR Code PIX criado com sucesso:', pixData.id);
