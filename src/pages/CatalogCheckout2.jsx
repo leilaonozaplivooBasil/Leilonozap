@@ -227,15 +227,18 @@ export default function CatalogCheckout2() {
                       }
 
                       console.log('✅ Mercado Pago pronto:', response.data.preference_id);
+                      console.log('✅ Redirecionando para checkout do Mercado Pago...');
                       toast.dismiss('checkout-loading');
+                      toast.success('Abrindo Mercado Pago... Você retornará aqui após o pagamento.');
 
-                      // ✅ Redirecionar direto para checkout do Mercado Pago
-                      const checkoutUrl = response.data.init_point || response.data.sandbox_init_point;
-                      if (checkoutUrl) {
-                          window.location.href = checkoutUrl;
-                      } else {
-                          toast.error('Erro ao abrir checkout do Mercado Pago');
-                      }
+                      setTimeout(() => {
+                          const checkoutUrl = response.data.init_point || response.data.sandbox_init_point;
+                          if (checkoutUrl) {
+                              window.location.href = checkoutUrl;
+                          } else {
+                              toast.error('Erro ao abrir checkout do Mercado Pago');
+                          }
+                      }, 800);
 
         } catch (error) {
             console.error('❌ Erro:', error.message);
