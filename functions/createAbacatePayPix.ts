@@ -2,6 +2,12 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
   try {
+    // ⏸️ ABACATEPAY DESATIVADO - Em standby
+    return Response.json({ 
+      success: false,
+      error: 'AbacatePay temporariamente desativado'
+    }, { status: 503 });
+
     const base44 = createClientFromRequest(req);
     const body = await req.json();
     const { licensee_id, plan_code, user_name, user_email, user_phone, user_cpf } = body;
