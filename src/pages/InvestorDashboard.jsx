@@ -1014,53 +1014,53 @@ export default function InvestorDashboard() {
                     Voltar
                   </Button>
                   <Button
-                    onClick={async () => {
-                      const { name, phone, email, cpf } = pixFormData;
-                      if (!name || !phone || !email || !cpf) {
-                        toast.error("Preencha todos os campos");
-                        return;
-                      }
+                  onClick={async () => {
+                    const { name, phone, email, cpf } = pixFormData;
+                    if (!name || !phone || !email || !cpf) {
+                      toast.error("Preencha todos os campos");
+                      return;
+                    }
 
-                      // Validação de CPF
-                      const cleanCpf = cpf.replace(/\D/g, '');
-                      if (cleanCpf.length !== 11) {
-                        toast.error("CPF inválido. Deve ter 11 dígitos.");
-                        return;
-                      }
+                    // Validação de CPF
+                    const cleanCpf = cpf.replace(/\D/g, '');
+                    if (cleanCpf.length !== 11) {
+                      toast.error("CPF inválido. Deve ter 11 dígitos.");
+                      return;
+                    }
 
-                      // Validação básica de CPF (dígitos verificadores)
-                      const validateCPF = (cpf) => {
-                        if (cpf.length !== 11) return false;
-                        if (/^(\d)\1+$/.test(cpf)) return false; // Todos dígitos iguais
-                        
-                        let sum = 0;
-                        for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
-                        let remainder = (sum * 10) % 11;
-                        if (remainder === 10 || remainder === 11) remainder = 0;
-                        if (remainder !== parseInt(cpf[9])) return false;
-                        
-                        sum = 0;
-                        for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
-                        remainder = (sum * 10) % 11;
-                        if (remainder === 10 || remainder === 11) remainder = 0;
-                        if (remainder !== parseInt(cpf[10])) return false;
-                        
-                        return true;
-                      };
+                    // Validação básica de CPF (dígitos verificadores)
+                    const validateCPF = (cpf) => {
+                      if (cpf.length !== 11) return false;
+                      if (/^(\d)\1+$/.test(cpf)) return false; // Todos dígitos iguais
 
-                      if (!validateCPF(cleanCpf)) {
-                        toast.error("CPF inválido. Verifique os números digitados.");
-                        return;
-                      }
+                      let sum = 0;
+                      for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+                      let remainder = (sum * 10) % 11;
+                      if (remainder === 10 || remainder === 11) remainder = 0;
+                      if (remainder !== parseInt(cpf[9])) return false;
 
-                      setIsProcessing(true);
-                      try {
-                        toast.info("Gerando QR Code PIX...");
+                      sum = 0;
+                      for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+                      remainder = (sum * 10) % 11;
+                      if (remainder === 10 || remainder === 11) remainder = 0;
+                      if (remainder !== parseInt(cpf[10])) return false;
+
+                      return true;
+                    };
+
+                    if (!validateCPF(cleanCpf)) {
+                      toast.error("CPF inválido. Verifique os números digitados.");
+                      return;
+                    }
+
+                    setIsProcessing(true);
+                    try {
+                      toast.info("Gerando QR Code PIX...");
 
                         // ✅ ISOLAMENTO: Passa licensee_id para createAbacatePayPix
                         // Não precisa criar Auction para investimentos (AbacatePay é isolado)
 
-                        const response = await createAbacatePayPix({
+                        const response = await base44.functions.invoke('createAbacatePayPix', {
                            licensee_id: currentUser.id,
                            user_name: name,
                            user_email: email,
