@@ -6,8 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
-// 🔴 IMPORTANTE: Código Asaas mantido em standby - não remover
-// Para reativar Asaas, trocar chamadas de createMPPreference por createAsaasOrder
+// GATEWAY: PagSeguro prioridade, Mercado Pago fallback
+const PAYMENT_GATEWAYS = {
+  pagseguro: { name: 'PagSeguro PIX', default: true },
+  mercadopago: { name: 'Mercado Pago', default: false }
+};
 
 const Product = base44.entities.Product;
 const Auction = base44.entities.Auction;
