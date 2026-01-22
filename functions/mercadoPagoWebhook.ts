@@ -9,36 +9,45 @@ const corsHeaders = {
 
 async function handleWebhook(req) {
     const timestamp = new Date().toISOString();
-    const method = req.method.toUpperCase();
+    const method = (req.method || 'UNKNOWN').toUpperCase();
     
-    // Log imediato de QUALQUER requisição
-    console.log(`[${timestamp}] ${method} - URL: ${req.url}`);
+    console.log(`[${timestamp}] ${method} ${req.url}`);
+    console.log(`Headers:`, {
+        'content-type': req.headers.get('content-type'),
+        'user-agent': req.headers.get('user-agent'),
+        'x-signature': req.headers.get('x-signature') ? '✓' : '✗'
+    });
     
-    // CORS Preflight
+    // CORS Preflight - SEMPRE 204
     if (method === 'OPTIONS') {
-        console.log(`✅ CORS preflight`);
         return new Response(null, { status: 204, headers: corsHeaders });
     }
 
+    // Acessa body SEM perder possibilidade de reprocessar
+    let bodyText = '';
+    let body = {};
+    
+    try {
+        // Tenta ler o body
+        bodyText = await req.text();
+        body = bodyText ? JSON.parse(bodyText) : {};
+        console.log(`✓ Body:`, { type: body.type, action: body.action });
+    } catch (e) {
+        console.error(`✗ Parse:`, e.message);
+        body = {};
+    }
+
     // Health check
-    if (method === 'GET') {
-        console.log(`✅ Health check`);
-        return new Response(JSON.stringify({ status: 'ok', time: timestamp }), { 
+    if (method === 'GET' || !bodyText) {
+        console.log(`→ GET/empty, retornando 200`);
+        return new Response(JSON.stringify({ status: 'ok' }), { 
             status: 200, 
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
     }
 
-    // Só POST e PUT processam webhook
-    if (method !== 'POST' && method !== 'PUT') {
-        console.error(`❌ Método não permitido: ${method}`);
-        return new Response(JSON.stringify({ error: `Method ${method} not allowed` }), { 
-            status: 405, 
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-    }
-    
-    console.log(`📨 Processando ${method}`);
+    // QUALQUER outro método que não seja GET/OPTIONS, tenta processar como webhook
+    console.log(`→ Processando como webhook`);
 
     try {
         let body = {};
