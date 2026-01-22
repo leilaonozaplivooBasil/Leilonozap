@@ -64,19 +64,23 @@ async function handleWebhook(req) {
             console.warn(`⚠️ base44 init failed (background will skip):`, authErr.message);
         }
 
-        // Processa em background
+        // Processa em background (fire-and-forget)
         (async () => {
             try {
+                if (!base44) {
+                    console.log(`⏭️ Sem base44, pulando processamento`);
+                    return;
+                }
+
                 const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
                 if (!accessToken) {
-                    console.warn(`⚠️ MP_ACCESS_TOKEN não configurado`);
+                    console.log(`⏭️ Sem token MP`);
                     return;
                 }
 
                 const isPaymentEvent = body.type === 'payment' || body.action?.startsWith('payment');
-                console.log(`🔍 Event check:`, { type: body.type, action: body.action, isPaymentEvent });
                 if (!isPaymentEvent) {
-                    console.log(`⏭️ Event ignorado (não é payment)`);
+                    console.log(`⏭️ Não é payment event`);
                     return;
                 }
 
@@ -85,8 +89,6 @@ async function handleWebhook(req) {
                     console.log(`⏭️ Sem payment ID`);
                     return;
                 }
-                
-                console.log(`🔄 Processando payment:`, paymentId);
 
                 const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
                     headers: { 
