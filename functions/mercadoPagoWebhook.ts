@@ -32,6 +32,8 @@ async function handleWebhook(req) {
     }
 
     try {
+        const base44 = createClientFromRequest(req);
+
         let body;
         try {
             const bodyText = await req.text();
@@ -48,8 +50,6 @@ async function handleWebhook(req) {
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
-
-        const base44 = createClientFromRequest(req);
 
         // Processa em background
         (async () => {
