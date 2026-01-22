@@ -264,33 +264,8 @@ export default function Cart() {
         buyer: formData.name 
       });
 
-      // Criar venda do catálogo
-      const saleData = {
-        product_id: cartItems[0]?.id,
-        product_title: cartItems.map(i => i.description).join(', '),
-        product_image: cartItems[0]?.image_urls?.[0] || '',
-        sale_price: totalAmount,
-        total_amount: totalAmount,
-        buyer_id: currentUser?.id,
-        buyer_name: formData.name,
-        buyer_email: formData.email,
-        buyer_phone: formData.phone,
-        status: 'pending_payment',
-        observation: observation
-      };
-
-      const saleResponse = await base44.asServiceRole.entities.CatalogSale.create(saleData);
-      const saleId = saleResponse?.id;
-
-      if (!saleId) {
-        toast.error('Erro ao criar pedido');
-        setIsProcessing(false);
-        return;
-      }
-
-      // Criar pagamento no PagSeguro
+      // Chamar função backend para criar venda + pagamento (tudo atômico)
       const response = await base44.functions.invoke('createPagSeguroPayment', {
-        catalog_sale_id: saleId,
         amount: totalAmount,
         user_data: {
           id: currentUser?.id,
@@ -305,18 +280,19 @@ export default function Cart() {
           address_city: formData.city,
           address_state: formData.state,
           address_zip_code: formData.cep.replace(/\D/g, '')
-        }
+        },
+        products: cartItems.map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity || 1,
+          price: item.price_catalog || item.selling_price_wholesale || 0
+        })),
+        observation: observation
       });
 
       const data = response?.data || response;
 
       if (data?.error) {
-        // Cancela a venda se o pagamento falhar
-        try {
-          await base44.asServiceRole.entities.CatalogSale.delete(saleId);
-        } catch (e) {
-          console.warn('Erro ao deletar venda:', e.message);
-        }
         toast.error(data.error);
         setIsProcessing(false);
         return;
