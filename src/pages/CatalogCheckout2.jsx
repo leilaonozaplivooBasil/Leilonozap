@@ -405,7 +405,31 @@ export default function CatalogCheckout2() {
             <div className="max-w-4xl mx-auto">
                 <h1 className="text-3xl font-bold mb-6">Finalizar Pagamento</h1>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* ✅ Se formulário está fechado, mostrar Wallet */}
+                {!showCheckoutForm && mpData ? (
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-8">
+                        <div className="mb-6">
+                            <h2 className="text-2xl font-bold text-green-400 mb-2">Escolha seu método de pagamento</h2>
+                            <p className="text-gray-400">Você será redirecionado para o Mercado Pago para completar a transação de forma segura.</p>
+                        </div>
+
+                        {/* ✅ Container para o Wallet Brick do Mercado Pago */}
+                        <div id="walletBrick_container" className="min-h-[300px]"></div>
+
+                        <div className="mt-6 flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowCheckoutForm(true);
+                                    localStorage.removeItem('mpCheckoutData');
+                                }}
+                                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                            >
+                                ← Voltar e editar dados
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Resumo do Pedido */}
                     <Card className="bg-gray-800 border-gray-700">
                         <CardHeader>
