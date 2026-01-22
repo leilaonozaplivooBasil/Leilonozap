@@ -224,9 +224,9 @@ export default function CatalogCheckout2() {
 
                 const responseData = response?.data || response;
                 
-                // Validar resposta de MP
-                if (!responseData?.success || !responseData?.preference_id) {
-                    console.error('❌ MP falhou:', responseData);
+                // Validar resposta
+                if (!responseData?.success && !responseData?.order_id && !responseData?.preference_id) {
+                    console.error('❌ Gateway falhou:', responseData);
                     toast.dismiss('checkout-loading');
                     toast.error(responseData?.error || 'Erro ao processar pagamento');
 
@@ -240,19 +240,28 @@ export default function CatalogCheckout2() {
                     return;
                 }
 
-                console.log('✅ Mercado Pago pronto:', responseData.preference_id);
-                console.log('✅ Redirecionando para checkout do Mercado Pago...');
-                toast.dismiss('checkout-loading');
-                toast.success('Abrindo Mercado Pago... Você retornará aqui após o pagamento.');
+                if (selectedGateway === 'pagseguro') {
+                    console.log('✅ PagSeguro pronto:', responseData.order_id);
+                    toast.dismiss('checkout-loading');
+                    toast.success('Abrindo PagSeguro PIX...');
+                    // TODO: Implementar QR Code ou redirect para PagSeguro
+                    setTimeout(() => {
+                        toast.info('QR Code: ' + (responseData.qr_code || 'Processando...'));
+                    }, 800);
+                } else {
+                    console.log('✅ Mercado Pago pronto:', responseData.preference_id);
+                    toast.dismiss('checkout-loading');
+                    toast.success('Abrindo Mercado Pago... Você retornará aqui após o pagamento.');
 
-                setTimeout(() => {
-                    const checkoutUrl = responseData.init_point;
-                    if (checkoutUrl) {
-                        window.location.href = checkoutUrl;
-                    } else {
-                        toast.error('Erro ao abrir checkout do Mercado Pago');
-                    }
-                }, 800);
+                    setTimeout(() => {
+                        const checkoutUrl = responseData.init_point;
+                        if (checkoutUrl) {
+                            window.location.href = checkoutUrl;
+                        } else {
+                            toast.error('Erro ao abrir checkout do Mercado Pago');
+                        }
+                    }, 800);
+                }
             } catch (mpError) {
                 console.error('❌ Erro ao chamar MP:', mpError);
                 toast.dismiss('checkout-loading');
