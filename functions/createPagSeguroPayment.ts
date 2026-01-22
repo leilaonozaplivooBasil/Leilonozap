@@ -134,16 +134,30 @@ Deno.serve(async (req) => {
       }, { status: 400 });
     }
 
-    // Atualiza CatalogSale com order_id para rastreamento
+    // Cria CatalogSale com referência ao PagSeguro
+    let saleId;
     try {
-      if (catalog_sale_id) {
-        await base44.asServiceRole.entities.CatalogSale.update(catalog_sale_id, {
-          pagseguro_order_id: result.id,
-          status: 'pending_payment'
-        });
-      }
+      const saleData = {
+        product_title: products.map(p => p.description).join(', ') || 'Compra do Catálogo',
+        product_image: '',
+        sale_price: amount,
+        total_amount: amount,
+        buyer_id: user_data.id,
+        buyer_name: user_data.full_name,
+        buyer_email: user_data.email,
+        buyer_phone: user_data.phone,
+        status: 'pending_payment',
+        pagseguro_order_id: result.id,
+        observation: observation,
+        payment_method: 'pagseguro'
+      };
+      
+      const saleResponse = await base44.asServiceRole.entities.CatalogSale.create(saleData);
+      saleId = saleResponse?.id;
+      console.log('✅ CatalogSale criada:', saleId);
     } catch (e) {
-      console.warn('⚠️ Erro ao atualizar CatalogSale:', e.message);
+      console.warn('⚠️ Erro ao criar CatalogSale:', e.message);
+      // Continua mesmo se falhar a criação da venda (o webhook do PagSeguro criará depois)
     }
 
     // Log de sucesso
