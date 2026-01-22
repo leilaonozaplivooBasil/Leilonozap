@@ -122,8 +122,7 @@ Deno.serve(async (req) => {
         error_details: {
           parse_error: parseError.message,
           raw_response: responseText.substring(0, 500)
-        },
-        payload: { auction_id }
+        }
       }).catch(() => {});
 
       return Response.json({ 
