@@ -103,7 +103,9 @@ Deno.serve(async (req) => {
         }
 
         // ✅ PASSO 6: Preparar referência e endereço
-        const externalReference = product_id 
+        const externalReference = catalog_sale_id
+            ? `CATALOG_SALE_${catalog_sale_id}_${Date.now()}`
+            : product_id 
             ? `CATALOG_${product_id}_${user.id}_${Date.now()}`
             : `AUCTION_${auction_id}_${user.id}_${Date.now()}`;
 
