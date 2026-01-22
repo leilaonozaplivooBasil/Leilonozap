@@ -170,15 +170,15 @@ Deno.serve(async (req) => {
 
     const pixData = result.data;
 
-    // ✅ ISOLAMENTO CRÍTICO: Registra em AbacatePayPayment (não em Payment)
+    // ✅ ISOLAMENTO CRÍTICO: Registra em AbacatePayPayment (NUNCA em Payment)
     await base44.asServiceRole.entities.AbacatePayPayment.create({
-      licensee_id: auction.winner_id || user_email,
+      licensee_id: licensee_id,
       licensee_email: user_email,
       transaction_id: pixData.id,
       amount: amount,
       status: 'pending',
       pix_code: pixData.brCode,
-      plan_code: auction.title,
+      plan_code: plan_code,
       plan_price: amount,
       expires_at: pixData.expiresAt,
       webhook_received: false,
