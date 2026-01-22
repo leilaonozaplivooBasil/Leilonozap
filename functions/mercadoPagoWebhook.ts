@@ -24,25 +24,32 @@ async function handleWebhook(req) {
         });
     }
 
-    // 🔴 REGRA #3: Só processa POST e PUT (MP usa ambos às vezes)
     if (req.method !== 'POST' && req.method !== 'PUT') {
-        console.log(`⚠️ Método ${req.method} aceito mas não processado`);
-        return respondNow(200);
+        return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
+            status: 405, 
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 
     try {
-        const base44 = createClientFromRequest(req);
-
         let body;
         try {
             const bodyText = await req.text();
             body = bodyText ? JSON.parse(bodyText) : {};
         } catch (parseErr) {
-            return respondNow(200);
+            return new Response(JSON.stringify({ error: 'Invalid JSON' }), { 
+                status: 400, 
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
         // Retorna 200 IMEDIATAMENTE
-        const response = respondNow(200);
+        const response = new Response(JSON.stringify({ received: true }), { 
+            status: 200,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+
+        const base44 = createClientFromRequest(req);
 
         // Processa em background
         (async () => {
