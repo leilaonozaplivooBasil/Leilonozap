@@ -48,17 +48,13 @@ Deno.serve(async (req) => {
         address: {
           street: user_data.address_street,
           number: user_data.address_number,
-          complement: user_data.address_complement,
+          complement: user_data.address_complement || '',
           locality: user_data.address_neighborhood,
           city: user_data.address_city,
           region_code: user_data.address_state,
           postal_code: user_data.address_zip_code ? user_data.address_zip_code.replace(/\D/g, '') : null
         }
-      } : null,
-      redirect_url: returnUrl,
-      notification_urls: [
-        `${Deno.env.get('PAGSEGURO_WEBHOOK_URL') || 'https://api.leilaonozap.net/webhook/pagseguro'}`
-      ]
+      } : null
     };
 
     console.log('📤 Enviando para PagSeguro Checkout:', { reference_id: pagseguroPayload.reference_id, amount });
