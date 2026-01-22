@@ -50,31 +50,18 @@ async function handleWebhook(req) {
     console.log(`→ Processando como webhook`);
 
     try {
-        let body = {};
-        try {
-            const bodyText = await req.text();
-            body = bodyText ? JSON.parse(bodyText) : {};
-            console.log(`📦 Body parsed:`, { type: body.type, action: body.action, data_id: body.data?.id });
-        } catch (parseErr) {
-            console.error(`❌ JSON parse error:`, parseErr.message);
-            return new Response(JSON.stringify({ error: 'Invalid JSON' }), { 
-                status: 400, 
-                headers: { 'Content-Type': 'application/json', ...corsHeaders }
-            });
-        }
-
-        // Retorna 200 IMEDIATAMENTE
+        // Retorna 200 IMEDIATAMENTE (antes de qualquer processamento pesado)
         const response = new Response(JSON.stringify({ received: true, id: body.data?.id }), { 
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
 
-        let base44;
+        // Tenta criar client do base44 (pode falhar, não importa)
+        let base44 = null;
         try {
             base44 = createClientFromRequest(req);
         } catch (authErr) {
-            console.error(`⚠️ Auth error (background only):`, authErr.message);
-            return response;
+            console.warn(`⚠️ base44 init failed (background will skip):`, authErr.message);
         }
 
         // Processa em background
