@@ -30,16 +30,10 @@ Deno.serve(async (req) => {
     }
 
     // Prepara dados para PagSeguro Checkout (múltiplos métodos)
-    const returnUrl = `${Deno.env.get('BASE_URL') || 'https://leilaonozap.net'}/catalog/order-status?sale_id=${catalog_sale_id}`;
-    
     const pagseguroPayload = {
-      reference_id: catalog_sale_id || auction_id || product_id,
+      reference_id: `sale_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       description: user_data.full_name ? `Compra de ${user_data.full_name}` : 'Compra',
       amount_in_cents: Math.round(amount * 100),
-      payment_method: {
-        type: 'PAYMENT_METHOD',
-        installments: 12 // Permite parcelamento no cartão
-      },
       customer: {
         name: user_data.full_name || `${user_data.first_name || ''} ${user_data.last_name || ''}`.trim(),
         email: user_data.email,
