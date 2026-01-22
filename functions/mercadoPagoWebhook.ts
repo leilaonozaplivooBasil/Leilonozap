@@ -8,16 +8,9 @@ const corsHeaders = {
 };
 
 async function handleWebhook(req) {
-    // 🔴 REGRA #2: Loga TUDO o que chega (método, headers, body)
+    // Logging essencial apenas
     const timestamp = new Date().toISOString();
-    console.log(`\n📨 [${timestamp}] WEBHOOK RECEBIDO`);
-    console.log(`   Método: ${req.method}`);
-    console.log(`   URL: ${req.url}`);
-    const headerObj = {};
-    req.headers.forEach((value, key) => {
-        headerObj[key] = key.includes('authorization') ? '***' : value;
-    });
-    console.log(`   Headers:`, headerObj);
+    console.log(`[${timestamp}] ${req.method}`)
     
     // 🔴 RESPOSTA PADRÃO PARA TODOS OS CASOS
     const respondNow = (status = 200, data = { received: true }) => {
