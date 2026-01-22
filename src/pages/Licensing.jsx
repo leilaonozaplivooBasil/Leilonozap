@@ -633,21 +633,19 @@ const DashboardContent = ({ user, isAdmin }) => {
       // Buscar vendas do catálogo onde EU SOU O LICENCIADO (vendedor)
       try {
         const CatalogSale = base44.entities.CatalogSale;
-        const allCatalogSales = await CatalogSale.list('-created_date', 300);
+        
+        // ✅ ISOLAMENTO CRÍTICO: Filtrar NO SERVIDOR, não na UI
+        // Busca apenas vendas onde licensee_id = meu ID (não código de referral)
+        const catalogSales = Array.isArray(user.id) ? [] :
+        await CatalogSale.filter(
+          { licensee_id: user.id },
+          '-created_date',
+          300
+        );
 
-        // Filtra vendas onde o licensee_id é meu código de referral OU meu user ID
-        const catalogSales = Array.isArray(allCatalogSales) ?
-        allCatalogSales.filter((s) =>
-        s.referred_by_code === user.referral_code ||
-        s.licensee_id === user.referral_code ||
-        s.licensee_id === user.id
-        ) :
-        [];
-
-        console.log('🛍️ Vendas catálogo encontradas:', catalogSales.length);
-        console.log('🛍️ Vendas completas:', catalogSales);
-        setMySales(catalogSales);
-        setMyCatalogSales(catalogSales);
+        console.log('✅ [ISOLAMENTO] Vendas catálogo do user_id:', user.id, '→', catalogSales.length, 'vendas');
+        setMySales(Array.isArray(catalogSales) ? catalogSales : []);
+        setMyCatalogSales(Array.isArray(catalogSales) ? catalogSales : []);
       } catch (catalogError) {
         console.error("Erro ao buscar vendas do catálogo:", catalogError);
         setMySales([]);
