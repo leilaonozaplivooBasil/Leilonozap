@@ -8,28 +8,37 @@ const corsHeaders = {
 };
 
 async function handleWebhook(req) {
-    // Logging essencial apenas
     const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method}`)
+    const method = req.method.toUpperCase();
     
-    // Resposta imediata para TODOS os métodos (exceto POST/PUT)
-    if (req.method === 'OPTIONS') {
+    // Log imediato de QUALQUER requisição
+    console.log(`[${timestamp}] ${method} - URL: ${req.url}`);
+    
+    // CORS Preflight
+    if (method === 'OPTIONS') {
+        console.log(`✅ CORS preflight`);
         return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    if (req.method === 'GET') {
-        return new Response(JSON.stringify({ status: 'ok' }), { 
+    // Health check
+    if (method === 'GET') {
+        console.log(`✅ Health check`);
+        return new Response(JSON.stringify({ status: 'ok', time: timestamp }), { 
             status: 200, 
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
     }
 
-    if (req.method !== 'POST' && req.method !== 'PUT') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
+    // Só POST e PUT processam webhook
+    if (method !== 'POST' && method !== 'PUT') {
+        console.error(`❌ Método não permitido: ${method}`);
+        return new Response(JSON.stringify({ error: `Method ${method} not allowed` }), { 
             status: 405, 
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
     }
+    
+    console.log(`📨 Processando ${method}`);
 
     try {
         const base44 = createClientFromRequest(req);
