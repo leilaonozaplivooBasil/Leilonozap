@@ -1019,17 +1019,15 @@ export default function InvestorDashboard() {
                       return;
                     }
 
-                    // Validação de CPF
                     const cleanCpf = cpf.replace(/\D/g, '');
                     if (cleanCpf.length !== 11) {
                       toast.error("CPF inválido. Deve ter 11 dígitos.");
                       return;
                     }
 
-                    // Validação básica de CPF (dígitos verificadores)
                     const validateCPF = (cpf) => {
                       if (cpf.length !== 11) return false;
-                      if (/^(\d)\1+$/.test(cpf)) return false; // Todos dígitos iguais
+                      if (/^(\d)\1+$/.test(cpf)) return false;
 
                       let sum = 0;
                       for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
@@ -1055,31 +1053,28 @@ export default function InvestorDashboard() {
                     try {
                       toast.info("Gerando QR Code PIX...");
 
-                        // ✅ ISOLAMENTO: Passa licensee_id para createAbacatePayPix
-                        // Não precisa criar Auction para investimentos (AbacatePay é isolado)
+                      const response = await base44.functions.invoke('createAbacatePayPix', {
+                        licensee_id: currentUser.id,
+                        user_name: name,
+                        user_email: email,
+                        user_phone: phone,
+                        user_cpf: cpf,
+                        plan_code: selectedPlan.name
+                      });
 
-                        const response = await base44.functions.invoke('createAbacatePayPix', {
-                           licensee_id: currentUser.id,
-                           user_name: name,
-                           user_email: email,
-                           user_phone: phone,
-                           user_cpf: cpf,
-                           plan_code: selectedPlan.name
-                         });
-
-                        if (response?.data?.success) {
-                          setPixData(response.data);
-                          toast.success("QR Code gerado com sucesso!");
-                        } else {
-                          toast.error(response?.data?.error || "Erro ao gerar QR Code");
-                        }
-                      } catch (error) {
-                        console.error('❌ Erro:', error);
-                        toast.error("Erro ao processar: " + error.message);
-                      } finally {
-                        setIsProcessing(false);
+                      if (response?.data?.success) {
+                        setPixData(response.data);
+                        toast.success("QR Code gerado com sucesso!");
+                      } else {
+                        toast.error(response?.data?.error || "Erro ao gerar QR Code");
                       }
-                    }}
+                    } catch (error) {
+                      console.error('❌ Erro:', error);
+                      toast.error("Erro ao processar: " + error.message);
+                    } finally {
+                      setIsProcessing(false);
+                    }
+                  }}
                     disabled={isProcessing || !acceptedContract}
                     className={`flex-1 ${acceptedContract ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 cursor-not-allowed'}`}
                   >

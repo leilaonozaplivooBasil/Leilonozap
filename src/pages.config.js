@@ -51,8 +51,6 @@ import PDV from './pages/PDV';
 import Partners from './pages/Partners';
 import PaymentFailure from './pages/PaymentFailure';
 import PaymentSettings from './pages/PaymentSettings';
-import PaymentSuccess from './pages/PaymentSuccess';
-import PixPayment from './pages/PixPayment';
 import ProductManagement from './pages/ProductManagement';
 import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
@@ -128,8 +126,6 @@ export const PAGES = {
     "Partners": Partners,
     "PaymentFailure": PaymentFailure,
     "PaymentSettings": PaymentSettings,
-    "PaymentSuccess": PaymentSuccess,
-    "PixPayment": PixPayment,
     "ProductManagement": ProductManagement,
     "Profile": Profile,
     "ProtecaoCriacao": ProtecaoCriacao,
