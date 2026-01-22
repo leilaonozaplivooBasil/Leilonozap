@@ -1156,23 +1156,23 @@ export default function InvestorDashboard() {
                   onClick={async () => {
                     setIsCheckingPayment(true);
                     try {
-                      toast.info("Verificando pagamento...");
-                      
-                      const response = await checkAbacatePayPix({
-                       billing_id: pixData.billing_id
+                      toast.info("Verificando pagamento PIX...");
+
+                      const response = await base44.functions.invoke('checkAbacatePayPix', {
+                        billing_id: pixData.billing_id
                       });
 
                       if (response?.data?.is_paid || response?.is_paid) {
-                        toast.success("✅ Pagamento confirmado!");
+                        toast.success("✅ Pagamento PIX confirmado!");
                         setShowPlansModal(false);
                         setTimeout(() => {
                           window.location.reload();
                         }, 2000);
                       } else {
-                        toast.info("⏳ Pagamento ainda não identificado. Aguarde e tente novamente.");
+                        toast.info("⏳ Pagamento PIX ainda não identificado. Aguarde alguns segundos e tente novamente.");
                       }
                     } catch (error) {
-                      toast.error("Erro ao verificar: " + error.message);
+                      toast.error("Erro ao verificar pagamento: " + error.message);
                     } finally {
                       setIsCheckingPayment(false);
                     }
@@ -1183,7 +1183,7 @@ export default function InvestorDashboard() {
                   {isCheckingPayment ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    <>✅ Já efetuei o pagamento</>
+                    <>💰 Já efetuei o PIX (verificar pagamento)</>
                   )}
                 </Button>
 
