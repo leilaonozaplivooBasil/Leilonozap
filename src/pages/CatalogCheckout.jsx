@@ -10,6 +10,12 @@ import { Loader2, ArrowLeft, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { createMPPreference } from "@/functions/createMPPreference";
 
+// GATEWAY: PagSeguro prioridade, Mercado Pago fallback
+const PAYMENT_GATEWAYS = {
+  pagseguro: { name: 'PagSeguro PIX', default: true },
+  mercadopago: { name: 'Mercado Pago', default: false }
+};
+
 const Product = base44.entities.Product;
 const CatalogSale = base44.entities.CatalogSale;
 
