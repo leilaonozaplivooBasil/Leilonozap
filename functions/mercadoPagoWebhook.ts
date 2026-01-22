@@ -68,12 +68,32 @@ Deno.serve(async (req) => {
                 }
 
                 // Busca payment no MP
-                const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-                    headers: { 'Authorization': `Bearer ${accessToken.trim()}` }
+                const mpUrl = `https://api.mercadopago.com/v1/payments/${paymentId}`;
+                console.log(`🔍 Buscando payment no MP:`, mpUrl);
+                console.log(`🔑 Token preview: ${accessToken.trim().substring(0, 20)}...`);
+
+                const mpResponse = await fetch(mpUrl, {
+                    headers: { 
+                        'Authorization': `Bearer ${accessToken.trim()}`,
+                        'Content-Type': 'application/json'
+                    }
                 });
 
                 if (!mpResponse.ok) {
-                    console.error(`❌ MP retornou ${mpResponse.status}`);
+                    const errorText = await mpResponse.text();
+                    console.error(`❌ MP retornou ${mpResponse.status}:`, errorText);
+
+                    // Log do erro
+                    try {
+                        await base44.asServiceRole.entities.WebhookLog.create({
+                            provider: 'mercadopago',
+                            event_type: body.type || body.action || 'unknown',
+                            resource_id: String(paymentId),
+                            body: body,
+                            processed: false,
+                            error: `MP API returned ${mpResponse.status}: ${errorText}`
+                        });
+                    } catch (logErr) {}
                     return;
                 }
 
