@@ -30,6 +30,7 @@ export default function CatalogCheckout() {
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
 
+  const [selectedGateway, setSelectedGateway] = useState('pagseguro');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
