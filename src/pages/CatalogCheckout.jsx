@@ -218,7 +218,7 @@ export default function CatalogCheckout() {
       toast.success('Abrindo Mercado Pago... Você retornará aqui após o pagamento.');
       
       setTimeout(() => {
-        const checkoutUrl = responseData.init_point || responseData.sandbox_init_point;
+        const checkoutUrl = responseData.init_point;
         if (checkoutUrl) {
           window.location.href = checkoutUrl;
         } else {
