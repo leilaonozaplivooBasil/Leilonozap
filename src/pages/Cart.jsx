@@ -282,12 +282,7 @@ export default function Cart() {
         }
       });
 
-      console.log('Resposta MP completa:', JSON.stringify(response, null, 2));
-
-      // A resposta pode vir direto ou dentro de .data dependendo do SDK
       const data = response?.data || response;
-
-      console.log('Data extraído:', JSON.stringify(data, null, 2));
 
       if (data?.error) {
         toast.error(data.error);
@@ -295,16 +290,15 @@ export default function Cart() {
         return;
       }
 
-      const initPoint = data?.init_point;
-
-      if (initPoint) {
-        console.log('Redirecionando para:', initPoint);
-        window.location.href = initPoint;
-      } else {
+      if (!data?.success || !data?.init_point) {
         toast.error('Erro ao gerar link de pagamento');
-        console.error('Resposta sem init_point:', response);
+        console.error('Resposta inválida:', data);
         setIsProcessing(false);
+        return;
       }
+
+      console.log('✅ Redirecionando para Mercado Pago:', data.init_point);
+      window.location.href = data.init_point;
     } catch (error) {
       console.error('Erro no checkout:', error);
       toast.error('Erro ao processar pagamento. Tente novamente.');
