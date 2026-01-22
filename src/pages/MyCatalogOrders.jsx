@@ -116,7 +116,34 @@ export default function MyCatalogOrders() {
         setIsLoading(false);
       }
     };
+    
     loadData();
+
+    // 🔄 Subscrever a atualizações em tempo real de CatalogSale
+    const unsubscribe = CatalogSale.subscribe((event) => {
+      if (event.type === 'update') {
+        const savedUser = localStorage.getItem('currentUser');
+        if (!savedUser) return;
+        
+        const user = JSON.parse(savedUser);
+        
+        // Se atualização é para um pedido desse usuário, recarregar
+        if (event.data?.buyer_id === user.id || event.data?.buyer_email === user.email) {
+          console.log('📢 Pedido atualizado em tempo real:', event.id);
+          
+          setOrders(prev => 
+            prev.map(order => order.id === event.id ? event.data : order)
+          );
+
+          // Se o pagamento foi confirmado, mostrar notificação
+          if (event.data?.status === 'paid') {
+            console.log('✅ Pagamento confirmado para pedido:', event.id);
+          }
+        }
+      }
+    });
+
+    return unsubscribe;
   }, []);
 
   const handleTrackClick = (order) => {
