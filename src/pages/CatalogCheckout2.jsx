@@ -613,5 +613,6 @@ export default function CatalogCheckout2() {
                         </div>
                         </div>
                         </div>
+                        </div>
                         );
                         }
