@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       order_id: result.id,
-      checkout_url: checkoutLink.href,
+      checkout_url: checkoutUrl,
       // Compatibilidade: retorna QR Code se tiver PIX
       qr_code: result.qr_codes?.[0]?.text || null,
       qr_code_url: result.qr_codes?.[0]?.url || null
