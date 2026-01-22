@@ -1109,16 +1109,24 @@ export default function InvestorDashboard() {
                   />
                 </div>
 
-                {/* Botão Abrir PIX AbacatePay */}
+                {/* Botão Copiar Código PIX */}
                 <Button
                   onClick={() => {
-                    // Tenta abrir o app PIX (Android/iOS)
-                    const pixDeeplink = `https://api.abacatepay.com/v1/pix/flow?qrCode=${encodeURIComponent(pixData.pix_code)}`;
-                    window.open(pixDeeplink, '_blank');
+                    navigator.clipboard.writeText(pixData.pix_code);
+                    toast.success("Código PIX copiado! Cole no seu banco.");
+                    // Abre o app do Banco nativo (se existir)
+                    const isAndroid = /Android/i.test(navigator.userAgent);
+                    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                    if (isAndroid || isIOS) {
+                      // App Banco genérico
+                      setTimeout(() => {
+                        window.location.href = 'intent://pay#Intent;scheme=http;end';
+                      }, 300);
+                    }
                   }}
                   className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-4 text-base"
                 >
-                  💳 Abrir PIX Agora
+                  ✅ Copiar Código PIX e Ir para Banco
                 </Button>
 
                 <p className="text-sm text-gray-300 text-center">Ou copie o código PIX:</p>
