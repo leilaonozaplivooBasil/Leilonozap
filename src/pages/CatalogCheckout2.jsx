@@ -681,9 +681,10 @@ export default function CatalogCheckout2() {
                                 Pagamento processado de forma segura pelo Mercado Pago
                             </p>
                         </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </div>
-    );
-}
+                        </Card>
+                        </div>
+                        )}
+                        </div>
+                        </div>
+                        );
+                        }
