@@ -1,18 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
-import { createMPPreference } from '@/functions/createMPPreference';
 
 export default function CheckoutPage() {
-    const [selectedGateway, setSelectedGateway] = useState('pagseguro');
     const [auction, setAuction] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [preferenceId, setPreferenceId] = useState(null);
-    const [publicKey, setPublicKey] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [lastName, setLastName] = useState('');
     const [phone, setPhone] = useState('');
@@ -27,8 +23,6 @@ export default function CheckoutPage() {
     const [addressState, setAddressState] = useState('');
     const [addressZip, setAddressZip] = useState('');
     const [isLoadingCep, setIsLoadingCep] = useState(false);
-    const walletContainerRef = useRef(null);
-    const mpInstanceRef = useRef(null);
     const navigate = useNavigate();
 
     const searchCep = async (cep) => {
@@ -59,126 +53,101 @@ export default function CheckoutPage() {
         if (v.replace(/\D/g,'').length === 8) searchCep(v);
     };
 
-    const handleCreatePreference = async () => {
-        if (!lastName || lastName.trim() === '') {
-            toast.error('Por favor, preencha seu sobrenome');
-            return;
-        }
+    const handleCreatePagSeguroPayment = async () => {
+         if (!lastName || lastName.trim() === '') {
+             toast.error('Por favor, preencha seu sobrenome');
+             return;
+         }
 
-        if (!phone || phone.trim() === '') {
-            toast.error('Telefone é obrigatório para pagamento');
-            return;
-        }
+         if (!phone || phone.trim() === '') {
+             toast.error('Telefone é obrigatório para pagamento');
+             return;
+         }
 
-        if (!cpf || cpf.trim() === '') {
-            toast.error('CPF é obrigatório para pagamento');
-            return;
-        }
+         if (!cpf || cpf.trim() === '') {
+             toast.error('CPF é obrigatório para pagamento');
+             return;
+         }
 
-        if (!addressStreet || addressStreet.trim() === '') {
-            toast.error('Endereço é obrigatório para entrega');
-            return;
-        }
+         if (!addressStreet || addressStreet.trim() === '') {
+             toast.error('Endereço é obrigatório para entrega');
+             return;
+         }
 
-        if (!addressNumber || addressNumber.trim() === '') {
-            toast.error('Número do endereço é obrigatório');
-            return;
-        }
+         if (!addressNumber || addressNumber.trim() === '') {
+             toast.error('Número do endereço é obrigatório');
+             return;
+         }
 
-        if (!addressCity || addressCity.trim() === '') {
-            toast.error('Cidade é obrigatória');
-            return;
-        }
+         if (!addressCity || addressCity.trim() === '') {
+             toast.error('Cidade é obrigatória');
+             return;
+         }
 
-        if (!addressState || addressState.trim() === '') {
-            toast.error('Estado é obrigatório');
-            return;
-        }
+         if (!addressState || addressState.trim() === '') {
+             toast.error('Estado é obrigatório');
+             return;
+         }
 
-        if (!addressZip || addressZip.trim() === '') {
-            toast.error('CEP é obrigatório');
-            return;
-        }
+         if (!addressZip || addressZip.trim() === '') {
+             toast.error('CEP é obrigatório');
+             return;
+         }
 
-        if (!addressNeighborhood || addressNeighborhood.trim() === '') {
-            toast.error('Bairro é obrigatório');
-            return;
-        }
+         if (!addressNeighborhood || addressNeighborhood.trim() === '') {
+             toast.error('Bairro é obrigatório');
+             return;
+         }
 
-        if (!auction) {
-            toast.error('Leilão não encontrado');
-            return;
-        }
+         if (!auction) {
+             toast.error('Leilão não encontrado');
+             return;
+         }
 
-        try {
-            const savedUserJSON = localStorage.getItem('currentUser');
-            const savedUser = JSON.parse(savedUserJSON);
+         try {
+             const savedUserJSON = localStorage.getItem('currentUser');
+             const savedUser = JSON.parse(savedUserJSON);
 
-            const auctionId = auction.id;
-            console.log(`🔄 Criando pagamento com ${selectedGateway === 'pagseguro' ? 'PagSeguro' : 'Mercado Pago'} para auction:`, auctionId);
-            
-            const paymentData = {
-                auction_id: auctionId,
-                amount: auction.current_price,
-                user_data: {
-                    id: savedUser.id,
-                    email: email.trim(),
-                    full_name: savedUser.full_name,
-                    phone: phone.trim(),
-                    cpf: cpf.trim(),
-                    last_name: lastName.trim(),
-                    address_street: addressStreet.trim(),
-                    address_number: addressNumber.trim(),
-                    address_complement: addressComplement.trim(),
-                    address_neighborhood: addressNeighborhood.trim(),
-                    address_city: addressCity.trim(),
-                    address_state: addressState.trim(),
-                    address_zip_code: addressZip.trim()
-                }
-            };
+             const auctionId = auction.id;
+             console.log('🔄 Criando pagamento PagSeguro para:', auctionId);
 
-            let response;
-            if (selectedGateway === 'pagseguro') {
-                response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
-            } else {
-                response = await createMPPreference(paymentData);
-            }
-            
-            console.log('📦 Resposta gateway:', JSON.stringify(response, null, 2));
-            
-            if (response?.data?.success || response?.order_id) {
-                if (selectedGateway === 'pagseguro') {
-                    console.log('✅ PagSeguro Order ID:', response.order_id);
-                    toast.success('Ordem criada no PagSeguro!');
-                    // TODO: Implementar exibição de QR Code ou redirect
-                    toast.info('QR Code: ' + (response.qr_code || 'Processando...'));
-                } else {
-                    console.log('✅ Preference ID:', response.data.preference_id);
-                    console.log('✅ Public Key:', response.data.public_key);
-                    
-                    if (!response.data.preference_id) {
-                        toast.error('Erro: Preference ID não retornado');
-                        return;
-                    }
-                    
-                    if (!response.data.public_key) {
-                        toast.error('Erro: Public Key não retornada');
-                        return;
-                    }
-                    
-                    setPreferenceId(response.data.preference_id);
-                    setPublicKey(response.data.public_key);
-                }
-            } else {
-                console.error('❌ Erro na resposta:', response);
-                toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
-            }
+             const paymentData = {
+                 auction_id: auctionId,
+                 amount: auction.current_price,
+                 user_data: {
+                     id: savedUser.id,
+                     email: email.trim(),
+                     full_name: savedUser.full_name,
+                     phone: phone.trim(),
+                     cpf: cpf.trim(),
+                     last_name: lastName.trim(),
+                     address_street: addressStreet.trim(),
+                     address_number: addressNumber.trim(),
+                     address_complement: addressComplement.trim(),
+                     address_neighborhood: addressNeighborhood.trim(),
+                     address_city: addressCity.trim(),
+                     address_state: addressState.trim(),
+                     address_zip_code: addressZip.trim()
+                 }
+             };
 
-        } catch (error) {
-            console.error('Erro:', error);
-            toast.error('Erro ao criar preferência de pagamento');
-        }
-    };
+             const response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
+             console.log('📦 Resposta PagSeguro:', JSON.stringify(response, null, 2));
+
+             if (response?.data?.success || response?.order_id) {
+                 console.log('✅ PagSeguro Order ID:', response.order_id);
+                 toast.success('Ordem criada no PagSeguro!');
+                 toast.info('QR Code: ' + (response.qr_code || 'Processando...'));
+             } else {
+                 console.error('❌ Erro na resposta:', response);
+                 toast.error(response?.data?.error || 'Erro ao criar pagamento PagSeguro');
+             }
+
+         } catch (error) {
+             console.error('Erro:', error);
+             toast.error('Erro ao criar pagamento PagSeguro');
+         }
+     };
 
     useEffect(() => {
         const loadData = async () => {
@@ -233,160 +202,7 @@ export default function CheckoutPage() {
         loadData();
     }, []);
 
-    // Carregar SDK do Mercado Pago e renderizar botão
-    useEffect(() => {
-        console.log('🔍 [SDK Effect] Estado atual:', { 
-            preferenceId: preferenceId ? 'SIM' : 'NÃO', 
-            publicKey: publicKey ? 'SIM' : 'NÃO',
-            prefValue: preferenceId,
-            keyValue: publicKey
-        });
-        
-        if (!preferenceId || !publicKey) {
-            console.log('⏳ Aguardando preferenceId e publicKey...');
-            return;
-        }
 
-        console.log('🚀 Iniciando carregamento do SDK MP');
-
-        const loadMercadoPagoSDK = () => {
-            // Verificar se já existe
-            if (window.MercadoPago) {
-                console.log('✅ SDK já carregado, inicializando...');
-                initializeMercadoPago();
-                return;
-            }
-
-            console.log('📥 Carregando SDK do Mercado Pago...');
-            
-            // Carregar SDK com timeout
-            const script = document.createElement('script');
-            script.src = 'https://sdk.mercadopago.com/js/v2';
-            script.async = true;
-            
-            let sdkTimeout = setTimeout(() => {
-                console.error('❌ SDK timeout após 15s');
-                toast.error('SDK demorou muito para carregar. Verifique conexão.');
-            }, 15000);
-            
-            script.onload = () => {
-                clearTimeout(sdkTimeout);
-                console.log('✅ SDK carregado com sucesso');
-                initializeMercadoPago();
-            };
-            script.onerror = (error) => {
-                clearTimeout(sdkTimeout);
-                console.error('❌ Erro ao carregar SDK:', error);
-                toast.error('Erro ao carregar SDK. Tente novamente.');
-            };
-            document.body.appendChild(script);
-        };
-
-        const initializeMercadoPago = async () => {
-        try {
-        console.log('🔧 Inicializando Mercado Pago SDK...');
-        console.log('🔑 Public Key:', publicKey);
-        console.log('🎫 Preference ID:', preferenceId);
-
-        // Verificar se container existe
-        const container = document.getElementById('walletBrick_container');
-        if (!container) {
-            throw new Error('Container walletBrick_container não encontrado');
-        }
-        console.log('✅ Container encontrado');
-
-        // Aguardar um tick para garantir que o DOM está pronto
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Limpar container antes de renderizar
-        container.innerHTML = '';
-
-        // Inicializar MP com public key recebida do backend
-        const mp = new window.MercadoPago(publicKey.trim(), {
-            locale: 'pt-BR'
-        });
-
-        mpInstanceRef.current = mp;
-        console.log('✅ SDK MP inicializado');
-
-        // Criar Wallet Brick
-        const bricksBuilder = mp.bricks();
-        console.log('🧱 Criando Wallet Brick...');
-
-        const brick = await bricksBuilder.create('wallet', 'walletBrick_container', {
-            initialization: {
-                preferenceId: preferenceId.trim()
-            },
-            customization: {
-                texts: {
-                    valueProp: 'security_safety'
-                }
-            },
-            onError: (error) => {
-                console.error('❌ Erro Wallet Brick:', error);
-                toast.error('Erro ao renderizar opções de pagamento.');
-            }
-        });
-
-        console.log('✅ Wallet Brick criado:', brick);
-
-        // Verificar se realmente foi renderizado
-        const containerAfter = document.getElementById('walletBrick_container');
-        console.log('✅ Container após render:', containerAfter?.innerHTML.length, 'chars');
-        console.log('✅ Botão de pagamento renderizado com sucesso!');
-
-        } catch (error) {
-        console.error('❌ Erro detalhado ao inicializar MP:', error);
-        console.error('Tipo do erro:', error.name);
-        console.error('Mensagem:', error.message);
-        console.error('Stack:', error.stack);
-
-        // Mostrar erro mais detalhado
-        if (error.message.includes('public_key')) {
-            toast.error('Chave pública inválida. Verifique as credenciais do Mercado Pago.');
-        } else if (error.message.includes('preference')) {
-            toast.error('Erro ao carregar preferência de pagamento.');
-        } else {
-            toast.error(`Erro: ${error.message}`);
-        }
-        }
-        };
-
-        loadMercadoPagoSDK();
-
-        // Cleanup
-        return () => {
-            if (mpInstanceRef.current) {
-                const container = document.getElementById('walletBrick_container');
-                if (container) {
-                    container.innerHTML = '';
-                }
-            }
-        };
-    }, [preferenceId, publicKey]);
-
-    // Monitorar a confirmação do pagamento via webhook e redirecionar
-    useEffect(() => {
-        if (!preferenceId) return;
-        let stopped = false;
-        const interval = setInterval(async () => {
-            try {
-                const list = await base44.entities.MercadoPagoPayment.filter({ preference_id: preferenceId });
-                if (list && list.length > 0) {
-                    const p = list[0];
-                    if (p.status === 'approved') {
-                        clearInterval(interval);
-                        if (!stopped) {
-                            toast.success('Pagamento aprovado!');
-                            const ref = encodeURIComponent(p.external_reference || '');
-                            navigate(createPageUrl('OrderStatusMP') + (ref ? `?ref=${ref}` : ''));
-                        }
-                    }
-                }
-            } catch (_) {}
-        }, 3000);
-        return () => { stopped = true; clearInterval(interval); };
-    }, [preferenceId]);
 
     if (isLoading) {
         return (
@@ -620,86 +436,29 @@ export default function CheckoutPage() {
                                  </div>
                              </div>
 
-                             {/* Seletor de Gateway */}
-                             {!preferenceId && !publicKey && (
-                                 <div className="border-t border-gray-600 pt-4 mb-4">
-                                     <label className="block text-sm font-medium text-gray-300 mb-3">
-                                         Método de Pagamento
-                                     </label>
-                                     <div className="space-y-2">
-                                         <button
-                                             onClick={() => setSelectedGateway('pagseguro')}
-                                             className={`w-full p-3 rounded-lg border-2 transition-all text-sm font-semibold ${
-                                                 selectedGateway === 'pagseguro'
-                                                     ? 'border-green-500 bg-green-600/20 text-green-400'
-                                                     : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-                                             }`}
-                                         >
-                                             ✓ PagSeguro PIX (Prioridade)
-                                         </button>
-                                         <button
-                                             onClick={() => setSelectedGateway('mercadopago')}
-                                             className={`w-full p-3 rounded-lg border-2 transition-all text-sm font-semibold ${
-                                                 selectedGateway === 'mercadopago'
-                                                     ? 'border-blue-500 bg-blue-600/20 text-blue-400'
-                                                     : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
-                                             }`}
-                                         >
-                                             💳 Mercado Pago (Fallback)
-                                         </button>
-                                     </div>
-                                 </div>
-                             )}
+                             {/* PagSeguro apenas */}
+                             <div className="border-t border-gray-600 pt-4 mb-4 bg-green-600/10 rounded-lg p-3">
+                                 <p className="text-green-400 text-sm font-semibold mb-2">✓ Pagamento via PagSeguro PIX</p>
+                                 <p className="text-gray-300 text-xs">Pagamento instantâneo e seguro</p>
+                             </div>
 
-                             {(!preferenceId || !publicKey) && selectedGateway === 'mercadopago' && (
-                                 <>
-                                     <p className="text-gray-400 text-sm">
-                                         Escolha seu método de pagamento preferido:
-                                     </p>
-                                     <ul className="text-gray-300 text-sm space-y-2 mb-6">
-                                         <li>✓ Cartão de crédito (até 12x)</li>
-                                         <li>✓ Cartão de débito</li>
-                                         <li>✓ PIX</li>
-                                         <li>✓ Boleto bancário</li>
-                                     </ul>
-                                 </>
-                             )}
-
-                             {(preferenceId && publicKey) && (
-                                 /* Container para o Wallet Brick do Mercado Pago */
-                                 <div 
-                                     id="walletBrick_container" 
-                                     ref={walletContainerRef}
-                                     style={{ minHeight: '400px', width: '100%' }}
-                                     className="w-full mb-4"
-                                 ></div>
-                             )}
-
-                             {(!preferenceId || !publicKey) && (
-                                 <div className="space-y-3">
-                                     <button
-                                         onClick={handleCreatePreference}
-                                         disabled={!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
-                                         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors"
-                                         >
-                                         {preferenceId ? (
-                                             <>
-                                                 <Loader2 className="inline w-4 h-4 mr-2 animate-spin" />
-                                                 Carregando opções de pagamento...
-                                             </>
-                                         ) : (
-                                             'Continuar com Pagamento'
-                                         )}
-                                     </button>
-                                     {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
-                                     <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
-                                     )}
-                                 </div>
-                             )}
+                             <div className="space-y-3">
+                                 <button
+                                     onClick={handleCreatePagSeguroPayment}
+                                     disabled={!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
+                                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                     >
+                                     <ShoppingCart className="w-5 h-5" />
+                                     Pagar com PagSeguro
+                                 </button>
+                                 {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
+                                 <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
+                                 )}
+                             </div>
 
                              <p className="text-xs text-gray-500 text-center mt-4">
-                                Pagamento processado de forma segura pelo Mercado Pago
-                            </p>
+                                Pagamento seguro via PagSeguro
+                             </p>
                         </CardContent>
                     </Card>
                 </div>
