@@ -35,6 +35,7 @@ export default function CatalogCheckout2() {
           const [isLoadingCep, setIsLoadingCep] = useState(false);
           const [showCheckoutForm, setShowCheckoutForm] = useState(true);
           const [mpData, setMpData] = useState(null);
+          const [selectedGateway, setSelectedGateway] = useState('pagseguro');
           const navigate = useNavigate();
 
     const searchCep = async (cep) => {
