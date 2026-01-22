@@ -211,6 +211,17 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error('❌ Erro crítico:', error.message);
-        return Response.json({ received: true }, { status: 200 });
+        return respondNow(200); // Retorna 200 mesmo com erro crítico
     }
-});
+    });
+
+    // 🔴 REGRA #6: Trata erros globais da função
+    const handleError = (error) => {
+    console.error('🚨 Erro não tratado no webhook:', error);
+    return respondNow(200);
+    };
+
+    // Adiciona handler global
+    if (typeof req !== 'undefined') {
+    req.addEventListener?.('error', handleError);
+    }
