@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
     const abacatePayload = {
       amount: Math.round(amount * 100), // Valor em centavos
       expiresIn: 3600, // 1 hora
-      description: `Arremate: ${auction.title}`,
+      description: `Investimento: ${plan_code}`,
       customer: {
         name: user_name,
         cellphone: formattedPhone,
@@ -76,7 +76,8 @@ Deno.serve(async (req) => {
         taxId: cleanCpf
       },
       metadata: {
-        externalId: auction_id
+        externalId: licensee_id,
+        plan_code: plan_code
       }
     };
 
