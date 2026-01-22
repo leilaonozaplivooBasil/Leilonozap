@@ -1108,6 +1108,19 @@ export default function InvestorDashboard() {
                     className="w-64 h-64 mx-auto"
                   />
                 </div>
+
+                {/* Botão Abrir PIX AbacatePay */}
+                <Button
+                  onClick={() => {
+                    // Tenta abrir o app PIX (Android/iOS)
+                    const pixDeeplink = `https://api.abacatepay.com/v1/pix/flow?qrCode=${encodeURIComponent(pixData.pix_code)}`;
+                    window.open(pixDeeplink, '_blank');
+                  }}
+                  className="w-full bg-green-700 hover:bg-green-800 text-white font-bold py-4 text-base"
+                >
+                  💳 Abrir PIX Agora
+                </Button>
+
                 <p className="text-sm text-gray-300 text-center">Ou copie o código PIX:</p>
                 <div className="flex gap-2">
                   <Input
