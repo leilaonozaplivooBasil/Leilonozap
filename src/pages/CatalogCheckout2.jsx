@@ -188,56 +188,69 @@ export default function CatalogCheckout2() {
 
             // 🔒 PASSO 3: Criar preferência MP com catalog_sale_id vinculado
             console.log('📤 Enviando para Mercado Pago...');
-            const response = await createMPPreference({
-                          product_id: product.is_auction ? null : product.id,
-                          auction_id: product.is_auction ? product.id : null,
-                          catalog_sale_id: product.is_auction ? null : sale.id,
-                          user_data: {
-                              id: savedUser.id,
-                              email: email.trim(),
-                              full_name: savedUser.full_name,
-                              phone: phone.trim(),
-                              cpf: cpf.trim(),
-                              last_name: lastName.trim(),
-                              address_street: addressStreet.trim(),
-                              address_number: addressNumber.trim(),
-                              address_complement: addressComplement.trim(),
-                              address_neighborhood: addressNeighborhood.trim(),
-                              address_city: addressCity.trim(),
-                              address_state: addressState.trim(),
-                              address_zip_code: addressZip.trim()
-                          }
-                      });
+            try {
+                const response = await base44.functions.invoke('createMPPreference', {
+                    product_id: product.is_auction ? null : product.id,
+                    auction_id: product.is_auction ? product.id : null,
+                    catalog_sale_id: product.is_auction ? null : sale.id,
+                    user_data: {
+                        id: savedUser.id,
+                        email: email.trim(),
+                        full_name: savedUser.full_name,
+                        phone: phone.trim(),
+                        cpf: cpf.trim(),
+                        last_name: lastName.trim(),
+                        address_street: addressStreet.trim(),
+                        address_number: addressNumber.trim(),
+                        address_complement: addressComplement.trim(),
+                        address_neighborhood: addressNeighborhood.trim(),
+                        address_city: addressCity.trim(),
+                        address_state: addressState.trim(),
+                        address_zip_code: addressZip.trim()
+                    }
+                });
 
-                      // Validar resposta de MP
-                      if (!response?.data?.success || !response?.data?.preference_id) {
-                          console.error('❌ MP falhou');
-                          toast.dismiss('checkout-loading');
-                          toast.error(response?.data?.error || 'Erro ao processar pagamento');
+                const responseData = response?.data || response;
+                
+                // Validar resposta de MP
+                if (!responseData?.success || !responseData?.preference_id) {
+                    console.error('❌ MP falhou:', responseData);
+                    toast.dismiss('checkout-loading');
+                    toast.error(responseData?.error || 'Erro ao processar pagamento');
 
-                          // Limpar sale órfã
-                          try {
-                              await base44.entities.CatalogSale.delete(sale.id);
-                              console.log('🧹 CatalogSale deletada');
-                          } catch (delErr) {
-                              console.warn('⚠️ Erro ao limpar:', delErr.message);
-                          }
-                          return;
-                      }
+                    // Limpar sale órfã
+                    try {
+                        await base44.entities.CatalogSale.delete(sale.id);
+                        console.log('🧹 CatalogSale deletada');
+                    } catch (delErr) {
+                        console.warn('⚠️ Erro ao limpar:', delErr.message);
+                    }
+                    return;
+                }
 
-                      console.log('✅ Mercado Pago pronto:', response.data.preference_id);
-                      console.log('✅ Redirecionando para checkout do Mercado Pago...');
-                      toast.dismiss('checkout-loading');
-                      toast.success('Abrindo Mercado Pago... Você retornará aqui após o pagamento.');
+                console.log('✅ Mercado Pago pronto:', responseData.preference_id);
+                console.log('✅ Redirecionando para checkout do Mercado Pago...');
+                toast.dismiss('checkout-loading');
+                toast.success('Abrindo Mercado Pago... Você retornará aqui após o pagamento.');
 
-                      setTimeout(() => {
-                          const checkoutUrl = response.data.init_point || response.data.sandbox_init_point;
-                          if (checkoutUrl) {
-                              window.location.href = checkoutUrl;
-                          } else {
-                              toast.error('Erro ao abrir checkout do Mercado Pago');
-                          }
-                      }, 800);
+                setTimeout(() => {
+                    const checkoutUrl = responseData.init_point || responseData.sandbox_init_point;
+                    if (checkoutUrl) {
+                        window.location.href = checkoutUrl;
+                    } else {
+                        toast.error('Erro ao abrir checkout do Mercado Pago');
+                    }
+                }, 800);
+            } catch (mpError) {
+                console.error('❌ Erro ao chamar MP:', mpError);
+                toast.dismiss('checkout-loading');
+                toast.error('Erro ao conectar com Mercado Pago');
+                try {
+                    await base44.entities.CatalogSale.delete(sale.id);
+                } catch (delErr) {
+                    console.warn('⚠️ Erro ao limpar:', delErr.message);
+                }
+            }
 
         } catch (error) {
             console.error('❌ Erro:', error.message);
