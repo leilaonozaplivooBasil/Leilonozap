@@ -229,15 +229,13 @@ export default function CatalogCheckout2() {
                       console.log('✅ Mercado Pago pronto:', response.data.preference_id);
                       toast.dismiss('checkout-loading');
 
-                      // ✅ Salvar dados da preferência e abrir SDK
-                      localStorage.setItem('mpCheckoutData', JSON.stringify({
-                          preference_id: response.data.preference_id,
-                          public_key: response.data.public_key,
-                          sale_id: sale.id
-                      }));
-
-                      // Fechar o formulário e mostrar o botão de pagamento
-                      setShowCheckoutForm(false);
+                      // ✅ Redirecionar direto para checkout do Mercado Pago
+                      const checkoutUrl = response.data.init_point || response.data.sandbox_init_point;
+                      if (checkoutUrl) {
+                          window.location.href = checkoutUrl;
+                      } else {
+                          toast.error('Erro ao abrir checkout do Mercado Pago');
+                      }
 
         } catch (error) {
             console.error('❌ Erro:', error.message);
