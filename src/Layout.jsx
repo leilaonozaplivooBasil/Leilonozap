@@ -477,6 +477,7 @@ export default function Layout({ children, currentPageName }) {
     { title: "🔑 Acessos VIP", pageName: "LuxuryAccessManager" },
     { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
     { title: "💳 Transações", pageName: "TransactionHistory" },
+    { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
     ]
     },
     { title: "💰 PDV", pageName: "PDV" },
