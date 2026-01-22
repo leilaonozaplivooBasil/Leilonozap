@@ -195,48 +195,54 @@ export default function CatalogCheckout2() {
             // 🔒 PASSO 3: Criar preferência MP com catalog_sale_id vinculado
             console.log('📤 Enviando para Mercado Pago...');
             const response = await createMPPreference({
-                product_id: product.is_auction ? null : product.id,
-                auction_id: product.is_auction ? product.id : null,
-                catalog_sale_id: product.is_auction ? null : sale.id,
-                user_data: {
-                    id: savedUser.id,
-                    email: email.trim(),
-                    full_name: savedUser.full_name,
-                    phone: phone.trim(),
-                    cpf: cpf.trim(),
-                    last_name: lastName.trim(),
-                    address_street: addressStreet.trim(),
-                    address_number: addressNumber.trim(),
-                    address_complement: addressComplement.trim(),
-                    address_neighborhood: addressNeighborhood.trim(),
-                    address_city: addressCity.trim(),
-                    address_state: addressState.trim(),
-                    address_zip_code: addressZip.trim()
-                }
-            });
+                          product_id: product.is_auction ? null : product.id,
+                          auction_id: product.is_auction ? product.id : null,
+                          catalog_sale_id: product.is_auction ? null : sale.id,
+                          user_data: {
+                              id: savedUser.id,
+                              email: email.trim(),
+                              full_name: savedUser.full_name,
+                              phone: phone.trim(),
+                              cpf: cpf.trim(),
+                              last_name: lastName.trim(),
+                              address_street: addressStreet.trim(),
+                              address_number: addressNumber.trim(),
+                              address_complement: addressComplement.trim(),
+                              address_neighborhood: addressNeighborhood.trim(),
+                              address_city: addressCity.trim(),
+                              address_state: addressState.trim(),
+                              address_zip_code: addressZip.trim()
+                          }
+                      });
 
-            // Validar resposta de MP
-            if (!response?.data?.success || !response?.data?.init_point) {
-                console.error('❌ MP falhou');
-                toast.dismiss('checkout-loading');
-                toast.error(response?.data?.error || 'Erro ao processar pagamento');
+                      // Validar resposta de MP
+                      if (!response?.data?.success || !response?.data?.preference_id) {
+                          console.error('❌ MP falhou');
+                          toast.dismiss('checkout-loading');
+                          toast.error(response?.data?.error || 'Erro ao processar pagamento');
 
-                // Limpar sale órfã
-                try {
-                    await base44.entities.CatalogSale.delete(sale.id);
-                    console.log('🧹 CatalogSale deletada');
-                } catch (delErr) {
-                    console.warn('⚠️ Erro ao limpar:', delErr.message);
-                }
-                return;
-            }
+                          // Limpar sale órfã
+                          try {
+                              await base44.entities.CatalogSale.delete(sale.id);
+                              console.log('🧹 CatalogSale deletada');
+                          } catch (delErr) {
+                              console.warn('⚠️ Erro ao limpar:', delErr.message);
+                          }
+                          return;
+                      }
 
-            console.log('✅ Mercado Pago pronto');
-            toast.dismiss('checkout-loading');
-            toast.success('Redirecionando...');
+                      console.log('✅ Mercado Pago pronto:', response.data.preference_id);
+                      toast.dismiss('checkout-loading');
 
-            // 🔥 Redirecionar para checkout
-            window.location.href = response.data.init_point;
+                      // ✅ Salvar dados da preferência e abrir SDK
+                      localStorage.setItem('mpCheckoutData', JSON.stringify({
+                          preference_id: response.data.preference_id,
+                          public_key: response.data.public_key,
+                          sale_id: sale.id
+                      }));
+
+                      // Fechar o formulário e mostrar o botão de pagamento
+                      setShowCheckoutForm(false);
 
         } catch (error) {
             console.error('❌ Erro:', error.message);
