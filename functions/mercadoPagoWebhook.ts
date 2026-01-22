@@ -40,14 +40,18 @@ Deno.serve(async (req) => {
 
     try {
         const base44 = createClientFromRequest(req);
-        
-        // Parse body
+
+        // 🔴 REGRA #4: Parse com proteção total
         let body;
+        let bodyText = '';
         try {
-            body = await req.json();
+            bodyText = await req.text();
+            body = bodyText ? JSON.parse(bodyText) : {};
+            console.log(`✅ Body parseado:`, JSON.stringify(body).substring(0, 200));
         } catch (parseErr) {
             console.error('❌ Erro ao fazer parse do JSON:', parseErr.message);
-            return Response.json({ received: true }, { status: 200 });
+            console.error('   Body recebido:', bodyText.substring(0, 500));
+            return respondNow(200); // Retorna 200 mesmo com erro
         }
 
         console.log('📥 Webhook MP recebido:', {
