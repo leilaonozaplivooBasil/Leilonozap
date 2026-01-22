@@ -48,30 +48,15 @@ async function handleWebhook(req) {
         (async () => {
             try {
                 const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
-                if (!accessToken) {
-                    console.error('❌ MP_ACCESS_TOKEN não configurado');
-                    return;
-                }
+                if (!accessToken) return;
 
                 const isPaymentEvent = body.type === 'payment' || body.action?.startsWith('payment');
-                
-                if (!isPaymentEvent) {
-                    console.log('ℹ️ Evento ignorado:', body.type || body.action);
-                    return;
-                }
+                if (!isPaymentEvent) return;
 
                 const paymentId = body.data?.id;
-                if (!paymentId) {
-                    console.error('❌ Payment ID não encontrado');
-                    return;
-                }
+                if (!paymentId) return;
 
-                // Busca payment no MP
-                const mpUrl = `https://api.mercadopago.com/v1/payments/${paymentId}`;
-                console.log(`🔍 Buscando payment no MP:`, mpUrl);
-                console.log(`🔑 Token preview: ${accessToken.trim().substring(0, 20)}...`);
-
-                const mpResponse = await fetch(mpUrl, {
+                const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
                     headers: { 
                         'Authorization': `Bearer ${accessToken.trim()}`,
                         'Content-Type': 'application/json'
@@ -79,112 +64,66 @@ async function handleWebhook(req) {
                 });
 
                 if (!mpResponse.ok) {
-                    const errorText = await mpResponse.text();
-                    console.error(`❌ MP retornou ${mpResponse.status}:`, errorText);
-
-                    // Log do erro
-                    try {
-                        await base44.asServiceRole.entities.WebhookLog.create({
-                            provider: 'mercadopago',
-                            event_type: body.type || body.action || 'unknown',
-                            resource_id: String(paymentId),
-                            body: body,
-                            processed: false,
-                            error: `MP API returned ${mpResponse.status}: ${errorText}`
-                        });
-                    } catch (logErr) {}
+                    await base44.asServiceRole.entities.WebhookLog.create({
+                        provider: 'mercadopago',
+                        event_type: body.type || body.action || 'unknown',
+                        resource_id: String(paymentId),
+                        body: body,
+                        processed: false,
+                        error: `MP API ${mpResponse.status}`
+                    }).catch(() => {});
                     return;
                 }
 
                 const payment = await mpResponse.json();
-                console.log('💳 Payment:', { id: payment.id, status: payment.status, ref: payment.external_reference });
 
-                if (!payment.external_reference) {
-                    console.log('⚠️ Sem external_reference');
-                    return;
-                }
+                if (!payment.external_reference) return;
 
-                // Busca no banco
                 const payments = await base44.asServiceRole.entities.MercadoPagoPayment.filter({
                     external_reference: payment.external_reference
                 });
 
-                if (payments.length === 0) {
-                    console.log('⚠️ Payment não encontrado:', payment.external_reference);
-                    return;
-                }
+                if (payments.length === 0) return;
 
                 const dbPayment = payments[0];
 
-                // Verifica se já foi processado
-                if (dbPayment.status === 'approved' && payment.status === 'approved') {
-                    console.log('⚠️ Já processado anteriormente');
-                    return;
-                }
+                if (dbPayment.status === 'approved' && payment.status === 'approved') return;
 
-                // Atualiza payment
                 await base44.asServiceRole.entities.MercadoPagoPayment.update(dbPayment.id, {
                     payment_id: String(paymentId),
                     status: payment.status,
                     payment_method: payment.payment_type_id || payment.payment_method_id
                 });
 
-                console.log(`✅ Payment atualizado: ${payment.status}`);
-
-                // Se aprovado, processa sale e comissões
                 if (payment.status === 'approved') {
                     if (dbPayment.catalog_sale_id) {
-                        // Atualiza sale
                         await base44.asServiceRole.entities.CatalogSale.update(dbPayment.catalog_sale_id, {
                             status: 'paid',
                             payment_id: String(paymentId)
                         });
-                        console.log(`✅ Sale marcada como paga`);
 
-                        // Processa comissões
-                        try {
-                            const commResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-                                sale_id: dbPayment.catalog_sale_id
-                            });
-                            console.log(`✅ Comissões processadas:`, commResult.data);
-                        } catch (commErr) {
-                            console.error(`❌ Erro nas comissões:`, commErr.message);
-                        }
+                        await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                            sale_id: dbPayment.catalog_sale_id
+                        }).catch(() => {});
                     }
 
                     if (dbPayment.auction_id) {
                         await base44.asServiceRole.entities.Auction.update(dbPayment.auction_id, {
                             order_status: 'paid'
                         });
-                        console.log(`✅ Leilão marcado como pago`);
                     }
                 }
 
-                // Log do webhook
                 await base44.asServiceRole.entities.WebhookLog.create({
                     provider: 'mercadopago',
                     event_type: body.type || body.action || 'unknown',
                     resource_id: String(paymentId),
                     body: body,
                     processed: true
-                });
+                }).catch(() => {});
 
             } catch (error) {
-                console.error('❌ Erro ao processar:', error.message);
-                
-                // Log de erro
-                try {
-                    await base44.asServiceRole.entities.WebhookLog.create({
-                        provider: 'mercadopago',
-                        event_type: body.type || body.action || 'unknown',
-                        resource_id: body.data?.id?.toString() || 'unknown',
-                        body: body,
-                        processed: false,
-                        error: error.message
-                    });
-                } catch (logErr) {
-                    console.error('❌ Erro ao salvar log:', logErr.message);
-                }
+                // Silencioso
             }
         })();
 
