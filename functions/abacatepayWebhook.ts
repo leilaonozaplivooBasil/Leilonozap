@@ -38,8 +38,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Transaction ID não encontrado' }, { status: 400 });
     }
 
-    // Buscar pagamento
-    const payments = await base44.asServiceRole.entities.Payment.filter({ 
+    // Buscar AbacatePayPayment usando transaction_id
+    const payments = await base44.asServiceRole.entities.AbacatePayPayment.filter({ 
       transaction_id: transactionId 
     });
 
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       await base44.asServiceRole.entities.SystemLog.create({
         step: 'ABACATEPAY_WEBHOOK_PAYMENT_NOT_FOUND',
         status: 'warning',
-        message: 'Pagamento não encontrado para transaction_id',
+        message: 'Pagamento AbacatePay não encontrado para transaction_id',
         component_name: 'abacatepayWebhook',
         payload: { transactionId, status }
       }).catch(() => {});
@@ -61,29 +61,25 @@ Deno.serve(async (req) => {
     let newStatus = payment.status;
     
     if (status === 'PAID' || status === 'paid' || status === 'CONFIRMED') {
-      newStatus = 'paid';
-      
-      // Atualizar leilão
-      if (auctionId) {
-        await base44.asServiceRole.entities.Auction.update(auctionId, {
-          order_status: 'paid'
-        }).catch(() => {});
-      }
+      newStatus = 'approved';
     } else if (status === 'EXPIRED' || status === 'expired' || status === 'CANCELLED') {
-      newStatus = 'failed';
+      newStatus = 'expired';
+    } else if (status === 'REJECTED' || status === 'rejected') {
+      newStatus = 'rejected';
     }
 
-    // Atualizar pagamento
-    await base44.asServiceRole.entities.Payment.update(payment.id, {
+    // Atualizar AbacatePayPayment
+    await base44.asServiceRole.entities.AbacatePayPayment.update(payment.id, {
       status: newStatus,
-      payment_date: newStatus === 'paid' ? new Date().toISOString() : payment.payment_date
+      webhook_received: true,
+      approved_at: newStatus === 'approved' ? new Date().toISOString() : payment.approved_at
     });
 
     // Log de sucesso
     await base44.asServiceRole.entities.SystemLog.create({
       step: 'ABACATEPAY_WEBHOOK_PROCESSED',
       status: 'success',
-      message: `Webhook processado - Status: ${newStatus}`,
+      message: `Webhook AbacatePay processado - Status: ${newStatus}`,
       component_name: 'abacatepayWebhook',
       entity_id: payment.id,
       payload: { transactionId, oldStatus: payment.status, newStatus }
