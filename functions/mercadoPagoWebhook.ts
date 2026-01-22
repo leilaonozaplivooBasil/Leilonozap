@@ -31,20 +31,42 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Invalid payment ID' }, { status: 400 });
         }
 
-        // Buscar pagamento registrado no MP
+        // Buscar payment no MP para obter external_reference
+        const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN')?.trim();
+        if (!mpAccessToken) {
+            return Response.json({ error: 'MP credentials not configured' }, { status: 500 });
+        }
+
+        let externalRef = null;
+        try {
+            const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+                headers: { 'Authorization': `Bearer ${mpAccessToken}` }
+            });
+            const paymentData = await mpRes.json();
+            externalRef = paymentData.external_reference || null;
+            console.log('✅ Payment do MP obtido:', { paymentId, externalRef });
+        } catch (mpErr) {
+            console.warn('⚠️ Erro ao buscar payment do MP:', mpErr.message);
+        }
+
+        if (!externalRef) {
+            console.warn('⚠️ External reference não encontrado para payment:', paymentId);
+            return Response.json({ received: true });
+        }
+
+        // Buscar MercadoPagoPayment usando external_reference
         const mpPayments = await base44.entities.MercadoPagoPayment.filter(
-            { transaction_id: paymentId.toString() },
+            { external_reference: externalRef },
             null,
             1
         );
 
         if (!mpPayments?.length) {
-            console.warn('⚠️ Pagamento não encontrado no banco:', paymentId);
+            console.warn('⚠️ MercadoPagoPayment não encontrado para:', externalRef);
             return Response.json({ received: true });
         }
 
         const mpPayment = mpPayments[0];
-        const externalRef = mpPayment.external_reference || '';
 
         console.log('📋 Processando pagamento:', {
             mp_id: mpPayment.id,
@@ -56,7 +78,8 @@ Deno.serve(async (req) => {
         await base44.entities.MercadoPagoPayment.update(mpPayment.id, {
             status: 'confirmed',
             payment_method: data.data?.payment_method_id || 'pending',
-            transaction_id: paymentId.toString()
+            transaction_id: paymentId.toString(),
+            external_reference: externalRef
         });
 
         // ✅ PASSO 2: Atualizar CatalogSale se for pedido de catálogo

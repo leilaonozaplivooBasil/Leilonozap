@@ -131,14 +131,15 @@ Deno.serve(async (req) => {
                         catalog_sale_id: saleId,
                         user_id: user_data.id,
                         preference_id: result.id,
+                        external_reference: externalReference,
                         amount: cart_items.reduce((total, item) => 
                             total + ((item.price_catalog || 0) * (item.quantity || 1)), 0),
-                        external_reference: externalReference,
                         status: 'pending',
-                        payment_method: 'pending'
+                        payment_method: 'pending',
+                        transaction_id: null
                     });
                 }
-                console.log('✅ Pagamentos registrados');
+                console.log('✅ Pagamentos registrados com external_reference:', externalReference);
             } catch (dbErr) {
                 console.warn('⚠️ Erro ao registrar pagamentos:', dbErr.message);
             }
