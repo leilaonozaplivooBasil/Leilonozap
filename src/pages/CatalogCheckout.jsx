@@ -212,14 +212,19 @@ export default function CatalogCheckout() {
         return;
       }
 
-      console.log('✅ Redirecionando para:', responseData.init_point || responseData.sandbox_init_point);
+      console.log('✅ Mercado Pago pronto:', responseData.preference_id);
+      console.log('✅ Redirecionando para checkout do Mercado Pago...');
       toast.dismiss('checkout-loading');
-      const checkoutUrl = responseData.init_point || responseData.sandbox_init_point;
-      if (checkoutUrl) {
-        window.location.href = checkoutUrl;
-      } else {
-        toast.error('Erro ao abrir checkout do Mercado Pago');
-      }
+      toast.success('Abrindo Mercado Pago... Você retornará aqui após o pagamento.');
+      
+      setTimeout(() => {
+        const checkoutUrl = responseData.init_point || responseData.sandbox_init_point;
+        if (checkoutUrl) {
+          window.location.href = checkoutUrl;
+        } else {
+          toast.error('Erro ao abrir checkout do Mercado Pago');
+        }
+      }, 800);
 
     } catch (error) {
       console.error("Erro:", error.message);
