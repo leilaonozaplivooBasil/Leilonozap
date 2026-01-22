@@ -261,10 +261,9 @@ export default function Cart() {
         formData.cep = '22790877';
       }
 
-      const response = await base44.functions.invoke('createMPPreference', {
-        product_id: cartItems[0]?.id || null,
-        auction_id: null,
-        catalog_sale_id: null,
+      const response = await base44.functions.invoke('createMPPreferenceCart', {
+        cart_items: cartItems,
+        catalog_sale_ids: [],
         user_data: {
           id: currentUser?.id,
           email: formData.email,
