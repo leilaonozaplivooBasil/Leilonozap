@@ -322,7 +322,7 @@ export default function Cart() {
         return;
       }
 
-      if (!data?.success || !data?.qr_code) {
+      if (!data?.success || !data?.checkout_url) {
         try {
           await base44.asServiceRole.entities.CatalogSale.delete(saleId);
         } catch (e) {
@@ -333,14 +333,16 @@ export default function Cart() {
         return;
       }
 
-      console.log('✅ PIX Gerado - Pedido:', saleId);
-      toast.success('QR Code PIX gerado! Escaneie o código para pagar.');
+      console.log('✅ Checkout gerado - Pedido:', saleId);
+      toast.success('Redirecionando para pagamento...');
       
       // Limpa carrinho
       updateCart([]);
       
-      // Redireciona para página de acompanhamento
-      navigate(createPageUrl('MyCatalogOrders'));
+      // Redireciona para checkout do PagSeguro (PIX, Cartão, Boleto)
+      setTimeout(() => {
+        window.location.href = data.checkout_url;
+      }, 500);
     } catch (error) {
       console.error('Erro no checkout:', error);
       toast.error('Erro ao processar pagamento. Tente novamente.');
