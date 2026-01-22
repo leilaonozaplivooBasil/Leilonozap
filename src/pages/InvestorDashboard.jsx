@@ -8,9 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createAbacatePayPix } from '@/functions/createAbacatePayPix';
 import { generateContractPDF } from '@/functions/generateContractPDF';
-import { checkAbacatePayPix } from '@/functions/checkAbacatePayPix';
 import { toast } from 'sonner';
 
 import { 
