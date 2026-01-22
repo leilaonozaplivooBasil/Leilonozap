@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2, ArrowLeft, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
+import { createMPPreference } from "@/functions/createMPPreference";
 
 const Product = base44.entities.Product;
 const CatalogSale = base44.entities.CatalogSale;
