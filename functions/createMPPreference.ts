@@ -3,6 +3,12 @@ import { MercadoPagoConfig, Preference } from 'npm:mercadopago@2.0.15';
 
 Deno.serve(async (req) => {
     try {
+        // ⏸️ MERCADO PAGO DESATIVADO - Em standby
+        return Response.json({ 
+            success: false,
+            error: 'Mercado Pago temporariamente desativado'
+        }, { status: 503 });
+
         const base44 = createClientFromRequest(req);
         const { product_id, auction_id, catalog_sale_id, user_data } = await req.json();
         
