@@ -115,9 +115,11 @@ export default function CheckoutPage() {
             const savedUser = JSON.parse(savedUserJSON);
 
             const auctionId = auction.id;
-            console.log('🔄 Criando preferência MP para auction:', auctionId);
-            const response = await createMPPreference({ 
+            console.log(`🔄 Criando pagamento com ${selectedGateway === 'pagseguro' ? 'PagSeguro' : 'Mercado Pago'} para auction:`, auctionId);
+            
+            const paymentData = {
                 auction_id: auctionId,
+                amount: auction.current_price,
                 user_data: {
                     id: savedUser.id,
                     email: email.trim(),
