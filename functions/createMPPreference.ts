@@ -131,14 +131,18 @@ Deno.serve(async (req) => {
             },
             external_reference: externalReference,
             back_urls: {
-                success: `${BASE_URL}/MyCatalogOrders`,
-                failure: `${BASE_URL}/MyCatalogOrders`,
-                pending: `${BASE_URL}/MyCatalogOrders`
+              success: `${BASE_URL}/MyCatalogOrders`,
+              failure: `${BASE_URL}/MyCatalogOrders`,
+              pending: `${BASE_URL}/MyCatalogOrders`
             },
             auto_return: 'all',
             notification_url: `https://leilaonozap.net/api/mercadoPagoWebhook`,
-            statement_descriptor: 'LEILAO NOZAP'
-        };
+            statement_descriptor: 'LEILAO NOZAP',
+            payment_methods: {
+              excluded_payment_methods: [],
+              excluded_payment_types: []
+            }
+            };
 
         // ✅ PASSO 9: Criar preferência no Mercado Pago
         console.log('📤 Criando preferência no Mercado Pago...');
