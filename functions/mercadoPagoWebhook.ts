@@ -110,6 +110,30 @@ async function handleWebhook(req) {
     console.log(`→ Processando como webhook`);
 
     try {
+        // Valida assinatura (CRÍTICO para segurança)
+        if (method === 'POST' || method === 'PUT') {
+            const xSignature = req.headers.get('x-signature');
+            const xRequestId = req.headers.get('x-request-id');
+
+            if (!xSignature || !xRequestId) {
+                console.error(`❌ Headers críticos faltando: x-signature=${!!xSignature}, x-request-id=${!!xRequestId}`);
+                return new Response(JSON.stringify({ error: 'Missing required headers' }), { 
+                    status: 401, 
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+                });
+            }
+
+            const isValidSignature = await validateMPSignature(body, xSignature, xRequestId);
+            if (!isValidSignature) {
+                console.error(`❌ Assinatura inválida - rejeitando notificação`);
+                return new Response(JSON.stringify({ error: 'Invalid signature' }), { 
+                    status: 401, 
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+                });
+            }
+            console.log(`✅ Assinatura validada`);
+        }
+
         // Retorna 200 IMEDIATAMENTE (antes de qualquer processamento pesado)
         const response = new Response(JSON.stringify({ received: true, id: body.data?.id }), { 
             status: 200,
