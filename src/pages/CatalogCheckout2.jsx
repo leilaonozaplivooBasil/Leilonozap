@@ -342,7 +342,10 @@ export default function CatalogCheckout2() {
             if (mpCheckout) {
                 const data = JSON.parse(mpCheckout);
                 setMpData(data);
-                initializeMercadoPagoSDK(data.public_key, data.preference_id);
+                // Aguarda o DOM estar pronto antes de inicializar
+                setTimeout(() => {
+                    initializeMercadoPagoSDK(data.public_key, data.preference_id);
+                }, 100);
             }
         }
     }, [showCheckoutForm]);
@@ -354,31 +357,35 @@ export default function CatalogCheckout2() {
         script.async = true;
         script.onload = () => {
             console.log('✅ SDK Mercado Pago carregado');
-            if (window.MercadoPago) {
-                try {
-                    const mp = new window.MercadoPago(publicKey);
-                    const bricksBuilder = mp.bricks();
+            // Aguarda window.MercadoPago estar disponível
+            const checkMP = setInterval(() => {
+                if (window.MercadoPago) {
+                    clearInterval(checkMP);
+                    try {
+                        const mp = new window.MercadoPago(publicKey);
+                        const bricksBuilder = mp.bricks();
 
-                    bricksBuilder.create('wallet', 'walletBrick_container', {
-                        initialization: {
-                            preferenceId: preferenceId
-                        }
-                    }).then(() => {
-                        console.log('✅ Wallet Brick criado');
-                        toast.success('Pronto para pagamento!');
-                    }).catch((error) => {
-                        console.error('❌ Erro ao criar Wallet:', error);
-                        toast.error('Erro ao carregar opções de pagamento');
-                    });
-                } catch (error) {
-                    console.error('❌ Erro ao inicializar MP:', error);
-                    toast.error('Erro ao processar pagamento');
+                        bricksBuilder.create('wallet', 'walletBrick_container', {
+                            initialization: {
+                                preferenceId: preferenceId
+                            }
+                        }).then(() => {
+                            console.log('✅ Wallet Brick criado com sucesso');
+                            toast.success('Escolha seu método de pagamento');
+                        }).catch((error) => {
+                            console.error('❌ Erro ao criar Wallet Brick:', error);
+                            toast.error('Erro ao carregar opções de pagamento. Tente novamente.');
+                        });
+                    } catch (error) {
+                        console.error('❌ Erro ao inicializar MercadoPago:', error);
+                        toast.error('Erro ao processar pagamento');
+                    }
                 }
-            }
+            }, 50);
         };
         script.onerror = () => {
-            console.error('❌ Erro ao carregar SDK');
-            toast.error('Erro ao carregar SDK Mercado Pago');
+            console.error('❌ Erro ao carregar SDK do Mercado Pago');
+            toast.error('Erro ao conectar com Mercado Pago. Verifique sua conexão.');
         };
         document.head.appendChild(script);
     };
