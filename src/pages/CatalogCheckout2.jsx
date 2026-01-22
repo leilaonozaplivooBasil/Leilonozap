@@ -342,6 +342,54 @@ export default function CatalogCheckout2() {
 
     // ❌ SDK do Mercado Pago REMOVIDO - agora fazemos redirecionamento direto
 
+    // ✅ Efeito para inicializar SDK quando houver dados da preferência
+    useEffect(() => {
+        if (!showCheckoutForm) {
+            const mpCheckout = localStorage.getItem('mpCheckoutData');
+            if (mpCheckout) {
+                const data = JSON.parse(mpCheckout);
+                setMpData(data);
+                initializeMercadoPagoSDK(data.public_key, data.preference_id);
+            }
+        }
+    }, [showCheckoutForm]);
+
+    const initializeMercadoPagoSDK = (publicKey, preferenceId) => {
+        // ✅ Carregar SDK do Mercado Pago
+        const script = document.createElement('script');
+        script.src = 'https://sdk.mercadopago.com/js/v2';
+        script.async = true;
+        script.onload = () => {
+            console.log('✅ SDK Mercado Pago carregado');
+            if (window.MercadoPago) {
+                try {
+                    const mp = new window.MercadoPago(publicKey);
+                    const bricksBuilder = mp.bricks();
+
+                    bricksBuilder.create('wallet', 'walletBrick_container', {
+                        initialization: {
+                            preferenceId: preferenceId
+                        }
+                    }).then(() => {
+                        console.log('✅ Wallet Brick criado');
+                        toast.success('Pronto para pagamento!');
+                    }).catch((error) => {
+                        console.error('❌ Erro ao criar Wallet:', error);
+                        toast.error('Erro ao carregar opções de pagamento');
+                    });
+                } catch (error) {
+                    console.error('❌ Erro ao inicializar MP:', error);
+                    toast.error('Erro ao processar pagamento');
+                }
+            }
+        };
+        script.onerror = () => {
+            console.error('❌ Erro ao carregar SDK');
+            toast.error('Erro ao carregar SDK Mercado Pago');
+        };
+        document.head.appendChild(script);
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen bg-gray-900 flex items-center justify-center">
