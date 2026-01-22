@@ -96,35 +96,30 @@ export default function InvestorDashboard() {
             console.error('Erro ao carregar imagens:', error);
           }
           
-          // Simula compras ativas (em produção, viria do banco)
-          setActiveInvestments([
-            {
-              id: 1,
-              plan: "Plano Visionário",
-              amount: 5000,
-              startDate: "2026-01-02",
-              currentStep: 3,
-              products: [
-                { name: "Micro-ondas Philco 20L", quantity: 4 },
-                { name: "Liquidificador Arno", quantity: 6 }
-              ],
-              estimatedProfit: 150,
-              estimatedReturn: "2026-03-03"
-            },
-            {
-              id: 2,
-              plan: "Plano Sócios de Ouro",
-              amount: 15000,
-              startDate: "2026-01-02",
-              currentStep: 1,
-              products: [
-                { name: "iPhone 13 128GB", quantity: 3 },
-                { name: "AirPods Pro", quantity: 5 }
-              ],
-              estimatedProfit: 450,
-              estimatedReturn: "2026-03-03"
-            }
-          ]);
+          // ✅ ISOLAMENTO: Busca investimentos APENAS do usuário logado
+          try {
+            const AbacatePayPayment = base44.entities.AbacatePayPayment;
+            const investments = await AbacatePayPayment.filter(
+              { licensee_id: user.id },
+              '-created_date',
+              50
+            );
+            // Mapeia dados de AbacatePay para formato de exibição
+            const formatted = (investments || []).map((inv) => ({
+              id: inv.id,
+              plan: inv.plan_code,
+              amount: inv.amount,
+              startDate: inv.created_date,
+              currentStep: 0,
+              products: [],
+              estimatedProfit: Math.round(inv.amount * 0.03), // 3% estimado
+              estimatedReturn: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
+            }));
+            setActiveInvestments(formatted);
+          } catch (error) {
+            console.warn('Erro ao carregar investimentos:', error);
+            setActiveInvestments([]);
+          }
         } else {
           navigate(createPageUrl("Partners"));
         }
