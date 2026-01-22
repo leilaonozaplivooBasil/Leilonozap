@@ -129,9 +129,9 @@ Deno.serve(async (req) => {
             },
             external_reference: externalReference,
             back_urls: {
-                success: `${BASE_URL}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`,
-                failure: `${BASE_URL}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`,
-                pending: `${BASE_URL}/OrderStatusMP?ref=${encodeURIComponent(externalReference)}`
+                success: `${BASE_URL}/MyCatalogOrders`,
+                failure: `${BASE_URL}/MyCatalogOrders`,
+                pending: `${BASE_URL}/MyCatalogOrders`
             },
             auto_return: 'all',
             notification_url: `https://leilaonozap.net/api/mercadoPagoWebhook`,

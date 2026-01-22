@@ -48,8 +48,6 @@ import MemoryBackup from './pages/MemoryBackup';
 import MyCatalogOrders from './pages/MyCatalogOrders';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
-import OrderStatus from './pages/OrderStatus';
-import OrderStatusMP from './pages/OrderStatusMP';
 import OrderTracking from './pages/OrderTracking';
 import PDV from './pages/PDV';
 import Partners from './pages/Partners';
@@ -129,8 +127,6 @@ export const PAGES = {
     "MyCatalogOrders": MyCatalogOrders,
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
-    "OrderStatus": OrderStatus,
-    "OrderStatusMP": OrderStatusMP,
     "OrderTracking": OrderTracking,
     "PDV": PDV,
     "Partners": Partners,
