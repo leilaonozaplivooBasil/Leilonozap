@@ -135,10 +135,18 @@ export default function CheckoutPage() {
                     address_state: addressState.trim(),
                     address_zip_code: addressZip.trim()
                 }
-            });
-            console.log('📦 Resposta completa MP:', JSON.stringify(response, null, 2));
+            };
+
+            let response;
+            if (selectedGateway === 'pagseguro') {
+                response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
+            } else {
+                response = await createMPPreference(paymentData);
+            }
             
-            if (response?.data?.success) {
+            console.log('📦 Resposta gateway:', JSON.stringify(response, null, 2));
+            
+            if (response?.data?.success || response?.order_id) {
                 console.log('✅ Preference ID:', response.data.preference_id);
                 console.log('✅ Public Key:', response.data.public_key);
                 
