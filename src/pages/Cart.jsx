@@ -246,13 +246,8 @@ export default function Cart() {
         cpf: formData.cpf
       };
 
-      console.log('Enviando para MP:', { cart_items: cartItems, user_data: userData });
-
-      // Precisa converter dados do carrinho para formato da função
-      // Como são múltiplos produtos, vamos criar para o primeiro e depois criar os demais
-      
+      // Endereço padrão se não preencher
       if (!formData.street) {
-        // Se estão usando pickup, preenche com endereço padrão
         formData.street = 'Estrada do Pontal';
         formData.number = '6500';
         formData.neighborhood = 'Recreio dos Bandeirantes';
@@ -261,43 +256,91 @@ export default function Cart() {
         formData.cep = '22790877';
       }
 
-      const response = await base44.functions.invoke('createMPPreferenceCart', {
-        cart_items: cartItems,
-        catalog_sale_ids: [],
+      const totalAmount = calculateSubtotal();
+      
+      console.log('📤 Enviando para PagSeguro:', { 
+        items_count: cartItems.length, 
+        total: totalAmount,
+        buyer: formData.name 
+      });
+
+      // Criar venda do catálogo
+      const saleData = {
+        product_id: cartItems[0]?.id,
+        product_title: cartItems.map(i => i.description).join(', '),
+        product_image: cartItems[0]?.image_urls?.[0] || '',
+        sale_price: totalAmount,
+        total_amount: totalAmount,
+        buyer_id: currentUser?.id,
+        buyer_name: formData.name,
+        buyer_email: formData.email,
+        buyer_phone: formData.phone,
+        status: 'pending_payment',
+        observation: observation
+      };
+
+      const saleResponse = await base44.asServiceRole.entities.CatalogSale.create(saleData);
+      const saleId = saleResponse?.id;
+
+      if (!saleId) {
+        toast.error('Erro ao criar pedido');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Criar pagamento no PagSeguro
+      const response = await base44.functions.invoke('createPagSeguroPayment', {
+        catalog_sale_id: saleId,
+        amount: totalAmount,
         user_data: {
           id: currentUser?.id,
           email: formData.email,
           full_name: formData.name,
-          phone: formData.phone,
-          cpf: formData.cpf,
-          last_name: formData.name.split(' ').slice(1).join(' '),
+          phone: formData.phone.replace(/\D/g, ''),
+          cpf: formData.cpf.replace(/\D/g, ''),
           address_street: formData.street,
           address_number: formData.number,
           address_complement: formData.complement,
           address_neighborhood: formData.neighborhood,
           address_city: formData.city,
           address_state: formData.state,
-          address_zip_code: formData.cep
+          address_zip_code: formData.cep.replace(/\D/g, '')
         }
       });
 
       const data = response?.data || response;
 
       if (data?.error) {
+        // Cancela a venda se o pagamento falhar
+        try {
+          await base44.asServiceRole.entities.CatalogSale.delete(saleId);
+        } catch (e) {
+          console.warn('Erro ao deletar venda:', e.message);
+        }
         toast.error(data.error);
         setIsProcessing(false);
         return;
       }
 
-      if (!data?.success || !data?.init_point) {
-        toast.error('Erro ao gerar link de pagamento');
-        console.error('Resposta inválida:', data);
+      if (!data?.success || !data?.qr_code) {
+        try {
+          await base44.asServiceRole.entities.CatalogSale.delete(saleId);
+        } catch (e) {
+          console.warn('Erro ao deletar venda:', e.message);
+        }
+        toast.error('Erro ao processar pagamento PagSeguro');
         setIsProcessing(false);
         return;
       }
 
-      console.log('✅ Redirecionando para Mercado Pago:', data.init_point);
-      window.location.href = data.init_point;
+      console.log('✅ PIX Gerado - Pedido:', saleId);
+      toast.success('QR Code PIX gerado! Escaneie o código para pagar.');
+      
+      // Limpa carrinho
+      updateCart([]);
+      
+      // Redireciona para página de acompanhamento
+      navigate(createPageUrl('MyCatalogOrders'));
     } catch (error) {
       console.error('Erro no checkout:', error);
       toast.error('Erro ao processar pagamento. Tente novamente.');
