@@ -33,26 +33,15 @@ async function handleWebhook(req) {
     try {
         const base44 = createClientFromRequest(req);
 
-        // 🔴 REGRA #4: Parse com proteção total
         let body;
-        let bodyText = '';
         try {
-            bodyText = await req.text();
+            const bodyText = await req.text();
             body = bodyText ? JSON.parse(bodyText) : {};
-            console.log(`✅ Body parseado:`, JSON.stringify(body).substring(0, 200));
         } catch (parseErr) {
-            console.error('❌ Erro ao fazer parse do JSON:', parseErr.message);
-            console.error('   Body recebido:', bodyText.substring(0, 500));
             return respondNow(200);
         }
 
-        console.log('📥 Webhook MP recebido:', {
-            action: body.action,
-            type: body.type,
-            payment_id: body.data?.id
-        });
-
-        // 🔴 REGRA #5: Retorna 200 IMEDIATAMENTE (não aguarda processamento)
+        // Retorna 200 IMEDIATAMENTE
         const response = respondNow(200);
 
         // Processa em background
