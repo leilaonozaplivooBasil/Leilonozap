@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { createMPPreference } from '@/functions/createMPPreference';
 
 export default function CheckoutPage() {
+    const [selectedGateway, setSelectedGateway] = useState('pagseguro');
     const [auction, setAuction] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [preferenceId, setPreferenceId] = useState(null);
