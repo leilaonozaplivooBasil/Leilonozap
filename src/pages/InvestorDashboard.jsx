@@ -1161,8 +1161,7 @@ export default function InvestorDashboard() {
                       toast.info("Verificando pagamento...");
                       
                       const response = await checkAbacatePayPix({
-                        billing_id: pixData.billing_id,
-                        auction_id: pixData.auction_id
+                       billing_id: pixData.billing_id
                       });
 
                       if (response?.data?.is_paid || response?.is_paid) {
