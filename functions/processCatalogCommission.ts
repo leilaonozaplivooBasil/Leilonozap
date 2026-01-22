@@ -269,8 +269,15 @@ Deno.serve(async (req) => {
     }
 
     // Cria CommissionRecords
+    console.log(`📝 Criando ${records.length} CommissionRecords...`);
     if (records.length > 0) {
-      await base44.asServiceRole.entities.CommissionRecord.bulkCreate(records);
+      try {
+        await base44.asServiceRole.entities.CommissionRecord.bulkCreate(records);
+        console.log(`✅ ${records.length} CommissionRecords criados`);
+      } catch (err) {
+        console.error(`❌ Erro ao criar CommissionRecords:`, err.message);
+        throw err;
+      }
     }
 
     // Atualiza saldos agregados dos usuários (catálogo + saldo geral)
