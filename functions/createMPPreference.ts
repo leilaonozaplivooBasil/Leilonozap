@@ -4,7 +4,7 @@ import { MercadoPagoConfig, Preference } from 'npm:mercadopago@2.0.15';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const { auction_id, product_id, catalog_sale_id, user_data } = await req.json();
+        const { product_id, auction_id, catalog_sale_id, user_data } = await req.json();
         
         const BASE_URL = 'https://leilaonozap.net';
 
@@ -112,10 +112,11 @@ Deno.serve(async (req) => {
             user.address_neighborhood, user.address_city, user.address_state, user.address_zip_code
         ].filter(x => x?.trim()).join(', ');
 
-        // ✅ PASSO 7: Criar preferência no Mercado Pago ANTES de salvar no banco
+        // ✅ PASSO 7: Inicializar SDK Mercado Pago
         const client = new MercadoPagoConfig({ accessToken });
         const preference = new Preference(client);
 
+        // ✅ PASSO 8: Criar objeto de preferência
         const preferenceData = {
             items: [itemData],
             payer: {
@@ -137,6 +138,8 @@ Deno.serve(async (req) => {
             statement_descriptor: 'LEILAO NOZAP'
         };
 
+        // ✅ PASSO 9: Criar preferência no Mercado Pago
+        console.log('📤 Criando preferência no Mercado Pago...');
         let result;
         try {
             const timeoutPromise = new Promise((_, reject) => 
@@ -144,6 +147,7 @@ Deno.serve(async (req) => {
             );
             result = await Promise.race([preference.create({ body: preferenceData }), timeoutPromise]);
         } catch (err) {
+            console.error('❌ Erro ao criar preferência:', err.message);
             return Response.json({ 
                 success: false,
                 error: err.message.includes('Timeout') ? 'Timeout ao conectar Mercado Pago' : 'Erro ao criar preferência'
@@ -151,10 +155,13 @@ Deno.serve(async (req) => {
         }
 
         if (!result?.id) {
+            console.error('❌ MP não retornou ID válido');
             return Response.json({ success: false, error: 'Mercado Pago não retornou preferência válida' }, { status: 500 });
         }
 
-        // ✅ PASSO 8: Salvar no banco DEPOIS de sucesso no MP
+        console.log('✅ Preferência criada:', result.id);
+
+        // ✅ PASSO 10: Salvar no banco de dados
         const paymentData = {
             user_id: user.id,
             preference_id: result.id,
@@ -169,18 +176,26 @@ Deno.serve(async (req) => {
         if (product_id) paymentData.product_id = product_id;
         if (catalog_sale_id) paymentData.catalog_sale_id = catalog_sale_id;
 
-        await base44.entities.MercadoPagoPayment.create(paymentData);
+        try {
+            await base44.entities.MercadoPagoPayment.create(paymentData);
+            console.log('✅ Pagamento registrado:', result.id);
+        } catch (dbErr) {
+            console.warn('⚠️ Erro ao registrar no banco:', dbErr.message);
+            // Continua mesmo com erro de registro - a preferência já existe no MP
+        }
 
+        // ✅ PASSO 11: Retornar resposta com URLs e chaves
         return Response.json({
             success: true,
             preference_id: result.id,
             public_key: publicKey,
             init_point: result.init_point,
-            sandbox_init_point: result.sandbox_init_point
+            sandbox_init_point: result.sandbox_init_point || result.init_point,
+            external_reference: externalReference
         });
 
     } catch (error) {
-        console.error('❌ Erro ao criar preferência:', error.message);
+        console.error('❌ Erro crítico:', error.message);
         return Response.json({ 
             success: false,
             error: 'Erro ao processar pagamento'
