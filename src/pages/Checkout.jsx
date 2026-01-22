@@ -147,21 +147,28 @@ export default function CheckoutPage() {
             console.log('📦 Resposta gateway:', JSON.stringify(response, null, 2));
             
             if (response?.data?.success || response?.order_id) {
-                console.log('✅ Preference ID:', response.data.preference_id);
-                console.log('✅ Public Key:', response.data.public_key);
-                
-                if (!response.data.preference_id) {
-                    toast.error('Erro: Preference ID não retornado');
-                    return;
+                if (selectedGateway === 'pagseguro') {
+                    console.log('✅ PagSeguro Order ID:', response.order_id);
+                    toast.success('Ordem criada no PagSeguro!');
+                    // TODO: Implementar exibição de QR Code ou redirect
+                    toast.info('QR Code: ' + (response.qr_code || 'Processando...'));
+                } else {
+                    console.log('✅ Preference ID:', response.data.preference_id);
+                    console.log('✅ Public Key:', response.data.public_key);
+                    
+                    if (!response.data.preference_id) {
+                        toast.error('Erro: Preference ID não retornado');
+                        return;
+                    }
+                    
+                    if (!response.data.public_key) {
+                        toast.error('Erro: Public Key não retornada');
+                        return;
+                    }
+                    
+                    setPreferenceId(response.data.preference_id);
+                    setPublicKey(response.data.public_key);
                 }
-                
-                if (!response.data.public_key) {
-                    toast.error('Erro: Public Key não retornada');
-                    return;
-                }
-                
-                setPreferenceId(response.data.preference_id);
-                setPublicKey(response.data.public_key);
             } else {
                 console.error('❌ Erro na resposta:', response);
                 toast.error(response?.data?.error || 'Erro ao criar preferência de pagamento');
