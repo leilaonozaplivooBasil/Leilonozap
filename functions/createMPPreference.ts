@@ -139,9 +139,10 @@ Deno.serve(async (req) => {
             notification_url: `https://leilaonozap.net/api/mercadoPagoWebhook`,
             statement_descriptor: 'LEILAO NOZAP',
             payment_methods: {
-                allowed_payment_methods: ['pix', 'credit_card', 'debit_card', 'bolbradesco'],
                 excluded_payment_types: [],
-                installments: 12
+                excluded_payment_methods: [],
+                installments: 12,
+                default_payment_method_id: 'pix'
             }
             };
 
