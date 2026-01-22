@@ -22,23 +22,25 @@ const Auction = base44.entities.Auction;
 const CatalogSale = base44.entities.CatalogSale;
 
 export default function CatalogCheckout2() {
-    const [product, setProduct] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [currentUser, setCurrentUser] = useState(null);
-    const [lastName, setLastName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [cpf, setCpf] = useState('');
-    const [email, setEmail] = useState('');
-    const [firstName, setFirstName] = useState('');
-    const [addressStreet, setAddressStreet] = useState('');
-    const [addressNumber, setAddressNumber] = useState('');
-    const [addressComplement, setAddressComplement] = useState('');
-    const [addressNeighborhood, setAddressNeighborhood] = useState('');
-    const [addressCity, setAddressCity] = useState('');
-    const [addressState, setAddressState] = useState('');
-    const [addressZip, setAddressZip] = useState('');
-    const [isLoadingCep, setIsLoadingCep] = useState(false);
-    const navigate = useNavigate();
+          const [product, setProduct] = useState(null);
+          const [isLoading, setIsLoading] = useState(true);
+          const [currentUser, setCurrentUser] = useState(null);
+          const [lastName, setLastName] = useState('');
+          const [phone, setPhone] = useState('');
+          const [cpf, setCpf] = useState('');
+          const [email, setEmail] = useState('');
+          const [firstName, setFirstName] = useState('');
+          const [addressStreet, setAddressStreet] = useState('');
+          const [addressNumber, setAddressNumber] = useState('');
+          const [addressComplement, setAddressComplement] = useState('');
+          const [addressNeighborhood, setAddressNeighborhood] = useState('');
+          const [addressCity, setAddressCity] = useState('');
+          const [addressState, setAddressState] = useState('');
+          const [addressZip, setAddressZip] = useState('');
+          const [isLoadingCep, setIsLoadingCep] = useState(false);
+          const [showCheckoutForm, setShowCheckoutForm] = useState(true);
+          const [mpData, setMpData] = useState(null);
+          const navigate = useNavigate();
 
     const searchCep = async (cep) => {
         const cleanCep = cep.replace(/\D/g, '');
