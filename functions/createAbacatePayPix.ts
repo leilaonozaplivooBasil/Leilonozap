@@ -4,7 +4,7 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const body = await req.json();
-    const { auction_id, user_name, user_email, user_phone, user_cpf } = body;
+    const { licensee_id, plan_code, user_name, user_email, user_phone, user_cpf } = body;
 
     // Verifica se há usuário autenticado (opcional para esta função)
     let isAuthenticated = false;
