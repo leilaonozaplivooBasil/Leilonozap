@@ -18,10 +18,15 @@ Deno.serve(async (req) => {
     };
 
     // 🔴 REGRA #2: Loga TUDO o que chega (método, headers, body)
-    console.log(`\n📨 WEBHOOK RECEBIDO`);
+    const timestamp = new Date().toISOString();
+    console.log(`\n📨 [${timestamp}] WEBHOOK RECEBIDO`);
     console.log(`   Método: ${req.method}`);
     console.log(`   URL: ${req.url}`);
-    console.log(`   Headers:`, Object.fromEntries(req.headers.entries()));
+    const headerObj = {};
+    req.headers.forEach((value, key) => {
+        headerObj[key] = key.includes('authorization') ? '***' : value;
+    });
+    console.log(`   Headers:`, headerObj);
     
     // Aceita OPTIONS para CORS
     if (req.method === 'OPTIONS') {
