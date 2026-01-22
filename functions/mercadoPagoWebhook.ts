@@ -16,20 +16,28 @@ Deno.serve(async (req) => {
         const body = await req.text();
         const data = JSON.parse(body);
 
-        console.log('🔔 Webhook Mercado Pago recebido:', {
+        console.log('🔔 WEBHOOK MP RECEBIDO:', {
+            action: data.action,
             type: data.type,
-            data_id: data.data?.id
+            payment_id: data.data?.id,
+            live_mode: data.live_mode,
+            timestamp: new Date().toISOString()
         });
+        console.log('📦 Payload completo:', JSON.stringify(data, null, 2));
 
         // Validar se é evento de pagamento
         if (data.type !== 'payment') {
+            console.log('⏭️ Tipo de evento ignorado:', data.type);
             return Response.json({ received: true });
         }
 
         const paymentId = data.data?.id;
         if (!paymentId) {
+            console.error('❌ Payment ID inválido:', data.data);
             return Response.json({ error: 'Invalid payment ID' }, { status: 400 });
         }
+
+        console.log('✅ Payment ID extraído:', paymentId);
 
         // Buscar payment no MP para obter external_reference
         const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN')?.trim();
@@ -39,21 +47,28 @@ Deno.serve(async (req) => {
 
         let externalRef = null;
         try {
+            console.log('🔍 Buscando dados do payment no MP API...');
             const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
                 headers: { 'Authorization': `Bearer ${mpAccessToken}` }
             });
             const paymentData = await mpRes.json();
             externalRef = paymentData.external_reference || null;
-            console.log('✅ Payment do MP obtido:', { paymentId, externalRef });
+            console.log('✅ Payment obtido do MP:', { 
+                paymentId, 
+                externalRef,
+                status: paymentData.status,
+                payment_method: paymentData.payment_method?.type
+            });
         } catch (mpErr) {
-            console.warn('⚠️ Erro ao buscar payment do MP:', mpErr.message);
+            console.error('❌ Erro ao buscar payment do MP:', mpErr.message);
         }
 
         if (!externalRef) {
-            console.warn('⚠️ External reference não encontrado para payment:', paymentId);
+            console.error('❌ External reference NÃO ENCONTRADO para payment:', paymentId);
             return Response.json({ received: true });
         }
 
+        console.log('🔎 Procurando MercadoPagoPayment com external_reference:', externalRef);
         // Buscar MercadoPagoPayment usando external_reference
         const mpPayments = await base44.entities.MercadoPagoPayment.filter(
             { external_reference: externalRef },
@@ -62,9 +77,12 @@ Deno.serve(async (req) => {
         );
 
         if (!mpPayments?.length) {
-            console.warn('⚠️ MercadoPagoPayment não encontrado para:', externalRef);
+            console.error('❌ MercadoPagoPayment NÃO ENCONTRADO com external_reference:', externalRef);
+            console.log('📝 Procurando em MercadoPagoPayment com filtro:', { external_reference: externalRef });
             return Response.json({ received: true });
         }
+
+        console.log('✅ MercadoPagoPayment encontrado:', mpPayments[0].id);
 
         const mpPayment = mpPayments[0];
 
@@ -156,7 +174,13 @@ Deno.serve(async (req) => {
             }
         }
 
-        console.log('✅ Webhook processado com sucesso');
+        console.log('🎉 WEBHOOK PROCESSADO COM SUCESSO ✅', {
+            paymentId,
+            catalogSaleId: mpPayment.catalog_sale_id,
+            auctionId: mpPayment.auction_id,
+            status: 'confirmed',
+            timestamp: new Date().toISOString()
+        });
         return Response.json({ success: true });
 
     } catch (error) {
