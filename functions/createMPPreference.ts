@@ -88,6 +88,13 @@ Deno.serve(async (req) => {
         const accessToken = Deno.env.get('MP_ACCESS_TOKEN')?.trim();
         const publicKey = Deno.env.get('MP_PUBLIC_KEY')?.trim();
 
+        console.log('🔍 DEBUG MP TOKEN:', {
+            token_prefix: accessToken?.substring(0, 15),
+            token_length: accessToken?.length,
+            is_test: accessToken?.includes('TEST'),
+            timestamp: Date.now()
+        });
+
         if (!accessToken || !publicKey) {
             return Response.json({ 
                 success: false,
