@@ -342,6 +342,33 @@ export default function CatalogCheckout() {
                 </div>
               </div>
 
+              {/* Seletor de Gateway */}
+              <div className="border-t border-gray-700 pt-4">
+                <Label className="text-gray-300 text-sm mb-3 block">Método de Pagamento</Label>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setSelectedGateway('pagseguro')}
+                    className={`w-full p-3 rounded-lg border-2 transition-all text-sm font-semibold ${
+                      selectedGateway === 'pagseguro'
+                        ? 'border-green-500 bg-green-600/20 text-green-400'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    ✓ PagSeguro PIX (Prioridade)
+                  </button>
+                  <button
+                    onClick={() => setSelectedGateway('mercadopago')}
+                    className={`w-full p-3 rounded-lg border-2 transition-all text-sm font-semibold ${
+                      selectedGateway === 'mercadopago'
+                        ? 'border-blue-500 bg-blue-600/20 text-blue-400'
+                        : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                    }`}
+                  >
+                    💳 Mercado Pago (Fallback)
+                  </button>
+                </div>
+              </div>
+
               <Button
                 onClick={handleCheckout}
                 disabled={isProcessing}
