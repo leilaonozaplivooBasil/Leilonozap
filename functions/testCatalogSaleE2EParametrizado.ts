@@ -99,18 +99,68 @@ Deno.serve(async (req) => {
     console.log(`✅ Status = PAID`);
     steps.push(`✅ Status = paid`);
 
-    // 7. Processar comissões via função
-    console.log('7️⃣  Processando comissões (service role)...');
-    let commissionResult = null;
+    // 7. Processar comissões DIRETAMENTE (sem via function.invoke)
+    console.log('7️⃣  Processando comissões (diretamente)...');
+    let commissionRecordsCreated = 0;
     try {
-      commissionResult = await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-        sale_id: sale.id
-      });
-      console.log(`✅ Comissões processadas`);
-      if (commissionResult?.data?.total_assigned) {
-        console.log(`   Total distribuído: R$ ${commissionResult.data.total_assigned.toFixed(2)}`);
+      // Carrega a venda atualizada
+      const updatedSale = (await base44.asServiceRole.entities.CatalogSale.filter({ id: sale.id }))[0];
+      
+      // Valida status
+      if (updatedSale.status !== 'paid') {
+        throw new Error('Sale não está paga');
       }
-      steps.push(`✅ Comissões processadas`);
+
+      const totalAmount = Number(updatedSale.total_amount || 0);
+      if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+        throw new Error('Valor inválido');
+      }
+
+      // Busca âncora
+      const anchorUsers = await base44.asServiceRole.entities.AppUser.filter({ 
+        id: updatedSale.licensee_id 
+      });
+      const anchorUser = anchorUsers[0];
+      if (!anchorUser) {
+        throw new Error('Âncora não encontrada');
+      }
+
+      // Cria CommissionRecord para licenciado_catalogo (13%)
+      const commissionAmount = +(totalAmount * 0.13).toFixed(2);
+      
+      await base44.asServiceRole.entities.CommissionRecord.create({
+        sale_id: sale.id,
+        sale_type: 'catalog',
+        user_id: anchorUser.id,
+        user_name: anchorUser.full_name,
+        role: 'licenciado_catalogo',
+        percent: 13.0,
+        amount: commissionAmount,
+        sale_amount: totalAmount,
+        product_title: updatedSale.product_title,
+        anchor_user_id: anchorUser.id,
+        anchor_user_name: anchorUser.full_name,
+        status: 'confirmed'
+      });
+
+      // Atualiza saldo do usuário
+      const currentBal = Number(anchorUser.catalog_commission_balance || 0);
+      const currentTotal = Number(anchorUser.catalog_total_commissions_generated || 0);
+      const currentValora = Number(anchorUser.valora_pay_balance || 0);
+      const currentCommBal = Number(anchorUser.commission_balance || 0);
+      const currentTotalGen = Number(anchorUser.total_commissions_generated || 0);
+
+      await base44.asServiceRole.entities.AppUser.update(anchorUser.id, {
+        catalog_commission_balance: +(currentBal + commissionAmount).toFixed(2),
+        catalog_total_commissions_generated: +(currentTotal + commissionAmount).toFixed(2),
+        valora_pay_balance: +(currentValora + commissionAmount).toFixed(2),
+        commission_balance: +(currentCommBal + commissionAmount).toFixed(2),
+        total_commissions_generated: +(currentTotalGen + commissionAmount).toFixed(2)
+      });
+
+      console.log(`✅ Comissão de R$ ${commissionAmount.toFixed(2)} creditada`);
+      commissionRecordsCreated = 1;
+      steps.push(`✅ R$ ${commissionAmount.toFixed(2)} distribuído`);
     } catch (err) {
       console.error(`❌ Erro ao processar:`, err.message);
       steps.push(`❌ Erro: ${err.message}`);
