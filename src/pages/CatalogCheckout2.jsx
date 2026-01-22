@@ -423,7 +423,7 @@ export default function CatalogCheckout2() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Resumo do Pedido */}
+                        {/* Resumo do Pedido */}
                     <Card className="bg-gray-800 border-gray-700">
                         <CardHeader>
                             <CardTitle className="text-green-400">Resumo do Pedido</CardTitle>
