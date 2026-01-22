@@ -137,8 +137,10 @@ async function handleWebhook(req) {
         return response;
 
     } catch (error) {
-        console.error('❌ Erro crítico:', error.message);
-        return respondNow(200);
+        return new Response(JSON.stringify({ error: 'Server error' }), { 
+            status: 500, 
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 }
 
