@@ -1,27 +1,41 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
-    // Aceita OPTIONS para CORS
-    if (req.method === 'OPTIONS') {
-        return new Response(null, {
-            status: 204,
+    // 🔴 REGRA #1: SEMPRE responde 200 imediatamente (não importa o método)
+    // MP precisa de confirmação ANTES de processar
+    const respondNow = (status = 200, data = { received: true }) => {
+        return Response.json(data, { 
+            status,
             headers: {
                 'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, PATCH, DELETE',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Signature'
             }
         });
+    };
+
+    // 🔴 REGRA #2: Loga TUDO o que chega (método, headers, body)
+    console.log(`\n📨 WEBHOOK RECEBIDO`);
+    console.log(`   Método: ${req.method}`);
+    console.log(`   URL: ${req.url}`);
+    console.log(`   Headers:`, Object.fromEntries(req.headers.entries()));
+    
+    // Aceita OPTIONS para CORS
+    if (req.method === 'OPTIONS') {
+        console.log(`✅ Respondendo OPTIONS`);
+        return respondNow(204);
     }
 
     // GET = health check
     if (req.method === 'GET') {
-        return Response.json({ status: 'webhook_active', ready: true }, { status: 200 });
+        console.log(`✅ Health check OK`);
+        return respondNow(200, { status: 'webhook_active', ready: true });
     }
 
-    // Aceita qualquer método graciosamente
-    if (req.method !== 'POST') {
-        console.warn(`⚠️ Método não suportado: ${req.method}`);
-        return Response.json({ received: true }, { status: 200 });
+    // 🔴 REGRA #3: Só processa POST e PUT (MP usa ambos às vezes)
+    if (req.method !== 'POST' && req.method !== 'PUT') {
+        console.log(`⚠️ Método ${req.method} aceito mas não processado`);
+        return respondNow(200); // Retorna 200 mesmo assim!
     }
 
     try {
