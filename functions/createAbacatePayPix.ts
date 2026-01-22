@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
       }
     }).catch(() => {});
 
-    if (!auction_id || !user_name || !user_email || !user_phone || !user_cpf) {
+    if (!licensee_id || !plan_code || !user_name || !user_email || !user_phone || !user_cpf) {
       return Response.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 });
     }
 
@@ -44,14 +44,19 @@ Deno.serve(async (req) => {
     const cleanPhone = user_phone.replace(/\D/g, '');
     const formattedPhone = cleanPhone.startsWith('55') ? `+${cleanPhone}` : `+55${cleanPhone}`;
 
-    // Busca dados do leilão
-    const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id });
-    if (!auctions || auctions.length === 0) {
-      return Response.json({ error: 'Leilão não encontrado' }, { status: 404 });
+    // ✅ ISOLAMENTO: Obtém valor do plano (não do leilão)
+    const portfolios = [
+      { name: "Plano de Teste", minInvestment: 10 },
+      { name: "Plano Visionário", minInvestment: 5000 },
+      { name: "Plano Sócios de Ouro", minInvestment: 15000 },
+      { name: "Plano Elite", minInvestment: 30000 }
+    ];
+    const portfolio = portfolios.find(p => p.name === plan_code);
+    const amount = portfolio ? portfolio.minInvestment : 0;
+    
+    if (!amount || amount <= 0) {
+      return Response.json({ error: 'Plano ou valor inválido' }, { status: 400 });
     }
-
-    const auction = auctions[0];
-    const amount = auction.current_price;
 
     // Integração com AbacatePay
     const apiKey = Deno.env.get('ABACATEPAY_API_KEY');
