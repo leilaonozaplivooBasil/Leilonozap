@@ -255,8 +255,8 @@ Deno.serve(async (req) => {
       },
       sale_amount: salePrice,
       commissions: {
-        total_distributed: (180 * 0.13),
-        records: commissionRecordsCreated,
+        total_distributed: totalDistributed,
+        records: allRecords.length,
         details: allRecords
       },
       steps: steps
