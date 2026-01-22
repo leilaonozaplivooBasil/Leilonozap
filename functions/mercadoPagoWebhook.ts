@@ -41,24 +41,32 @@ async function handleWebhook(req) {
     console.log(`📨 Processando ${method}`);
 
     try {
-        const base44 = createClientFromRequest(req);
-
-        let body;
+        let body = {};
         try {
             const bodyText = await req.text();
             body = bodyText ? JSON.parse(bodyText) : {};
+            console.log(`📦 Body parsed:`, { type: body.type, action: body.action, data_id: body.data?.id });
         } catch (parseErr) {
+            console.error(`❌ JSON parse error:`, parseErr.message);
             return new Response(JSON.stringify({ error: 'Invalid JSON' }), { 
                 status: 400, 
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json', ...corsHeaders }
             });
         }
 
         // Retorna 200 IMEDIATAMENTE
-        const response = new Response(JSON.stringify({ received: true }), { 
+        const response = new Response(JSON.stringify({ received: true, id: body.data?.id }), { 
             status: 200,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
+
+        let base44;
+        try {
+            base44 = createClientFromRequest(req);
+        } catch (authErr) {
+            console.error(`⚠️ Auth error (background only):`, authErr.message);
+            return response;
+        }
 
         // Processa em background
         (async () => {
