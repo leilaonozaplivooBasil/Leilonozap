@@ -6,11 +6,10 @@ Deno.serve(async (req) => {
     const body = await req.json();
     
     const { 
-      product_id, 
-      auction_id,
-      catalog_sale_id,
       user_data,
-      amount 
+      amount,
+      products = [],
+      observation = ''
     } = body;
 
     // Autenticação opcional
