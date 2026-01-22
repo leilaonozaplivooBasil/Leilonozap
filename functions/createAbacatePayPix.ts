@@ -19,10 +19,11 @@ Deno.serve(async (req) => {
     await base44.asServiceRole.entities.SystemLog.create({
       step: 'PIX_PAYMENT_INIT',
       status: 'info',
-      message: 'Iniciando geração de PIX',
+      message: 'Iniciando geração de PIX para investimento AbacatePay',
       component_name: 'createAbacatePayPix',
       payload: { 
-        auction_id, 
+        licensee_id,
+        plan_code,
         user_name, 
         user_email, 
         user_phone: user_phone?.substring(0, 5) + '****', // Parcial para privacidade
