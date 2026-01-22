@@ -7,16 +7,7 @@ const corsHeaders = {
     'Access-Control-Max-Age': '86400'
 };
 
-Deno.serve(async (req) => {
-    // 🔴 REGRA #1: SEMPRE responde 200 imediatamente (não importa o método)
-    // MP precisa de confirmação ANTES de processar
-    const respondNow = (status = 200, data = { received: true }) => {
-        return Response.json(data, { 
-            status,
-            headers: corsHeaders
-        });
-    };
-
+async function handleWebhook(req) {
     // 🔴 REGRA #2: Loga TUDO o que chega (método, headers, body)
     const timestamp = new Date().toISOString();
     console.log(`\n📨 [${timestamp}] WEBHOOK RECEBIDO`);
@@ -28,10 +19,24 @@ Deno.serve(async (req) => {
     });
     console.log(`   Headers:`, headerObj);
     
+    // 🔴 RESPOSTA PADRÃO PARA TODOS OS CASOS
+    const respondNow = (status = 200, data = { received: true }) => {
+        return new Response(JSON.stringify(data), { 
+            status,
+            headers: {
+                'Content-Type': 'application/json',
+                ...corsHeaders
+            }
+        });
+    };
+
     // Aceita OPTIONS para CORS
     if (req.method === 'OPTIONS') {
         console.log(`✅ Respondendo OPTIONS`);
-        return respondNow(204);
+        return new Response(null, {
+            status: 204,
+            headers: corsHeaders
+        });
     }
 
     // GET = health check
@@ -43,7 +48,7 @@ Deno.serve(async (req) => {
     // 🔴 REGRA #3: Só processa POST e PUT (MP usa ambos às vezes)
     if (req.method !== 'POST' && req.method !== 'PUT') {
         console.log(`⚠️ Método ${req.method} aceito mas não processado`);
-        return respondNow(200); // Retorna 200 mesmo assim!
+        return respondNow(200);
     }
 
     try {
@@ -59,7 +64,7 @@ Deno.serve(async (req) => {
         } catch (parseErr) {
             console.error('❌ Erro ao fazer parse do JSON:', parseErr.message);
             console.error('   Body recebido:', bodyText.substring(0, 500));
-            return respondNow(200); // Retorna 200 mesmo com erro
+            return respondNow(200);
         }
 
         console.log('📥 Webhook MP recebido:', {
@@ -219,17 +224,8 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error('❌ Erro crítico:', error.message);
-        return respondNow(200); // Retorna 200 mesmo com erro crítico
+        return respondNow(200);
     }
-    });
+}
 
-    // 🔴 REGRA #6: Trata erros globais da função
-    const handleError = (error) => {
-    console.error('🚨 Erro não tratado no webhook:', error);
-    return respondNow(200);
-    };
-
-    // Adiciona handler global
-    if (typeof req !== 'undefined') {
-    req.addEventListener?.('error', handleError);
-    }
+Deno.serve(handleWebhook);
