@@ -190,13 +190,14 @@ export default function CatalogCheckout2() {
                 console.warn('⚠️ Erro ao registrar rastreamento:', trackErr.message);
             }
 
-            // 🔒 PASSO 3: Criar preferência MP com catalog_sale_id vinculado
-            console.log('📤 Enviando para Mercado Pago...');
+            // 🔒 PASSO 3: Rota de pagamento por gateway
+            console.log(`📤 Enviando para ${selectedGateway === 'pagseguro' ? 'PagSeguro' : 'Mercado Pago'}...`);
             try {
-                const response = await base44.functions.invoke('createMPPreference', {
+                const paymentData = {
                     product_id: product.is_auction ? null : product.id,
                     auction_id: product.is_auction ? product.id : null,
                     catalog_sale_id: product.is_auction ? null : sale.id,
+                    amount: product.price_catalog,
                     user_data: {
                         id: savedUser.id,
                         email: email.trim(),
@@ -212,7 +213,14 @@ export default function CatalogCheckout2() {
                         address_state: addressState.trim(),
                         address_zip_code: addressZip.trim()
                     }
-                });
+                };
+
+                let response;
+                if (selectedGateway === 'pagseguro') {
+                    response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
+                } else {
+                    response = await base44.functions.invoke('createMPPreference', paymentData);
+                }
 
                 const responseData = response?.data || response;
                 
