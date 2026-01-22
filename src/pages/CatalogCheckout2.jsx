@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
-// GATEWAY: PagSeguro apenas
+// GATEWAY: Mercado Pago (em desenvolvimento)
 const PAYMENT_GATEWAYS = {
-  pagseguro: { name: 'PagSeguro PIX', default: true }
+  mercadopago: { name: 'Mercado Pago', default: true }
 };
 
 const Product = base44.entities.Product;
@@ -186,66 +186,10 @@ export default function CatalogCheckout2() {
                 console.warn('⚠️ Erro ao registrar rastreamento:', trackErr.message);
             }
 
-            // 🔒 PASSO 3: PagSeguro
-             console.log('📤 Enviando para PagSeguro...');
-             try {
-                 const paymentData = {
-                     product_id: product.is_auction ? null : product.id,
-                     auction_id: product.is_auction ? product.id : null,
-                     catalog_sale_id: product.is_auction ? null : sale.id,
-                     amount: product.price_catalog,
-                     user_data: {
-                         id: savedUser.id,
-                         email: email.trim(),
-                         full_name: savedUser.full_name,
-                         phone: phone.trim(),
-                         cpf: cpf.trim(),
-                         last_name: lastName.trim(),
-                         address_street: addressStreet.trim(),
-                         address_number: addressNumber.trim(),
-                         address_complement: addressComplement.trim(),
-                         address_neighborhood: addressNeighborhood.trim(),
-                         address_city: addressCity.trim(),
-                         address_state: addressState.trim(),
-                         address_zip_code: addressZip.trim()
-                     }
-                 };
-
-                 const response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
-                 const responseData = response?.data || response;
-
-                 // Validar resposta
-                 if (!responseData?.success && !responseData?.order_id) {
-                     console.error('❌ PagSeguro falhou:', responseData);
-                     toast.dismiss('checkout-loading');
-                     toast.error(responseData?.error || 'Erro ao processar pagamento');
-
-                     // Limpar sale órfã
-                     try {
-                         await base44.entities.CatalogSale.delete(sale.id);
-                         console.log('🧹 CatalogSale deletada');
-                     } catch (delErr) {
-                         console.warn('⚠️ Erro ao limpar:', delErr.message);
-                     }
-                     return;
-                 }
-
-                 console.log('✅ PagSeguro pronto:', responseData.order_id);
-                 toast.dismiss('checkout-loading');
-                 toast.success('Abrindo PagSeguro PIX...');
-                 setTimeout(() => {
-                     toast.info('QR Code: ' + (responseData.qr_code || 'Processando...'));
-                 }, 800);
-             } catch (pgError) {
-                 console.error('❌ Erro ao chamar PagSeguro:', pgError);
-                 toast.dismiss('checkout-loading');
-                 toast.error('Erro ao conectar com PagSeguro');
-                 try {
-                     await base44.entities.CatalogSale.delete(sale.id);
-                 } catch (delErr) {
-                     console.warn('⚠️ Erro ao limpar:', delErr.message);
-                 }
-             }
+            // 🔒 PASSO 3: Mercado Pago (integração em preparação)
+             console.log('📤 Mercado Pago - integração em desenvolvimento...');
+             toast.dismiss('checkout-loading');
+             toast.info('Integração de pagamento em preparação. Retornando ao catálogo.');
 
         } catch (error) {
             console.error('❌ Erro:', error.message);
@@ -581,11 +525,11 @@ export default function CatalogCheckout2() {
                                  />
                              </div>
 
-                             {/* PagSeguro apenas */}
-                             <div className="border-t border-gray-600 pt-4 mb-4 bg-green-600/10 rounded-lg p-3">
-                                 <p className="text-green-400 text-sm font-semibold mb-2">✓ Pagamento via PagSeguro</p>
+                             {/* Mercado Pago */}
+                             <div className="border-t border-gray-600 pt-4 mb-4 bg-blue-600/10 rounded-lg p-3">
+                                 <p className="text-blue-400 text-sm font-semibold mb-2">✓ Mercado Pago</p>
                                  <p className="text-gray-300 text-xs">
-                                     PIX instantâneo, sem taxas adicionais
+                                     PIX, Cartão e Boleto - Integração em preparação
                                  </p>
                              </div>
 
@@ -606,8 +550,8 @@ export default function CatalogCheckout2() {
                              </div>
 
                              <p className="text-xs text-gray-500 text-center mt-4">
-                                Pagamento processado de forma segura pelo Mercado Pago
-                            </p>
+                                 Pagamento processado de forma segura via Mercado Pago
+                             </p>
                         </CardContent>
                         </Card>
                         </div>
