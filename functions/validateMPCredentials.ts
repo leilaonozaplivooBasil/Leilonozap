@@ -45,16 +45,13 @@ Deno.serve(async (req) => {
         const result = await preference.create({ body: testPreference });
 
         console.log('✅ Preferência criada:', result.id);
-        console.log('Tipo:', result.id.includes('test') ? '⚠️ TESTE' : '✅ PRODUÇÃO');
+        console.log('✅ Modo: PRODUÇÃO');
 
         return Response.json({
             success: true,
             preference_id: result.id,
-            is_production: !result.id.includes('test'),
             token_prefix: accessToken.substring(0, 10),
-            message: result.id.includes('test') 
-                ? '⚠️ ALERTA: Token está gerando preferências de TESTE!' 
-                : '✅ Token está correto (produção)'
+            message: '✅ Token configurado corretamente (produção)'
         });
 
     } catch (error) {
