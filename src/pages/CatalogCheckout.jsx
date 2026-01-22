@@ -120,7 +120,7 @@ export default function CatalogCheckout() {
 
   const handleCheckout = async () => {
     // Validação
-    if (!formData.name || !formData.email || !formData.phone) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.address_street || !formData.address_number || !formData.address_city || !formData.address_state || !formData.address_zip_code) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -131,21 +131,29 @@ export default function CatalogCheckout() {
     }
 
     setIsProcessing(true);
+    toast.loading('Processando compra...', { id: 'checkout-loading' });
+
     try {
-      const licenseeCode = sessionStorage.getItem('licenseeCode');
+      const referralCode = sessionStorage.getItem('referralCode');
 
       // Busca o ID real do licenciado pelo referral_code
       let licenseeId = null;
-      if (licenseeCode) {
+      let licenseeData = null;
+      if (referralCode) {
         try {
-          const licensees = await base44.entities.AppUser.filter({ referral_code: licenseeCode });
+          const licensees = await base44.entities.AppUser.filter({ referral_code: referralCode });
           if (licensees && licensees.length > 0) {
-            licenseeId = licensees[0].id;
-            console.log(`✅ Licenciado encontrado: ${licensees[0].full_name} (ID: ${licenseeId})`);
+            licenseeData = licensees[0];
+            licenseeId = licenseeData.id;
+            console.log(`✅ Licenciado encontrado: ${licenseeData.full_name} (ID: ${licenseeId})`);
           }
         } catch (err) {
           console.warn('Erro ao buscar licenciado:', err);
         }
+      }
+
+      if (!licenseeId) {
+        licenseeId = 'site_official';
       }
 
       // Cria registro de venda
@@ -155,28 +163,64 @@ export default function CatalogCheckout() {
         product_image: product.image_urls?.[0] || '',
         sale_price: product.price_catalog,
         total_amount: product.price_catalog,
-        buyer_id: currentUser?.id || 'guest',
+        buyer_id: currentUser?.id,
         buyer_name: formData.name,
         buyer_email: formData.email,
         buyer_phone: formData.phone,
-        licensee_id: licenseeId || null, // ✅ ID REAL do licenciado (não o código!)
-        referred_by_code: licenseeCode || '', // ✅ Código de referência separado
+        licensee_id: licenseeId,
+        licensee_name: licenseeData?.full_name || null,
+        licensee_plan: licenseeData?.primary_career_level || null,
+        referred_by_code: referralCode || '',
+        referral_code: referralCode || null,
         status: 'pending_payment'
       });
 
-      toast.success("Pedido criado! Redirecionando para pagamento...");
-      
-      // Redireciona para página de pagamento/confirmação
-      sessionStorage.removeItem('licenseeCode');
-      sessionStorage.removeItem('selectedProduct');
-      
-      setTimeout(() => {
-        navigate(createPageUrl("Catalog"));
-      }, 2000);
+      console.log(`🛍️ CatalogSale criada com ID: ${sale.id}`);
+
+      // Criar preferência MP
+      const response = await createMPPreference({
+        product_id: product.id,
+        catalog_sale_id: sale.id,
+        user_data: {
+          id: currentUser?.id,
+          email: formData.email.trim(),
+          full_name: formData.name,
+          phone: formData.phone.trim(),
+          cpf: currentUser?.cpf || '',
+          last_name: formData.name.split(' ').slice(1).join(' '),
+          address_street: formData.address_street.trim(),
+          address_number: formData.address_number.trim(),
+          address_complement: formData.address_complement.trim(),
+          address_neighborhood: formData.address_neighborhood.trim(),
+          address_city: formData.address_city.trim(),
+          address_state: formData.address_state.trim(),
+          address_zip_code: formData.address_zip_code.trim()
+        }
+      });
+
+      if (!response?.data?.success || !response?.data?.preference_id) {
+        toast.dismiss('checkout-loading');
+        toast.error(response?.data?.error || 'Erro ao processar pagamento');
+        try {
+          await CatalogSale.delete(sale.id);
+        } catch (delErr) {
+          console.warn('Erro ao limpar:', delErr.message);
+        }
+        return;
+      }
+
+      toast.dismiss('checkout-loading');
+      const checkoutUrl = response.data.init_point || response.data.sandbox_init_point;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      } else {
+        toast.error('Erro ao abrir checkout do Mercado Pago');
+      }
 
     } catch (error) {
-      console.error("Erro ao criar venda:", error);
-      toast.error("Erro ao processar pedido");
+      console.error("Erro:", error.message);
+      toast.dismiss('checkout-loading');
+      toast.error('Erro ao processar compra');
     } finally {
       setIsProcessing(false);
     }
