@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 
       console.log(`📍 Cadeia: ${chain.map(u => u.full_name).join(' → ')}`);
 
-      // Tabela de comissões
+      // Tabela de comissões COMPLETA (26%)
       const ROLES = [
         { id: 'licenciado_catalogo', percent: 13.0 },
         { id: 'trainee', percent: 0.5 },
@@ -139,7 +139,12 @@ Deno.serve(async (req) => {
         { id: 'kit_start', percent: 1.0 },
         { id: 'plano_lider', percent: 1.0 },
         { id: 'plano_lojista', percent: 3.0 },
-        { id: 'distribuidor', percent: 1.0 }
+        { id: 'distribuidor', percent: 1.0 },
+        { id: 'diretor', percent: 0.5 },
+        { id: 'diretoria', percent: 0.5 },
+        { id: 'ceo', percent: 3.0 },
+        { id: 'conselheiro', percent: 1.0 },
+        { id: 'fundador', percent: 1.0 }
       ];
 
       // Distribui para cada nível
