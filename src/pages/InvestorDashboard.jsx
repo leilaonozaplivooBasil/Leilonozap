@@ -1061,12 +1061,13 @@ export default function InvestorDashboard() {
                         // Não precisa criar Auction para investimentos (AbacatePay é isolado)
 
                         const response = await createAbacatePayPix({
-                          auction_id: tempAuction.id,
-                          user_name: name,
-                          user_email: email,
-                          user_phone: phone,
-                          user_cpf: cpf
-                        });
+                           licensee_id: currentUser.id,
+                           user_name: name,
+                           user_email: email,
+                           user_phone: phone,
+                           user_cpf: cpf,
+                           plan_code: selectedPlan.name
+                         });
 
                         if (response?.data?.success) {
                           setPixData(response.data);
