@@ -12,30 +12,16 @@ async function handleWebhook(req) {
     const timestamp = new Date().toISOString();
     console.log(`[${timestamp}] ${req.method}`)
     
-    // 🔴 RESPOSTA PADRÃO PARA TODOS OS CASOS
-    const respondNow = (status = 200, data = { received: true }) => {
-        return new Response(JSON.stringify(data), { 
-            status,
-            headers: {
-                'Content-Type': 'application/json',
-                ...corsHeaders
-            }
-        });
-    };
-
-    // Aceita OPTIONS para CORS
+    // Resposta imediata para TODOS os métodos (exceto POST/PUT)
     if (req.method === 'OPTIONS') {
-        console.log(`✅ Respondendo OPTIONS`);
-        return new Response(null, {
-            status: 204,
-            headers: corsHeaders
-        });
+        return new Response(null, { status: 204, headers: corsHeaders });
     }
 
-    // GET = health check
     if (req.method === 'GET') {
-        console.log(`✅ Health check OK`);
-        return respondNow(200, { status: 'webhook_active', ready: true });
+        return new Response(JSON.stringify({ status: 'ok' }), { 
+            status: 200, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
     }
 
     // 🔴 REGRA #3: Só processa POST e PUT (MP usa ambos às vezes)
