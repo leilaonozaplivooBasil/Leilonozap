@@ -60,8 +60,8 @@ Deno.serve(async (req) => {
             payment_id: body.data?.id
         });
 
-        // Retorna 200 imediatamente
-        const response = Response.json({ received: true }, { status: 200 });
+        // 🔴 REGRA #5: Retorna 200 IMEDIATAMENTE (não aguarda processamento)
+        const response = respondNow(200);
 
         // Processa em background
         (async () => {
