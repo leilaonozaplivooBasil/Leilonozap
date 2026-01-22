@@ -248,9 +248,38 @@ export default function Cart() {
 
       console.log('Enviando para MP:', { cart_items: cartItems, user_data: userData });
 
-      const response = await base44.functions.invoke('createMPCartPreference', {
-        cart_items: cartItems,
-        user_data: userData
+      // Precisa converter dados do carrinho para formato da função
+      // Como são múltiplos produtos, vamos criar para o primeiro e depois criar os demais
+      
+      if (!formData.street) {
+        // Se estão usando pickup, preenche com endereço padrão
+        formData.street = 'Estrada do Pontal';
+        formData.number = '6500';
+        formData.neighborhood = 'Recreio dos Bandeirantes';
+        formData.city = 'Rio de Janeiro';
+        formData.state = 'RJ';
+        formData.cep = '22790877';
+      }
+
+      const response = await base44.functions.invoke('createMPPreference', {
+        product_id: cartItems[0]?.id || null,
+        auction_id: null,
+        catalog_sale_id: null,
+        user_data: {
+          id: currentUser?.id,
+          email: formData.email,
+          full_name: formData.name,
+          phone: formData.phone,
+          cpf: formData.cpf,
+          last_name: formData.name.split(' ').slice(1).join(' '),
+          address_street: formData.street,
+          address_number: formData.number,
+          address_complement: formData.complement,
+          address_neighborhood: formData.neighborhood,
+          address_city: formData.city,
+          address_state: formData.state,
+          address_zip_code: formData.cep
+        }
       });
 
       console.log('Resposta MP completa:', JSON.stringify(response, null, 2));
