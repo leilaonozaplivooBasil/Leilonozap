@@ -459,8 +459,8 @@ export default function CatalogCheckout2() {
                         </CardContent>
                     </Card>
 
-                    {/* Dados da Entrega */}
-                     <Card className="bg-gray-800 border-gray-700">
+                        {/* Dados da Entrega */}
+                        <Card className="bg-gray-800 border-gray-700">
                          <CardHeader>
                              <CardTitle className="text-green-400">Dados da Entrega</CardTitle>
                          </CardHeader>
