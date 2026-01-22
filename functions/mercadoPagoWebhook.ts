@@ -1,6 +1,16 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+    // ✅ Aceita apenas POST (webhooks do Mercado Pago)
+    // GET = verificação/health check
+    if (req.method === 'GET') {
+        return Response.json({ status: 'webhook_ready' }, { status: 200 });
+    }
+
+    if (req.method !== 'POST') {
+        return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    }
+
     try {
         const base44 = createClientFromRequest(req);
         const body = await req.text();
