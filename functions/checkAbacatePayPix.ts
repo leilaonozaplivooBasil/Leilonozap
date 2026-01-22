@@ -38,34 +38,33 @@ Deno.serve(async (req) => {
 
     console.log('💰 Status do PIX:', result.data?.status, 'isPaid:', isPaid);
 
-    // Se foi pago, atualiza o leilão
-    if (isPaid && auction_id) {
-      await base44.asServiceRole.entities.Auction.update(auction_id, {
-        order_status: 'paid'
-      });
-
-      // Atualiza o Payment
-      const payments = await base44.asServiceRole.entities.Payment.filter({ 
-        transaction_id: billing_id 
-      });
-      
-      if (payments && payments.length > 0) {
-        await base44.asServiceRole.entities.Payment.update(payments[0].id, {
-          status: 'paid',
-          payment_date: new Date().toISOString()
+    // ✅ ISOLAMENTO: Atualiza APENAS AbacatePayPayment (não Payment do ASAAS)
+    if (isPaid) {
+      try {
+        const abacatePayments = await base44.asServiceRole.entities.AbacatePayPayment.filter({ 
+          transaction_id: billing_id 
         });
+        
+        if (abacatePayments && abacatePayments.length > 0) {
+          await base44.asServiceRole.entities.AbacatePayPayment.update(abacatePayments[0].id, {
+            status: 'approved',
+            approved_at: new Date().toISOString()
+          });
+
+          await base44.asServiceRole.entities.SystemLog.create({
+            step: 'CHECK_ABACATEPAY_PIX_CONFIRMED',
+            status: 'success',
+            message: 'Pagamento AbacatePay PIX confirmado',
+            component_name: 'checkAbacatePayPix',
+            entity_id: abacatePayments[0].id,
+            payload: { billing_id }
+          }).catch(() => {});
+
+          console.log('✅ AbacatePay: Pagamento confirmado!');
+        }
+      } catch (updateError) {
+        console.warn('⚠️ Erro ao atualizar AbacatePayPayment:', updateError.message);
       }
-
-      await base44.asServiceRole.entities.SystemLog.create({
-        step: 'CHECK_PIX_PAYMENT_CONFIRMED',
-        status: 'success',
-        message: 'Pagamento PIX confirmado manualmente',
-        component_name: 'checkAbacatePayPix',
-        entity_id: payments[0].id,
-        payload: { billing_id, auction_id }
-      }).catch(() => {});
-
-      console.log('✅ Pagamento confirmado e atualizado!');
     }
 
     return Response.json({
