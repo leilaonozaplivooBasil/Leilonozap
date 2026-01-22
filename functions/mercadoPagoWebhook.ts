@@ -72,13 +72,25 @@ async function handleWebhook(req) {
         (async () => {
             try {
                 const accessToken = Deno.env.get('MP_ACCESS_TOKEN');
-                if (!accessToken) return;
+                if (!accessToken) {
+                    console.warn(`⚠️ MP_ACCESS_TOKEN não configurado`);
+                    return;
+                }
 
                 const isPaymentEvent = body.type === 'payment' || body.action?.startsWith('payment');
-                if (!isPaymentEvent) return;
+                console.log(`🔍 Event check:`, { type: body.type, action: body.action, isPaymentEvent });
+                if (!isPaymentEvent) {
+                    console.log(`⏭️ Event ignorado (não é payment)`);
+                    return;
+                }
 
                 const paymentId = body.data?.id;
-                if (!paymentId) return;
+                if (!paymentId) {
+                    console.log(`⏭️ Sem payment ID`);
+                    return;
+                }
+                
+                console.log(`🔄 Processando payment:`, paymentId);
 
                 const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
                     headers: { 
