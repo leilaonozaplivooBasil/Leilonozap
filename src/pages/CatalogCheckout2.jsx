@@ -6,10 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
 
-// GATEWAY: PagSeguro prioridade, Mercado Pago fallback
+// GATEWAY: PagSeguro apenas
 const PAYMENT_GATEWAYS = {
-  pagseguro: { name: 'PagSeguro PIX', default: true },
-  mercadopago: { name: 'Mercado Pago', default: false }
+  pagseguro: { name: 'PagSeguro PIX', default: true }
 };
 
 const Product = base44.entities.Product;
@@ -33,9 +32,6 @@ export default function CatalogCheckout2() {
           const [addressState, setAddressState] = useState('');
           const [addressZip, setAddressZip] = useState('');
           const [isLoadingCep, setIsLoadingCep] = useState(false);
-          const [showCheckoutForm, setShowCheckoutForm] = useState(true);
-          const [mpData, setMpData] = useState(null);
-          const [selectedGateway, setSelectedGateway] = useState('pagseguro');
           const navigate = useNavigate();
 
     const searchCep = async (cep) => {
@@ -190,88 +186,66 @@ export default function CatalogCheckout2() {
                 console.warn('⚠️ Erro ao registrar rastreamento:', trackErr.message);
             }
 
-            // 🔒 PASSO 3: Rota de pagamento por gateway
-            console.log(`📤 Enviando para ${selectedGateway === 'pagseguro' ? 'PagSeguro' : 'Mercado Pago'}...`);
-            try {
-                const paymentData = {
-                    product_id: product.is_auction ? null : product.id,
-                    auction_id: product.is_auction ? product.id : null,
-                    catalog_sale_id: product.is_auction ? null : sale.id,
-                    amount: product.price_catalog,
-                    user_data: {
-                        id: savedUser.id,
-                        email: email.trim(),
-                        full_name: savedUser.full_name,
-                        phone: phone.trim(),
-                        cpf: cpf.trim(),
-                        last_name: lastName.trim(),
-                        address_street: addressStreet.trim(),
-                        address_number: addressNumber.trim(),
-                        address_complement: addressComplement.trim(),
-                        address_neighborhood: addressNeighborhood.trim(),
-                        address_city: addressCity.trim(),
-                        address_state: addressState.trim(),
-                        address_zip_code: addressZip.trim()
-                    }
-                };
+            // 🔒 PASSO 3: PagSeguro
+             console.log('📤 Enviando para PagSeguro...');
+             try {
+                 const paymentData = {
+                     product_id: product.is_auction ? null : product.id,
+                     auction_id: product.is_auction ? product.id : null,
+                     catalog_sale_id: product.is_auction ? null : sale.id,
+                     amount: product.price_catalog,
+                     user_data: {
+                         id: savedUser.id,
+                         email: email.trim(),
+                         full_name: savedUser.full_name,
+                         phone: phone.trim(),
+                         cpf: cpf.trim(),
+                         last_name: lastName.trim(),
+                         address_street: addressStreet.trim(),
+                         address_number: addressNumber.trim(),
+                         address_complement: addressComplement.trim(),
+                         address_neighborhood: addressNeighborhood.trim(),
+                         address_city: addressCity.trim(),
+                         address_state: addressState.trim(),
+                         address_zip_code: addressZip.trim()
+                     }
+                 };
 
-                let response;
-                if (selectedGateway === 'pagseguro') {
-                    response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
-                } else {
-                    response = await base44.functions.invoke('createMPPreference', paymentData);
-                }
+                 const response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
+                 const responseData = response?.data || response;
 
-                const responseData = response?.data || response;
-                
-                // Validar resposta
-                if (!responseData?.success && !responseData?.order_id && !responseData?.preference_id) {
-                    console.error('❌ Gateway falhou:', responseData);
-                    toast.dismiss('checkout-loading');
-                    toast.error(responseData?.error || 'Erro ao processar pagamento');
+                 // Validar resposta
+                 if (!responseData?.success && !responseData?.order_id) {
+                     console.error('❌ PagSeguro falhou:', responseData);
+                     toast.dismiss('checkout-loading');
+                     toast.error(responseData?.error || 'Erro ao processar pagamento');
 
-                    // Limpar sale órfã
-                    try {
-                        await base44.entities.CatalogSale.delete(sale.id);
-                        console.log('🧹 CatalogSale deletada');
-                    } catch (delErr) {
-                        console.warn('⚠️ Erro ao limpar:', delErr.message);
-                    }
-                    return;
-                }
+                     // Limpar sale órfã
+                     try {
+                         await base44.entities.CatalogSale.delete(sale.id);
+                         console.log('🧹 CatalogSale deletada');
+                     } catch (delErr) {
+                         console.warn('⚠️ Erro ao limpar:', delErr.message);
+                     }
+                     return;
+                 }
 
-                if (selectedGateway === 'pagseguro') {
-                    console.log('✅ PagSeguro pronto:', responseData.order_id);
-                    toast.dismiss('checkout-loading');
-                    toast.success('Abrindo PagSeguro PIX...');
-                    // TODO: Implementar QR Code ou redirect para PagSeguro
-                    setTimeout(() => {
-                        toast.info('QR Code: ' + (responseData.qr_code || 'Processando...'));
-                    }, 800);
-                } else {
-                    console.log('✅ Mercado Pago pronto:', responseData.preference_id);
-                    toast.dismiss('checkout-loading');
-                    toast.success('Abrindo Mercado Pago... Você retornará aqui após o pagamento.');
-
-                    setTimeout(() => {
-                        const checkoutUrl = responseData.init_point;
-                        if (checkoutUrl) {
-                            window.location.href = checkoutUrl;
-                        } else {
-                            toast.error('Erro ao abrir checkout do Mercado Pago');
-                        }
-                    }, 800);
-                }
-            } catch (mpError) {
-                console.error('❌ Erro ao chamar MP:', mpError);
-                toast.dismiss('checkout-loading');
-                toast.error('Erro ao conectar com Mercado Pago');
-                try {
-                    await base44.entities.CatalogSale.delete(sale.id);
-                } catch (delErr) {
-                    console.warn('⚠️ Erro ao limpar:', delErr.message);
-                }
-            }
+                 console.log('✅ PagSeguro pronto:', responseData.order_id);
+                 toast.dismiss('checkout-loading');
+                 toast.success('Abrindo PagSeguro PIX...');
+                 setTimeout(() => {
+                     toast.info('QR Code: ' + (responseData.qr_code || 'Processando...'));
+                 }, 800);
+             } catch (pgError) {
+                 console.error('❌ Erro ao chamar PagSeguro:', pgError);
+                 toast.dismiss('checkout-loading');
+                 toast.error('Erro ao conectar com PagSeguro');
+                 try {
+                     await base44.entities.CatalogSale.delete(sale.id);
+                 } catch (delErr) {
+                     console.warn('⚠️ Erro ao limpar:', delErr.message);
+                 }
+             }
 
         } catch (error) {
             console.error('❌ Erro:', error.message);
@@ -367,62 +341,7 @@ export default function CatalogCheckout2() {
         loadData();
     }, []);
 
-    // ❌ SDK do Mercado Pago REMOVIDO - agora fazemos redirecionamento direto
 
-    // ✅ Efeito para inicializar SDK quando houver dados da preferência
-    useEffect(() => {
-        if (!showCheckoutForm) {
-            const mpCheckout = localStorage.getItem('mpCheckoutData');
-            if (mpCheckout) {
-                const data = JSON.parse(mpCheckout);
-                setMpData(data);
-                // Aguarda o DOM estar pronto antes de inicializar
-                setTimeout(() => {
-                    initializeMercadoPagoSDK(data.public_key, data.preference_id);
-                }, 100);
-            }
-        }
-    }, [showCheckoutForm]);
-
-    const initializeMercadoPagoSDK = (publicKey, preferenceId) => {
-        // ✅ Carregar SDK do Mercado Pago
-        const script = document.createElement('script');
-        script.src = 'https://sdk.mercadopago.com/js/v2';
-        script.async = true;
-        script.onload = () => {
-            console.log('✅ SDK Mercado Pago carregado');
-            // Aguarda window.MercadoPago estar disponível
-            const checkMP = setInterval(() => {
-                if (window.MercadoPago) {
-                    clearInterval(checkMP);
-                    try {
-                        const mp = new window.MercadoPago(publicKey);
-                        const bricksBuilder = mp.bricks();
-
-                        bricksBuilder.create('wallet', 'walletBrick_container', {
-                            initialization: {
-                                preferenceId: preferenceId
-                            }
-                        }).then(() => {
-                            console.log('✅ Wallet Brick criado com sucesso');
-                            toast.success('Escolha seu método de pagamento');
-                        }).catch((error) => {
-                            console.error('❌ Erro ao criar Wallet Brick:', error);
-                            toast.error('Erro ao carregar opções de pagamento. Tente novamente.');
-                        });
-                    } catch (error) {
-                        console.error('❌ Erro ao inicializar MercadoPago:', error);
-                        toast.error('Erro ao processar pagamento');
-                    }
-                }
-            }, 50);
-        };
-        script.onerror = () => {
-            console.error('❌ Erro ao carregar SDK do Mercado Pago');
-            toast.error('Erro ao conectar com Mercado Pago. Verifique sua conexão.');
-        };
-        document.head.appendChild(script);
-    };
 
     if (isLoading) {
         return (
@@ -435,34 +354,11 @@ export default function CatalogCheckout2() {
     if (!product) return null;
 
     return (
-        <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
-            <div className="max-w-4xl mx-auto">
-                <h1 className="text-3xl font-bold mb-6">Finalizar Pagamento</h1>
+         <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
+             <div className="max-w-4xl mx-auto">
+                 <h1 className="text-3xl font-bold mb-6">Finalizar Pagamento</h1>
 
-                {/* ✅ Se formulário está fechado, mostrar Wallet */}
-                {!showCheckoutForm && mpData ? (
-                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-8">
-                        <div className="mb-6">
-                            <h2 className="text-2xl font-bold text-green-400 mb-2">Escolha seu método de pagamento</h2>
-                            <p className="text-gray-400">Você será redirecionado para o Mercado Pago para completar a transação de forma segura.</p>
-                        </div>
-
-                        {/* ✅ Container para o Wallet Brick do Mercado Pago */}
-                        <div id="walletBrick_container" className="min-h-[300px]"></div>
-
-                        <div className="mt-6 flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setShowCheckoutForm(true);
-                                    localStorage.removeItem('mpCheckoutData');
-                                }}
-                                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-                            >
-                                ← Voltar e editar dados
-                            </button>
-                        </div>
-                    </div>
-                ) : (
+                 <div>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         {/* Resumo do Pedido */}
                     <Card className="bg-gray-800 border-gray-700">
@@ -715,7 +611,6 @@ export default function CatalogCheckout2() {
                         </CardContent>
                         </Card>
                         </div>
-                        )}
                         </div>
                         </div>
                         );
