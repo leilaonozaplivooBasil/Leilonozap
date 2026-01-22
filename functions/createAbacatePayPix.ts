@@ -204,7 +204,8 @@ Deno.serve(async (req) => {
     return Response.json({
       success: true,
       billing_id: pixData.id,
-      auction_id: auction_id,
+      licensee_id: licensee_id,
+      plan_code: plan_code,
       qr_code_base64: pixData.brCodeBase64,
       pix_code: pixData.brCode,
       amount: amount,
