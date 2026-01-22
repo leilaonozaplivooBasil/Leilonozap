@@ -3,7 +3,6 @@ import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import AmbienteDeTeste from './pages/AmbienteDeTeste';
 import ArquitetoIA from './pages/ArquitetoIA';
-import AsaasConfig from './pages/AsaasConfig';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
@@ -18,7 +17,6 @@ import CatalogManagement from './pages/CatalogManagement';
 import CatalogOrderTracking from './pages/CatalogOrderTracking';
 import CatalogProductDetails from './pages/CatalogProductDetails';
 import Checkout from './pages/Checkout';
-import CheckoutAsaas from './pages/CheckoutAsaas';
 import CommissionDistributionFull from './pages/CommissionDistributionFull';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
@@ -82,7 +80,6 @@ export const PAGES = {
     "AdminWithdrawals": AdminWithdrawals,
     "AmbienteDeTeste": AmbienteDeTeste,
     "ArquitetoIA": ArquitetoIA,
-    "AsaasConfig": AsaasConfig,
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
     "AuctionRoom": AuctionRoom,
@@ -97,7 +94,6 @@ export const PAGES = {
     "CatalogOrderTracking": CatalogOrderTracking,
     "CatalogProductDetails": CatalogProductDetails,
     "Checkout": Checkout,
-    "CheckoutAsaas": CheckoutAsaas,
     "CommissionDistributionFull": CommissionDistributionFull,
     "CreateAuction": CreateAuction,
     "CreateAuctionV2": CreateAuctionV2,
