@@ -23,9 +23,10 @@ Deno.serve(async (req) => {
     }
 
     // Valida e limpa CPF (deve ter 11 dígitos)
-    const cleanCpf = user_cpf.replace(/\D/g, '');
-    if (cleanCpf.length !== 11) {
-      return Response.json({ error: `CPF inválido. Deve ter 11 dígitos. Recebido: ${cleanCpf.length} dígitos` }, { status: 400 });
+    const cleanCpf = String(user_cpf || '').replace(/\D/g, '');
+    if (!cleanCpf || cleanCpf.length !== 11) {
+      console.error('CPF inválido:', { user_cpf, cleanCpf, length: cleanCpf.length });
+      return Response.json({ error: `CPF inválido. Esperado 11 dígitos, recebido: ${cleanCpf.length}` }, { status: 400 });
     }
 
     // Limpa e formata telefone com código do país +55
