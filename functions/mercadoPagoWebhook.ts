@@ -1,5 +1,65 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+// Valida assinatura HMAC-SHA256 do Mercado Pago
+async function validateMPSignature(payload, xSignature, xRequestId) {
+    const secret = Deno.env.get('MP_WEBHOOK_SECRET');
+    
+    // Se secret não estiver configurado, aceita (mas loga warning)
+    if (!secret) {
+        console.warn(`⚠️ MP_WEBHOOK_SECRET não configurado - assinatura não será validada`);
+        return true;
+    }
+
+    // Extrai ts e v1 do header x-signature
+    // Formato: ts=1704908010,v1=618c85...
+    const parts = xSignature.split(',');
+    let ts = null;
+    let receivedHash = null;
+
+    for (const part of parts) {
+        const [key, value] = part.split('=');
+        if (key?.trim() === 'ts') ts = value?.trim();
+        if (key?.trim() === 'v1') receivedHash = value?.trim();
+    }
+
+    if (!ts || !receivedHash) {
+        console.error(`✗ Assinatura malformada`);
+        return false;
+    }
+
+    // Extrai data.id do payload
+    const dataId = payload.data?.id ? String(payload.data.id).toLowerCase() : '';
+
+    // Monta manifest conforme especificação Mercado Pago
+    // id:[data.id];request-id:[x-request-id];ts:[ts];
+    const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+
+    // Calcula HMAC-SHA256
+    const encoder = new TextEncoder();
+    const keyData = encoder.encode(secret);
+    const messageData = encoder.encode(manifest);
+
+    const hashBuffer = await crypto.subtle.sign('HMAC', 
+        await crypto.subtle.importKey('raw', keyData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']),
+        messageData
+    );
+
+    // Converte para hex
+    const calculatedHash = Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+    // Compara
+    const isValid = calculatedHash === receivedHash;
+    console.log(`🔐 Validação:`, { 
+        isValid, 
+        receivedHash: receivedHash?.substring(0, 8) + '...', 
+        calculatedHash: calculatedHash.substring(0, 8) + '...' 
+    });
+
+    return isValid;
+}
+
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, GET, OPTIONS, PUT, PATCH, DELETE',
