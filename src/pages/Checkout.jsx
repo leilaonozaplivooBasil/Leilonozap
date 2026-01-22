@@ -620,7 +620,38 @@ export default function CheckoutPage() {
                                  </div>
                              </div>
 
-                             {(!preferenceId || !publicKey) ? (
+                             {/* Seletor de Gateway */}
+                             {!preferenceId && !publicKey && (
+                                 <div className="border-t border-gray-600 pt-4 mb-4">
+                                     <label className="block text-sm font-medium text-gray-300 mb-3">
+                                         Método de Pagamento
+                                     </label>
+                                     <div className="space-y-2">
+                                         <button
+                                             onClick={() => setSelectedGateway('pagseguro')}
+                                             className={`w-full p-3 rounded-lg border-2 transition-all text-sm font-semibold ${
+                                                 selectedGateway === 'pagseguro'
+                                                     ? 'border-green-500 bg-green-600/20 text-green-400'
+                                                     : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                                             }`}
+                                         >
+                                             ✓ PagSeguro PIX (Prioridade)
+                                         </button>
+                                         <button
+                                             onClick={() => setSelectedGateway('mercadopago')}
+                                             className={`w-full p-3 rounded-lg border-2 transition-all text-sm font-semibold ${
+                                                 selectedGateway === 'mercadopago'
+                                                     ? 'border-blue-500 bg-blue-600/20 text-blue-400'
+                                                     : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                                             }`}
+                                         >
+                                             💳 Mercado Pago (Fallback)
+                                         </button>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {(!preferenceId || !publicKey) && selectedGateway === 'mercadopago' ? (
                                  <>
                                      <p className="text-gray-400 text-sm">
                                          Escolha seu método de pagamento preferido:
@@ -632,7 +663,9 @@ export default function CheckoutPage() {
                                          <li>✓ Boleto bancário</li>
                                      </ul>
                                  </>
-                             ) : (
+                             ) : null}
+
+                             {(preferenceId && publicKey) ? (
                                  /* Container para o Wallet Brick do Mercado Pago */
                                  <div 
                                      id="walletBrick_container" 
