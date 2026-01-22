@@ -16,20 +16,7 @@ Deno.serve(async (req) => {
     }
 
     // Log inicial - usa asServiceRole para funcionar mesmo sem auth
-    await base44.asServiceRole.entities.SystemLog.create({
-      step: 'PIX_PAYMENT_INIT',
-      status: 'info',
-      message: 'Iniciando geração de PIX para investimento AbacatePay',
-      component_name: 'createAbacatePayPix',
-      payload: { 
-        licensee_id,
-        plan_code,
-        user_name, 
-        user_email, 
-        user_phone: user_phone?.substring(0, 5) + '****', // Parcial para privacidade
-        user_cpf: user_cpf?.substring(0, 3) + '.***.***-**' // Mascarado
-      }
-    }).catch(() => {});
+    // Log inicial removido - variáveis não verificadas ainda
 
     if (!licensee_id || !plan_code || !user_name || !user_email || !user_phone || !user_cpf) {
       return Response.json({ error: 'Todos os campos são obrigatórios' }, { status: 400 });
