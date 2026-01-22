@@ -5,7 +5,6 @@ import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, ShoppingCart } from 'lucide-react';
 import { toast } from 'sonner';
-import { createMPPreference } from '@/functions/createMPPreference';
 
 // 🔴 IMPORTANTE: Código Asaas mantido em standby - não remover
 // Para reativar Asaas, trocar chamadas de createMPPreference por createAsaasOrder
