@@ -92,7 +92,11 @@ Deno.serve(async (req) => {
             },
             auto_return: 'all',
             notification_url: `https://leilaonozap.net/api/mercadoPagoWebhook`,
-            statement_descriptor: 'LEILAO NOZAP'
+            statement_descriptor: 'LEILAO NOZAP',
+            payment_methods: {
+                excluded_payment_methods: [],
+                excluded_payment_types: []
+            }
         };
 
         // ✅ PASSO 7: Criar preferência
