@@ -1301,59 +1301,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   Sacar
                 </Button>
               </div>
-            </div>
-            
-            <div className="relative w-64 h-40 flex items-center justify-center nota-stack-container">
-              {guardianNote && guardianNote.url &&
-              <img
-                src={guardianNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-15 translate-y-3 -translate-x-1 nota-stack-guardian nota-entrance-guardian"
-                style={{ zIndex: 0, opacity: 0.65 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
 
-              }
-              
-              {backBackNote && backBackNote.url &&
-              <img
-                src={backBackNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-10 translate-y-2 nota-stack-backback nota-entrance-backback"
-                style={{ zIndex: 1, opacity: 0.7 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
-
-              }
-              
-              {backNote && backNote.url &&
-              <img
-                src={backNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-5 translate-y-1 nota-stack-back nota-entrance-back"
-                style={{ zIndex: 2, opacity: 0.8 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
-
-              }
-              
-              {sideNote && sideNote.url &&
-              <img
-                src={sideNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
-                style={{ zIndex: 3, opacity: 0.9 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
-
-              }
-
-              {frontNote && frontNote.url &&
-              <img
-                src={frontNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-2 nota-stack-front nota-entrance-front"
-                style={{ zIndex: 4 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
-
-              }
-            </div>
           </div>
         </CardContent>
       </Card>
