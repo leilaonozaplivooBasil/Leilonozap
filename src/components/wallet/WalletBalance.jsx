@@ -55,8 +55,8 @@ export default function WalletBalance({ userId, showActions = true, onBalanceLoa
   }
 
   return (
-    <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 shadow-lg">
-      <CardContent className="p-3">
+    <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 shadow-lg overflow-hidden relative">
+      <CardContent className="p-3 relative z-10">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 text-white/80 text-sm mb-1">
@@ -90,6 +90,14 @@ export default function WalletBalance({ userId, showActions = true, onBalanceLoa
           )}
         </div>
       </CardContent>
+      {/* Nota de R$ 200 de fundo */}
+      <div className="absolute bottom-0 right-0 opacity-30 pointer-events-none">
+        <img 
+          src="https://raw.githubusercontent.com/jeanromee/brasileiras_banknotes/main/200_reais_frente.png" 
+          alt="Nota 200 reais" 
+          className="h-24 w-auto"
+        />
+      </div>
     </Card>
   );
 }
