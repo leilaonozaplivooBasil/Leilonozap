@@ -105,9 +105,9 @@ export default function MyCatalogOrders() {
         const allOrders = await CatalogSale.list("-created_date", 500);
         console.log('📦 Total de pedidos no sistema:', allOrders?.length || 0);
         
-        // Filtrar pedidos do usuário (por ID ou email)
+        // Filtrar pedidos do usuário (por ID, email ou created_by)
         const userOrders = allOrders.filter(order => 
-          order.buyer_id === user.id || order.buyer_email === user.email
+          order.buyer_id === user.id || order.buyer_email === user.email || order.created_by === user.email
         );
         
         console.log('✅ Pedidos do usuário:', userOrders.length, userOrders);
