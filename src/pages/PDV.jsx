@@ -2312,6 +2312,113 @@ ${boletoInfo}================================
           </div>
         )}
 
+        {/* MODAL ADICIONAR VENDEDOR */}
+        {showAddSellerModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <Card className="bg-white border-gray-200 max-w-lg w-full">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    👤 Adicionar Vendedor à Venda
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowAddSellerModal(false);
+                      setNewCommissionData({ seller_id: '', commission_type: 'percentage', commission_value: 0 });
+                    }}
+                    className="text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-gray-700 text-sm mb-2 block font-medium">Selecione o Vendedor</label>
+                  <select
+                    value={newCommissionData.seller_id}
+                    onChange={(e) => setNewCommissionData({...newCommissionData, seller_id: e.target.value})}
+                    className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
+                  >
+                    <option value="">Escolha um vendedor...</option>
+                    {sellers.map(seller => (
+                      <option key={seller.id} value={seller.id}>
+                        {seller.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-gray-700 text-sm mb-2 block font-medium">Tipo de Comissão</label>
+                  <select
+                    value={newCommissionData.commission_type}
+                    onChange={(e) => setNewCommissionData({...newCommissionData, commission_type: e.target.value})}
+                    className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
+                  >
+                    <option value="percentage">Porcentagem (%)</option>
+                    <option value="fixed">Valor Fixo (R$)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-gray-700 text-sm mb-2 block font-medium">
+                    {newCommissionData.commission_type === 'percentage' ? 'Porcentagem (%)' : 'Valor (R$)'}
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={newCommissionData.commission_value}
+                    onChange={(e) => setNewCommissionData({...newCommissionData, commission_value: parseFloat(e.target.value) || 0})}
+                    className="bg-white text-gray-900 border-gray-300"
+                    placeholder={newCommissionData.commission_type === 'percentage' ? '10' : '50.00'}
+                  />
+                </div>
+
+                {newCommissionData.commission_value > 0 && (
+                  <div className="bg-green-50 rounded-lg p-3 border border-green-200">
+                    <p className="text-gray-700 font-medium">Comissão Estimada:</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      R$ {newCommissionData.commission_type === 'percentage' 
+                        ? ((cartTotal * newCommissionData.commission_value) / 100).toFixed(2)
+                        : newCommissionData.commission_value.toFixed(2)
+                      }
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      if (newCommissionData.seller_id && newCommissionData.commission_value > 0) {
+                        setSaleCommissions([...saleCommissions, newCommissionData]);
+                        setShowAddSellerModal(false);
+                        setNewCommissionData({ seller_id: '', commission_type: 'percentage', commission_value: 0 });
+                      } else {
+                        alert('Preencha todos os campos');
+                      }
+                    }}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    Adicionar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowAddSellerModal(false);
+                      setNewCommissionData({ seller_id: '', commission_type: 'percentage', commission_value: 0 });
+                    }}
+                    variant="outline"
+                    className="flex-1 border-gray-300"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* MODAL EDITAR COMISSÃO */}
         {showEditCommissionModal && editingCommissionSale && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
