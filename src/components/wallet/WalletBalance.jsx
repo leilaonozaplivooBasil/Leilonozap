@@ -90,12 +90,12 @@ export default function WalletBalance({ userId, showActions = true, onBalanceLoa
           )}
         </div>
       </CardContent>
-      {/* Nota de R$ 200 de fundo */}
-      <div className="absolute bottom-0 right-0 opacity-30 pointer-events-none">
+      {/* Nota de R$ 200 no topo */}
+      <div className="absolute top-0 right-0 opacity-40 pointer-events-none">
         <img 
-          src="https://raw.githubusercontent.com/jeanromee/brasileiras_banknotes/main/200_reais_frente.png" 
+          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/604f41821_image.png" 
           alt="Nota 200 reais" 
-          className="h-24 w-auto"
+          className="h-32 w-auto"
         />
       </div>
     </Card>
