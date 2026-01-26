@@ -18,7 +18,8 @@ Deno.serve(async (req) => {
             buyer_phone,
             amount,
             billing_type = 'PIX', // PIX ou CREDIT_CARD
-            description
+            description,
+            card_data // Dados do cartão (se CREDIT_CARD)
         } = await req.json();
 
         // Validações
@@ -104,6 +105,24 @@ Deno.serve(async (req) => {
             postalService: false
         };
 
+        // Se for cartão, adicionar dados do cartão
+        if (billing_type === 'CREDIT_CARD' && card_data) {
+            paymentPayload.creditCard = {
+                holderName: card_data.holderName,
+                number: card_data.number,
+                expiryMonth: card_data.expiryMonth,
+                expiryYear: card_data.expiryYear,
+                ccv: card_data.ccv
+            };
+            paymentPayload.creditCardHolderInfo = {
+                name: buyer_name,
+                email: buyer_email,
+                cpfCnpj: cleanCpf,
+                postalCode: '00000000',
+                addressNumber: '0'
+            };
+        }
+
         const paymentResponse = await fetch('https://api.asaas.com/v3/payments', {
             method: 'POST',
             headers: {
@@ -122,9 +141,10 @@ Deno.serve(async (req) => {
 
         console.log('✅ Cobrança criada:', paymentData.id);
 
-        // 🔒 PASSO 3: Obter QR Code PIX (se for PIX)
+        // 🔒 PASSO 3: Obter QR Code PIX (se for PIX) ou processar cartão
         let pixQrCode = null;
         let pixPayload = null;
+        let paymentStatus = 'pending';
 
         if (billing_type === 'PIX') {
             const qrCodeResponse = await fetch(
@@ -144,6 +164,16 @@ Deno.serve(async (req) => {
                 pixPayload = qrCodeData.payload;
                 console.log('✅ QR Code PIX gerado');
             }
+        } else if (billing_type === 'CREDIT_CARD') {
+            // Cartão é processado instantaneamente pelo ASAAS
+            // Verificar se foi aprovado
+            if (paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED') {
+                paymentStatus = 'confirmed';
+                console.log('✅ Cartão aprovado instantaneamente');
+            } else if (paymentData.status === 'PENDING') {
+                paymentStatus = 'pending';
+                console.log('⏳ Cartão em análise');
+            }
         }
 
         // 🔒 PASSO 4: Registrar no banco de dados
@@ -152,7 +182,7 @@ Deno.serve(async (req) => {
             customer_id: customerId,
             billing_type: billing_type,
             value: amount,
-            status: 'pending',
+            status: paymentStatus,
             external_reference: externalReference,
             catalog_sale_id: catalog_sale_id || null,
             auction_id: auction_id || null,
@@ -164,21 +194,52 @@ Deno.serve(async (req) => {
             pix_payload: pixPayload,
             boleto_url: paymentData.bankSlipUrl || null,
             invoice_url: paymentData.invoiceUrl || null,
-            due_date: paymentData.dueDate
+            due_date: paymentData.dueDate,
+            payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
         });
 
         console.log('✅ AsaasPayment registrado no banco');
+
+        // Se cartão foi aprovado, confirmar a venda automaticamente
+        if (billing_type === 'CREDIT_CARD' && paymentStatus === 'confirmed') {
+            if (catalog_sale_id) {
+                await base44.asServiceRole.entities.CatalogSale.update(catalog_sale_id, {
+                    status: 'paid',
+                    payment_confirmed_date: new Date().toISOString(),
+                    asaas_payment_id: paymentData.id
+                });
+                console.log('✅ CatalogSale atualizada para PAID');
+
+                // Processar comissões
+                try {
+                    await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                        catalog_sale_id: catalog_sale_id
+                    });
+                    console.log('✅ Comissões processadas');
+                } catch (commErr) {
+                    console.warn('⚠️ Erro ao processar comissões:', commErr.message);
+                }
+            } else if (auction_id) {
+                await base44.asServiceRole.entities.Auction.update(auction_id, {
+                    order_status: 'paid',
+                    asaas_payment_id: paymentData.id
+                });
+                console.log('✅ Auction atualizada para PAID');
+            }
+        }
 
         // Retornar dados para o frontend
         return Response.json({
             success: true,
             payment_id: paymentData.id,
             billing_type: billing_type,
+            payment_status: paymentStatus,
             pix_qr_code: pixQrCode,
             pix_payload: pixPayload,
             boleto_url: paymentData.bankSlipUrl,
             invoice_url: paymentData.invoiceUrl,
-            due_date: paymentData.dueDate
+            due_date: paymentData.dueDate,
+            asaas_status: paymentData.status
         });
 
     } catch (error) {
