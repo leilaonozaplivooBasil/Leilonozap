@@ -87,26 +87,26 @@ Deno.serve(async (req) => {
         }
 
         // 🔒 PASSO 2: Criar cobrança no ASAAS
-        console.log('💳 Criando cobrança no ASAAS...');
+        console.log('💳 Criando cobrança no ASAAS...', { billing_type, amount, customer: customerId });
         
         const externalReference = catalog_sale_id || auction_id;
         
-        // Payload base - dueDate só para PIX/Boleto
+        // dueDate é OBRIGATÓRIO para todos os tipos
+        const dueDate = new Date();
+        dueDate.setDate(dueDate.getDate() + 1); // Vencimento amanhã
+        const dueDateStr = dueDate.toISOString().split('T')[0];
+        
+        console.log('📅 dueDate será:', dueDateStr);
+        
         const paymentPayload = {
             customer: customerId,
             billingType: billing_type,
             value: amount,
+            dueDate: dueDateStr,
             description: description || `Pedido ${externalReference}`,
             externalReference: externalReference,
             postalService: false
         };
-
-        // Apenas PIX e Boleto precisam de dueDate
-        if (billing_type !== 'CREDIT_CARD') {
-            const dueDate = new Date();
-            dueDate.setDate(dueDate.getDate() + 1); // Vencimento amanhã
-            paymentPayload.dueDate = dueDate.toISOString().split('T')[0];
-        }
 
         // Se for cartão, adicionar dados do cartão
         if (billing_type === 'CREDIT_CARD' && card_data) {
