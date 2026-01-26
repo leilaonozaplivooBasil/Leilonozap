@@ -100,16 +100,18 @@ export default function MyCatalogOrders() {
         setCurrentUser(user);
 
         // Buscar pedidos do catálogo pelo buyer_id ou buyer_email
-        const allOrders = await CatalogSale.filter({ buyer_id: user.id }, "-created_date", 100);
+        console.log('🔍 Buscando pedidos para user:', { id: user.id, email: user.email });
         
-        // Se não encontrar por ID, tenta por email
-        let finalOrders = allOrders;
-        if (allOrders.length === 0 && user.email) {
-          const ordersByEmail = await CatalogSale.filter({ buyer_email: user.email }, "-created_date", 100);
-          finalOrders = ordersByEmail;
-        }
-
-        setOrders(finalOrders);
+        const allOrders = await CatalogSale.list("-created_date", 500);
+        console.log('📦 Total de pedidos no sistema:', allOrders?.length || 0);
+        
+        // Filtrar pedidos do usuário (por ID ou email)
+        const userOrders = allOrders.filter(order => 
+          order.buyer_id === user.id || order.buyer_email === user.email
+        );
+        
+        console.log('✅ Pedidos do usuário:', userOrders.length, userOrders);
+        setOrders(userOrders);
       } catch (error) {
         console.error("Failed to load catalog orders:", error);
       } finally {
