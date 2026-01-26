@@ -26,6 +26,7 @@ export default function CatalogCheckout2() {
     const [addressState, setAddressState] = useState('');
     const [addressZip, setAddressZip] = useState('');
     const [isLoadingCep, setIsLoadingCep] = useState(false);
+    const [deliveryType, setDeliveryType] = useState('delivery'); // 'delivery' ou 'pickup'
     const [paymentType, setPaymentType] = useState('PIX');
     const [pixData, setPixData] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -81,25 +82,29 @@ export default function CatalogCheckout2() {
             toast.error('Telefone é obrigatório');
             return;
         }
-        if (!addressStreet?.trim()) {
-            toast.error('Rua é obrigatória');
-            return;
-        }
-        if (!addressNumber?.trim()) {
-            toast.error('Número é obrigatório');
-            return;
-        }
-        if (!addressCity?.trim()) {
-            toast.error('Cidade é obrigatória');
-            return;
-        }
-        if (!addressState?.trim()) {
-            toast.error('Estado é obrigatório');
-            return;
-        }
-        if (!addressZip?.trim()) {
-            toast.error('CEP é obrigatório');
-            return;
+
+        // Validações de endereço apenas para entrega em domicílio
+        if (deliveryType === 'delivery') {
+            if (!addressStreet?.trim()) {
+                toast.error('Rua é obrigatória');
+                return;
+            }
+            if (!addressNumber?.trim()) {
+                toast.error('Número é obrigatório');
+                return;
+            }
+            if (!addressCity?.trim()) {
+                toast.error('Cidade é obrigatória');
+                return;
+            }
+            if (!addressState?.trim()) {
+                toast.error('Estado é obrigatório');
+                return;
+            }
+            if (!addressZip?.trim()) {
+                toast.error('CEP é obrigatório');
+                return;
+            }
         }
 
         if (!product) {
@@ -429,122 +434,156 @@ export default function CatalogCheckout2() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                
+
                                 {/* Escolha forma de entrega */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">
                                         Escolha a forma de entrega
                                     </label>
-                                    <select className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500">
-                                        <option>🏠 Entrega em domicílio</option>
+                                    <select 
+                                        value={deliveryType}
+                                        onChange={(e) => setDeliveryType(e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
+                                    >
+                                        <option value="delivery">🏠 Entrega em domicílio</option>
+                                        <option value="pickup">🏪 Retirada na Loja</option>
                                     </select>
                                 </div>
 
-                                {/* CEP e Número */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                                            CEP
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={addressZip}
-                                            onChange={handleCepChange}
-                                            placeholder="00000-000"
-                                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                        />
+                                {/* Conteúdo condicional baseado no tipo de entrega */}
+                                {deliveryType === 'pickup' ? (
+                                    /* Retirada na Loja */
+                                    <div className="bg-gray-700/30 border border-green-500/30 rounded-lg p-4">
+                                        <div className="flex items-start gap-3 mb-3">
+                                            <div className="bg-green-500/20 p-2 rounded-lg">
+                                                <svg className="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-gray-300 font-medium mb-1">Endereço para retirada:</p>
+                                                <p className="text-white text-sm leading-relaxed">
+                                                    Estrada do Pontal, 6500 - Recreio dos Bandeirantes, Rio de Janeiro - RJ, 22790877
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mt-3">
+                                            <p className="text-green-400 text-sm">
+                                                A gente adora negociar! Chama no Zap que a gente conversa sobre tudo — inclusive o frete.
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                                            Número
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={addressNumber}
-                                            onChange={(e) => setAddressNumber(e.target.value)}
-                                            placeholder="Número"
-                                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                        />
-                                    </div>
-                                </div>
+                                ) : (
+                                    /* Entrega em Domicílio */
+                                    <>
+                                        {/* CEP e Número */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                    CEP
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addressZip}
+                                                    onChange={handleCepChange}
+                                                    placeholder="00000-000"
+                                                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                    Número
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addressNumber}
+                                                    onChange={(e) => setAddressNumber(e.target.value)}
+                                                    placeholder="Número"
+                                                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                                />
+                                            </div>
+                                        </div>
 
-                                {/* Endereço */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                                        Endereço
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={addressStreet}
-                                        onChange={(e) => setAddressStreet(e.target.value)}
-                                        placeholder="Nome da rua ou avenida"
-                                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                    />
-                                </div>
+                                        {/* Endereço */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                Endereço
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={addressStreet}
+                                                onChange={(e) => setAddressStreet(e.target.value)}
+                                                placeholder="Nome da rua ou avenida"
+                                                className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                            />
+                                        </div>
 
-                                {/* Bairro e Complemento */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                                            Bairro
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={addressNeighborhood}
-                                            onChange={(e) => setAddressNeighborhood(e.target.value)}
-                                            placeholder="Bairro"
-                                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                                            Complemento
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={addressComplement}
-                                            onChange={(e) => setAddressComplement(e.target.value)}
-                                            placeholder="Complemento"
-                                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                        />
-                                    </div>
-                                </div>
+                                        {/* Bairro e Complemento */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                    Bairro
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addressNeighborhood}
+                                                    onChange={(e) => setAddressNeighborhood(e.target.value)}
+                                                    placeholder="Bairro"
+                                                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                    Complemento
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addressComplement}
+                                                    onChange={(e) => setAddressComplement(e.target.value)}
+                                                    placeholder="Complemento"
+                                                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                                />
+                                            </div>
+                                        </div>
 
-                                {/* Cidade e UF */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                                            Cidade
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={addressCity}
-                                            onChange={(e) => setAddressCity(e.target.value)}
-                                            placeholder="Cidade"
-                                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-300 mb-2">
-                                            Estado
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={addressState}
-                                            onChange={(e) => setAddressState(e.target.value)}
-                                            placeholder="UF"
-                                            maxLength="2"
-                                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500 uppercase"
-                                        />
-                                    </div>
-                                </div>
+                                        {/* Cidade e UF */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                    Cidade
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addressCity}
+                                                    onChange={(e) => setAddressCity(e.target.value)}
+                                                    placeholder="Cidade"
+                                                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                                    Estado
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={addressState}
+                                                    onChange={(e) => setAddressState(e.target.value)}
+                                                    placeholder="UF"
+                                                    maxLength="2"
+                                                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500 uppercase"
+                                                />
+                                            </div>
+                                        </div>
 
-                                {/* Mensagem do frete */}
-                                <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mt-4">
-                                    <p className="text-green-400 text-sm">
-                                        A gente adora negociar! Chama no Zap que a gente conversa sobre tudo — inclusive o frete.
-                                    </p>
-                                </div>
+                                        {/* Mensagem do frete */}
+                                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mt-4">
+                                            <p className="text-green-400 text-sm">
+                                                A gente adora negociar! Chama no Zap que a gente conversa sobre tudo — inclusive o frete.
+                                            </p>
+                                        </div>
+                                    </>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
@@ -718,11 +757,7 @@ export default function CatalogCheckout2() {
                                             !email?.trim() || 
                                             !phone?.trim() || 
                                             !cpf?.trim() || 
-                                            !addressStreet?.trim() || 
-                                            !addressNumber?.trim() || 
-                                            !addressCity?.trim() || 
-                                            !addressState?.trim() || 
-                                            !addressZip?.trim() ||
+                                            (deliveryType === 'delivery' && (!addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim())) ||
                                             (paymentType === 'CREDIT_CARD' && (!cardNumber?.trim() || !cardName?.trim() || !cardExpiry?.trim() || !cardCvv?.trim()))
                                         }
                                         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 text-base"
