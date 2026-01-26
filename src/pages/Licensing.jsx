@@ -40,7 +40,6 @@ import RotatingBanner from '../components/banner/RotatingBanner';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
-import WalletBalanceCard from '../components/wallet/WalletBalanceCard';
 
 const Product = base44.entities.Product;
 
@@ -1302,10 +1301,9 @@ const DashboardContent = ({ user, isAdmin }) => {
                   Sacar
                 </Button>
               </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+              </CardContent>
+              </Card>
 
       <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
