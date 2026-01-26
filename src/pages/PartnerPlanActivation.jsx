@@ -35,7 +35,7 @@ const PLANS = [
 ];
 
 export default function PartnerPlanActivation() {
-  const [cpf, setCpf] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [foundUser, setFoundUser] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isSearching, setIsSearching] = useState(false);
@@ -43,14 +43,23 @@ export default function PartnerPlanActivation() {
   const [activationHistory, setActivationHistory] = useState([]);
 
   const handleSearchUser = async () => {
-    if (!cpf.trim()) {
-      toast.error('Digite um CPF válido');
+    if (!searchTerm.trim()) {
+      toast.error('Digite um CPF ou email válido');
       return;
     }
 
     setIsSearching(true);
     try {
-      const users = await base44.entities.AppUser.filter({ cpf }, '-created_date', 10);
+      // Buscar por CPF ou email
+      const cleanTerm = searchTerm.trim();
+      const isCpf = /^\d/.test(cleanTerm);
+      
+      let users;
+      if (isCpf) {
+        users = await base44.entities.AppUser.filter({ cpf: cleanTerm }, '-created_date', 10);
+      } else {
+        users = await base44.entities.AppUser.filter({ email: cleanTerm }, '-created_date', 10);
+      }
       
       if (users && users.length > 0) {
         setFoundUser(users[0]);
@@ -58,7 +67,7 @@ export default function PartnerPlanActivation() {
         toast.success(`Usuário encontrado: ${users[0].full_name}`);
       } else {
         setFoundUser(null);
-        toast.error('Nenhum usuário encontrado com este CPF');
+        toast.error('Nenhum usuário encontrado');
       }
     } catch (error) {
       console.error('Erro ao buscar usuário:', error);
@@ -117,7 +126,7 @@ export default function PartnerPlanActivation() {
       ]);
 
       // Limpar estado
-      setCpf('');
+      setSearchTerm('');
       setFoundUser(null);
       setSelectedPlan(null);
     } catch (error) {
@@ -142,15 +151,15 @@ export default function PartnerPlanActivation() {
               <CardTitle className="text-xl">Ativar Novo Plano</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Busca de CPF */}
+              {/* Busca por CPF ou Email */}
               <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-300">CPF do Parceiro</label>
+                <label className="block text-sm font-medium text-gray-300">CPF ou Email do Parceiro</label>
                 <div className="flex gap-2">
                   <Input
                     type="text"
-                    placeholder="000.000.000-00"
-                    value={cpf}
-                    onChange={(e) => setCpf(e.target.value)}
+                    placeholder="000.000.000-00 ou email@exemplo.com"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSearchUser()}
                     className="bg-gray-700 border-gray-600 text-white flex-1"
                     disabled={isSearching}
@@ -220,7 +229,7 @@ export default function PartnerPlanActivation() {
                 <div className="flex gap-3 pt-4">
                   <Button
                     onClick={() => {
-                      setCpf('');
+                      setSearchTerm('');
                       setFoundUser(null);
                       setSelectedPlan(null);
                     }}
@@ -304,7 +313,7 @@ export default function PartnerPlanActivation() {
                 </div>
                 <div>
                   <p className="font-semibold text-sm">Busca Rápida</p>
-                  <p className="text-xs text-gray-400 mt-1">Pesquise por CPF para encontrar qualquer parceiro.</p>
+                  <p className="text-xs text-gray-400 mt-1">Pesquise por CPF ou email para encontrar qualquer parceiro.</p>
                 </div>
               </div>
             </CardContent>
