@@ -532,9 +532,8 @@ export default function Profile() {
                                     </Button>
                                 </div>
                             </CardContent>
-                            </Card>
-                            </>
-                            )}
+                          </Card>
+                      )}
 
                       <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Ou escolha uma cor para o avatar de letra:</p>
                       <div className="flex flex-wrap gap-2">
