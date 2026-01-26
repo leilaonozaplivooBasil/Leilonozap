@@ -90,18 +90,23 @@ Deno.serve(async (req) => {
         console.log('💳 Criando cobrança no ASAAS...');
         
         const externalReference = catalog_sale_id || auction_id;
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 1); // Vencimento amanhã
         
+        // Payload base - dueDate só para PIX/Boleto
         const paymentPayload = {
             customer: customerId,
             billingType: billing_type,
             value: amount,
-            dueDate: dueDate.toISOString().split('T')[0],
             description: description || `Pedido ${externalReference}`,
             externalReference: externalReference,
             postalService: false
         };
+
+        // Apenas PIX e Boleto precisam de dueDate
+        if (billing_type !== 'CREDIT_CARD') {
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 1); // Vencimento amanhã
+            paymentPayload.dueDate = dueDate.toISOString().split('T')[0];
+        }
 
         // Se for cartão, adicionar dados do cartão
         if (billing_type === 'CREDIT_CARD' && card_data) {
