@@ -29,6 +29,10 @@ export default function CatalogCheckout2() {
     const [paymentType, setPaymentType] = useState('PIX');
     const [pixData, setPixData] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [cardNumber, setCardNumber] = useState('');
+    const [cardName, setCardName] = useState('');
+    const [cardExpiry, setCardExpiry] = useState('');
+    const [cardCvv, setCardCvv] = useState('');
     const navigate = useNavigate();
 
     const searchCep = async (cep) => {
@@ -181,7 +185,7 @@ export default function CatalogCheckout2() {
             // 🔒 PASSO 3: ASAAS - Criar pagamento
             console.log('📤 Criando pagamento ASAAS...');
             
-            const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
+            const paymentPayload = {
                 catalog_sale_id: sale.id,
                 buyer_name: firstName.trim(),
                 buyer_email: email.trim(),
@@ -190,7 +194,21 @@ export default function CatalogCheckout2() {
                 amount: product.price_catalog,
                 billing_type: paymentType,
                 description: `Catálogo - ${product.description}`
-            });
+            };
+
+            // Se for cartão, adicionar dados do cartão
+            if (paymentType === 'CREDIT_CARD') {
+                const [expMonth, expYear] = cardExpiry.split('/');
+                paymentPayload.card_data = {
+                    holderName: cardName.trim(),
+                    number: cardNumber.replace(/\s/g, ''),
+                    expiryMonth: expMonth,
+                    expiryYear: `20${expYear}`,
+                    ccv: cardCvv
+                };
+            }
+            
+            const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
 
             setIsProcessing(false);
             toast.dismiss('checkout-loading');
@@ -610,23 +628,103 @@ export default function CatalogCheckout2() {
                             {!pixData && (
                                 <div className="pt-4 border-t border-gray-700">
                                     <p className="text-gray-300 text-sm font-medium mb-3">Forma de Pagamento</p>
-                                    <div className="mb-4">
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
                                         <button
                                             type="button"
-                                            className="w-full p-4 rounded-lg border-2 border-green-500 bg-green-500/10"
+                                            onClick={() => setPaymentType('PIX')}
+                                            className={`p-3 rounded-lg border-2 transition-all ${
+                                                paymentType === 'PIX'
+                                                    ? 'border-green-500 bg-green-500/10'
+                                                    : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
+                                            }`}
                                         >
-                                            <p className="text-white font-semibold text-base">PIX</p>
+                                            <p className="text-white font-semibold">PIX</p>
                                             <p className="text-gray-400 text-xs">Aprovação imediata</p>
                                         </button>
-                                        <p className="text-xs text-gray-500 text-center mt-3">
-                                            💳 Cartão de crédito em breve
-                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() => setPaymentType('CREDIT_CARD')}
+                                            className={`p-3 rounded-lg border-2 transition-all ${
+                                                paymentType === 'CREDIT_CARD'
+                                                    ? 'border-green-500 bg-green-500/10'
+                                                    : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
+                                            }`}
+                                        >
+                                            <p className="text-white font-semibold">Cartão</p>
+                                            <p className="text-gray-400 text-xs">Crédito</p>
+                                        </button>
                                     </div>
+
+                                    {/* Campos do Cartão - apenas se CREDIT_CARD */}
+                                    {paymentType === 'CREDIT_CARD' && (
+                                        <div className="space-y-3 mb-4 pb-4 border-b border-gray-700">
+                                            <p className="text-sm text-gray-400 font-medium">Dados do Cartão</p>
+                                            <input
+                                                type="text"
+                                                placeholder="Número do cartão"
+                                                value={cardNumber}
+                                                onChange={(e) => {
+                                                    let v = e.target.value.replace(/\D/g, '');
+                                                    if (v.length > 16) v = v.slice(0, 16);
+                                                    v = v.match(/.{1,4}/g)?.join(' ') || v;
+                                                    setCardNumber(v);
+                                                }}
+                                                maxLength="19"
+                                                className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                            />
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <input
+                                                    type="text"
+                                                    placeholder="MM/AA"
+                                                    value={cardExpiry}
+                                                    onChange={(e) => {
+                                                        let v = e.target.value.replace(/\D/g, '');
+                                                        if (v.length > 4) v = v.slice(0, 4);
+                                                        if (v.length >= 2) v = `${v.slice(0,2)}/${v.slice(2,4)}`;
+                                                        setCardExpiry(v);
+                                                    }}
+                                                    maxLength="5"
+                                                    className="px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder="CVV"
+                                                    value={cardCvv}
+                                                    onChange={(e) => {
+                                                        let v = e.target.value.replace(/\D/g, '');
+                                                        if (v.length > 4) v = v.slice(0, 4);
+                                                        setCardCvv(v);
+                                                    }}
+                                                    maxLength="4"
+                                                    className="px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                                />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                placeholder="Nome impresso no cartão"
+                                                value={cardName}
+                                                onChange={(e) => setCardName(e.target.value.toUpperCase())}
+                                                className="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                            />
+                                        </div>
+                                    )}
 
                                     {/* Botão Pagar */}
                                     <button
                                         onClick={handleCreatePreference}
-                                        disabled={isProcessing || !firstName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
+                                        disabled={
+                                            isProcessing || 
+                                            !firstName?.trim() || 
+                                            !email?.trim() || 
+                                            !phone?.trim() || 
+                                            !cpf?.trim() || 
+                                            !addressStreet?.trim() || 
+                                            !addressNumber?.trim() || 
+                                            !addressCity?.trim() || 
+                                            !addressState?.trim() || 
+                                            !addressZip?.trim() ||
+                                            (paymentType === 'CREDIT_CARD' && (!cardNumber?.trim() || !cardName?.trim() || !cardExpiry?.trim() || !cardCvv?.trim()))
+                                        }
                                         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 text-base"
                                     >
                                         {isProcessing ? (
@@ -634,7 +732,7 @@ export default function CatalogCheckout2() {
                                         ) : (
                                             <>
                                                 <ShoppingCart className="w-5 h-5" />
-                                                GERAR PIX
+                                                {paymentType === 'PIX' ? 'GERAR PIX' : 'PAGAR COM CARTÃO'}
                                             </>
                                         )}
                                     </button>
