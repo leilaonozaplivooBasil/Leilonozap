@@ -741,11 +741,9 @@ ${taxSettings.iss_rate > 0 ? `ISS (${taxSettings.iss_rate}%): R$ ${taxes.iss.toF
 Total Impostos: R$ ${taxes.total.toFixed(2)}
 ` : '';
 
-    const commissionInfo = selectedSeller && commissionValue > 0 ? `
-COMISSÃO DO VENDEDOR:
-Vendedor: ${selectedSeller.name}
-Tipo: ${commissionType === 'percentage' ? `Porcentagem (${commissionValue}%)` : 'Valor Fixo'}
-Valor da Comissão: R$ ${totalCommission.toFixed(2)}
+    const commissionInfo = saleCommissions.length > 0 ? `
+COMISSÕES:
+Valor Total das Comissões: R$ ${totalCommission.toFixed(2)}
 ` : '';
 
     const totalDeductions = (taxInfo ? taxes.total : 0) + (commissionInfo ? totalCommission : 0);
