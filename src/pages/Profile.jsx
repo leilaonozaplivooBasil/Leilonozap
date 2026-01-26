@@ -29,7 +29,11 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Package
+  Package,
+  ShoppingBag,
+  CheckCircle,
+  Clock,
+  Truck
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
@@ -69,10 +73,27 @@ export default function Profile() {
     newPassword: '',
     confirmPassword: ''
   });
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile' ou 'orders'
+  const [catalogOrders, setCatalogOrders] = useState([]);
 
   useEffect(() => {
     loadUserData();
+    loadCatalogOrders();
   }, []);
+
+  const loadCatalogOrders = async () => {
+    try {
+      const savedUser = localStorage.getItem('currentUser');
+      if (!savedUser) return;
+      
+      const user = JSON.parse(savedUser);
+      const orders = await base44.entities.CatalogSale.filter({ buyer_id: user.id }, '-created_date', 50);
+      setCatalogOrders(orders || []);
+    } catch (error) {
+      console.error('Erro ao carregar pedidos:', error);
+      setCatalogOrders([]);
+    }
+  };
 
   const loadUserData = async () => {
     setIsLoading(true);
@@ -399,12 +420,36 @@ export default function Profile() {
   return (
     <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900' : 'bg-gray-900 text-white'} p-4 sm:p-6 lg:p-8`}>
       <div className="max-w-5xl mx-auto">
-        {/* Header */}
+        {/* Header com Tabs */}
         <div className="mb-8">
-          <h1 className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>Meu Perfil</h1>
-          <p className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>Gerencie suas informações e acompanhe suas estatísticas</p>
+          <h1 className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-4`}>Meu Perfil</h1>
+          <div className="flex gap-3 border-b border-gray-700">
+            <button
+              onClick={() => setActiveTab('profile')}
+              className={`pb-3 px-4 font-semibold transition-all ${
+                activeTab === 'profile'
+                  ? `${isSaiDeBaixo ? 'text-red-600 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
+                  : `${isSaiDeBaixo ? 'text-gray-600 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`
+              }`}
+            >
+              <UserIcon className="w-4 h-4 inline mr-2" />
+              Perfil
+            </button>
+            <button
+              onClick={() => setActiveTab('orders')}
+              className={`pb-3 px-4 font-semibold transition-all ${
+                activeTab === 'orders'
+                  ? `${isSaiDeBaixo ? 'text-red-600 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
+                  : `${isSaiDeBaixo ? 'text-gray-600 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`
+              }`}
+            >
+              <Package className="w-4 h-4 inline mr-2" />
+              Meus Pedidos ({catalogOrders.filter(o => o.status !== 'canceled').length})
+            </button>
+          </div>
         </div>
 
+        {activeTab === 'profile' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Info */}
           <div className="lg:col-span-2">
@@ -842,6 +887,80 @@ export default function Profile() {
             )}
           </CardContent>
         </Card>
+        </div>
+        )}
+
+        {/* Tab Meus Pedidos */}
+        {activeTab === 'orders' && (
+          <div className="space-y-6">
+            {catalogOrders.length === 0 ? (
+              <Card className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'}>
+                <CardContent className="py-12 text-center">
+                  <ShoppingBag className={`w-16 h-16 mx-auto mb-4 ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-600'}`} />
+                  <h3 className={`text-xl font-semibold mb-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+                    Nenhum pedido ainda
+                  </h3>
+                  <p className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                    Seus pedidos do catálogo aparecerão aqui
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {catalogOrders.map(order => {
+                  const statusConfig = {
+                    pending_payment: { text: 'Aguardando Pagamento', icon: Clock, color: 'text-yellow-400' },
+                    paid: { text: 'Pago', icon: CheckCircle, color: 'text-green-400' },
+                    shipped: { text: 'Enviado', icon: Truck, color: 'text-blue-400' },
+                    delivered: { text: 'Entregue', icon: Package, color: 'text-purple-400' },
+                    canceled: { text: 'Cancelado', icon: X, color: 'text-red-400' }
+                  };
+                  const config = statusConfig[order.status] || statusConfig.pending_payment;
+                  
+                  return (
+                    <Card key={order.id} className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'}>
+                      <CardContent className="p-4">
+                        <div className="flex gap-4 mb-3">
+                          {order.product_image && (
+                            <img 
+                              src={order.product_image} 
+                              alt={order.product_title}
+                              className="w-20 h-20 object-cover rounded-lg"
+                            />
+                          )}
+                          <div className="flex-1">
+                            <h4 className={`font-semibold line-clamp-2 mb-1 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+                              {order.product_title}
+                            </h4>
+                            <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                              {new Date(order.created_date).toLocaleDateString('pt-BR')}
+                            </p>
+                            <p className={`font-bold text-lg ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
+                              R$ {order.total_amount.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mb-3">
+                          <config.icon className={`w-4 h-4 ${config.color}`} />
+                          <span className={`text-sm ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>{config.text}</span>
+                        </div>
+
+                        <Button
+                          onClick={() => navigate(createPageUrl('CatalogOrderTracking') + `?order_id=${order.id}`)}
+                          variant="outline"
+                          className={`w-full ${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 hover:bg-gray-100' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                        >
+                          Acompanhar Pedido
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
