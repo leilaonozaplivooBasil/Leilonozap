@@ -570,14 +570,15 @@ Transações: ${selectedSession.transactions_count || 0}
 
   const taxes = calculateTaxes(cartTotal);
 
-  // Calcula comissão total do carrinho
+  // Calcula comissão total do carrinho (soma de todos vendedores)
   const totalCommission = React.useMemo(() => {
-    if (!selectedSeller || commissionValue <= 0) return 0;
-    if (commissionType === 'percentage') {
-      return (cartTotal * commissionValue) / 100;
-    }
-    return commissionValue;
-  }, [selectedSeller, commissionValue, commissionType, cartTotal]);
+    return saleCommissions.reduce((sum, sc) => {
+      const amt = sc.commission_type === 'percentage'
+        ? (cartTotal * sc.commission_value) / 100
+        : sc.commission_value;
+      return sum + amt;
+    }, 0);
+  }, [saleCommissions, cartTotal]);
 
   // Calcula valor líquido (total - impostos - comissão)
   const netAmount = cartTotal - taxes.total - totalCommission;
