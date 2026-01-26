@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ShoppingCart } from 'lucide-react';
+import { Loader2, ShoppingCart, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
-// GATEWAY: Mercado Pago (em desenvolvimento)
+// GATEWAY: ASAAS (ÚNICO GATEWAY ATIVO)
 const PAYMENT_GATEWAYS = {
-  mercadopago: { name: 'Mercado Pago', default: true }
+  asaas: { name: 'ASAAS', default: true }
 };
 
 const Product = base44.entities.Product;
@@ -32,6 +32,9 @@ export default function CatalogCheckout2() {
           const [addressState, setAddressState] = useState('');
           const [addressZip, setAddressZip] = useState('');
           const [isLoadingCep, setIsLoadingCep] = useState(false);
+          const [paymentType, setPaymentType] = useState('PIX');
+          const [pixData, setPixData] = useState(null);
+          const [isProcessing, setIsProcessing] = useState(false);
           const navigate = useNavigate();
 
     const searchCep = async (cep) => {
@@ -186,10 +189,47 @@ export default function CatalogCheckout2() {
                 console.warn('⚠️ Erro ao registrar rastreamento:', trackErr.message);
             }
 
-            // 🔒 PASSO 3: Mercado Pago (integração em preparação)
-             console.log('📤 Mercado Pago - integração em desenvolvimento...');
-             toast.dismiss('checkout-loading');
-             toast.info('Integração de pagamento em preparação. Retornando ao catálogo.');
+            // 🔒 PASSO 3: ASAAS - Criar pagamento
+            console.log('📤 Criando pagamento ASAAS...');
+            
+            const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
+                catalog_sale_id: sale.id,
+                buyer_name: `${firstName.trim()} ${lastName.trim()}`,
+                buyer_email: email.trim(),
+                buyer_cpf: cpf.trim(),
+                buyer_phone: phone.trim(),
+                amount: product.price_catalog,
+                billing_type: paymentType,
+                description: `Catálogo - ${product.description}`
+            });
+
+            toast.dismiss('checkout-loading');
+
+            if (paymentResponse?.data?.success) {
+                setPixData(paymentResponse.data);
+                toast.success('✅ Pagamento criado! Efetue o PIX para confirmar.');
+                
+                // Registrar tracking
+                try {
+                    await base44.functions.invoke('trackPaymentFlow', {
+                        payment_id: paymentResponse.data.payment_id,
+                        product_id: product.id,
+                        buyer_id: savedUser.id,
+                        licensee_id: licenseeId,
+                        referral_code: referralCode || null,
+                        catalog_sale_id: sale.id,
+                        amount: product.price_catalog,
+                        status: 'pending',
+                        stage: 'asaas_payment_created',
+                        event: 'asaas_payment_created'
+                    });
+                } catch (trackErr) {
+                    console.warn('⚠️ Erro ao registrar tracking:', trackErr.message);
+                }
+            } else {
+                toast.error('Erro ao criar pagamento');
+                throw new Error(paymentResponse?.data?.error || 'Erro desconhecido');
+            }
 
         } catch (error) {
             console.error('❌ Erro:', error.message);
@@ -525,32 +565,112 @@ export default function CatalogCheckout2() {
                                  />
                              </div>
 
-                             {/* Mercado Pago */}
-                             <div className="border-t border-gray-600 pt-4 mb-4 bg-blue-600/10 rounded-lg p-3">
-                                 <p className="text-blue-400 text-sm font-semibold mb-2">✓ Mercado Pago</p>
-                                 <p className="text-gray-300 text-xs">
-                                     PIX, Cartão e Boleto - Integração em preparação
-                                 </p>
+                             {/* Método de Pagamento */}
+                             <div className="border-t border-gray-600 pt-4 mb-4">
+                                 <label className="block text-sm font-medium text-gray-300 mb-3">
+                                     Forma de Pagamento
+                                 </label>
+                                 <div className="grid grid-cols-2 gap-3">
+                                     <button
+                                         type="button"
+                                         onClick={() => setPaymentType('PIX')}
+                                         className={`p-3 rounded-lg border-2 transition-all ${
+                                             paymentType === 'PIX'
+                                                 ? 'border-green-500 bg-green-500/10'
+                                                 : 'border-gray-600 bg-gray-700 hover:border-gray-500'
+                                         }`}
+                                     >
+                                         <p className="text-white font-semibold">PIX</p>
+                                         <p className="text-gray-400 text-xs">Aprovação imediata</p>
+                                     </button>
+                                     <button
+                                         type="button"
+                                         onClick={() => setPaymentType('BOLETO')}
+                                         className={`p-3 rounded-lg border-2 transition-all ${
+                                             paymentType === 'BOLETO'
+                                                 ? 'border-green-500 bg-green-500/10'
+                                                 : 'border-gray-600 bg-gray-700 hover:border-gray-500'
+                                         }`}
+                                     >
+                                         <p className="text-white font-semibold">Boleto</p>
+                                         <p className="text-gray-400 text-xs">Até 3 dias úteis</p>
+                                     </button>
+                                 </div>
                              </div>
 
-                             <div className="space-y-3">
-                                 <button
-                                     onClick={handleCreatePreference}
-                                     disabled={!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
-                                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                 >
-                                     <ShoppingCart className="w-5 h-5" />
-                                     Comprar Agora
-                                 </button>
-                                 {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()) && (
-                                     <p className="text-xs text-yellow-400 text-center">
-                                         Preencha todos os campos obrigatórios (*)
-                                     </p>
-                                 )}
-                             </div>
+                             {/* QR Code PIX ou Boleto */}
+                             {pixData ? (
+                                 <div className="space-y-4 border-t border-gray-600 pt-4">
+                                     {paymentType === 'PIX' && pixData.pix_qr_code ? (
+                                         <>
+                                             <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
+                                             <div className="bg-white rounded-lg p-4">
+                                                 <img 
+                                                     src={pixData.pix_qr_code} 
+                                                     alt="QR Code PIX" 
+                                                     className="w-64 h-64 mx-auto"
+                                                 />
+                                             </div>
+                                             <button
+                                                 onClick={() => {
+                                                     navigator.clipboard.writeText(pixData.pix_payload);
+                                                     toast.success('Código PIX copiado!');
+                                                 }}
+                                                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg"
+                                             >
+                                                 📋 Copiar Código PIX
+                                             </button>
+                                             <div className="bg-gray-700 rounded-lg p-3">
+                                                 <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
+                                                 <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                                             </div>
+                                         </>
+                                     ) : paymentType === 'BOLETO' && pixData.boleto_url ? (
+                                         <>
+                                             <h3 className="text-lg font-bold text-blue-400 text-center">📄 Boleto Gerado</h3>
+                                             <a
+                                                 href={pixData.boleto_url}
+                                                 target="_blank"
+                                                 rel="noopener noreferrer"
+                                                 className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-center"
+                                             >
+                                                 📥 Baixar Boleto
+                                             </a>
+                                         </>
+                                     ) : null}
+                                     <button
+                                         onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                                         className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg"
+                                     >
+                                         Ver Meus Pedidos
+                                     </button>
+                                 </div>
+                             ) : (
+                                 <div className="space-y-3">
+                                     <button
+                                         onClick={handleCreatePreference}
+                                         disabled={isProcessing || !firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
+                                         className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                     >
+                                         {isProcessing ? (
+                                             <Loader2 className="w-5 h-5 animate-spin" />
+                                         ) : (
+                                             <>
+                                                 <ShoppingCart className="w-5 h-5" />
+                                                 {paymentType === 'PIX' ? 'Gerar PIX' : 'Gerar Boleto'}
+                                             </>
+                                         )}
+                                     </button>
+                                     {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()) && (
+                                         <p className="text-xs text-yellow-400 text-center">
+                                             Preencha todos os campos obrigatórios (*)
+                                         </p>
+                                     )}
+                                 </div>
+                             )}
 
                              <p className="text-xs text-gray-500 text-center mt-4">
-                                 Pagamento processado de forma segura via Mercado Pago
+                                 Pagamento processado de forma segura via ASAAS
                              </p>
                         </CardContent>
                         </Card>
