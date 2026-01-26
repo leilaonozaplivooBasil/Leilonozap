@@ -719,8 +719,15 @@ Documento: ${boletoData.documento}
 Parcelas: ${boletoData.parcelas}x de R$ ${(cartTotal / boletoData.parcelas).toFixed(2)}
 ` : '';
 
-    const sellerInfo = selectedSeller ? `
-Vendedor: ${selectedSeller.name}
+    const sellerInfo = saleCommissions.length > 0 ? `
+VENDEDORES:
+${saleCommissions.map(sc => {
+  const seller = sellers.find(s => s.id === sc.seller_id);
+  const amt = sc.commission_type === 'percentage'
+    ? (cartTotal * sc.commission_value) / 100
+    : sc.commission_value;
+  return `${seller?.name || 'Vendedor'}: ${sc.commission_type === 'percentage' ? sc.commission_value + '%' : 'R$ ' + sc.commission_value.toFixed(2)} (R$ ${amt.toFixed(2)})`;
+}).join('\n')}
 ` : '';
 
     const taxInfo = taxSettings && taxSettings.is_active ? `
