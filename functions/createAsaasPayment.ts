@@ -129,6 +129,8 @@ Deno.serve(async (req) => {
             };
         }
 
+        console.log('📤 Enviando payload para ASAAS:', JSON.stringify(paymentPayload, null, 2));
+        
         const paymentResponse = await fetch('https://api.asaas.com/v3/payments', {
             method: 'POST',
             headers: {
@@ -140,9 +142,15 @@ Deno.serve(async (req) => {
 
         const paymentData = await paymentResponse.json();
         
+        console.log('📥 Resposta ASAAS:', { status: paymentResponse.status, data: paymentData });
+        
         if (paymentData.errors) {
             console.error('❌ Erro ao criar cobrança:', paymentData.errors);
-            return Response.json({ error: 'Erro ao criar cobrança', details: paymentData.errors }, { status: 400 });
+            return Response.json({ 
+                error: 'Erro ao criar cobrança ASAAS', 
+                details: paymentData.errors,
+                payload_sent: paymentPayload
+            }, { status: 400 });
         }
 
         console.log('✅ Cobrança criada:', paymentData.id);
