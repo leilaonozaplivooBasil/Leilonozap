@@ -29,9 +29,9 @@ export default function PDV() {
   const [boletoData, setBoletoData] = useState({ cliente: '', documento: '', parcelas: 1 });
   const [isProcessing, setIsProcessing] = useState(false);
   const [sellers, setSellers] = useState([]);
-  const [selectedSeller, setSelectedSeller] = useState(null);
-  const [commissionType, setCommissionType] = useState('percentage');
-  const [commissionValue, setCommissionValue] = useState(0);
+  const [saleCommissions, setSaleCommissions] = useState([]);
+  const [showAddSellerModal, setShowAddSellerModal] = useState(false);
+  const [newCommissionData, setNewCommissionData] = useState({ seller_id: '', commission_type: 'percentage', commission_value: 0 });
   const [sellerStats, setSellerStats] = useState([]);
   const [todaySales, setTodaySales] = useState([]);
   const [allSales, setAllSales] = useState([]);
