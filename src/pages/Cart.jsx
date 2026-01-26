@@ -264,60 +264,61 @@ export default function Cart() {
         buyer: formData.name 
       });
 
-      // Criar uma única CatalogSale para o carrinho inteiro
-      const referralCode = sessionStorage.getItem('referralCode');
-      let licenseeId = null;
-
-      if (referralCode) {
-        try {
-          const licensees = await base44.entities.AppUser.filter({ referral_code: referralCode });
-          if (licensees && licensees.length > 0) {
-            licenseeId = licensees[0].id;
-          }
-        } catch (e) {
-          console.warn('Erro ao buscar licensee:', e.message);
-        }
-      }
-
-      if (!licenseeId) {
-        licenseeId = 'site_official';
-      }
-
-      const sale = await base44.entities.CatalogSale.create({
-        product_id: cartItems[0]?.id,
-        product_title: `Pedido com ${cartItems.length} item(ns)`,
-        product_image: cartItems[0]?.image_urls?.[0] || '',
-        sale_price: totalAmount,
-        total_amount: totalAmount,
-        buyer_id: currentUser.id,
-        buyer_name: formData.name,
-        buyer_email: formData.email,
-        buyer_phone: formData.phone,
-        licensee_id: licenseeId,
-        status: 'pending_payment'
-      });
-
-      // Criar pagamento ASAAS
-      const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
-        catalog_sale_id: sale.id,
-        buyer_name: formData.name,
-        buyer_email: formData.email,
-        buyer_cpf: formData.cpf.replace(/\D/g, ''),
-        buyer_phone: formData.phone.replace(/\D/g, ''),
+      // Chamar função backend para criar venda + pagamento (tudo atômico)
+      const response = await base44.functions.invoke('createPagSeguroPayment', {
         amount: totalAmount,
-        billing_type: 'PIX',
-        description: `Carrinho com ${cartItems.length} item(ns)`
+        user_data: {
+          id: currentUser?.id,
+          email: formData.email,
+          full_name: formData.name,
+          phone: formData.phone.replace(/\D/g, ''),
+          cpf: formData.cpf.replace(/\D/g, ''),
+          address_street: formData.street,
+          address_number: formData.number,
+          address_complement: formData.complement,
+          address_neighborhood: formData.neighborhood,
+          address_city: formData.city,
+          address_state: formData.state,
+          address_zip_code: formData.cep.replace(/\D/g, '')
+        },
+        products: cartItems.map(item => ({
+          id: item.id,
+          description: item.description,
+          quantity: item.quantity || 1,
+          price: item.price_catalog || item.selling_price_wholesale || 0
+        })),
+        observation: observation
       });
 
-      if (paymentResponse?.data?.success) {
-        toast.success('Pagamento gerado! Redirecionando...');
-        updateCart([]);
-        navigate(createPageUrl('MyCatalogOrders'));
-      } else {
-        toast.error(paymentResponse?.data?.error || 'Erro ao gerar pagamento');
-        await base44.entities.CatalogSale.delete(sale.id);
+      const data = response?.data || response;
+
+      if (data?.error) {
+        toast.error(data.error);
         setIsProcessing(false);
+        return;
       }
+
+      if (!data?.success || !data?.checkout_url) {
+        try {
+          await base44.asServiceRole.entities.CatalogSale.delete(saleId);
+        } catch (e) {
+          console.warn('Erro ao deletar venda:', e.message);
+        }
+        toast.error('Erro ao processar pagamento PagSeguro');
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log('✅ Checkout gerado - Pedido:', saleId);
+      toast.success('Redirecionando para pagamento...');
+      
+      // Limpa carrinho
+      updateCart([]);
+      
+      // Redireciona para checkout do PagSeguro (PIX, Cartão, Boleto)
+      setTimeout(() => {
+        window.location.href = data.checkout_url;
+      }, 500);
     } catch (error) {
       console.error('Erro no checkout:', error);
       toast.error('Erro ao processar pagamento. Tente novamente.');
@@ -693,7 +694,7 @@ export default function Cart() {
                   Processando...
                 </>
               ) : (
-                'GERAR PIX'
+                'PAGAR AGORA'
               )}
             </Button>
           </div>
