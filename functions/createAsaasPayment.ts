@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
             buyer_cpf,
             buyer_phone,
             amount,
-            billing_type = 'PIX', // PIX ou BOLETO
+            billing_type = 'PIX', // PIX ou CREDIT_CARD
             description
         } = await req.json();
 

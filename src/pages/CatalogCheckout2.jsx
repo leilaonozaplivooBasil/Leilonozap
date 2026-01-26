@@ -114,6 +114,7 @@ export default function CatalogCheckout2() {
         }
 
         console.log('✅ Validações OK, processando...');
+        setIsProcessing(true);
         toast.loading('Processando compra...', { id: 'checkout-loading' });
 
         let sale = null;
@@ -203,6 +204,7 @@ export default function CatalogCheckout2() {
                 description: `Catálogo - ${product.description}`
             });
 
+            setIsProcessing(false);
             toast.dismiss('checkout-loading');
 
             if (paymentResponse?.data?.success) {
@@ -233,6 +235,7 @@ export default function CatalogCheckout2() {
 
         } catch (error) {
             console.error('❌ Erro:', error.message);
+            setIsProcessing(false);
             toast.dismiss('checkout-loading');
             toast.error('Erro ao processar compra');
 
