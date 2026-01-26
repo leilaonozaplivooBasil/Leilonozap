@@ -12,7 +12,6 @@ export default function CheckoutPage() {
     const [auction, setAuction] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null);
-    const [lastName, setLastName] = useState('');
     const [phone, setPhone] = useState('');
     const [cpf, setCpf] = useState('');
     const [email, setEmail] = useState('');
@@ -62,10 +61,6 @@ export default function CheckoutPage() {
         // Validações básicas
         if (!firstName?.trim()) {
             toast.error('Preencha o primeiro nome');
-            return;
-        }
-        if (!lastName?.trim()) {
-            toast.error('Preencha o sobrenome');
             return;
         }
         if (!cpf?.trim()) {
@@ -119,7 +114,7 @@ export default function CheckoutPage() {
             
             const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
                 auction_id: auction.id,
-                buyer_name: `${firstName.trim()} ${lastName.trim()}`,
+                buyer_name: firstName.trim(),
                 buyer_email: email.trim(),
                 buyer_cpf: cpf.trim(),
                 buyer_phone: phone.trim(),
@@ -176,8 +171,7 @@ export default function CheckoutPage() {
                 }
 
                 setAuction(auctions[0]);
-                setFirstName(savedUser.full_name ? savedUser.full_name.split(' ')[0] : '');
-                setLastName(savedUser.full_name ? savedUser.full_name.split(' ').slice(1).join(' ') : '');
+                setFirstName(savedUser.full_name || '');
                 setEmail(savedUser.email || '');
                 setPhone(savedUser.phone || '');
                 setCpf(savedUser.cpf || '');
@@ -213,85 +207,92 @@ export default function CheckoutPage() {
     return (
         <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
-                <h1 className="text-2xl md:text-3xl font-bold mb-6 text-white">Finalizar Pagamento</h1>
+                <h1 className="text-2xl md:text-3xl font-bold mb-6 text-white">Finalizar Pedido</h1>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     
                     {/* CARD ESQUERDO - SEUS DADOS */}
-                    <Card className="bg-gray-800/90 border-gray-700">
-                        <CardHeader className="pb-4">
-                            <CardTitle className="text-green-400 flex items-center gap-2">
-                                <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
-                                Seus dados
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            
-                            {/* Nome */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Nome
-                                </label>
-                                <input
-                                    type="text"
-                                    value={firstName}
-                                    onChange={(e) => setFirstName(e.target.value)}
-                                    placeholder="Informe o seu nome"
-                                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                />
-                            </div>
-
-                            {/* Celular e CPF */}
-                            <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-6">
+                        {/* Card 1 - Seus dados */}
+                        <Card className="bg-gray-800/90 border-gray-700">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="text-green-400 flex items-center gap-2 text-lg">
+                                    <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">1</span>
+                                    Seus dados
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                
+                                {/* Nome */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                                        Celular
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        value={phone}
-                                        onChange={(e) => setPhone(e.target.value)}
-                                        placeholder="Telefone"
-                                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                                        CPF
+                                        Nome
                                     </label>
                                     <input
                                         type="text"
-                                        value={cpf}
-                                        onChange={(e) => setCpf(e.target.value)}
-                                        placeholder="000.000.000-00"
+                                        value={firstName}
+                                        onChange={(e) => setFirstName(e.target.value)}
+                                        placeholder="Informe o seu nome"
                                         className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
                                     />
                                 </div>
-                            </div>
 
-                            {/* Email */}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-2">
-                                    Email
-                                </label>
-                                <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    placeholder="seu_email@provedor.com"
-                                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
-                                />
-                            </div>
+                                {/* Celular e CPF */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            Celular
+                                        </label>
+                                        <input
+                                            type="tel"
+                                            value={phone}
+                                            onChange={(e) => setPhone(e.target.value)}
+                                            placeholder="Telefone"
+                                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                                            CPF
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={cpf}
+                                            onChange={(e) => setCpf(e.target.value)}
+                                            placeholder="000.000.000-00"
+                                            className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                        />
+                                    </div>
+                                </div>
 
-                            {/* SEÇÃO 2 - Como gostaria de receber o pedido */}
-                            <div className="pt-6 mt-6 border-t border-gray-700">
-                                <h3 className="text-green-400 flex items-center gap-2 mb-4 font-semibold">
+                                {/* Email */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        Email
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="seu_email@provedor.com"
+                                        className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Card 2 - Como gostaria de receber o pedido */}
+                        <Card className="bg-gray-800/90 border-gray-700">
+                            <CardHeader className="pb-4">
+                                <CardTitle className="text-green-400 flex items-center gap-2 text-lg">
                                     <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">2</span>
                                     Como gostaria de receber o pedido
-                                </h3>
-
-                                {/* Escolha forma de entrega - placeholder */}
-                                <div className="mb-4">
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                
+                                {/* Escolha forma de entrega */}
+                                <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">
                                         Escolha a forma de entrega
                                     </label>
@@ -301,7 +302,7 @@ export default function CheckoutPage() {
                                 </div>
 
                                 {/* CEP e Número */}
-                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">
                                             CEP
@@ -329,7 +330,7 @@ export default function CheckoutPage() {
                                 </div>
 
                                 {/* Endereço */}
-                                <div className="mb-3">
+                                <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">
                                         Endereço
                                     </label>
@@ -343,7 +344,7 @@ export default function CheckoutPage() {
                                 </div>
 
                                 {/* Bairro e Complemento */}
-                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">
                                             Bairro
@@ -386,7 +387,7 @@ export default function CheckoutPage() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                                            Estado
+                                            UF
                                         </label>
                                         <input
                                             type="text"
@@ -405,14 +406,14 @@ export default function CheckoutPage() {
                                         A gente adora negociar! Chama no Zap que a gente conversa sobre tudo — inclusive o frete.
                                     </p>
                                 </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    </div>
 
                     {/* CARD DIREITO - SEU PEDIDO */}
-                    <Card className="bg-gray-800/90 border-gray-700">
+                    <Card className="bg-gray-800/90 border-gray-700 h-fit">
                         <CardHeader className="pb-4">
-                            <CardTitle className="text-green-400 flex items-center gap-2">
+                            <CardTitle className="text-green-400 flex items-center gap-2 text-lg">
                                 <span className="bg-green-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">✓</span>
                                 Seu pedido
                             </CardTitle>
@@ -430,7 +431,7 @@ export default function CheckoutPage() {
                                         />
                                     )}
                                     <div className="flex-1">
-                                        <h3 className="text-white font-semibold mb-1">{auction.title}</h3>
+                                        <h3 className="text-white font-medium text-sm mb-1 line-clamp-2">{auction.title}</h3>
                                         <p className="text-green-400 text-lg font-bold">
                                             R$ {auction.current_price.toFixed(2)}
                                         </p>
@@ -449,12 +450,12 @@ export default function CheckoutPage() {
                                     <span className="text-green-400 font-semibold">A combinar</span>
                                 </div>
                                 <div className="flex justify-between pt-3 border-t border-gray-700">
-                                    <span className="text-white font-bold text-lg">Valor total</span>
+                                    <span className="text-white font-bold text-base">Valor total</span>
                                     <span className="text-green-400 font-bold text-xl">R$ {auction.current_price.toFixed(2)}</span>
                                 </div>
                             </div>
 
-                            {/* Cupom e Observação - placeholders */}
+                            {/* Cupom e Observação */}
                             <div className="space-y-3 pt-4 border-t border-gray-700">
                                 <div>
                                     <p className="text-gray-400 text-sm mb-2">Aplicar cupom</p>
@@ -488,7 +489,7 @@ export default function CheckoutPage() {
                             {!pixData && (
                                 <div className="pt-4 border-t border-gray-700">
                                     <p className="text-gray-300 text-sm font-medium mb-3">Forma de Pagamento</p>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-3 mb-4">
                                         <button
                                             type="button"
                                             onClick={() => setPaymentType('PIX')}
@@ -514,6 +515,26 @@ export default function CheckoutPage() {
                                             <p className="text-gray-400 text-xs">Crédito</p>
                                         </button>
                                     </div>
+
+                                    {/* Botão Pagar */}
+                                    <button
+                                        onClick={handleCreatePayment}
+                                        disabled={isProcessing || !firstName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
+                                        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 text-base"
+                                    >
+                                        {isProcessing ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <ShoppingCart className="w-5 h-5" />
+                                                {paymentType === 'PIX' ? 'GERAR PIX' : 'PAGAR AGORA'}
+                                            </>
+                                        )}
+                                    </button>
+                                    
+                                    <p className="text-xs text-gray-500 text-center mt-3">
+                                        Pagamento processado de forma segura via ASAAS
+                                    </p>
                                 </div>
                             )}
 
@@ -566,29 +587,6 @@ export default function CheckoutPage() {
                                         Ver Meus Arremates
                                     </button>
                                 </div>
-                            )}
-
-                            {/* Botão Pagar Agora */}
-                            {!pixData && (
-                                <>
-                                    <button
-                                        onClick={handleCreatePayment}
-                                        disabled={isProcessing || !firstName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
-                                        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition-colors flex items-center justify-center gap-2 text-lg"
-                                    >
-                                        {isProcessing ? (
-                                            <Loader2 className="w-6 h-6 animate-spin" />
-                                        ) : (
-                                            <>
-                                                <ShoppingCart className="w-5 h-5" />
-                                                {paymentType === 'PIX' ? 'GERAR PIX' : 'PAGAR AGORA'}
-                                            </>
-                                        )}
-                                    </button>
-                                    <p className="text-xs text-gray-500 text-center">
-                                        Pagamento processado de forma segura via ASAAS
-                                    </p>
-                                </>
                             )}
                         </CardContent>
                     </Card>
