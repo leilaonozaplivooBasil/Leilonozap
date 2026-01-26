@@ -40,6 +40,7 @@ import RotatingBanner from '../components/banner/RotatingBanner';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
+import WalletBalanceCard from '../components/wallet/WalletBalanceCard';
 
 const Product = base44.entities.Product;
 
