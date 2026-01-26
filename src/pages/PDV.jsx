@@ -53,6 +53,9 @@ export default function PDV() {
   const [showEditSaleModal, setShowEditSaleModal] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
   const [editSaleData, setEditSaleData] = useState({});
+  const [showEditCommissionModal, setShowEditCommissionModal] = useState(false);
+  const [editingCommissionSale, setEditingCommissionSale] = useState(null);
+  const [editCommissionData, setEditCommissionData] = useState({ commission_amount: 0, commission_type: 'fixed', commission_value: 0 });
   const [timeUntilClose, setTimeUntilClose] = useState('');
   const [searchSale, setSearchSale] = useState('');
   const [isGeneratingCodes, setIsGeneratingCodes] = useState(false);
