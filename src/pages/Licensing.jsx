@@ -1300,10 +1300,10 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <Wallet className="w-4 h-4 mr-2" />
                   Sacar
                 </Button>
-              </div>
-              </div>
-              </CardContent>
-              </Card>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
