@@ -213,7 +213,9 @@ export default function CatalogCheckout2() {
                 };
             }
             
+            console.log('📤 Payload enviado:', paymentPayload);
             const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
+            console.log('📥 Resposta ASAAS:', paymentResponse);
 
             setIsProcessing(false);
             toast.dismiss('checkout-loading');
@@ -245,10 +247,11 @@ export default function CatalogCheckout2() {
             }
 
         } catch (error) {
-            console.error('❌ Erro:', error.message);
+            console.error('❌ Erro completo:', error);
+            console.error('❌ Stack:', error.stack);
             setIsProcessing(false);
             toast.dismiss('checkout-loading');
-            toast.error('Erro ao processar compra');
+            toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
 
             // Limpar sale em caso de erro
             if (sale?.id) {
