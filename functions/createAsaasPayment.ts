@@ -103,8 +103,10 @@ Deno.serve(async (req) => {
             postalService: false
         };
 
-        // Se for cartão, adicionar dados do cartão
+        // Se for cartão, adicionar dados do cartão E remover dueDate (cartão é instantâneo)
         if (billing_type === 'CREDIT_CARD' && card_data) {
+            delete paymentPayload.dueDate; // Cartão não tem vencimento
+            
             paymentPayload.creditCard = {
                 holderName: card_data.holderName,
                 number: card_data.number,
@@ -117,7 +119,9 @@ Deno.serve(async (req) => {
                 email: buyer_email,
                 cpfCnpj: cleanCpf,
                 postalCode: '00000000',
-                addressNumber: '0'
+                addressNumber: '0',
+                addressComplement: '',
+                phone: cleanPhone
             };
         }
 
@@ -241,7 +245,31 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
-        console.error('❌ Erro em createAsaasPayment:', error.message);
-        return Response.json({ error: error.message }, { status: 500 });
+        console.error('❌ Erro em createAsaasPayment:', error);
+        console.error('❌ Stack completo:', error.stack);
+        
+        // Log detalhado no SystemLog
+        try {
+            const base44 = createClientFromRequest(req);
+            await base44.asServiceRole.entities.SystemLog.create({
+                step: 'ASAAS_PAYMENT_ERROR',
+                status: 'error',
+                message: `Erro ao criar pagamento ASAAS: ${error.message}`,
+                component_name: 'createAsaasPayment',
+                error_details: { 
+                    message: error.message, 
+                    stack: error.stack,
+                    catalog_sale_id: catalog_sale_id,
+                    auction_id: auction_id
+                }
+            });
+        } catch (logErr) {
+            console.warn('Falha ao logar erro');
+        }
+        
+        return Response.json({ 
+            error: error.message,
+            details: error.toString()
+        }, { status: 500 });
     }
 });
