@@ -1113,14 +1113,12 @@ export default function ProductManagement() {
                         });
 
                         if (operationType === 'zerar_estoque') {
-                          // Zera o estoque
-                          const totalQty = (editingProduct.quantity || 0) + (editingProduct.quantity_sold || 0);
+                          // Zera APENAS a quantidade total (quantity = 0)
                           await base44.entities.Product.update(editingProduct.id, {
-                            quantity: totalQty,
-                            quantity_sold: 0,
-                            sold_amount: 0,
-                            profit: 0,
-                            status: 'ESTOQUE'
+                            quantity: 0,
+                            qty_perfeito: 0,
+                            qty_bom: 0,
+                            qty_oficina: 0
                           });
                           alert('✅ Estoque zerado com sucesso!');
                         } else {
