@@ -71,7 +71,7 @@ export default function ProductOperationHistory() {
         
         {/* HEADER */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Mais Ações - Histórico de Operações</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Histórico de Operações</h1>
           <Button
             onClick={() => navigate(createPageUrl("ProductManagement"))}
             variant="outline"

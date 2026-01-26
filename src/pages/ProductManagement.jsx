@@ -347,7 +347,7 @@ export default function ProductManagement() {
                   className="cursor-pointer hover:bg-gray-100"
                 >
                   <BookOpen className="w-4 h-4 mr-2" />
-                  Mais Ações
+                  Histórico de Operação
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => {
