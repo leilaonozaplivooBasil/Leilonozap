@@ -1805,13 +1805,22 @@ ${boletoInfo}================================
                               </Badge>
                             </td>
                             <td className="text-center p-3">
-                              <Button
-                                size="sm"
-                                onClick={() => handleEditSale(sale)}
-                                className="bg-blue-600 hover:bg-blue-700 h-7 px-2"
-                              >
-                                ✏️ Editar
-                              </Button>
+                              <div className="flex gap-1 justify-center">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleEditSale(sale)}
+                                  className="bg-blue-600 hover:bg-blue-700 h-7 px-2"
+                                >
+                                  ✏️
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => cancelSale(sale)}
+                                  className="bg-red-600 hover:bg-red-700 h-7 px-2"
+                                >
+                                  ✕
+                                </Button>
+                              </div>
                             </td>
                           </tr>
                         ))}
