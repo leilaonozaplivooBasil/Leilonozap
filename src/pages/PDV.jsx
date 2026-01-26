@@ -1197,68 +1197,66 @@ ${boletoInfo}================================
               </CardHeader>
               <CardContent className="space-y-4 p-4">
                 
-                {/* SELEÇÃO DE VENDEDOR E COMISSÃO */}
+                {/* DISTRIBUIÇÃO DE COMISSÕES ENTRE VENDEDORES */}
                 {cart.length > 0 && (
-                 <div className="space-y-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                   <div>
-                     <label className="text-gray-700 text-sm mb-2 block font-medium">Vendedor</label>
-                     <select
-                       value={selectedSeller?.id || ''}
-                       onChange={(e) => {
-                         const seller = sellers.find(s => s.id === e.target.value);
-                         setSelectedSeller(seller || null);
-                       }}
-                       className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
-                     >
-                       <option value="">Sem vendedor</option>
-                       {sellers.map(seller => (
-                         <option key={seller.id} value={seller.id}>
-                           {seller.name}
-                         </option>
-                       ))}
-                     </select>
-                   </div>
+                  <div className="space-y-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-bold text-gray-900">👥 Vendedores e Comissões</h3>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowAddSellerModal(true)}
+                        className="bg-blue-600 hover:bg-blue-700 h-8 px-2 text-xs"
+                      >
+                        + Adicionar Vendedor
+                      </Button>
+                    </div>
 
-                   {selectedSeller && (
-                     <>
-                       <div>
-                         <label className="text-gray-700 text-sm mb-2 block font-medium">Tipo de Comissão</label>
-                         <select
-                           value={commissionType}
-                           onChange={(e) => setCommissionType(e.target.value)}
-                           className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
-                         >
-                           <option value="percentage">Porcentagem (%)</option>
-                           <option value="fixed">Valor Fixo (R$)</option>
-                         </select>
-                       </div>
+                    {saleCommissions.length === 0 ? (
+                      <p className="text-sm text-gray-600 italic">Nenhum vendedor adicionado</p>
+                    ) : (
+                      <div className="space-y-2 bg-white rounded p-2 border border-blue-100 max-h-48 overflow-y-auto">
+                        {saleCommissions.map((sc, idx) => {
+                          const seller = sellers.find(s => s.id === sc.seller_id);
+                          const commissionAmount = sc.commission_type === 'percentage'
+                            ? (cartTotal * sc.commission_value) / 100
+                            : sc.commission_value;
+                          
+                          return (
+                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200 text-sm">
+                              <div>
+                                <p className="font-medium text-gray-900">{seller?.name || 'Vendedor'}</p>
+                                <p className="text-xs text-gray-600">
+                                  {sc.commission_type === 'percentage' ? `${sc.commission_value}%` : `R$ ${sc.commission_value.toFixed(2)}`}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-green-600">R$ {commissionAmount.toFixed(2)}</p>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setSaleCommissions(saleCommissions.filter((_, i) => i !== idx))}
+                                  className="text-red-600 hover:bg-red-50 h-6 w-6 p-0"
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
-                       <div>
-                         <label className="text-gray-700 text-sm mb-2 block font-medium">
-                           {commissionType === 'percentage' ? 'Porcentagem (%)' : 'Valor (R$)'}
-                         </label>
-                         <Input
-                           type="number"
-                           step="0.01"
-                           value={commissionValue}
-                           onChange={(e) => setCommissionValue(parseFloat(e.target.value) || 0)}
-                           className="bg-white text-gray-900 border-gray-300"
-                           placeholder={commissionType === 'percentage' ? '10' : '50.00'}
-                         />
-                       </div>
-
-                       {commissionValue > 0 && (
-                         <div className="bg-green-100 rounded p-2 text-sm text-green-900 font-medium">
-                           💰 Comissão: R$ {
-                             commissionType === 'percentage' 
-                               ? ((cartTotal * commissionValue) / 100).toFixed(2)
-                               : commissionValue.toFixed(2)
-                           }
-                         </div>
-                       )}
-                     </>
-                   )}
-                 </div>
+                    {saleCommissions.length > 0 && (
+                      <div className="bg-green-100 rounded p-2 text-sm font-bold text-green-900">
+                        💰 Total Comissões: R$ {saleCommissions.reduce((sum, sc) => {
+                          const amt = sc.commission_type === 'percentage'
+                            ? (cartTotal * sc.commission_value) / 100
+                            : sc.commission_value;
+                          return sum + amt;
+                        }, 0).toFixed(2)}
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* ITENS DO CARRINHO - FUNDO BRANCO */}
