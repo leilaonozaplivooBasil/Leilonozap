@@ -1301,6 +1301,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                   <Wallet className="w-4 h-4 mr-2" />
                   Sacar
                 </Button>
+              </div>
             </div>
           </div>
         </CardContent>
