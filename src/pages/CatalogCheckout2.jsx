@@ -610,31 +610,17 @@ export default function CatalogCheckout2() {
                             {!pixData && (
                                 <div className="pt-4 border-t border-gray-700">
                                     <p className="text-gray-300 text-sm font-medium mb-3">Forma de Pagamento</p>
-                                    <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div className="mb-4">
                                         <button
                                             type="button"
-                                            onClick={() => setPaymentType('PIX')}
-                                            className={`p-3 rounded-lg border-2 transition-all ${
-                                                paymentType === 'PIX'
-                                                    ? 'border-green-500 bg-green-500/10'
-                                                    : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
-                                            }`}
+                                            className="w-full p-4 rounded-lg border-2 border-green-500 bg-green-500/10"
                                         >
-                                            <p className="text-white font-semibold">PIX</p>
+                                            <p className="text-white font-semibold text-base">PIX</p>
                                             <p className="text-gray-400 text-xs">Aprovação imediata</p>
                                         </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setPaymentType('CREDIT_CARD')}
-                                            className={`p-3 rounded-lg border-2 transition-all ${
-                                                paymentType === 'CREDIT_CARD'
-                                                    ? 'border-green-500 bg-green-500/10'
-                                                    : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
-                                            }`}
-                                        >
-                                            <p className="text-white font-semibold">Cartão</p>
-                                            <p className="text-gray-400 text-xs">Crédito</p>
-                                        </button>
+                                        <p className="text-xs text-gray-500 text-center mt-3">
+                                            💳 Cartão de crédito em breve
+                                        </p>
                                     </div>
 
                                     {/* Botão Pagar */}
