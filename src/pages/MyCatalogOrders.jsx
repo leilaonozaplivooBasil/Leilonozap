@@ -107,8 +107,12 @@ export default function MyCatalogOrders() {
         
         // Filtrar pedidos do usuário (por ID, email ou created_by)
         const userOrders = allOrders.filter(order => 
-          order.buyer_id === user.id || order.buyer_email === user.email || order.created_by === user.email
+          order.buyer_id === user.id || 
+          order.buyer_email === user.email || 
+          order.created_by === user.email
         );
+
+        console.log('🔍 Pedidos encontrados:', userOrders.length, 'Filtros - buyer_id:', user.id, 'email:', user.email);
         
         console.log('✅ Pedidos do usuário:', userOrders.length, userOrders);
         setOrders(userOrders);
