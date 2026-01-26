@@ -21,7 +21,9 @@ import {
   Store,
   Trash2,
   Plus,
-  Minus
+  Minus,
+  Copy,
+  CreditCard
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -33,6 +35,12 @@ export default function Cart() {
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
   const [coupon, setCoupon] = useState('');
   const [observation, setObservation] = useState('');
+  const [paymentType, setPaymentType] = useState('PIX');
+  const [pixData, setPixData] = useState(null);
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
   
   // Form data
   const [formData, setFormData] = useState({
@@ -235,94 +243,151 @@ export default function Cart() {
       }
     }
 
-    setIsProcessing(true);
-    
-    try {
-      const userData = {
-        id: currentUser?.id,
-        full_name: formData.name,
-        email: formData.email || currentUser?.email,
-        phone: formData.phone,
-        cpf: formData.cpf
-      };
+    if (paymentType === 'CREDIT_CARD') {
+      if (!cardNumber?.trim() || !cardName?.trim() || !cardExpiry?.trim() || !cardCvv?.trim()) {
+        toast.error('Preencha todos os dados do cartão');
+        return;
+      }
+    }
 
-      // Endereço padrão se não preencher
-      if (!formData.street) {
-        formData.street = 'Estrada do Pontal';
-        formData.number = '6500';
-        formData.neighborhood = 'Recreio dos Bandeirantes';
-        formData.city = 'Rio de Janeiro';
-        formData.state = 'RJ';
-        formData.cep = '22790877';
+    const totalAmount = calculateSubtotal();
+    
+    if (totalAmount < 5) {
+      toast.error('Valor mínimo para pagamento: R$ 5,00');
+      return;
+    }
+
+    setIsProcessing(true);
+    toast.loading('Processando compra...', { id: 'checkout-loading' });
+
+    let createdSales = [];
+
+    try {
+      const referralCode = sessionStorage.getItem('referralCode');
+      
+      // Resolver licensee
+      let licenseeId = 'site_official';
+      let licenseeData = null;
+      
+      if (referralCode) {
+        try {
+          const licensees = await base44.entities.AppUser.filter({ referral_code: referralCode });
+          if (licensees && licensees.length > 0) {
+            licenseeData = licensees[0];
+            licenseeId = licenseeData.id;
+          }
+        } catch (e) {
+          console.warn('Erro ao buscar licensee:', e.message);
+        }
       }
 
-      const totalAmount = calculateSubtotal();
-      
-      console.log('📤 Enviando para PagSeguro:', { 
-        items_count: cartItems.length, 
-        total: totalAmount,
-        buyer: formData.name 
-      });
-
-      // Chamar função backend para criar venda + pagamento (tudo atômico)
-      const response = await base44.functions.invoke('createPagSeguroPayment', {
-        amount: totalAmount,
-        user_data: {
-          id: currentUser?.id,
-          email: formData.email,
-          full_name: formData.name,
-          phone: formData.phone.replace(/\D/g, ''),
-          cpf: formData.cpf.replace(/\D/g, ''),
+      // Criar CatalogSale para cada produto
+      for (const item of cartItems) {
+        const price = item.price_catalog || item.selling_price_wholesale || 0;
+        const sale = await base44.entities.CatalogSale.create({
+          product_id: item.id,
+          product_title: item.description,
+          product_image: item.image_urls?.[0] || '',
+          sale_price: price,
+          quantity: item.quantity || 1,
+          total_amount: price * (item.quantity || 1),
+          buyer_id: currentUser.id,
+          buyer_name: formData.name,
+          buyer_email: formData.email,
+          buyer_phone: formData.phone,
+          licensee_id: licenseeId,
+          licensee_name: licenseeData?.full_name || null,
+          licensee_plan: licenseeData?.primary_career_level || null,
+          referred_by_code: referralCode || '',
+          referral_code: referralCode || null,
+          status: 'pending_payment',
+          delivery_type: deliveryMethod,
           address_street: formData.street,
           address_number: formData.number,
           address_complement: formData.complement,
           address_neighborhood: formData.neighborhood,
           address_city: formData.city,
           address_state: formData.state,
-          address_zip_code: formData.cep.replace(/\D/g, '')
-        },
-        products: cartItems.map(item => ({
-          id: item.id,
-          description: item.description,
-          quantity: item.quantity || 1,
-          price: item.price_catalog || item.selling_price_wholesale || 0
-        })),
-        observation: observation
+          address_zip_code: formData.cep
+        });
+        createdSales.push(sale);
+      }
+
+      // Criar pagamento ASAAS único para todo o carrinho
+      const paymentPayload = {
+        catalog_sale_id: createdSales[0].id, // Usa primeiro como referência
+        buyer_name: formData.name.trim(),
+        buyer_email: formData.email.trim(),
+        buyer_cpf: formData.cpf.replace(/\D/g, ''),
+        buyer_phone: formData.phone.replace(/\D/g, ''),
+        amount: totalAmount,
+        billing_type: paymentType,
+        description: `Pedido - ${cartItems.length} item(s) do catálogo`
+      };
+
+      if (paymentType === 'CREDIT_CARD') {
+        const [expMonth, expYear] = cardExpiry.split('/');
+        paymentPayload.card_data = {
+          holderName: cardName.trim(),
+          number: cardNumber.replace(/\s/g, ''),
+          expiryMonth: expMonth,
+          expiryYear: `20${expYear}`,
+          ccv: cardCvv
+        };
+      }
+
+      const functionUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/createAsaasPayment`;
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentPayload)
       });
 
-      const data = response?.data || response;
+      const paymentResponse = await response.json();
 
-      if (data?.error) {
-        toast.error(data.error);
-        setIsProcessing(false);
-        return;
-      }
+      setIsProcessing(false);
+      toast.dismiss('checkout-loading');
 
-      if (!data?.success || !data?.checkout_url) {
-        try {
-          await base44.asServiceRole.entities.CatalogSale.delete(saleId);
-        } catch (e) {
-          console.warn('Erro ao deletar venda:', e.message);
+      if (paymentResponse?.success) {
+        setPixData({ ...paymentResponse, billing_type: paymentType });
+        toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
+        
+        // Limpa carrinho apenas se pagamento foi criado
+        updateCart([]);
+      } else {
+        const errorMsg = paymentResponse?.error || 'Erro desconhecido';
+        const errorDetails = paymentResponse?.details;
+        
+        if (errorDetails && Array.isArray(errorDetails)) {
+          const asaasError = errorDetails.map(e => e.description).join(', ');
+          toast.error(`ASAAS: ${asaasError}`);
+        } else {
+          toast.error(`Erro: ${errorMsg}`);
         }
-        toast.error('Erro ao processar pagamento PagSeguro');
-        setIsProcessing(false);
-        return;
+        
+        // Limpar vendas criadas em caso de erro
+        for (const sale of createdSales) {
+          try {
+            await base44.entities.CatalogSale.delete(sale.id);
+          } catch (e) {
+            console.warn('Erro ao limpar venda:', e.message);
+          }
+        }
       }
-
-      console.log('✅ Checkout gerado - Pedido:', saleId);
-      toast.success('Redirecionando para pagamento...');
-      
-      // Limpa carrinho
-      updateCart([]);
-      
-      // Redireciona para checkout do PagSeguro (PIX, Cartão, Boleto)
-      setTimeout(() => {
-        window.location.href = data.checkout_url;
-      }, 500);
     } catch (error) {
       console.error('Erro no checkout:', error);
-      toast.error('Erro ao processar pagamento. Tente novamente.');
       setIsProcessing(false);
+      toast.dismiss('checkout-loading');
+      toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
+      
+      // Limpar vendas em caso de erro
+      for (const sale of createdSales) {
+        try {
+          await base44.entities.CatalogSale.delete(sale.id);
+        } catch (e) {
+          console.warn('Erro ao limpar:', e.message);
+        }
+      }
     }
   };
 
@@ -682,21 +747,174 @@ export default function Cart() {
               </Card>
             </div>
 
-            {/* Botão Enviar Pedido */}
-            <Button
-              onClick={handleCheckout}
-              disabled={isProcessing || cartItems.length === 0}
-              className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Processando...
-                </>
-              ) : (
-                'PAGAR AGORA'
-              )}
-            </Button>
+            {/* Forma de Pagamento */}
+            {!pixData && cartItems.length > 0 && (
+              <Card className="bg-gray-800 border-gray-700 p-5">
+                <h3 className="text-white font-medium mb-4">Forma de Pagamento</h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType('PIX')}
+                    className={`p-3 rounded-lg border-2 transition-all ${
+                      paymentType === 'PIX'
+                        ? 'border-green-500 bg-green-500/10'
+                        : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
+                    }`}
+                  >
+                    <p className="text-white font-semibold">PIX</p>
+                    <p className="text-gray-400 text-xs">Aprovação imediata</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentType('CREDIT_CARD')}
+                    className={`p-3 rounded-lg border-2 transition-all ${
+                      paymentType === 'CREDIT_CARD'
+                        ? 'border-green-500 bg-green-500/10'
+                        : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
+                    }`}
+                  >
+                    <p className="text-white font-semibold">Cartão</p>
+                    <p className="text-gray-400 text-xs">Crédito</p>
+                  </button>
+                </div>
+
+                {/* Campos do Cartão */}
+                {paymentType === 'CREDIT_CARD' && (
+                  <div className="space-y-3 pb-4 border-b border-gray-700">
+                    <p className="text-sm text-gray-400 font-medium">Dados do Cartão</p>
+                    <Input
+                      type="text"
+                      placeholder="Número do cartão"
+                      value={cardNumber}
+                      onChange={(e) => {
+                        let v = e.target.value.replace(/\D/g, '');
+                        if (v.length > 16) v = v.slice(0, 16);
+                        v = v.match(/.{1,4}/g)?.join(' ') || v;
+                        setCardNumber(v);
+                      }}
+                      maxLength={19}
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500"
+                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input
+                        type="text"
+                        placeholder="MM/AA"
+                        value={cardExpiry}
+                        onChange={(e) => {
+                          let v = e.target.value.replace(/\D/g, '');
+                          if (v.length > 4) v = v.slice(0, 4);
+                          if (v.length >= 2) v = `${v.slice(0,2)}/${v.slice(2,4)}`;
+                          setCardExpiry(v);
+                        }}
+                        maxLength={5}
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500"
+                      />
+                      <Input
+                        type="text"
+                        placeholder="CVV"
+                        value={cardCvv}
+                        onChange={(e) => {
+                          let v = e.target.value.replace(/\D/g, '');
+                          if (v.length > 4) v = v.slice(0, 4);
+                          setCardCvv(v);
+                        }}
+                        maxLength={4}
+                        className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+                    <Input
+                      type="text"
+                      placeholder="Nome impresso no cartão"
+                      value={cardName}
+                      onChange={(e) => setCardName(e.target.value.toUpperCase())}
+                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500"
+                    />
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* QR Code PIX */}
+            {pixData && pixData.billing_type === 'PIX' && (
+              <Card className="bg-gray-800 border-gray-700 p-5">
+                <h3 className="text-lg font-bold text-green-400 text-center mb-4">💚 Pague com PIX</h3>
+                <div className="bg-white rounded-lg p-4 mb-4">
+                  <img 
+                    src={pixData.pix_qr_code} 
+                    alt="QR Code PIX" 
+                    className="w-full max-w-[280px] mx-auto"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    navigator.clipboard.writeText(pixData.pix_payload);
+                    toast.success('Código PIX copiado!');
+                  }}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold mb-3"
+                >
+                  <Copy className="w-5 h-5 mr-2" />
+                  Copiar Código PIX
+                </Button>
+                <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
+                  <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
+                  <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                </div>
+                <Button
+                  onClick={() => {
+                    setPixData(null);
+                    setPaymentType('PIX');
+                  }}
+                  variant="outline"
+                  className="w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600 mb-2"
+                >
+                  Alterar Forma de Pagamento
+                </Button>
+                <Button
+                  onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white"
+                >
+                  Ver Meus Pedidos
+                </Button>
+              </Card>
+            )}
+
+            {/* Sucesso Cartão */}
+            {pixData && pixData.billing_type === 'CREDIT_CARD' && (
+              <Card className="bg-gray-800 border-gray-700 p-5">
+                <h3 className="text-lg font-bold text-green-400 text-center mb-4">✅ Pagamento Processado</h3>
+                <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30 mb-4">
+                  <p className="text-green-400 text-center">Cartão de crédito processado com sucesso!</p>
+                  <p className="text-gray-400 text-sm text-center mt-2">Aguarde a confirmação.</p>
+                </div>
+                <Button
+                  onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white"
+                >
+                  Ver Meus Pedidos
+                </Button>
+              </Card>
+            )}
+
+            {/* Botão Pagar */}
+            {!pixData && (
+              <Button
+                onClick={handleCheckout}
+                disabled={isProcessing || cartItems.length === 0}
+                className="w-full bg-green-600 hover:bg-green-700 text-white h-14 text-lg font-bold rounded-full disabled:opacity-50 shadow-lg shadow-green-600/30"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    {paymentType === 'PIX' ? 'GERAR PIX' : 'PAGAR COM CARTÃO'}
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
