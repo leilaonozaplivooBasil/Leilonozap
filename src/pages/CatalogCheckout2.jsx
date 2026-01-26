@@ -567,77 +567,36 @@ export default function CatalogCheckout2() {
 
                              {/* Método de Pagamento */}
                              <div className="border-t border-gray-600 pt-4 mb-4">
-                                 <label className="block text-sm font-medium text-gray-300 mb-3">
-                                     Forma de Pagamento
-                                 </label>
-                                 <div className="grid grid-cols-2 gap-3">
-                                     <button
-                                         type="button"
-                                         onClick={() => setPaymentType('PIX')}
-                                         className={`p-3 rounded-lg border-2 transition-all ${
-                                             paymentType === 'PIX'
-                                                 ? 'border-green-500 bg-green-500/10'
-                                                 : 'border-gray-600 bg-gray-700 hover:border-gray-500'
-                                         }`}
-                                     >
-                                         <p className="text-white font-semibold">PIX</p>
-                                         <p className="text-gray-400 text-xs">Aprovação imediata</p>
-                                     </button>
-                                     <button
-                                         type="button"
-                                         onClick={() => setPaymentType('BOLETO')}
-                                         className={`p-3 rounded-lg border-2 transition-all ${
-                                             paymentType === 'BOLETO'
-                                                 ? 'border-green-500 bg-green-500/10'
-                                                 : 'border-gray-600 bg-gray-700 hover:border-gray-500'
-                                         }`}
-                                     >
-                                         <p className="text-white font-semibold">Boleto</p>
-                                         <p className="text-gray-400 text-xs">Até 3 dias úteis</p>
-                                     </button>
+                                 <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
+                                     <p className="text-green-400 font-semibold text-center">💚 Pagamento via PIX</p>
+                                     <p className="text-gray-400 text-xs text-center mt-1">Aprovação imediata</p>
                                  </div>
                              </div>
 
-                             {/* QR Code PIX ou Boleto */}
+                             {/* QR Code PIX */}
                              {pixData ? (
                                  <div className="space-y-4 border-t border-gray-600 pt-4">
-                                     {paymentType === 'PIX' && pixData.pix_qr_code ? (
-                                         <>
-                                             <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
-                                             <div className="bg-white rounded-lg p-4">
-                                                 <img 
-                                                     src={pixData.pix_qr_code} 
-                                                     alt="QR Code PIX" 
-                                                     className="w-64 h-64 mx-auto"
-                                                 />
-                                             </div>
-                                             <button
-                                                 onClick={() => {
-                                                     navigator.clipboard.writeText(pixData.pix_payload);
-                                                     toast.success('Código PIX copiado!');
-                                                 }}
-                                                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg"
-                                             >
-                                                 📋 Copiar Código PIX
-                                             </button>
-                                             <div className="bg-gray-700 rounded-lg p-3">
-                                                 <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
-                                                 <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
-                                             </div>
-                                         </>
-                                     ) : paymentType === 'BOLETO' && pixData.boleto_url ? (
-                                         <>
-                                             <h3 className="text-lg font-bold text-blue-400 text-center">📄 Boleto Gerado</h3>
-                                             <a
-                                                 href={pixData.boleto_url}
-                                                 target="_blank"
-                                                 rel="noopener noreferrer"
-                                                 className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-center"
-                                             >
-                                                 📥 Baixar Boleto
-                                             </a>
-                                         </>
-                                     ) : null}
+                                     <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
+                                     <div className="bg-white rounded-lg p-4">
+                                         <img 
+                                             src={pixData.pix_qr_code} 
+                                             alt="QR Code PIX" 
+                                             className="w-64 h-64 mx-auto"
+                                         />
+                                     </div>
+                                     <button
+                                         onClick={() => {
+                                             navigator.clipboard.writeText(pixData.pix_payload);
+                                             toast.success('Código PIX copiado!');
+                                         }}
+                                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg"
+                                     >
+                                         📋 Copiar Código PIX
+                                     </button>
+                                     <div className="bg-gray-700 rounded-lg p-3">
+                                         <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
+                                         <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                                     </div>
                                      <button
                                          onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
                                          className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg"
@@ -657,7 +616,7 @@ export default function CatalogCheckout2() {
                                          ) : (
                                              <>
                                                  <ShoppingCart className="w-5 h-5" />
-                                                 {paymentType === 'PIX' ? 'Gerar PIX' : 'Gerar Boleto'}
+                                                 Gerar PIX
                                              </>
                                          )}
                                      </button>
