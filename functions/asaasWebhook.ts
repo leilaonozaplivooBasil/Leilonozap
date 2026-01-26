@@ -39,11 +39,11 @@ Deno.serve(async (req) => {
 
         // Registrar evento
         await base44.asServiceRole.entities.WebhookLog.create({
-            webhook_id: eventId,
-            gateway: 'ASAAS',
+            provider: 'ASAAS',
             event_type: data.event,
-            payload: data,
-            processed_at: new Date().toISOString()
+            resource_id: paymentId || eventId,
+            body: data,
+            processed: false
         });
 
         // 🔒 Processar apenas eventos de pagamento confirmado
