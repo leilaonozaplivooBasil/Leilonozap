@@ -53,7 +53,6 @@ Deno.serve(async (req) => {
             return Response.json({ received: true });
         }
 
-        const paymentId = data.payment?.id;
         if (!paymentId) {
             console.error('❌ Payment ID inválido');
             return Response.json({ error: 'Invalid payment ID' }, { status: 400 });
