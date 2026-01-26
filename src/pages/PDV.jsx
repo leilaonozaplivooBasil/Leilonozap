@@ -2028,18 +2028,30 @@ ${boletoInfo}================================
                                     </summary>
                                     <div className="mt-3 ml-3 space-y-2 border-l-2 border-gray-700 pl-3 max-h-48 overflow-y-auto">
                                       <div className="grid grid-cols-3 gap-2 mb-2 text-xs">
-                                        <div className="bg-gray-700 rounded p-2">
-                                          <p className="text-gray-400">Vendas</p>
-                                          <p className="text-white font-bold">{sellerCount}</p>
-                                        </div>
-                                        <div className="bg-gray-700 rounded p-2">
-                                          <p className="text-gray-400">Total</p>
-                                          <p className="text-green-400 font-bold">R$ {sellerTotal.toFixed(2)}</p>
-                                        </div>
-                                        <div className="bg-gray-700 rounded p-2">
-                                          <p className="text-gray-400">Comissão</p>
+                                      <div className="bg-gray-700 rounded p-2">
+                                        <p className="text-gray-400">Vendas</p>
+                                        <p className="text-white font-bold">{sellerCount}</p>
+                                      </div>
+                                      <div className="bg-gray-700 rounded p-2">
+                                        <p className="text-gray-400">Total</p>
+                                        <p className="text-green-400 font-bold">R$ {sellerTotal.toFixed(2)}</p>
+                                      </div>
+                                      <div className="bg-orange-900/40 border border-orange-700 rounded p-2 flex items-center justify-between">
+                                        <div>
+                                          <p className="text-orange-300 text-xs">Comissão</p>
                                           <p className="text-orange-400 font-bold">R$ {sellerCommission.toFixed(2)}</p>
                                         </div>
+                                        <Button
+                                          size="sm"
+                                          onClick={() => {
+                                            const sale = sales[0];
+                                            handleEditCommission(sale);
+                                          }}
+                                          className="bg-blue-600 hover:bg-blue-700 h-6 px-1 text-xs"
+                                        >
+                                          ✏️
+                                        </Button>
+                                      </div>
                                       </div>
                                       <table className="w-full text-xs">
                                         <thead className="bg-gray-700 sticky top-0">
