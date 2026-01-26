@@ -214,22 +214,30 @@ export default function CatalogCheckout2() {
             }
             
             console.log('📤 Payload enviado:', paymentPayload);
-            const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
+            
+            // Chamar function diretamente via fetch (não depende de auth do SDK)
+            const functionUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/createAsaasPayment`;
+            const response = await fetch(functionUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(paymentPayload)
+            });
+            
+            const paymentResponse = await response.json();
             console.log('📥 Resposta COMPLETA ASAAS:', paymentResponse);
-            console.log('📥 Resposta DATA:', paymentResponse?.data);
-            console.log('📥 Resposta STATUS:', paymentResponse?.status);
+            console.log('📥 Status HTTP:', response.status);
 
             setIsProcessing(false);
             toast.dismiss('checkout-loading');
 
-            if (paymentResponse?.data?.success) {
-                setPixData({...paymentResponse.data, billing_type: paymentType});
+            if (paymentResponse?.success) {
+                setPixData({...paymentResponse, billing_type: paymentType});
                 toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
                 
                 // Registrar tracking
                 try {
                     await base44.functions.invoke('trackPaymentFlow', {
-                        payment_id: paymentResponse.data.payment_id,
+                        payment_id: paymentResponse.payment_id,
                         product_id: product.id,
                         buyer_id: savedUser.id,
                         licensee_id: licenseeId,
@@ -244,9 +252,9 @@ export default function CatalogCheckout2() {
                     console.warn('⚠️ Erro ao registrar tracking:', trackErr.message);
                 }
             } else {
-                console.error('❌ ASAAS RETORNOU ERRO:', paymentResponse?.data);
-                const errorMsg = paymentResponse?.data?.error || 'Erro desconhecido';
-                const errorDetails = paymentResponse?.data?.details;
+                console.error('❌ ASAAS RETORNOU ERRO:', paymentResponse);
+                const errorMsg = paymentResponse?.error || 'Erro desconhecido';
+                const errorDetails = paymentResponse?.details;
                 
                 // Mostrar erro específico do ASAAS
                 if (errorDetails && Array.isArray(errorDetails)) {
