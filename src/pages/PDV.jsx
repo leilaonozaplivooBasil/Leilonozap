@@ -821,6 +821,36 @@ ${boletoInfo}================================
     setShowEditSaleModal(true);
   };
 
+  const handleEditCommission = (sale) => {
+    setEditingCommissionSale(sale);
+    setEditCommissionData({
+      commission_amount: sale.commission_amount || 0,
+      commission_type: sale.commission_type || 'fixed',
+      commission_value: sale.commission_value || 0
+    });
+    setShowEditCommissionModal(true);
+  };
+
+  const saveEditedCommission = async () => {
+    if (!editingCommissionSale) return;
+    
+    try {
+      await base44.entities.Sale.update(editingCommissionSale.id, {
+        commission_amount: parseFloat(editCommissionData.commission_amount),
+        commission_type: editCommissionData.commission_type,
+        commission_value: parseFloat(editCommissionData.commission_value)
+      });
+
+      alert('✅ Comissão atualizada com sucesso!');
+      setShowEditCommissionModal(false);
+      setEditingCommissionSale(null);
+      await loadAllSales();
+    } catch (error) {
+      console.error('Erro ao editar comissão:', error);
+      alert('❌ Erro ao editar comissão');
+    }
+  };
+
   const saveEditedSale = async () => {
     if (!editingSale) return;
     
