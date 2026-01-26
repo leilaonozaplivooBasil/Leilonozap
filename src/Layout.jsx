@@ -10,6 +10,7 @@ import LoginModal from "@/components/common/LoginModal";
 import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
 import CartPopup from "@/components/cart/CartPopup";
+import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 
       import { Button } from "@/components/ui/button";
       import { base44 } from '@/api/base44Client';
@@ -991,6 +992,9 @@ export default function Layout({ children, currentPageName }) {
           isOpen={showCartPopup} 
           onClose={() => setShowCartPopup(false)} 
         />
+
+        {/* Payment Confirmation Popup */}
+        <PaymentConfirmationPopup />
 
 
       </div>

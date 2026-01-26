@@ -136,8 +136,16 @@ Deno.serve(async (req) => {
 
     const totalAmount = Number((sale.total_amount ?? sale.sale_price ?? sale.amount ?? 0));
     if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
-      console.log('Sale data:', sale);
-      return Response.json({ error: 'Invalid or missing total_amount/sale_price/amount on sale', sale_fields: Object.keys(sale.data || {}) }, { status: 400 });
+      console.log('❌ [CommissionError] Sale:', sale);
+      console.log('❌ [CommissionError] Campos disponíveis:', Object.keys(sale || {}));
+      return Response.json({ 
+        error: 'Invalid or missing total_amount', 
+        sale_id: saleId,
+        available_fields: Object.keys(sale || {}),
+        total_amount: sale.total_amount,
+        sale_price: sale.sale_price,
+        amount: sale.amount
+      }, { status: 400 });
     }
 
     // Resolve âncora: licensee é anchor principal, referral_code é cadeia

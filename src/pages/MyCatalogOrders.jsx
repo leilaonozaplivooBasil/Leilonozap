@@ -138,8 +138,17 @@ export default function MyCatalogOrders() {
           );
 
           // Se o pagamento foi confirmado, mostrar notificação
-          if (event.data?.status === 'paid') {
+          if (event.data?.status === 'paid' && prev.find(o => o.id === event.id)?.status !== 'paid') {
             console.log('✅ Pagamento confirmado para pedido:', event.id);
+            
+            // Dispara evento global para mostrar popup
+            window.dispatchEvent(new CustomEvent('paymentConfirmed', {
+              detail: {
+                sale_id: event.id,
+                product_title: event.data.product_title,
+                amount: event.data.total_amount
+              }
+            }));
           }
         }
       }
