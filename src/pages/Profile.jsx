@@ -854,40 +854,41 @@ export default function Profile() {
           </div>
         </div>
 
-          {/* Recent Bids */}
-          <Card className={`mt-8 ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200 shadow-lg' : 'bg-gray-800/50 border-gray-700/80 backdrop-blur-sm'}`}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Meus Lances Recentes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {userBids.length > 0 ? (
-                <div className="space-y-3">
-                  {userBids.slice(0, 10).map((bid) => (
-                    <div key={bid.id} className={`flex justify-between items-center p-3 ${isSaiDeBaixo ? 'bg-gray-50 border-2 border-gray-200' : 'bg-gray-800 border border-gray-700'} rounded-lg`}>
-                      <div>
-                        <p className={`font-medium ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Lance de R$ {bid.bid_amount.toFixed(2)}</p>
-                        <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
-                          em {new Date(bid.created_date).toLocaleDateString('pt-BR')}
-                        </p>
-                      </div>
-                      <Badge className={isSaiDeBaixo ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-500/10 text-green-400 border border-green-500/20'}>Lance Registrado</Badge>
+        {/* Recent Bids */}
+        <Card className={`mt-8 ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200 shadow-lg' : 'bg-gray-800/50 border-gray-700/80 backdrop-blur-sm'}`}>
+          <CardHeader>
+            <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Meus Lances Recentes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {userBids.length > 0 ? (
+              <div className="space-y-3">
+                {userBids.slice(0, 10).map((bid) => (
+                  <div key={bid.id} className={`flex justify-between items-center p-3 ${isSaiDeBaixo ? 'bg-gray-50 border-2 border-gray-200' : 'bg-gray-800 border border-gray-700'} rounded-lg`}>
+                    <div>
+                      <p className={`font-medium ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Lance de R$ {bid.bid_amount.toFixed(2)}</p>
+                      <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                        em {new Date(bid.created_date).toLocaleDateString('pt-BR')}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Zap className={`w-12 h-12 ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-600'} mx-auto mb-4`} />
-                  <h3 className={`text-lg font-semibold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>
-                    Nenhum lance ainda
-                  </h3>
-                  <p className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                    Quando você participar de leilões, seus lances aparecerão aqui.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                    <Badge className={isSaiDeBaixo ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-green-500/10 text-green-400 border border-green-500/20'}>Lance Registrado</Badge>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Zap className={`w-12 h-12 ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-600'} mx-auto mb-4`} />
+                <h3 className={`text-lg font-semibold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>
+                  Nenhum lance ainda
+                </h3>
+                <p className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                  Quando você participar de leilões, seus lances aparecerão aqui.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+      )}
 
         {/* Tab Meus Pedidos */}
         {activeTab === 'orders' && (
