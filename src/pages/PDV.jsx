@@ -896,6 +896,44 @@ ${boletoInfo}================================
     }
   };
 
+  const cancelSale = async (sale) => {
+    if (!confirm(`⚠️ Cancelar venda de ${sale.product_description}?\n\nIsso reverterá:\n- Quantidade ao estoque\n- Comissões\n- Impostos registrados`)) return;
+
+    try {
+      // Busca o produto original
+      const product = await base44.entities.Product.list();
+      const targetProduct = product.find(p => p.id === sale.product_id);
+      
+      if (!targetProduct) {
+        alert('❌ Produto não encontrado');
+        return;
+      }
+
+      // Restaura o estoque
+      const restoredQuantity = (targetProduct.quantity || 0) + (sale.quantity_sold || 0);
+      const restoredSoldAmount = Math.max(0, (targetProduct.sold_amount || 0) - (sale.total_amount || 0));
+      const restoredProfit = restoredSoldAmount - ((targetProduct.cost_price || 0) * ((targetProduct.quantity_sold || 0) - (sale.quantity_sold || 0)));
+
+      await base44.entities.Product.update(sale.product_id, {
+        quantity: restoredQuantity,
+        quantity_sold: Math.max(0, (targetProduct.quantity_sold || 0) - (sale.quantity_sold || 0)),
+        status: 'ESTOQUE',
+        sold_amount: restoredSoldAmount,
+        profit: restoredProfit
+      });
+
+      // Delete a venda
+      await base44.entities.Sale.delete(sale.id);
+
+      alert('✅ Venda cancelada! Produto retornou ao estoque e comissões foram revertidas.');
+      await loadTodaySales();
+      await loadAllSales();
+    } catch (error) {
+      console.error('Erro ao cancelar venda:', error);
+      alert('❌ Erro ao cancelar venda');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* HEADER VERDE NOZAP */}
