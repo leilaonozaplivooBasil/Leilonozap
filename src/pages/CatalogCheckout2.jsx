@@ -215,7 +215,9 @@ export default function CatalogCheckout2() {
             
             console.log('📤 Payload enviado:', paymentPayload);
             const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
-            console.log('📥 Resposta ASAAS:', paymentResponse);
+            console.log('📥 Resposta COMPLETA ASAAS:', paymentResponse);
+            console.log('📥 Resposta DATA:', paymentResponse?.data);
+            console.log('📥 Resposta STATUS:', paymentResponse?.status);
 
             setIsProcessing(false);
             toast.dismiss('checkout-loading');
@@ -242,8 +244,20 @@ export default function CatalogCheckout2() {
                     console.warn('⚠️ Erro ao registrar tracking:', trackErr.message);
                 }
             } else {
-                toast.error('Erro ao criar pagamento');
-                throw new Error(paymentResponse?.data?.error || 'Erro desconhecido');
+                console.error('❌ ASAAS RETORNOU ERRO:', paymentResponse?.data);
+                const errorMsg = paymentResponse?.data?.error || 'Erro desconhecido';
+                const errorDetails = paymentResponse?.data?.details;
+                
+                // Mostrar erro específico do ASAAS
+                if (errorDetails && Array.isArray(errorDetails)) {
+                    const asaasError = errorDetails.map(e => e.description).join(', ');
+                    toast.error(`ASAAS: ${asaasError}`);
+                    console.error('❌ Detalhes ASAAS:', errorDetails);
+                } else {
+                    toast.error(`Erro: ${errorMsg}`);
+                }
+                
+                throw new Error(errorMsg);
             }
 
         } catch (error) {
