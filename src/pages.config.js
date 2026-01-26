@@ -9,12 +9,14 @@ import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CareerLevelsReport from './pages/CareerLevelsReport';
+import Cart from './pages/Cart';
 import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
 import CatalogManagement from './pages/CatalogManagement';
 import CatalogOrderTracking from './pages/CatalogOrderTracking';
 import CatalogProductDetails from './pages/CatalogProductDetails';
+import Checkout from './pages/Checkout';
 import CommissionDistributionFull from './pages/CommissionDistributionFull';
 import CreateAuction from './pages/CreateAuction';
 import CreateAuctionV2 from './pages/CreateAuctionV2';
@@ -51,6 +53,7 @@ import Partners from './pages/Partners';
 import PaymentFailure from './pages/PaymentFailure';
 import PaymentSettings from './pages/PaymentSettings';
 import ProductManagement from './pages/ProductManagement';
+import ProductOperationHistory from './pages/ProductOperationHistory';
 import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
 import ProtectionDashboard from './pages/ProtectionDashboard';
@@ -68,9 +71,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import ProductOperationHistory from './pages/ProductOperationHistory';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
 import __Layout from './Layout.jsx';
 
 
@@ -86,12 +86,14 @@ export const PAGES = {
     "BannerManagement": BannerManagement,
     "CRM": CRM,
     "CareerLevelsReport": CareerLevelsReport,
+    "Cart": Cart,
     "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
     "CatalogManagement": CatalogManagement,
     "CatalogOrderTracking": CatalogOrderTracking,
     "CatalogProductDetails": CatalogProductDetails,
+    "Checkout": Checkout,
     "CommissionDistributionFull": CommissionDistributionFull,
     "CreateAuction": CreateAuction,
     "CreateAuctionV2": CreateAuctionV2,
@@ -128,6 +130,7 @@ export const PAGES = {
     "PaymentFailure": PaymentFailure,
     "PaymentSettings": PaymentSettings,
     "ProductManagement": ProductManagement,
+    "ProductOperationHistory": ProductOperationHistory,
     "Profile": Profile,
     "ProtecaoCriacao": ProtecaoCriacao,
     "ProtectionDashboard": ProtectionDashboard,
@@ -145,9 +148,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "ProductOperationHistory": ProductOperationHistory,
-    "Cart": Cart,
-    "Checkout": Checkout,
 }
 
 export const pagesConfig = {

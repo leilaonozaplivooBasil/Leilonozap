@@ -23,6 +23,9 @@ export default function CheckoutPage() {
     const [addressState, setAddressState] = useState('');
     const [addressZip, setAddressZip] = useState('');
     const [isLoadingCep, setIsLoadingCep] = useState(false);
+    const [paymentType, setPaymentType] = useState('PIX');
+    const [pixData, setPixData] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
     const navigate = useNavigate();
 
     const searchCep = async (cep) => {
@@ -53,101 +56,91 @@ export default function CheckoutPage() {
         if (v.replace(/\D/g,'').length === 8) searchCep(v);
     };
 
-    const handleCreatePagSeguroPayment = async () => {
-         if (!lastName || lastName.trim() === '') {
-             toast.error('Por favor, preencha seu sobrenome');
-             return;
-         }
+    const handleCreatePayment = async () => {
+        // Validações
+        if (!firstName?.trim()) {
+            toast.error('Preencha o primeiro nome');
+            return;
+        }
+        if (!lastName?.trim()) {
+            toast.error('Preencha o sobrenome');
+            return;
+        }
+        if (!cpf?.trim()) {
+            toast.error('CPF é obrigatório');
+            return;
+        }
+        if (!email?.trim()) {
+            toast.error('Email é obrigatório');
+            return;
+        }
+        if (!phone?.trim()) {
+            toast.error('Telefone é obrigatório');
+            return;
+        }
+        if (!addressStreet?.trim()) {
+            toast.error('Rua é obrigatória');
+            return;
+        }
+        if (!addressNumber?.trim()) {
+            toast.error('Número é obrigatório');
+            return;
+        }
+        if (!addressCity?.trim()) {
+            toast.error('Cidade é obrigatória');
+            return;
+        }
+        if (!addressState?.trim()) {
+            toast.error('Estado é obrigatório');
+            return;
+        }
+        if (!addressZip?.trim()) {
+            toast.error('CEP é obrigatório');
+            return;
+        }
+        if (!auction) {
+            toast.error('Leilão não encontrado');
+            return;
+        }
 
-         if (!phone || phone.trim() === '') {
-             toast.error('Telefone é obrigatório para pagamento');
-             return;
-         }
+        console.log('✅ Validações OK, processando...');
+        setIsProcessing(true);
+        toast.loading('Processando compra...', { id: 'checkout-loading' });
 
-         if (!cpf || cpf.trim() === '') {
-             toast.error('CPF é obrigatório para pagamento');
-             return;
-         }
+        try {
+            const savedUserJSON = localStorage.getItem('currentUser');
+            const savedUser = JSON.parse(savedUserJSON);
 
-         if (!addressStreet || addressStreet.trim() === '') {
-             toast.error('Endereço é obrigatório para entrega');
-             return;
-         }
+            // Criar pagamento ASAAS
+            const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
+                auction_id: auction.id,
+                buyer_name: `${firstName.trim()} ${lastName.trim()}`,
+                buyer_email: email.trim(),
+                buyer_cpf: cpf.trim(),
+                buyer_phone: phone.trim(),
+                amount: auction.current_price,
+                billing_type: paymentType,
+                description: `Arremate - ${auction.title}`
+            });
 
-         if (!addressNumber || addressNumber.trim() === '') {
-             toast.error('Número do endereço é obrigatório');
-             return;
-         }
+            setIsProcessing(false);
+            toast.dismiss('checkout-loading');
 
-         if (!addressCity || addressCity.trim() === '') {
-             toast.error('Cidade é obrigatória');
-             return;
-         }
+            if (paymentResponse?.data?.success) {
+                setPixData({...paymentResponse.data, billing_type: paymentType});
+                toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
+            } else {
+                toast.error('Erro ao criar pagamento');
+                throw new Error(paymentResponse?.data?.error || 'Erro desconhecido');
+            }
 
-         if (!addressState || addressState.trim() === '') {
-             toast.error('Estado é obrigatório');
-             return;
-         }
-
-         if (!addressZip || addressZip.trim() === '') {
-             toast.error('CEP é obrigatório');
-             return;
-         }
-
-         if (!addressNeighborhood || addressNeighborhood.trim() === '') {
-             toast.error('Bairro é obrigatório');
-             return;
-         }
-
-         if (!auction) {
-             toast.error('Leilão não encontrado');
-             return;
-         }
-
-         try {
-             const savedUserJSON = localStorage.getItem('currentUser');
-             const savedUser = JSON.parse(savedUserJSON);
-
-             const auctionId = auction.id;
-             console.log('🔄 Criando pagamento PagSeguro para:', auctionId);
-
-             const paymentData = {
-                 auction_id: auctionId,
-                 amount: auction.current_price,
-                 user_data: {
-                     id: savedUser.id,
-                     email: email.trim(),
-                     full_name: savedUser.full_name,
-                     phone: phone.trim(),
-                     cpf: cpf.trim(),
-                     last_name: lastName.trim(),
-                     address_street: addressStreet.trim(),
-                     address_number: addressNumber.trim(),
-                     address_complement: addressComplement.trim(),
-                     address_neighborhood: addressNeighborhood.trim(),
-                     address_city: addressCity.trim(),
-                     address_state: addressState.trim(),
-                     address_zip_code: addressZip.trim()
-                 }
-             };
-
-             const response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
-             console.log('📦 Resposta PagSeguro:', JSON.stringify(response, null, 2));
-
-             if (response?.data?.success || response?.order_id) {
-                 console.log('✅ PagSeguro Order ID:', response.order_id);
-                 toast.success('Ordem criada no PagSeguro!');
-                 toast.info('QR Code: ' + (response.qr_code || 'Processando...'));
-             } else {
-                 console.error('❌ Erro na resposta:', response);
-                 toast.error(response?.data?.error || 'Erro ao criar pagamento PagSeguro');
-             }
-
-         } catch (error) {
-             console.error('Erro:', error);
-             toast.error('Erro ao criar pagamento PagSeguro');
-         }
-     };
+        } catch (error) {
+            console.error('❌ Erro:', error.message);
+            setIsProcessing(false);
+            toast.dismiss('checkout-loading');
+            toast.error('Erro ao processar compra');
+        }
+    };
 
     useEffect(() => {
         const loadData = async () => {
@@ -223,7 +216,7 @@ export default function CheckoutPage() {
                     {/* Resumo do Pedido */}
                     <Card className="bg-gray-800 border-gray-700">
                         <CardHeader>
-                            <CardTitle className="text-white">Resumo do Pedido</CardTitle>
+                            <CardTitle className="text-green-400">Resumo do Pedido</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -236,12 +229,18 @@ export default function CheckoutPage() {
                                 )}
                                 <div>
                                     <h3 className="text-xl font-semibold text-white">{auction.title}</h3>
-                                    <p className="text-gray-400 mt-2">{auction.description}</p>
+                                    <p className="text-gray-400 mt-2">Estoque: 1 un.</p>
                                 </div>
                                 <div className="border-t border-gray-700 pt-4">
-                                    <div className="flex justify-between text-lg">
-                                        <span className="text-gray-300">Valor do Arremate:</span>
-                                        <span className="text-green-400 font-bold">
+                                    <div className="flex justify-between text-lg mb-2">
+                                        <span className="text-gray-300">Preço Unitário:</span>
+                                        <span className="text-white font-semibold">
+                                            R$ {auction.current_price.toFixed(2)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between border-t border-gray-700 pt-2">
+                                        <span className="text-green-400 font-semibold text-xl">Total:</span>
+                                        <span className="text-2xl font-bold text-green-400">
                                             R$ {auction.current_price.toFixed(2)}
                                         </span>
                                     </div>
@@ -250,215 +249,294 @@ export default function CheckoutPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Método de Pagamento */}
-                     <Card className="bg-gray-800 border-gray-700">
-                         <CardHeader>
-                             <CardTitle className="text-white">Finalizar Pagamento</CardTitle>
-                         </CardHeader>
-                         <CardContent className="space-y-4">
-                             {/* Campo Nome */}
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                                     Primeiro Nome *
-                                 </label>
-                                 <input
-                                     type="text"
-                                     value={firstName}
-                                     onChange={(e) => setFirstName(e.target.value)}
-                                     placeholder="Digite seu primeiro nome"
-                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                     required
-                                 />
-                             </div>
+                    {/* Dados da Entrega */}
+                    <Card className="bg-gray-800 border-gray-700">
+                        <CardHeader>
+                            <CardTitle className="text-green-400">Dados da Entrega</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {/* Nome */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Primeiro Nome *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={firstName}
+                                    onChange={(e) => setFirstName(e.target.value)}
+                                    placeholder="Digite seu primeiro nome"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                    required
+                                />
+                            </div>
 
-                             {/* Campo Sobrenome */}
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                                     Sobrenome *
-                                 </label>
-                                 <input
-                                     type="text"
-                                     value={lastName}
-                                     onChange={(e) => setLastName(e.target.value)}
-                                     placeholder="Digite seu sobrenome"
-                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                     required
-                                 />
-                             </div>
+                            {/* Sobrenome */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Sobrenome *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={lastName}
+                                    onChange={(e) => setLastName(e.target.value)}
+                                    placeholder="Digite seu sobrenome"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                    required
+                                />
+                            </div>
 
-                             {/* Campo Email */}
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                                     Email *
-                                 </label>
-                                 <input
-                                     type="email"
-                                     value={email}
-                                     onChange={(e) => setEmail(e.target.value)}
-                                     placeholder="seu@email.com"
-                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                     required
-                                 />
-                             </div>
+                            {/* CPF */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    CPF *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={cpf}
+                                    onChange={(e) => setCpf(e.target.value)}
+                                    placeholder="000.000.000-00"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                    required
+                                />
+                            </div>
 
-                             {/* Campo Telefone */}
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                                     Telefone *
-                                 </label>
-                                 <input
-                                     type="tel"
-                                     value={phone}
-                                     onChange={(e) => setPhone(e.target.value)}
-                                     placeholder="(11) 99999-9999"
-                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                     required
-                                 />
-                             </div>
+                            {/* Email e Telefone */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        Email *
+                                    </label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        placeholder="seu@email.com"
+                                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        Telefone *
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={phone}
+                                        onChange={(e) => setPhone(e.target.value)}
+                                        placeholder="(11) 99999-9999"
+                                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                        required
+                                    />
+                                </div>
+                            </div>
 
-                             {/* Campo CPF */}
-                             <div>
-                                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                                     CPF *
-                                 </label>
-                                 <input
-                                     type="text"
-                                     value={cpf}
-                                     onChange={(e) => setCpf(e.target.value)}
-                                     placeholder="000.000.000-00"
-                                     className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                     required
-                                 />
-                             </div>
+                            {/* Rua */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Rua *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={addressStreet}
+                                    onChange={(e) => setAddressStreet(e.target.value)}
+                                    placeholder="Rua, Avenida, etc"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                    required
+                                />
+                            </div>
 
-                             {/* SEÇÃO DE ENDEREÇO */}
-                             <div className="border-t border-gray-600 pt-4 mt-4">
-                                 <h3 className="text-lg font-semibold text-white mb-4">Endereço de Entrega *</h3>
+                            {/* Número e Complemento */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        Número *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={addressNumber}
+                                        onChange={(e) => setAddressNumber(e.target.value)}
+                                        placeholder="123"
+                                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        Complemento
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={addressComplement}
+                                        onChange={(e) => setAddressComplement(e.target.value)}
+                                        placeholder="Apto, Bloco, etc"
+                                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                    />
+                                </div>
+                            </div>
 
-                                 <div>
-                                     <label className="block text-sm font-medium text-gray-300 mb-2">
-                                         Logradouro *
-                                     </label>
-                                     <input
-                                         type="text"
-                                         value={addressStreet}
-                                         onChange={(e) => setAddressStreet(e.target.value)}
-                                         placeholder="Rua, Avenida, etc"
-                                         className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                         required
-                                     />
-                                 </div>
+                            {/* Bairro */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    Bairro
+                                </label>
+                                <input
+                                    type="text"
+                                    value={addressNeighborhood}
+                                    onChange={(e) => setAddressNeighborhood(e.target.value)}
+                                    placeholder="Digite o bairro"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                />
+                            </div>
 
-                                 <div className="grid grid-cols-2 gap-3 mt-3">
-                                     <div>
-                                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                                             Número *
-                                         </label>
-                                         <input
-                                             type="text"
-                                             value={addressNumber}
-                                             onChange={(e) => setAddressNumber(e.target.value)}
-                                             placeholder="123"
-                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                             required
-                                         />
-                                     </div>
-                                     <div>
-                                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                                             Complemento
-                                         </label>
-                                         <input
-                                             type="text"
-                                             value={addressComplement}
-                                             onChange={(e) => setAddressComplement(e.target.value)}
-                                             placeholder="Apto, Bloco, etc"
-                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                         />
-                                     </div>
-                                 </div>
+                            {/* Cidade e UF */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        Cidade *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={addressCity}
+                                        onChange={(e) => setAddressCity(e.target.value)}
+                                        placeholder="São Paulo"
+                                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                        required
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                                        UF *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={addressState}
+                                        onChange={(e) => setAddressState(e.target.value)}
+                                        placeholder="SP"
+                                        maxLength="2"
+                                        className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500 uppercase"
+                                        required
+                                    />
+                                </div>
+                            </div>
 
-                                 <div>
-                                     <label className="block text-sm font-medium text-gray-300 mb-2 mt-3">
-                                         Bairro *
-                                     </label>
-                                     <input
-                                         type="text"
-                                         value={addressNeighborhood}
-                                         onChange={(e) => setAddressNeighborhood(e.target.value)}
-                                         placeholder="Digite o bairro"
-                                         className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                         required
-                                     />
-                                 </div>
+                            {/* CEP */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">
+                                    CEP *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={addressZip}
+                                    onChange={handleCepChange}
+                                    placeholder="00000-000"
+                                    className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
+                                    required
+                                />
+                            </div>
 
-                                 <div className="grid grid-cols-2 gap-3 mt-3">
-                                     <div>
-                                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                                             Cidade *
-                                         </label>
-                                         <input
-                                             type="text"
-                                             value={addressCity}
-                                             onChange={(e) => setAddressCity(e.target.value)}
-                                             placeholder="São Paulo"
-                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                             required
-                                         />
-                                     </div>
-                                     <div>
-                                         <label className="block text-sm font-medium text-gray-300 mb-2">
-                                             Estado *
-                                         </label>
-                                         <input
-                                             type="text"
-                                             value={addressState}
-                                             onChange={(e) => setAddressState(e.target.value)}
-                                             placeholder="SP"
-                                             maxLength="2"
-                                             className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                             required
-                                         />
-                                     </div>
-                                 </div>
+                            {/* Método de Pagamento */}
+                            <div className="border-t border-gray-600 pt-4 mb-4">
+                                <label className="block text-sm font-medium text-gray-300 mb-3">
+                                    Forma de Pagamento
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentType('PIX')}
+                                        className={`p-3 rounded-lg border-2 transition-all ${
+                                            paymentType === 'PIX'
+                                                ? 'border-green-500 bg-green-500/10'
+                                                : 'border-gray-600 bg-gray-700 hover:border-gray-500'
+                                        }`}
+                                    >
+                                        <p className="text-white font-semibold">PIX</p>
+                                        <p className="text-gray-400 text-xs">Aprovação imediata</p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPaymentType('CREDIT_CARD')}
+                                        className={`p-3 rounded-lg border-2 transition-all ${
+                                            paymentType === 'CREDIT_CARD'
+                                                ? 'border-green-500 bg-green-500/10'
+                                                : 'border-gray-600 bg-gray-700 hover:border-gray-500'
+                                        }`}
+                                    >
+                                        <p className="text-white font-semibold">Cartão</p>
+                                        <p className="text-gray-400 text-xs">Crédito</p>
+                                    </button>
+                                </div>
+                            </div>
 
-                                 <div>
-                                     <label className="block text-sm font-medium text-gray-300 mb-2 mt-3">
-                                         CEP *
-                                     </label>
-                                     <input
-                                         type="text"
-                                         value={addressZip}
-                                         onChange={(e) => setAddressZip(e.target.value)}
-                                         placeholder="00000-000"
-                                         className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-green-500"
-                                         required
-                                     />
-                                 </div>
-                             </div>
+                            {/* QR Code PIX ou Sucesso Cartão */}
+                            {pixData ? (
+                                <div className="space-y-4 border-t border-gray-600 pt-4">
+                                    {pixData.billing_type === 'PIX' ? (
+                                        <>
+                                            <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
+                                            <div className="bg-white rounded-lg p-4">
+                                                <img 
+                                                    src={pixData.pix_qr_code} 
+                                                    alt="QR Code PIX" 
+                                                    className="w-64 h-64 mx-auto"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(pixData.pix_payload);
+                                                    toast.success('Código PIX copiado!');
+                                                }}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg"
+                                            >
+                                                📋 Copiar Código PIX
+                                            </button>
+                                            <div className="bg-gray-700 rounded-lg p-3">
+                                                <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
+                                                <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <h3 className="text-lg font-bold text-green-400 text-center">✅ Pagamento Processado</h3>
+                                            <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30">
+                                                <p className="text-green-400 text-center">Cartão de crédito processado com sucesso!</p>
+                                                <p className="text-gray-400 text-sm text-center mt-2">Aguarde a confirmação.</p>
+                                            </div>
+                                        </>
+                                    )}
+                                    <button
+                                        onClick={() => navigate(createPageUrl('MyWinnings'))}
+                                        className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg"
+                                    >
+                                        Ver Meus Arremates
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <button
+                                        onClick={handleCreatePayment}
+                                        disabled={isProcessing || !firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()}
+                                        className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {isProcessing ? (
+                                            <Loader2 className="w-5 h-5 animate-spin" />
+                                        ) : (
+                                            <>
+                                                <ShoppingCart className="w-5 h-5" />
+                                                {paymentType === 'PIX' ? 'Gerar PIX' : 'Pagar com Cartão'}
+                                            </>
+                                        )}
+                                    </button>
+                                    {(!firstName?.trim() || !lastName?.trim() || !email?.trim() || !phone?.trim() || !cpf?.trim() || !addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim()) && (
+                                        <p className="text-xs text-yellow-400 text-center">
+                                            Preencha todos os campos obrigatórios (*)
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
-                             {/* PagSeguro apenas */}
-                             <div className="border-t border-gray-600 pt-4 mb-4 bg-green-600/10 rounded-lg p-3">
-                                 <p className="text-green-400 text-sm font-semibold mb-2">✓ Pagamento via PagSeguro PIX</p>
-                                 <p className="text-gray-300 text-xs">Pagamento instantâneo e seguro</p>
-                             </div>
-
-                             <div className="space-y-3">
-                                 <button
-                                     onClick={handleCreatePagSeguroPayment}
-                                     disabled={!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
-                                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-                                     >
-                                     <ShoppingCart className="w-5 h-5" />
-                                     Pagar com PagSeguro
-                                 </button>
-                                 {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
-                                 <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
-                                 )}
-                             </div>
-
-                             <p className="text-xs text-gray-500 text-center mt-4">
-                                Pagamento seguro via PagSeguro
-                             </p>
+                            <p className="text-xs text-gray-500 text-center mt-4">
+                                Pagamento processado de forma segura via ASAAS
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
