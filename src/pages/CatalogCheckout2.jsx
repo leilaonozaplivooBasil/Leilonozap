@@ -769,8 +769,17 @@ export default function CatalogCheckout2() {
                                         <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
                                     </div>
                                     <button
+                                        onClick={() => {
+                                            setPixData(null);
+                                            setPaymentType('PIX');
+                                        }}
+                                        className="w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 rounded-lg border border-gray-500"
+                                    >
+                                        Alterar Forma de Pagamento
+                                    </button>
+                                    <button
                                         onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
-                                        className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg mt-2"
+                                        className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg"
                                     >
                                         Ver Meus Pedidos
                                     </button>
