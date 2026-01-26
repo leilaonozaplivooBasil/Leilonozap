@@ -888,8 +888,8 @@ export default function Profile() {
             )}
           </CardContent>
         </Card>
-      </div>
-      )}
+        </>
+        )}
 
         {/* Tab Meus Pedidos */}
         {activeTab === 'orders' && (
