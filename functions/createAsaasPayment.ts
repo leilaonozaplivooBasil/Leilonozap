@@ -91,22 +91,22 @@ Deno.serve(async (req) => {
         
         const externalReference = catalog_sale_id || auction_id;
         
-        // dueDate é OBRIGATÓRIO para todos os tipos
-        const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 1); // Vencimento amanhã
-        const dueDateStr = dueDate.toISOString().split('T')[0];
-        
-        console.log('📅 dueDate será:', dueDateStr);
-        
         const paymentPayload = {
             customer: customerId,
             billingType: billing_type,
             value: amount,
-            dueDate: dueDateStr,
             description: description || `Pedido ${externalReference}`,
             externalReference: externalReference,
             postalService: false
         };
+
+        // dueDate SÓ para PIX e Boleto (não cartão)
+        if (billing_type !== 'CREDIT_CARD') {
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 1);
+            paymentPayload.dueDate = dueDate.toISOString().split('T')[0];
+            console.log('📅 dueDate adicionado (PIX/Boleto):', paymentPayload.dueDate);
+        }
 
         // Se for cartão, adicionar dados do cartão
         if (billing_type === 'CREDIT_CARD' && card_data) {
