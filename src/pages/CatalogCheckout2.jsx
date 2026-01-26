@@ -169,19 +169,24 @@ export default function CatalogCheckout2() {
 
             console.log(`🛍️ CatalogSale criada com ID: ${sale.id} | Licensee: ${licenseeId}`);
 
-            // 📊 Registrar rastreamento inicial
+            // 📊 Registrar rastreamento inicial (via fetch direto)
             try {
-                await base44.functions.invoke('trackPaymentFlow', {
-                    payment_id: `checkout_${sale.id}`,
-                    product_id: product.id,
-                    buyer_id: savedUser.id,
-                    licensee_id: licenseeId,
-                    referral_code: referralCode || null,
-                    catalog_sale_id: sale.id,
-                    amount: product.price_catalog,
-                    status: 'pending',
-                    stage: 'sale_created',
-                    event: 'catalog_sale_created'
+                const trackUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/trackPaymentFlow`;
+                await fetch(trackUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        payment_id: `checkout_${sale.id}`,
+                        product_id: product.id,
+                        buyer_id: savedUser.id,
+                        licensee_id: licenseeId,
+                        referral_code: referralCode || null,
+                        catalog_sale_id: sale.id,
+                        amount: product.price_catalog,
+                        status: 'pending',
+                        stage: 'sale_created',
+                        event: 'catalog_sale_created'
+                    })
                 });
             } catch (trackErr) {
                 console.warn('⚠️ Erro ao registrar rastreamento:', trackErr.message);
@@ -234,19 +239,24 @@ export default function CatalogCheckout2() {
                 setPixData({...paymentResponse, billing_type: paymentType});
                 toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
                 
-                // Registrar tracking
+                // Registrar tracking (via fetch direto)
                 try {
-                    await base44.functions.invoke('trackPaymentFlow', {
-                        payment_id: paymentResponse.payment_id,
-                        product_id: product.id,
-                        buyer_id: savedUser.id,
-                        licensee_id: licenseeId,
-                        referral_code: referralCode || null,
-                        catalog_sale_id: sale.id,
-                        amount: product.price_catalog,
-                        status: 'pending',
-                        stage: 'asaas_payment_created',
-                        event: 'asaas_payment_created'
+                    const trackUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/trackPaymentFlow`;
+                    await fetch(trackUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            payment_id: paymentResponse.payment_id,
+                            product_id: product.id,
+                            buyer_id: savedUser.id,
+                            licensee_id: licenseeId,
+                            referral_code: referralCode || null,
+                            catalog_sale_id: sale.id,
+                            amount: product.price_catalog,
+                            status: 'pending',
+                            stage: 'asaas_payment_created',
+                            event: 'asaas_payment_created'
+                        })
                     });
                 } catch (trackErr) {
                     console.warn('⚠️ Erro ao registrar tracking:', trackErr.message);
