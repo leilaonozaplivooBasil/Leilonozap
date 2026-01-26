@@ -206,7 +206,7 @@ export default function CatalogCheckout2() {
                 description: `Catálogo - ${product.description}`
             };
 
-            // Se for cartão, adicionar dados do cartão
+            // Se for cartão, adicionar dados do cartão + endereço
             if (paymentType === 'CREDIT_CARD') {
                 const [expMonth, expYear] = cardExpiry.split('/');
                 paymentPayload.card_data = {
@@ -214,7 +214,12 @@ export default function CatalogCheckout2() {
                     number: cardNumber.replace(/\s/g, ''),
                     expiryMonth: expMonth,
                     expiryYear: `20${expYear}`,
-                    ccv: cardCvv
+                    ccv: cardCvv,
+                    address: {
+                        zip_code: addressZip.replace(/\D/g, ''),
+                        number: addressNumber.trim(),
+                        complement: addressComplement.trim()
+                    }
                 };
             }
             
