@@ -15,15 +15,14 @@ Deno.serve(async (req) => {
         const body = await req.text();
         const data = JSON.parse(body);
 
+        const paymentId = data.payment?.id;
+        const eventId = data.id || `${paymentId}_${data.event}`;
+
         console.log('🔔 WEBHOOK ASAAS RECEBIDO:', {
             event: data.event,
-            payment_id: data.payment?.id,
+            payment_id: paymentId,
             timestamp: new Date().toISOString()
         });
-
-        // 🛡️ IDEMPOTÊNCIA: Verificar se já processamos este evento
-        const eventId = data.id || `${data.payment?.id}_${data.event}`;
-        const paymentId = data.payment?.id;
         
         if (eventId) {
             const existingLogs = await base44.asServiceRole.entities.WebhookLog.filter(
