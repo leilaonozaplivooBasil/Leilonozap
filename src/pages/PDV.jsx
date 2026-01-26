@@ -621,23 +621,21 @@ Transações: ${selectedSession.transactions_count || 0}
         const novaQuantidadeVendida = (product.quantity_sold || 0) + qtdVendida;
         const novoLucroTotal = novoSoldAmount - (custoUnitario * novaQuantidadeVendida);
 
-        // Calcula comissão
-        let commissionAmount = 0;
-        if (selectedSeller && commissionValue > 0) {
-          if (commissionType === 'percentage') {
-            commissionAmount = (valorVenda * commissionValue) / 100;
-          } else {
-            commissionAmount = commissionValue;
-          }
-        }
+        // Calcula comissão total do item
+        const totalItemCommission = saleCommissions.reduce((sum, sc) => {
+          const amt = sc.commission_type === 'percentage'
+            ? (valorVenda * sc.commission_value) / 100
+            : sc.commission_value;
+          return sum + amt;
+        }, 0);
 
         // Calcula impostos proporcionais para este item
         const itemTaxes = calculateTaxes(valorVenda);
-        const itemNetAmount = valorVenda - itemTaxes.total - commissionAmount;
+        const itemNetAmount = valorVenda - itemTaxes.total - totalItemCommission;
 
         // 🆕 REGISTRA A VENDA NA ENTIDADE SALE
         const orderCode = generateOrderCode();
-        await base44.entities.Sale.create({
+        const saleRecord = await base44.entities.Sale.create({
           order_code: orderCode,
           product_id: product.id,
           product_description: product.description,
@@ -651,15 +649,27 @@ Transações: ${selectedSession.transactions_count || 0}
           sale_date: saleDate,
           sale_datetime: saleDatetime,
           operator_name: currentUser?.full_name || 'Admin',
-          seller_id: selectedSeller?.id || null,
-          seller_name: selectedSeller?.name || null,
-          commission_type: selectedSeller ? commissionType : null,
-          commission_value: selectedSeller ? commissionValue : 0,
-          commission_amount: commissionAmount,
+          commission_amount: totalItemCommission,
           boleto_cliente: paymentMethod === 'BOLETO PARCELADO' ? boletoData.cliente : null,
           boleto_documento: paymentMethod === 'BOLETO PARCELADO' ? boletoData.documento : null,
           boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
         });
+
+        // 🆕 Registra cada comissão distribuída
+        for (const sc of saleCommissions) {
+          const commissionAmt = sc.commission_type === 'percentage'
+            ? (valorVenda * sc.commission_value) / 100
+            : sc.commission_value;
+          
+          await base44.entities.SaleCommission?.create?.({
+            sale_id: saleRecord.id,
+            seller_id: sc.seller_id,
+            seller_name: sellers.find(s => s.id === sc.seller_id)?.name || 'Vendedor',
+            commission_type: sc.commission_type,
+            commission_value: sc.commission_value,
+            commission_amount: commissionAmt
+          }).catch(() => {});
+        }
 
         // Atualiza produto
         await base44.entities.Product.update(product.id, {
