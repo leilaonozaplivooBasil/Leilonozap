@@ -103,9 +103,8 @@ Deno.serve(async (req) => {
             postalService: false
         };
 
-        // Se for cartão, adicionar dados do cartão E remover dueDate (cartão é instantâneo)
+        // Se for cartão, adicionar dados do cartão
         if (billing_type === 'CREDIT_CARD' && card_data) {
-            delete paymentPayload.dueDate; // Cartão não tem vencimento
             
             paymentPayload.creditCard = {
                 holderName: card_data.holderName,

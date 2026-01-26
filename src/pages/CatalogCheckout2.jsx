@@ -753,6 +753,7 @@ export default function CatalogCheckout2() {
 
                                     {/* Botão Pagar */}
                                     <button
+                                        type="button"
                                         onClick={handleCreatePreference}
                                         disabled={
                                             isProcessing || 
