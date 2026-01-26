@@ -23,10 +23,11 @@ Deno.serve(async (req) => {
 
         // 🛡️ IDEMPOTÊNCIA: Verificar se já processamos este evento
         const eventId = data.id || `${data.payment?.id}_${data.event}`;
+        const paymentId = data.payment?.id;
         
         if (eventId) {
             const existingLogs = await base44.asServiceRole.entities.WebhookLog.filter(
-                { webhook_id: eventId },
+                { resource_id: paymentId || eventId, event_type: data.event },
                 null,
                 1
             );
