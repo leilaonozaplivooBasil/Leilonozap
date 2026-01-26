@@ -696,8 +696,7 @@ Transações: ${selectedSession.transactions_count || 0}
 
       setCart([]);
       setBoletoData({ cliente: '', documento: '', parcelas: 1 });
-      setSelectedSeller(null);
-      setCommissionValue(0);
+      setSaleCommissions([]);
       
       // Recarrega tudo com delay para garantir sincronização
       await new Promise(resolve => setTimeout(resolve, 500));
