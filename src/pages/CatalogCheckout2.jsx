@@ -206,8 +206,8 @@ export default function CatalogCheckout2() {
             toast.dismiss('checkout-loading');
 
             if (paymentResponse?.data?.success) {
-                setPixData(paymentResponse.data);
-                toast.success('✅ Pagamento criado! Efetue o PIX para confirmar.');
+                setPixData({...paymentResponse.data, billing_type: paymentType});
+                toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
                 
                 // Registrar tracking
                 try {
@@ -567,36 +567,115 @@ export default function CatalogCheckout2() {
 
                              {/* Método de Pagamento */}
                              <div className="border-t border-gray-600 pt-4 mb-4">
-                                 <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
-                                     <p className="text-green-400 font-semibold text-center">💚 Pagamento via PIX</p>
-                                     <p className="text-gray-400 text-xs text-center mt-1">Aprovação imediata</p>
+                                 <label className="block text-sm font-medium text-gray-300 mb-3">
+                                     Forma de Pagamento
+                                 </label>
+                                 <div className="grid grid-cols-2 gap-3">
+                                     <button
+                                         type="button"
+                                         onClick={() => setPaymentType('PIX')}
+                                         className={`p-3 rounded-lg border-2 transition-all ${
+                                             paymentType === 'PIX'
+                                                 ? 'border-green-500 bg-green-500/10'
+                                                 : 'border-gray-600 bg-gray-700 hover:border-gray-500'
+                                         }`}
+                                     >
+                                         <p className="text-white font-semibold">PIX</p>
+                                         <p className="text-gray-400 text-xs">Aprovação imediata</p>
+                                     </button>
+                                     <button
+                                         type="button"
+                                         onClick={() => setPaymentType('CREDIT_CARD')}
+                                         className={`p-3 rounded-lg border-2 transition-all ${
+                                             paymentType === 'CREDIT_CARD'
+                                                 ? 'border-green-500 bg-green-500/10'
+                                                 : 'border-gray-600 bg-gray-700 hover:border-gray-500'
+                                         }`}
+                                     >
+                                         <p className="text-white font-semibold">Cartão</p>
+                                         <p className="text-gray-400 text-xs">Crédito</p>
+                                     </button>
                                  </div>
                              </div>
 
-                             {/* QR Code PIX */}
-                             {pixData ? (
+                             {/* Dados do Cartão - apenas se CREDIT_CARD */}
+                             {paymentType === 'CREDIT_CARD' && !pixData && (
                                  <div className="space-y-4 border-t border-gray-600 pt-4">
-                                     <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
-                                     <div className="bg-white rounded-lg p-4">
-                                         <img 
-                                             src={pixData.pix_qr_code} 
-                                             alt="QR Code PIX" 
-                                             className="w-64 h-64 mx-auto"
+                                     <p className="text-sm text-gray-400">Dados do Cartão</p>
+                                     <input
+                                         type="text"
+                                         placeholder="Número do cartão"
+                                         className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                                         maxLength="19"
+                                         onChange={(e) => {
+                                             let v = e.target.value.replace(/\D/g, '');
+                                             v = v.match(/.{1,4}/g)?.join(' ') || v;
+                                             e.target.value = v;
+                                         }}
+                                     />
+                                     <div className="grid grid-cols-2 gap-3">
+                                         <input
+                                             type="text"
+                                             placeholder="MM/AA"
+                                             className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                                             maxLength="5"
+                                             onChange={(e) => {
+                                                 let v = e.target.value.replace(/\D/g, '');
+                                                 if (v.length >= 2) v = `${v.slice(0,2)}/${v.slice(2,4)}`;
+                                                 e.target.value = v;
+                                             }}
+                                         />
+                                         <input
+                                             type="text"
+                                             placeholder="CVV"
+                                             className="px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                                             maxLength="4"
                                          />
                                      </div>
-                                     <button
-                                         onClick={() => {
-                                             navigator.clipboard.writeText(pixData.pix_payload);
-                                             toast.success('Código PIX copiado!');
-                                         }}
-                                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg"
-                                     >
-                                         📋 Copiar Código PIX
-                                     </button>
-                                     <div className="bg-gray-700 rounded-lg p-3">
-                                         <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
-                                         <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
-                                     </div>
+                                     <input
+                                         type="text"
+                                         placeholder="Nome impresso no cartão"
+                                         className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white"
+                                     />
+                                 </div>
+                             )}
+
+                             {/* QR Code PIX ou Sucesso Cartão */}
+                             {pixData ? (
+                                 <div className="space-y-4 border-t border-gray-600 pt-4">
+                                     {pixData.billing_type === 'PIX' ? (
+                                         <>
+                                             <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
+                                             <div className="bg-white rounded-lg p-4">
+                                                 <img 
+                                                     src={pixData.pix_qr_code} 
+                                                     alt="QR Code PIX" 
+                                                     className="w-64 h-64 mx-auto"
+                                                 />
+                                             </div>
+                                             <button
+                                                 onClick={() => {
+                                                     navigator.clipboard.writeText(pixData.pix_payload);
+                                                     toast.success('Código PIX copiado!');
+                                                 }}
+                                                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg"
+                                             >
+                                                 📋 Copiar Código PIX
+                                             </button>
+                                             <div className="bg-gray-700 rounded-lg p-3">
+                                                 <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
+                                                 <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                                             </div>
+                                         </>
+                                     ) : (
+                                         <>
+                                             <h3 className="text-lg font-bold text-green-400 text-center">✅ Pagamento Processado</h3>
+                                             <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30">
+                                                 <p className="text-green-400 text-center">Cartão de crédito processado com sucesso!</p>
+                                                 <p className="text-gray-400 text-sm text-center mt-2">Aguarde a confirmação.</p>
+                                             </div>
+                                         </>
+                                     )}
                                      <button
                                          onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
                                          className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg"
@@ -616,7 +695,7 @@ export default function CatalogCheckout2() {
                                          ) : (
                                              <>
                                                  <ShoppingCart className="w-5 h-5" />
-                                                 Gerar PIX
+                                                 {paymentType === 'PIX' ? 'Gerar PIX' : 'Pagar com Cartão'}
                                              </>
                                          )}
                                      </button>
