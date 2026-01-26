@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Plus, Package, DollarSign, TrendingUp, Search, Filter,
-  Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen
+  Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
+  Trash2, RotateCcw
 } from 'lucide-react';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
@@ -57,6 +58,9 @@ export default function ProductManagement() {
   const [showCalculator, setShowCalculator] = useState(false);
   const [showGoogleShopping, setShowGoogleShopping] = useState(false);
   const [googleShoppingProduct, setGoogleShoppingProduct] = useState(null);
+  const [showOperationModal, setShowOperationModal] = useState(false);
+  const [operationType, setOperationType] = useState(null);
+  const [operationData, setOperationData] = useState({ operatorName: '', reason: '' });
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     lot: '',
@@ -337,6 +341,13 @@ export default function ProductManagement() {
                 >
                   <DollarSign className="w-4 h-4 mr-2" />
                   PDV
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => navigate(createPageUrl("ProductOperationHistory"))}
+                  className="cursor-pointer hover:bg-gray-100"
+                >
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Mais Ações
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => {
@@ -972,34 +983,25 @@ export default function ProductManagement() {
                           </Button>
                           <Button
                             type="button"
-                            onClick={async () => {
-                              if (!confirm('⚠️ Resetar estoque? Isso irá zerar vendas e lucro deste produto.')) return;
-
-                              try {
-                                const totalQty = (editingProduct.quantity || 0) + (editingProduct.quantity_sold || 0);
-
-                                await base44.entities.Product.update(editingProduct.id, {
-                                  quantity: totalQty,
-                                  quantity_sold: 0,
-                                  sold_amount: 0,
-                                  profit: 0,
-                                  status: 'ESTOQUE'
-                                });
-
-                                alert('✅ Estoque resetado com sucesso!');
-                                sessionStorage.removeItem('products_cache_v3');
-                                sessionStorage.removeItem('products_cache_time_v3');
-                                setShowAddForm(false);
-                                setEditingProduct(null);
-                                setTimeout(() => loadData(), 1000);
-                              } catch (error) {
-                                console.error('Erro ao resetar estoque:', error);
-                                alert('❌ Erro ao resetar estoque');
-                              }
+                            onClick={() => {
+                              setOperationType('zerar_estoque');
+                              setShowOperationModal(true);
                             }}
                             className="bg-orange-600 hover:bg-orange-700"
                           >
-                            🔄 Resetar Estoque
+                            <RotateCcw className="w-4 h-4 mr-2" />
+                            Zerar Estoque
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              setOperationType('excluir_produto');
+                              setShowOperationModal(true);
+                            }}
+                            className="bg-red-600 hover:bg-red-700"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Excluir Produto
                           </Button>
                         </>
                       )}
@@ -1047,6 +1049,118 @@ export default function ProductManagement() {
         }}
         productName={googleShoppingProduct}
       />
+
+      {/* MODAL DE CONFIRMAÇÃO DE OPERAÇÃO */}
+      {showOperationModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <Card className="bg-gray-800 border-gray-700 max-w-md w-full">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white">
+                  {operationType === 'zerar_estoque' ? '🔄 Zerar Estoque' : '🗑️ Excluir Produto'}
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowOperationModal(false);
+                    setOperationData({ operatorName: '', reason: '' });
+                  }}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-gray-300">Nome do Operador *</Label>
+                  <Input
+                    value={operationData.operatorName}
+                    onChange={(e) => setOperationData({...operationData, operatorName: e.target.value})}
+                    className="bg-gray-700 text-white"
+                    placeholder="Digite seu nome"
+                  />
+                </div>
+                <div>
+                  <Label className="text-gray-300">Motivo da {operationType === 'zerar_estoque' ? 'zeração de estoque' : 'exclusão'} *</Label>
+                  <Textarea
+                    value={operationData.reason}
+                    onChange={(e) => setOperationData({...operationData, reason: e.target.value})}
+                    className="bg-gray-700 text-white"
+                    placeholder="Descreva o motivo..."
+                    rows={3}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={async () => {
+                      if (!operationData.operatorName || !operationData.reason) {
+                        alert('⚠️ Preencha todos os campos');
+                        return;
+                      }
+
+                      try {
+                        // Registra a operação
+                        await base44.entities.ProductOperation.create({
+                          product_id: editingProduct.id,
+                          product_description: editingProduct.description,
+                          operation_type: operationType,
+                          operator_name: operationData.operatorName,
+                          reason: operationData.reason,
+                          operation_date: new Date().toISOString()
+                        });
+
+                        if (operationType === 'zerar_estoque') {
+                          // Zera o estoque
+                          const totalQty = (editingProduct.quantity || 0) + (editingProduct.quantity_sold || 0);
+                          await base44.entities.Product.update(editingProduct.id, {
+                            quantity: totalQty,
+                            quantity_sold: 0,
+                            sold_amount: 0,
+                            profit: 0,
+                            status: 'ESTOQUE'
+                          });
+                          alert('✅ Estoque zerado com sucesso!');
+                        } else {
+                          // Exclui o produto
+                          await base44.entities.Product.delete(editingProduct.id);
+                          alert('✅ Produto excluído com sucesso!');
+                        }
+
+                        sessionStorage.removeItem('products_cache_v3');
+                        sessionStorage.removeItem('products_cache_time_v3');
+                        setShowAddForm(false);
+                        setEditingProduct(null);
+                        setShowOperationModal(false);
+                        setOperationData({ operatorName: '', reason: '' });
+                        setTimeout(() => loadData(), 1000);
+                      } catch (error) {
+                        console.error('Erro:', error);
+                        alert('❌ Erro ao realizar operação');
+                      }
+                    }}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    Confirmar Operação
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowOperationModal(false);
+                      setOperationData({ operatorName: '', reason: '' });
+                    }}
+                    className="flex-1 border-gray-600 text-gray-300"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
