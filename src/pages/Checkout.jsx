@@ -53,7 +53,10 @@ export default function CheckoutPage() {
         if (v.replace(/\D/g,'').length === 8) searchCep(v);
     };
 
-    const handleCreatePagSeguroPayment = async () => {
+    const [pixData, setPixData] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleCreateAsaasPayment = async () => {
          if (!lastName || lastName.trim() === '') {
              toast.error('Por favor, preencha seu sobrenome');
              return;
@@ -104,48 +107,41 @@ export default function CheckoutPage() {
              return;
          }
 
+         setIsProcessing(true);
+         toast.loading('Gerando pagamento...', { id: 'checkout-loading' });
+
          try {
              const savedUserJSON = localStorage.getItem('currentUser');
              const savedUser = JSON.parse(savedUserJSON);
 
-             const auctionId = auction.id;
-             console.log('🔄 Criando pagamento PagSeguro para:', auctionId);
+             console.log('🔄 Criando pagamento ASAAS para leilão:', auction.id);
 
-             const paymentData = {
-                 auction_id: auctionId,
+             const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
+                 auction_id: auction.id,
+                 buyer_name: `${firstName.trim()} ${lastName.trim()}`,
+                 buyer_email: email.trim(),
+                 buyer_cpf: cpf.trim(),
+                 buyer_phone: phone.trim(),
                  amount: auction.current_price,
-                 user_data: {
-                     id: savedUser.id,
-                     email: email.trim(),
-                     full_name: savedUser.full_name,
-                     phone: phone.trim(),
-                     cpf: cpf.trim(),
-                     last_name: lastName.trim(),
-                     address_street: addressStreet.trim(),
-                     address_number: addressNumber.trim(),
-                     address_complement: addressComplement.trim(),
-                     address_neighborhood: addressNeighborhood.trim(),
-                     address_city: addressCity.trim(),
-                     address_state: addressState.trim(),
-                     address_zip_code: addressZip.trim()
-                 }
-             };
+                 billing_type: 'PIX',
+                 description: `Arremate - ${auction.title}`
+             });
 
-             const response = await base44.functions.invoke('createPagSeguroPayment', paymentData);
-             console.log('📦 Resposta PagSeguro:', JSON.stringify(response, null, 2));
+             toast.dismiss('checkout-loading');
 
-             if (response?.data?.success || response?.order_id) {
-                 console.log('✅ PagSeguro Order ID:', response.order_id);
-                 toast.success('Ordem criada no PagSeguro!');
-                 toast.info('QR Code: ' + (response.qr_code || 'Processando...'));
+             if (paymentResponse?.data?.success) {
+                 setPixData(paymentResponse.data);
+                 toast.success('✅ PIX gerado! Escaneie o QR Code para pagar.');
              } else {
-                 console.error('❌ Erro na resposta:', response);
-                 toast.error(response?.data?.error || 'Erro ao criar pagamento PagSeguro');
+                 toast.error(paymentResponse?.data?.error || 'Erro ao gerar pagamento');
              }
 
          } catch (error) {
              console.error('Erro:', error);
-             toast.error('Erro ao criar pagamento PagSeguro');
+             toast.dismiss('checkout-loading');
+             toast.error('Erro ao criar pagamento');
+         } finally {
+             setIsProcessing(false);
          }
      };
 
@@ -436,29 +432,71 @@ export default function CheckoutPage() {
                                  </div>
                              </div>
 
-                             {/* PagSeguro apenas */}
-                             <div className="border-t border-gray-600 pt-4 mb-4 bg-green-600/10 rounded-lg p-3">
-                                 <p className="text-green-400 text-sm font-semibold mb-2">✓ Pagamento via PagSeguro PIX</p>
-                                 <p className="text-gray-300 text-xs">Pagamento instantâneo e seguro</p>
-                             </div>
-
-                             <div className="space-y-3">
-                                 <button
-                                     onClick={handleCreatePagSeguroPayment}
-                                     disabled={!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
-                                     className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                             {/* QR Code PIX */}
+                             {pixData ? (
+                                 <div className="space-y-4 border-t border-gray-600 pt-4">
+                                     <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
+                                     <div className="bg-white rounded-lg p-4">
+                                         <img 
+                                             src={pixData.pix_qr_code} 
+                                             alt="QR Code PIX" 
+                                             className="w-64 h-64 mx-auto"
+                                         />
+                                     </div>
+                                     <button
+                                         onClick={() => {
+                                             navigator.clipboard.writeText(pixData.pix_payload);
+                                             toast.success('Código PIX copiado!');
+                                         }}
+                                         className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg"
                                      >
-                                     <ShoppingCart className="w-5 h-5" />
-                                     Pagar com PagSeguro
-                                 </button>
-                                 {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
-                                 <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
-                                 )}
-                             </div>
+                                         📋 Copiar Código PIX
+                                     </button>
+                                     <div className="bg-gray-700 rounded-lg p-3">
+                                         <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
+                                         <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                                     </div>
+                                     <button
+                                         onClick={() => navigate(createPageUrl('MyWinnings'))}
+                                         className="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-lg"
+                                     >
+                                         Ver Meus Arremates
+                                     </button>
+                                 </div>
+                             ) : (
+                                 <>
+                                     <div className="border-t border-gray-600 pt-4 mb-4">
+                                         <div className="bg-green-600/10 rounded-lg p-3 border border-green-500/30">
+                                             <p className="text-green-400 font-semibold text-center">💚 Pagamento via PIX</p>
+                                             <p className="text-gray-400 text-xs text-center mt-1">Aprovação imediata</p>
+                                         </div>
+                                     </div>
 
-                             <p className="text-xs text-gray-500 text-center mt-4">
-                                Pagamento seguro via PagSeguro
-                             </p>
+                                     <div className="space-y-3">
+                                         <button
+                                             onClick={handleCreateAsaasPayment}
+                                             disabled={isProcessing || !firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === ''}
+                                             className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+                                         >
+                                             {isProcessing ? (
+                                                 <Loader2 className="w-5 h-5 animate-spin" />
+                                             ) : (
+                                                 <>
+                                                     <ShoppingCart className="w-5 h-5" />
+                                                     Gerar PIX
+                                                 </>
+                                             )}
+                                         </button>
+                                         {(!firstName || firstName.trim() === '' || !lastName || lastName.trim() === '' || !email || email.trim() === '' || !phone || phone.trim() === '' || !cpf || cpf.trim() === '' || !addressStreet || addressStreet.trim() === '' || !addressNumber || addressNumber.trim() === '' || !addressNeighborhood || addressNeighborhood.trim() === '' || !addressCity || addressCity.trim() === '' || !addressState || addressState.trim() === '' || !addressZip || addressZip.trim() === '') && (
+                                             <p className="text-xs text-yellow-400">Preencha todos os campos obrigatórios</p>
+                                         )}
+                                     </div>
+
+                                     <p className="text-xs text-gray-500 text-center mt-4">
+                                        Pagamento seguro via ASAAS
+                                     </p>
+                                 </>
+                             )}
                         </CardContent>
                     </Card>
                 </div>
