@@ -87,10 +87,17 @@ export default function Profile() {
       if (!savedUser) return;
       
       const user = JSON.parse(savedUser);
-      const orders = await base44.entities.CatalogSale.filter({ buyer_id: user.id }, '-created_date', 50);
-      setCatalogOrders(orders || []);
+      console.log('🔍 [Profile] Buscando pedidos para:', { id: user.id, email: user.email });
+      
+      const allOrders = await base44.entities.CatalogSale.list('-created_date', 500);
+      const userOrders = allOrders.filter(order => 
+        order.buyer_id === user.id || order.buyer_email === user.email
+      );
+      
+      console.log('✅ [Profile] Pedidos encontrados:', userOrders.length, userOrders);
+      setCatalogOrders(userOrders || []);
     } catch (error) {
-      console.error('Erro ao carregar pedidos:', error);
+      console.error('❌ Erro ao carregar pedidos:', error);
       setCatalogOrders([]);
     }
   };
