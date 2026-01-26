@@ -2036,21 +2036,9 @@ ${boletoInfo}================================
                                         <p className="text-gray-400">Total</p>
                                         <p className="text-green-400 font-bold">R$ {sellerTotal.toFixed(2)}</p>
                                       </div>
-                                      <div className="bg-orange-900/40 border border-orange-700 rounded p-2 flex items-center justify-between">
-                                        <div>
-                                          <p className="text-orange-300 text-xs">Comissão</p>
-                                          <p className="text-orange-400 font-bold">R$ {sellerCommission.toFixed(2)}</p>
-                                        </div>
-                                        <Button
-                                          size="sm"
-                                          onClick={() => {
-                                            const sale = sales[0];
-                                            handleEditCommission(sale);
-                                          }}
-                                          className="bg-blue-600 hover:bg-blue-700 h-6 px-1 text-xs"
-                                        >
-                                          ✏️
-                                        </Button>
+                                      <div className="bg-gray-700 rounded p-2">
+                                        <p className="text-gray-400">Comissão Total</p>
+                                        <p className="text-orange-400 font-bold">R$ {sellerCommission.toFixed(2)}</p>
                                       </div>
                                       </div>
                                       <table className="w-full text-xs">
