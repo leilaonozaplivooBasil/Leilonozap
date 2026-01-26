@@ -634,7 +634,7 @@ export default function CatalogCheckout2() {
                                         ) : (
                                             <>
                                                 <ShoppingCart className="w-5 h-5" />
-                                                {paymentType === 'PIX' ? 'GERAR PIX' : 'PAGAR AGORA'}
+                                                GERAR PIX
                                             </>
                                         )}
                                     </button>
