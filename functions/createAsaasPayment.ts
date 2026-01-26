@@ -116,22 +116,6 @@ Deno.serve(async (req) => {
                 expiryYear: card_data.expiryYear,
                 ccv: card_data.ccv
             };
-            
-            // creditCardHolderInfo SÓ se endereço for completo (senão omitir)
-            if (card_data.address) {
-                paymentPayload.creditCardHolderInfo = {
-                    name: buyer_name,
-                    email: buyer_email,
-                    cpfCnpj: cleanCpf,
-                    postalCode: card_data.address.zip_code,
-                    addressNumber: card_data.address.number,
-                    addressComplement: card_data.address.complement || '',
-                    phone: cleanPhone
-                };
-                console.log('📍 Endereço do cartão incluído');
-            } else {
-                console.log('⚠️ Sem endereço - testando sem creditCardHolderInfo');
-            }
         }
 
         console.log('📤 Enviando payload para ASAAS:', JSON.stringify(paymentPayload, null, 2));
