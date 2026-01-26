@@ -1301,10 +1301,9 @@ const DashboardContent = ({ user, isAdmin }) => {
                   Sacar
                 </Button>
               </div>
-
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+              </CardContent>
+              </Card>
 
       <div className="grid gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
