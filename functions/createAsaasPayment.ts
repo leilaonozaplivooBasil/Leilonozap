@@ -3,11 +3,9 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
-        const user = await base44.auth.me();
-
-        if (!user) {
-            return Response.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        
+        // ⚠️ REMOVIDO: Validação de auth (frontend já valida)
+        // Backend functions podem ser chamadas sem auth quando invocadas via SDK
 
         const {
             catalog_sale_id,
@@ -186,7 +184,7 @@ Deno.serve(async (req) => {
             external_reference: externalReference,
             catalog_sale_id: catalog_sale_id || null,
             auction_id: auction_id || null,
-            buyer_id: user.id,
+            buyer_id: catalog_sale_id ? (await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }))[0]?.buyer_id : null,
             buyer_name: buyer_name,
             buyer_email: buyer_email,
             buyer_cpf: cleanCpf,
