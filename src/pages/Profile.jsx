@@ -450,6 +450,7 @@ export default function Profile() {
         </div>
 
         {activeTab === 'profile' && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Info */}
           <div className="lg:col-span-2">
@@ -531,8 +532,9 @@ export default function Profile() {
                                     </Button>
                                 </div>
                             </CardContent>
-                          </Card>
-                      )}
+                            </Card>
+                            </>
+                            )}
 
                       <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Ou escolha uma cor para o avatar de letra:</p>
                       <div className="flex flex-wrap gap-2">
