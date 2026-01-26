@@ -2297,6 +2297,102 @@ ${boletoInfo}================================
           </div>
         )}
 
+        {/* MODAL EDITAR COMISSÃO */}
+        {showEditCommissionModal && editingCommissionSale && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <Card className="bg-white border-gray-200 max-w-lg w-full">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    <DollarSign className="w-5 h-5 text-orange-600" />
+                    Editar Comissão do Vendedor
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setShowEditCommissionModal(false);
+                      setEditingCommissionSale(null);
+                    }}
+                    className="text-gray-600"
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-gray-600 mb-2">
+                    <strong>Vendedor:</strong> {editingCommissionSale.seller_name || 'Sem vendedor'}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    <strong>Produto:</strong> {editingCommissionSale.product_description}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {new Date(editingCommissionSale.sale_datetime).toLocaleString('pt-BR')}
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-gray-700 text-sm mb-2 block font-medium">Tipo de Comissão</label>
+                  <select
+                    value={editCommissionData.commission_type}
+                    onChange={(e) => setEditCommissionData({...editCommissionData, commission_type: e.target.value})}
+                    className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
+                  >
+                    <option value="percentage">Porcentagem (%)</option>
+                    <option value="fixed">Valor Fixo (R$)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-gray-700 text-sm mb-2 block font-medium">
+                    {editCommissionData.commission_type === 'percentage' ? 'Porcentagem (%)' : 'Valor (R$)'}
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editCommissionData.commission_value}
+                    onChange={(e) => setEditCommissionData({...editCommissionData, commission_value: parseFloat(e.target.value) || 0})}
+                    className="bg-white text-gray-900 border-gray-300"
+                    placeholder={editCommissionData.commission_type === 'percentage' ? '10' : '50.00'}
+                  />
+                </div>
+
+                {editCommissionData.commission_value > 0 && (
+                  <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
+                    <p className="text-gray-700 font-medium">Valor da Comissão:</p>
+                    <p className="text-2xl font-bold text-orange-600">
+                      R$ {editCommissionData.commission_type === 'percentage' 
+                        ? ((editingCommissionSale.total_amount * editCommissionData.commission_value) / 100).toFixed(2)
+                        : editCommissionData.commission_value.toFixed(2)
+                      }
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={saveEditedCommission}
+                    className="flex-1 bg-green-600 hover:bg-green-700"
+                  >
+                    Salvar Comissão
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowEditCommissionModal(false);
+                      setEditingCommissionSale(null);
+                    }}
+                    variant="outline"
+                    className="flex-1 border-gray-300"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         {/* MODAL EDITAR VENDA */}
         {showEditSaleModal && editingSale && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
