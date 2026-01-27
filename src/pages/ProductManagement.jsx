@@ -693,7 +693,22 @@ export default function ProductManagement() {
                       <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_perfeito || 0}</td>
                       <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_bom || 0}</td>
                       <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
-                      <td className="p-3 text-gray-900 text-sm cursor-pointer" onClick={() => handleEdit(product)}>{product.notes || '-'}</td>
+                      <td 
+                        className="p-3 text-gray-900 text-sm cursor-pointer hover:bg-gray-200 transition-colors max-w-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExpandedNotes(prev => ({...prev, [product.id]: !prev[product.id]}));
+                        }}
+                      >
+                        <div className={expandedNotes[product.id] ? '' : 'truncate'}>
+                          {product.notes || '-'}
+                        </div>
+                        {product.notes && product.notes.length > 50 && (
+                          <span className="text-blue-600 text-xs">
+                            {expandedNotes[product.id] ? '▲ minimizar' : '▼ ver mais'}
+                          </span>
+                        )}
+                      </td>
                       <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
                       <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>
                         R$ {(() => {
