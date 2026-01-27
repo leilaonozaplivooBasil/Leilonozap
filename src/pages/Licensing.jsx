@@ -739,26 +739,14 @@ const DashboardContent = ({ user, isAdmin }) => {
   }, []); // Remove dependências para carregar apenas uma vez
 
   const getNoteStack = (balance) => {
-    // 🆕 ORDENAÇÃO INVERTIDA: maior valor primeiro (R$ 200 na frente)
-    const sortedNotes = [...valoraNotesDashboard].sort((a, b) => b.value - a.value);
-
-    let centerNote = sortedNotes.find((note) => balance >= note.value) || sortedNotes[sortedNotes.length - 1];
-
-    if (!centerNote && sortedNotes.length > 0) {
-      centerNote = sortedNotes[sortedNotes.length - 1];
-    } else if (!centerNote) {
-      return [{}, {}, {}, {}, {}];
-    }
-
-    const currentIndex = sortedNotes.findIndex((note) => note.value === centerNote.value);
-
-    const getCircularIndex = (idx) => (idx + sortedNotes.length) % sortedNotes.length;
-
-    const guardianNote = sortedNotes[sortedNotes.length - 1];
-    const backBackNote = sortedNotes[getCircularIndex(currentIndex - 2)];
-    const backNote = sortedNotes[getCircularIndex(currentIndex - 1)];
-    const frontNote = centerNote;
-    const sideNote = sortedNotes[getCircularIndex(currentIndex + 1)];
+    // 🆕 PILHA FIXA: R$ 200 sempre na frente, independente do saldo
+    // Ordem: R$ 200 (frente) → R$ 100 → R$ 50 → R$ 20 → R$ 10 → R$ 5 → R$ 2 (guardião/fundo)
+    
+    const frontNote = valoraNotesDashboard.find(n => n.value === 200) || valoraNotesDashboard[0];
+    const backNote = valoraNotesDashboard.find(n => n.value === 100) || valoraNotesDashboard[1];
+    const backBackNote = valoraNotesDashboard.find(n => n.value === 50) || valoraNotesDashboard[2];
+    const sideNote = valoraNotesDashboard.find(n => n.value === 20) || valoraNotesDashboard[3];
+    const guardianNote = valoraNotesDashboard.find(n => n.value === 10) || valoraNotesDashboard[4];
 
     return [guardianNote, backBackNote, backNote, frontNote, sideNote];
   };
