@@ -102,8 +102,57 @@ export default function InvestorDashboard() {
           // ✅ Busca planos do parceiro (prioriza sistema novo)
           const investments = [];
           
+          // Buscar PartnerPlanPurchases (sistema novo)
+          try {
+            const purchases = await base44.entities.PartnerPlanPurchase.filter({ 
+              user_id: user.id, 
+              status: 'active' 
+            });
+            
+            purchases.forEach(purchase => {
+              // Calcula rendimento baseado na modalidade
+              let profit = 0;
+              let returnDate = null;
+              
+              if (purchase.is_investment && purchase.investment_rate) {
+                // Modalidade investimento: juros compostos mensais
+                const startDate = new Date(purchase.activated_at);
+                const now = new Date();
+                const monthsPassed = Math.floor((now - startDate) / (1000 * 60 * 60 * 24 * 30));
+                
+                // Fórmula: M = C × (1 + i)^t
+                const rate = purchase.investment_rate / 100;
+                const accumulated = purchase.plan_amount * Math.pow(1 + rate, monthsPassed);
+                profit = Math.round(accumulated - purchase.plan_amount);
+                
+                // Data de retirada: 12 meses após início
+                returnDate = purchase.withdrawal_available_date || 
+                  new Date(new Date(purchase.activated_at).setMonth(new Date(purchase.activated_at).getMonth() + 12)).toISOString();
+              } else {
+                // Modalidade compra: 3% fixo em 60 dias
+                profit = Math.round(purchase.plan_amount * 0.03);
+                returnDate = new Date(new Date(purchase.activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString();
+              }
+              
+              investments.push({
+                id: purchase.id,
+                plan: purchase.plan_name,
+                amount: purchase.plan_amount,
+                startDate: purchase.activated_at,
+                currentStep: 0,
+                products: [],
+                estimatedProfit: profit,
+                estimatedReturn: returnDate,
+                isInvestment: purchase.is_investment || false,
+                investmentRate: purchase.investment_rate || null
+              });
+            });
+          } catch (error) {
+            console.error('Erro ao carregar PartnerPlanPurchases:', error);
+          }
+          
           // Buscar plano antigo APENAS se não houver compras no novo sistema
-          if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
+          if (investments.length === 0 && user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
             investments.push({
               id: `legacy_${user.id}`,
               plan: user.active_partner_plan,
@@ -112,7 +161,9 @@ export default function InvestorDashboard() {
               currentStep: 0,
               products: [],
               estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
-              estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
+              estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+              isInvestment: false,
+              investmentRate: null
             });
           }
           
@@ -449,10 +500,17 @@ export default function InvestorDashboard() {
                           <p className="text-xs sm:text-sm text-gray-400">
                             Iniciado em {new Date(investment.startDate).toLocaleDateString('pt-BR')} • {daysPassed} dias
                           </p>
+                          {investment.isInvestment && investment.investmentRate && (
+                            <Badge className="mt-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-white text-xs">
+                              💰 Investimento {investment.investmentRate}% a.m.
+                            </Badge>
+                          )}
                         </div>
                         <div className="text-left sm:text-right w-full sm:w-auto">
                           <p className="text-xl sm:text-2xl font-bold text-white">R$ {investment.amount.toLocaleString('pt-BR')}</p>
-                          <p className="text-xs sm:text-sm text-green-400 font-semibold">+ R$ {investment.estimatedProfit.toLocaleString('pt-BR')} lucro</p>
+                          <p className="text-xs sm:text-sm text-green-400 font-semibold">
+                            + R$ {investment.estimatedProfit.toLocaleString('pt-BR')} {investment.isInvestment ? 'rendimento' : 'lucro'}
+                          </p>
                         </div>
                       </div>
                     </CardHeader>
@@ -537,7 +595,9 @@ export default function InvestorDashboard() {
                         <div className="flex items-center gap-2 sm:gap-3">
                           <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                           <div>
-                            <p className="text-xs sm:text-sm text-gray-400">Retorno Previsto</p>
+                            <p className="text-xs sm:text-sm text-gray-400">
+                              {investment.isInvestment ? 'Retirada Disponível em' : 'Retorno Previsto'}
+                            </p>
                             <p className="font-bold text-white text-sm sm:text-base">
                               {new Date(investment.estimatedReturn).toLocaleDateString('pt-BR')}
                             </p>
@@ -547,7 +607,9 @@ export default function InvestorDashboard() {
                           <p className="text-xl sm:text-2xl font-bold text-green-400">
                             R$ {(investment.amount + investment.estimatedProfit).toLocaleString('pt-BR')}
                           </p>
-                          <p className="text-xs text-gray-400">valor total</p>
+                          <p className="text-xs text-gray-400">
+                            {investment.isInvestment ? 'saldo acumulado' : 'valor total'}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
