@@ -65,7 +65,26 @@ export default function ActivePartners() {
         '-activated_at', 
         500
       );
-      setPartnerPurchases(purchases);
+
+      // Buscar usuários com planos ativos (retrocompatibilidade)
+      const usersWithPlans = await base44.entities.AppUser.list('-partner_plan_activated_at', 500);
+      const legacyActivations = usersWithPlans
+        .filter(user => user.active_partner_plan && user.partner_plan_activated_at)
+        .map(user => ({
+          id: `legacy_${user.id}`,
+          user_id: user.id,
+          user_name: user.full_name,
+          user_email: user.email,
+          plan_name: user.active_partner_plan,
+          plan_amount: user.partner_plan_amount,
+          activated_at: user.partner_plan_activated_at,
+          status: 'active',
+          activation_source: 'legacy'
+        }));
+
+      // Combinar compras novas + ativações antigas
+      const allActivations = [...purchases, ...legacyActivations];
+      setPartnerPurchases(allActivations);
     } catch (error) {
       console.error('Erro ao carregar parceiros:', error);
       toast.error('Erro ao carregar parceiros');
@@ -311,7 +330,11 @@ export default function ActivePartners() {
                             <h3 className="text-xl font-bold text-white">{purchase.user_name}</h3>
                             <p className="text-gray-400 text-sm">{purchase.user_email}</p>
                             <Badge className="mt-2 bg-purple-600 text-white text-xs">
-                              {purchase.activation_source === 'manual' ? '🔧 Ativação Manual' : '💰 Lucre Conosco'}
+                              {purchase.activation_source === 'manual' 
+                                ? '🔧 Ativação Manual' 
+                                : purchase.activation_source === 'legacy'
+                                ? '📋 Sistema Anterior'
+                                : '💰 Lucre Conosco'}
                             </Badge>
                           </div>
                           <div className="flex gap-2">
