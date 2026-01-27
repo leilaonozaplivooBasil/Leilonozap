@@ -31,6 +31,7 @@ import ErrorReport from './pages/ErrorReport';
 import Home from './pages/Home';
 import Influencers from './pages/Influencers';
 import InfluencersDashboard from './pages/InfluencersDashboard';
+import InvestorDashboard from './pages/InvestorDashboard';
 import Landing from './pages/Landing';
 import LicenseeOrders from './pages/LicenseeOrders';
 import Licensing from './pages/Licensing';
@@ -71,7 +72,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import InvestorDashboard from './pages/InvestorDashboard';
 import __Layout from './Layout.jsx';
 
 
@@ -109,6 +109,7 @@ export const PAGES = {
     "Home": Home,
     "Influencers": Influencers,
     "InfluencersDashboard": InfluencersDashboard,
+    "InvestorDashboard": InvestorDashboard,
     "Landing": Landing,
     "LicenseeOrders": LicenseeOrders,
     "Licensing": Licensing,
@@ -149,7 +150,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "InvestorDashboard": InvestorDashboard,
 }
 
 export const pagesConfig = {

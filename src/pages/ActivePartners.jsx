@@ -61,17 +61,31 @@ export default function ActivePartners() {
   const loadPartners = async () => {
     setIsLoading(true);
     try {
-      // Buscar todas as compras de planos ativas
+      // 1️⃣ Buscar todas as compras de planos ativas no sistema novo
       const purchases = await base44.entities.PartnerPlanPurchase.filter(
         { status: 'active' }, 
         '-activated_at', 
         500
       );
 
-      // Buscar usuários com planos ativos (retrocompatibilidade)
+      // 2️⃣ Buscar usuários com planos ativos no sistema antigo (AppUser)
       const usersWithPlans = await base44.entities.AppUser.list('-partner_plan_activated_at', 500);
+      
+      // 3️⃣ CRIAR SET de user_ids que JÁ TEM planos no sistema novo
+      const userIdsWithNewPlans = new Set(purchases.map(p => p.user_id));
+      
+      // 4️⃣ Filtrar legacies: APENAS quem NÃO tem planos no sistema novo
       const legacyActivations = usersWithPlans
-        .filter(user => user.active_partner_plan && user.partner_plan_activated_at)
+        .filter(user => {
+          // Só inclui se:
+          // - Tem dados de plano no AppUser
+          // - E NÃO tem nenhum registro no PartnerPlanPurchase
+          return (
+            user.active_partner_plan && 
+            user.partner_plan_activated_at && 
+            !userIdsWithNewPlans.has(user.id)
+          );
+        })
         .map(user => ({
           id: `legacy_${user.id}`,
           user_id: user.id,
@@ -84,7 +98,12 @@ export default function ActivePartners() {
           activation_source: 'legacy'
         }));
 
-      // Combinar compras novas + ativações antigas
+      console.log('📊 Estatísticas de carregamento:');
+      console.log('- Planos no sistema novo:', purchases.length);
+      console.log('- Planos legacy (sem migração):', legacyActivations.length);
+      console.log('- Total de ativações exibidas:', purchases.length + legacyActivations.length);
+
+      // ✅ Combinar: novo sistema + legacies SEM duplicação
       const allActivations = [...purchases, ...legacyActivations];
       setPartnerPurchases(allActivations);
     } catch (error) {
