@@ -61,16 +61,16 @@ export default function InvestorDashboard() {
   const [showContract, setShowContract] = useState(false);
   const [acceptedContract, setAcceptedContract] = useState(false);
 
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const savedUserJSON = localStorage.getItem('currentUser');
-        if (savedUserJSON) {
-          const userFromStorage = JSON.parse(savedUserJSON);
-          
-          // ✅ SEMPRE sincroniza com o banco para pegar ativações mais recentes
-          const freshUsers = await base44.entities.AppUser.filter({ id: userFromStorage.id });
-          const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
+  // 🔄 Função para carregar dados (reutilizável)
+  const loadUserData = async () => {
+    try {
+      const savedUserJSON = localStorage.getItem('currentUser');
+      if (savedUserJSON) {
+        const userFromStorage = JSON.parse(savedUserJSON);
+        
+        // ✅ SEMPRE sincroniza com o banco para pegar ativações mais recentes
+        const freshUsers = await base44.entities.AppUser.filter({ id: userFromStorage.id });
+        const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
           
           setCurrentUser(user);
           setPixFormData({
@@ -179,20 +179,30 @@ export default function InvestorDashboard() {
             }
           }
           
-          console.log('✅ Total de investimentos carregados:', investments.length);
-          setActiveInvestments(investments);
-        } else {
-          navigate(createPageUrl("Partners"));
-        }
-      } catch (error) {
-        console.error("Erro ao carregar usuário:", error);
+        console.log('✅ Total de investimentos carregados:', investments.length);
+        setActiveInvestments(investments);
+      } else {
         navigate(createPageUrl("Partners"));
-      } finally {
-        setIsLoading(false);
       }
+    } catch (error) {
+      console.error("Erro ao carregar usuário:", error);
+      navigate(createPageUrl("Partners"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadUserData();
+
+    // 🔄 AUTO-REFRESH: Recarrega dados quando a página volta ao foco
+    const handleFocus = () => {
+      console.log('🔄 Página focada - recarregando planos ativos...');
+      loadUserData();
     };
 
-    loadUser();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [navigate]);
 
   const commonFeatures = [
@@ -1211,9 +1221,8 @@ export default function InvestorDashboard() {
                       if (response?.data?.is_paid || response?.is_paid) {
                         toast.success("✅ Pagamento PIX confirmado!");
                         setShowPlansModal(false);
-                        setTimeout(() => {
-                          window.location.reload();
-                        }, 2000);
+                        // Recarrega dados diretamente (sem reload de página)
+                        await loadUserData();
                       } else {
                         toast.info("⏳ Pagamento PIX ainda não identificado. Aguarde alguns segundos e tente novamente.");
                       }
