@@ -748,8 +748,8 @@ const DashboardContent = ({ user, isAdmin }) => {
     const sideNote = valoraNotesDashboard.find(n => n.value === 20) || valoraNotesDashboard[3];
     const guardianNote = valoraNotesDashboard.find(n => n.value === 10) || valoraNotesDashboard[4];
 
-    // Array retorna na ordem crescente de z-index: [z-0, z-1, z-2, z-3, z-4]
-    return [guardianNote, sideNote, backBackNote, backNote, frontNote];
+    // Array na ordem da desestruturação: [guardianNote, backBackNote, backNote, frontNote, sideNote]
+    return [guardianNote, backBackNote, backNote, frontNote, sideNote];
   };
 
   const [guardianNote, backBackNote, backNote, frontNote, sideNote] = getNoteStack(user.valora_pay_balance || 0);
