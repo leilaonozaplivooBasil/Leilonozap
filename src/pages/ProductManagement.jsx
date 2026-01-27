@@ -61,6 +61,7 @@ export default function ProductManagement() {
   const [showOperationModal, setShowOperationModal] = useState(false);
   const [operationType, setOperationType] = useState(null);
   const [operationData, setOperationData] = useState({ operatorName: '', reason: '' });
+  const [expandedNotes, setExpandedNotes] = useState({});
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     lot: '',
