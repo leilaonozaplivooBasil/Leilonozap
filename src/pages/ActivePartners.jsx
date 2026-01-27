@@ -49,7 +49,9 @@ export default function ActivePartners() {
   const [editFormData, setEditFormData] = useState({
     plan_name: '',
     plan_amount: 0,
-    activated_at: ''
+    activated_at: '',
+    is_investment: false,
+    investment_rate: 3
   });
 
   useEffect(() => {
@@ -100,7 +102,9 @@ export default function ActivePartners() {
       plan_amount: purchase.plan_amount || 0,
       activated_at: purchase.activated_at 
         ? new Date(purchase.activated_at).toISOString().split('T')[0]
-        : ''
+        : '',
+      is_investment: purchase.is_investment || false,
+      investment_rate: purchase.investment_rate || 3
     });
   };
 
@@ -124,6 +128,11 @@ export default function ActivePartners() {
         });
       }
 
+      // Calcular data de retirada (12 meses a partir da ativação)
+      const withdrawalDate = editFormData.is_investment 
+        ? new Date(new Date(editFormData.activated_at).setMonth(new Date(editFormData.activated_at).getMonth() + 12)).toISOString()
+        : null;
+
       // Verificar se é ativação legacy ou nova
       if (editingPurchase.activation_source === 'legacy') {
         // Atualizar no AppUser
@@ -138,7 +147,11 @@ export default function ActivePartners() {
           plan_name: editFormData.plan_name || null,
           plan_amount: parseFloat(editFormData.plan_amount) || 0,
           activated_at: activationDateTime,
-          purchase_periods: schedule
+          purchase_periods: schedule,
+          is_investment: editFormData.is_investment || false,
+          investment_rate: editFormData.is_investment ? parseFloat(editFormData.investment_rate) : null,
+          withdrawal_available_date: withdrawalDate,
+          accumulated_return: 0
         });
       }
 
@@ -517,6 +530,71 @@ export default function ActivePartners() {
                   <p className="text-xs text-gray-400 mt-1">
                     Esta data define o cronograma de compras ativas
                   </p>
+                </div>
+
+                {/* Opção de Investimento com Rendimento */}
+                <div className="border-t border-gray-700 pt-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <input
+                      type="checkbox"
+                      id="is_investment"
+                      checked={editFormData.is_investment}
+                      onChange={(e) => setEditFormData({...editFormData, is_investment: e.target.checked})}
+                      className="w-4 h-4 rounded border-gray-600 bg-gray-700 text-green-600 focus:ring-green-500"
+                    />
+                    <Label htmlFor="is_investment" className="text-gray-300 cursor-pointer">
+                      💰 Modalidade Investimento (com rendimento)
+                    </Label>
+                  </div>
+
+                  {editFormData.is_investment && (
+                    <div className="space-y-4 pl-7 border-l-2 border-green-500/30">
+                      <div>
+                        <Label className="text-gray-300 mb-2 block">Taxa de Rendimento Mensal</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setEditFormData({...editFormData, investment_rate: 3})}
+                            className={`p-3 rounded-lg border-2 transition-all ${
+                              editFormData.investment_rate === 3
+                                ? 'border-green-500 bg-green-600/20 text-green-400'
+                                : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                            }`}
+                          >
+                            <p className="font-bold text-lg">3%</p>
+                            <p className="text-xs">ao mês</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditFormData({...editFormData, investment_rate: 5})}
+                            className={`p-3 rounded-lg border-2 transition-all ${
+                              editFormData.investment_rate === 5
+                                ? 'border-green-500 bg-green-600/20 text-green-400'
+                                : 'border-gray-600 bg-gray-700 text-gray-300 hover:border-gray-500'
+                            }`}
+                          >
+                            <p className="font-bold text-lg">5%</p>
+                            <p className="text-xs">ao mês</p>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-900/20 border border-blue-600/30 rounded-lg p-3">
+                        <p className="text-blue-300 text-xs font-semibold mb-1">ℹ️ Como Funciona o Investimento</p>
+                        <ul className="text-xs text-gray-400 space-y-1">
+                          <li>• <strong className="text-white">Prazo:</strong> 12 meses mínimo</li>
+                          <li>• <strong className="text-white">Rendimento:</strong> juros compostos mensais</li>
+                          <li>• <strong className="text-white">Retirada:</strong> após 12 meses da ativação</li>
+                          <li>• O rendimento é <strong className="text-green-400">reinvestido automaticamente</strong></li>
+                        </ul>
+                        {editFormData.activated_at && (
+                          <p className="text-green-400 text-xs mt-2 font-semibold">
+                            📅 Retirada disponível em: {new Date(new Date(editFormData.activated_at).setMonth(new Date(editFormData.activated_at).getMonth() + 12)).toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 pt-4">
