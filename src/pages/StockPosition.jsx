@@ -22,6 +22,7 @@ export default function StockPosition() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [expandedNotes, setExpandedNotes] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
