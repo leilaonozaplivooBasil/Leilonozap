@@ -88,12 +88,40 @@ export default function PartnerPlanActivation() {
     try {
       toast.loading('Ativando plano...');
 
-      // Atualizar usuário com plano ativo
+      const activationDateTime = new Date(activationDate).toISOString();
+
+      // Criar cronograma de compras
+      const schedule = [];
+      const start = new Date(activationDate);
+      for (let i = 1; i <= 3; i++) {
+        const purchaseDate = new Date(start);
+        purchaseDate.setDate(purchaseDate.getDate() + (i * 15));
+        schedule.push({
+          period: i,
+          date: purchaseDate.toISOString(),
+          status: 'scheduled'
+        });
+      }
+
+      // ✅ CRIAR REGISTRO DE COMPRA INDIVIDUAL
+      await base44.entities.PartnerPlanPurchase.create({
+        user_id: foundUser.id,
+        user_name: foundUser.full_name,
+        user_email: foundUser.email,
+        plan_name: selectedPlan.name,
+        plan_amount: selectedPlan.minInvestment,
+        activated_at: activationDateTime,
+        status: 'active',
+        purchase_periods: schedule,
+        activation_source: 'manual'
+      });
+
+      // Atualizar usuário (mantém compatibilidade com código existente)
       const AppUser = base44.entities.AppUser;
       await AppUser.update(foundUser.id, {
         active_partner_plan: selectedPlan.name,
         partner_plan_amount: selectedPlan.minInvestment,
-        partner_plan_activated_at: new Date(activationDate).toISOString()
+        partner_plan_activated_at: activationDateTime
       });
 
       // Log da ativação
@@ -106,7 +134,8 @@ export default function PartnerPlanActivation() {
           user_id: foundUser.id,
           user_email: foundUser.email,
           plan_name: selectedPlan.name,
-          plan_amount: selectedPlan.minInvestment
+          plan_amount: selectedPlan.minInvestment,
+          activated_at: activationDateTime
         }
       }).catch(() => {});
 

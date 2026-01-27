@@ -41,15 +41,15 @@ const PLANS = [
 ];
 
 export default function ActivePartners() {
-  const [partners, setPartners] = useState([]);
+  const [partnerPurchases, setPartnerPurchases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [editingPartner, setEditingPartner] = useState(null);
+  const [editingPurchase, setEditingPurchase] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    active_partner_plan: '',
-    partner_plan_amount: 0,
-    partner_plan_activated_at: ''
+    plan_name: '',
+    plan_amount: 0,
+    activated_at: ''
   });
 
   useEffect(() => {
@@ -59,10 +59,13 @@ export default function ActivePartners() {
   const loadPartners = async () => {
     setIsLoading(true);
     try {
-      // Buscar todos os usuários com plano ativo
-      const allUsers = await base44.entities.AppUser.list('-partner_plan_activated_at', 500);
-      const activePartners = allUsers.filter(user => user.active_partner_plan);
-      setPartners(activePartners);
+      // Buscar todas as compras de planos ativas
+      const purchases = await base44.entities.PartnerPlanPurchase.filter(
+        { status: 'active' }, 
+        '-activated_at', 
+        500
+      );
+      setPartnerPurchases(purchases);
     } catch (error) {
       console.error('Erro ao carregar parceiros:', error);
       toast.error('Erro ao carregar parceiros');
@@ -71,47 +74,61 @@ export default function ActivePartners() {
     }
   };
 
-  const handleEdit = (partner) => {
-    setEditingPartner(partner);
+  const handleEdit = (purchase) => {
+    setEditingPurchase(purchase);
     setEditFormData({
-      active_partner_plan: partner.active_partner_plan || '',
-      partner_plan_amount: partner.partner_plan_amount || 0,
-      partner_plan_activated_at: partner.partner_plan_activated_at 
-        ? new Date(partner.partner_plan_activated_at).toISOString().split('T')[0]
+      plan_name: purchase.plan_name || '',
+      plan_amount: purchase.plan_amount || 0,
+      activated_at: purchase.activated_at 
+        ? new Date(purchase.activated_at).toISOString().split('T')[0]
         : ''
     });
   };
 
   const handleSave = async () => {
-    if (!editingPartner) return;
+    if (!editingPurchase) return;
 
     setIsSaving(true);
     try {
-      await base44.entities.AppUser.update(editingPartner.id, {
-        active_partner_plan: editFormData.active_partner_plan || null,
-        partner_plan_amount: parseFloat(editFormData.partner_plan_amount) || 0,
-        partner_plan_activated_at: editFormData.partner_plan_activated_at 
-          ? new Date(editFormData.partner_plan_activated_at).toISOString()
-          : null
+      const activationDateTime = new Date(editFormData.activated_at).toISOString();
+
+      // Recalcular cronograma de compras
+      const schedule = [];
+      const start = new Date(editFormData.activated_at);
+      for (let i = 1; i <= 3; i++) {
+        const purchaseDate = new Date(start);
+        purchaseDate.setDate(purchaseDate.getDate() + (i * 15));
+        schedule.push({
+          period: i,
+          date: purchaseDate.toISOString(),
+          status: 'scheduled'
+        });
+      }
+
+      await base44.entities.PartnerPlanPurchase.update(editingPurchase.id, {
+        plan_name: editFormData.plan_name || null,
+        plan_amount: parseFloat(editFormData.plan_amount) || 0,
+        activated_at: activationDateTime,
+        purchase_periods: schedule
       });
 
       // Log da edição
       await base44.entities.SystemLog.create({
-        step: 'PARTNER_PLAN_EDITED',
+        step: 'PARTNER_PURCHASE_EDITED',
         status: 'success',
-        message: `Plano editado para ${editingPartner.full_name}`,
+        message: `Compra de plano editada para ${editingPurchase.user_name}`,
         component_name: 'ActivePartners',
         payload: {
-          user_id: editingPartner.id,
-          user_email: editingPartner.email,
-          plan_name: editFormData.active_partner_plan,
-          plan_amount: editFormData.partner_plan_amount,
-          activated_at: editFormData.partner_plan_activated_at
+          purchase_id: editingPurchase.id,
+          user_id: editingPurchase.user_id,
+          plan_name: editFormData.plan_name,
+          plan_amount: editFormData.plan_amount,
+          activated_at: editFormData.activated_at
         }
       }).catch(() => {});
 
-      toast.success('✅ Parceiro atualizado com sucesso!');
-      setEditingPartner(null);
+      toast.success('✅ Ativação atualizada com sucesso!');
+      setEditingPurchase(null);
       loadPartners();
     } catch (error) {
       console.error('Erro ao salvar:', error);
@@ -121,33 +138,31 @@ export default function ActivePartners() {
     }
   };
 
-  const handleDeactivate = async (partner) => {
-    if (!confirm(`Deseja desativar o plano de ${partner.full_name}?`)) return;
+  const handleDeactivate = async (purchase) => {
+    if (!confirm(`Deseja desativar esta compra de ${purchase.user_name}?`)) return;
 
     try {
-      await base44.entities.AppUser.update(partner.id, {
-        active_partner_plan: null,
-        partner_plan_amount: null,
-        partner_plan_activated_at: null
+      await base44.entities.PartnerPlanPurchase.update(purchase.id, {
+        status: 'canceled'
       });
 
       await base44.entities.SystemLog.create({
-        step: 'PARTNER_PLAN_DEACTIVATED',
+        step: 'PARTNER_PURCHASE_CANCELED',
         status: 'success',
-        message: `Plano desativado para ${partner.full_name}`,
+        message: `Compra de plano cancelada para ${purchase.user_name}`,
         component_name: 'ActivePartners',
         payload: {
-          user_id: partner.id,
-          user_email: partner.email,
-          previous_plan: partner.active_partner_plan
+          purchase_id: purchase.id,
+          user_id: purchase.user_id,
+          plan_name: purchase.plan_name
         }
       }).catch(() => {});
 
-      toast.success('✅ Plano desativado!');
+      toast.success('✅ Compra desativada!');
       loadPartners();
     } catch (error) {
       console.error('Erro ao desativar:', error);
-      toast.error('Erro ao desativar plano');
+      toast.error('Erro ao desativar compra');
     }
   };
 
@@ -179,18 +194,18 @@ export default function ActivePartners() {
     return schedule;
   };
 
-  const filteredPartners = partners.filter(partner => {
+  const filteredPurchases = partnerPurchases.filter(purchase => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return (
-      partner.full_name?.toLowerCase().includes(term) ||
-      partner.email?.toLowerCase().includes(term) ||
-      partner.cpf?.toLowerCase().includes(term) ||
-      partner.active_partner_plan?.toLowerCase().includes(term)
+      purchase.user_name?.toLowerCase().includes(term) ||
+      purchase.user_email?.toLowerCase().includes(term) ||
+      purchase.plan_name?.toLowerCase().includes(term)
     );
   });
 
-  const totalInvested = partners.reduce((sum, p) => sum + (p.partner_plan_amount || 0), 0);
+  const totalInvested = partnerPurchases.reduce((sum, p) => sum + (p.plan_amount || 0), 0);
+  const uniquePartners = new Set(partnerPurchases.map(p => p.user_id)).size;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
@@ -207,8 +222,9 @@ export default function ActivePartners() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Total de Parceiros</p>
-                  <p className="text-3xl font-bold text-white">{partners.length}</p>
+                  <p className="text-gray-400 text-sm mb-1">Parceiros Únicos</p>
+                  <p className="text-3xl font-bold text-white">{uniquePartners}</p>
+                  <p className="text-xs text-gray-500 mt-1">{partnerPurchases.length} ativações totais</p>
                 </div>
                 <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
                   <Users className="w-6 h-6 text-green-400" />
@@ -263,52 +279,52 @@ export default function ActivePartners() {
           </div>
         </div>
 
-        {/* Partners List */}
+        {/* Purchases List */}
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-8 h-8 animate-spin text-green-400" />
           </div>
-        ) : filteredPartners.length === 0 ? (
+        ) : filteredPurchases.length === 0 ? (
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-12 text-center">
               <Users className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">Nenhum parceiro encontrado</p>
+              <p className="text-gray-400">Nenhuma ativação encontrada</p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-4">
-            {filteredPartners.map((partner) => {
+            {filteredPurchases.map((purchase) => {
               const schedule = calculatePurchaseSchedule(
-                partner.partner_plan_activated_at, 
-                partner.partner_plan_amount
+                purchase.activated_at, 
+                purchase.plan_amount
               );
               const activePurchases = schedule.filter(s => s.isActive).length;
 
               return (
-                <Card key={partner.id} className="bg-gray-800 border-gray-700 hover:border-green-500/50 transition-all">
+                <Card key={purchase.id} className="bg-gray-800 border-gray-700 hover:border-green-500/50 transition-all">
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                      {/* Info do Parceiro */}
+                      {/* Info da Compra */}
                       <div className="lg:col-span-2 space-y-3">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h3 className="text-xl font-bold text-white">{partner.full_name}</h3>
-                            <p className="text-gray-400 text-sm">{partner.email}</p>
-                            {partner.cpf && (
-                              <p className="text-gray-500 text-xs mt-1">CPF: {partner.cpf}</p>
-                            )}
+                            <h3 className="text-xl font-bold text-white">{purchase.user_name}</h3>
+                            <p className="text-gray-400 text-sm">{purchase.user_email}</p>
+                            <Badge className="mt-2 bg-purple-600 text-white text-xs">
+                              {purchase.activation_source === 'manual' ? '🔧 Ativação Manual' : '💰 Lucre Conosco'}
+                            </Badge>
                           </div>
                           <div className="flex gap-2">
                             <Button
                               size="sm"
-                              onClick={() => handleEdit(partner)}
+                              onClick={() => handleEdit(purchase)}
                               className="bg-blue-600 hover:bg-blue-700"
                             >
                               <Edit2 className="w-4 h-4" />
                             </Button>
                             <Button
                               size="sm"
-                              onClick={() => handleDeactivate(partner)}
+                              onClick={() => handleDeactivate(purchase)}
                               variant="outline"
                               className="border-red-500 text-red-500 hover:bg-red-500/20"
                             >
@@ -321,20 +337,20 @@ export default function ActivePartners() {
                           <div>
                             <p className="text-gray-500 text-xs mb-1">Plano</p>
                             <Badge className="bg-green-600 text-white">
-                              {partner.active_partner_plan}
+                              {purchase.plan_name}
                             </Badge>
                           </div>
                           <div>
                             <p className="text-gray-500 text-xs mb-1">Valor Investido</p>
                             <p className="text-white font-bold">
-                              R$ {(partner.partner_plan_amount || 0).toLocaleString('pt-BR')}
+                              R$ {(purchase.plan_amount || 0).toLocaleString('pt-BR')}
                             </p>
                           </div>
                           <div>
                             <p className="text-gray-500 text-xs mb-1">Data de Ativação</p>
                             <p className="text-white">
-                              {partner.partner_plan_activated_at 
-                                ? new Date(partner.partner_plan_activated_at).toLocaleDateString('pt-BR')
+                              {purchase.activated_at 
+                                ? new Date(purchase.activated_at).toLocaleDateString('pt-BR')
                                 : '-'
                               }
                             </p>
@@ -381,16 +397,16 @@ export default function ActivePartners() {
       </div>
 
       {/* Modal de Edição */}
-      {editingPartner && (
+      {editingPurchase && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <Card className="bg-gray-800 border-gray-700 max-w-md w-full">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-white">Editar Parceiro</CardTitle>
+                <CardTitle className="text-white">Editar Ativação</CardTitle>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setEditingPartner(null)}
+                  onClick={() => setEditingPurchase(null)}
                   className="text-gray-400 hover:text-white"
                 >
                   <X className="w-5 h-5" />
@@ -402,7 +418,7 @@ export default function ActivePartners() {
                 <div>
                   <Label className="text-gray-300 mb-2 block">Nome do Parceiro</Label>
                   <Input
-                    value={editingPartner.full_name}
+                    value={editingPurchase.user_name}
                     disabled
                     className="bg-gray-700 text-gray-400 border-gray-600"
                   />
@@ -411,24 +427,24 @@ export default function ActivePartners() {
                 <div>
                   <Label className="text-gray-300 mb-2 block">Email</Label>
                   <Input
-                    value={editingPartner.email}
+                    value={editingPurchase.user_email}
                     disabled
                     className="bg-gray-700 text-gray-400 border-gray-600"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-gray-300 mb-2 block">Plano Ativo</Label>
+                  <Label className="text-gray-300 mb-2 block">Plano</Label>
                   <select
-                    value={editFormData.active_partner_plan}
+                    value={editFormData.plan_name}
                     onChange={(e) => setEditFormData({
                       ...editFormData, 
-                      active_partner_plan: e.target.value,
-                      partner_plan_amount: PLANS.find(p => p.name === e.target.value)?.minInvestment || editFormData.partner_plan_amount
+                      plan_name: e.target.value,
+                      plan_amount: PLANS.find(p => p.name === e.target.value)?.minInvestment || editFormData.plan_amount
                     })}
                     className="w-full bg-gray-700 border-gray-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
                   >
-                    <option value="">Sem plano</option>
+                    <option value="">Selecione um plano</option>
                     {PLANS.map((plan) => (
                       <option key={plan.name} value={plan.name}>{plan.name}</option>
                     ))}
@@ -439,8 +455,8 @@ export default function ActivePartners() {
                   <Label className="text-gray-300 mb-2 block">Valor do Plano</Label>
                   <Input
                     type="number"
-                    value={editFormData.partner_plan_amount}
-                    onChange={(e) => setEditFormData({...editFormData, partner_plan_amount: e.target.value})}
+                    value={editFormData.plan_amount}
+                    onChange={(e) => setEditFormData({...editFormData, plan_amount: e.target.value})}
                     className="bg-gray-700 border-gray-600 text-white"
                   />
                 </div>
@@ -449,8 +465,8 @@ export default function ActivePartners() {
                   <Label className="text-gray-300 mb-2 block">Data de Ativação</Label>
                   <Input
                     type="date"
-                    value={editFormData.partner_plan_activated_at}
-                    onChange={(e) => setEditFormData({...editFormData, partner_plan_activated_at: e.target.value})}
+                    value={editFormData.activated_at}
+                    onChange={(e) => setEditFormData({...editFormData, activated_at: e.target.value})}
                     className="bg-gray-700 border-gray-600 text-white"
                   />
                   <p className="text-xs text-gray-400 mt-1">
@@ -460,7 +476,7 @@ export default function ActivePartners() {
 
                 <div className="flex gap-3 pt-4">
                   <Button
-                    onClick={() => setEditingPartner(null)}
+                    onClick={() => setEditingPurchase(null)}
                     variant="outline"
                     className="flex-1 border-gray-600 text-gray-300"
                   >
