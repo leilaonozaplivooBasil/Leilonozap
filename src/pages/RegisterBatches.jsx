@@ -240,25 +240,115 @@ export default function RegisterBatches() {
     }
   };
 
-  const handleConvertToProducts = (batch) => {
-    navigate(createPageUrl("ProductManagement"), {
-      state: { batchData: batch }
-    });
+  const handleConvertToProducts = async (batch) => {
+    setIsProcessing(true);
+    setProgress('🔄 Convertendo produtos para estoque...');
+    
+    try {
+      // 1️⃣ Cria registros de Product para cada item do batch
+      const productsToCreate = [];
+      
+      (batch.lotes || []).forEach(lote => {
+        (lote.produtos || []).forEach(produto => {
+          for (let i = 0; i < (produto.quantidade || 1); i++) {
+            productsToCreate.push({
+              date: batch.data_lancamento ? new Date(batch.data_lancamento).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+              lot: lote.numero_lote,
+              description: produto.descricao || `Produto ${produto.codigo || 'N/A'}`,
+              quantity: 1,
+              cost_price: batch.custo_por_unidade || 0,
+              selling_price_retail: 0,
+              selling_price_wholesale: 0,
+              status: 'ESTOQUE',
+              purchase_order: batch.numero_leilao
+            });
+          }
+        });
+      });
+
+      // 2️⃣ Cria produtos em lote (máx 50 por requisição)
+      if (productsToCreate.length > 0) {
+        for (let i = 0; i < productsToCreate.length; i += 50) {
+          const chunk = productsToCreate.slice(i, i + 50);
+          await base44.entities.Product.bulkCreate(chunk);
+          console.log(`✅ ${i + chunk.length} produtos criados no estoque`);
+        }
+      }
+
+      // 3️⃣ Atualiza o batch para "convertido"
+      await base44.entities.BatchRegistration.update(batch.id, {
+        status: 'convertido'
+      });
+
+      console.log('✅ Batch convertido com sucesso');
+      setProgress('');
+      setIsProcessing(false);
+      
+      alert(`✅ ${productsToCreate.length} produtos adicionados ao estoque!`);
+      await loadBatches();
+      
+      // Agora navega para ProductManagement
+      navigate(createPageUrl("ProductManagement"), {
+        state: { batchData: batch }
+      });
+    } catch (error) {
+      console.error('❌ Erro ao converter:', error);
+      alert(`❌ Erro ao converter: ${error.message}`);
+      setProgress('');
+      setIsProcessing(false);
+    }
   };
 
-  const handleConvertSingleLot = (batch, loteIndex) => {
-    const lote = batch.lotes[loteIndex];
+  const handleConvertSingleLot = async (batch, loteIndex) => {
+    setIsProcessing(true);
+    setProgress('🔄 Lançando lote no estoque...');
     
-    // Cria um batch temporário com apenas esse lote
-    const singleLotBatch = {
-      ...batch,
-      lotes: [lote],
-      numero_leilao: `${batch.numero_leilao} - Lote ${lote.numero_lote}`
-    };
-    
-    navigate(createPageUrl("ProductManagement"), {
-      state: { batchData: singleLotBatch }
-    });
+    try {
+      const lote = batch.lotes[loteIndex];
+      
+      // 1️⃣ Cria registros de Product para este lote
+      const productsToCreate = [];
+      
+      (lote.produtos || []).forEach(produto => {
+        for (let i = 0; i < (produto.quantidade || 1); i++) {
+          productsToCreate.push({
+            date: batch.data_lancamento ? new Date(batch.data_lancamento).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            lot: lote.numero_lote,
+            description: produto.descricao || `Produto ${produto.codigo || 'N/A'}`,
+            quantity: 1,
+            cost_price: batch.custo_por_unidade || 0,
+            selling_price_retail: 0,
+            selling_price_wholesale: 0,
+            status: 'ESTOQUE',
+            purchase_order: batch.numero_leilao
+          });
+        }
+      });
+
+      // 2️⃣ Cria produtos em lote
+      if (productsToCreate.length > 0) {
+        for (let i = 0; i < productsToCreate.length; i += 50) {
+          const chunk = productsToCreate.slice(i, i + 50);
+          await base44.entities.Product.bulkCreate(chunk);
+          console.log(`✅ ${i + chunk.length} produtos do lote criados`);
+        }
+      }
+
+      // 3️⃣ Recarrega o cache de status dos lotes
+      await checkLotesStatus([batch]);
+
+      console.log(`✅ Lote ${lote.numero_lote} lançado com sucesso`);
+      setProgress('');
+      setIsProcessing(false);
+      
+      alert(`✅ ${productsToCreate.length} produtos do lote adicionados ao estoque!`);
+      await loadBatches();
+    } catch (error) {
+      console.error('❌ Erro ao lançar lote:', error);
+      alert(`❌ Erro ao lançar lote: ${error.message}`);
+      setProgress('');
+      setIsProcessing(false);
+    }
   };
 
   const toggleBatchExpanded = (batchId) => {
