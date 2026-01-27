@@ -41,6 +41,7 @@ export default function PartnerPlanActivation() {
   const [isSearching, setIsSearching] = useState(false);
   const [isActivating, setIsActivating] = useState(false);
   const [activationHistory, setActivationHistory] = useState([]);
+  const [activationDate, setActivationDate] = useState(new Date().toISOString().split('T')[0]);
 
   const handleSearchUser = async () => {
     if (!searchTerm.trim()) {
@@ -92,7 +93,7 @@ export default function PartnerPlanActivation() {
       await AppUser.update(foundUser.id, {
         active_partner_plan: selectedPlan.name,
         partner_plan_amount: selectedPlan.minInvestment,
-        partner_plan_activated_at: new Date().toISOString()
+        partner_plan_activated_at: new Date(activationDate).toISOString()
       });
 
       // Log da ativação
@@ -129,6 +130,7 @@ export default function PartnerPlanActivation() {
       setSearchTerm('');
       setFoundUser(null);
       setSelectedPlan(null);
+      setActivationDate(new Date().toISOString().split('T')[0]);
     } catch (error) {
       console.error('Erro ao ativar plano:', error);
       toast.dismiss();
@@ -186,6 +188,20 @@ export default function PartnerPlanActivation() {
                     <p><span className="text-gray-400">Email:</span> {foundUser.email}</p>
                     <p><span className="text-gray-400">CPF:</span> {foundUser.cpf}</p>
                   </div>
+                </div>
+              )}
+
+              {/* Data de Ativação */}
+              {foundUser && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-300">Data de Ativação do Plano</label>
+                  <Input
+                    type="date"
+                    value={activationDate}
+                    onChange={(e) => setActivationDate(e.target.value)}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                  <p className="text-xs text-gray-400">Esta data será usada para calcular o cronograma de compras</p>
                 </div>
               )}
 
