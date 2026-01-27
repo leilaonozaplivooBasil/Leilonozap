@@ -99,24 +99,75 @@ export default function InvestorDashboard() {
             console.error('Erro ao carregar imagens:', error);
           }
           
-          // ✅ Busca planos do parceiro (prioriza sistema novo)
+          // ✅ Busca TODOS os planos ativos do parceiro (sistema novo + legacy)
           const investments = [];
           
-          // Buscar plano antigo APENAS se não houver compras no novo sistema
-          if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
-            investments.push({
-              id: `legacy_${user.id}`,
-              plan: user.active_partner_plan,
-              amount: user.partner_plan_amount,
-              startDate: user.partner_plan_activated_at,
-              currentStep: 0,
-              products: [],
-              estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
-              estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
-            });
+          try {
+            // 1️⃣ PRIORIDADE: Buscar compras no sistema novo (PartnerPlanPurchase)
+            const purchases = await base44.entities.PartnerPlanPurchase.filter({ 
+              user_id: user.id,
+              status: 'active'
+            }, '-activated_at', 50);
+            
+            if (purchases && purchases.length > 0) {
+              console.log(`✅ ${purchases.length} plano(s) ativo(s) encontrado(s) no PartnerPlanPurchase`);
+              
+              purchases.forEach(purchase => {
+                // Se for investimento com rendimento
+                if (purchase.is_investment) {
+                  investments.push({
+                    id: purchase.id,
+                    plan: `${purchase.plan_name} - Investimento ${purchase.investment_rate}%`,
+                    amount: purchase.plan_amount,
+                    startDate: purchase.activated_at,
+                    currentStep: 0,
+                    products: [],
+                    isInvestment: true,
+                    investmentRate: purchase.investment_rate,
+                    accumulatedReturn: purchase.accumulated_return || 0,
+                    withdrawalDate: purchase.withdrawal_available_date,
+                    estimatedProfit: Math.round(purchase.plan_amount * 0.03),
+                    estimatedReturn: purchase.withdrawal_available_date || new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
+                  });
+                } else {
+                  // Plano de compra normal (3% em 60 dias)
+                  investments.push({
+                    id: purchase.id,
+                    plan: purchase.plan_name,
+                    amount: purchase.plan_amount,
+                    startDate: purchase.activated_at,
+                    currentStep: 0,
+                    products: [],
+                    isInvestment: false,
+                    estimatedProfit: Math.round(purchase.plan_amount * 0.03),
+                    estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
+                  });
+                }
+              });
+            }
+          } catch (error) {
+            console.error('⚠️ Erro ao buscar PartnerPlanPurchase:', error.message);
           }
           
-          console.log('✅ Investimentos carregados:', investments);
+          // 2️⃣ FALLBACK: Se não encontrou nada no sistema novo, busca legacy no AppUser
+          if (investments.length === 0) {
+            if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
+              console.log('⚠️ Usando plano legacy do AppUser');
+              investments.push({
+                id: `legacy_${user.id}`,
+                plan: user.active_partner_plan,
+                amount: user.partner_plan_amount,
+                startDate: user.partner_plan_activated_at,
+                currentStep: 0,
+                products: [],
+                isInvestment: false,
+                estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
+                estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
+              });
+            }
+          }
+          
+          console.log('✅ Total de investimentos carregados:', investments.length);
           setActiveInvestments(investments);
         } else {
           navigate(createPageUrl("Partners"));
