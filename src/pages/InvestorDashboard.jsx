@@ -66,7 +66,12 @@ export default function InvestorDashboard() {
       try {
         const savedUserJSON = localStorage.getItem('currentUser');
         if (savedUserJSON) {
-          const user = JSON.parse(savedUserJSON);
+          const userFromStorage = JSON.parse(savedUserJSON);
+          
+          // ✅ SEMPRE sincroniza com o banco para pegar ativações mais recentes
+          const freshUsers = await base44.entities.AppUser.filter({ id: userFromStorage.id });
+          const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
+          
           setCurrentUser(user);
           setPixFormData({
             name: user?.full_name || '',
