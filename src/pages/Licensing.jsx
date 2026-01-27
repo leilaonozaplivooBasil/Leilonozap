@@ -740,7 +740,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const getNoteStack = (balance) => {
     // 🆕 PILHA FIXA: R$ 200 sempre na frente, independente do saldo
-    // Ordem: R$ 200 (frente) → R$ 100 → R$ 50 → R$ 20 → R$ 10 → R$ 5 → R$ 2 (guardião/fundo)
+    // Ordem visual da frente para trás: R$ 200 (z-4) → R$ 100 (z-3) → R$ 50 (z-2) → R$ 20 (z-1) → R$ 10 (z-0)
     
     const frontNote = valoraNotesDashboard.find(n => n.value === 200) || valoraNotesDashboard[0];
     const backNote = valoraNotesDashboard.find(n => n.value === 100) || valoraNotesDashboard[1];
@@ -748,7 +748,8 @@ const DashboardContent = ({ user, isAdmin }) => {
     const sideNote = valoraNotesDashboard.find(n => n.value === 20) || valoraNotesDashboard[3];
     const guardianNote = valoraNotesDashboard.find(n => n.value === 10) || valoraNotesDashboard[4];
 
-    return [guardianNote, backBackNote, backNote, frontNote, sideNote];
+    // Array retorna na ordem crescente de z-index: [z-0, z-1, z-2, z-3, z-4]
+    return [guardianNote, sideNote, backBackNote, backNote, frontNote];
   };
 
   const [guardianNote, backBackNote, backNote, frontNote, sideNote] = getNoteStack(user.valora_pay_balance || 0);
