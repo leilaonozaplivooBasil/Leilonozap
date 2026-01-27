@@ -98,16 +98,36 @@ export default function InvestorDashboard() {
           try {
             const investments = [];
             
-            // Se o usuário tem um plano ativo
+            // Buscar compras ativas no PartnerPlanPurchase (sistema novo)
+            const purchases = await base44.entities.PartnerPlanPurchase.filter(
+              { user_id: user.id, status: 'active' },
+              '-activated_at',
+              100
+            );
+
+            purchases.forEach(purchase => {
+              investments.push({
+                id: purchase.id,
+                plan: purchase.plan_name,
+                amount: purchase.plan_amount,
+                startDate: purchase.activated_at,
+                currentStep: 0,
+                products: [],
+                estimatedProfit: Math.round(purchase.plan_amount * 0.03),
+                estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
+              });
+            });
+            
+            // Buscar plano antigo (retrocompatibilidade)
             if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
               investments.push({
-                id: user.id,
+                id: `legacy_${user.id}`,
                 plan: user.active_partner_plan,
                 amount: user.partner_plan_amount,
                 startDate: user.partner_plan_activated_at,
                 currentStep: 0,
                 products: [],
-                estimatedProfit: Math.round(user.partner_plan_amount * 0.03), // 3% estimado
+                estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
                 estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
               });
             }
