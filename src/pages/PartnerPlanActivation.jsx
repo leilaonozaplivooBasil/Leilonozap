@@ -86,7 +86,7 @@ export default function PartnerPlanActivation() {
 
     setIsActivating(true);
     try {
-      toast.loading('Ativando plano...');
+      const loadingToast = toast.loading('Ativando plano...');
 
       const activationDateTime = new Date(activationDate).toISOString();
 
@@ -103,8 +103,8 @@ export default function PartnerPlanActivation() {
         });
       }
 
-      // ✅ CRIAR REGISTRO DE COMPRA INDIVIDUAL
-      await base44.entities.PartnerPlanPurchase.create({
+      // ✅ CRIAR REGISTRO DE COMPRA INDIVIDUAL (cada ativação = 1 registro)
+      const newPurchase = await base44.entities.PartnerPlanPurchase.create({
         user_id: foundUser.id,
         user_name: foundUser.full_name,
         user_email: foundUser.email,
@@ -116,13 +116,10 @@ export default function PartnerPlanActivation() {
         activation_source: 'manual'
       });
 
-      // Atualizar usuário (mantém compatibilidade com código existente)
-      const AppUser = base44.entities.AppUser;
-      await AppUser.update(foundUser.id, {
-        active_partner_plan: selectedPlan.name,
-        partner_plan_amount: selectedPlan.minInvestment,
-        partner_plan_activated_at: activationDateTime
-      });
+      console.log('✅ Plano criado com ID:', newPurchase.id);
+
+      // ⚠️ NÃO atualiza mais o AppUser (legacy) - agora só usa PartnerPlanPurchase
+      // O AppUser mantém os campos para compatibilidade mas não é mais fonte de verdade
 
       // Log da ativação
       await base44.entities.SystemLog.create({
@@ -135,12 +132,13 @@ export default function PartnerPlanActivation() {
           user_email: foundUser.email,
           plan_name: selectedPlan.name,
           plan_amount: selectedPlan.minInvestment,
-          activated_at: activationDateTime
+          activated_at: activationDateTime,
+          purchase_id: newPurchase.id
         }
       }).catch(() => {});
 
-      toast.dismiss();
-      toast.success(`✅ Plano ativado com sucesso!`);
+      toast.dismiss(loadingToast);
+      toast.success(`✅ Plano ${selectedPlan.name} ativado! O parceiro verá no painel.`);
 
       // Adicionar ao histórico
       setActivationHistory([

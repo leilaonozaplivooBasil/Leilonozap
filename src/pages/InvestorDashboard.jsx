@@ -107,10 +107,20 @@ export default function InvestorDashboard() {
             const purchases = await base44.entities.PartnerPlanPurchase.filter({ 
               user_id: user.id,
               status: 'active'
-            }, '-activated_at', 50);
+            }, '-activated_at', 100);
+            
+            console.log('🔍 Buscando planos para user_id:', user.id);
+            console.log('📦 Planos encontrados:', purchases?.length || 0);
             
             if (purchases && purchases.length > 0) {
-              console.log(`✅ ${purchases.length} plano(s) ativo(s) encontrado(s) no PartnerPlanPurchase`);
+              console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
+                id: p.id,
+                plan: p.plan_name,
+                amount: p.plan_amount,
+                is_investment: p.is_investment,
+                rate: p.investment_rate,
+                activated_at: p.activated_at
+              })));
               
               purchases.forEach(purchase => {
                 // Se for investimento com rendimento
@@ -144,9 +154,11 @@ export default function InvestorDashboard() {
                   });
                 }
               });
+            } else {
+              console.log('⚠️ Nenhum plano encontrado no PartnerPlanPurchase para este usuário');
             }
           } catch (error) {
-            console.error('⚠️ Erro ao buscar PartnerPlanPurchase:', error.message);
+            console.error('❌ Erro ao buscar PartnerPlanPurchase:', error.message);
           }
           
           // 2️⃣ FALLBACK: Se não encontrou nada no sistema novo, busca legacy no AppUser
