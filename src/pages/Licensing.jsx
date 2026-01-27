@@ -748,8 +748,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     const sideNote = valoraNotesDashboard.find(n => n.value === 20) || valoraNotesDashboard[3];
     const guardianNote = valoraNotesDashboard.find(n => n.value === 10) || valoraNotesDashboard[4];
 
-    // Array na ordem da desestruturação: [guardianNote, sideNote, backBackNote, backNote, frontNote]
-    // Isso mapeia para z-index: [z0, z1, z2, z3, z4]
+    // Array retorna na ordem crescente de z-index: [z-0, z-1, z-2, z-3, z-4]
     return [guardianNote, sideNote, backBackNote, backNote, frontNote];
   };
 
@@ -1295,57 +1294,52 @@ const DashboardContent = ({ user, isAdmin }) => {
             </div>
             
             <div className="relative w-64 h-40 flex items-center justify-center nota-stack-container">
-              {/* R$ 10 - FUNDO (z-index 0) */}
               {guardianNote && guardianNote.url &&
               <img
                 src={guardianNote.url}
-                alt="R$ 10"
+                alt=""
                 className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-15 translate-y-3 -translate-x-1 nota-stack-guardian nota-entrance-guardian"
                 style={{ zIndex: 0, opacity: 0.65 }}
                 onError={(e) => {e.target.style.display = 'none';}} />
 
               }
               
-              {/* R$ 20 (z-index 1) */}
-              {sideNote && sideNote.url &&
+              {backBackNote && backBackNote.url &&
               <img
-                src={sideNote.url}
-                alt="R$ 20"
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
+                src={backBackNote.url}
+                alt=""
+                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-10 translate-y-2 nota-stack-backback nota-entrance-backback"
                 style={{ zIndex: 1, opacity: 0.7 }}
                 onError={(e) => {e.target.style.display = 'none';}} />
 
               }
               
-              {/* R$ 50 (z-index 2) */}
-              {backBackNote && backBackNote.url &&
+              {backNote && backNote.url &&
               <img
-                src={backBackNote.url}
-                alt="R$ 50"
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-10 translate-y-2 nota-stack-backback nota-entrance-backback"
+                src={backNote.url}
+                alt=""
+                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-5 translate-y-1 nota-stack-back nota-entrance-back"
                 style={{ zIndex: 2, opacity: 0.8 }}
                 onError={(e) => {e.target.style.display = 'none';}} />
 
               }
               
-              {/* R$ 100 (z-index 3) */}
-              {backNote && backNote.url &&
+              {sideNote && sideNote.url &&
               <img
-                src={backNote.url}
-                alt="R$ 100"
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-5 translate-y-1 nota-stack-back nota-entrance-back"
+                src={sideNote.url}
+                alt=""
+                className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
                 style={{ zIndex: 3, opacity: 0.9 }}
                 onError={(e) => {e.target.style.display = 'none';}} />
 
               }
 
-              {/* R$ 200 - FRENTE (z-index 4) */}
               {frontNote && frontNote.url &&
               <img
                 src={frontNote.url}
-                alt="R$ 200"
+                alt=""
                 className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-2 nota-stack-front nota-entrance-front"
-                style={{ zIndex: 4, opacity: 1 }}
+                style={{ zIndex: 4 }}
                 onError={(e) => {e.target.style.display = 'none';}} />
 
               }
