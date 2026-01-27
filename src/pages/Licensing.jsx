@@ -1304,12 +1304,22 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               }
               
+              {sideNote && sideNote.url &&
+              <img
+                src={sideNote.url}
+                alt=""
+                className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
+                style={{ zIndex: 1, opacity: 0.7 }}
+                onError={(e) => {e.target.style.display = 'none';}} />
+
+              }
+              
               {backBackNote && backBackNote.url &&
               <img
                 src={backBackNote.url}
                 alt=""
                 className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-10 translate-y-2 nota-stack-backback nota-entrance-backback"
-                style={{ zIndex: 1, opacity: 0.7 }}
+                style={{ zIndex: 2, opacity: 0.8 }}
                 onError={(e) => {e.target.style.display = 'none';}} />
 
               }
@@ -1319,16 +1329,6 @@ const DashboardContent = ({ user, isAdmin }) => {
                 src={backNote.url}
                 alt=""
                 className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-5 translate-y-1 nota-stack-back nota-entrance-back"
-                style={{ zIndex: 2, opacity: 0.8 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
-
-              }
-              
-              {sideNote && sideNote.url &&
-              <img
-                src={sideNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
                 style={{ zIndex: 3, opacity: 0.9 }}
                 onError={(e) => {e.target.style.display = 'none';}} />
 
