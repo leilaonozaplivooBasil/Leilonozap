@@ -739,12 +739,13 @@ const DashboardContent = ({ user, isAdmin }) => {
   }, []); // Remove dependências para carregar apenas uma vez
 
   const getNoteStack = (balance) => {
-    const sortedNotes = [...valoraNotesDashboard].sort((a, b) => a.value - b.value);
+    // 🆕 ORDENAÇÃO INVERTIDA: maior valor primeiro (R$ 200 na frente)
+    const sortedNotes = [...valoraNotesDashboard].sort((a, b) => b.value - a.value);
 
-    let centerNote = sortedNotes.find((note) => balance >= note.value) || sortedNotes[0];
+    let centerNote = sortedNotes.find((note) => balance >= note.value) || sortedNotes[sortedNotes.length - 1];
 
     if (!centerNote && sortedNotes.length > 0) {
-      centerNote = sortedNotes[0];
+      centerNote = sortedNotes[sortedNotes.length - 1];
     } else if (!centerNote) {
       return [{}, {}, {}, {}, {}];
     }
@@ -753,7 +754,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
     const getCircularIndex = (idx) => (idx + sortedNotes.length) % sortedNotes.length;
 
-    const guardianNote = sortedNotes[0];
+    const guardianNote = sortedNotes[sortedNotes.length - 1];
     const backBackNote = sortedNotes[getCircularIndex(currentIndex - 2)];
     const backNote = sortedNotes[getCircularIndex(currentIndex - 1)];
     const frontNote = centerNote;
