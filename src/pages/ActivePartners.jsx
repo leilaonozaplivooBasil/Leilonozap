@@ -124,12 +124,23 @@ export default function ActivePartners() {
         });
       }
 
-      await base44.entities.PartnerPlanPurchase.update(editingPurchase.id, {
-        plan_name: editFormData.plan_name || null,
-        plan_amount: parseFloat(editFormData.plan_amount) || 0,
-        activated_at: activationDateTime,
-        purchase_periods: schedule
-      });
+      // Verificar se é ativação legacy ou nova
+      if (editingPurchase.activation_source === 'legacy') {
+        // Atualizar no AppUser
+        await base44.entities.AppUser.update(editingPurchase.user_id, {
+          active_partner_plan: editFormData.plan_name || null,
+          partner_plan_amount: parseFloat(editFormData.plan_amount) || 0,
+          partner_plan_activated_at: activationDateTime
+        });
+      } else {
+        // Atualizar no PartnerPlanPurchase
+        await base44.entities.PartnerPlanPurchase.update(editingPurchase.id, {
+          plan_name: editFormData.plan_name || null,
+          plan_amount: parseFloat(editFormData.plan_amount) || 0,
+          activated_at: activationDateTime,
+          purchase_periods: schedule
+        });
+      }
 
       // Log da edição
       await base44.entities.SystemLog.create({
@@ -151,7 +162,7 @@ export default function ActivePartners() {
       loadPartners();
     } catch (error) {
       console.error('Erro ao salvar:', error);
-      toast.error('Erro ao salvar alterações');
+      toast.error('Erro ao salvar alterações: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -161,9 +172,20 @@ export default function ActivePartners() {
     if (!confirm(`Deseja desativar esta compra de ${purchase.user_name}?`)) return;
 
     try {
-      await base44.entities.PartnerPlanPurchase.update(purchase.id, {
-        status: 'canceled'
-      });
+      // Verificar se é ativação legacy ou nova
+      if (purchase.activation_source === 'legacy') {
+        // Desativar no AppUser
+        await base44.entities.AppUser.update(purchase.user_id, {
+          active_partner_plan: null,
+          partner_plan_amount: null,
+          partner_plan_activated_at: null
+        });
+      } else {
+        // Desativar no PartnerPlanPurchase
+        await base44.entities.PartnerPlanPurchase.update(purchase.id, {
+          status: 'canceled'
+        });
+      }
 
       await base44.entities.SystemLog.create({
         step: 'PARTNER_PURCHASE_CANCELED',
@@ -181,7 +203,7 @@ export default function ActivePartners() {
       loadPartners();
     } catch (error) {
       console.error('Erro ao desativar:', error);
-      toast.error('Erro ao desativar compra');
+      toast.error('Erro ao desativar compra: ' + error.message);
     }
   };
 
