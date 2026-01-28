@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Share2, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Share2, Trophy, Calendar as CalendarIcon } from "lucide-react";
 import html2canvas from "html2canvas";
 import { base44 } from "@/api/base44Client";
 
