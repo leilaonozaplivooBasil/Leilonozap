@@ -2041,14 +2041,65 @@ ${boletoInfo}================================
                         const dayTotal = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
                         const dayCount = daySales.length;
 
-                        // Agrupa por vendedor dentro do dia
+                        // 🆕 Agrupa por vendedor usando CommissionRecord
                         const sellersByDay = {};
+                        
+                        // Para cada venda, buscar seus CommissionRecords
                         daySales.forEach(sale => {
-                          const sellerName = sale.seller_name || 'Sem vendedor';
-                          if (!sellersByDay[sellerName]) {
-                            sellersByDay[sellerName] = [];
-                          }
-                          sellersByDay[sellerName].push(sale);
+                          // Busca comissões desta venda
+                          base44.entities.CommissionRecord?.filter({ sale_id: sale.id }).then(commissions => {
+                            if (commissions && commissions.length > 0) {
+                              commissions.forEach(comm => {
+                                const sellerKey = comm.recipient_user_id || 'sem_vendedor';
+                                const sellerName = comm.recipient_name || 'Sem vendedor';
+                                
+                                if (!sellersByDay[sellerKey]) {
+                                  sellersByDay[sellerKey] = {
+                                    name: sellerName,
+                                    sales: [],
+                                    totalCommission: 0
+                                  };
+                                }
+                                
+                                // Adiciona venda ao vendedor com o valor da comissão
+                                sellersByDay[sellerKey].sales.push({
+                                  ...sale,
+                                  seller_commission: comm.commission_amount
+                                });
+                                sellersByDay[sellerKey].totalCommission += comm.commission_amount || 0;
+                              });
+                            } else {
+                              // Venda sem comissão registrada
+                              const sellerName = sale.seller_name || 'Sem vendedor';
+                              if (!sellersByDay['sem_vendedor']) {
+                                sellersByDay['sem_vendedor'] = {
+                                  name: sellerName,
+                                  sales: [],
+                                  totalCommission: 0
+                                };
+                              }
+                              sellersByDay['sem_vendedor'].sales.push({
+                                ...sale,
+                                seller_commission: sale.commission_amount || 0
+                              });
+                              sellersByDay['sem_vendedor'].totalCommission += sale.commission_amount || 0;
+                            }
+                          }).catch(() => {
+                            // Fallback: usa seller_name da venda
+                            const sellerName = sale.seller_name || 'Sem vendedor';
+                            if (!sellersByDay['sem_vendedor']) {
+                              sellersByDay['sem_vendedor'] = {
+                                name: sellerName,
+                                sales: [],
+                                totalCommission: 0
+                              };
+                            }
+                            sellersByDay['sem_vendedor'].sales.push({
+                              ...sale,
+                              seller_commission: sale.commission_amount || 0
+                            });
+                            sellersByDay['sem_vendedor'].totalCommission += sale.commission_amount || 0;
+                          });
                         });
 
                         return (
@@ -2072,19 +2123,24 @@ ${boletoInfo}================================
 
                             {/* VENDEDORES DO DIA */}
                             <div className="space-y-3">
-                              {Object.entries(sellersByDay).map(([sellerName, sales]) => {
+                              {Object.entries(sellersByDay).map(([sellerKey, sellerData]) => {
+                                const sellerName = sellerData.name;
+                                const sales = sellerData.sales;
                                 const sellerTotal = sales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-                                const sellerCommission = sales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
+                                const sellerCommission = sellerData.totalCommission;
                                 const sellerCount = sales.length;
 
                                 return (
-                                  <details key={sellerName} className="bg-gray-800 rounded p-3">
+                                  <details key={sellerKey} className="bg-gray-800 rounded p-3">
                                     <summary className="cursor-pointer flex items-center justify-between font-medium text-blue-400 hover:text-blue-300">
                                       <div className="flex items-center gap-2">
                                         <span>👤 {sellerName}</span>
                                         <span className="text-xs text-gray-400">({sellerCount})</span>
                                       </div>
-                                      <span className="text-green-400">R$ {sellerTotal.toFixed(2)}</span>
+                                      <div className="text-right">
+                                        <span className="text-green-400 block">R$ {sellerTotal.toFixed(2)}</span>
+                                        <span className="text-orange-400 text-xs">Comissão: R$ {sellerCommission.toFixed(2)}</span>
+                                      </div>
                                     </summary>
                                     <div className="mt-3 ml-3 space-y-2 border-l-2 border-gray-700 pl-3 max-h-48 overflow-y-auto">
                                       <div className="grid grid-cols-3 gap-2 mb-2 text-xs">
@@ -2113,17 +2169,17 @@ ${boletoInfo}================================
                                         </thead>
                                         <tbody>
                                           {sales.map((sale) => (
-                                            <tr key={sale.id} className="border-b border-gray-700 text-gray-300 hover:bg-gray-700/50">
-                                              <td className="p-1">
-                                                {new Date(sale.sale_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                              </td>
-                                              <td className="p-1 text-xs">{sale.product_description.substring(0, 20)}</td>
-                                              <td className="text-right p-1 text-green-400 font-bold">
-                                                R$ {sale.total_amount.toFixed(2)}
-                                              </td>
-                                              <td className="text-center p-1">
-                                                <span className="text-orange-400 font-bold">R$ {(sale.commission_amount || 0).toFixed(2)}</span>
-                                              </td>
+                                           <tr key={sale.id} className="border-b border-gray-700 text-gray-300 hover:bg-gray-700/50">
+                                             <td className="p-1">
+                                               {new Date(sale.sale_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                             </td>
+                                             <td className="p-1 text-xs">{sale.product_description.substring(0, 20)}</td>
+                                             <td className="text-right p-1 text-green-400 font-bold">
+                                               R$ {sale.total_amount.toFixed(2)}
+                                             </td>
+                                             <td className="text-center p-1">
+                                               <span className="text-orange-400 font-bold">R$ {(sale.seller_commission || 0).toFixed(2)}</span>
+                                             </td>
                                               <td className="text-center p-1">
                                                 <Button
                                                   size="sm"

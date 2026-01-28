@@ -28,17 +28,59 @@ export default function DailyRanking({ allSales }) {
     return d && d.toLocaleDateString('pt-BR') === targetDate;
   });
 
-  const sellersMap = {};
-  daySales.forEach(s => {
-    const name = s.seller_name || 'Sem vendedor';
-    if (!sellersMap[name]) sellersMap[name] = { name, total: 0, count: 0 };
-    sellersMap[name].total += Number(s.total_amount) || 0;
-    sellersMap[name].count += 1;
-  });
+  const [sellersMap, setSellersMap] = React.useState({});
+  const [isLoadingCommissions, setIsLoadingCommissions] = React.useState(true);
 
-  const ranking = Object.values(sellersMap)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
+  React.useEffect(() => {
+    const loadCommissions = async () => {
+      const tempMap = {};
+      
+      for (const sale of daySales) {
+        try {
+          // Busca comissões desta venda
+          const commissions = await base44.entities.CommissionRecord?.filter({ sale_id: sale.id }).catch(() => []);
+          
+          if (commissions && commissions.length > 0) {
+            // Múltiplos vendedores
+            commissions.forEach(comm => {
+              const name = comm.recipient_name || 'Sem vendedor';
+              if (!tempMap[name]) tempMap[name] = { name, total: 0, count: 0 };
+              tempMap[name].total += Number(comm.commission_amount) || 0;
+              tempMap[name].count += 1;
+            });
+          } else {
+            // Fallback: usa seller_name da venda
+            const name = sale.seller_name || 'Sem vendedor';
+            if (!tempMap[name]) tempMap[name] = { name, total: 0, count: 0 };
+            tempMap[name].total += Number(sale.commission_amount) || 0;
+            tempMap[name].count += 1;
+          }
+        } catch (e) {
+          // Fallback silencioso
+          const name = sale.seller_name || 'Sem vendedor';
+          if (!tempMap[name]) tempMap[name] = { name, total: 0, count: 0 };
+          tempMap[name].total += Number(sale.commission_amount) || 0;
+          tempMap[name].count += 1;
+        }
+      }
+      
+      setSellersMap(tempMap);
+      setIsLoadingCommissions(false);
+    };
+    
+    if (daySales.length > 0) {
+      loadCommissions();
+    } else {
+      setIsLoadingCommissions(false);
+    }
+  }, [daySales.length]);
+
+  const ranking = React.useMemo(() => 
+    Object.values(sellersMap)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10),
+    [sellersMap]
+  );
 
   const dayTotal = daySales.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
 
@@ -194,7 +236,12 @@ export default function DailyRanking({ allSales }) {
 
       {/* Lista Top 10 */}
       <div className="space-y-2">
-        {(ranking.length > 0 ? ranking : [{ name: 'Sem dados', total: 0, count: 0 }]).map((r, i) => (
+        {isLoadingCommissions ? (
+          <div className="text-center py-4 text-gray-400">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+            <p className="text-sm">Carregando vendedores...</p>
+          </div>
+        ) : (ranking.length > 0 ? ranking : [{ name: 'Sem vendedor', total: 0, count: 0 }]).map((r, i) => (
           <div key={r.name} className="flex items-center justify-between bg-zinc-900/70 hover:bg-zinc-800 transition-colors rounded-lg px-3 py-2 border border-zinc-800">
             <div className="flex items-center gap-3">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
@@ -216,7 +263,7 @@ export default function DailyRanking({ allSales }) {
               </p>
             </div>
           </div>
-        ))}
+        )))}
       </div>
 
       </div>
