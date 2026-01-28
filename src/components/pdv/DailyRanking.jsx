@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Share2, Trophy, Calendar as CalendarIcon } from "lucide-react";
+import { Share2, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import html2canvas from "html2canvas";
 import { base44 } from "@/api/base44Client";
 
@@ -195,27 +195,27 @@ export default function DailyRanking({ allSales }) {
       {/* Lista Top 10 */}
       <div className="space-y-2">
         {(ranking.length > 0 ? ranking : [{ name: 'Sem dados', total: 0, count: 0 }]).map((r, i) => (
-            <div key={r.name} className="flex items-center justify-between bg-zinc-900/70 hover:bg-zinc-800 transition-colors rounded-lg px-3 py-2 border border-zinc-800">
-              <div className="flex items-center gap-3">
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
-                  i === 0 ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40' :
-                  i === 1 ? 'bg-gray-500/20 text-gray-300 border border-gray-500/40' :
-                  i === 2 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40' :
-                  'bg-zinc-700/50 text-zinc-300 border border-zinc-600'
-                }`}>
-                  {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                </div>
-                <div className="max-w-[60%]">
-                  <p className="text-white font-medium leading-tight break-words">{r.name}</p>
-                  <p className="text-[11px] text-gray-400">{r.count} vendas</p>
-                </div>
+          <div key={r.name} className="flex items-center justify-between bg-zinc-900/70 hover:bg-zinc-800 transition-colors rounded-lg px-3 py-2 border border-zinc-800">
+            <div className="flex items-center gap-3">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
+                i === 0 ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40' :
+                i === 1 ? 'bg-gray-500/20 text-gray-300 border border-gray-500/40' :
+                i === 2 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40' :
+                'bg-zinc-700/50 text-zinc-300 border border-zinc-600'
+              }`}>
+                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
               </div>
-              <div className="text-right flex-shrink-0 min-w-[110px] sm:min-w-[140px] md:min-w-[160px] overflow-hidden">
-                <p className="text-green-400 font-bold font-mono whitespace-nowrap text-ellipsis overflow-hidden" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  R$ {fmt(r.total)}
-                </p>
+              <div className="max-w-[60%]">
+                <p className="text-white font-medium leading-tight break-words">{r.name}</p>
+                <p className="text-[11px] text-gray-400">{r.count} vendas</p>
               </div>
             </div>
+            <div className="text-right flex-shrink-0 min-w-[110px] sm:min-w-[140px] md:min-w-[160px] overflow-hidden">
+              <p className="text-green-400 font-bold font-mono whitespace-nowrap text-ellipsis overflow-hidden" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                R$ {fmt(r.total)}
+              </p>
+            </div>
+          </div>
         ))}
       </div>
 
