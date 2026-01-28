@@ -636,6 +636,72 @@ export default function Cart() {
 
           {/* Coluna Direita - Resumo do Pedido */}
           <div className="space-y-4">
+            {/* Vendedores e Comissões */}
+            <Card className="bg-gray-800 border-gray-700 p-5 mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white font-semibold flex items-center gap-2">
+                  👥 Vendedores e Comissões
+                </h3>
+                <Button
+                  size="sm"
+                  onClick={() => toast.info('Adicionar vendedor')}
+                  className="bg-blue-600 hover:bg-blue-700 text-xs"
+                >
+                  + Adicionar Vendedor
+                </Button>
+              </div>
+
+              {(() => {
+                const referralCode = sessionStorage.getItem('referralCode');
+                let licenseeData = null;
+                let sellers = [];
+
+                // Simula busca do licensee (deve estar no estado no código real)
+                if (referralCode) {
+                  sellers.push({
+                    name: 'Licenciado Principal',
+                    role: 'Licenciada',
+                    percentage: 13,
+                    amount: calculateSubtotal() * 0.13
+                  });
+                }
+
+                // CEO sempre recebe 2%
+                sellers.push({
+                  name: 'CEO SANTANNA',
+                  role: 'Administrador',
+                  percentage: 2,
+                  amount: calculateSubtotal() * 0.02
+                });
+
+                const totalCommission = sellers.reduce((sum, s) => sum + s.amount, 0);
+
+                return (
+                  <div className="space-y-3">
+                    {sellers.map((seller, idx) => (
+                      <div key={idx} className="flex items-center justify-between bg-gray-700/30 rounded-lg p-3">
+                        <div className="flex-1">
+                          <p className="text-white font-medium">{seller.name}</p>
+                          <p className="text-gray-400 text-xs">{seller.role} • {seller.percentage}%</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-green-400 font-bold">R$ {seller.amount.toFixed(2)}</p>
+                          <button className="text-red-400 text-xs hover:text-red-300">×</button>
+                        </div>
+                      </div>
+                    ))}
+
+                    <div className="bg-green-900/20 border border-green-600/30 rounded-lg p-3 mt-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-green-400 font-semibold">💰 Total Comissões:</span>
+                        <span className="text-green-400 font-bold text-lg">R$ {totalCommission.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </Card>
+
             {/* Seu Pedido */}
             <Card className="bg-gray-800 border-gray-700 border-2 border-green-600/30 p-6">
               <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
