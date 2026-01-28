@@ -97,7 +97,6 @@ import MyCatalogOrders from './pages/MyCatalogOrders';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
 import OrderTracking from './pages/OrderTracking';
-import PDV from './pages/PDV';
 import PartnerPlanActivation from './pages/PartnerPlanActivation';
 import Partners from './pages/Partners';
 import PaymentFailure from './pages/PaymentFailure';
@@ -121,6 +120,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
+import PDV from './pages/PDV';
 import __Layout from './Layout.jsx';
 
 
@@ -175,7 +175,6 @@ export const PAGES = {
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
-    "PDV": PDV,
     "PartnerPlanActivation": PartnerPlanActivation,
     "Partners": Partners,
     "PaymentFailure": PaymentFailure,
@@ -199,6 +198,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
+    "PDV": PDV,
 }
 
 export const pagesConfig = {

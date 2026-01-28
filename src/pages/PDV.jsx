@@ -635,6 +635,13 @@ Transações: ${selectedSession.transactions_count || 0}
 
         // 🆕 REGISTRA A VENDA NA ENTIDADE SALE
         const orderCode = generateOrderCode();
+        
+        // ✅ EXTRAI NOMES DOS VENDEDORES PARA EXIBIR NO RELATÓRIO
+        const sellerNames = saleCommissions
+          .map(sc => sellers.find(s => s.id === sc.seller_id)?.name)
+          .filter(Boolean)
+          .join(', ');
+        
         const saleRecord = await base44.entities.Sale.create({
           order_code: orderCode,
           product_id: product.id,
@@ -649,6 +656,7 @@ Transações: ${selectedSession.transactions_count || 0}
           sale_date: saleDate,
           sale_datetime: saleDatetime,
           operator_name: currentUser?.full_name || 'Admin',
+          seller_name: sellerNames || null,
           commission_amount: totalItemCommission,
           boleto_cliente: paymentMethod === 'BOLETO PARCELADO' ? boletoData.cliente : null,
           boleto_documento: paymentMethod === 'BOLETO PARCELADO' ? boletoData.documento : null,
