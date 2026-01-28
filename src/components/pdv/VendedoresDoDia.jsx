@@ -32,10 +32,14 @@ export default function VendedoresDoDia({ daySales, date }) {
 
       // Agrupa por vendedor
       const sellerMap = {};
+      const processedSales = new Set();
       
+      // 1️⃣ Primeiro: processa vendas COM comissões registradas (vendas novas)
       commissionsForDay.forEach(commission => {
         const sale = daySales.find(s => s.id === commission.sale_id);
         if (!sale) return;
+
+        processedSales.add(sale.id);
 
         const sellerId = commission.seller_id;
         if (!sellerMap[sellerId]) {
@@ -50,7 +54,7 @@ export default function VendedoresDoDia({ daySales, date }) {
 
         sellerMap[sellerId].total_commission += commission.commission_amount || 0;
         
-        // Adiciona venda se ainda não foi contada
+        // Adiciona venda se ainda não foi contada para este vendedor
         if (!sellerMap[sellerId].sales.find(s => s.id === sale.id)) {
           sellerMap[sellerId].sales.push({
             ...sale,
@@ -60,16 +64,30 @@ export default function VendedoresDoDia({ daySales, date }) {
         }
       });
 
-      // Se não há comissões, agrupa vendas sem vendedor
-      if (Object.keys(sellerMap).length === 0) {
-        sellerMap['no_seller'] = {
-          seller_id: 'no_seller',
-          seller_name: 'Sem vendedor',
-          total_commission: 0,
-          sales_count: daySales.length,
-          sales: daySales.map(s => ({...s, seller_commission: 0}))
-        };
-      }
+      // 2️⃣ Depois: processa vendas SEM comissões (vendas antigas com seller_name)
+      daySales.forEach(sale => {
+        if (processedSales.has(sale.id)) return; // Já processada
+
+        const sellerName = sale.seller_name || 'Sem vendedor';
+        const sellerId = sale.seller_id || 'no_seller';
+
+        if (!sellerMap[sellerId]) {
+          sellerMap[sellerId] = {
+            seller_id: sellerId,
+            seller_name: sellerName,
+            total_commission: 0,
+            sales_count: 0,
+            sales: []
+          };
+        }
+
+        sellerMap[sellerId].total_commission += sale.commission_amount || 0;
+        sellerMap[sellerId].sales.push({
+          ...sale,
+          seller_commission: sale.commission_amount || 0
+        });
+        sellerMap[sellerId].sales_count += 1;
+      });
 
       setSellersData(Object.values(sellerMap));
     } catch (error) {
