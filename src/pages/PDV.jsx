@@ -2041,16 +2041,6 @@ ${boletoInfo}================================
                         const dayTotal = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
                         const dayCount = daySales.length;
 
-                        // Agrupa por vendedor dentro do dia
-                        const sellersByDay = {};
-                        daySales.forEach(sale => {
-                          const sellerName = sale.seller_name || 'Sem vendedor';
-                          if (!sellersByDay[sellerName]) {
-                            sellersByDay[sellerName] = [];
-                          }
-                          sellersByDay[sellerName].push(sale);
-                        });
-
                         return (
                           <div key={date} className="bg-gray-900/50 rounded-lg p-5 border border-gray-700">
                             {/* HEADER DO DIA */}
@@ -2070,78 +2060,8 @@ ${boletoInfo}================================
                               </div>
                             </div>
 
-                            {/* VENDEDORES DO DIA */}
-                            <div className="space-y-3">
-                              {Object.entries(sellersByDay).map(([sellerName, sales]) => {
-                                const sellerTotal = sales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-                                const sellerCommission = sales.reduce((sum, s) => sum + (s.commission_amount || 0), 0);
-                                const sellerCount = sales.length;
-
-                                return (
-                                  <details key={sellerName} className="bg-gray-800 rounded p-3">
-                                    <summary className="cursor-pointer flex items-center justify-between font-medium text-blue-400 hover:text-blue-300">
-                                      <div className="flex items-center gap-2">
-                                        <span>👤 {sellerName}</span>
-                                        <span className="text-xs text-gray-400">({sellerCount})</span>
-                                      </div>
-                                      <span className="text-green-400">R$ {sellerTotal.toFixed(2)}</span>
-                                    </summary>
-                                    <div className="mt-3 ml-3 space-y-2 border-l-2 border-gray-700 pl-3 max-h-48 overflow-y-auto">
-                                      <div className="grid grid-cols-3 gap-2 mb-2 text-xs">
-                                      <div className="bg-gray-700 rounded p-2">
-                                        <p className="text-gray-400">Vendas</p>
-                                        <p className="text-white font-bold">{sellerCount}</p>
-                                      </div>
-                                      <div className="bg-gray-700 rounded p-2">
-                                        <p className="text-gray-400">Total</p>
-                                        <p className="text-green-400 font-bold">R$ {sellerTotal.toFixed(2)}</p>
-                                      </div>
-                                      <div className="bg-gray-700 rounded p-2">
-                                        <p className="text-gray-400">Comissão Total</p>
-                                        <p className="text-orange-400 font-bold">R$ {sellerCommission.toFixed(2)}</p>
-                                      </div>
-                                      </div>
-                                      <table className="w-full text-xs">
-                                        <thead className="bg-gray-700 sticky top-0">
-                                          <tr className="text-gray-400">
-                                            <th className="text-left p-1">Horário</th>
-                                            <th className="text-left p-1">Produto</th>
-                                            <th className="text-right p-1">Valor</th>
-                                            <th className="text-center p-1">Comissão</th>
-                                            <th className="text-center p-1">Ação</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {sales.map((sale) => (
-                                           <tr key={sale.id} className="border-b border-gray-700 text-gray-300 hover:bg-gray-700/50">
-                                             <td className="p-1">
-                                               {new Date(sale.sale_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                             </td>
-                                             <td className="p-1 text-xs">{sale.product_description.substring(0, 20)}</td>
-                                             <td className="text-right p-1 text-green-400 font-bold">
-                                               R$ {sale.total_amount.toFixed(2)}
-                                             </td>
-                                             <td className="text-center p-1">
-                                               <span className="text-orange-400 font-bold">R$ {(sale.commission_amount || 0).toFixed(2)}</span>
-                                             </td>
-                                              <td className="text-center p-1">
-                                                <Button
-                                                  size="sm"
-                                                  onClick={() => handleEditCommission(sale)}
-                                                  className="bg-blue-600 hover:bg-blue-700 h-6 px-2 text-xs"
-                                                >
-                                                  ✏️
-                                                </Button>
-                                              </td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  </details>
-                                );
-                              })}
-                            </div>
+                            {/* VENDEDORES DO DIA - USANDO CommissionRecord */}
+                            <SellerDayBreakdown daySales={daySales} onEditCommission={handleEditCommission} />
                           </div>
                         );
                       });
