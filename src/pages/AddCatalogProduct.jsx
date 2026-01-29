@@ -25,6 +25,7 @@ export default function AddCatalogProduct() {
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState([]);
+  const [sellers, setSellers] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -81,9 +82,10 @@ export default function AddCatalogProduct() {
     notes: ''
   });
   
-  // Carrega categorias e subcategorias
+  // Carrega categorias, subcategorias e vendedores
   useEffect(() => {
     loadCategories();
+    loadSellers();
   }, []);
   
   // Preenche automaticamente com dados do produto fonte
@@ -127,6 +129,15 @@ export default function AddCatalogProduct() {
       setSubcategories(subs);
     } catch (error) {
       console.error('Erro ao carregar categorias:', error);
+    }
+  };
+
+  const loadSellers = async () => {
+    try {
+      const allSellers = await base44.entities.Seller.list();
+      setSellers(allSellers || []);
+    } catch (error) {
+      console.error('Erro ao carregar vendedores:', error);
     }
   };
   
@@ -643,12 +654,16 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                         <Label className="text-sm text-gray-700 mb-1.5 block">
                           Vendedor responsável
                         </Label>
-                        <Input
+                        <select
                           value={formData.seller_name}
                           onChange={(e) => handleInputChange('seller_name', e.target.value)}
-                          placeholder="Nome do vendedor que gerenciará este produto"
-                          className="bg-white border-gray-300"
-                        />
+                          className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
+                        >
+                          <option value="">Selecione o vendedor responsável</option>
+                          {sellers.map(seller => (
+                            <option key={seller.id} value={seller.name}>{seller.name}</option>
+                          ))}
+                        </select>
                         <p className="text-xs text-gray-500 mt-1">
                           Esta informação será usada para enviar notificações sobre vendas e gestão do pedido
                         </p>
