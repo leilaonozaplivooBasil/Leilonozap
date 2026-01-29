@@ -44,7 +44,13 @@ export default function VendedoresDoDia({ daySales, date }) {
       });
 
       // 1️⃣ Primeiro: processa vendas COM comissões registradas (vendas novas)
+      // ⚠️ IMPORTANTE: Apenas licenciados aparecem como vendedores, licenciantes só recebem comissão
       commissionsForDay.forEach(commission => {
+        // Ignora licenciantes - eles não contam como vendedores
+        if (commission.seller_role === 'licenciante') {
+          return;
+        }
+
         const sale = daySales.find(s => s.id === commission.sale_id);
         if (!sale) return;
 
