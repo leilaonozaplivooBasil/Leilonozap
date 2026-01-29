@@ -376,7 +376,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
       
       await base44.entities.Product.create(productData);
       alert('Produto adicionado com sucesso!');
-      navigate(createPageUrl('CatalogManagement'));
+      navigate(-1);
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
       alert('Erro ao salvar o produto. Tente novamente.');
@@ -416,7 +416,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
           <div className="flex items-center gap-3">
             <Button
               type="button"
-              onClick={() => navigate(createPageUrl('CatalogManagement'))}
+              onClick={() => navigate(-1)}
               variant="outline"
               className="border-gray-300"
             >
