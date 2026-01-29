@@ -11,6 +11,7 @@ import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
+import { ThemeProvider } from "@/components/system/ThemeContext";
 
       import { Button } from "@/components/ui/button";
       import { base44 } from '@/api/base44Client';
@@ -590,8 +591,9 @@ export default function Layout({ children, currentPageName }) {
   }
 
   return (
-    <ErrorBoundary>
-      <GlobalMonitor />
+    <ThemeProvider>
+      <ErrorBoundary>
+        <GlobalMonitor />
       
       <div className="min-h-screen bg-gray-900">
         <nav className="fixed top-0 left-0 right-0 z-50 shadow-lg border-b bg-gray-800 border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
