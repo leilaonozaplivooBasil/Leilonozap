@@ -34,6 +34,15 @@ export default function VendedoresDoDia({ daySales, date }) {
       const sellerMap = {};
       const processedSales = new Set();
       
+      // Agrupa comissões por venda
+      const saleCommissionsMap = {};
+      commissionsForDay.forEach(c => {
+        if (!saleCommissionsMap[c.sale_id]) {
+          saleCommissionsMap[c.sale_id] = [];
+        }
+        saleCommissionsMap[c.sale_id].push(c);
+      });
+
       // 1️⃣ Primeiro: processa vendas COM comissões registradas (vendas novas)
       commissionsForDay.forEach(commission => {
         const sale = daySales.find(s => s.id === commission.sale_id);
@@ -54,11 +63,12 @@ export default function VendedoresDoDia({ daySales, date }) {
 
         sellerMap[sellerId].total_commission += commission.commission_amount || 0;
         
-        // Adiciona venda se ainda não foi contada para este vendedor
+        // Adiciona venda com todas as comissões anexadas
         if (!sellerMap[sellerId].sales.find(s => s.id === sale.id)) {
           sellerMap[sellerId].sales.push({
             ...sale,
-            seller_commission: commission.commission_amount
+            seller_commission: commission.commission_amount,
+            all_commissions: saleCommissionsMap[sale.id] || []
           });
           sellerMap[sellerId].sales_count += 1;
         }
