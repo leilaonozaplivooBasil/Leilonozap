@@ -70,12 +70,21 @@ export default function DailyRanking({ allSales }) {
             name: commission.seller_name,
             total: 0,
             commission: 0,
+            comissaoLicenciado: 0,
+            comissaoLicenciante: 0,
             count: 0
           };
         }
 
         sellerMap[sellerId].total += sale.total_amount || 0;
         sellerMap[sellerId].commission += commission.commission_amount || 0;
+        
+        // Separa comissões por tipo
+        if (commission.seller_role === 'licenciante') {
+          sellerMap[sellerId].comissaoLicenciante += commission.commission_amount || 0;
+        } else {
+          sellerMap[sellerId].comissaoLicenciado += commission.commission_amount || 0;
+        }
         if (!sellerMap[sellerId].sales?.includes(sale.id)) {
           sellerMap[sellerId].count += 1;
           if (!sellerMap[sellerId].sales) sellerMap[sellerId].sales = [];
@@ -95,12 +104,15 @@ export default function DailyRanking({ allSales }) {
             name: sellerName,
             total: 0,
             commission: 0,
+            comissaoLicenciado: 0,
+            comissaoLicenciante: 0,
             count: 0
           };
         }
 
         sellerMap[sellerId].total += sale.total_amount || 0;
         sellerMap[sellerId].commission += sale.commission_amount || 0;
+        sellerMap[sellerId].comissaoLicenciado += sale.commission_amount || 0;
         sellerMap[sellerId].count += 1;
       });
 
@@ -287,13 +299,17 @@ export default function DailyRanking({ allSales }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-white font-medium leading-tight truncate">{r.name}</p>
-                <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                <div className="flex flex-col gap-0.5 text-[11px] text-gray-400">
                   <span>{r.count} vendas</span>
-                  {r.commission > 0 && (
-                    <>
-                      <span>•</span>
-                      <span className="text-orange-400 font-semibold">Comissão: R$ {fmt(r.commission)}</span>
-                    </>
+                  {r.comissaoLicenciado > 0 && (
+                    <span className="text-orange-400 font-semibold">
+                      Comissão Licenciado: R$ {fmt(r.comissaoLicenciado)}
+                    </span>
+                  )}
+                  {r.comissaoLicenciante > 0 && (
+                    <span className="text-purple-400 font-semibold">
+                      Comissão Licenciante: R$ {fmt(r.comissaoLicenciante)}
+                    </span>
                   )}
                 </div>
               </div>
