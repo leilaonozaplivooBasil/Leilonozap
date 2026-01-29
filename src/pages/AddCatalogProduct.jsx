@@ -134,10 +134,10 @@ export default function AddCatalogProduct() {
 
   const loadSellers = async () => {
     try {
-      const allSellers = await base44.entities.Seller.list();
-      setSellers(allSellers || []);
+      const allStores = await base44.entities.Store.list();
+      setSellers(allStores || []);
     } catch (error) {
-      console.error('Erro ao carregar vendedores:', error);
+      console.error('Erro ao carregar lojistas:', error);
     }
   };
   
@@ -652,16 +652,16 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
 
                       <div className="col-span-2">
                         <Label className="text-sm text-gray-700 mb-1.5 block">
-                          Vendedor responsável
+                          Lojista responsável
                         </Label>
                         <select
                           value={formData.seller_name}
                           onChange={(e) => handleInputChange('seller_name', e.target.value)}
                           className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
                         >
-                          <option value="">Selecione o vendedor responsável</option>
-                          {sellers.map(seller => (
-                            <option key={seller.id} value={seller.name}>{seller.name}</option>
+                          <option value="">Selecione o lojista responsável</option>
+                          {sellers.map(store => (
+                            <option key={store.id} value={store.store_name}>{store.store_name}</option>
                           ))}
                         </select>
                         <p className="text-xs text-gray-500 mt-1">
