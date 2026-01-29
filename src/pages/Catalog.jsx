@@ -391,6 +391,12 @@ export default function Catalog() {
     }
   }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
 
+  const featuredProducts = useMemo(() => {
+    return products
+      .filter(p => p.catalog_active && p.is_featured)
+      .slice(0, 4);
+  }, [products]);
+
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
   }, []);
@@ -486,6 +492,25 @@ export default function Catalog() {
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
+          {/* Produtos em Destaque */}
+          {featuredProducts.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                ⭐ Produtos em Destaque
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {featuredProducts.map((product) => (
+                  <CatalogProductCard
+                    key={product.id}
+                    product={product}
+                    currentUser={currentUser}
+                    licenseePhone={licenseePhone}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Busca e Filtros */}
           <div className="mb-8 space-y-4">
             <div className="flex gap-2">

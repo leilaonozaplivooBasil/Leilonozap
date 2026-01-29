@@ -94,6 +94,7 @@ import LuxuryAccessManager from './pages/LuxuryAccessManager';
 import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
 import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
+import MyCatalogOrders from './pages/MyCatalogOrders';
 import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
 import OrderTracking from './pages/OrderTracking';
@@ -121,7 +122,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import MyCatalogOrders from './pages/MyCatalogOrders';
 import __Layout from './Layout.jsx';
 
 
@@ -173,6 +173,7 @@ export const PAGES = {
     "LuxuryBannerManagement": LuxuryBannerManagement,
     "LuxuryCollection": LuxuryCollection,
     "MemoryBackup": MemoryBackup,
+    "MyCatalogOrders": MyCatalogOrders,
     "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
@@ -200,7 +201,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "MyCatalogOrders": MyCatalogOrders,
 }
 
 export const pagesConfig = {
