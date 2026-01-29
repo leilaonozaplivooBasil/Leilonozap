@@ -34,6 +34,7 @@ export default function AddCatalogProduct() {
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingSubcategory, setEditingSubcategory] = useState(null);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [formData, setFormData] = useState({
     // Informações Gerais
@@ -398,6 +399,30 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
     }
   };
   
+  const handleDelete = async () => {
+    if (!location.state?.sourceProduct?.id) {
+      alert('Nenhum produto para excluir');
+      return;
+    }
+    
+    if (!confirm('Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    
+    try {
+      await base44.entities.Product.delete(location.state.sourceProduct.id);
+      alert('Produto excluído com sucesso!');
+      navigate(-1);
+    } catch (error) {
+      console.error('Erro ao excluir produto:', error);
+      alert('Erro ao excluir o produto. Tente novamente.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+  
   const sections = [
     { id: 'geral', label: 'Informação Gerais' },
     { id: 'variacoes', label: 'Estrutura e variações' },
@@ -427,6 +452,27 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {location.state?.sourceProduct?.id && (
+              <Button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                variant="destructive"
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Excluir
+                  </>
+                )}
+              </Button>
+            )}
             <Button
               type="button"
               onClick={() => navigate(-1)}
