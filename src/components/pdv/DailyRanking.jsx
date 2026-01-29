@@ -62,6 +62,11 @@ export default function DailyRanking({ allSales }) {
         const sale = daySales.find(s => s.id === commission.sale_id);
         if (!sale) return;
 
+        // ⚠️ IMPORTANTE: Licenciante não aparece no ranking, só recebe comissão
+        if (commission.seller_role === 'licenciante') {
+          return;
+        }
+
         processedSales.add(sale.id);
 
         const sellerId = commission.seller_id;
@@ -76,20 +81,17 @@ export default function DailyRanking({ allSales }) {
           };
         }
 
-        sellerMap[sellerId].total += sale.total_amount || 0;
-        sellerMap[sellerId].commission += commission.commission_amount || 0;
-        
-        // Separa comissões por tipo
-        if (commission.seller_role === 'licenciante') {
-          sellerMap[sellerId].comissaoLicenciante += commission.commission_amount || 0;
-        } else {
-          sellerMap[sellerId].comissaoLicenciado += commission.commission_amount || 0;
-        }
+        // Adiciona o valor total da venda apenas uma vez
         if (!sellerMap[sellerId].sales?.includes(sale.id)) {
+          sellerMap[sellerId].total += sale.total_amount || 0;
           sellerMap[sellerId].count += 1;
           if (!sellerMap[sellerId].sales) sellerMap[sellerId].sales = [];
           sellerMap[sellerId].sales.push(sale.id);
         }
+
+        // Contabiliza a comissão do licenciado
+        sellerMap[sellerId].commission += commission.commission_amount || 0;
+        sellerMap[sellerId].comissaoLicenciado += commission.commission_amount || 0;
       });
 
       // Processa vendas antigas sem comissões
