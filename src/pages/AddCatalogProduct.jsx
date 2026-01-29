@@ -1023,23 +1023,15 @@ export default function AddCatalogProduct() {
                         <Label className="text-sm text-gray-700 mb-1.5 block">
                           Margem de lucro
                         </Label>
-                        <div className="flex items-center gap-4">
-                          <Input
-                            type="text"
-                            value={formData.price && formData.cost_price 
-                              ? `R$ ${(parseFloat(formData.price) - parseFloat(formData.cost_price)).toFixed(2)}`
-                              : 'R$ 0,00'
-                            }
-                            readOnly
-                            className="flex-1 bg-gray-50 border-gray-300"
-                          />
-                          <button
-                            type="button"
-                            className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
-                          >
-                            🧮 Análise comparativa
-                          </button>
-                        </div>
+                        <Input
+                          type="text"
+                          value={formData.price && formData.cost_price 
+                            ? `R$ ${(parseFloat(formData.price) - parseFloat(formData.cost_price)).toFixed(2)}`
+                            : 'R$ 0,00'
+                          }
+                          readOnly
+                          className="bg-gray-50 border-gray-300"
+                        />
                       </div>
                     </div>
                     
