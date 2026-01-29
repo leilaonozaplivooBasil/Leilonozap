@@ -147,16 +147,19 @@ export default function AddCatalogProduct() {
     setGeneratingDescription(true);
     
     try {
-      const prompt = `Crie uma descrição atraente e detalhada para o seguinte produto de catálogo: "${formData.title}". 
+      const prompt = `Você é um redator especializado em e-commerce e está criando uma descrição de produto para nosso catálogo.
 
-A descrição deve:
-- Ter entre 100-200 palavras
-- Destacar os principais benefícios e características
-- Ser persuasiva para vendas online
-- Usar linguagem profissional mas acessível
-- Incluir informações técnicas relevantes quando aplicável
+PRODUTO: ${formData.title}
 
-Retorne APENAS a descrição, sem introduções ou conclusões.`;
+INSTRUÇÕES:
+• Crie uma descrição atraente e persuasiva com 100-200 palavras
+• Destaque os principais benefícios e diferenciais do produto
+• Use linguagem profissional mas acessível ao público geral
+• Inclua características técnicas quando relevantes
+• Organize em parágrafos curtos para facilitar a leitura
+• Use formatação HTML básica (<p>, <strong>, <br>) para melhor apresentação
+
+IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, títulos ou comentários adicionais.`;
 
       const response = await base44.integrations.Core.InvokeLLM({
         prompt: prompt
