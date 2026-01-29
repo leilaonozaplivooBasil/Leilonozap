@@ -31,7 +31,20 @@ export default function CatalogManagement() {
 
   useEffect(() => {
     loadBanners();
+    loadProducts();
   }, []);
+  
+  const loadProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      const data = await base44.entities.Product.filter({ catalog_active: true }, '-updated_date', 100);
+      setProducts(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
 
   const handleUploadImage = async (file) => {
     if (!file || !file.type.startsWith('image/')) {
