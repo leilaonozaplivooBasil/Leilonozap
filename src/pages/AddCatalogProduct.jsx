@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Camera, Loader2, Plus, X, Image as ImageIcon } from 'lucide-react';
+import { Camera, Loader2, Plus, X, Image as ImageIcon, Edit2, Trash2 } from 'lucide-react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
@@ -18,6 +18,18 @@ export default function AddCatalogProduct() {
   const [currentSection, setCurrentSection] = useState('geral');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  
+  // Estados de categorias
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [filteredSubcategories, setFilteredSubcategories] = useState([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [selectedParentForSub, setSelectedParentForSub] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingSubcategory, setEditingSubcategory] = useState(null);
   
   const [formData, setFormData] = useState({
     // Informações Gerais
@@ -65,8 +77,116 @@ export default function AddCatalogProduct() {
     notes: ''
   });
   
+  // Carrega categorias e subcategorias
+  useEffect(() => {
+    loadCategories();
+  }, []);
+  
+  useEffect(() => {
+    if (formData.category) {
+      const filtered = subcategories.filter(sub => sub.parent_category_id === formData.category);
+      setFilteredSubcategories(filtered);
+    } else {
+      setFilteredSubcategories([]);
+    }
+  }, [formData.category, subcategories]);
+  
+  const loadCategories = async () => {
+    try {
+      const allCategories = await base44.entities.Category.list();
+      const mainCategories = allCategories.filter(cat => !cat.parent_category_id);
+      const subs = allCategories.filter(cat => cat.parent_category_id);
+      setCategories(mainCategories);
+      setSubcategories(subs);
+    } catch (error) {
+      console.error('Erro ao carregar categorias:', error);
+    }
+  };
+  
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Se mudou a categoria, limpa a subcategoria
+    if (field === 'category') {
+      setFormData(prev => ({ ...prev, subcategory: '' }));
+    }
+  };
+  
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    
+    try {
+      if (editingCategory) {
+        await base44.entities.Category.update(editingCategory.id, {
+          name: newCategoryName.trim()
+        });
+      } else {
+        await base44.entities.Category.create({
+          name: newCategoryName.trim(),
+          is_active: true
+        });
+      }
+      setNewCategoryName('');
+      setEditingCategory(null);
+      loadCategories();
+    } catch (error) {
+      console.error('Erro ao salvar categoria:', error);
+      alert('Erro ao salvar categoria');
+    }
+  };
+  
+  const handleDeleteCategory = async (id) => {
+    if (!confirm('Deseja excluir esta categoria?')) return;
+    
+    try {
+      await base44.entities.Category.delete(id);
+      loadCategories();
+    } catch (error) {
+      console.error('Erro ao excluir categoria:', error);
+      alert('Erro ao excluir categoria');
+    }
+  };
+  
+  const handleCreateSubcategory = async () => {
+    if (!newSubcategoryName.trim() || !selectedParentForSub) return;
+    
+    try {
+      const parentCategory = categories.find(c => c.id === selectedParentForSub);
+      
+      if (editingSubcategory) {
+        await base44.entities.Category.update(editingSubcategory.id, {
+          name: newSubcategoryName.trim(),
+          parent_category_id: selectedParentForSub,
+          parent_category_name: parentCategory?.name || ''
+        });
+      } else {
+        await base44.entities.Category.create({
+          name: newSubcategoryName.trim(),
+          parent_category_id: selectedParentForSub,
+          parent_category_name: parentCategory?.name || '',
+          is_active: true
+        });
+      }
+      setNewSubcategoryName('');
+      setSelectedParentForSub('');
+      setEditingSubcategory(null);
+      loadCategories();
+    } catch (error) {
+      console.error('Erro ao salvar subcategoria:', error);
+      alert('Erro ao salvar subcategoria');
+    }
+  };
+  
+  const handleDeleteSubcategory = async (id) => {
+    if (!confirm('Deseja excluir esta subcategoria?')) return;
+    
+    try {
+      await base44.entities.Category.delete(id);
+      loadCategories();
+    } catch (error) {
+      console.error('Erro ao excluir subcategoria:', error);
+      alert('Erro ao excluir subcategoria');
+    }
   };
   
   const handleImageUpload = async (e) => {
@@ -321,7 +441,7 @@ export default function AddCatalogProduct() {
                         type="button"
                         className="text-sm text-purple-600 hover:text-purple-700"
                       >
-                        🔍 Dicas de categoria
+                        🔍 Como as categorias funcionam?
                       </button>
                     </div>
                     
@@ -334,11 +454,17 @@ export default function AddCatalogProduct() {
                           className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
                         >
                           <option value="">Primeiro escolha uma categoria</option>
-                          <option value="eletronicos">Eletrônicos</option>
-                          <option value="eletrodomesticos">Eletrodomésticos</option>
-                          <option value="moveis">Móveis e Decoração</option>
-                          <option value="outros">Outros</option>
+                          {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                          ))}
                         </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowCategoryModal(true)}
+                          className="text-xs text-pink-600 hover:text-pink-700 mt-1"
+                        >
+                          Gerenciar
+                        </button>
                       </div>
                       
                       <div>
@@ -349,8 +475,22 @@ export default function AddCatalogProduct() {
                           className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
                           disabled={!formData.category}
                         >
-                          <option value="">Primeiro selecione a categoria principal</option>
+                          <option value="">Selecione ou crie uma subcategoria</option>
+                          {filteredSubcategories.map(sub => (
+                            <option key={sub.id} value={sub.id}>{sub.name}</option>
+                          ))}
                         </select>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedParentForSub(formData.category);
+                            setShowSubcategoryModal(true);
+                          }}
+                          className="text-xs text-pink-600 hover:text-pink-700 mt-1"
+                          disabled={!formData.category}
+                        >
+                          Gerenciar
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -912,6 +1052,196 @@ export default function AddCatalogProduct() {
           </div>
         </div>
       </div>
+      
+      {/* Modal de Gerenciar Categorias */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Gerencie suas categorias</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  As categorias que os produtos serão exibidas na tela inicial do seu catálogo
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setEditingCategory(null);
+                  setNewCategoryName('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Insira a categoria que você deseja criar"
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateCategory();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleCreateCategory}
+                  className="bg-pink-600 hover:bg-pink-700 text-white"
+                  disabled={!newCategoryName.trim()}
+                >
+                  {editingCategory ? 'Salvar' : 'Criar'}
+                </Button>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">
+                  Estas são suas categorias
+                </p>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {categories.map(category => (
+                    <div
+                      key={category.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                    >
+                      <span className="text-sm text-gray-900 font-medium uppercase">
+                        {category.name}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingCategory(category);
+                            setNewCategoryName(category.name);
+                          }}
+                          className="text-pink-600 hover:text-pink-700"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(category.id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal de Gerenciar Subcategorias */}
+      {showSubcategoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-md max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Gerencie suas subcategorias</h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  As subcategorias serão vistas por seus clientes na tela inicial do seu catálogo abaixo das categorias pais. Os clientes poderão filtrar os produtos por meio dessas subcategorias.
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSubcategoryModal(false);
+                  setEditingSubcategory(null);
+                  setNewSubcategoryName('');
+                  setSelectedParentForSub('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-3">
+              <div>
+                <Label className="text-sm text-gray-700 mb-1.5 block">Categoria pai:</Label>
+                <select
+                  value={selectedParentForSub}
+                  onChange={(e) => setSelectedParentForSub(e.target.value)}
+                  className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
+                >
+                  <option value="">Selecione a categoria pai</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex gap-2">
+                <Input
+                  value={newSubcategoryName}
+                  onChange={(e) => setNewSubcategoryName(e.target.value)}
+                  placeholder="Insira a subcategoria que você deseja criar"
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateSubcategory();
+                    }
+                  }}
+                />
+                <Button
+                  onClick={handleCreateSubcategory}
+                  className="bg-pink-600 hover:bg-pink-700 text-white"
+                  disabled={!newSubcategoryName.trim() || !selectedParentForSub}
+                >
+                  {editingSubcategory ? 'Salvar' : 'Criar'}
+                </Button>
+              </div>
+              
+              {selectedParentForSub && (
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Estas são subcategorias cadastradas para a categoria pai selecionada
+                  </p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {subcategories
+                      .filter(sub => sub.parent_category_id === selectedParentForSub)
+                      .map(subcategory => (
+                        <div
+                          key={subcategory.id}
+                          className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                        >
+                          <span className="text-sm text-gray-900 font-medium uppercase">
+                            {subcategory.name}
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingSubcategory(subcategory);
+                                setNewSubcategoryName(subcategory.name);
+                                setSelectedParentForSub(subcategory.parent_category_id);
+                              }}
+                              className="text-pink-600 hover:text-pink-700"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSubcategory(subcategory.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
