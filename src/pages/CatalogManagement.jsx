@@ -42,7 +42,7 @@ export default function CatalogManagement() {
   const loadProducts = async () => {
     setLoadingProducts(true);
     try {
-      const data = await base44.entities.Product.filter({ catalog_active: true }, '-updated_date', 100);
+      const data = await base44.entities.Product.list('-updated_date', 100);
       setProducts(data || []);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
@@ -194,7 +194,9 @@ export default function CatalogManagement() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-2xl font-bold text-white">Produtos do Catálogo</h2>
-                <p className="text-gray-400 mt-1">{products.length} produtos ativos no catálogo</p>
+                <p className="text-gray-400 mt-1">
+                  {products.filter(p => p.catalog_active).length} ativos · {products.filter(p => !p.catalog_active).length} inativos
+                </p>
               </div>
               <Button
                 onClick={() => navigate(createPageUrl('AddCatalogProduct'))}
@@ -222,44 +224,105 @@ export default function CatalogManagement() {
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-green-500 transition-colors cursor-pointer"
-                    onClick={() => navigate(createPageUrl('AddCatalogProduct'), { state: { sourceProduct: product } })}
-                  >
-                    <div className="aspect-square bg-gray-900 relative">
-                      {product.image_urls && product.image_urls.length > 0 ? (
-                        <img
-                          src={product.image_urls[0]}
-                          alt={product.description}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Package className="w-16 h-16 text-gray-600" />
+              <div className="space-y-6">
+                {/* Produtos Ativos */}
+                {products.filter(p => p.catalog_active).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-green-400 mb-4 flex items-center gap-2">
+                      ✅ Ativos no Catálogo ({products.filter(p => p.catalog_active).length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {products.filter(p => p.catalog_active).map((product) => (
+                        <div
+                          key={product.id}
+                          className="bg-gray-800 rounded-lg overflow-hidden border border-green-500 hover:border-green-400 transition-colors cursor-pointer"
+                          onClick={() => navigate(createPageUrl('AddCatalogProduct'), { state: { sourceProduct: product } })}
+                        >
+                          <div className="aspect-square bg-gray-900 relative">
+                            {product.image_urls && product.image_urls.length > 0 ? (
+                              <img
+                                src={product.image_urls[0]}
+                                alt={product.description}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="w-16 h-16 text-gray-600" />
+                              </div>
+                            )}
+                            <div className="absolute top-2 right-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
+                              R$ {product.price_catalog?.toFixed(2) || '0.00'}
+                            </div>
+                          </div>
+                          <div className="p-4">
+                            <h3 className="text-white font-semibold mb-2 line-clamp-2">
+                              {product.description || 'Sem título'}
+                            </h3>
+                            <div className="flex items-center justify-between text-sm text-gray-400">
+                              <span>Estoque: {product.quantity || 0}</span>
+                              {product.seller_name && (
+                                <span className="text-xs bg-gray-700 px-2 py-1 rounded">
+                                  {product.seller_name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      )}
-                      <div className="absolute top-2 right-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
-                        R$ {product.price_catalog?.toFixed(2) || '0.00'}
-                      </div>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="text-white font-semibold mb-2 line-clamp-2">
-                        {product.description || 'Sem título'}
-                      </h3>
-                      <div className="flex items-center justify-between text-sm text-gray-400">
-                        <span>Estoque: {product.quantity || 0}</span>
-                        {product.seller_name && (
-                          <span className="text-xs bg-gray-700 px-2 py-1 rounded">
-                            {product.seller_name}
-                          </span>
-                        )}
-                      </div>
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
+
+                {/* Produtos Inativos */}
+                {products.filter(p => !p.catalog_active).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-400 mb-4 flex items-center gap-2">
+                      ⛔ Inativos ({products.filter(p => !p.catalog_active).length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {products.filter(p => !p.catalog_active).map((product) => (
+                        <div
+                          key={product.id}
+                          className="bg-gray-800 rounded-lg overflow-hidden border border-gray-600 hover:border-gray-500 transition-colors cursor-pointer opacity-75"
+                          onClick={() => navigate(createPageUrl('AddCatalogProduct'), { state: { sourceProduct: product } })}
+                        >
+                          <div className="aspect-square bg-gray-900 relative">
+                            {product.image_urls && product.image_urls.length > 0 ? (
+                              <img
+                                src={product.image_urls[0]}
+                                alt={product.description}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Package className="w-16 h-16 text-gray-600" />
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                              <span className="text-white font-bold text-lg">INATIVO</span>
+                            </div>
+                            <div className="absolute top-2 right-2 bg-gray-600 text-white text-xs font-bold px-2 py-1 rounded">
+                              R$ {product.price_catalog?.toFixed(2) || '0.00'}
+                            </div>
+                          </div>
+                          <div className="p-4">
+                            <h3 className="text-gray-300 font-semibold mb-2 line-clamp-2">
+                              {product.description || 'Sem título'}
+                            </h3>
+                            <div className="flex items-center justify-between text-sm text-gray-500">
+                              <span>Estoque: {product.quantity || 0}</span>
+                              {product.seller_name && (
+                                <span className="text-xs bg-gray-700 px-2 py-1 rounded">
+                                  {product.seller_name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
