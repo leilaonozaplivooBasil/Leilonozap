@@ -163,6 +163,21 @@ export default function CatalogCheckout() {
         licenseeId = 'site_official';
       }
 
+      // Busca o lojista responsável pelo produto
+      let sellerName = null;
+      let sellerId = null;
+      if (product.seller_name) {
+        try {
+          const stores = await base44.entities.Store.filter({ store_name: product.seller_name });
+          if (stores && stores.length > 0) {
+            sellerName = stores[0].store_name;
+            sellerId = stores[0].id;
+          }
+        } catch (err) {
+          console.warn('Erro ao buscar lojista:', err);
+        }
+      }
+
       // Cria registro de venda
       const sale = await CatalogSale.create({
         product_id: product.id,
@@ -179,6 +194,8 @@ export default function CatalogCheckout() {
         licensee_plan: licenseeData?.primary_career_level || null,
         referred_by_code: referralCode || '',
         referral_code: referralCode || null,
+        seller_name: sellerName,
+        seller_id: sellerId,
         status: 'pending_payment'
       });
 

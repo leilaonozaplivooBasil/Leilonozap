@@ -15,6 +15,7 @@ import { toast } from "sonner";
 
 const StoreEntity = base44.entities.Store;
 const AuctionEntity = base44.entities.Auction;
+const CatalogSaleEntity = base44.entities.CatalogSale;
 const AppUserEntity = base44.entities.AppUser;
 
 export default function LojistaDashboard() {
@@ -22,6 +23,7 @@ export default function LojistaDashboard() {
   const [loginForm, setLoginForm] = useState({ login: "", password: "" });
   const [currentStore, setCurrentStore] = useState(null);
   const [auctions, setAuctions] = useState([]);
+  const [catalogSales, setCatalogSales] = useState([]);
   const [stats, setStats] = useState({ totalSales: 0, activeAuctions: 0, soldProducts: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
@@ -83,20 +85,33 @@ export default function LojistaDashboard() {
 
   const loadDashboardData = async (storeId) => {
     try {
+      // Carrega leilões
       const allAuctions = await AuctionEntity.list("-created_date", 500);
       const storeAuctions = allAuctions.filter(a => a.seller_id === storeId);
       setAuctions(storeAuctions);
 
+      // Carrega vendas do catálogo
+      const allCatalogSales = await CatalogSaleEntity.list("-created_date", 500);
+      const storeCatalogSales = allCatalogSales.filter(s => s.seller_id === storeId);
+      setCatalogSales(storeCatalogSales);
+
       const activeCount = storeAuctions.filter(a => a.status === 'active').length;
       const soldCount = storeAuctions.filter(a => a.status === 'sold' || (a.status === 'ended' && a.winner_id)).length;
-      const totalSales = storeAuctions
+      const totalSalesAuctions = storeAuctions
         .filter(a => a.status === 'sold' || (a.status === 'ended' && a.winner_id))
         .reduce((sum, a) => sum + (a.current_price || 0), 0);
+      
+      // Soma vendas do catálogo pagas
+      const totalSalesCatalog = storeCatalogSales
+        .filter(s => s.status === 'paid' || s.status === 'shipped' || s.status === 'delivered')
+        .reduce((sum, s) => sum + (s.total_amount || 0), 0);
+
+      const totalCatalogProducts = storeCatalogSales.filter(s => s.status === 'paid' || s.status === 'shipped' || s.status === 'delivered').length;
 
       setStats({
-        totalSales,
+        totalSales: totalSalesAuctions + totalSalesCatalog,
         activeAuctions: activeCount,
-        soldProducts: soldCount
+        soldProducts: soldCount + totalCatalogProducts
       });
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -123,16 +138,32 @@ export default function LojistaDashboard() {
 
     setIsUpdating(true);
     try {
-      await AuctionEntity.update(selectedAuction.id, {
-        order_status: newStatus,
-        tracking_code: trackingCode
-      });
+      // Verifica se é venda do catálogo ou leilão
+      const isCatalogSale = catalogSales.some(s => s.id === selectedAuction.id);
+      
+      if (isCatalogSale) {
+        await CatalogSaleEntity.update(selectedAuction.id, {
+          status: newStatus,
+          tracking_code: trackingCode
+        });
 
-      setAuctions(prev => prev.map(a => 
-        a.id === selectedAuction.id 
-          ? { ...a, order_status: newStatus, tracking_code: trackingCode }
-          : a
-      ));
+        setCatalogSales(prev => prev.map(s => 
+          s.id === selectedAuction.id 
+            ? { ...s, status: newStatus, tracking_code: trackingCode }
+            : s
+        ));
+      } else {
+        await AuctionEntity.update(selectedAuction.id, {
+          order_status: newStatus,
+          tracking_code: trackingCode
+        });
+
+        setAuctions(prev => prev.map(a => 
+          a.id === selectedAuction.id 
+            ? { ...a, order_status: newStatus, tracking_code: trackingCode }
+            : a
+        ));
+      }
 
       toast.success('✅ Status atualizado com sucesso!');
       setShowStatusModal(false);
@@ -388,10 +419,11 @@ export default function LojistaDashboard() {
 
         {/* Tabs */}
          <Tabs defaultValue="auctions" className="w-full">
-           <TabsList className="bg-gray-800 border-gray-700">
-             <TabsTrigger value="auctions">Meus Leilões</TabsTrigger>
-             <TabsTrigger value="sold">Vendas Realizadas</TabsTrigger>
-           </TabsList>
+          <TabsList className="bg-gray-800 border-gray-700">
+            <TabsTrigger value="auctions">Meus Leilões</TabsTrigger>
+            <TabsTrigger value="sold">Vendas Realizadas</TabsTrigger>
+            <TabsTrigger value="catalog">Vendas do Catálogo</TabsTrigger>
+          </TabsList>
 
           <TabsContent value="auctions" className="space-y-4 mt-6">
             {auctions.filter(a => a.status === 'active').map(auction => (
@@ -469,6 +501,84 @@ export default function LojistaDashboard() {
                 </CardContent>
               </Card>
             ))}
+          </TabsContent>
+
+          <TabsContent value="catalog" className="space-y-4 mt-6">
+            {catalogSales.filter(s => s.status !== 'pending_payment' && s.status !== 'canceled').map(sale => (
+              <Card key={sale.id} className="bg-gray-800 border-gray-700">
+                <CardContent className="pt-6">
+                  <div className="flex items-start gap-4">
+                    {sale.product_image && (
+                      <img src={sale.product_image} alt={sale.product_title} className="w-24 h-24 object-cover rounded-lg" />
+                    )}
+                    <div className="flex-1">
+                      <h3 className="text-white font-bold text-lg mb-2">{sale.product_title}</h3>
+                      <div className="space-y-1 text-sm text-gray-300">
+                        <p><strong>Cliente:</strong> {sale.buyer_name || 'N/A'}</p>
+                        <p><strong>Valor:</strong> R$ {sale.total_amount?.toFixed(2)}</p>
+                        <Badge className={`${
+                          sale.status === 'delivered' ? 'bg-green-600' :
+                          sale.status === 'shipped' ? 'bg-blue-600' :
+                          sale.status === 'paid' ? 'bg-yellow-600' :
+                          'bg-gray-600'
+                        }`}>
+                          {sale.status === 'paid' ? 'Pago' :
+                           sale.status === 'shipped' ? 'Enviado' :
+                           sale.status === 'delivered' ? 'Entregue' : sale.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setDetailsAuction({
+                            ...sale,
+                            title: sale.product_title,
+                            image_urls: [sale.product_image],
+                            current_price: sale.total_amount,
+                            winner_id: sale.buyer_id,
+                            winner_name: sale.buyer_name,
+                            order_status: sale.status
+                          });
+                          setShowDetailsModal(true);
+                        }}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        <Info className="w-4 h-4 mr-2" />
+                        Detalhes
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedAuction({
+                            ...sale,
+                            id: sale.id,
+                            title: sale.product_title,
+                            winner_name: sale.buyer_name,
+                            order_status: sale.status
+                          });
+                          setNewStatus(sale.status);
+                          setTrackingCode(sale.tracking_code || '');
+                          setShowStatusModal(true);
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Atualizar Status
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {catalogSales.filter(s => s.status !== 'pending_payment' && s.status !== 'canceled').length === 0 && (
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="py-12 text-center">
+                  <p className="text-gray-400">Nenhuma venda do catálogo encontrada</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
           </Tabs>
 
