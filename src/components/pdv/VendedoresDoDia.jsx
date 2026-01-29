@@ -179,10 +179,10 @@ export default function VendedoresDoDia({ daySales, date }) {
                           {new Date(sale.sale_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                         </td>
                         <td className="p-1 text-xs">{sale.product_description.substring(0, 20)}</td>
-                        <td className="text-right p-1 text-green-400 font-bold">
+                        <td className="text-right pr-4 p-1 text-green-400 font-bold">
                           R$ {sale.total_amount.toFixed(2)}
                         </td>
-                        <td className="p-1 text-xs text-purple-300 w-24">
+                        <td className="pl-4 p-1 text-xs text-purple-300 w-24">
                           {hasLicenciante?.seller_name || '-'}
                         </td>
                         <td className="text-right p-1 w-20">
