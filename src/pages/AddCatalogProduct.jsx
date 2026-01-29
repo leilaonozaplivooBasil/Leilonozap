@@ -169,417 +169,386 @@ export default function AddCatalogProduct() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      {/* Header */}
-      <div className="bg-gray-800 border-b border-gray-700 sticky top-16 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
+      {/* Header Compacto */}
+      <div className="bg-gray-800/95 backdrop-blur-sm border-b border-gray-700 sticky top-16 z-40">
+        <div className="max-w-6xl mx-auto px-6 py-3">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(createPageUrl('CatalogManagement'))}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-gray-400 hover:text-white transition-colors p-1.5 hover:bg-gray-700 rounded-lg"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-xl font-bold text-white">Adicionar Produto ao Catálogo</h1>
+            <h1 className="text-lg font-semibold text-white">Adicionar Produto ao Catálogo</h1>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="max-w-6xl mx-auto px-6 py-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           
-          {/* Seção 1: Informações Básicas */}
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Package className="w-5 h-5 text-blue-400" />
-                Informações Básicas
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* Informações Básicas - Layout Compacto */}
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
+              <Package className="w-4 h-4 text-blue-400" />
+              <span>Informações Básicas</span>
+            </div>
+
+            <div>
+              <Label className="text-gray-300 text-sm">Descrição do Produto *</Label>
+              <Textarea
+                placeholder="Ex: Processador Intel Core i7 10700K"
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 min-h-[70px] text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <Label className="text-gray-300">Descrição do Produto *</Label>
-                <Textarea
-                  placeholder="Ex: Processador Intel Core i7 10700K"
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 min-h-[80px]"
+                <Label className="text-gray-300 text-xs">Lote/SKU</Label>
+                <Input
+                  placeholder="Ex: LOTE-001"
+                  value={formData.lot}
+                  onChange={(e) => handleInputChange('lot', e.target.value)}
+                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
                 />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label className="text-gray-300">Lote/SKU</Label>
-                  <Input
-                    placeholder="Ex: LOTE-001"
-                    value={formData.lot}
-                    onChange={(e) => handleInputChange('lot', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Nota Fiscal</Label>
-                  <Input
-                    placeholder="Ex: 0001"
-                    value={formData.purchase_order}
-                    onChange={(e) => handleInputChange('purchase_order', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Valor de Mercado</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="R$ 0,00"
-                    value={formData.market_value}
-                    onChange={(e) => handleInputChange('market_value', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
-                  />
-                </div>
-              </div>
-
               <div>
-                <Label className="text-gray-300">Observações</Label>
-                <Textarea
-                  placeholder="Informações adicionais sobre o produto..."
-                  value={formData.notes}
-                  onChange={(e) => handleInputChange('notes', e.target.value)}
-                  className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 min-h-[60px]"
+                <Label className="text-gray-300 text-xs">Nota Fiscal</Label>
+                <Input
+                  placeholder="Ex: 0001"
+                  value={formData.purchase_order}
+                  onChange={(e) => handleInputChange('purchase_order', e.target.value)}
+                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
                 />
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Seção 2: Imagens */}
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Upload className="w-5 h-5 text-purple-400" />
-                Imagens do Produto *
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="image-upload" className="cursor-pointer">
-                  <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-purple-500 transition-colors">
-                    {uploadingImage ? (
-                      <Loader2 className="w-12 h-12 text-purple-400 animate-spin mx-auto mb-3" />
-                    ) : (
-                      <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <Label className="text-gray-300 text-xs">Valor de Mercado</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="R$ 0,00"
+                  value={formData.market_value}
+                  onChange={(e) => handleInputChange('market_value', e.target.value)}
+                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-gray-300 text-xs">Observações</Label>
+              <Textarea
+                placeholder="Informações adicionais sobre o produto..."
+                value={formData.notes}
+                onChange={(e) => handleInputChange('notes', e.target.value)}
+                className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 min-h-[50px] text-sm"
+              />
+            </div>
+          </div>
+
+          {/* Imagens - Layout Compacto */}
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-3">
+            <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
+              <Upload className="w-4 h-4 text-purple-400" />
+              <span>Imagens do Produto *</span>
+            </div>
+
+            <Label htmlFor="image-upload" className="cursor-pointer block">
+              <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-purple-500 hover:bg-gray-700/30 transition-all">
+                {uploadingImage ? (
+                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-2" />
+                ) : (
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                )}
+                <p className="text-gray-300 text-sm font-medium">Clique para fazer upload</p>
+                <p className="text-gray-500 text-xs mt-0.5">Selecione múltiplas imagens</p>
+              </div>
+              <input
+                id="image-upload"
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleImageUpload}
+                className="hidden"
+                disabled={uploadingImage}
+              />
+            </Label>
+
+            {imageUrls.length > 0 && (
+              <div className="grid grid-cols-4 gap-3">
+                {imageUrls.map((url, index) => (
+                  <div key={index} className="relative group">
+                    <img
+                      src={url}
+                      alt={`Produto ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-lg bg-gray-700 border border-gray-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-700 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                    >
+                      <X className="w-3 h-3 text-white" />
+                    </button>
+                    {index === 0 && (
+                      <div className="absolute bottom-1.5 left-1.5 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
+                        Principal
+                      </div>
                     )}
-                    <p className="text-gray-300 font-medium">Clique para fazer upload</p>
-                    <p className="text-gray-500 text-sm mt-1">Selecione múltiplas imagens</p>
                   </div>
-                  <input
-                    id="image-upload"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    disabled={uploadingImage}
-                  />
-                </Label>
+                ))}
               </div>
+            )}
+          </div>
 
-              {imageUrls.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {imageUrls.map((url, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={url}
-                        alt={`Produto ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg bg-gray-700"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-2 right-2 bg-red-600 hover:bg-red-700 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-4 h-4 text-white" />
-                      </button>
-                      {index === 0 && (
-                        <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded">
-                          Principal
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Preços - Layout Grid Compacto */}
+          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
+              <DollarSign className="w-4 h-4 text-green-400" />
+              <span>Precificação</span>
+            </div>
 
-          {/* Seção 3: Preços */}
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <DollarSign className="w-5 h-5 text-green-400" />
-                Precificação
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <Label className="text-gray-300 text-xs">Custo (C.U.L) *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="R$ 0,00"
+                  value={formData.cost_price}
+                  onChange={(e) => handleInputChange('cost_price', e.target.value)}
+                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-gray-300 text-xs">Varejo (P/V)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="R$ 0,00"
+                  value={formData.selling_price_retail}
+                  onChange={(e) => handleInputChange('selling_price_retail', e.target.value)}
+                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-gray-300 text-xs">Licenciado (P/LIC)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="R$ 0,00"
+                  value={formData.selling_price_wholesale}
+                  onChange={(e) => handleInputChange('selling_price_wholesale', e.target.value)}
+                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
+                />
+              </div>
+              <div className="relative">
+                <Label className="text-gray-300 text-xs">Catálogo {formData.catalog_active && '*'}</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  placeholder="R$ 0,00"
+                  value={formData.price_catalog}
+                  onChange={(e) => handleInputChange('price_catalog', e.target.value)}
+                  className={`bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm ${
+                    formData.catalog_active ? 'border-green-500' : ''
+                  }`}
+                />
+                {formData.catalog_active && (
+                  <div className="absolute -top-1 -right-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-gray-700/20 rounded-lg p-3 border border-gray-600/50">
+              <p className="text-gray-400 text-xs mb-2.5">Leilões (opcional)</p>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-gray-300">Preço de Custo (C.U.L) *</Label>
+                  <Label className="text-gray-300 text-xs">Lance Inicial</Label>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="R$ 0,00"
-                    value={formData.cost_price}
-                    onChange={(e) => handleInputChange('cost_price', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
+                    value={formData.price_auction_start}
+                    onChange={(e) => handleInputChange('price_auction_start', e.target.value)}
+                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300">Preço Varejo (P/V)</Label>
+                  <Label className="text-gray-300 text-xs">Arremate Agora</Label>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="R$ 0,00"
-                    value={formData.selling_price_retail}
-                    onChange={(e) => handleInputChange('selling_price_retail', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
+                    value={formData.price_buy_now}
+                    onChange={(e) => handleInputChange('price_buy_now', e.target.value)}
+                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
                   />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Preço Licenciado (P/LIC)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="R$ 0,00"
-                    value={formData.selling_price_wholesale}
-                    onChange={(e) => handleInputChange('selling_price_wholesale', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
-                  />
-                </div>
-                <div className="relative">
-                  <Label className="text-gray-300">Preço Catálogo {formData.catalog_active && '*'}</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="R$ 0,00"
-                    value={formData.price_catalog}
-                    onChange={(e) => handleInputChange('price_catalog', e.target.value)}
-                    className={`bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 ${
-                      formData.catalog_active ? 'border-green-500' : ''
-                    }`}
-                  />
-                  {formData.catalog_active && (
-                    <div className="absolute -top-1 -right-1">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    </div>
-                  )}
                 </div>
               </div>
+            </div>
+          </div>
 
-              <div className="bg-gray-700/30 rounded-lg p-4 border border-gray-600">
-                <h4 className="text-white font-medium mb-3">Preços para Leilões (opcional)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-gray-300 text-sm">Lance Inicial</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="R$ 0,00"
-                      value={formData.price_auction_start}
-                      onChange={(e) => handleInputChange('price_auction_start', e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-gray-300 text-sm">Arremate Agora</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="R$ 0,00"
-                      value={formData.price_buy_now}
-                      onChange={(e) => handleInputChange('price_buy_now', e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
-                    />
-                  </div>
-                </div>
+          {/* Estoque e Dimensões - Grid Lado a Lado */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Estoque */}
+            <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
+                <Warehouse className="w-4 h-4 text-yellow-400" />
+                <span>Controle de Estoque</span>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Seção 4: Estoque */}
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Warehouse className="w-5 h-5 text-yellow-400" />
-                Controle de Estoque
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-5 gap-2">
                 <div>
-                  <Label className="text-gray-300 text-sm">Qtd. Total</Label>
+                  <Label className="text-gray-300 text-xs">Total</Label>
                   <Input
                     type="number"
                     min="0"
                     value={formData.quantity}
                     onChange={(e) => handleInputChange('quantity', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300 text-sm">Perfeito</Label>
+                  <Label className="text-gray-300 text-xs">Perfeito</Label>
                   <Input
                     type="number"
                     min="0"
                     value={formData.qty_perfeito}
                     onChange={(e) => handleInputChange('qty_perfeito', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300 text-sm">Bom</Label>
+                  <Label className="text-gray-300 text-xs">Bom</Label>
                   <Input
                     type="number"
                     min="0"
                     value={formData.qty_bom}
                     onChange={(e) => handleInputChange('qty_bom', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300 text-sm">Ruim</Label>
+                  <Label className="text-gray-300 text-xs">Ruim</Label>
                   <Input
                     type="number"
                     min="0"
                     value={formData.qty_ruim}
                     onChange={(e) => handleInputChange('qty_ruim', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300 text-sm">Oficina</Label>
+                  <Label className="text-gray-300 text-xs">Oficina</Label>
                   <Input
                     type="number"
                     min="0"
                     value={formData.qty_oficina}
                     onChange={(e) => handleInputChange('qty_oficina', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
                   />
                 </div>
               </div>
+            </div>
 
-              <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-                <p className="text-blue-300 text-sm">
-                  A quantidade total deve ser a soma dos estados individuais. O sistema não calcula automaticamente.
-                </p>
+            {/* Dimensões */}
+            <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
+                <Ruler className="w-4 h-4 text-orange-400" />
+                <span>Dimensões (Frete)</span>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* Seção 5: Dimensões (Frete) */}
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Ruler className="w-5 h-5 text-orange-400" />
-                Dimensões (Para Cálculo de Frete)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-4 gap-2">
                 <div>
-                  <Label className="text-gray-300 text-sm">Peso (kg)</Label>
+                  <Label className="text-gray-300 text-xs">Peso (kg)</Label>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     value={formData.peso}
                     onChange={(e) => handleInputChange('peso', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300 text-sm">Comprimento (cm)</Label>
+                  <Label className="text-gray-300 text-xs">Comp. (cm)</Label>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     value={formData.comprimento}
                     onChange={(e) => handleInputChange('comprimento', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300 text-sm">Altura (cm)</Label>
+                  <Label className="text-gray-300 text-xs">Altura (cm)</Label>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     value={formData.altura}
                     onChange={(e) => handleInputChange('altura', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
                   />
                 </div>
                 <div>
-                  <Label className="text-gray-300 text-sm">Largura (cm)</Label>
+                  <Label className="text-gray-300 text-xs">Larg. (cm)</Label>
                   <Input
                     type="number"
                     step="0.01"
                     placeholder="0.00"
                     value={formData.largura}
                     onChange={(e) => handleInputChange('largura', e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 mt-1.5"
+                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          {/* Seção 6: Catálogo */}
-          <Card className="bg-gray-800 border-gray-700 border-2 border-green-600/30">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-white">
-                <ShoppingCart className="w-5 h-5 text-green-400" />
-                Disponibilidade no Catálogo
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between bg-gray-700/30 rounded-lg p-4 border border-gray-600">
+          {/* Catálogo - Compacto */}
+          <div className="bg-gray-800/50 border border-green-600/30 rounded-xl p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ShoppingCart className="w-4 h-4 text-green-400" />
                 <div>
-                  <p className="text-white font-medium">Ativar no Catálogo</p>
-                  <p className="text-gray-400 text-sm">Tornar este produto visível para licenciados</p>
+                  <p className="text-white text-sm font-medium">Ativar no Catálogo</p>
+                  <p className="text-gray-400 text-xs">Tornar visível para licenciados</p>
                 </div>
-                <Switch
-                  checked={formData.catalog_active}
-                  onCheckedChange={(checked) => handleInputChange('catalog_active', checked)}
-                  className="data-[state=checked]:bg-green-600"
-                />
               </div>
-              
-              {formData.catalog_active && (
-                <div className="mt-4 bg-green-600/10 border border-green-500/30 rounded-lg p-4">
-                  <p className="text-green-400 text-sm">
-                    ✅ Este produto estará disponível no catálogo para licenciados após ser criado.
-                  </p>
-                  <p className="text-green-300 text-xs mt-2">
-                    Certifique-se de preencher o <strong>Preço Catálogo</strong> antes de salvar.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              <Switch
+                checked={formData.catalog_active}
+                onCheckedChange={(checked) => handleInputChange('catalog_active', checked)}
+                className="data-[state=checked]:bg-green-600"
+              />
+            </div>
+            
+            {formData.catalog_active && (
+              <div className="mt-3 bg-green-600/10 border border-green-500/30 rounded-lg p-3">
+                <p className="text-green-400 text-xs">
+                  ✅ Produto disponível no catálogo após salvar. Preencha o <strong>Preço Catálogo</strong>.
+                </p>
+              </div>
+            )}
+          </div>
 
-          {/* Botões de Ação */}
-          <div className="flex gap-4 justify-end">
+          {/* Botões de Ação - Compactos */}
+          <div className="flex gap-3 justify-end pt-2">
             <Button
               type="button"
               onClick={() => navigate(createPageUrl('CatalogManagement'))}
               variant="outline"
-              className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600"
+              className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 h-9 text-sm"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 text-white px-8"
+              className="bg-green-600 hover:bg-green-700 text-white px-8 h-9 text-sm font-medium"
             >
               {isSubmitting ? (
                 <>
