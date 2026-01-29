@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move } from 'lucide-react';
+import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
 
 export default function CatalogManagement() {
+  const navigate = useNavigate();
   const [catalogBanners, setCatalogBanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingBanner, setEditingBanner] = useState(null);
   const [activeTab, setActiveTab] = useState('banners');
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
 
   const loadBanners = async () => {
     try {
@@ -162,6 +167,13 @@ export default function CatalogManagement() {
             🎨 Banners
           </Button>
           <Button
+            onClick={() => setActiveTab('catalog-products')}
+            variant={activeTab === 'catalog-products' ? 'default' : 'outline'}
+            className={activeTab === 'catalog-products' ? 'bg-blue-600 hover:bg-blue-700' : ''}
+          >
+            📦 Produtos do Catálogo
+          </Button>
+          <Button
             onClick={() => setActiveTab('produtos')}
             variant={activeTab === 'produtos' ? 'default' : 'outline'}
             className={activeTab === 'produtos' ? 'bg-yellow-600 hover:bg-yellow-700' : ''}
@@ -176,6 +188,82 @@ export default function CatalogManagement() {
             📄 Rodapé
           </Button>
         </div>
+
+        {activeTab === 'catalog-products' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Produtos do Catálogo</h2>
+                <p className="text-gray-400 mt-1">{products.length} produtos ativos no catálogo</p>
+              </div>
+              <Button
+                onClick={() => navigate(createPageUrl('AddCatalogProduct'))}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Adicionar Produto
+              </Button>
+            </div>
+
+            {loadingProducts ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
+              </div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-12">
+                <Package className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400 text-lg mb-4">Nenhum produto no catálogo ainda</p>
+                <Button
+                  onClick={() => navigate(createPageUrl('AddCatalogProduct'))}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Adicionar Primeiro Produto
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-green-500 transition-colors cursor-pointer"
+                    onClick={() => navigate(createPageUrl('AddCatalogProduct'), { state: { sourceProduct: product } })}
+                  >
+                    <div className="aspect-square bg-gray-900 relative">
+                      {product.image_urls && product.image_urls.length > 0 ? (
+                        <img
+                          src={product.image_urls[0]}
+                          alt={product.description}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="w-16 h-16 text-gray-600" />
+                        </div>
+                      )}
+                      <div className="absolute top-2 right-2 bg-green-600 text-white text-xs font-bold px-2 py-1 rounded">
+                        R$ {product.price_catalog?.toFixed(2) || '0.00'}
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="text-white font-semibold mb-2 line-clamp-2">
+                        {product.description || 'Sem título'}
+                      </h3>
+                      <div className="flex items-center justify-between text-sm text-gray-400">
+                        <span>Estoque: {product.quantity || 0}</span>
+                        {product.seller_name && (
+                          <span className="text-xs bg-gray-700 px-2 py-1 rounded">
+                            {product.seller_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {activeTab === 'banners' && (
           <>
