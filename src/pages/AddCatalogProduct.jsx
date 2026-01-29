@@ -356,19 +356,19 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
   
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.title || !formData.price) {
       alert('Por favor, preencha o título e o preço do produto');
       return;
     }
-    
+
     if (formData.catalog_active && formData.image_urls.length === 0) {
       alert('Por favor, adicione pelo menos uma imagem ao produto');
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const productData = {
         description: formData.title,
@@ -387,9 +387,19 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         purchase_order: formData.purchase_order,
         seller_name: formData.seller_name || ''
       };
-      
-      await base44.entities.Product.create(productData);
-      alert('Produto adicionado com sucesso!');
+
+      const sourceProduct = location.state?.sourceProduct;
+
+      if (sourceProduct?.id) {
+        // EDITAR produto existente
+        await base44.entities.Product.update(sourceProduct.id, productData);
+        alert('Produto atualizado com sucesso!');
+      } else {
+        // CRIAR novo produto
+        await base44.entities.Product.create(productData);
+        alert('Produto adicionado com sucesso!');
+      }
+
       navigate(-1);
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
