@@ -1077,6 +1077,7 @@ export default function Layout({ children, currentPageName }) {
            color: #1a1a1a;
          }
         `}</style>
+        </div>
         </ThemeProvider>
         );
         }
