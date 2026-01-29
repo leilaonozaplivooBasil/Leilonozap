@@ -2,553 +2,219 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { 
-  ArrowLeft, 
-  Loader2, 
-  Upload, 
-  X,
-  Package,
-  DollarSign,
-  Warehouse,
-  Ruler,
-  ShoppingCart,
-  AlertCircle
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Camera, Loader2, Plus, X, Image as ImageIcon } from 'lucide-react';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 export default function AddCatalogProduct() {
   const navigate = useNavigate();
+  
+  // Estados do formulário
+  const [currentSection, setCurrentSection] = useState('geral');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imageUrls, setImageUrls] = useState([]);
   const [uploadingImage, setUploadingImage] = useState(false);
-
+  
   const [formData, setFormData] = useState({
-    // Básico
+    // Informações Gerais
+    title: '',
     description: '',
-    lot: '',
-    notes: '',
-    purchase_order: '',
+    category: '',
+    subcategory: '',
     
-    // Estoque
-    quantity: 1,
-    qty_perfeito: 0,
-    qty_bom: 0,
-    qty_ruim: 0,
-    qty_oficina: 0,
+    // Códigos
+    sku: '',
+    barcode: '',
+    gerar_barcode_automatico: false,
     
-    // Preços
+    // Especificações
+    condition: 'Novo',
+    brand: '',
+    model: '',
+    
+    // Dimensões e peso
+    weight: '',
+    length: '',
+    height: '',
+    width: '',
+    
+    // Variações
+    has_variations: false,
+    variation_type: '', // cor, tamanho, etc
+    variations: [],
+    
+    // Fotos
+    image_urls: [],
+    
+    // Preço
+    price: '',
     cost_price: '',
-    selling_price_retail: '',
-    selling_price_wholesale: '',
-    price_auction_start: '',
-    price_buy_now: '',
-    price_catalog: '',
+    compare_price: '',
     
     // Catálogo
-    catalog_active: true,
+    catalog_active: false,
+    quantity: 1,
     
-    // Dimensões (frete)
-    peso: '',
-    comprimento: '',
-    altura: '',
-    largura: '',
-    
-    // Mercado
-    market_value: ''
+    // Campos existentes
+    lot: '',
+    purchase_order: '',
+    notes: ''
   });
-
+  
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
-
+  
   const handleImageUpload = async (e) => {
     const files = Array.from(e.target.files);
     if (files.length === 0) return;
-
+    
     setUploadingImage(true);
-    const uploadedUrls = [];
-
-    for (const file of files) {
-      try {
+    
+    try {
+      const uploadPromises = files.map(async (file) => {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
-        uploadedUrls.push(file_url);
-        toast.success(`Imagem ${files.indexOf(file) + 1} enviada!`);
-      } catch (error) {
-        toast.error(`Erro ao enviar imagem: ${error.message}`);
-      }
+        return file_url;
+      });
+      
+      const uploadedUrls = await Promise.all(uploadPromises);
+      setFormData(prev => ({
+        ...prev,
+        image_urls: [...prev.image_urls, ...uploadedUrls]
+      }));
+    } catch (error) {
+      console.error('Erro ao fazer upload:', error);
+      alert('Erro ao fazer upload das imagens');
+    } finally {
+      setUploadingImage(false);
     }
-
-    setImageUrls(prev => [...prev, ...uploadedUrls]);
-    setUploadingImage(false);
   };
-
+  
   const removeImage = (index) => {
-    setImageUrls(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => ({
+      ...prev,
+      image_urls: prev.image_urls.filter((_, i) => i !== index)
+    }));
   };
-
+  
+  const addVariation = () => {
+    const newVariation = {
+      id: Date.now(),
+      name: '',
+      stock: 0,
+      price_adjustment: 0
+    };
+    setFormData(prev => ({
+      ...prev,
+      variations: [...prev.variations, newVariation]
+    }));
+  };
+  
+  const removeVariation = (id) => {
+    setFormData(prev => ({
+      ...prev,
+      variations: prev.variations.filter(v => v.id !== id)
+    }));
+  };
+  
+  const updateVariation = (id, field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      variations: prev.variations.map(v => 
+        v.id === id ? { ...v, [field]: value } : v
+      )
+    }));
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validações
-    if (!formData.description.trim()) {
-      toast.error('Preencha a descrição do produto');
+    
+    if (!formData.title || !formData.price) {
+      alert('Por favor, preencha o título e o preço do produto');
       return;
     }
-
-    if (!formData.cost_price || parseFloat(formData.cost_price) <= 0) {
-      toast.error('Preencha o preço de custo');
+    
+    if (formData.catalog_active && formData.image_urls.length === 0) {
+      alert('Por favor, adicione pelo menos uma imagem ao produto');
       return;
     }
-
-    if (formData.catalog_active && (!formData.price_catalog || parseFloat(formData.price_catalog) <= 0)) {
-      toast.error('Preencha o preço do catálogo para ativar no catálogo');
-      return;
-    }
-
-    if (imageUrls.length === 0) {
-      toast.error('Adicione pelo menos uma imagem do produto');
-      return;
-    }
-
+    
     setIsSubmitting(true);
-
+    
     try {
       const productData = {
-        description: formData.description.trim(),
-        lot: formData.lot.trim() || null,
-        notes: formData.notes.trim() || null,
-        purchase_order: formData.purchase_order.trim() || null,
-        image_urls: imageUrls,
-        
-        quantity: parseInt(formData.quantity) || 1,
-        qty_perfeito: parseInt(formData.qty_perfeito) || 0,
-        qty_bom: parseInt(formData.qty_bom) || 0,
-        qty_ruim: parseInt(formData.qty_ruim) || 0,
-        qty_oficina: parseInt(formData.qty_oficina) || 0,
-        
-        cost_price: parseFloat(formData.cost_price),
-        selling_price_retail: parseFloat(formData.selling_price_retail) || null,
-        selling_price_wholesale: parseFloat(formData.selling_price_wholesale) || null,
-        price_auction_start: parseFloat(formData.price_auction_start) || null,
-        price_buy_now: parseFloat(formData.price_buy_now) || null,
-        price_catalog: parseFloat(formData.price_catalog) || null,
-        
+        description: formData.title,
+        notes: formData.description,
+        image_urls: formData.image_urls,
+        price_catalog: parseFloat(formData.price) || 0,
+        cost_price: parseFloat(formData.cost_price) || 0,
+        market_value: parseFloat(formData.compare_price) || 0,
         catalog_active: formData.catalog_active,
-        
-        peso: parseFloat(formData.peso) || null,
-        comprimento: parseFloat(formData.comprimento) || null,
-        altura: parseFloat(formData.altura) || null,
-        largura: parseFloat(formData.largura) || null,
-        
-        market_value: parseFloat(formData.market_value) || null,
-        
-        status: 'ESTOQUE',
-        quantity_sold: 0,
-        sold_amount: 0,
-        profit: 0,
-        date: new Date().toISOString().split('T')[0]
+        quantity: parseInt(formData.quantity) || 1,
+        peso: parseFloat(formData.weight) || 0,
+        comprimento: parseFloat(formData.length) || 0,
+        altura: parseFloat(formData.height) || 0,
+        largura: parseFloat(formData.width) || 0,
+        lot: formData.sku || formData.lot,
+        purchase_order: formData.purchase_order
       };
-
-      await base44.entities.Product.create(productData);
       
-      toast.success('✅ Produto adicionado ao catálogo com sucesso!');
+      await base44.entities.Product.create(productData);
+      alert('Produto adicionado com sucesso!');
       navigate(createPageUrl('CatalogManagement'));
     } catch (error) {
-      console.error('Erro ao criar produto:', error);
-      toast.error(`Erro: ${error.message}`);
+      console.error('Erro ao salvar produto:', error);
+      alert('Erro ao salvar o produto. Tente novamente.');
     } finally {
       setIsSubmitting(false);
     }
   };
-
+  
+  const sections = [
+    { id: 'geral', label: 'Informação Gerais' },
+    { id: 'variacoes', label: 'Estrutura e variações' },
+    { id: 'fotos', label: 'Fotos' },
+    { id: 'preco', label: 'Preço' }
+  ];
+  
   return (
-    <div className="min-h-screen bg-gray-900">
-      {/* Header Compacto */}
-      <div className="bg-gray-800/95 backdrop-blur-sm border-b border-gray-700 sticky top-16 z-40">
-        <div className="max-w-6xl mx-auto px-6 py-3">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+              <Camera className="w-6 h-6 text-gray-400" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">
+                {formData.title || 'Novo produto'}
+              </h1>
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <span className={`w-2 h-2 rounded-full ${formData.catalog_active ? 'bg-green-500' : 'bg-gray-300'}`}></span>
+                <span>{formData.catalog_active ? 'Ativo' : 'Inativo'}</span>
+                <span>|</span>
+                <span>Estoque: {formData.quantity || 0}</span>
+              </div>
+            </div>
+          </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(createPageUrl('CatalogManagement'))}
-              className="text-gray-400 hover:text-white transition-colors p-1.5 hover:bg-gray-700 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-lg font-semibold text-white">Adicionar Produto ao Catálogo</h1>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-6xl mx-auto px-6 py-6">
-        <form onSubmit={handleSubmit} className="space-y-5">
-          
-          {/* Informações Básicas - Layout Compacto */}
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
-              <Package className="w-4 h-4 text-blue-400" />
-              <span>Informações Básicas</span>
-            </div>
-
-            <div>
-              <Label className="text-gray-300 text-sm">Descrição do Produto *</Label>
-              <Textarea
-                placeholder="Ex: Processador Intel Core i7 10700K"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 min-h-[70px] text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <div>
-                <Label className="text-gray-300 text-xs">Lote/SKU</Label>
-                <Input
-                  placeholder="Ex: LOTE-001"
-                  value={formData.lot}
-                  onChange={(e) => handleInputChange('lot', e.target.value)}
-                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-xs">Nota Fiscal</Label>
-                <Input
-                  placeholder="Ex: 0001"
-                  value={formData.purchase_order}
-                  onChange={(e) => handleInputChange('purchase_order', e.target.value)}
-                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-xs">Valor de Mercado</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="R$ 0,00"
-                  value={formData.market_value}
-                  onChange={(e) => handleInputChange('market_value', e.target.value)}
-                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label className="text-gray-300 text-xs">Observações</Label>
-              <Textarea
-                placeholder="Informações adicionais sobre o produto..."
-                value={formData.notes}
-                onChange={(e) => handleInputChange('notes', e.target.value)}
-                className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 min-h-[50px] text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Imagens - Layout Compacto */}
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-3">
-            <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
-              <Upload className="w-4 h-4 text-purple-400" />
-              <span>Imagens do Produto *</span>
-            </div>
-
-            <Label htmlFor="image-upload" className="cursor-pointer block">
-              <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-purple-500 hover:bg-gray-700/30 transition-all">
-                {uploadingImage ? (
-                  <Loader2 className="w-8 h-8 text-purple-400 animate-spin mx-auto mb-2" />
-                ) : (
-                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                )}
-                <p className="text-gray-300 text-sm font-medium">Clique para fazer upload</p>
-                <p className="text-gray-500 text-xs mt-0.5">Selecione múltiplas imagens</p>
-              </div>
-              <input
-                id="image-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-                disabled={uploadingImage}
-              />
-            </Label>
-
-            {imageUrls.length > 0 && (
-              <div className="grid grid-cols-4 gap-3">
-                {imageUrls.map((url, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={url}
-                      alt={`Produto ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-lg bg-gray-700 border border-gray-600"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute -top-1.5 -right-1.5 bg-red-600 hover:bg-red-700 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                    >
-                      <X className="w-3 h-3 text-white" />
-                    </button>
-                    {index === 0 && (
-                      <div className="absolute bottom-1.5 left-1.5 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-medium">
-                        Principal
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Preços - Layout Grid Compacto */}
-          <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-4">
-            <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
-              <DollarSign className="w-4 h-4 text-green-400" />
-              <span>Precificação</span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-3">
-              <div>
-                <Label className="text-gray-300 text-xs">Custo (C.U.L) *</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="R$ 0,00"
-                  value={formData.cost_price}
-                  onChange={(e) => handleInputChange('cost_price', e.target.value)}
-                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-xs">Varejo (P/V)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="R$ 0,00"
-                  value={formData.selling_price_retail}
-                  onChange={(e) => handleInputChange('selling_price_retail', e.target.value)}
-                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                />
-              </div>
-              <div>
-                <Label className="text-gray-300 text-xs">Licenciado (P/LIC)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="R$ 0,00"
-                  value={formData.selling_price_wholesale}
-                  onChange={(e) => handleInputChange('selling_price_wholesale', e.target.value)}
-                  className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                />
-              </div>
-              <div className="relative">
-                <Label className="text-gray-300 text-xs">Catálogo {formData.catalog_active && '*'}</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="R$ 0,00"
-                  value={formData.price_catalog}
-                  onChange={(e) => handleInputChange('price_catalog', e.target.value)}
-                  className={`bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm ${
-                    formData.catalog_active ? 'border-green-500' : ''
-                  }`}
-                />
-                {formData.catalog_active && (
-                  <div className="absolute -top-1 -right-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-gray-700/20 rounded-lg p-3 border border-gray-600/50">
-              <p className="text-gray-400 text-xs mb-2.5">Leilões (opcional)</p>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label className="text-gray-300 text-xs">Lance Inicial</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="R$ 0,00"
-                    value={formData.price_auction_start}
-                    onChange={(e) => handleInputChange('price_auction_start', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-xs">Arremate Agora</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="R$ 0,00"
-                    value={formData.price_buy_now}
-                    onChange={(e) => handleInputChange('price_buy_now', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Estoque e Dimensões - Grid Lado a Lado */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Estoque */}
-            <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-3">
-              <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
-                <Warehouse className="w-4 h-4 text-yellow-400" />
-                <span>Controle de Estoque</span>
-              </div>
-              <div className="grid grid-cols-5 gap-2">
-                <div>
-                  <Label className="text-gray-300 text-xs">Total</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={formData.quantity}
-                    onChange={(e) => handleInputChange('quantity', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-xs">Perfeito</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={formData.qty_perfeito}
-                    onChange={(e) => handleInputChange('qty_perfeito', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-xs">Bom</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={formData.qty_bom}
-                    onChange={(e) => handleInputChange('qty_bom', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-xs">Ruim</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={formData.qty_ruim}
-                    onChange={(e) => handleInputChange('qty_ruim', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-xs">Oficina</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    value={formData.qty_oficina}
-                    onChange={(e) => handleInputChange('qty_oficina', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white mt-1.5 h-9 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Dimensões */}
-            <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-5 space-y-3">
-              <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
-                <Ruler className="w-4 h-4 text-orange-400" />
-                <span>Dimensões (Frete)</span>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                <div>
-                  <Label className="text-gray-300 text-xs">Peso (kg)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.peso}
-                    onChange={(e) => handleInputChange('peso', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-xs">Comp. (cm)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.comprimento}
-                    onChange={(e) => handleInputChange('comprimento', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-xs">Altura (cm)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.altura}
-                    onChange={(e) => handleInputChange('altura', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300 text-xs">Larg. (cm)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.largura}
-                    onChange={(e) => handleInputChange('largura', e.target.value)}
-                    className="bg-gray-700/50 border-gray-600 text-white placeholder:text-gray-500 mt-1.5 h-9 text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Catálogo - Compacto */}
-          <div className="bg-gray-800/50 border border-green-600/30 rounded-xl p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <ShoppingCart className="w-4 h-4 text-green-400" />
-                <div>
-                  <p className="text-white text-sm font-medium">Ativar no Catálogo</p>
-                  <p className="text-gray-400 text-xs">Tornar visível para licenciados</p>
-                </div>
-              </div>
-              <Switch
-                checked={formData.catalog_active}
-                onCheckedChange={(checked) => handleInputChange('catalog_active', checked)}
-                className="data-[state=checked]:bg-green-600"
-              />
-            </div>
-            
-            {formData.catalog_active && (
-              <div className="mt-3 bg-green-600/10 border border-green-500/30 rounded-lg p-3">
-                <p className="text-green-400 text-xs">
-                  ✅ Produto disponível no catálogo após salvar. Preencha o <strong>Preço Catálogo</strong>.
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Botões de Ação - Compactos */}
-          <div className="flex gap-3 justify-end pt-2">
             <Button
               type="button"
               onClick={() => navigate(createPageUrl('CatalogManagement'))}
               variant="outline"
-              className="bg-gray-700 border-gray-600 text-white hover:bg-gray-600 h-9 text-sm"
+              className="border-gray-300"
             >
               Cancelar
             </Button>
             <Button
-              type="submit"
+              onClick={handleSubmit}
               disabled={isSubmitting}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 h-9 text-sm font-medium"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
             >
               {isSubmitting ? (
                 <>
@@ -556,11 +222,710 @@ export default function AddCatalogProduct() {
                   Salvando...
                 </>
               ) : (
-                'Adicionar Produto'
+                'Analisar produto'
               )}
             </Button>
           </div>
-        </form>
+        </div>
+      </div>
+      
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        <div className="flex gap-6">
+          {/* Sidebar de navegação */}
+          <div className="w-48 flex-shrink-0">
+            <div className="bg-white rounded-lg border p-2 sticky top-28">
+              {sections.map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => setCurrentSection(section.id)}
+                  className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    currentSection === section.id
+                      ? 'bg-blue-600 text-white'
+                      : 'text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  {section.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          {/* Conteúdo principal */}
+          <div className="flex-1">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              
+              {/* Seção: Informações Gerais */}
+              {currentSection === 'geral' && (
+                <div className="space-y-6">
+                  {/* Título e Descrição */}
+                  <div className="bg-white rounded-lg border p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-4">
+                      Título e descrição
+                    </h2>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Nome <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          value={formData.title}
+                          onChange={(e) => handleInputChange('title', e.target.value)}
+                          placeholder="Ex: Notebook Dell Inspiron 15"
+                          className="bg-white border-gray-300"
+                          maxLength={60}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {formData.title.length}/60 caracteres restantes
+                        </p>
+                      </div>
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <Label className="text-sm text-gray-700">Descrição</Label>
+                          <button
+                            type="button"
+                            className="text-sm text-purple-600 hover:text-purple-700"
+                          >
+                            🪄 Usar IA
+                          </button>
+                        </div>
+                        <ReactQuill
+                          value={formData.description}
+                          onChange={(value) => handleInputChange('description', value)}
+                          theme="snow"
+                          className="bg-white"
+                          modules={{
+                            toolbar: [
+                              ['bold', 'italic', 'underline'],
+                              [{ list: 'ordered' }, { list: 'bullet' }],
+                              ['link'],
+                              ['clean']
+                            ]
+                          }}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          5/200 caracteres restantes
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Categoria e Subcategoria */}
+                  <div className="bg-white rounded-lg border p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-base font-semibold text-gray-900">
+                        Categoria e subcategoria
+                      </h2>
+                      <button
+                        type="button"
+                        className="text-sm text-purple-600 hover:text-purple-700"
+                      >
+                        🔍 Dicas de categoria
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">Categoria</Label>
+                        <select
+                          value={formData.category}
+                          onChange={(e) => handleInputChange('category', e.target.value)}
+                          className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
+                        >
+                          <option value="">Primeiro escolha uma categoria</option>
+                          <option value="eletronicos">Eletrônicos</option>
+                          <option value="eletrodomesticos">Eletrodomésticos</option>
+                          <option value="moveis">Móveis e Decoração</option>
+                          <option value="outros">Outros</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">Subcategoria</Label>
+                        <select
+                          value={formData.subcategory}
+                          onChange={(e) => handleInputChange('subcategory', e.target.value)}
+                          className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
+                          disabled={!formData.category}
+                        >
+                          <option value="">Primeiro selecione a categoria principal</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Códigos de Identificação */}
+                  <div className="bg-white rounded-lg border p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-4">
+                      Códigos de identificação
+                    </h2>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Tipo de código de barras
+                        </Label>
+                        <select className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm">
+                          <option>Não possui código de barras</option>
+                          <option>EAN</option>
+                          <option>UPC</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Código de barras
+                        </Label>
+                        <Input
+                          value={formData.barcode}
+                          onChange={(e) => handleInputChange('barcode', e.target.value)}
+                          placeholder="Código do barras do produto"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
+                      
+                      <div className="col-span-2">
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Código interno (SKU)
+                        </Label>
+                        <Input
+                          value={formData.sku}
+                          onChange={(e) => handleInputChange('sku', e.target.value)}
+                          placeholder="880200"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-4">
+                      <Switch
+                        checked={formData.gerar_barcode_automatico}
+                        onCheckedChange={(checked) => handleInputChange('gerar_barcode_automatico', checked)}
+                      />
+                      <span className="text-sm text-gray-700">Gerar automaticamente</span>
+                    </div>
+                  </div>
+                  
+                  {/* Especificações */}
+                  <div className="bg-white rounded-lg border p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-4">
+                      Especificações
+                    </h2>
+                    
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm text-gray-700 mb-1.5 block">
+                            Condição do produto
+                          </Label>
+                          <select
+                            value={formData.condition}
+                            onChange={(e) => handleInputChange('condition', e.target.value)}
+                            className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm"
+                          >
+                            <option value="Novo">Novo</option>
+                            <option value="Usado">Usado</option>
+                            <option value="Recondicionado">Recondicionado</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm text-gray-700 mb-1.5 block">
+                            Unidade
+                          </Label>
+                          <select className="w-full h-10 px-3 border border-gray-300 rounded-md bg-white text-sm">
+                            <option>Unidade</option>
+                            <option>Kit</option>
+                            <option>Par</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm text-gray-700 mb-1.5 block">Marca</Label>
+                          <Input
+                            value={formData.brand}
+                            onChange={(e) => handleInputChange('brand', e.target.value)}
+                            placeholder="Marca do produto"
+                            className="bg-white border-gray-300"
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label className="text-sm text-gray-700 mb-1.5 block">Modelo</Label>
+                          <Input
+                            value={formData.model}
+                            onChange={(e) => handleInputChange('model', e.target.value)}
+                            placeholder="Modelo do produto"
+                            className="bg-white border-gray-300"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Peso e Dimensões */}
+                  <div className="bg-white rounded-lg border p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-1">
+                      Peso e dimensões do produto
+                    </h2>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Essas informações influenciam no cálculo do frete. Medir com precisão evita erros no envio.
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">Peso (Kg)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.weight}
+                          onChange={(e) => handleInputChange('weight', e.target.value)}
+                          placeholder="0cm"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">Altura (cm)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.height}
+                          onChange={(e) => handleInputChange('height', e.target.value)}
+                          placeholder="0cm"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">Comprimento (cm)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.length}
+                          onChange={(e) => handleInputChange('length', e.target.value)}
+                          placeholder="0cm"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">Largura (cm)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.width}
+                          onChange={(e) => handleInputChange('width', e.target.value)}
+                          placeholder="0cm"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4 flex items-start gap-3">
+                      <div className="flex-1">
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                          <div className="flex items-center justify-center">
+                            <div className="text-center">
+                              <div className="w-24 h-24 mx-auto mb-2 bg-white rounded-lg border-2 border-gray-300 flex items-center justify-center">
+                                <div className="text-xs text-gray-400">Visualização</div>
+                              </div>
+                              <p className="text-xs text-gray-500">Largura</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Seção: Estrutura e variações */}
+              {currentSection === 'variacoes' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg border p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-4">
+                      Este produto possui variações?
+                    </h2>
+                    
+                    <div className="flex items-center gap-4 mb-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={!formData.has_variations}
+                          onChange={() => handleInputChange('has_variations', false)}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm text-gray-700">Não</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          checked={formData.has_variations}
+                          onChange={() => handleInputChange('has_variations', true)}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm text-gray-700">Sim</span>
+                      </label>
+                    </div>
+                    
+                    {formData.has_variations && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-sm text-gray-700 mb-3 block">
+                            Qual é o tipo de variação principal deste produto?
+                          </Label>
+                          
+                          <div className="flex flex-wrap gap-2 mb-4">
+                            {['Cor', 'Tamanho', 'Sabor', 'Material', 'Voltagem'].map((type) => (
+                              <button
+                                key={type}
+                                type="button"
+                                onClick={() => handleInputChange('variation_type', type)}
+                                className={`px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                                  formData.variation_type === type
+                                    ? 'bg-blue-50 border-blue-600 text-blue-700'
+                                    : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                {type}
+                              </button>
+                            ))}
+                          </div>
+                          
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                            <p className="text-sm text-yellow-800">
+                              💡 Atenção: A variação escolhida não pode ser alterada por restrição de produto.
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {formData.variation_type && (
+                          <div>
+                            <Label className="text-sm text-gray-700 mb-2 block">
+                              Quais opções de "{formData.variation_type}" este produto possui?
+                            </Label>
+                            
+                            <div className="space-y-2">
+                              {formData.variations.map((variation) => (
+                                <div key={variation.id} className="flex items-center gap-2">
+                                  <Input
+                                    value={variation.name}
+                                    onChange={(e) => updateVariation(variation.id, 'name', e.target.value)}
+                                    placeholder={`Ex: ${formData.variation_type === 'Cor' ? 'Azul' : 'M'}`}
+                                    className="flex-1 bg-white border-gray-300"
+                                  />
+                                  <Input
+                                    type="number"
+                                    value={variation.stock}
+                                    onChange={(e) => updateVariation(variation.id, 'stock', e.target.value)}
+                                    placeholder="Estoque"
+                                    className="w-24 bg-white border-gray-300"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => removeVariation(variation.id)}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <Button
+                              type="button"
+                              onClick={addVariation}
+                              variant="outline"
+                              className="mt-3 border-gray-300 text-sm"
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Adicionar variação
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {!formData.has_variations && (
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">Estoque</Label>
+                        <Input
+                          type="number"
+                          value={formData.quantity}
+                          onChange={(e) => handleInputChange('quantity', e.target.value)}
+                          placeholder="1"
+                          className="w-32 bg-white border-gray-300"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm text-blue-900">
+                        Avise-me quando um envio estiver abaixo de{' '}
+                        <input
+                          type="number"
+                          defaultValue={1}
+                          className="w-16 px-2 py-0.5 border border-blue-300 rounded mx-1 text-center"
+                        />
+                      </p>
+                    </div>
+                    <img
+                      src="https://via.placeholder.com/100x60"
+                      alt="Ilustração"
+                      className="w-24 h-auto"
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Seção: Fotos */}
+              {currentSection === 'fotos' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg border p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-1">
+                      Fotos principais do produto
+                    </h2>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Arraste as fotos na ordem que quiser e defina a que será a principal do seu produto.
+                      {' '}
+                      <button type="button" className="text-purple-600 hover:text-purple-700">
+                        Buscar fotos
+                      </button>
+                    </p>
+                    
+                    {formData.image_urls.length === 0 ? (
+                      <label htmlFor="image-upload" className="block cursor-pointer">
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-purple-400 hover:bg-purple-50/30 transition-all">
+                          {uploadingImage ? (
+                            <Loader2 className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-3" />
+                          ) : (
+                            <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                          )}
+                          <p className="text-sm text-gray-600 font-medium mb-1">
+                            Arraste as fotos até aqui ou clique para fazer upload
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Formato JPG ou PNG. Tamanho máx. 10MB
+                          </p>
+                        </div>
+                        <input
+                          id="image-upload"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleImageUpload}
+                          className="hidden"
+                          disabled={uploadingImage}
+                        />
+                      </label>
+                    ) : (
+                      <div>
+                        <div className="grid grid-cols-4 gap-4">
+                          {formData.image_urls.map((url, index) => (
+                            <div key={index} className="relative group">
+                              <img
+                                src={url}
+                                alt={`Produto ${index + 1}`}
+                                className="w-full h-32 object-cover rounded-lg border-2 border-gray-200"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeImage(index)}
+                                className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-lg border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <X className="w-4 h-4 text-gray-600" />
+                              </button>
+                              {index === 0 && (
+                                <div className="absolute bottom-2 left-2 bg-blue-600 text-white text-xs px-2 py-1 rounded font-medium">
+                                  Principal
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                          
+                          <label htmlFor="image-upload-more" className="cursor-pointer">
+                            <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-purple-400 hover:bg-purple-50/30 transition-all">
+                              <Plus className="w-8 h-8 text-gray-400" />
+                            </div>
+                            <input
+                              id="image-upload-more"
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              onChange={handleImageUpload}
+                              className="hidden"
+                              disabled={uploadingImage}
+                            />
+                          </label>
+                        </div>
+                        
+                        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start gap-3">
+                          <div className="flex-1">
+                            <p className="text-sm text-yellow-800 font-medium mb-1">
+                              Essas são fotos principais do produto. Você também pode definir fotos específicas por variação de marcante.
+                            </p>
+                            <button
+                              type="button"
+                              className="text-sm text-yellow-900 underline hover:no-underline"
+                            >
+                              Sim
+                            </button>
+                            {' • '}
+                            <button
+                              type="button"
+                              className="text-sm text-yellow-900 underline hover:no-underline"
+                            >
+                              Continuar da mesma forma
+                            </button>
+                          </div>
+                          <img
+                            src="https://via.placeholder.com/100x60"
+                            alt="Ilustração"
+                            className="w-24 h-auto"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Seção: Preço */}
+              {currentSection === 'preco' && (
+                <div className="space-y-6">
+                  <div className="bg-white rounded-lg border p-6">
+                    <h2 className="text-base font-semibold text-gray-900 mb-4">
+                      Preço do produto
+                    </h2>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Preço <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.price}
+                          onChange={(e) => handleInputChange('price', e.target.value)}
+                          placeholder="R$ 0,00"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
+                      
+                      <div>
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Preço de custo
+                        </Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={formData.cost_price}
+                          onChange={(e) => handleInputChange('cost_price', e.target.value)}
+                          placeholder="R$ 0,00"
+                          className="bg-white border-gray-300"
+                        />
+                      </div>
+                      
+                      <div className="col-span-2">
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Margem de lucro
+                        </Label>
+                        <div className="flex items-center gap-4">
+                          <Input
+                            type="text"
+                            value={formData.price && formData.cost_price 
+                              ? `R$ ${(parseFloat(formData.price) - parseFloat(formData.cost_price)).toFixed(2)}`
+                              : 'R$ 0,00'
+                            }
+                            readOnly
+                            className="flex-1 bg-gray-50 border-gray-300"
+                          />
+                          <button
+                            type="button"
+                            className="text-sm text-purple-600 hover:text-purple-700 flex items-center gap-1"
+                          >
+                            🧮 Análise comparativa
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
+                      <div className="flex-1">
+                        <p className="text-sm text-blue-900 font-medium mb-2">
+                          💡 Sugestão de preço comparativo
+                        </p>
+                        <p className="text-sm text-blue-800 mb-3">
+                          Encontre o código de barras do seu produto e gere análise comparativa com o mercado.
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="border-blue-300 text-blue-700 bg-white"
+                          >
+                            Sim
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-700"
+                          >
+                            Não
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-700"
+                          >
+                            Continuar assim mesmo
+                          </Button>
+                        </div>
+                      </div>
+                      <img
+                        src="https://via.placeholder.com/100x60"
+                        alt="Ilustração"
+                        className="w-24 h-auto"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Ativar no Catálogo */}
+                  <div className="bg-white rounded-lg border p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Disponibilizar no Catálogo
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-0.5">
+                          Tornar este produto visível para licenciados
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formData.catalog_active}
+                        onCheckedChange={(checked) => handleInputChange('catalog_active', checked)}
+                        className="data-[state=checked]:bg-green-600"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );
