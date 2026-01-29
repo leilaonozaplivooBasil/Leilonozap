@@ -983,7 +983,13 @@ ${boletoInfo}================================
     if (!confirm(`⚠️ Cancelar venda de ${sale.product_description}?\n\nIsso reverterá:\n- Quantidade ao estoque\n- Comissões\n- Impostos registrados`)) return;
 
     try {
-      // Busca o produto original
+      // 1️⃣ Deleta comissões relacionadas primeiro
+      const commissions = await base44.entities.SaleCommission.filter({ sale_id: sale.id });
+      for (const commission of commissions) {
+        await base44.entities.SaleCommission.delete(commission.id);
+      }
+
+      // 2️⃣ Busca o produto original
       const product = await base44.entities.Product.list();
       const targetProduct = product.find(p => p.id === sale.product_id);
       
@@ -992,7 +998,7 @@ ${boletoInfo}================================
         return;
       }
 
-      // Restaura o estoque
+      // 3️⃣ Restaura o estoque
       const restoredQuantity = (targetProduct.quantity || 0) + (sale.quantity_sold || 0);
       const restoredSoldAmount = Math.max(0, (targetProduct.sold_amount || 0) - (sale.total_amount || 0));
       const restoredProfit = restoredSoldAmount - ((targetProduct.cost_price || 0) * ((targetProduct.quantity_sold || 0) - (sale.quantity_sold || 0)));
@@ -1005,7 +1011,7 @@ ${boletoInfo}================================
         profit: restoredProfit
       });
 
-      // Delete a venda
+      // 4️⃣ Deleta a venda
       await base44.entities.Sale.delete(sale.id);
 
       alert('✅ Venda cancelada! Produto retornou ao estoque e comissões foram revertidas.');
