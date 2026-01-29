@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Store, Package, DollarSign, TrendingUp, LogOut, Printer, Eye, Edit, Loader2 } from "lucide-react";
+import { Store, Package, DollarSign, TrendingUp, LogOut, Printer, Eye, Edit, Loader2, Info } from "lucide-react";
 import { toast } from "sonner";
 
 const StoreEntity = base44.entities.Store;
@@ -29,6 +29,10 @@ export default function LojistaDashboard() {
   const [newStatus, setNewStatus] = useState('');
   const [trackingCode, setTrackingCode] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [detailsAuction, setDetailsAuction] = useState(null);
+  const [clientDetails, setClientDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -139,6 +143,26 @@ export default function LojistaDashboard() {
       toast.error('❌ Erro ao atualizar status');
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const handleViewDetails = async (auction) => {
+    setDetailsAuction(auction);
+    setShowDetailsModal(true);
+    setLoadingDetails(true);
+    
+    try {
+      if (auction.winner_id) {
+        const users = await AppUserEntity.filter({ id: auction.winner_id });
+        if (users && users.length > 0) {
+          setClientDetails(users[0]);
+        }
+      }
+    } catch (err) {
+      console.error("Erro ao buscar dados do cliente:", err);
+      toast.error("Erro ao carregar dados do cliente");
+    } finally {
+      setLoadingDetails(false);
     }
   };
 
@@ -417,6 +441,14 @@ export default function LojistaDashboard() {
                     <div className="flex gap-2">
                       <Button
                         size="sm"
+                        onClick={() => handleViewDetails(auction)}
+                        className="bg-purple-600 hover:bg-purple-700"
+                      >
+                        <Info className="w-4 h-4 mr-2" />
+                        Detalhes
+                      </Button>
+                      <Button
+                        size="sm"
                         onClick={() => handleUpdateStatus(auction)}
                         className="bg-blue-600 hover:bg-blue-700"
                       >
@@ -439,6 +471,101 @@ export default function LojistaDashboard() {
             ))}
           </TabsContent>
           </Tabs>
+
+          {/* Modal de Detalhes da Venda */}
+        <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+          <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Detalhes da Venda</DialogTitle>
+            </DialogHeader>
+            
+            {loadingDetails ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+              </div>
+            ) : detailsAuction && (
+              <div className="space-y-6">
+                {/* Informações do Produto */}
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-purple-400 mb-3">Informações do Produto</h3>
+                  <div className="flex gap-4">
+                    {detailsAuction.image_urls?.[0] && (
+                      <img 
+                        src={detailsAuction.image_urls[0]} 
+                        alt={detailsAuction.title} 
+                        className="w-24 h-24 object-cover rounded-lg"
+                      />
+                    )}
+                    <div className="flex-1 space-y-2 text-sm">
+                      <p><strong className="text-gray-400">Produto:</strong> {detailsAuction.title}</p>
+                      <p><strong className="text-gray-400">Valor:</strong> <span className="text-green-400 text-lg font-bold">R$ {detailsAuction.current_price?.toFixed(2)}</span></p>
+                      <p><strong className="text-gray-400">Data da Venda:</strong> {new Date(detailsAuction.created_date).toLocaleDateString('pt-BR')}</p>
+                      {detailsAuction.order_status && (
+                        <p><strong className="text-gray-400">Status:</strong> 
+                          <Badge className={`ml-2 ${
+                            detailsAuction.order_status === 'delivered' ? 'bg-green-600' :
+                            detailsAuction.order_status === 'shipped' ? 'bg-blue-600' :
+                            detailsAuction.order_status === 'paid' ? 'bg-yellow-600' :
+                            'bg-gray-600'
+                          }`}>
+                            {detailsAuction.order_status === 'awaiting_payment' ? 'Aguardando Pagamento' :
+                             detailsAuction.order_status === 'paid' ? 'Pago' :
+                             detailsAuction.order_status === 'shipped' ? 'Enviado' :
+                             detailsAuction.order_status === 'delivered' ? 'Entregue' :
+                             detailsAuction.order_status === 'canceled' ? 'Cancelado' : detailsAuction.order_status}
+                          </Badge>
+                        </p>
+                      )}
+                      {detailsAuction.tracking_code && (
+                        <p><strong className="text-gray-400">Rastreio:</strong> {detailsAuction.tracking_code}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dados do Cliente */}
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-blue-400 mb-3">Dados do Cliente</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><strong className="text-gray-400">Nome:</strong> {clientDetails?.full_name || detailsAuction.winner_name || 'N/A'}</p>
+                    <p><strong className="text-gray-400">Email:</strong> {clientDetails?.email || 'Não informado'}</p>
+                    <p><strong className="text-gray-400">Telefone:</strong> {clientDetails?.phone || 'Não informado'}</p>
+                    {clientDetails?.cpf && (
+                      <p><strong className="text-gray-400">CPF:</strong> {clientDetails.cpf}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Endereço de Entrega */}
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <h3 className="text-lg font-semibold text-green-400 mb-3">Endereço de Entrega</h3>
+                  {clientDetails?.address_street ? (
+                    <div className="space-y-2 text-sm">
+                      <p><strong className="text-gray-400">Logradouro:</strong> {clientDetails.address_street}{clientDetails.address_number ? ', ' + clientDetails.address_number : ''}</p>
+                      {clientDetails.address_complement && (
+                        <p><strong className="text-gray-400">Complemento:</strong> {clientDetails.address_complement}</p>
+                      )}
+                      <p><strong className="text-gray-400">Bairro:</strong> {clientDetails.address_neighborhood || 'N/A'}</p>
+                      <p><strong className="text-gray-400">Cidade/UF:</strong> {clientDetails.address_city || 'N/A'} / {clientDetails.address_state || 'N/A'}</p>
+                      <p><strong className="text-gray-400">CEP:</strong> {clientDetails.address_zip_code || 'N/A'}</p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">Endereço não informado</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button
+                onClick={() => setShowDetailsModal(false)}
+                className="bg-gray-700 hover:bg-gray-600"
+              >
+                Fechar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
           {/* Modal de Atualização de Status */}
         <Dialog open={showStatusModal} onOpenChange={setShowStatusModal}>
