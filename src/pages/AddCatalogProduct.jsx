@@ -32,6 +32,7 @@ export default function AddCatalogProduct() {
   const [selectedParentForSub, setSelectedParentForSub] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingSubcategory, setEditingSubcategory] = useState(null);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
   
   const [formData, setFormData] = useState({
     // Informações Gerais
@@ -134,6 +135,39 @@ export default function AddCatalogProduct() {
     // Se mudou a categoria, limpa a subcategoria
     if (field === 'category') {
       setFormData(prev => ({ ...prev, subcategory: '' }));
+    }
+  };
+  
+  const handleGenerateDescription = async () => {
+    if (!formData.title) {
+      alert('Por favor, insira o nome do produto primeiro');
+      return;
+    }
+    
+    setGeneratingDescription(true);
+    
+    try {
+      const prompt = `Crie uma descrição atraente e detalhada para o seguinte produto de catálogo: "${formData.title}". 
+
+A descrição deve:
+- Ter entre 100-200 palavras
+- Destacar os principais benefícios e características
+- Ser persuasiva para vendas online
+- Usar linguagem profissional mas acessível
+- Incluir informações técnicas relevantes quando aplicável
+
+Retorne APENAS a descrição, sem introduções ou conclusões.`;
+
+      const response = await base44.integrations.Core.InvokeLLM({
+        prompt: prompt
+      });
+      
+      setFormData(prev => ({ ...prev, description: response }));
+    } catch (error) {
+      console.error('Erro ao gerar descrição:', error);
+      alert('Erro ao gerar descrição. Tente novamente.');
+    } finally {
+      setGeneratingDescription(false);
     }
   };
   
@@ -459,9 +493,18 @@ export default function AddCatalogProduct() {
                           <Label className="text-sm text-gray-700">Descrição</Label>
                           <button
                             type="button"
-                            className="text-sm text-purple-600 hover:text-purple-700"
+                            onClick={handleGenerateDescription}
+                            disabled={generatingDescription || !formData.title}
+                            className="text-sm text-purple-600 hover:text-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                           >
-                            🪄 Usar IA
+                            {generatingDescription ? (
+                              <>
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                                Gerando...
+                              </>
+                            ) : (
+                              '🪄 Usar IA'
+                            )}
                           </button>
                         </div>
                         <ReactQuill
