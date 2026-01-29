@@ -75,6 +75,7 @@ export default function AddCatalogProduct() {
     
     // Catálogo
     catalog_active: false,
+    is_featured: false,
     quantity: 1,
     
     // Campos existentes
@@ -378,6 +379,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         cost_price: parseFloat(formData.cost_price) || 0,
         market_value: parseFloat(formData.compare_price) || 0,
         catalog_active: formData.catalog_active,
+        is_featured: formData.is_featured,
         quantity: parseInt(formData.quantity) || 1,
         peso: parseFloat(formData.weight) || 0,
         comprimento: parseFloat(formData.length) || 0,
@@ -1198,7 +1200,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                   
                   {/* Ativar no Catálogo */}
                   <div className="bg-white rounded-lg border p-6">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-6">
                       <div>
                         <h3 className="text-sm font-semibold text-gray-900">
                           Disponibilizar no Catálogo
@@ -1211,6 +1213,22 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                         checked={formData.catalog_active}
                         onCheckedChange={(checked) => handleInputChange('catalog_active', checked)}
                         className="data-[state=checked]:bg-green-600"
+                      />
+                    </div>
+
+                    <div className="border-t pt-6 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-900">
+                          Colocar em Destaque
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-0.5">
+                          Destacar este produto no catálogo
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formData.is_featured}
+                        onCheckedChange={(checked) => handleInputChange('is_featured', checked)}
+                        className="data-[state=checked]:bg-yellow-500"
                       />
                     </div>
                   </div>
