@@ -42,6 +42,8 @@ export default function Catalog() {
   const [sortBy, setSortBy] = useState("recent");
   const [stockFilter, setStockFilter] = useState("all");
   const [licenseePhone, setLicenseePhone] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   useEffect(() => {
     const slider = scrollerRef.current;
@@ -98,6 +100,11 @@ export default function Catalog() {
 
     let filtered = products;
 
+    // Filtro por categoria
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((p) => p.category_id === selectedCategory);
+    }
+
     // Filtro por texto
     if (searchTerm) {
       filtered = filtered.filter((p) =>
@@ -132,7 +139,7 @@ export default function Catalog() {
     }
 
     setFilteredProducts(filtered);
-  }, [products, searchTerm, priceRange, sortBy, stockFilter]);
+  }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory]);
 
   const loadLicenseePhone = React.useCallback(async () => {
     try {
@@ -332,6 +339,14 @@ export default function Catalog() {
 
       console.log('✅ [Catálogo] Carregando produtos para venda');
 
+      // Carrega categorias
+      try {
+        const allCategories = await base44.entities.Category.filter({ parent_category_id: null });
+        setCategories(allCategories || []);
+      } catch (error) {
+        console.debug('Erro ao carregar categorias:', error);
+      }
+
       try {
         const cachedBanners = sessionStorage.getItem('catalog_banners_cache');
         const cacheTime = sessionStorage.getItem('catalog_banners_cache_time');
@@ -374,7 +389,7 @@ export default function Catalog() {
     if (products.length > 0) {
       filterProducts();
     }
-  }, [products, searchTerm, priceRange, sortBy, stockFilter, filterProducts]);
+  }, [products, searchTerm, priceRange, sortBy, stockFilter, selectedCategory, filterProducts]);
 
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
@@ -499,6 +514,7 @@ export default function Catalog() {
                   </h3>
                   <button
                     onClick={() => {
+                      setSelectedCategory("all");
                       setPriceRange({ min: "", max: "" });
                       setSortBy("recent");
                       setStockFilter("all");
@@ -509,7 +525,22 @@ export default function Catalog() {
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                  {/* Categoria */}
+                  <div>
+                    <label className="block text-sm text-gray-400 mb-2">Categoria</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:border-green-500 focus:outline-none"
+                    >
+                      <option value="all">Todas</option>
+                      {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Faixa de Preço */}
                   <div>
                     <label className="block text-sm text-gray-400 mb-2">Preço mínimo</label>
