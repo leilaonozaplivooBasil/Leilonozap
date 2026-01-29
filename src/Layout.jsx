@@ -1057,9 +1057,29 @@ export default function Layout({ children, currentPageName }) {
         }
         
         .animate-pulse-subtle {
-          animation: pulse-subtle 2s ease-in-out infinite;
+           animation: pulse-subtle 2s ease-in-out infinite;
+         }
+
+         /* TEMA CLARO */
+         :root.light-theme {
+           --bg-primary: #ffffff;
+           --bg-secondary: #f5f5f5;
+           --text-primary: #1a1a1a;
+           --text-secondary: #666666;
+           --border-color: #e0e0e0;
+         }
+
+         html.light-theme {
+           background-color: #ffffff;
+           color: #1a1a1a;
+         }
+
+         html.light-theme body {
+           background-color: #ffffff;
+           color: #1a1a1a;
+         }
+        `}</style>
+        </ErrorBoundary>
+        </ThemeProvider>
+        );
         }
-      `}</style>
-    </ErrorBoundary>
-  );
-}
