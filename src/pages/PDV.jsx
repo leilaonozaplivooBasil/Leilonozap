@@ -36,6 +36,7 @@ export default function PDV() {
   const [selectedLicenciante, setSelectedLicenciante] = useState(null);
   const [comissaoLicenciante, setComissaoLicenciante] = useState(0);
   const [tipoComissaoLicenciante, setTipoComissaoLicenciante] = useState('percentage');
+  const [autoFilledLicenciante, setAutoFilledLicenciante] = useState(false);
   const [sellerStats, setSellerStats] = useState([]);
   const [todaySales, setTodaySales] = useState([]);
   const [allSales, setAllSales] = useState([]);
@@ -344,6 +345,49 @@ Transações: ${selectedSession.transactions_count || 0}
       setSellers(allSellers);
     } catch (error) {
       console.error('Erro ao carregar vendedores:', error);
+    }
+  };
+
+  // 🆕 Função para auto-preencher licenciante quando vendedor é selecionado
+  const handleSellerChange = async (sellerId) => {
+    setSelectedSeller(sellerId);
+    
+    if (!sellerId) {
+      setSelectedLicenciante(null);
+      setComissaoLicenciante(0);
+      setAutoFilledLicenciante(false);
+      return;
+    }
+
+    // Busca dados do vendedor selecionado
+    const seller = sellers.find(s => s.id === sellerId);
+    if (!seller) return;
+
+    // Define comissão padrão do licenciado
+    if (seller.default_commission_percentage) {
+      setCommissionValue(seller.default_commission_percentage);
+    }
+
+    // Auto-preenche licenciante se existir
+    if (seller.referred_by_id) {
+      const licenciante = sellers.find(s => s.id === seller.referred_by_id);
+      if (licenciante) {
+        setSelectedLicenciante(seller.referred_by_id);
+        
+        // Define comissão padrão do licenciante
+        if (seller.default_licenciante_commission_percentage) {
+          setComissaoLicenciante(seller.default_licenciante_commission_percentage);
+        } else {
+          setComissaoLicenciante(0);
+        }
+        
+        setAutoFilledLicenciante(true);
+        console.log(`✅ Licenciante auto-preenchido: ${licenciante.name}`);
+      }
+    } else {
+      setSelectedLicenciante(null);
+      setComissaoLicenciante(0);
+      setAutoFilledLicenciante(false);
     }
   };
 
@@ -1302,7 +1346,7 @@ ${boletoInfo}================================
                           <label className="text-gray-700 text-xs mb-1 block font-medium">Vendedor</label>
                           <select
                             value={selectedSeller || ''}
-                            onChange={(e) => setSelectedSeller(e.target.value || null)}
+                            onChange={(e) => handleSellerChange(e.target.value || null)}
                             className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
                           >
                             <option value="">Sem vendedor</option>
@@ -1352,7 +1396,14 @@ ${boletoInfo}================================
 
                     {/* LICENCIANTE (Segundo Vendedor) */}
                     <div className="bg-white rounded-lg p-3 border border-purple-200">
-                      <p className="text-xs font-semibold text-purple-700 mb-2">Licenciante (Indicador)</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-purple-700">Licenciante (Indicador)</p>
+                        {autoFilledLicenciante && (
+                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                            ✓ Auto
+                          </span>
+                        )}
+                      </div>
                       <div className="space-y-2">
                         <div>
                           <label className="text-gray-700 text-xs mb-1 block font-medium">Licenciante</label>
