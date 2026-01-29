@@ -433,7 +433,7 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                   Salvando...
                 </>
               ) : (
-                'Analisar produto'
+                'Salvar produto'
               )}
             </Button>
           </div>
