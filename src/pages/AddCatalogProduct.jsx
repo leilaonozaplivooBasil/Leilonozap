@@ -18,6 +18,7 @@ export default function AddCatalogProduct() {
   const [currentSection, setCurrentSection] = useState('geral');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   // Estados de categorias
   const [categories, setCategories] = useState([]);
@@ -189,14 +190,13 @@ export default function AddCatalogProduct() {
     }
   };
   
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+  const handleImageUpload = async (files) => {
+    if (!files || files.length === 0) return;
     
     setUploadingImage(true);
     
     try {
-      const uploadPromises = files.map(async (file) => {
+      const uploadPromises = Array.from(files).map(async (file) => {
         const { file_url } = await base44.integrations.Core.UploadFile({ file });
         return file_url;
       });
@@ -211,6 +211,36 @@ export default function AddCatalogProduct() {
       alert('Erro ao fazer upload das imagens');
     } finally {
       setUploadingImage(false);
+    }
+  };
+  
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === e.target) {
+      setIsDragging(false);
+    }
+  };
+  
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleImageUpload(files);
     }
   };
   
@@ -827,15 +857,26 @@ export default function AddCatalogProduct() {
                     </p>
                     
                     {formData.image_urls.length === 0 ? (
-                      <label htmlFor="image-upload" className="block cursor-pointer">
-                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-purple-400 hover:bg-purple-50/30 transition-all">
+                      <label 
+                        htmlFor="image-upload" 
+                        className="block cursor-pointer"
+                        onDragEnter={handleDragEnter}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                      >
+                        <div className={`border-2 border-dashed rounded-lg p-12 text-center transition-all ${
+                          isDragging 
+                            ? 'border-purple-500 bg-purple-50' 
+                            : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/30'
+                        }`}>
                           {uploadingImage ? (
                             <Loader2 className="w-12 h-12 text-purple-500 animate-spin mx-auto mb-3" />
                           ) : (
-                            <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                            <ImageIcon className={`w-12 h-12 mx-auto mb-3 ${isDragging ? 'text-purple-500' : 'text-gray-400'}`} />
                           )}
-                          <p className="text-sm text-gray-600 font-medium mb-1">
-                            Arraste as fotos até aqui ou clique para fazer upload
+                          <p className={`text-sm font-medium mb-1 ${isDragging ? 'text-purple-700' : 'text-gray-600'}`}>
+                            {isDragging ? 'Solte as fotos aqui' : 'Arraste as fotos até aqui ou clique para fazer upload'}
                           </p>
                           <p className="text-xs text-gray-500">
                             Formato JPG ou PNG. Tamanho máx. 10MB
@@ -846,14 +887,20 @@ export default function AddCatalogProduct() {
                           type="file"
                           accept="image/*"
                           multiple
-                          onChange={handleImageUpload}
+                          onChange={(e) => handleImageUpload(e.target.files)}
                           className="hidden"
                           disabled={uploadingImage}
                         />
                       </label>
                     ) : (
                       <div>
-                        <div className="grid grid-cols-4 gap-4">
+                        <div 
+                          className="grid grid-cols-4 gap-4"
+                          onDragEnter={handleDragEnter}
+                          onDragOver={handleDragOver}
+                          onDragLeave={handleDragLeave}
+                          onDrop={handleDrop}
+                        >
                           {formData.image_urls.map((url, index) => (
                             <div key={index} className="relative group">
                               <img
@@ -876,16 +923,28 @@ export default function AddCatalogProduct() {
                             </div>
                           ))}
                           
-                          <label htmlFor="image-upload-more" className="cursor-pointer">
-                            <div className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center hover:border-purple-400 hover:bg-purple-50/30 transition-all">
-                              <Plus className="w-8 h-8 text-gray-400" />
+                          <label 
+                            htmlFor="image-upload-more" 
+                            className="cursor-pointer"
+                            onDragEnter={(e) => e.stopPropagation()}
+                          >
+                            <div className={`w-full h-32 border-2 border-dashed rounded-lg flex items-center justify-center transition-all ${
+                              isDragging 
+                                ? 'border-purple-500 bg-purple-50' 
+                                : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/30'
+                            }`}>
+                              {uploadingImage ? (
+                                <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+                              ) : (
+                                <Plus className={`w-8 h-8 ${isDragging ? 'text-purple-500' : 'text-gray-400'}`} />
+                              )}
                             </div>
                             <input
                               id="image-upload-more"
                               type="file"
                               accept="image/*"
                               multiple
-                              onChange={handleImageUpload}
+                              onChange={(e) => handleImageUpload(e.target.files)}
                               className="hidden"
                               disabled={uploadingImage}
                             />

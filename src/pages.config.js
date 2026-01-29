@@ -48,6 +48,7 @@
  * The mainPage value must match a key in the PAGES object exactly.
  */
 import ActivePartners from './pages/ActivePartners';
+import AddCatalogProduct from './pages/AddCatalogProduct';
 import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
@@ -121,12 +122,12 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import AddCatalogProduct from './pages/AddCatalogProduct';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "ActivePartners": ActivePartners,
+    "AddCatalogProduct": AddCatalogProduct,
     "AdminCatalogSales": AdminCatalogSales,
     "AdminUsers": AdminUsers,
     "AdminWithdrawals": AdminWithdrawals,
@@ -200,7 +201,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "AddCatalogProduct": AddCatalogProduct,
 }
 
 export const pagesConfig = {
