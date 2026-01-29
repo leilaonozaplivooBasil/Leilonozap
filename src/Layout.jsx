@@ -999,8 +999,8 @@ export default function Layout({ children, currentPageName }) {
 
         <Footer />
         </ErrorBoundary>
-      
-      <style>{`
+
+        <style>{`
         @keyframes fadeInScale {
           0% {
             opacity: 0;
