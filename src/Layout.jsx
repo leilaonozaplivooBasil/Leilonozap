@@ -1079,7 +1079,8 @@ export default function Layout({ children, currentPageName }) {
            color: #1a1a1a;
          }
         `}</style>
-        </ErrorBoundary>
-        </ThemeProvider>
-        );
-        }
+      </div>
+      </ErrorBoundary>
+    </ThemeProvider>
+    );
+  }
