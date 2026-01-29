@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2 } from 'lucide-react';
+import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone, Move, Package, Plus, Loader2, Edit, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImagePositionEditor from '@/components/admin/ImagePositionEditor';
@@ -20,6 +20,7 @@ export default function CatalogManagement() {
   const [activeTab, setActiveTab] = useState('banners');
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
+  const [editingFeaturedProduct, setEditingFeaturedProduct] = useState(null);
 
   const loadBanners = async () => {
     try {
@@ -141,6 +142,33 @@ export default function CatalogManagement() {
       console.error('Erro ao atualizar ordem:', error);
       toast.error('Erro ao atualizar ordem');
       loadBanners();
+    }
+  };
+
+  const handleToggleFeatured = async (product) => {
+    try {
+      await base44.entities.Product.update(product.id, {
+        is_featured: !product.is_featured
+      });
+      loadProducts();
+      toast.success(product.is_featured ? 'Removido do destaque' : 'Adicionado ao destaque');
+    } catch (error) {
+      console.error('Erro ao atualizar destaque:', error);
+      toast.error('Erro ao atualizar destaque');
+    }
+  };
+
+  const handleUpdateFeaturedProduct = async (productId, newDescription) => {
+    try {
+      await base44.entities.Product.update(productId, {
+        description: newDescription
+      });
+      loadProducts();
+      setEditingFeaturedProduct(null);
+      toast.success('Nome do produto atualizado!');
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      toast.error('Erro ao atualizar produto');
     }
   };
 
@@ -488,9 +516,148 @@ export default function CatalogManagement() {
         )}
 
         {activeTab === 'produtos' && (
-          <div className="text-center py-12">
-            <h2 className="text-2xl text-white mb-4">Produtos em Destaque</h2>
-            <p className="text-gray-400">Em breve: gerenciamento de produtos em destaque</p>
+          <div>
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-white mb-2">Produtos em Destaque</h2>
+              <p className="text-gray-400">Gerencie quais produtos aparecem na seção de destaque do catálogo (máximo 4)</p>
+            </div>
+
+            {loadingProducts ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-yellow-500 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {products.filter(p => p.catalog_active && p.is_featured).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold text-yellow-400 mb-4 flex items-center gap-2">
+                      ⭐ Em Destaque ({products.filter(p => p.is_featured).length}/4)
+                    </h3>
+                    <div className="space-y-3">
+                      {products.filter(p => p.is_featured).map((product) => (
+                        <div
+                          key={product.id}
+                          className="bg-gray-800 rounded-lg border border-yellow-500 p-4 flex items-center gap-4"
+                        >
+                          <div className="w-16 h-16 flex-shrink-0">
+                            {product.image_urls && product.image_urls.length > 0 ? (
+                              <img
+                                src={product.image_urls[0]}
+                                alt={product.description}
+                                className="w-full h-full object-cover rounded-lg"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gray-700 rounded-lg flex items-center justify-center">
+                                <Package className="w-6 h-6 text-gray-600" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex-1">
+                            <h4 className="text-white font-semibold line-clamp-2">
+                              {product.description || 'Sem título'}
+                            </h4>
+                            <p className="text-gray-400 text-sm">
+                              R$ {product.price_catalog?.toFixed(2) || '0.00'}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setEditingFeaturedProduct(product)}
+                              className="p-2 hover:bg-gray-700 rounded transition-colors text-blue-400 hover:text-blue-300"
+                              title="Editar nome"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleToggleFeatured(product)}
+                              className="p-2 hover:bg-gray-700 rounded transition-colors text-yellow-400 hover:text-yellow-300"
+                              title="Remover do destaque"
+                            >
+                              <Star className="w-4 h-4 fill-yellow-400" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <h3 className="text-lg font-bold text-gray-400 mb-4">Adicionar ao Destaque</h3>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {products
+                      .filter(p => p.catalog_active && !p.is_featured)
+                      .slice(0, 10)
+                      .map((product) => (
+                        <button
+                          key={product.id}
+                          onClick={() => handleToggleFeatured(product)}
+                          className="w-full bg-gray-700 hover:bg-gray-600 rounded-lg p-3 text-left transition-colors flex items-center justify-between"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-white font-semibold text-sm line-clamp-1">
+                              {product.description || 'Sem título'}
+                            </p>
+                            <p className="text-gray-400 text-xs">
+                              R$ {product.price_catalog?.toFixed(2) || '0.00'}
+                            </p>
+                          </div>
+                          <Star className="w-4 h-4 text-gray-400 ml-2 flex-shrink-0" />
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {editingFeaturedProduct && (
+              <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                <Card className="bg-gray-800 border-gray-700 max-w-md w-full">
+                  <CardHeader>
+                    <CardTitle className="text-white">Editar Nome do Produto</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target);
+                        handleUpdateFeaturedProduct(
+                          editingFeaturedProduct.id,
+                          formData.get('description')
+                        );
+                      }}
+                      className="space-y-4"
+                    >
+                      <div>
+                        <Label className="text-gray-300">Nome do Produto</Label>
+                        <Input
+                          type="text"
+                          name="description"
+                          defaultValue={editingFeaturedProduct.description || ''}
+                          placeholder="Digite o nome do produto"
+                          maxLength={60}
+                          className="bg-gray-700 text-white border-gray-600"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setEditingFeaturedProduct(null)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                          Salvar
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </div>
         )}
 
