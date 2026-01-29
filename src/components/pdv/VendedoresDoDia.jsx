@@ -162,8 +162,8 @@ export default function VendedoresDoDia({ daySales, date }) {
                   <tr className="text-gray-400">
                     <th className="text-left p-1">Horário</th>
                     <th className="text-left p-1">Produto</th>
-                    <th className="text-right p-1">Valor</th>
-                    <th className="text-left p-1 w-24">Licenciante</th>
+                    <th className="text-right pr-4 p-1">Valor</th>
+                    <th className="text-left pl-4 p-1 w-24">Licenciante</th>
                     <th className="text-right p-1 w-20">Com. Licenciante</th>
                     <th className="text-right p-1 w-20">Com. Licenciado</th>
                   </tr>
