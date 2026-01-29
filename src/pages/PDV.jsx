@@ -30,9 +30,9 @@ export default function PDV() {
   const [boletoData, setBoletoData] = useState({ cliente: '', documento: '', parcelas: 1 });
   const [isProcessing, setIsProcessing] = useState(false);
   const [sellers, setSellers] = useState([]);
-  const [saleCommissions, setSaleCommissions] = useState([]);
-  const [showAddSellerModal, setShowAddSellerModal] = useState(false);
-  const [newCommissionData, setNewCommissionData] = useState({ seller_id: '', commission_type: 'percentage', commission_value: 0 });
+  const [selectedSeller, setSelectedSeller] = useState(null);
+  const [commissionType, setCommissionType] = useState('percentage');
+  const [commissionValue, setCommissionValue] = useState(0);
   const [sellerStats, setSellerStats] = useState([]);
   const [todaySales, setTodaySales] = useState([]);
   const [allSales, setAllSales] = useState([]);
@@ -571,15 +571,13 @@ Transações: ${selectedSession.transactions_count || 0}
 
   const taxes = calculateTaxes(cartTotal);
 
-  // Calcula comissão total do carrinho (soma de todos vendedores)
+  // Calcula comissão do vendedor único
   const totalCommission = React.useMemo(() => {
-    return saleCommissions.reduce((sum, sc) => {
-      const amt = sc.commission_type === 'percentage'
-        ? (cartTotal * sc.commission_value) / 100
-        : sc.commission_value;
-      return sum + amt;
-    }, 0);
-  }, [saleCommissions, cartTotal]);
+    if (!selectedSeller || commissionValue === 0) return 0;
+    return commissionType === 'percentage'
+      ? (cartTotal * commissionValue) / 100
+      : commissionValue;
+  }, [selectedSeller, commissionType, commissionValue, cartTotal]);
 
   // Calcula valor líquido (total - impostos - comissão)
   const netAmount = cartTotal - taxes.total - totalCommission;
@@ -622,13 +620,12 @@ Transações: ${selectedSession.transactions_count || 0}
         const novaQuantidadeVendida = (product.quantity_sold || 0) + qtdVendida;
         const novoLucroTotal = novoSoldAmount - (custoUnitario * novaQuantidadeVendida);
 
-        // Calcula comissão total do item
-        const totalItemCommission = saleCommissions.reduce((sum, sc) => {
-          const amt = sc.commission_type === 'percentage'
-            ? (valorVenda * sc.commission_value) / 100
-            : sc.commission_value;
-          return sum + amt;
-        }, 0);
+        // Calcula comissão do item
+        const totalItemCommission = selectedSeller && commissionValue > 0
+          ? (commissionType === 'percentage'
+              ? (valorVenda * commissionValue) / 100
+              : commissionValue)
+          : 0;
 
         // Calcula impostos proporcionais para este item
         const itemTaxes = calculateTaxes(valorVenda);
@@ -637,11 +634,7 @@ Transações: ${selectedSession.transactions_count || 0}
         // 🆕 REGISTRA A VENDA NA ENTIDADE SALE
         const orderCode = generateOrderCode();
         
-        // ✅ EXTRAI NOMES DOS VENDEDORES PARA EXIBIR NO RELATÓRIO
-        const sellerNames = saleCommissions
-          .map(sc => sellers.find(s => s.id === sc.seller_id)?.name)
-          .filter(Boolean)
-          .join(', ');
+        const sellerData = selectedSeller ? sellers.find(s => s.id === selectedSeller) : null;
         
         const saleRecord = await base44.entities.Sale.create({
           order_code: orderCode,
@@ -657,31 +650,28 @@ Transações: ${selectedSession.transactions_count || 0}
           sale_date: saleDate,
           sale_datetime: saleDatetime,
           operator_name: currentUser?.full_name || 'Admin',
-          seller_name: sellerNames || null,
+          seller_id: selectedSeller || null,
+          seller_name: sellerData?.name || null,
+          commission_type: commissionType,
+          commission_value: commissionValue,
           commission_amount: totalItemCommission,
           boleto_cliente: paymentMethod === 'BOLETO PARCELADO' ? boletoData.cliente : null,
           boleto_documento: paymentMethod === 'BOLETO PARCELADO' ? boletoData.documento : null,
           boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
         });
 
-        // 🆕 Registra cada comissão distribuída individualmente
-        for (const sc of saleCommissions) {
-          const commissionAmt = sc.commission_type === 'percentage'
-            ? (valorVenda * sc.commission_value) / 100
-            : sc.commission_value;
-          
-          const sellerData = sellers.find(s => s.id === sc.seller_id);
-          
+        // 🆕 Registra comissão individual se houver vendedor
+        if (selectedSeller && totalItemCommission > 0) {
           await base44.entities.SaleCommission.create({
             sale_id: saleRecord.id,
-            seller_id: sc.seller_id,
+            seller_id: selectedSeller,
             seller_name: sellerData?.name || 'Vendedor',
-            commission_type: sc.commission_type,
-            commission_value: sc.commission_value,
-            commission_amount: commissionAmt
+            commission_type: commissionType,
+            commission_value: commissionValue,
+            commission_amount: totalItemCommission
           });
           
-          console.log(`✅ Comissão registrada: ${sellerData?.name} - R$ ${commissionAmt.toFixed(2)}`);
+          console.log(`✅ Comissão registrada: ${sellerData?.name} - R$ ${totalItemCommission.toFixed(2)}`);
         }
 
         // Atualiza produto
@@ -709,7 +699,8 @@ Transações: ${selectedSession.transactions_count || 0}
 
       setCart([]);
       setBoletoData({ cliente: '', documento: '', parcelas: 1 });
-      setSaleCommissions([]);
+      setSelectedSeller(null);
+      setCommissionValue(0);
       
       // Recarrega tudo com delay para garantir sincronização
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -732,15 +723,9 @@ Documento: ${boletoData.documento}
 Parcelas: ${boletoData.parcelas}x de R$ ${(cartTotal / boletoData.parcelas).toFixed(2)}
 ` : '';
 
-    const sellerInfo = saleCommissions.length > 0 ? `
-VENDEDORES:
-${saleCommissions.map(sc => {
-  const seller = sellers.find(s => s.id === sc.seller_id);
-  const amt = sc.commission_type === 'percentage'
-    ? (cartTotal * sc.commission_value) / 100
-    : sc.commission_value;
-  return `${seller?.name || 'Vendedor'}: ${sc.commission_type === 'percentage' ? sc.commission_value + '%' : 'R$ ' + sc.commission_value.toFixed(2)} (R$ ${amt.toFixed(2)})`;
-}).join('\n')}
+    const sellerInfo = selectedSeller ? `
+VENDEDOR: ${sellers.find(s => s.id === selectedSeller)?.name || 'Vendedor'}
+Comissão: ${commissionType === 'percentage' ? commissionValue + '%' : 'R$ ' + commissionValue.toFixed(2)} = R$ ${totalCommission.toFixed(2)}
 ` : '';
 
     const taxInfo = taxSettings && taxSettings.is_active ? `
@@ -754,9 +739,9 @@ ${taxSettings.iss_rate > 0 ? `ISS (${taxSettings.iss_rate}%): R$ ${taxes.iss.toF
 Total Impostos: R$ ${taxes.total.toFixed(2)}
 ` : '';
 
-    const commissionInfo = saleCommissions.length > 0 ? `
-COMISSÕES:
-Valor Total das Comissões: R$ ${totalCommission.toFixed(2)}
+    const commissionInfo = totalCommission > 0 ? `
+COMISSÃO:
+Valor da Comissão: R$ ${totalCommission.toFixed(2)}
 ` : '';
 
     const totalDeductions = (taxInfo ? taxes.total : 0) + (commissionInfo ? totalCommission : 0);
@@ -1263,64 +1248,61 @@ ${boletoInfo}================================
               </CardHeader>
               <CardContent className="space-y-4 p-4">
                 
-                {/* DISTRIBUIÇÃO DE COMISSÕES ENTRE VENDEDORES */}
+                {/* VENDEDOR E COMISSÃO */}
                 {cart.length > 0 && (
                   <div className="space-y-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-bold text-gray-900">👥 Vendedores e Comissões</h3>
-                      <Button
-                        size="sm"
-                        onClick={() => setShowAddSellerModal(true)}
-                        className="bg-blue-600 hover:bg-blue-700 h-8 px-2 text-xs"
+                    <h3 className="font-bold text-gray-900 mb-2">👤 Vendedor e Comissão</h3>
+
+                    <div>
+                      <label className="text-gray-700 text-xs mb-1 block font-medium">Vendedor</label>
+                      <select
+                        value={selectedSeller || ''}
+                        onChange={(e) => setSelectedSeller(e.target.value || null)}
+                        className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
                       >
-                        + Adicionar Vendedor
-                      </Button>
+                        <option value="">Sem vendedor</option>
+                        {sellers.map(seller => (
+                          <option key={seller.id} value={seller.id}>
+                            {seller.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    {saleCommissions.length === 0 ? (
-                      <p className="text-sm text-gray-600 italic">Nenhum vendedor adicionado</p>
-                    ) : (
-                      <div className="space-y-2 bg-white rounded p-2 border border-blue-100 max-h-48 overflow-y-auto">
-                        {saleCommissions.map((sc, idx) => {
-                          const seller = sellers.find(s => s.id === sc.seller_id);
-                          const commissionAmount = sc.commission_type === 'percentage'
-                            ? (cartTotal * sc.commission_value) / 100
-                            : sc.commission_value;
-                          
-                          return (
-                            <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200 text-sm">
-                              <div>
-                                <p className="font-medium text-gray-900">{seller?.name || 'Vendedor'}</p>
-                                <p className="text-xs text-gray-600">
-                                  {sc.commission_type === 'percentage' ? `${sc.commission_value}%` : `R$ ${sc.commission_value.toFixed(2)}`}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <p className="font-bold text-green-600">R$ {commissionAmount.toFixed(2)}</p>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => setSaleCommissions(saleCommissions.filter((_, i) => i !== idx))}
-                                  className="text-red-600 hover:bg-red-50 h-6 w-6 p-0"
-                                >
-                                  ✕
-                                </Button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                    {selectedSeller && (
+                      <>
+                        <div>
+                          <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo de Comissão</label>
+                          <select
+                            value={commissionType}
+                            onChange={(e) => setCommissionType(e.target.value)}
+                            className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                          >
+                            <option value="percentage">Porcentagem (%)</option>
+                            <option value="fixed">Valor Fixo (R$)</option>
+                          </select>
+                        </div>
 
-                    {saleCommissions.length > 0 && (
-                      <div className="bg-green-100 rounded p-2 text-sm font-bold text-green-900">
-                        💰 Total Comissões: R$ {saleCommissions.reduce((sum, sc) => {
-                          const amt = sc.commission_type === 'percentage'
-                            ? (cartTotal * sc.commission_value) / 100
-                            : sc.commission_value;
-                          return sum + amt;
-                        }, 0).toFixed(2)}
-                      </div>
+                        <div>
+                          <label className="text-gray-700 text-xs mb-1 block font-medium">
+                            {commissionType === 'percentage' ? 'Porcentagem (%)' : 'Valor (R$)'}
+                          </label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={commissionValue}
+                            onChange={(e) => setCommissionValue(parseFloat(e.target.value) || 0)}
+                            className="bg-white text-gray-900 border-gray-300 h-9"
+                            placeholder={commissionType === 'percentage' ? '10' : '50.00'}
+                          />
+                        </div>
+
+                        {commissionValue > 0 && (
+                          <div className="bg-green-100 rounded p-2 text-sm font-bold text-green-900">
+                            💰 Comissão: R$ {totalCommission.toFixed(2)}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 )}
@@ -2292,112 +2274,7 @@ ${boletoInfo}================================
           </div>
         )}
 
-        {/* MODAL ADICIONAR VENDEDOR */}
-        {showAddSellerModal && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <Card className="bg-white border-gray-200 max-w-lg w-full">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-gray-900 flex items-center gap-2">
-                    👤 Adicionar Vendedor à Venda
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    onClick={() => {
-                      setShowAddSellerModal(false);
-                      setNewCommissionData({ seller_id: '', commission_type: 'percentage', commission_value: 0 });
-                    }}
-                    className="text-gray-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <label className="text-gray-700 text-sm mb-2 block font-medium">Selecione o Vendedor</label>
-                  <select
-                    value={newCommissionData.seller_id}
-                    onChange={(e) => setNewCommissionData({...newCommissionData, seller_id: e.target.value})}
-                    className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
-                  >
-                    <option value="">Escolha um vendedor...</option>
-                    {sellers.map(seller => (
-                      <option key={seller.id} value={seller.id}>
-                        {seller.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
 
-                <div>
-                  <label className="text-gray-700 text-sm mb-2 block font-medium">Tipo de Comissão</label>
-                  <select
-                    value={newCommissionData.commission_type}
-                    onChange={(e) => setNewCommissionData({...newCommissionData, commission_type: e.target.value})}
-                    className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
-                  >
-                    <option value="percentage">Porcentagem (%)</option>
-                    <option value="fixed">Valor Fixo (R$)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-gray-700 text-sm mb-2 block font-medium">
-                    {newCommissionData.commission_type === 'percentage' ? 'Porcentagem (%)' : 'Valor (R$)'}
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={newCommissionData.commission_value}
-                    onChange={(e) => setNewCommissionData({...newCommissionData, commission_value: parseFloat(e.target.value) || 0})}
-                    className="bg-white text-gray-900 border-gray-300"
-                    placeholder={newCommissionData.commission_type === 'percentage' ? '10' : '50.00'}
-                  />
-                </div>
-
-                {newCommissionData.commission_value > 0 && (
-                  <div className="bg-green-50 rounded-lg p-3 border border-green-200">
-                    <p className="text-gray-700 font-medium">Comissão Estimada:</p>
-                    <p className="text-2xl font-bold text-green-600">
-                      R$ {newCommissionData.commission_type === 'percentage' 
-                        ? ((cartTotal * newCommissionData.commission_value) / 100).toFixed(2)
-                        : newCommissionData.commission_value.toFixed(2)
-                      }
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => {
-                      if (newCommissionData.seller_id && newCommissionData.commission_value > 0) {
-                        setSaleCommissions([...saleCommissions, newCommissionData]);
-                        setShowAddSellerModal(false);
-                        setNewCommissionData({ seller_id: '', commission_type: 'percentage', commission_value: 0 });
-                      } else {
-                        alert('Preencha todos os campos');
-                      }
-                    }}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
-                  >
-                    Adicionar
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setShowAddSellerModal(false);
-                      setNewCommissionData({ seller_id: '', commission_type: 'percentage', commission_value: 0 });
-                    }}
-                    variant="outline"
-                    className="flex-1 border-gray-300"
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         {/* MODAL EDITAR COMISSÃO */}
         {showEditCommissionModal && editingCommissionSale && (
