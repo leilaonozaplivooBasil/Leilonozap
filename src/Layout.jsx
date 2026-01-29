@@ -996,10 +996,9 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
-        </ErrorBoundary>
 
         <Footer />
-      </div>
+        </ErrorBoundary>
       
       <style>{`
         @keyframes fadeInScale {
