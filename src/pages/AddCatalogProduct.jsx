@@ -1043,47 +1043,7 @@ export default function AddCatalogProduct() {
                       </div>
                     </div>
                     
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start gap-3">
-                      <div className="flex-1">
-                        <p className="text-sm text-blue-900 font-medium mb-2">
-                          💡 Sugestão de preço comparativo
-                        </p>
-                        <p className="text-sm text-blue-800 mb-3">
-                          Encontre o código de barras do seu produto e gere análise comparativa com o mercado.
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="border-blue-300 text-blue-700 bg-white"
-                          >
-                            Sim
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-blue-700"
-                          >
-                            Não
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="text-blue-700"
-                          >
-                            Continuar assim mesmo
-                          </Button>
-                        </div>
-                      </div>
-                      <img
-                        src="https://via.placeholder.com/100x60"
-                        alt="Ilustração"
-                        className="w-24 h-auto"
-                      />
-                    </div>
+
                   </div>
                   
                   {/* Ativar no Catálogo */}
