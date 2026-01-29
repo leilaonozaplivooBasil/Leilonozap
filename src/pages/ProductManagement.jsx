@@ -400,7 +400,7 @@ export default function ProductManagement() {
               </DropdownMenuContent>
             </DropdownMenu>
             <Button
-              onClick={() => navigate(createPageUrl("CreateCatalogProduct"))}
+              onClick={() => navigate(createPageUrl("AddCatalogProduct"))}
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               <BookOpen className="w-4 h-4 mr-2" />
