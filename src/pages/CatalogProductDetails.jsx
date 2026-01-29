@@ -322,7 +322,7 @@ export default function CatalogProductDetails() {
 
             {/* BOTÕES DE AÇÃO */}
              <div className="space-y-3">
-               {/* COMPRAR AGORA */}
+               {/* ADICIONAR AO CARRINHO */}
                {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
                  <Button
                    disabled
@@ -332,20 +332,8 @@ export default function CatalogProductDetails() {
                  </Button>
                ) : (
                  <Button
-                   onClick={handleBuyNow}
-                   className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
-                 >
-                   <ShoppingCart className="w-5 h-5 mr-2" />
-                   PAGAR AGORA
-                 </Button>
-               )}
-
-               {/* ADICIONAR AO CARRINHO */}
-               {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? null : (
-                 <Button
                    onClick={handleAddToCart}
-                   variant="outline"
-                   className="w-full h-12 border-2 border-green-600 text-green-400 hover:bg-green-600/10 text-white font-bold text-base rounded-lg"
+                   className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
                  >
                    <ShoppingCart className="w-5 h-5 mr-2" />
                    ADICIONAR AO CARRINHO
