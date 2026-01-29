@@ -318,7 +318,9 @@ ${categoryEmoji} ${product.description}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                navigate(createPageUrl("EditCatalogProduct") + `?id=${product.id}`);
+                navigate(createPageUrl("AddCatalogProduct"), { 
+                  state: { sourceProduct: product }
+                });
               }}
               onMouseDown={(e) => e.stopPropagation()} 
               onTouchStart={(e) => e.stopPropagation()}
