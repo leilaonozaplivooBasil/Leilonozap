@@ -163,9 +163,9 @@ export default function VendedoresDoDia({ daySales, date }) {
                     <th className="text-left p-1">Horário</th>
                     <th className="text-left p-1">Produto</th>
                     <th className="text-right p-1">Valor</th>
-                    <th className="text-left p-1">Licenciante</th>
-                    <th className="text-center p-1">Com. Licenciante</th>
-                    <th className="text-center p-1">Com. Licenciado</th>
+                    <th className="text-left p-1 w-24">Licenciante</th>
+                    <th className="text-right p-1 w-20">Com. Licenciante</th>
+                    <th className="text-right p-1 w-20">Com. Licenciado</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -182,15 +182,15 @@ export default function VendedoresDoDia({ daySales, date }) {
                         <td className="text-right p-1 text-green-400 font-bold">
                           R$ {sale.total_amount.toFixed(2)}
                         </td>
-                        <td className="p-1 text-xs text-purple-300">
+                        <td className="p-1 text-xs text-purple-300 w-24">
                           {hasLicenciante?.seller_name || '-'}
                         </td>
-                        <td className="text-center p-1">
+                        <td className="text-right p-1 w-20">
                           <span className="text-purple-400 font-bold">
                             R$ {hasLicenciante?.commission_amount?.toFixed(2) || '0.00'}
                           </span>
                         </td>
-                        <td className="text-center p-1">
+                        <td className="text-right p-1 w-20">
                           <span className="text-orange-400 font-bold">R$ {(sale.seller_commission || 0).toFixed(2)}</span>
                         </td>
                       </tr>
