@@ -148,24 +148,39 @@ export default function VendedoresDoDia({ daySales, date }) {
                     <th className="text-left p-1">Horário</th>
                     <th className="text-left p-1">Produto</th>
                     <th className="text-right p-1">Valor</th>
-                    <th className="text-center p-1">Comissão</th>
+                    <th className="text-left p-1">Licenciante</th>
+                    <th className="text-center p-1">Com. Licenciante</th>
+                    <th className="text-center p-1">Com. Licenciado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {seller.sales.map((sale) => (
-                    <tr key={sale.id} className="border-b border-gray-700 text-gray-300 hover:bg-gray-700/50">
-                      <td className="p-1">
-                        {new Date(sale.sale_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </td>
-                      <td className="p-1 text-xs">{sale.product_description.substring(0, 25)}</td>
-                      <td className="text-right p-1 text-green-400 font-bold">
-                        R$ {sale.total_amount.toFixed(2)}
-                      </td>
-                      <td className="text-center p-1">
-                        <span className="text-orange-400 font-bold">R$ {(sale.seller_commission || 0).toFixed(2)}</span>
-                      </td>
-                    </tr>
-                  ))}
+                  {seller.sales.map((sale) => {
+                    // Busca se há licenciante nesta venda
+                    const hasLicenciante = sale.all_commissions?.find(c => c.seller_role === 'licenciante');
+                    
+                    return (
+                      <tr key={sale.id} className="border-b border-gray-700 text-gray-300 hover:bg-gray-700/50">
+                        <td className="p-1">
+                          {new Date(sale.sale_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="p-1 text-xs">{sale.product_description.substring(0, 20)}</td>
+                        <td className="text-right p-1 text-green-400 font-bold">
+                          R$ {sale.total_amount.toFixed(2)}
+                        </td>
+                        <td className="p-1 text-xs text-purple-300">
+                          {hasLicenciante?.seller_name || '-'}
+                        </td>
+                        <td className="text-center p-1">
+                          <span className="text-purple-400 font-bold">
+                            R$ {hasLicenciante?.commission_amount?.toFixed(2) || '0.00'}
+                          </span>
+                        </td>
+                        <td className="text-center p-1">
+                          <span className="text-orange-400 font-bold">R$ {(sale.seller_commission || 0).toFixed(2)}</span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

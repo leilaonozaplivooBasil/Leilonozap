@@ -33,6 +33,9 @@ export default function PDV() {
   const [selectedSeller, setSelectedSeller] = useState(null);
   const [commissionType, setCommissionType] = useState('percentage');
   const [commissionValue, setCommissionValue] = useState(0);
+  const [selectedLicenciante, setSelectedLicenciante] = useState(null);
+  const [comissaoLicenciante, setComissaoLicenciante] = useState(0);
+  const [tipoComissaoLicenciante, setTipoComissaoLicenciante] = useState('percentage');
   const [sellerStats, setSellerStats] = useState([]);
   const [todaySales, setTodaySales] = useState([]);
   const [allSales, setAllSales] = useState([]);
@@ -571,13 +574,24 @@ Transações: ${selectedSession.transactions_count || 0}
 
   const taxes = calculateTaxes(cartTotal);
 
-  // Calcula comissão do vendedor único
-  const totalCommission = React.useMemo(() => {
+  // Calcula comissão do licenciado (vendedor principal)
+  const commissionLicenciado = React.useMemo(() => {
     if (!selectedSeller || commissionValue === 0) return 0;
     return commissionType === 'percentage'
       ? (cartTotal * commissionValue) / 100
       : commissionValue;
   }, [selectedSeller, commissionType, commissionValue, cartTotal]);
+
+  // Calcula comissão do licenciante (segundo vendedor)
+  const commissionLicencianteCalc = React.useMemo(() => {
+    if (!selectedLicenciante || comissaoLicenciante === 0) return 0;
+    return tipoComissaoLicenciante === 'percentage'
+      ? (cartTotal * comissaoLicenciante) / 100
+      : comissaoLicenciante;
+  }, [selectedLicenciante, tipoComissaoLicenciante, comissaoLicenciante, cartTotal]);
+
+  // Total de comissões
+  const totalCommission = commissionLicenciado + commissionLicencianteCalc;
 
   // Calcula valor líquido (total - impostos - comissão)
   const netAmount = cartTotal - taxes.total - totalCommission;
@@ -620,12 +634,20 @@ Transações: ${selectedSession.transactions_count || 0}
         const novaQuantidadeVendida = (product.quantity_sold || 0) + qtdVendida;
         const novoLucroTotal = novoSoldAmount - (custoUnitario * novaQuantidadeVendida);
 
-        // Calcula comissão do item
-        const totalItemCommission = selectedSeller && commissionValue > 0
+        // Calcula comissões do item
+        const comissaoLicenciadoItem = selectedSeller && commissionValue > 0
           ? (commissionType === 'percentage'
               ? (valorVenda * commissionValue) / 100
               : commissionValue)
           : 0;
+
+        const comissaoLicencianteItem = selectedLicenciante && comissaoLicenciante > 0
+          ? (tipoComissaoLicenciante === 'percentage'
+              ? (valorVenda * comissaoLicenciante) / 100
+              : comissaoLicenciante)
+          : 0;
+
+        const totalItemCommission = comissaoLicenciadoItem + comissaoLicencianteItem;
 
         // Calcula impostos proporcionais para este item
         const itemTaxes = calculateTaxes(valorVenda);
@@ -660,18 +682,35 @@ Transações: ${selectedSession.transactions_count || 0}
           boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
         });
 
-        // 🆕 Registra comissão individual se houver vendedor
-        if (selectedSeller && totalItemCommission > 0) {
+        // 🆕 Registra comissão do licenciado
+        if (selectedSeller && comissaoLicenciadoItem > 0) {
           await base44.entities.SaleCommission.create({
             sale_id: saleRecord.id,
             seller_id: selectedSeller,
             seller_name: sellerData?.name || 'Vendedor',
             commission_type: commissionType,
             commission_value: commissionValue,
-            commission_amount: totalItemCommission
+            commission_amount: comissaoLicenciadoItem,
+            seller_role: 'licenciado'
           });
           
-          console.log(`✅ Comissão registrada: ${sellerData?.name} - R$ ${totalItemCommission.toFixed(2)}`);
+          console.log(`✅ Comissão licenciado: ${sellerData?.name} - R$ ${comissaoLicenciadoItem.toFixed(2)}`);
+        }
+
+        // 🆕 Registra comissão do licenciante
+        if (selectedLicenciante && comissaoLicencianteItem > 0) {
+          const licencianteData = sellers.find(s => s.id === selectedLicenciante);
+          await base44.entities.SaleCommission.create({
+            sale_id: saleRecord.id,
+            seller_id: selectedLicenciante,
+            seller_name: licencianteData?.name || 'Licenciante',
+            commission_type: tipoComissaoLicenciante,
+            commission_value: comissaoLicenciante,
+            commission_amount: comissaoLicencianteItem,
+            seller_role: 'licenciante'
+          });
+          
+          console.log(`✅ Comissão licenciante: ${licencianteData?.name} - R$ ${comissaoLicencianteItem.toFixed(2)}`);
         }
 
         // Atualiza produto
@@ -701,6 +740,8 @@ Transações: ${selectedSession.transactions_count || 0}
       setBoletoData({ cliente: '', documento: '', parcelas: 1 });
       setSelectedSeller(null);
       setCommissionValue(0);
+      setSelectedLicenciante(null);
+      setComissaoLicenciante(0);
       
       // Recarrega tudo com delay para garantir sincronização
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -1248,61 +1289,128 @@ ${boletoInfo}================================
               </CardHeader>
               <CardContent className="space-y-4 p-4">
                 
-                {/* VENDEDOR E COMISSÃO */}
+                {/* VENDEDORES E COMISSÕES */}
                 {cart.length > 0 && (
                   <div className="space-y-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <h3 className="font-bold text-gray-900 mb-2">👤 Vendedor e Comissão</h3>
+                    <h3 className="font-bold text-gray-900 mb-2">👥 Vendedores e Comissões</h3>
 
-                    <div>
-                      <label className="text-gray-700 text-xs mb-1 block font-medium">Vendedor</label>
-                      <select
-                        value={selectedSeller || ''}
-                        onChange={(e) => setSelectedSeller(e.target.value || null)}
-                        className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
-                      >
-                        <option value="">Sem vendedor</option>
-                        {sellers.map(seller => (
-                          <option key={seller.id} value={seller.id}>
-                            {seller.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {selectedSeller && (
-                      <>
+                    {/* LICENCIADO (Vendedor Principal) */}
+                    <div className="bg-white rounded-lg p-3 border border-blue-200">
+                      <p className="text-xs font-semibold text-gray-700 mb-2">Licenciado (Vendedor)</p>
+                      <div className="space-y-2">
                         <div>
-                          <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo de Comissão</label>
+                          <label className="text-gray-700 text-xs mb-1 block font-medium">Vendedor</label>
                           <select
-                            value={commissionType}
-                            onChange={(e) => setCommissionType(e.target.value)}
+                            value={selectedSeller || ''}
+                            onChange={(e) => setSelectedSeller(e.target.value || null)}
                             className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
                           >
-                            <option value="percentage">Porcentagem (%)</option>
-                            <option value="fixed">Valor Fixo (R$)</option>
+                            <option value="">Sem vendedor</option>
+                            {sellers.map(seller => (
+                              <option key={seller.id} value={seller.id}>
+                                {seller.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
 
+                        {selectedSeller && (
+                          <>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo</label>
+                                <select
+                                  value={commissionType}
+                                  onChange={(e) => setCommissionType(e.target.value)}
+                                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                                >
+                                  <option value="percentage">%</option>
+                                  <option value="fixed">R$</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-gray-700 text-xs mb-1 block font-medium">Valor</label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={commissionValue}
+                                  onChange={(e) => setCommissionValue(parseFloat(e.target.value) || 0)}
+                                  className="bg-white text-gray-900 border-gray-300 h-9"
+                                  placeholder={commissionType === 'percentage' ? '10' : '50.00'}
+                                />
+                              </div>
+                            </div>
+                            {commissionValue > 0 && (
+                              <div className="bg-green-100 rounded p-2 text-xs font-bold text-green-900">
+                                💰 Comissão Licenciado: R$ {commissionLicenciado.toFixed(2)}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* LICENCIANTE (Segundo Vendedor) */}
+                    <div className="bg-white rounded-lg p-3 border border-purple-200">
+                      <p className="text-xs font-semibold text-purple-700 mb-2">Licenciante (Indicador)</p>
+                      <div className="space-y-2">
                         <div>
-                          <label className="text-gray-700 text-xs mb-1 block font-medium">
-                            {commissionType === 'percentage' ? 'Porcentagem (%)' : 'Valor (R$)'}
-                          </label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            value={commissionValue}
-                            onChange={(e) => setCommissionValue(parseFloat(e.target.value) || 0)}
-                            className="bg-white text-gray-900 border-gray-300 h-9"
-                            placeholder={commissionType === 'percentage' ? '10' : '50.00'}
-                          />
+                          <label className="text-gray-700 text-xs mb-1 block font-medium">Licenciante</label>
+                          <select
+                            value={selectedLicenciante || ''}
+                            onChange={(e) => setSelectedLicenciante(e.target.value || null)}
+                            className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                          >
+                            <option value="">Sem licenciante</option>
+                            {sellers.filter(s => s.id !== selectedSeller).map(seller => (
+                              <option key={seller.id} value={seller.id}>
+                                {seller.name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
 
-                        {commissionValue > 0 && (
-                          <div className="bg-green-100 rounded p-2 text-sm font-bold text-green-900">
-                            💰 Comissão: R$ {totalCommission.toFixed(2)}
-                          </div>
+                        {selectedLicenciante && (
+                          <>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo</label>
+                                <select
+                                  value={tipoComissaoLicenciante}
+                                  onChange={(e) => setTipoComissaoLicenciante(e.target.value)}
+                                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                                >
+                                  <option value="percentage">%</option>
+                                  <option value="fixed">R$</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-gray-700 text-xs mb-1 block font-medium">Valor</label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  value={comissaoLicenciante}
+                                  onChange={(e) => setComissaoLicenciante(parseFloat(e.target.value) || 0)}
+                                  className="bg-white text-gray-900 border-gray-300 h-9"
+                                  placeholder={tipoComissaoLicenciante === 'percentage' ? '5' : '25.00'}
+                                />
+                              </div>
+                            </div>
+                            {comissaoLicenciante > 0 && (
+                              <div className="bg-purple-100 rounded p-2 text-xs font-bold text-purple-900">
+                                💰 Comissão Licenciante: R$ {commissionLicencianteCalc.toFixed(2)}
+                              </div>
+                            )}
+                          </>
                         )}
-                      </>
+                      </div>
+                    </div>
+
+                    {/* TOTAL DE COMISSÕES */}
+                    {totalCommission > 0 && (
+                      <div className="bg-orange-100 rounded p-2 text-sm font-bold text-orange-900">
+                        💰 Total Comissões: R$ {totalCommission.toFixed(2)}
+                      </div>
                     )}
                   </div>
                 )}
