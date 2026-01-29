@@ -42,6 +42,7 @@ export default function Cart() {
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
   const [pollingInterval, setPollingInterval] = useState(null);
+  const [pixConfirmed, setPixConfirmed] = useState(false);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -132,27 +133,24 @@ export default function Cart() {
 
   // 🔄 Real-time + Polling para detectar confirmação de pagamento PIX
   useEffect(() => {
-    if (!pixData || pixData.billing_type !== 'PIX' || !createdSales || createdSales.length === 0) return;
+    if (!pixData || pixData.billing_type !== 'PIX' || !createdSales || createdSales.length === 0 || pixConfirmed) return;
 
     const saleId = createdSales[0].id;
-    let hasRedirected = false;
+    let hasConfirmed = false;
 
-    // 1️⃣ Real-time subscription (primeira linha de defesa)
+    // 1️⃣ Real-time subscription
     const unsubscribe = base44.entities.CatalogSale.subscribe((event) => {
-      if (event.type === 'update' && event.id === saleId && event.data?.status === 'paid' && !hasRedirected) {
-        hasRedirected = true;
+      if (event.type === 'update' && event.id === saleId && event.data?.status === 'paid' && !hasConfirmed) {
+        hasConfirmed = true;
         console.log('✅ PIX confirmado via real-time:', saleId);
         toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
-        
-        setTimeout(() => {
-          navigate(createPageUrl('MyCatalogOrders'));
-        }, 2000);
+        setPixConfirmed(true);
       }
     });
 
-    // 2️⃣ Polling de fallback (caso real-time falhe)
+    // 2️⃣ Polling de fallback
     const interval = setInterval(async () => {
-      if (hasRedirected) {
+      if (hasConfirmed) {
         clearInterval(interval);
         return;
       }
@@ -160,19 +158,16 @@ export default function Cart() {
       try {
         const sales = await base44.entities.CatalogSale.filter({ id: saleId });
         if (sales && sales[0]?.status === 'paid') {
-          hasRedirected = true;
+          hasConfirmed = true;
           clearInterval(interval);
           console.log('✅ PIX confirmado via polling:', saleId);
           toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
-          
-          setTimeout(() => {
-            navigate(createPageUrl('MyCatalogOrders'));
-          }, 2000);
+          setPixConfirmed(true);
         }
       } catch (error) {
         console.debug('Polling error:', error.message);
       }
-    }, 3000); // Verifica a cada 3 segundos
+    }, 3000);
 
     setPollingInterval(interval);
 
@@ -180,7 +175,7 @@ export default function Cart() {
       unsubscribe();
       if (interval) clearInterval(interval);
     };
-  }, [pixData, createdSales]);
+  }, [pixData, createdSales, pixConfirmed]);
 
   const updateCart = (newCart) => {
     setCartItems(newCart);
@@ -953,8 +948,8 @@ export default function Cart() {
               </Card>
             )}
 
-            {/* QR Code PIX */}
-            {pixData && pixData.billing_type === 'PIX' && (
+            {/* QR Code PIX ou Sucesso */}
+            {pixData && pixData.billing_type === 'PIX' && !pixConfirmed && (
               <Card className="bg-gray-800 border-gray-700 p-5">
                 <h3 className="text-lg font-bold text-green-400 text-center mb-4">💚 Pague com PIX</h3>
                 
@@ -992,16 +987,12 @@ export default function Cart() {
                   <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
                   <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
                 </div>
-                <div className="bg-gray-700/30 rounded-lg p-3 mb-4">
-                  <p className="text-gray-300 text-sm text-center">
-                    Após o pagamento, você será automaticamente redirecionado.
-                  </p>
-                </div>
 
                 <Button
                   onClick={() => {
                     if (pollingInterval) clearInterval(pollingInterval);
                     setPixData(null);
+                    setPixConfirmed(false);
                     setPaymentType('PIX');
                   }}
                   variant="outline"
@@ -1009,6 +1000,23 @@ export default function Cart() {
                 >
                   Alterar Forma de Pagamento
                 </Button>
+                <Button
+                  onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                  className="w-full bg-gray-700 hover:bg-gray-600 text-white"
+                >
+                  Ver Meus Pedidos
+                </Button>
+              </Card>
+            )}
+
+            {/* Sucesso PIX (igual ao cartão) */}
+            {pixData && pixData.billing_type === 'PIX' && pixConfirmed && (
+              <Card className="bg-gray-800 border-gray-700 p-5">
+                <h3 className="text-lg font-bold text-green-400 text-center mb-4">✅ Pagamento Confirmado</h3>
+                <div className="bg-green-600/10 rounded-lg p-4 border border-green-500/30 mb-4">
+                  <p className="text-green-400 text-center">Pagamento PIX confirmado com sucesso!</p>
+                  <p className="text-gray-400 text-sm text-center mt-2">Seu pedido está sendo processado.</p>
+                </div>
                 <Button
                   onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
                   className="w-full bg-gray-700 hover:bg-gray-600 text-white"
