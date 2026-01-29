@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import 'react-quill/dist/quill.snow.css';
 
 export default function AddCatalogProduct() {
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Estados do formulário
   const [currentSection, setCurrentSection] = useState('geral');
@@ -82,6 +83,29 @@ export default function AddCatalogProduct() {
   useEffect(() => {
     loadCategories();
   }, []);
+  
+  // Preenche automaticamente com dados do produto fonte
+  useEffect(() => {
+    if (location.state?.sourceProduct) {
+      const product = location.state.sourceProduct;
+      setFormData(prev => ({
+        ...prev,
+        title: product.description || '',
+        description: product.notes || '',
+        image_urls: product.image_urls || [],
+        price: product.price_catalog || product.selling_price_retail || '',
+        cost_price: product.cost_price || '',
+        compare_price: product.market_value || '',
+        sku: product.lot || '',
+        weight: product.peso || '',
+        length: product.comprimento || '',
+        height: product.altura || '',
+        width: product.largura || '',
+        quantity: product.quantity || 1,
+        catalog_active: product.catalog_active || false
+      }));
+    }
+  }, [location.state]);
   
   useEffect(() => {
     if (formData.category) {

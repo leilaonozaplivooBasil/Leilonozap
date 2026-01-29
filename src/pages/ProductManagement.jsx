@@ -752,7 +752,9 @@ export default function ProductManagement() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(createPageUrl("AddCatalogProduct"));
+                              navigate(createPageUrl("AddCatalogProduct"), {
+                                state: { sourceProduct: product }
+                              });
                             }}
                             className="bg-purple-600 hover:bg-purple-700 text-white"
                             title="Novo Produto Catálogo"
