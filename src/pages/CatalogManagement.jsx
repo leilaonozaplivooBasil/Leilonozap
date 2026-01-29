@@ -21,6 +21,8 @@ export default function CatalogManagement() {
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [editingFeaturedProduct, setEditingFeaturedProduct] = useState(null);
+  const [catalogSettings, setCatalogSettings] = useState(null);
+  const [editingSettings, setEditingSettings] = useState(false);
 
   const loadBanners = async () => {
     try {
@@ -38,7 +40,25 @@ export default function CatalogManagement() {
   useEffect(() => {
     loadBanners();
     loadProducts();
+    loadCatalogSettings();
   }, []);
+
+  const loadCatalogSettings = async () => {
+    try {
+      const settings = await base44.entities.CatalogSettings.list();
+      if (settings && settings.length > 0) {
+        setCatalogSettings(settings[0]);
+      } else {
+        const newSettings = await base44.entities.CatalogSettings.create({
+          featured_section_title: '⭐ Produtos em Destaque',
+          featured_section_description: 'Veja nossos destaques selecionados'
+        });
+        setCatalogSettings(newSettings);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error);
+    }
+  };
   
   const loadProducts = async () => {
     setLoadingProducts(true);
@@ -169,6 +189,23 @@ export default function CatalogManagement() {
     } catch (error) {
       console.error('Erro ao atualizar produto:', error);
       toast.error('Erro ao atualizar produto');
+    }
+  };
+
+  const handleUpdateSettings = async (title, description) => {
+    try {
+      if (catalogSettings.id) {
+        await base44.entities.CatalogSettings.update(catalogSettings.id, {
+          featured_section_title: title,
+          featured_section_description: description
+        });
+      }
+      loadCatalogSettings();
+      setEditingSettings(false);
+      toast.success('Título atualizado!');
+    } catch (error) {
+      console.error('Erro ao atualizar configurações:', error);
+      toast.error('Erro ao atualizar configurações');
     }
   };
 
@@ -517,9 +554,17 @@ export default function CatalogManagement() {
 
         {activeTab === 'produtos' && (
           <div>
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-white mb-2">Produtos em Destaque</h2>
-              <p className="text-gray-400">Gerencie quais produtos aparecem na seção de destaque do catálogo (máximo 4)</p>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">Produtos em Destaque</h2>
+                <p className="text-gray-400">Gerencie quais produtos aparecem na seção de destaque do catálogo (máximo 4)</p>
+              </div>
+              <Button
+                onClick={() => setEditingSettings(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                ✏️ Editar Título da Seção
+              </Button>
             </div>
 
             {loadingProducts ? (
@@ -651,6 +696,59 @@ export default function CatalogManagement() {
                         </Button>
                         <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
                           Salvar
+                        </Button>
+                      </div>
+                    </form>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+
+            {editingSettings && catalogSettings && (
+              <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+                <Card className="bg-gray-800 border-gray-700 max-w-md w-full">
+                  <CardHeader>
+                    <CardTitle className="text-white">Editar Título da Seção</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        const formData = new FormData(e.target);
+                        handleUpdateSettings(formData.get('title'), formData.get('description'));
+                      }}
+                      className="space-y-4"
+                    >
+                      <div>
+                        <Label className="text-gray-300">Título</Label>
+                        <Input
+                          type="text"
+                          name="title"
+                          defaultValue={catalogSettings.featured_section_title || ''}
+                          placeholder="⭐ Produtos em Destaque"
+                          className="bg-gray-700 text-white border-gray-600"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-gray-300">Descrição (opcional)</Label>
+                        <Input
+                          type="text"
+                          name="description"
+                          defaultValue={catalogSettings.featured_section_description || ''}
+                          placeholder="Descrição da seção"
+                          className="bg-gray-700 text-white border-gray-600"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setEditingSettings(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
+                          Salvar Alterações
                         </Button>
                       </div>
                     </form>
