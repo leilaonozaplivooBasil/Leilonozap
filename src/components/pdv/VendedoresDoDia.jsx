@@ -9,7 +9,7 @@ export default function VendedoresDoDia({ daySales, date }) {
 
   useEffect(() => {
     loadSellersForDay();
-  }, [daySales]);
+  }, [daySales.length]);
 
   const loadSellersForDay = async () => {
     setIsLoading(true);

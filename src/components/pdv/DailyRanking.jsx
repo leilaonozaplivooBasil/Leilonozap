@@ -34,7 +34,7 @@ export default function DailyRanking({ allSales }) {
 
   React.useEffect(() => {
     loadRanking();
-  }, [daySales]);
+  }, [daySales.length]);
 
   const loadRanking = async () => {
     setIsLoading(true);
