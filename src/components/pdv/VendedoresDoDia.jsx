@@ -9,7 +9,7 @@ export default function VendedoresDoDia({ daySales, date }) {
 
   useEffect(() => {
     loadSellersForDay();
-  }, [daySales.length]);
+  }, [daySales.length, date]);
 
   const loadSellersForDay = async () => {
     setIsLoading(true);
@@ -23,12 +23,11 @@ export default function VendedoresDoDia({ daySales, date }) {
         return;
       }
 
-      // Busca apenas as comissões deste dia (filtro no backend)
-      const commissionsPromises = saleIds.map(saleId => 
-        base44.entities.SaleCommission.filter({ sale_id: saleId }).catch(() => [])
-      );
-      const commissionsArrays = await Promise.all(commissionsPromises);
-      const commissionsForDay = commissionsArrays.flat();
+      // Busca todas as comissões de uma vez
+      const allCommissions = await base44.entities.SaleCommission.list();
+      const commissionsForDay = allCommissions.filter(c => saleIds.includes(c.sale_id));
+      
+      console.log(`📊 Total de comissões encontradas para ${saleIds.length} vendas:`, commissionsForDay.length);
 
       // Agrupa por vendedor
       const sellerMap = {};
