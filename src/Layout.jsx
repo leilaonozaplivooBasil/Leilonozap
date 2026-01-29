@@ -996,9 +996,9 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
+        </ErrorBoundary>
 
         <Footer />
-        </ErrorBoundary>
       </div>
       
       <style>{`
