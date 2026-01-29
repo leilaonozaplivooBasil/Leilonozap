@@ -524,21 +524,6 @@ export default function AddCatalogProduct() {
                         />
                       </div>
                     </div>
-                    
-                    <div className="mt-4 flex items-start gap-3">
-                      <div className="flex-1">
-                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                          <div className="flex items-center justify-center">
-                            <div className="text-center">
-                              <div className="w-24 h-24 mx-auto mb-2 bg-white rounded-lg border-2 border-gray-300 flex items-center justify-center">
-                                <div className="text-xs text-gray-400">Visualização</div>
-                              </div>
-                              <p className="text-xs text-gray-500">Largura</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               )}
