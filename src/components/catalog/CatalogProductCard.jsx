@@ -359,61 +359,62 @@ ${categoryEmoji} ${product.description}
         <div className="space-y-1.5 sm:space-y-2 mt-auto">
           {/* BOTÃO ADICIONAR - PRINCIPAL */}
           {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
-            <Button
-              disabled
-              className="w-full h-10 sm:h-11 text-sm sm:text-base font-bold bg-yellow-600 hover:bg-yellow-600 text-white rounded-lg cursor-not-allowed opacity-90"
-            >
-              <span>ESGOTADO</span>
-            </Button>
+            <div className="flex items-center justify-center py-6">
+              <div className="text-center">
+                <p className="text-2xl sm:text-3xl font-black text-yellow-500 mb-1">ESGOTADO</p>
+              </div>
+            </div>
           ) : (
-            <Button
-              onClick={addToCart}
-              className={`w-full h-10 sm:h-11 text-sm sm:text-base font-bold transition-all ${
-                isInCart 
-                  ? 'bg-green-600 hover:bg-green-700' 
-                  : 'bg-green-600 hover:bg-green-700'
-              } text-white rounded-lg`}
-            >
-              {isInCart ? (
-                <>
-                  <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                  <span>NO CARRINHO</span>
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
-                  <span>ADICIONAR</span>
-                </>
-              )}
-            </Button>
+            <>
+              <Button
+                onClick={addToCart}
+                className={`w-full h-10 sm:h-11 text-sm sm:text-base font-bold transition-all ${
+                  isInCart 
+                    ? 'bg-green-600 hover:bg-green-700' 
+                    : 'bg-green-600 hover:bg-green-700'
+                } text-white rounded-lg`}
+              >
+                {isInCart ? (
+                  <>
+                    <Check className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <span>NO CARRINHO</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
+                    <span>ADICIONAR</span>
+                  </>
+                )}
+              </Button>
+
+              {/* COMPARAR PREÇOS */}
+              <Button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowComparai(true);
+                }}
+                className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg px-2 sm:px-4"
+              >
+                <img 
+                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                  alt="Comparai"
+                  className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0"
+                />
+                <span className="truncate">COMPARAR PREÇOS</span>
+              </Button>
+
+              {/* MAIS INFORMAÇÕES - LINK */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
+                }}
+                className="w-full text-center text-xs sm:text-sm text-green-400 hover:text-green-300 font-semibold py-1 underline underline-offset-2"
+              >
+                MAIS INFORMAÇÕES
+              </button>
+            </>
           )}
-
-          {/* COMPARAR PREÇOS */}
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowComparai(true);
-            }}
-            className="w-full h-8 sm:h-9 text-[10px] sm:text-sm bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold rounded-lg px-2 sm:px-4"
-          >
-            <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-              alt="Comparai"
-              className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 flex-shrink-0"
-            />
-            <span className="truncate">COMPARAR PREÇOS</span>
-          </Button>
-
-          {/* MAIS INFORMAÇÕES - LINK */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(createPageUrl("CatalogProductDetails") + `?id=${product.id}`);
-            }}
-            className="w-full text-center text-xs sm:text-sm text-green-400 hover:text-green-300 font-semibold py-1 underline underline-offset-2"
-          >
-            MAIS INFORMAÇÕES
-          </button>
         </div>
       </CardContent>
     </Card>
