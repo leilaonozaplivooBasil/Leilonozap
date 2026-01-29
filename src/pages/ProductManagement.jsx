@@ -752,10 +752,10 @@ export default function ProductManagement() {
                             size="sm"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(createPageUrl("EditCatalogProduct") + `?id=${product.id}`);
+                              navigate(createPageUrl("AddCatalogProduct"));
                             }}
                             className="bg-purple-600 hover:bg-purple-700 text-white"
-                            title="Editar no Catálogo"
+                            title="Novo Produto Catálogo"
                           >
                             <BookOpen className="w-4 h-4" />
                           </Button>
