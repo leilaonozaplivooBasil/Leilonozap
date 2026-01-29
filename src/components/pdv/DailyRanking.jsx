@@ -9,15 +9,17 @@ const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/pub
 const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/c478ca710_LogoLeiloNoZap.PNG";
 
 export default function DailyRanking({ allSales }) {
+  const [sellersRanking, setSellersRanking] = React.useState([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+
   const sales = Array.isArray(allSales) ? allSales : [];
 
-  // Usa o dia mais recente existente nas vendas (robusto)
+  // Usa o dia mais recente existente nas vendas
   const parseValidDate = (d) => {
     const dt = new Date(d);
     return isNaN(dt.getTime()) ? null : dt;
   };
   const validSales = (sales || []).filter(s => parseValidDate(s.sale_datetime));
-  // Ordena por data desc
   validSales.sort((a, b) => parseValidDate(b.sale_datetime) - parseValidDate(a.sale_datetime));
   const latest = validSales[0];
   const headerDate = latest ? parseValidDate(latest.sale_datetime) : new Date();
@@ -28,19 +30,93 @@ export default function DailyRanking({ allSales }) {
     return d && d.toLocaleDateString('pt-BR') === targetDate;
   });
 
-  const sellersMap = {};
-  daySales.forEach(s => {
-    const name = s.seller_name || 'Sem vendedor';
-    if (!sellersMap[name]) sellersMap[name] = { name, total: 0, count: 0 };
-    sellersMap[name].total += Number(s.total_amount) || 0;
-    sellersMap[name].count += 1;
-  });
-
-  const ranking = Object.values(sellersMap)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 10);
-
   const dayTotal = daySales.reduce((sum, s) => sum + (Number(s.total_amount) || 0), 0);
+
+  React.useEffect(() => {
+    loadRanking();
+  }, [daySales]);
+
+  const loadRanking = async () => {
+    setIsLoading(true);
+    try {
+      const saleIds = daySales.map(s => s.id);
+      
+      if (saleIds.length === 0) {
+        setSellersRanking([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Busca comissões
+      const commissionsPromises = saleIds.map(saleId => 
+        base44.entities.SaleCommission.filter({ sale_id: saleId }).catch(() => [])
+      );
+      const commissionsArrays = await Promise.all(commissionsPromises);
+      const commissionsForDay = commissionsArrays.flat();
+
+      const sellerMap = {};
+      const processedSales = new Set();
+      
+      // Processa vendas com comissões
+      commissionsForDay.forEach(commission => {
+        const sale = daySales.find(s => s.id === commission.sale_id);
+        if (!sale) return;
+
+        processedSales.add(sale.id);
+
+        const sellerId = commission.seller_id;
+        if (!sellerMap[sellerId]) {
+          sellerMap[sellerId] = {
+            name: commission.seller_name,
+            total: 0,
+            commission: 0,
+            count: 0
+          };
+        }
+
+        sellerMap[sellerId].total += sale.total_amount || 0;
+        sellerMap[sellerId].commission += commission.commission_amount || 0;
+        if (!sellerMap[sellerId].sales?.includes(sale.id)) {
+          sellerMap[sellerId].count += 1;
+          if (!sellerMap[sellerId].sales) sellerMap[sellerId].sales = [];
+          sellerMap[sellerId].sales.push(sale.id);
+        }
+      });
+
+      // Processa vendas antigas sem comissões
+      daySales.forEach(sale => {
+        if (processedSales.has(sale.id)) return;
+
+        const sellerName = sale.seller_name || 'Sem vendedor';
+        const sellerId = sale.seller_id || 'no_seller';
+
+        if (!sellerMap[sellerId]) {
+          sellerMap[sellerId] = {
+            name: sellerName,
+            total: 0,
+            commission: 0,
+            count: 0
+          };
+        }
+
+        sellerMap[sellerId].total += sale.total_amount || 0;
+        sellerMap[sellerId].commission += sale.commission_amount || 0;
+        sellerMap[sellerId].count += 1;
+      });
+
+      const ranking = Object.values(sellerMap)
+        .sort((a, b) => b.total - a.total)
+        .slice(0, 10);
+
+      setSellersRanking(ranking);
+    } catch (error) {
+      console.error('Erro ao carregar ranking:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const ranking = sellersRanking;
 
   const fmt = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -194,10 +270,14 @@ export default function DailyRanking({ allSales }) {
 
       {/* Lista Top 10 */}
       <div className="space-y-2">
-        {(ranking.length > 0 ? ranking : [{ name: 'Sem dados', total: 0, count: 0 }]).map((r, i) => (
+        {isLoading ? (
+          <div className="flex items-center justify-center p-8">
+            <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+          </div>
+        ) : (ranking.length > 0 ? ranking : [{ name: 'Sem dados', total: 0, count: 0, commission: 0 }]).map((r, i) => (
           <div key={r.name} className="flex items-center justify-between bg-zinc-900/70 hover:bg-zinc-800 transition-colors rounded-lg px-3 py-2 border border-zinc-800">
-            <div className="flex items-center gap-3">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
                 i === 0 ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40' :
                 i === 1 ? 'bg-gray-500/20 text-gray-300 border border-gray-500/40' :
                 i === 2 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40' :
@@ -205,13 +285,21 @@ export default function DailyRanking({ allSales }) {
               }`}>
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
               </div>
-              <div className="max-w-[60%]">
-                <p className="text-white font-medium leading-tight break-words">{r.name}</p>
-                <p className="text-[11px] text-gray-400">{r.count} vendas</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-white font-medium leading-tight truncate">{r.name}</p>
+                <div className="flex items-center gap-2 text-[11px] text-gray-400">
+                  <span>{r.count} vendas</span>
+                  {r.commission > 0 && (
+                    <>
+                      <span>•</span>
+                      <span className="text-orange-400 font-semibold">Comissão: R$ {fmt(r.commission)}</span>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="text-right flex-shrink-0 min-w-[110px] sm:min-w-[140px] md:min-w-[160px] overflow-hidden">
-              <p className="text-green-400 font-bold font-mono whitespace-nowrap text-ellipsis overflow-hidden" style={{ fontVariantNumeric: 'tabular-nums' }}>
+            <div className="text-right flex-shrink-0 ml-3">
+              <p className="text-green-400 font-bold font-mono whitespace-nowrap text-sm" style={{ fontVariantNumeric: 'tabular-nums' }}>
                 R$ {fmt(r.total)}
               </p>
             </div>
