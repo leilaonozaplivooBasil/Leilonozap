@@ -45,6 +45,7 @@ export default function AddCatalogProduct() {
     sku: '',
     barcode: '',
     gerar_barcode_automatico: false,
+    seller_name: '',
     
     // Especificações
     condition: 'Novo',
@@ -371,7 +372,8 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
         altura: parseFloat(formData.height) || 0,
         largura: parseFloat(formData.width) || 0,
         lot: formData.sku || formData.lot,
-        purchase_order: formData.purchase_order
+        purchase_order: formData.purchase_order,
+        seller_name: formData.seller_name || ''
       };
       
       await base44.entities.Product.create(productData);
@@ -636,15 +638,30 @@ IMPORTANTE: Retorne APENAS a descrição pronta para uso, sem introduções, tí
                           className="bg-white border-gray-300"
                         />
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mt-4">
+
+                      <div className="col-span-2">
+                        <Label className="text-sm text-gray-700 mb-1.5 block">
+                          Vendedor responsável
+                        </Label>
+                        <Input
+                          value={formData.seller_name}
+                          onChange={(e) => handleInputChange('seller_name', e.target.value)}
+                          placeholder="Nome do vendedor que gerenciará este produto"
+                          className="bg-white border-gray-300"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Esta informação será usada para enviar notificações sobre vendas e gestão do pedido
+                        </p>
+                      </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 mt-4">
                       <Switch
                         checked={formData.gerar_barcode_automatico}
                         onCheckedChange={(checked) => handleInputChange('gerar_barcode_automatico', checked)}
                       />
                       <span className="text-sm text-gray-700">Gerar automaticamente</span>
-                    </div>
+                      </div>
                   </div>
                   
                   {/* Especificações */}
