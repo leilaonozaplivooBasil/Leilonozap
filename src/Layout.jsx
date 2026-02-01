@@ -11,7 +11,6 @@ import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
-import { ThemeProvider } from "@/components/system/ThemeContext";
 
       import { Button } from "@/components/ui/button";
       import { base44 } from '@/api/base44Client';
@@ -591,11 +590,11 @@ export default function Layout({ children, currentPageName }) {
   }
 
   return (
-    <ThemeProvider>
+    <ErrorBoundary>
+      <GlobalMonitor />
+      
       <div className="min-h-screen bg-gray-900">
-        <ErrorBoundary>
-          <GlobalMonitor />
-          <nav className="fixed top-0 left-0 right-0 z-50 shadow-lg border-b bg-gray-800 border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <nav className="fixed top-0 left-0 right-0 z-50 shadow-lg border-b bg-gray-800 border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
               
@@ -947,6 +946,7 @@ export default function Layout({ children, currentPageName }) {
         )}
 
         <main className="pt-16">{children}</main>
+        <Footer />
 
         {/* 🆕 BOTÃO FLUTUANTE WHATSAPP - SÓ NA SALA DE LEILÃO (AuctionRoom) */}
         {currentUser && (isLicensee || isAdmin) && currentPageName === "AuctionRoom" && (
@@ -997,10 +997,10 @@ export default function Layout({ children, currentPageName }) {
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
 
-        <Footer />
-        </ErrorBoundary>
 
-        <style>{`
+      </div>
+      
+      <style>{`
         @keyframes fadeInScale {
           0% {
             opacity: 0;
@@ -1055,29 +1055,9 @@ export default function Layout({ children, currentPageName }) {
         }
         
         .animate-pulse-subtle {
-           animation: pulse-subtle 2s ease-in-out infinite;
-         }
-
-         /* TEMA CLARO */
-         :root.light-theme {
-           --bg-primary: #ffffff;
-           --bg-secondary: #f5f5f5;
-           --text-primary: #1a1a1a;
-           --text-secondary: #666666;
-           --border-color: #e0e0e0;
-         }
-
-         html.light-theme {
-           background-color: #ffffff;
-           color: #1a1a1a;
-         }
-
-         html.light-theme body {
-           background-color: #ffffff;
-           color: #1a1a1a;
-         }
-        `}</style>
-        </div>
-        </ThemeProvider>
-        );
+          animation: pulse-subtle 2s ease-in-out infinite;
         }
+      `}</style>
+    </ErrorBoundary>
+  );
+}

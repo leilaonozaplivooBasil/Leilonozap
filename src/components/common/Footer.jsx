@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, Mail, MapPin, Phone, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter, Sun, Moon } from 'lucide-react';
+import { ChevronDown, Mail, MapPin, Phone, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
-import { useTheme } from '@/components/system/ThemeContext';
 
 export default function Footer() {
-  const { theme, toggleTheme } = useTheme();
   const [footerSettings, setFooterSettings] = useState(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +53,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="theme-footer bg-gray-800 dark:bg-gray-800 light:bg-white border-t border-gray-700 dark:border-gray-700 light:border-gray-200 text-gray-300 dark:text-gray-300 light:text-gray-700">
+    <footer className="bg-gray-800 border-t border-gray-700 text-gray-300">
       {/* Seção Expandível */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header do Footer - Sempre Visível */}
@@ -81,26 +79,13 @@ export default function Footer() {
                   href={social.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-full bg-gray-700 dark:bg-gray-700 light:bg-gray-200 hover:bg-gray-600 dark:hover:bg-gray-600 light:hover:bg-gray-300 flex items-center justify-center transition-colors"
+                  className="w-10 h-10 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition-colors"
                   title={social.name}
                 >
                   <Icon className="w-5 h-5" />
                 </a>
               ) : null;
             })}
-
-            {/* Botão de Tema */}
-            <button
-              onClick={toggleTheme}
-              className="w-10 h-10 rounded-full bg-gray-700 dark:bg-gray-700 light:bg-gray-200 hover:bg-gray-600 dark:hover:bg-gray-600 light:hover:bg-gray-300 flex items-center justify-center transition-colors"
-              title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
-            >
-              {theme === 'dark' ? (
-                <Sun className="w-5 h-5 text-yellow-400" />
-              ) : (
-                <Moon className="w-5 h-5 text-gray-700" />
-              )}
-            </button>
 
             {/* Botão Expandir */}
             <button 
@@ -115,25 +100,25 @@ export default function Footer() {
 
         {/* Conteúdo Expandível */}
         {isExpanded && (
-          <div className="border-t border-gray-700 dark:border-gray-700 light:border-gray-200 py-8 space-y-8 animate-in fade-in duration-300">
+          <div className="border-t border-gray-700 py-8 space-y-8 animate-in fade-in duration-300">
             
             {/* Sobre Nós */}
             <div>
-              <h3 className="text-white dark:text-white light:text-gray-900 font-bold text-lg mb-4">Sobre Nós</h3>
+              <h3 className="text-white font-bold text-lg mb-4">Sobre Nós</h3>
               <div className="space-y-3 text-sm">
-                <p className="text-gray-400 dark:text-gray-400 light:text-gray-600">Leilão NoZap - Leilões Presenciais e Online</p>
-                <p className="text-gray-400 dark:text-gray-400 light:text-gray-600">Plataforma de leilões online com sistema 100% seguro e transparente</p>
+                <p className="text-gray-400">Leilão NoZap - Leilões Presenciais e Online</p>
+                <p className="text-gray-400">Plataforma de leilões online com sistema 100% seguro e transparente</p>
               </div>
             </div>
 
             {/* Informações de Contato */}
             <div>
-              <h3 className="text-white dark:text-white light:text-gray-900 font-bold text-lg mb-4">Informações de Contato</h3>
+              <h3 className="text-white font-bold text-lg mb-4">Informações de Contato</h3>
               <div className="space-y-3">
                 {footerSettings.address && (
                   <div className="flex items-start gap-3">
                     <MapPin className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-gray-400 dark:text-gray-400 light:text-gray-600">{footerSettings.address}</p>
+                    <p className="text-sm text-gray-400">{footerSettings.address}</p>
                   </div>
                 )}
                 
@@ -142,7 +127,7 @@ export default function Footer() {
                     <Mail className="w-5 h-5 text-green-400 flex-shrink-0" />
                     <a 
                       href={`mailto:${footerSettings.email}`}
-                      className="text-sm text-gray-400 dark:text-gray-400 light:text-gray-600 hover:text-white dark:hover:text-white light:hover:text-gray-900 transition-colors"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
                       {footerSettings.email}
                     </a>
@@ -154,7 +139,7 @@ export default function Footer() {
                     <Phone className="w-5 h-5 text-green-400 flex-shrink-0" />
                     <a 
                       href={`tel:${footerSettings.phone}`}
-                      className="text-sm text-gray-400 dark:text-gray-400 light:text-gray-600 hover:text-white dark:hover:text-white light:hover:text-gray-900 transition-colors"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
                       {footerSettings.phone}
                     </a>
@@ -168,7 +153,7 @@ export default function Footer() {
                       href={`https://wa.me/${footerSettings.whatsapp}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm text-gray-400 dark:text-gray-400 light:text-gray-600 hover:text-white dark:hover:text-white light:hover:text-gray-900 transition-colors"
+                      className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
                       {footerSettings.whatsapp}
                     </a>
@@ -181,9 +166,9 @@ export default function Footer() {
       </div>
 
       {/* Copyright */}
-      <div className="border-t border-gray-700 dark:border-gray-700 light:border-gray-200 bg-gray-900 dark:bg-gray-900 light:bg-gray-100 py-4">
+      <div className="border-t border-gray-700 bg-gray-900 py-4">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-gray-500 dark:text-gray-500 light:text-gray-600">
+          <p className="text-center text-sm text-gray-500">
             © 2026 Leilão NoZap. Todos os direitos reservados.
           </p>
         </div>
