@@ -270,25 +270,12 @@ export default function Cart() {
     return value;
   };
 
-  // Validação de CPF
+  // Validação de CPF - simplificada (ASAAS faz validação final)
   const isValidCpf = (cpf) => {
     const cleanCpf = cpf.replace(/\D/g, '');
     if (cleanCpf.length !== 11) return false;
-    if (/^(\d)\1+$/.test(cleanCpf)) return false; // CPFs com todos dígitos iguais
-    
-    let sum = 0;
-    for (let i = 0; i < 9; i++) sum += parseInt(cleanCpf[i]) * (10 - i);
-    let digit1 = (sum * 10) % 11;
-    if (digit1 === 10) digit1 = 0;
-    if (digit1 !== parseInt(cleanCpf[9])) return false;
-    
-    sum = 0;
-    for (let i = 0; i < 10; i++) sum += parseInt(cleanCpf[i]) * (11 - i);
-    let digit2 = (sum * 10) % 11;
-    if (digit2 === 10) digit2 = 0;
-    if (digit2 !== parseInt(cleanCpf[10])) return false;
-    
-    return true;
+    if (/^(\d)\1+$/.test(cleanCpf)) return false; // CPFs com todos dígitos iguais (ex: 111.111.111-11)
+    return true; // ASAAS valida o CPF real
   };
 
   const handleCheckout = async () => {
