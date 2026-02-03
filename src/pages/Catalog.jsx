@@ -456,24 +456,24 @@ export default function Catalog() {
         
         {/* BANNER PERSONALIZADO DO LICENCIADO */}
         {licenseeData && (
-          <div className="mb-6 bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border border-purple-500/30 rounded-2xl p-6 backdrop-blur-sm">
-            <div className="flex items-center gap-4">
+          <div className="mb-6 bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border border-purple-500/30 rounded-xl p-4 backdrop-blur-sm">
+            <div className="flex items-center gap-3">
               {licenseeData.photo ? (
                 <img 
                   src={licenseeData.photo} 
                   alt={licenseeData.name}
-                  className="w-20 h-20 rounded-full object-cover border-4 border-purple-400/50 shadow-lg"
+                  className="w-14 h-14 rounded-full object-cover border-2 border-purple-400/50 shadow-lg"
                 />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold border-4 border-purple-400/50 shadow-lg">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xl font-bold border-2 border-purple-400/50 shadow-lg">
                   {licenseeData.name?.charAt(0)}
                 </div>
               )}
               <div className="flex-1">
-                <h2 className="text-2xl font-bold text-white mb-1">
+                <h2 className="text-lg font-bold text-white">
                   Catálogo de {licenseeData.name}
                 </h2>
-                <p className="text-purple-200 text-sm">
+                <p className="text-purple-200 text-xs">
                   ✨ Produtos exclusivos selecionados especialmente para você
                 </p>
               </div>
@@ -482,9 +482,9 @@ export default function Catalog() {
                   href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo seu catálogo personalizado.`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg hover:shadow-xl"
                 >
-                  <MessageCircle className="w-5 h-5" />
+                  <MessageCircle className="w-4 h-4" />
                   <span className="hidden sm:inline">Falar Comigo</span>
                 </a>
               )}
