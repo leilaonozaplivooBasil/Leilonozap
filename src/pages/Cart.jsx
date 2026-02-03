@@ -138,6 +138,8 @@ export default function Cart() {
 
     const saleId = createdSales[0].id;
     let hasConfirmed = false;
+    const startTime = Date.now();
+    const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos (expiração do PIX)
 
     // 1️⃣ Real-time subscription
     const unsubscribe = base44.entities.CatalogSale.subscribe((event) => {
@@ -149,10 +151,17 @@ export default function Cart() {
       }
     });
 
-    // 2️⃣ Polling de fallback
+    // 2️⃣ Polling de fallback com timeout
     const interval = setInterval(async () => {
       if (hasConfirmed) {
         clearInterval(interval);
+        return;
+      }
+
+      // Verificar timeout (15 min)
+      if (Date.now() - startTime > TIMEOUT_MS) {
+        clearInterval(interval);
+        toast.warning('⏰ PIX expirado. Gere um novo código.', { duration: 5000 });
         return;
       }
 
@@ -168,7 +177,7 @@ export default function Cart() {
       } catch (error) {
         console.debug('Polling error:', error.message);
       }
-    }, 3000);
+    }, 5000); // Aumentado para 5s (menos requisições)
 
     setPollingInterval(interval);
 
@@ -387,14 +396,7 @@ export default function Cart() {
         };
       }
 
-      const functionUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/createAsaasPayment`;
-      const response = await fetch(functionUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(paymentPayload)
-      });
-
-      const paymentResponse = await response.json();
+      const { data: paymentResponse } = await base44.functions.invoke('createAsaasPayment', paymentPayload);
 
       setIsProcessing(false);
       toast.dismiss('checkout-loading');
@@ -424,6 +426,7 @@ export default function Cart() {
             console.warn('Erro ao limpar venda:', e.message);
           }
         }
+        setCreatedSales([]); // Limpar estado
       }
     } catch (error) {
       console.error('Erro no checkout:', error);
@@ -439,6 +442,7 @@ export default function Cart() {
           console.warn('Erro ao limpar:', e.message);
         }
       }
+      setCreatedSales([]); // Limpar estado
     }
   };
 

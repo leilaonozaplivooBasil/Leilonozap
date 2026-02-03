@@ -60,7 +60,6 @@ import AuctionRoom from './pages/AuctionRoom';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CareerLevelsReport from './pages/CareerLevelsReport';
-import Cart from './pages/Cart';
 import Catalog from './pages/Catalog';
 import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
@@ -122,6 +121,7 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
+import Cart from './pages/Cart';
 import __Layout from './Layout.jsx';
 
 
@@ -139,7 +139,6 @@ export const PAGES = {
     "BannerManagement": BannerManagement,
     "CRM": CRM,
     "CareerLevelsReport": CareerLevelsReport,
-    "Cart": Cart,
     "Catalog": Catalog,
     "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
@@ -201,6 +200,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
+    "Cart": Cart,
 }
 
 export const pagesConfig = {
