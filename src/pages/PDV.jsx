@@ -702,7 +702,7 @@ Transações: ${selectedSession.transactions_count || 0}
         
         const sellerData = selectedSeller ? sellers.find(s => s.id === selectedSeller) : null;
         
-        await base44.entities.Sale.create({
+        const saleRecord = await base44.entities.Sale.create({
           order_code: orderCode,
           product_id: product.id,
           product_description: product.description,
@@ -726,16 +726,7 @@ Transações: ${selectedSession.transactions_count || 0}
           boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
         });
 
-        // 🆕 Registra comissão do licenciado  
-        // Busca o ID da venda recém criada
-        const createdSales = await base44.entities.Sale.filter({ order_code: orderCode });
-        const saleRecord = createdSales && createdSales.length > 0 ? createdSales[0] : null;
-        
-        if (!saleRecord) {
-          console.error('❌ Erro: Venda não encontrada após criação');
-          continue;
-        }
-        
+        // 🆕 Registra comissão do licenciado
         if (selectedSeller && comissaoLicenciadoItem > 0) {
           await base44.entities.SaleCommission.create({
             sale_id: saleRecord.id,
