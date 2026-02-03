@@ -265,17 +265,15 @@ Deno.serve(async (req) => {
         
         // Log detalhado no SystemLog
         try {
-            const base44 = createClientFromRequest(req);
-            await base44.asServiceRole.entities.SystemLog.create({
+            const base44ForLog = createClientFromRequest(req);
+            await base44ForLog.asServiceRole.entities.SystemLog.create({
                 step: 'ASAAS_PAYMENT_ERROR',
                 status: 'error',
                 message: `Erro ao criar pagamento ASAAS: ${error.message}`,
                 component_name: 'createAsaasPayment',
                 error_details: { 
                     message: error.message, 
-                    stack: error.stack,
-                    catalog_sale_id: catalog_sale_id,
-                    auction_id: auction_id
+                    stack: error.stack
                 }
             });
         } catch (logErr) {
