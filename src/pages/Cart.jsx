@@ -43,6 +43,7 @@ export default function Cart() {
   const [cardCvv, setCardCvv] = useState('');
   const [pollingInterval, setPollingInterval] = useState(null);
   const [pixConfirmed, setPixConfirmed] = useState(false);
+  const [createdSales, setCreatedSales] = useState([]);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -308,7 +309,7 @@ export default function Cart() {
     setIsProcessing(true);
     toast.loading('Processando compra...', { id: 'checkout-loading' });
 
-    let createdSales = [];
+    const salesBatch = [];
 
     try {
       const referralCode = sessionStorage.getItem('referralCode');
@@ -358,12 +359,14 @@ export default function Cart() {
           address_state: formData.state,
           address_zip_code: formData.cep
         });
-        createdSales.push(sale);
+        salesBatch.push(sale);
       }
+
+      setCreatedSales(salesBatch);
 
       // Criar pagamento ASAAS único para todo o carrinho
       const paymentPayload = {
-        catalog_sale_id: createdSales[0].id, // Usa primeiro como referência
+        catalog_sale_id: salesBatch[0].id, // Usa primeiro como referência
         buyer_name: formData.name.trim(),
         buyer_email: formData.email.trim(),
         buyer_cpf: formData.cpf.replace(/\D/g, ''),
@@ -414,7 +417,7 @@ export default function Cart() {
         }
         
         // Limpar vendas criadas em caso de erro
-        for (const sale of createdSales) {
+        for (const sale of salesBatch) {
           try {
             await base44.entities.CatalogSale.delete(sale.id);
           } catch (e) {
@@ -429,7 +432,7 @@ export default function Cart() {
       toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
       
       // Limpar vendas em caso de erro
-      for (const sale of createdSales) {
+      for (const sale of salesBatch) {
         try {
           await base44.entities.CatalogSale.delete(sale.id);
         } catch (e) {
