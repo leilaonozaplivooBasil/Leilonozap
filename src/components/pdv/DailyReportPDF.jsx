@@ -35,7 +35,10 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         console.warn('Não foi possível carregar a logo');
       }
 
-      // ========== CABEÇALHO ==========
+      // ========== CABEÇALHO ESCURO ==========
+      doc.setFillColor(17, 24, 39); // bg-gray-900
+      doc.rect(0, 0, pageWidth, 45, 'F');
+
       // Logo
       if (logoDataUrl) {
         try {
@@ -46,28 +49,24 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       }
 
       // Título
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
       doc.text('RELATÓRIO DE VENDAS', pageWidth / 2, 18, { align: 'center' });
 
       // Subtítulo
-      doc.setTextColor(80, 80, 80);
+      doc.setTextColor(180, 180, 180);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       doc.text('Leilão NoZap - Sistema de Gestão', pageWidth / 2, 26, { align: 'center' });
 
       // Data
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(34, 197, 94); // verde
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text(`Data: ${date}`, pageWidth / 2, 36, { align: 'center' });
 
-      // Linha separadora
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, 42, pageWidth - margin, 42);
-
-      yPos = 50;
+      yPos = 52;
 
       // ========== RESUMO GERAL ==========
       const totalVendas = daySales.length;
