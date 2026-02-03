@@ -123,81 +123,207 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
       yPos += 38;
 
-      // ========== VENDEDORES DO DIA ==========
+      // ========== SEÇÃO 1: COMISSÕES DOS LICENCIADOS (VENDEDORES) ==========
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('VENDEDORES DO DIA', margin, yPos);
-      yPos += 8;
+      doc.text('COMISSÕES DOS LICENCIADOS (VENDEDORES)', margin, yPos);
+      yPos += 3;
+      
+      // Linha separadora do título
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
 
-      // Ordenar vendedores por valor total
+      // Ordenar vendedores por valor de comissão
       const sortedSellers = [...(sellersData || [])].sort((a, b) => {
-        const totalA = a.sales?.reduce((sum, s) => sum + (s.total_amount || 0), 0) || 0;
-        const totalB = b.sales?.reduce((sum, s) => sum + (s.total_amount || 0), 0) || 0;
-        return totalB - totalA;
+        return (b.total_commission || 0) - (a.total_commission || 0);
       });
+
+      // Cabeçalho da tabela de licenciados
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, yPos, pageWidth - margin * 2, 7);
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LICENCIADO', margin + 3, yPos + 5);
+      doc.text('QTD VENDAS', margin + 70, yPos + 5);
+      doc.text('VALOR VENDIDO', margin + 100, yPos + 5);
+      doc.text('COMISSÃO', margin + 145, yPos + 5);
+      yPos += 9;
+
+      let subtotalComissaoLicenciados = 0;
 
       sortedSellers.forEach((seller, index) => {
         const sellerTotal = seller.sales?.reduce((sum, s) => sum + (s.total_amount || 0), 0) || 0;
         const sellerCommission = seller.total_commission || 0;
+        subtotalComissaoLicenciados += sellerCommission;
 
         // Verifica se precisa de nova página
-        if (yPos > pageHeight - 60) {
+        if (yPos > pageHeight - 40) {
           doc.addPage();
           yPos = 20;
         }
 
-        // Linha separadora se não for o primeiro
+        // Linha separadora
         if (index > 0) {
-          doc.setDrawColor(220, 220, 220);
-          doc.setLineWidth(0.3);
+          doc.setDrawColor(230, 230, 230);
+          doc.setLineWidth(0.2);
           doc.line(margin, yPos, pageWidth - margin, yPos);
-          yPos += 3;
         }
 
-        // Posição
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
-        
-        if (index === 0) {
-          doc.text('1º 🥇', margin + 2, yPos + 6);
-        } else if (index === 1) {
-          doc.text('2º 🥈', margin + 2, yPos + 6);
-        } else if (index === 2) {
-          doc.text('3º 🥉', margin + 2, yPos + 6);
-        } else {
-          doc.text(`${index + 1}º`, margin + 2, yPos + 6);
-        }
 
-        // Nome do vendedor
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text(seller.seller_name || 'Sem nome', margin + 18, yPos + 6);
+        // Nome do licenciado
+        doc.text(seller.seller_name || 'Sem nome', margin + 3, yPos + 5);
 
         // Quantidade de vendas
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`(${seller.sales_count || 0} vendas)`, margin + 18, yPos + 11);
+        doc.text(`${seller.sales_count || 0}`, margin + 75, yPos + 5);
 
-        // Valor total
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`R$ ${fmt(sellerTotal)}`, pageWidth - margin - 5, yPos + 6, { align: 'right' });
+        // Valor vendido
+        doc.text(`R$ ${fmt(sellerTotal)}`, margin + 100, yPos + 5);
 
         // Comissão
-        doc.setTextColor(80, 80, 80);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Comissão: R$ ${fmt(sellerCommission)}`, pageWidth - margin - 5, yPos + 11, { align: 'right' });
+        doc.setFont('helvetica', 'bold');
+        doc.text(`R$ ${fmt(sellerCommission)}`, margin + 145, yPos + 5);
 
-        yPos += 18;
+        yPos += 8;
       });
 
-      yPos += 10;
+      // Subtotal licenciados
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(margin + 130, yPos, pageWidth - margin, yPos);
+      yPos += 4;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('TOTAL COMISSÕES LICENCIADOS:', margin + 80, yPos + 4);
+      doc.text(`R$ ${fmt(subtotalComissaoLicenciados)}`, margin + 145, yPos + 4);
+      yPos += 15;
+
+      // ========== SEÇÃO 2: COMISSÕES DOS LICENCIANTES (INDICADORES) ==========
+      if (yPos > pageHeight - 60) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('COMISSÕES DOS LICENCIANTES (INDICADORES)', margin, yPos);
+      yPos += 3;
+      
+      // Linha separadora do título
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
+
+      // Agrupa comissões por licenciante
+      const licenciantesMap = {};
+      
+      if (sellersData && sellersData.length > 0) {
+        sellersData.forEach(seller => {
+          seller.sales?.forEach(sale => {
+            const licencianteComm = sale.all_commissions?.find(c => c.seller_role === 'licenciante');
+            if (licencianteComm && licencianteComm.commission_amount > 0) {
+              const licId = licencianteComm.seller_id;
+              if (!licenciantesMap[licId]) {
+                licenciantesMap[licId] = {
+                  id: licId,
+                  name: licencianteComm.seller_name,
+                  total_commission: 0,
+                  sales_count: 0,
+                  sales: []
+                };
+              }
+              licenciantesMap[licId].total_commission += licencianteComm.commission_amount || 0;
+              licenciantesMap[licId].sales_count += 1;
+              licenciantesMap[licId].sales.push({
+                ...sale,
+                licenciado_name: seller.seller_name,
+                commission: licencianteComm.commission_amount
+              });
+            }
+          });
+        });
+      }
+
+      const licenciantesList = Object.values(licenciantesMap).sort((a, b) => b.total_commission - a.total_commission);
+
+      if (licenciantesList.length === 0) {
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Nenhuma comissão de licenciante registrada neste dia.', margin + 3, yPos + 5);
+        yPos += 15;
+      } else {
+        // Cabeçalho da tabela de licenciantes
+        doc.setDrawColor(180, 180, 180);
+        doc.setLineWidth(0.5);
+        doc.rect(margin, yPos, pageWidth - margin * 2, 7);
+        
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LICENCIANTE', margin + 3, yPos + 5);
+        doc.text('QTD INDICAÇÕES', margin + 70, yPos + 5);
+        doc.text('COMISSÃO', margin + 145, yPos + 5);
+        yPos += 9;
+
+        let subtotalComissaoLicenciantes = 0;
+
+        licenciantesList.forEach((licenciante, index) => {
+          subtotalComissaoLicenciantes += licenciante.total_commission;
+
+          // Verifica se precisa de nova página
+          if (yPos > pageHeight - 40) {
+            doc.addPage();
+            yPos = 20;
+          }
+
+          // Linha separadora
+          if (index > 0) {
+            doc.setDrawColor(230, 230, 230);
+            doc.setLineWidth(0.2);
+            doc.line(margin, yPos, pageWidth - margin, yPos);
+          }
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9);
+          doc.setTextColor(0, 0, 0);
+
+          // Nome do licenciante
+          doc.text(licenciante.name || 'Sem nome', margin + 3, yPos + 5);
+
+          // Quantidade de indicações
+          doc.text(`${licenciante.sales_count}`, margin + 80, yPos + 5);
+
+          // Comissão
+          doc.setFont('helvetica', 'bold');
+          doc.text(`R$ ${fmt(licenciante.total_commission)}`, margin + 145, yPos + 5);
+
+          yPos += 8;
+        });
+
+        // Subtotal licenciantes
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.5);
+        doc.line(margin + 130, yPos, pageWidth - margin, yPos);
+        yPos += 4;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('TOTAL COMISSÕES LICENCIANTES:', margin + 75, yPos + 4);
+        doc.text(`R$ ${fmt(subtotalComissaoLicenciantes)}`, margin + 145, yPos + 4);
+        yPos += 15;
+      }
+
+      yPos += 5;
 
       // ========== DETALHAMENTO DAS VENDAS ==========
       if (yPos > pageHeight - 40) {
