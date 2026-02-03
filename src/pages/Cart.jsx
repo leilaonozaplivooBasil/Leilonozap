@@ -318,10 +318,6 @@ export default function Cart() {
       toast.error('Preencha seu email');
       return;
     }
-    if (!currentUser || !currentUser.id) {
-      toast.error('Você precisa estar logado para finalizar a compra');
-      return;
-    }
 
     if (deliveryMethod === 'delivery') {
       if (!formData.cep.trim() || !formData.street.trim() || !formData.number.trim() || !formData.city.trim()) {
