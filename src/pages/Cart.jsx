@@ -270,6 +270,27 @@ export default function Cart() {
     return value;
   };
 
+  // Validação de CPF
+  const isValidCpf = (cpf) => {
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) return false;
+    if (/^(\d)\1+$/.test(cleanCpf)) return false; // CPFs com todos dígitos iguais
+    
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(cleanCpf[i]) * (10 - i);
+    let digit1 = (sum * 10) % 11;
+    if (digit1 === 10) digit1 = 0;
+    if (digit1 !== parseInt(cleanCpf[9])) return false;
+    
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(cleanCpf[i]) * (11 - i);
+    let digit2 = (sum * 10) % 11;
+    if (digit2 === 10) digit2 = 0;
+    if (digit2 !== parseInt(cleanCpf[10])) return false;
+    
+    return true;
+  };
+
   const handleCheckout = async () => {
     if (cartItems.length === 0) {
       toast.error('Seu carrinho está vazio');
@@ -289,8 +310,16 @@ export default function Cart() {
       toast.error('Preencha seu CPF');
       return;
     }
+    if (!isValidCpf(formData.cpf)) {
+      toast.error('CPF inválido. Verifique os números digitados.');
+      return;
+    }
     if (!formData.email.trim()) {
       toast.error('Preencha seu email');
+      return;
+    }
+    if (!currentUser || !currentUser.id) {
+      toast.error('Você precisa estar logado para finalizar a compra');
       return;
     }
 
@@ -413,7 +442,12 @@ export default function Cart() {
         
         if (errorDetails && Array.isArray(errorDetails)) {
           const asaasError = errorDetails.map(e => e.description).join(', ');
-          toast.error(`ASAAS: ${asaasError}`);
+          // Mensagem amigável para CPF inválido
+          if (asaasError.toLowerCase().includes('cpf')) {
+            toast.error('CPF inválido ou não encontrado. Verifique os dados.');
+          } else {
+            toast.error(`Erro no pagamento: ${asaasError}`);
+          }
         } else {
           toast.error(`Erro: ${errorMsg}`);
         }
