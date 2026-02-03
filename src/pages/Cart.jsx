@@ -387,7 +387,14 @@ export default function Cart() {
         };
       }
 
-      const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
+      const functionUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/createAsaasPayment`;
+      const response = await fetch(functionUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentPayload)
+      });
+
+      const paymentResponse = await response.json();
 
       setIsProcessing(false);
       toast.dismiss('checkout-loading');
