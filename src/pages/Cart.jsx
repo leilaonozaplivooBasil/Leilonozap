@@ -387,19 +387,7 @@ export default function Cart() {
         };
       }
 
-      const response = await fetch('/api/functions/createAsaasPayment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(paymentPayload)
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const paymentResponse = await response.json();
+      const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
 
       setIsProcessing(false);
       toast.dismiss('checkout-loading');
