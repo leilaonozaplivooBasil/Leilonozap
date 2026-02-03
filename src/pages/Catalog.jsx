@@ -147,6 +147,7 @@ export default function Catalog() {
       const refCode = sessionStorage.getItem('referralCode');
       if (!refCode) return;
 
+      // Busca primeiro em AppUser
       const licensees = await AppUser.filter({ referral_code: refCode });
       if (licensees && licensees.length > 0) {
         const licensee = licensees[0];
@@ -155,8 +156,13 @@ export default function Catalog() {
         }
         // Carrega dados completos do licenciado para personalização
         setLicenseeData({
-          name: licensee.full_name,
+          name: licensee.full_name || licensee.display_first_name + ' ' + licensee.display_last_name,
           photo: licensee.profile_photo_url,
+          phone: licensee.phone
+        });
+        console.log('✅ Dados do licenciado carregados:', {
+          name: licensee.full_name,
+          hasPhoto: !!licensee.profile_photo_url,
           phone: licensee.phone
         });
       }
