@@ -324,11 +324,9 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
       yPos += 5;
 
-      // ========== DETALHAMENTO DAS VENDAS ==========
-      if (yPos > pageHeight - 40) {
-        doc.addPage();
-        yPos = 20;
-      }
+      // ========== DETALHAMENTO DAS VENDAS (SEMPRE NA SEGUNDA PÁGINA) ==========
+      doc.addPage();
+      yPos = 20;
 
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(14);
