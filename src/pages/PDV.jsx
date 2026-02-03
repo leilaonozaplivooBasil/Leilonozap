@@ -2267,6 +2267,18 @@ ${boletoInfo}================================
                         const dayTotal = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
                         const dayCount = daySales.length;
 
+                        // Filtra dados de vendedores apenas deste dia
+                        const sellersForDay = sellersDataForPDF.filter(seller => 
+                          seller.sales?.some(sale => 
+                            new Date(sale.sale_datetime).toLocaleDateString('pt-BR') === date
+                          )
+                        ).map(seller => ({
+                          ...seller,
+                          sales: seller.sales.filter(sale => 
+                            new Date(sale.sale_datetime).toLocaleDateString('pt-BR') === date
+                          )
+                        }));
+
                         return (
                           <div key={date} className="bg-gray-900/50 rounded-lg p-5 border border-gray-700">
                             {/* HEADER DO DIA */}
@@ -2278,11 +2290,18 @@ ${boletoInfo}================================
                                   <p className="text-gray-400 text-sm">{dayCount} vendas realizadas</p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-green-400 font-bold text-2xl">
-                                  R$ {dayTotal.toFixed(2)}
-                                </p>
-                                <p className="text-gray-500 text-xs">Total do dia</p>
+                              <div className="flex items-center gap-3">
+                                <DailyReportPDF 
+                                  daySales={daySales} 
+                                  date={date}
+                                  sellersData={sellersForDay}
+                                />
+                                <div className="text-right">
+                                  <p className="text-green-400 font-bold text-2xl">
+                                    R$ {dayTotal.toFixed(2)}
+                                  </p>
+                                  <p className="text-gray-500 text-xs">Total do dia</p>
+                                </div>
                               </div>
                             </div>
 
