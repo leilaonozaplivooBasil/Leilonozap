@@ -318,6 +318,10 @@ export default function Cart() {
       toast.error('Preencha seu email');
       return;
     }
+    if (!currentUser || !currentUser.id) {
+      toast.error('Você precisa estar logado para finalizar a compra');
+      return;
+    }
 
     if (deliveryMethod === 'delivery') {
       if (!formData.cep.trim() || !formData.street.trim() || !formData.number.trim() || !formData.city.trim()) {
@@ -364,9 +368,6 @@ export default function Cart() {
         }
       }
 
-      // Verificar se usuário está logado
-      const buyerId = currentUser?.id || null;
-
       // Criar CatalogSale para cada produto
       for (const item of cartItems) {
         const price = item.price_catalog || item.selling_price_wholesale || 0;
@@ -377,7 +378,7 @@ export default function Cart() {
           sale_price: price,
           quantity: item.quantity || 1,
           total_amount: price * (item.quantity || 1),
-          buyer_id: buyerId,
+          buyer_id: currentUser.id,
           buyer_name: formData.name,
           buyer_email: formData.email,
           buyer_phone: formData.phone,
