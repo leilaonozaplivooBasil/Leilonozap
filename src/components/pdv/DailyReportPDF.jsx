@@ -36,9 +36,6 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       }
 
       // ========== CABEÇALHO ==========
-      doc.setFillColor(17, 24, 39); // bg-gray-900
-      doc.rect(0, 0, pageWidth, 45, 'F');
-
       // Logo
       if (logoDataUrl) {
         try {
@@ -49,24 +46,28 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       }
 
       // Título
-      doc.setTextColor(34, 197, 94); // green-500
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
       doc.text('RELATÓRIO DE VENDAS', pageWidth / 2, 18, { align: 'center' });
 
       // Subtítulo
-      doc.setTextColor(156, 163, 175); // gray-400
+      doc.setTextColor(80, 80, 80);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'normal');
       doc.text('Leilão NoZap - Sistema de Gestão', pageWidth / 2, 26, { align: 'center' });
 
       // Data
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text(`Data: ${date}`, pageWidth / 2, 36, { align: 'center' });
 
-      yPos = 55;
+      // Linha separadora
+      doc.setDrawColor(200, 200, 200);
+      doc.line(margin, 42, pageWidth - margin, 42);
+
+      yPos = 50;
 
       // ========== RESUMO GERAL ==========
       const totalVendas = daySales.length;
@@ -90,45 +91,40 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         });
       }
 
-      // Box de Resumo
-      doc.setFillColor(31, 41, 55); // gray-800
-      doc.roundedRect(margin, yPos, pageWidth - margin * 2, 35, 3, 3, 'F');
+      // Box de Resumo com bordas
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, yPos, pageWidth - margin * 2, 30);
 
-      doc.setTextColor(156, 163, 175);
-      doc.setFontSize(10);
+      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
 
-      const col1 = margin + 10;
-      const col2 = margin + 55;
-      const col3 = margin + 105;
+      const col1 = margin + 5;
+      const col2 = margin + 50;
+      const col3 = margin + 100;
       const col4 = margin + 150;
 
       // Labels
-      doc.text('Total de Vendas', col1, yPos + 10);
-      doc.text('Valor Total', col2, yPos + 10);
-      doc.text('Comissões Licenciados', col3, yPos + 10);
-      doc.text('Comissões Licenciantes', col4, yPos + 10);
+      doc.text('Total de Vendas', col1, yPos + 8);
+      doc.text('Valor Total', col2, yPos + 8);
+      doc.text('Comissões Licenciados', col3, yPos + 8);
+      doc.text('Comissões Licenciantes', col4, yPos + 8);
 
       // Valores
-      doc.setFontSize(16);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
       
-      doc.setTextColor(255, 255, 255);
-      doc.text(`${totalVendas}`, col1, yPos + 22);
-      
-      doc.setTextColor(34, 197, 94); // green
-      doc.text(`R$ ${fmt(totalValor)}`, col2, yPos + 22);
-      
-      doc.setTextColor(251, 146, 60); // orange
-      doc.text(`R$ ${fmt(totalComissaoLicenciado)}`, col3, yPos + 22);
-      
-      doc.setTextColor(192, 132, 252); // purple
-      doc.text(`R$ ${fmt(totalComissaoLicenciante)}`, col4, yPos + 22);
+      doc.text(`${totalVendas}`, col1, yPos + 20);
+      doc.text(`R$ ${fmt(totalValor)}`, col2, yPos + 20);
+      doc.text(`R$ ${fmt(totalComissaoLicenciado)}`, col3, yPos + 20);
+      doc.text(`R$ ${fmt(totalComissaoLicenciante)}`, col4, yPos + 20);
 
-      yPos += 45;
+      yPos += 38;
 
       // ========== VENDEDORES DO DIA ==========
-      doc.setTextColor(34, 197, 94);
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('VENDEDORES DO DIA', margin, yPos);
@@ -151,50 +147,54 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
           yPos = 20;
         }
 
-        // Background do vendedor
-        const bgColor = index % 2 === 0 ? [31, 41, 55] : [17, 24, 39];
-        doc.setFillColor(...bgColor);
-        doc.roundedRect(margin, yPos, pageWidth - margin * 2, 18, 2, 2, 'F');
+        // Linha separadora se não for o primeiro
+        if (index > 0) {
+          doc.setDrawColor(220, 220, 220);
+          doc.setLineWidth(0.3);
+          doc.line(margin, yPos, pageWidth - margin, yPos);
+          yPos += 3;
+        }
 
-        // Posição (medalha)
-        doc.setFontSize(12);
+        // Posição
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        
         if (index === 0) {
-          doc.setTextColor(234, 179, 8); // yellow
-          doc.text('🥇', margin + 5, yPos + 12);
+          doc.text('1º 🥇', margin + 2, yPos + 6);
         } else if (index === 1) {
-          doc.setTextColor(156, 163, 175); // gray
-          doc.text('🥈', margin + 5, yPos + 12);
+          doc.text('2º 🥈', margin + 2, yPos + 6);
         } else if (index === 2) {
-          doc.setTextColor(234, 88, 12); // orange
-          doc.text('🥉', margin + 5, yPos + 12);
+          doc.text('3º 🥉', margin + 2, yPos + 6);
         } else {
-          doc.setTextColor(156, 163, 175);
-          doc.text(`${index + 1}º`, margin + 5, yPos + 12);
+          doc.text(`${index + 1}º`, margin + 2, yPos + 6);
         }
 
         // Nome do vendedor
-        doc.setTextColor(96, 165, 250); // blue-400
+        doc.setTextColor(0, 0, 0);
         doc.setFontSize(11);
-        doc.text(seller.seller_name || 'Sem nome', margin + 20, yPos + 8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(seller.seller_name || 'Sem nome', margin + 18, yPos + 6);
 
         // Quantidade de vendas
-        doc.setTextColor(156, 163, 175);
+        doc.setTextColor(100, 100, 100);
         doc.setFontSize(9);
-        doc.text(`(${seller.sales_count || 0} vendas)`, margin + 20, yPos + 14);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`(${seller.sales_count || 0} vendas)`, margin + 18, yPos + 11);
 
         // Valor total
-        doc.setTextColor(34, 197, 94);
+        doc.setTextColor(0, 0, 0);
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text(`R$ ${fmt(sellerTotal)}`, pageWidth - margin - 5, yPos + 10, { align: 'right' });
+        doc.text(`R$ ${fmt(sellerTotal)}`, pageWidth - margin - 5, yPos + 6, { align: 'right' });
 
         // Comissão
-        doc.setTextColor(251, 146, 60);
+        doc.setTextColor(80, 80, 80);
         doc.setFontSize(9);
-        doc.text(`Comissão: R$ ${fmt(sellerCommission)}`, pageWidth - margin - 5, yPos + 15, { align: 'right' });
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Comissão: R$ ${fmt(sellerCommission)}`, pageWidth - margin - 5, yPos + 11, { align: 'right' });
 
-        yPos += 22;
+        yPos += 18;
       });
 
       yPos += 10;
@@ -205,17 +205,18 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         yPos = 20;
       }
 
-      doc.setTextColor(34, 197, 94);
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('DETALHAMENTO DAS VENDAS', margin, yPos);
       yPos += 8;
 
-      // Cabeçalho da tabela
-      doc.setFillColor(55, 65, 81); // gray-700
-      doc.rect(margin, yPos, pageWidth - margin * 2, 8, 'F');
+      // Cabeçalho da tabela com borda
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, yPos, pageWidth - margin * 2, 8);
       
-      doc.setTextColor(209, 213, 219); // gray-300
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       
@@ -240,9 +241,10 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
           yPos = 20;
           
           // Repete cabeçalho da tabela
-          doc.setFillColor(55, 65, 81);
-          doc.rect(margin, yPos, pageWidth - margin * 2, 8, 'F');
-          doc.setTextColor(209, 213, 219);
+          doc.setDrawColor(180, 180, 180);
+          doc.setLineWidth(0.5);
+          doc.rect(margin, yPos, pageWidth - margin * 2, 8);
+          doc.setTextColor(0, 0, 0);
           doc.setFontSize(8);
           doc.setFont('helvetica', 'bold');
           doc.text('HORA', margin + 3, yPos + 5);
@@ -254,37 +256,39 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
           yPos += 10;
         }
 
-        // Alterna cor de fundo
-        if (index % 2 === 0) {
-          doc.setFillColor(31, 41, 55);
-          doc.rect(margin, yPos - 1, pageWidth - margin * 2, 7, 'F');
+        // Linha separadora leve
+        if (index > 0) {
+          doc.setDrawColor(240, 240, 240);
+          doc.setLineWidth(0.2);
+          doc.line(margin, yPos, pageWidth - margin, yPos);
         }
 
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(8);
 
         // Hora
-        doc.setTextColor(156, 163, 175);
+        doc.setTextColor(80, 80, 80);
         const hora = new Date(sale.sale_datetime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         doc.text(hora, margin + 3, yPos + 4);
 
         // Vendedor
-        doc.setTextColor(96, 165, 250);
+        doc.setTextColor(0, 0, 0);
         const vendedor = (sale.seller_name || 'N/A').substring(0, 18);
         doc.text(vendedor, margin + 20, yPos + 4);
 
         // Produto
-        doc.setTextColor(209, 213, 219);
+        doc.setTextColor(40, 40, 40);
         const produto = (sale.product_description || 'Produto').substring(0, 28);
         doc.text(produto, margin + 60, yPos + 4);
 
         // Valor
-        doc.setTextColor(34, 197, 94);
+        doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
         doc.text(`R$ ${fmt(sale.total_amount)}`, margin + 120, yPos + 4);
 
         // Comissão Licenciado
-        doc.setTextColor(251, 146, 60);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60, 60, 60);
         doc.text(`R$ ${fmt(sale.commission_amount || 0)}`, margin + 145, yPos + 4);
 
         // Busca comissão do licenciante (se houver)
@@ -301,7 +305,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         }
 
         // Comissão Licenciante
-        doc.setTextColor(192, 132, 252);
+        doc.setTextColor(60, 60, 60);
         doc.text(`R$ ${fmt(licencianteComm)}`, margin + 165, yPos + 4);
 
         yPos += 7;
@@ -311,11 +315,14 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-        doc.setFillColor(17, 24, 39);
-        doc.rect(0, pageHeight - 15, pageWidth, 15, 'F');
         
-        doc.setTextColor(107, 114, 128);
-        doc.setFontSize(8);
+        // Linha separadora
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
+        
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
         doc.text(`Relatório gerado em ${new Date().toLocaleString('pt-BR')}`, margin, pageHeight - 6);
         doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, pageHeight - 6, { align: 'right' });
