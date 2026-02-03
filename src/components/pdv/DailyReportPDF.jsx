@@ -347,11 +347,10 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setFont('helvetica', 'bold');
       
       doc.text('HORA', margin + 3, yPos + 5);
-      doc.text('VENDEDOR', margin + 20, yPos + 5);
-      doc.text('PRODUTO', margin + 60, yPos + 5);
-      doc.text('VALOR', margin + 120, yPos + 5);
-      doc.text('COM. LIC.', margin + 145, yPos + 5);
-      doc.text('COM. LICTE.', margin + 165, yPos + 5);
+      doc.text('VENDEDOR', margin + 25, yPos + 5);
+      doc.text('PRODUTO', margin + 70, yPos + 5);
+      doc.text('VALOR', margin + 140, yPos + 5);
+      doc.text('COMISSÃO', margin + 165, yPos + 5);
       
       yPos += 10;
 
@@ -374,11 +373,10 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
           doc.setFontSize(8);
           doc.setFont('helvetica', 'bold');
           doc.text('HORA', margin + 3, yPos + 5);
-          doc.text('VENDEDOR', margin + 20, yPos + 5);
-          doc.text('PRODUTO', margin + 60, yPos + 5);
-          doc.text('VALOR', margin + 120, yPos + 5);
-          doc.text('COM. LIC.', margin + 145, yPos + 5);
-          doc.text('COM. LICTE.', margin + 165, yPos + 5);
+          doc.text('VENDEDOR', margin + 25, yPos + 5);
+          doc.text('PRODUTO', margin + 70, yPos + 5);
+          doc.text('VALOR', margin + 140, yPos + 5);
+          doc.text('COMISSÃO', margin + 165, yPos + 5);
           yPos += 10;
         }
 
@@ -399,40 +397,23 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
         // Vendedor
         doc.setTextColor(0, 0, 0);
-        const vendedor = (sale.seller_name || 'N/A').substring(0, 18);
-        doc.text(vendedor, margin + 20, yPos + 4);
+        const vendedor = (sale.seller_name || 'N/A').substring(0, 20);
+        doc.text(vendedor, margin + 25, yPos + 4);
 
         // Produto
         doc.setTextColor(40, 40, 40);
-        const produto = (sale.product_description || 'Produto').substring(0, 28);
-        doc.text(produto, margin + 60, yPos + 4);
+        const produto = (sale.product_description || 'Produto').substring(0, 32);
+        doc.text(produto, margin + 70, yPos + 4);
 
         // Valor
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text(`R$ ${fmt(sale.total_amount)}`, margin + 120, yPos + 4);
+        doc.text(`R$ ${fmt(sale.total_amount)}`, margin + 140, yPos + 4);
 
         // Comissão Licenciado
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(60, 60, 60);
-        doc.text(`R$ ${fmt(sale.commission_amount || 0)}`, margin + 145, yPos + 4);
-
-        // Busca comissão do licenciante (se houver)
-        let licencianteComm = 0;
-        // Procura nos sellersData
-        if (sellersData) {
-          sellersData.forEach(seller => {
-            const saleData = seller.sales?.find(s => s.id === sale.id);
-            if (saleData?.all_commissions) {
-              const licComm = saleData.all_commissions.find(c => c.seller_role === 'licenciante');
-              if (licComm) licencianteComm = licComm.commission_amount || 0;
-            }
-          });
-        }
-
-        // Comissão Licenciante
-        doc.setTextColor(60, 60, 60);
-        doc.text(`R$ ${fmt(licencianteComm)}`, margin + 165, yPos + 4);
+        doc.text(`R$ ${fmt(sale.commission_amount || 0)}`, margin + 165, yPos + 4);
 
         yPos += 7;
       });
