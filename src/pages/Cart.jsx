@@ -82,7 +82,7 @@ export default function Cart() {
               name: fullUser.full_name || user.full_name || '',
               phone: fullUser.phone || user.phone || '',
               email: fullUser.email || user.email || '',
-              cpf: fullUser.cpf || user.cpf || '',
+              cpf: formatCpf(fullUser.cpf || user.cpf || ''),
               cep: fullUser.address_zip_code || user.address_zip_code || '',
               street: fullUser.address_street || user.address_street || '',
               number: fullUser.address_number || user.address_number || '',
