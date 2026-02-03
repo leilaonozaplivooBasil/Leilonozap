@@ -478,8 +478,7 @@ export default function Register() {
                   <Button 
                     type="button"
                     onClick={() => navigate(createPageUrl("Home"))}
-                    variant="outline"
-                    className={`h-12 text-base ${isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}`}
+                    className={`h-12 text-base ${isSaiDeBaixo ? 'bg-gray-800 text-white hover:bg-gray-900' : 'bg-green-600 text-white hover:bg-green-700'}`}
                     disabled={isRegistering}
                   >
                     Fazer Login
