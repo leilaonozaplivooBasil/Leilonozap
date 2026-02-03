@@ -6,6 +6,7 @@ import { base44 } from "@/api/base44Client";
 const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
+const Store = base44.entities.Store;
 import { Eye, TrendingUp, Zap, Filter, CheckCircle, Package, Smartphone, Percent, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, SlidersHorizontal, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -147,22 +148,37 @@ export default function Catalog() {
       const refCode = sessionStorage.getItem('referralCode');
       if (!refCode) return;
 
-      // Busca primeiro em AppUser
+      // Busca em AppUser
       const licensees = await AppUser.filter({ referral_code: refCode });
       if (licensees && licensees.length > 0) {
         const licensee = licensees[0];
+        
+        // Busca foto do Store (vendedor/lojista)
+        let photoUrl = licensee.profile_photo_url || licensee.avatar_url;
+        
+        try {
+          const stores = await Store.filter({ email: licensee.email });
+          if (stores && stores.length > 0 && stores[0].logo_url) {
+            photoUrl = stores[0].logo_url;
+            console.log('✅ Foto carregada do cadastro de lojista');
+          }
+        } catch (storeError) {
+          console.debug('Store não encontrada, usando foto do perfil');
+        }
+        
         if (licensee.phone) {
           setLicenseePhone(licensee.phone);
         }
-        // Carrega dados completos do licenciado para personalização
+        
         setLicenseeData({
-          name: licensee.full_name || licensee.display_first_name + ' ' + licensee.display_last_name,
-          photo: licensee.profile_photo_url,
+          name: licensee.full_name || (licensee.display_first_name + ' ' + licensee.display_last_name),
+          photo: photoUrl,
           phone: licensee.phone
         });
-        console.log('✅ Dados do licenciado carregados:', {
+        
+        console.log('✅ Dados do licenciado:', {
           name: licensee.full_name,
-          hasPhoto: !!licensee.profile_photo_url,
+          photo: photoUrl,
           phone: licensee.phone
         });
       }
