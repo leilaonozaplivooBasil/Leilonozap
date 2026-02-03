@@ -456,16 +456,16 @@ export default function Catalog() {
         
         {/* BANNER PERSONALIZADO DO LICENCIADO */}
         {licenseeData && (
-          <div className="mb-6 bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border border-purple-500/30 rounded-xl p-4 backdrop-blur-sm">
+          <div className="mb-6 bg-gradient-to-r from-green-900/40 via-teal-900/40 to-green-900/40 border border-green-500/30 rounded-xl p-4 backdrop-blur-sm">
             <div className="flex items-center gap-3">
               {licenseeData.photo ? (
                 <img 
                   src={licenseeData.photo} 
                   alt={licenseeData.name}
-                  className="w-14 h-14 rounded-full object-cover border-2 border-purple-400/50 shadow-lg"
+                  className="w-14 h-14 rounded-full object-cover border-2 border-green-400/50 shadow-lg"
                 />
               ) : (
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-xl font-bold border-2 border-purple-400/50 shadow-lg">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-500 to-teal-500 flex items-center justify-center text-white text-xl font-bold border-2 border-green-400/50 shadow-lg">
                   {licenseeData.name?.charAt(0)}
                 </div>
               )}
@@ -473,7 +473,7 @@ export default function Catalog() {
                 <h2 className="text-lg font-bold text-white">
                   Catálogo de {licenseeData.name}
                 </h2>
-                <p className="text-purple-200 text-xs">
+                <p className="text-green-200 text-xs">
                   ✨ Produtos exclusivos selecionados especialmente para você
                 </p>
               </div>
