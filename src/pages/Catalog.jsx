@@ -42,6 +42,7 @@ export default function Catalog() {
   const [sortBy, setSortBy] = useState("recent");
   const [stockFilter, setStockFilter] = useState("all");
   const [licenseePhone, setLicenseePhone] = useState(null);
+  const [licenseeData, setLicenseeData] = useState(null);
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("all");
 
@@ -147,11 +148,20 @@ export default function Catalog() {
       if (!refCode) return;
 
       const licensees = await AppUser.filter({ referral_code: refCode });
-      if (licensees && licensees.length > 0 && licensees[0].phone) {
-        setLicenseePhone(licensees[0].phone);
+      if (licensees && licensees.length > 0) {
+        const licensee = licensees[0];
+        if (licensee.phone) {
+          setLicenseePhone(licensee.phone);
+        }
+        // Carrega dados completos do licenciado para personalização
+        setLicenseeData({
+          name: licensee.full_name,
+          photo: licensee.profile_photo_url,
+          phone: licensee.phone
+        });
       }
     } catch (error) {
-      console.debug('Erro ao buscar phone do licenciado:', error);
+      console.debug('Erro ao buscar dados do licenciado:', error);
     }
   }, []);
 
@@ -443,6 +453,45 @@ export default function Catalog() {
       `}</style>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        
+        {/* BANNER PERSONALIZADO DO LICENCIADO */}
+        {licenseeData && (
+          <div className="mb-6 bg-gradient-to-r from-purple-900/40 via-blue-900/40 to-purple-900/40 border border-purple-500/30 rounded-2xl p-6 backdrop-blur-sm">
+            <div className="flex items-center gap-4">
+              {licenseeData.photo ? (
+                <img 
+                  src={licenseeData.photo} 
+                  alt={licenseeData.name}
+                  className="w-20 h-20 rounded-full object-cover border-4 border-purple-400/50 shadow-lg"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-3xl font-bold border-4 border-purple-400/50 shadow-lg">
+                  {licenseeData.name?.charAt(0)}
+                </div>
+              )}
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-white mb-1">
+                  Catálogo de {licenseeData.name}
+                </h2>
+                <p className="text-purple-200 text-sm">
+                  ✨ Produtos exclusivos selecionados especialmente para você
+                </p>
+              </div>
+              {licenseeData.phone && (
+                <a
+                  href={`https://wa.me/55${licenseeData.phone.replace(/\D/g, '')}?text=Olá ${licenseeData.name}! Estou vendo seu catálogo personalizado.`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  <span className="hidden sm:inline">Falar Comigo</span>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Hero Section */}
         <div className="mb-8">
           <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
@@ -467,7 +516,7 @@ export default function Catalog() {
                 </div>
               </div>
 
-              {licenseePhone && (
+              {licenseePhone && !licenseeData && (
                 <a
                   href={`https://wa.me/55${licenseePhone.replace(/\D/g, '')}?text=Olá! Gostaria de saber mais sobre os produtos do catálogo.`}
                   target="_blank"
