@@ -499,9 +499,8 @@ Equipe Leilão NoZap 🎯`
           
           <CardFooter className="flex gap-2 sm:gap-3">
             <Button 
-              variant="outline"
               onClick={handleCancelReset}
-              className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'border-gray-300 text-gray-700 hover:bg-gray-100' : 'border-gray-600 text-gray-300 hover:bg-gray-700'}`}
+              className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
               disabled={isResetting}
             >
               Cancelar
