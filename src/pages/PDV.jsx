@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import DailyRanking from '@/components/pdv/DailyRanking';
 import VendedoresDoDia from '@/components/pdv/VendedoresDoDia';
+import DailyReportPDF from '@/components/pdv/DailyReportPDF';
 import { Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -64,6 +65,7 @@ export default function PDV() {
   const [timeUntilClose, setTimeUntilClose] = useState('');
   const [searchSale, setSearchSale] = useState('');
   const [isGeneratingCodes, setIsGeneratingCodes] = useState(false);
+  const [sellersDataForPDF, setSellersDataForPDF] = useState([]);
   const navigate = useNavigate();
 
   const generateOrderCode = () => {
@@ -179,8 +181,72 @@ export default function PDV() {
     try {
       const sales = await base44.entities.Sale.list('-sale_datetime', 5000);
       setAllSales(sales);
+      
+      // Carrega dados de vendedores para o PDF
+      await loadSellersDataForPDF(sales);
     } catch (error) {
       console.error('Erro ao carregar todas as vendas:', error);
+    }
+  };
+
+  const loadSellersDataForPDF = async (sales) => {
+    try {
+      const saleIds = sales.map(s => s.id);
+      if (saleIds.length === 0) {
+        setSellersDataForPDF([]);
+        return;
+      }
+
+      const allCommissions = await base44.entities.SaleCommission.list();
+      const commissionsForSales = allCommissions.filter(c => saleIds.includes(c.sale_id));
+      
+      // Agrupa por venda
+      const saleCommissionsMap = {};
+      commissionsForSales.forEach(c => {
+        if (!saleCommissionsMap[c.sale_id]) {
+          saleCommissionsMap[c.sale_id] = [];
+        }
+        saleCommissionsMap[c.sale_id].push(c);
+      });
+
+      // Agrupa por vendedor
+      const sellerMap = {};
+      const processedSales = new Set();
+      
+      commissionsForSales.forEach(commission => {
+        if (commission.seller_role === 'licenciante') return;
+
+        const sale = sales.find(s => s.id === commission.sale_id);
+        if (!sale) return;
+
+        processedSales.add(sale.id);
+
+        const sellerId = commission.seller_id;
+        if (!sellerMap[sellerId]) {
+          sellerMap[sellerId] = {
+            seller_id: sellerId,
+            seller_name: commission.seller_name,
+            total_commission: 0,
+            sales_count: 0,
+            sales: []
+          };
+        }
+
+        sellerMap[sellerId].total_commission += commission.commission_amount || 0;
+        
+        if (!sellerMap[sellerId].sales.find(s => s.id === sale.id)) {
+          sellerMap[sellerId].sales.push({
+            ...sale,
+            seller_commission: commission.commission_amount,
+            all_commissions: saleCommissionsMap[sale.id] || []
+          });
+          sellerMap[sellerId].sales_count += 1;
+        }
+      });
+
+      setSellersDataForPDF(Object.values(sellerMap));
+    } catch (error) {
+      console.error('Erro ao carregar dados para PDF:', error);
     }
   };
 
