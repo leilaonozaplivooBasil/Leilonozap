@@ -469,7 +469,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const highestLevelName = careerLevelsMap[highestLevel];
   const primaryLevelName = careerLevelsMap[primaryLevel];
-  const totalAvailable = ((user.valora_pay_balance || 0) + (user.commission_balance || 0) + (user.catalog_commission_balance || 0));
+  const totalAvailable = ((user.commission_balance || 0) + (user.catalog_commission_balance || 0));
 
   const rolesText = highestLevel === primaryLevel ?
   highestLevelName :
@@ -808,7 +808,7 @@ const DashboardContent = ({ user, isAdmin }) => {
             text-shadow: 0 0 20px #1DB24A, 0 2px 8px rgba(0,0,0,0.8);
             letter-spacing: 1px;
           ">
-            R$ ${(user.valora_pay_balance || 0).toFixed(2)}
+            R$ ${totalAvailable.toFixed(2)}
           </span>
         </div>
       `;
@@ -933,8 +933,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       }
 
       await AppUser.update(selectedLicenseeId, {
-        commission_balance: (licensee.commission_balance || 0) + amount,
-        valora_pay_balance: (licensee.valora_pay_balance || 0) + amount
+        commission_balance: (licensee.commission_balance || 0) + amount
       });
 
       toast.success(`R$ ${amount.toFixed(2)} creditados!`);
@@ -1101,7 +1100,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       return;
     }
 
-    if (amount > (user.valora_pay_balance || 0)) {
+    if (amount > totalAvailable) {
       console.log('❌ [SAQUE] Saldo insuficiente');
       toast.error('Saldo indisponível');
       return;
@@ -1372,7 +1371,7 @@ const DashboardContent = ({ user, isAdmin }) => {
         <StatCard
           icon={BarChart}
           label="Total Comissões (App + Catálogo)"
-          value={`R$ ${(user.commission_balance || 0).toFixed(2)}`}
+          value={`R$ ${((user.commission_balance || 0) + (user.catalog_commission_balance || 0)).toFixed(2)}`}
           onClick={() => setViewingCommissionsFor(user)}
           isSaiDeBaixo={isSaiDeBaixo} />
 
@@ -2014,11 +2013,14 @@ const DashboardContent = ({ user, isAdmin }) => {
                           <SelectValue placeholder="Escolha um licenciado" />
                         </SelectTrigger>
                         <SelectContent>
-                          {licensees.map((lic) =>
-                        <SelectItem key={lic.id} value={lic.id}>
-                              {lic.full_name} - R$ {(lic.valora_pay_balance || 0).toFixed(2)}
-                            </SelectItem>
-                        )}
+                          {licensees.map((lic) => {
+                            const licTotal = ((lic.commission_balance || 0) + (lic.catalog_commission_balance || 0));
+                            return (
+                              <SelectItem key={lic.id} value={lic.id}>
+                                {lic.full_name} - R$ {licTotal.toFixed(2)}
+                              </SelectItem>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                     </div>
@@ -2199,7 +2201,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
                 <p className="text-sm text-gray-300 mb-1">Saldo Disponível para Saque:</p>
                 <p className="text-3xl font-bold text-green-400">
-                  R$ {(user?.valora_pay_balance || 0).toFixed(2)}
+                  R$ {totalAvailable.toFixed(2)}
                 </p>
               </div>
 
