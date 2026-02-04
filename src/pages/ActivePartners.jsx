@@ -15,7 +15,9 @@ import {
   Users,
   TrendingUp,
   CheckCircle,
-  XCircle
+  XCircle,
+  Flag,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -51,7 +53,8 @@ export default function ActivePartners() {
     plan_amount: 0,
     activated_at: '',
     is_investment: false,
-    investment_rate: 3
+    investment_rate: 3,
+    notes: ''
   });
 
   useEffect(() => {
@@ -123,7 +126,8 @@ export default function ActivePartners() {
         ? new Date(purchase.activated_at).toISOString().split('T')[0]
         : '',
       is_investment: purchase.is_investment || false,
-      investment_rate: purchase.investment_rate || 3
+      investment_rate: purchase.investment_rate || 3,
+      notes: purchase.notes || ''
     });
   };
 
@@ -170,7 +174,8 @@ export default function ActivePartners() {
           is_investment: editFormData.is_investment || false,
           investment_rate: editFormData.is_investment ? parseFloat(editFormData.investment_rate) : null,
           withdrawal_available_date: withdrawalDate,
-          accumulated_return: 0
+          accumulated_return: 0,
+          notes: editFormData.notes?.trim() || null
         });
       }
 
@@ -374,7 +379,22 @@ export default function ActivePartners() {
               const activePurchases = schedule.filter(s => s.isActive).length;
 
               return (
-                <Card key={purchase.id} className="bg-gray-800 border-gray-700 hover:border-green-500/50 transition-all">
+                <Card key={purchase.id} className="bg-gray-800 border-gray-700 hover:border-green-500/50 transition-all relative">
+                  {/* Bandeirinha de Observação */}
+                  {purchase.notes && (
+                    <div className="absolute -top-3 -right-3 z-10">
+                      <div className="relative group">
+                        <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center shadow-lg animate-pulse cursor-pointer">
+                          <Flag className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="absolute top-full right-0 mt-2 w-64 bg-gray-900 border border-red-500/50 rounded-lg p-3 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity shadow-xl">
+                          <p className="text-xs text-red-400 font-semibold mb-1">🚩 Observação Registrada</p>
+                          <p className="text-xs text-gray-300">{purchase.notes}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                       {/* Info da Compra */}
@@ -433,6 +453,19 @@ export default function ActivePartners() {
                             </p>
                           </div>
                         </div>
+
+                        {/* Observações */}
+                        {purchase.notes && (
+                          <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 mt-3">
+                            <div className="flex items-start gap-2">
+                              <FileText className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="text-red-400 text-xs font-semibold mb-1">📝 Observação:</p>
+                                <p className="text-gray-300 text-xs leading-relaxed">{purchase.notes}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Cronograma de Compras */}
@@ -548,6 +581,21 @@ export default function ActivePartners() {
                   />
                   <p className="text-xs text-gray-400 mt-1">
                     Esta data define o cronograma de compras ativas
+                  </p>
+                </div>
+
+                {/* Observações */}
+                <div>
+                  <Label className="text-gray-300 mb-2 block">📝 Observações / Lembretes</Label>
+                  <textarea
+                    value={editFormData.notes}
+                    onChange={(e) => setEditFormData({...editFormData, notes: e.target.value})}
+                    placeholder="Ex: Retorno adicional de 5% acordado, revisão em 30 dias..."
+                    rows={3}
+                    className="w-full bg-gray-700 border-gray-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    💡 Use para lembretes sobre condições especiais
                   </p>
                 </div>
 

@@ -55,6 +55,7 @@ export default function PartnerPlanActivation() {
   const [customAmount, setCustomAmount] = useState('');
   const [customReturn, setCustomReturn] = useState('3');
   const [customDuration, setCustomDuration] = useState('60');
+  const [notes, setNotes] = useState('');
 
   const handleSearchUser = async () => {
     if (!searchTerm.trim()) {
@@ -144,7 +145,8 @@ export default function PartnerPlanActivation() {
         activated_at: activationDateTime,
         status: 'active',
         purchase_periods: schedule,
-        activation_source: 'manual'
+        activation_source: 'manual',
+        notes: notes.trim() || null
       });
 
       console.log('✅ Plano criado com ID:', newPurchase.id);
@@ -193,6 +195,7 @@ export default function PartnerPlanActivation() {
       setCustomAmount('');
       setCustomReturn('3');
       setCustomDuration('60');
+      setNotes('');
     } catch (error) {
       console.error('Erro ao ativar plano:', error);
       toast.dismiss();
@@ -264,6 +267,21 @@ export default function PartnerPlanActivation() {
                     className="bg-gray-700 border-gray-600 text-white"
                   />
                   <p className="text-xs text-gray-400">Esta data será usada para calcular o cronograma de compras</p>
+                </div>
+              )}
+
+              {/* Observações */}
+              {foundUser && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-300">📝 Observações / Lembretes (Opcional)</label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Ex: Retorno adicional de 5% acordado, revisão em 30 dias..."
+                    rows={3}
+                    className="w-full bg-gray-700 border-gray-600 text-white rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+                  />
+                  <p className="text-xs text-gray-400">💡 Use este campo para adicionar lembretes sobre taxas especiais ou condições diferenciadas</p>
                 </div>
               )}
 
