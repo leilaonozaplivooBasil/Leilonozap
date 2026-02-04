@@ -71,6 +71,16 @@ export default function InvestorDashboard() {
         // ✅ SEMPRE sincroniza com o banco para pegar ativações mais recentes
         const freshUsers = await base44.entities.AppUser.filter({ id: userFromStorage.id });
         const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
+        
+        // 🕒 Registra último acesso
+        try {
+          await base44.entities.AppUser.update(user.id, {
+            last_dashboard_access: new Date().toISOString()
+          });
+          console.log('✅ Último acesso registrado');
+        } catch (e) {
+          console.debug('Registro de acesso ignorado');
+        }
           
           setCurrentUser(user);
           setPixFormData({
@@ -370,6 +380,34 @@ export default function InvestorDashboard() {
         {/* Perfil do Parceiro */}
         <Card className="bg-gradient-to-br from-gray-800 via-gray-800 to-green-900/20 backdrop-blur-sm border-2 border-green-500/30 mb-8 shadow-2xl shadow-green-500/10 hover:shadow-green-500/20 transition-all duration-500">
           <CardContent className="p-4 sm:p-8">
+            {/* Informações do Usuário */}
+            <div className="mb-6 pb-4 border-b border-gray-700">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <p className="text-gray-400 text-sm">Email</p>
+                  <p className="text-white font-semibold">{currentUser?.email}</p>
+                </div>
+                {currentUser?.last_dashboard_access && (
+                  <div className="text-right">
+                    <p className="text-gray-400 text-sm">Último Acesso</p>
+                    <p className="text-white font-semibold">
+                      {new Date(currentUser.last_dashboard_access).toLocaleString('pt-BR')}
+                    </p>
+                  </div>
+                )}
+              </div>
+              {activeInvestments.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Badge className="bg-purple-600/20 text-purple-400 border-purple-500/30">
+                    ✨ Associado Vitalício
+                  </Badge>
+                  <Badge className="bg-green-600/20 text-green-400 border-green-500/30">
+                    {activeInvestments[0]?.plan || 'Plano Visionário'}
+                  </Badge>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
               <motion.div 
                 className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg shadow-green-500/50 relative"
