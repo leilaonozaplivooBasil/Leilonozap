@@ -495,7 +495,7 @@ export default function ActivePartners() {
                           <div>
                             <h3 className="text-xl font-bold text-white">{purchase.user_name}</h3>
                             <p className="text-gray-400 text-sm">{purchase.user_email}</p>
-                            <Badge className="mt-2 bg-purple-600 text-white text-xs">
+                            <Badge className="mt-2 bg-green-600 text-white text-xs">
                               {purchase.activation_source === 'manual' 
                                 ? '🔧 Ativação Manual' 
                                 : purchase.activation_source === 'legacy'
@@ -507,7 +507,7 @@ export default function ActivePartners() {
                             <Button
                               size="sm"
                               onClick={() => loadInstallments(purchase)}
-                              className="bg-purple-600 hover:bg-purple-700"
+                              className="bg-green-600 hover:bg-green-700"
                             >
                               💰 Parcelas
                             </Button>
@@ -790,11 +790,11 @@ export default function ActivePartners() {
       {showInstallmentsModal && selectedPurchaseForInstallments && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <Card className="bg-gray-900 border-gray-700 max-w-6xl w-full max-h-[90vh] overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+            <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-2xl font-bold text-white">💰 Gerenciar Parcelas</CardTitle>
-                  <p className="text-blue-100 text-sm mt-1">
+                  <p className="text-green-100 text-sm mt-1">
                     {selectedPurchaseForInstallments.user_name} - {selectedPurchaseForInstallments.plan_name}
                   </p>
                 </div>
