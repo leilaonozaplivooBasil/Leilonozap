@@ -123,7 +123,10 @@ export default function InvestorDashboard() {
                 activated_at: p.activated_at
               })));
               
-              purchases.forEach(purchase => {
+              console.log('🔄 Processando', purchases.length, 'planos...');
+              
+              purchases.forEach((purchase, index) => {
+                console.log(`📦 Processando plano ${index + 1}/${purchases.length}:`, purchase.id);
                 // Se for investimento com rendimento
                 if (purchase.is_investment) {
                   investments.push({
@@ -153,8 +156,11 @@ export default function InvestorDashboard() {
                     estimatedProfit: Math.round(purchase.plan_amount * 0.03),
                     estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
                   });
+                  console.log('✅ Plano de compra adicionado:', purchase.plan_name);
                 }
               });
+              
+              console.log('📊 Total de planos processados e adicionados:', investments.length);
             } else {
               console.log('⚠️ Nenhum plano encontrado no PartnerPlanPurchase para este usuário');
             }
