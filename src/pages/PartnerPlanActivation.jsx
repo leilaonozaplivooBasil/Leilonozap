@@ -31,6 +31,15 @@ const PLANS = [
     expectedReturn: 3,
     duration: 60,
     description: "Máximo retorno com acesso a todas as oportunidades."
+  },
+  {
+    id: 4,
+    name: "Plano Personalizado",
+    minInvestment: 0,
+    expectedReturn: 3,
+    duration: 60,
+    description: "Defina valores personalizados para este parceiro.",
+    isCustom: true
   }
 ];
 
@@ -42,6 +51,10 @@ export default function PartnerPlanActivation() {
   const [isActivating, setIsActivating] = useState(false);
   const [activationHistory, setActivationHistory] = useState([]);
   const [activationDate, setActivationDate] = useState(new Date().toISOString().split('T')[0]);
+  const [customPlanName, setCustomPlanName] = useState('');
+  const [customAmount, setCustomAmount] = useState('');
+  const [customReturn, setCustomReturn] = useState('3');
+  const [customDuration, setCustomDuration] = useState('60');
 
   const handleSearchUser = async () => {
     if (!searchTerm.trim()) {
@@ -84,11 +97,29 @@ export default function PartnerPlanActivation() {
       return;
     }
 
+    // Validação para plano personalizado
+    if (selectedPlan.isCustom) {
+      if (!customPlanName.trim()) {
+        toast.error('Digite o nome do plano personalizado');
+        return;
+      }
+      if (!customAmount || parseFloat(customAmount) <= 0) {
+        toast.error('Digite um valor válido para o plano');
+        return;
+      }
+    }
+
     setIsActivating(true);
     try {
       const loadingToast = toast.loading('Ativando plano...');
 
       const activationDateTime = new Date(activationDate).toISOString();
+      
+      // Define valores do plano (fixo ou personalizado)
+      const planName = selectedPlan.isCustom ? customPlanName : selectedPlan.name;
+      const planAmount = selectedPlan.isCustom ? parseFloat(customAmount) : selectedPlan.minInvestment;
+      const planReturn = selectedPlan.isCustom ? parseFloat(customReturn) : selectedPlan.expectedReturn;
+      const planDuration = selectedPlan.isCustom ? parseInt(customDuration) : selectedPlan.duration;
 
       // Criar cronograma de compras
       const schedule = [];
@@ -108,8 +139,8 @@ export default function PartnerPlanActivation() {
         user_id: foundUser.id,
         user_name: foundUser.full_name,
         user_email: foundUser.email,
-        plan_name: selectedPlan.name,
-        plan_amount: selectedPlan.minInvestment,
+        plan_name: planName,
+        plan_amount: planAmount,
         activated_at: activationDateTime,
         status: 'active',
         purchase_periods: schedule,
@@ -125,20 +156,20 @@ export default function PartnerPlanActivation() {
       await base44.entities.SystemLog.create({
         step: 'PARTNER_PLAN_ACTIVATED',
         status: 'success',
-        message: `Plano ${selectedPlan.name} ativado para ${foundUser.full_name}`,
+        message: `Plano ${planName} ativado para ${foundUser.full_name}`,
         component_name: 'PartnerPlanActivation',
         payload: {
           user_id: foundUser.id,
           user_email: foundUser.email,
-          plan_name: selectedPlan.name,
-          plan_amount: selectedPlan.minInvestment,
+          plan_name: planName,
+          plan_amount: planAmount,
           activated_at: activationDateTime,
           purchase_id: newPurchase.id
         }
       }).catch(() => {});
 
       toast.dismiss(loadingToast);
-      toast.success(`✅ Plano ${selectedPlan.name} ativado! O parceiro verá no painel.`);
+      toast.success(`✅ Plano ${planName} ativado! O parceiro verá no painel.`);
 
       // Adicionar ao histórico
       setActivationHistory([
@@ -146,8 +177,8 @@ export default function PartnerPlanActivation() {
           id: foundUser.id,
           userName: foundUser.full_name,
           userEmail: foundUser.email,
-          planName: selectedPlan.name,
-          amount: selectedPlan.minInvestment,
+          planName: planName,
+          amount: planAmount,
           activatedAt: new Date().toLocaleString('pt-BR')
         },
         ...activationHistory
@@ -158,6 +189,10 @@ export default function PartnerPlanActivation() {
       setFoundUser(null);
       setSelectedPlan(null);
       setActivationDate(new Date().toISOString().split('T')[0]);
+      setCustomPlanName('');
+      setCustomAmount('');
+      setCustomReturn('3');
+      setCustomDuration('60');
     } catch (error) {
       console.error('Erro ao ativar plano:', error);
       toast.dismiss();
@@ -256,14 +291,68 @@ export default function PartnerPlanActivation() {
                             <CheckCircle className="w-5 h-5 text-green-400" />
                           )}
                         </div>
-                        <div className="flex gap-4 mt-2 text-xs text-gray-300">
-                          <span>Investimento: R$ {plan.minInvestment.toLocaleString('pt-BR')}</span>
-                          <span>Retorno: {plan.expectedReturn}%</span>
-                          <span>Prazo: {plan.duration} dias</span>
-                        </div>
+                        {!plan.isCustom && (
+                          <div className="flex gap-4 mt-2 text-xs text-gray-300">
+                            <span>Investimento: R$ {plan.minInvestment.toLocaleString('pt-BR')}</span>
+                            <span>Retorno: {plan.expectedReturn}%</span>
+                            <span>Prazo: {plan.duration} dias</span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
+
+                  {/* Campos para Plano Personalizado */}
+                  {selectedPlan?.isCustom && (
+                    <div className="bg-gray-700/30 rounded-lg p-4 space-y-3 border border-gray-600">
+                      <h5 className="font-semibold text-sm text-green-400">Configurar Plano Personalizado</h5>
+                      
+                      <div>
+                        <label className="block text-xs text-gray-300 mb-1">Nome do Plano</label>
+                        <Input
+                          type="text"
+                          placeholder="Ex: Plano Diamante"
+                          value={customPlanName}
+                          onChange={(e) => setCustomPlanName(e.target.value)}
+                          className="bg-gray-700 border-gray-600 text-white"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-300 mb-1">Valor (R$)</label>
+                          <Input
+                            type="number"
+                            placeholder="10000"
+                            value={customAmount}
+                            onChange={(e) => setCustomAmount(e.target.value)}
+                            className="bg-gray-700 border-gray-600 text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-300 mb-1">Retorno (%)</label>
+                          <Input
+                            type="number"
+                            placeholder="3"
+                            value={customReturn}
+                            onChange={(e) => setCustomReturn(e.target.value)}
+                            className="bg-gray-700 border-gray-600 text-white"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs text-gray-300 mb-1">Prazo (dias)</label>
+                        <Input
+                          type="number"
+                          placeholder="60"
+                          value={customDuration}
+                          onChange={(e) => setCustomDuration(e.target.value)}
+                          className="bg-gray-700 border-gray-600 text-white"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
