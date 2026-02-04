@@ -99,33 +99,35 @@ export default function InvestorDashboard() {
             console.error('Erro ao carregar imagens:', error);
           }
           
-          // ✅ Busca TODOS os planos ativos do parceiro (sistema novo + legacy)
+          // 🔥 BUSCA DEFINITIVA: Todos os planos ativos por EMAIL
           const investments = [];
           
           try {
-            // 1️⃣ PRIORIDADE: Buscar compras no sistema novo (PartnerPlanPurchase)
-            // 🔥 BUSCA POR EMAIL (MAIS CONFIÁVEL)
-            const purchases = await base44.entities.PartnerPlanPurchase.filter({ 
-              user_email: user.email,
-              status: 'active'
-            }, '-activated_at', 100);
+            console.log('🔍 Buscando planos ativos para:', user.email);
             
-            console.log('🔍 Buscando planos para email:', user.email);
-            console.log('📦 Planos encontrados:', purchases?.length || 0);
+            // Busca TODOS os planos ativos por email (mais confiável que user_id)
+            const allPurchases = await base44.entities.PartnerPlanPurchase.list('-activated_at', 500);
             
-            if (purchases && purchases.length > 0) {
-              console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
+            // Filtra apenas os do usuário atual com status active
+            const userPurchases = allPurchases.filter(p => 
+              p.user_email === user.email && p.status === 'active'
+            );
+            
+            console.log('📦 Total de planos ativos encontrados:', userPurchases.length);
+            
+            if (userPurchases.length > 0) {
+              console.log('✅ PLANOS CARREGADOS:', userPurchases.map(p => ({
                 id: p.id,
                 plan: p.plan_name,
                 amount: p.plan_amount,
                 is_investment: p.is_investment,
                 rate: p.investment_rate,
-                activated_at: p.activated_at
+                activated: p.activated_at
               })));
               
-              purchases.forEach(purchase => {
-                // Se for investimento com rendimento
+              userPurchases.forEach(purchase => {
                 if (purchase.is_investment) {
+                  // Plano de investimento com rendimento
                   investments.push({
                     id: purchase.id,
                     plan: `${purchase.plan_name} - Investimento ${purchase.investment_rate}%`,
@@ -137,7 +139,7 @@ export default function InvestorDashboard() {
                     investmentRate: purchase.investment_rate,
                     accumulatedReturn: purchase.accumulated_return || 0,
                     withdrawalDate: purchase.withdrawal_available_date,
-                    estimatedProfit: Math.round(purchase.plan_amount * 0.03),
+                    estimatedProfit: Math.round(purchase.plan_amount * (purchase.investment_rate / 100) * 12),
                     estimatedReturn: purchase.withdrawal_available_date || new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
                   });
                 } else {
@@ -155,32 +157,15 @@ export default function InvestorDashboard() {
                   });
                 }
               });
+              
+              console.log('✅ Total de investimentos processados:', investments.length);
             } else {
-              console.log('⚠️ Nenhum plano encontrado no PartnerPlanPurchase para este usuário');
+              console.log('⚠️ Nenhum plano ativo encontrado para este email');
             }
           } catch (error) {
-            console.error('❌ Erro ao buscar PartnerPlanPurchase:', error.message);
+            console.error('❌ Erro ao buscar planos:', error);
           }
           
-          // 2️⃣ FALLBACK: Se não encontrou nada no sistema novo, busca legacy no AppUser
-          if (investments.length === 0) {
-            if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
-              console.log('⚠️ Usando plano legacy do AppUser');
-              investments.push({
-                id: `legacy_${user.id}`,
-                plan: user.active_partner_plan,
-                amount: user.partner_plan_amount,
-                startDate: user.partner_plan_activated_at,
-                currentStep: 0,
-                products: [],
-                isInvestment: false,
-                estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
-                estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
-              });
-            }
-          }
-          
-        console.log('✅ Total de investimentos carregados:', investments.length);
         setActiveInvestments(investments);
       } else {
         navigate(createPageUrl("Partners"));
