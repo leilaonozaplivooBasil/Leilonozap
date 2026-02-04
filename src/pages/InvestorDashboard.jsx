@@ -31,7 +31,6 @@ import {
   ChevronRight,
   Loader2,
   Copy,
-  Calendar,
 } from 'lucide-react';
 import {
   Dialog,
@@ -61,8 +60,6 @@ export default function InvestorDashboard() {
   const [isCheckingPayment, setIsCheckingPayment] = useState(false);
   const [showContract, setShowContract] = useState(false);
   const [acceptedContract, setAcceptedContract] = useState(false);
-  const [showInstallmentsModal, setShowInstallmentsModal] = useState(false);
-  const [installments, setInstallments] = useState([]);
 
   // 🔄 Função para carregar dados (reutilizável)
   const loadUserData = async () => {
@@ -224,107 +221,6 @@ export default function InvestorDashboard() {
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
   }, [navigate]);
-
-  // Carrega parcelas ao abrir modal
-  useEffect(() => {
-    if (showInstallmentsModal && currentUser) {
-      loadInstallments();
-    }
-  }, [showInstallmentsModal, currentUser]);
-
-  const loadInstallments = async () => {
-    try {
-      const allPurchases = await base44.entities.PartnerPlanPurchase.filter({ 
-        user_id: currentUser.id,
-        status: 'active'
-      });
-      
-      // Gera as 12 parcelas para cada compra (começando após 60 dias)
-      const allInstallments = [];
-      
-      allPurchases.forEach(purchase => {
-        const activationDate = new Date(purchase.activated_at);
-        const firstInstallmentDate = new Date(activationDate);
-        firstInstallmentDate.setDate(firstInstallmentDate.getDate() + 60); // 60 dias após ativação
-        
-        // Calcula valor mensal: valor investido * taxa / 100
-        const rate = purchase.investment_rate || 3; // 3% ou 5%
-        const monthlyValue = (purchase.plan_amount * rate) / 100;
-        
-        // Busca dados de purchase_periods se existir
-        const periods = purchase.purchase_periods || [];
-        
-        for (let i = 1; i <= 12; i++) {
-          const installmentDate = new Date(firstInstallmentDate);
-          installmentDate.setMonth(installmentDate.getMonth() + (i - 1));
-          
-          // Verifica se já existe status para esta parcela
-          const periodData = periods.find(p => p.period === i);
-          
-          allInstallments.push({
-            purchase_id: purchase.id,
-            purchase_name: purchase.plan_name,
-            plan_amount: purchase.plan_amount,
-            rate: rate,
-            period: i,
-            date: installmentDate.toISOString(),
-            value: monthlyValue,
-            paid: periodData?.status === 'paid',
-            status: installmentDate > new Date() ? 'pending' : 'available'
-          });
-        }
-      });
-      
-      setInstallments(allInstallments.sort((a, b) => new Date(a.date) - new Date(b.date)));
-    } catch (error) {
-      console.error('Erro ao carregar parcelas:', error);
-    }
-  };
-
-  const toggleInstallmentPaid = async (installment) => {
-    try {
-      const purchase = await base44.entities.PartnerPlanPurchase.list();
-      const targetPurchase = purchase.find(p => p.id === installment.purchase_id);
-      
-      if (!targetPurchase) return;
-      
-      const periods = targetPurchase.purchase_periods || [];
-      const existingPeriod = periods.find(p => p.period === installment.period);
-      
-      let updatedPeriods;
-      if (existingPeriod) {
-        updatedPeriods = periods.map(p => 
-          p.period === installment.period 
-            ? { ...p, status: p.status === 'paid' ? 'pending' : 'paid' }
-            : p
-        );
-      } else {
-        updatedPeriods = [...periods, {
-          period: installment.period,
-          date: installment.date,
-          status: 'paid'
-        }];
-      }
-      
-      await base44.entities.PartnerPlanPurchase.update(installment.purchase_id, {
-        purchase_periods: updatedPeriods
-      });
-      
-      // Atualiza UI local
-      setInstallments(prev => 
-        prev.map(inst => 
-          inst.purchase_id === installment.purchase_id && inst.period === installment.period
-            ? { ...inst, paid: !inst.paid }
-            : inst
-        )
-      );
-      
-      toast.success(`Parcela ${installment.period} marcada como ${!installment.paid ? 'paga' : 'não paga'}`);
-    } catch (error) {
-      console.error('Erro ao atualizar parcela:', error);
-      toast.error('Erro ao atualizar parcela');
-    }
-  };
 
   const commonFeatures = [
     "Gestão 100% profissional",
@@ -636,25 +532,14 @@ export default function InvestorDashboard() {
             onClick={() => setShowInvestments(!showInvestments)}
           >
             <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/30">
-                    <Package className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="text-gray-400 text-xs sm:text-sm">Compras Ativas</p>
-                    <p className="text-xl sm:text-2xl font-bold text-white">{activeInvestments.length}</p>
-                  </div>
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/30">
+                  <Package className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
                 </div>
-                <Button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowInstallmentsModal(true);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm h-8 px-3"
-                >
-                  💰 Parcelas
-                </Button>
+                <div>
+                  <p className="text-gray-400 text-xs sm:text-sm">Compras Ativas</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white">{activeInvestments.length}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1418,155 +1303,6 @@ export default function InvestorDashboard() {
 
               </DialogContent>
             </Dialog>
-
-        {/* MODAL PARCELAS */}
-        <Dialog open={showInstallmentsModal} onOpenChange={setShowInstallmentsModal}>
-          <DialogContent className="max-w-6xl bg-gray-900 border-gray-700 text-white p-4 max-h-[95vh] overflow-y-auto">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-2xl font-bold">
-                💰 Gerenciar Parcelas
-              </DialogTitle>
-              <p className="text-gray-400 text-sm">
-                Acompanhe e confirme o pagamento das suas parcelas mensais
-              </p>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              {installments.length === 0 ? (
-                <div className="text-center py-12">
-                  <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
-                  <p className="text-gray-400">Nenhuma parcela disponível ainda</p>
-                  <p className="text-gray-500 text-sm mt-2">
-                    As parcelas começam 60 dias após a ativação do plano
-                  </p>
-                </div>
-              ) : (
-                <>
-                  {/* Agrupamento por compra */}
-                  {Object.entries(
-                    installments.reduce((acc, inst) => {
-                      if (!acc[inst.purchase_id]) {
-                        acc[inst.purchase_id] = [];
-                      }
-                      acc[inst.purchase_id].push(inst);
-                      return acc;
-                    }, {})
-                  ).map(([purchaseId, purchaseInstallments]) => {
-                    const firstInst = purchaseInstallments[0];
-                    const totalPaid = purchaseInstallments.filter(i => i.paid).length;
-                    
-                    return (
-                      <div key={purchaseId} className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-                        {/* Header da Compra */}
-                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-700">
-                          <div>
-                            <h4 className="text-lg font-bold text-white">{firstInst.purchase_name}</h4>
-                            <p className="text-gray-400 text-sm mt-1">
-                              Investimento: R$ {firstInst.plan_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} • 
-                              Taxa: {firstInst.rate}% ao mês
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-2xl font-bold text-green-400">
-                              {totalPaid}/12
-                            </div>
-                            <p className="text-gray-500 text-xs">parcelas pagas</p>
-                          </div>
-                        </div>
-
-                        {/* Lista de Parcelas */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          {purchaseInstallments.map((installment) => {
-                            const isPast = new Date(installment.date) < new Date();
-                            
-                            return (
-                              <div
-                                key={`${installment.purchase_id}-${installment.period}`}
-                                className={`relative rounded-lg p-4 border-2 transition-all ${
-                                  installment.paid
-                                    ? 'bg-green-900/20 border-green-500/50'
-                                    : isPast
-                                    ? 'bg-yellow-900/20 border-yellow-500/50'
-                                    : 'bg-gray-800/50 border-gray-600'
-                                }`}
-                              >
-                                {/* Badge Status */}
-                                {installment.paid && (
-                                  <div className="absolute top-2 right-2">
-                                    <div className="bg-green-500 rounded-full p-1">
-                                      <CheckCircle className="w-4 h-4 text-white" />
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Conteúdo */}
-                                <div className="mb-3">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-gray-400 text-xs font-medium">
-                                      Parcela {installment.period}
-                                    </span>
-                                    {!installment.paid && isPast && (
-                                      <span className="text-yellow-400 text-xs font-semibold">
-                                        Vencida
-                                      </span>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="text-2xl font-bold text-white mb-1">
-                                    R$ {installment.value.toFixed(2)}
-                                  </div>
-                                  
-                                  <div className="text-gray-400 text-xs flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    {new Date(installment.date).toLocaleDateString('pt-BR')}
-                                  </div>
-                                </div>
-
-                                {/* Checkbox */}
-                                <button
-                                  onClick={() => toggleInstallmentPaid(installment)}
-                                  className={`w-full py-2 rounded-lg font-medium text-sm transition-all ${
-                                    installment.paid
-                                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                                      : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                                  }`}
-                                >
-                                  {installment.paid ? '✓ Pago' : 'Marcar como Pago'}
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Resumo */}
-                        <div className="mt-6 pt-4 border-t border-gray-700 grid grid-cols-3 gap-4 text-center">
-                          <div>
-                            <div className="text-gray-400 text-xs mb-1">Total Pago</div>
-                            <div className="text-green-400 font-bold text-lg">
-                              R$ {(purchaseInstallments.filter(i => i.paid).length * firstInst.value).toFixed(2)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-gray-400 text-xs mb-1">A Receber</div>
-                            <div className="text-blue-400 font-bold text-lg">
-                              R$ {((12 - purchaseInstallments.filter(i => i.paid).length) * firstInst.value).toFixed(2)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-gray-400 text-xs mb-1">Total</div>
-                            <div className="text-white font-bold text-lg">
-                              R$ {(12 * firstInst.value).toFixed(2)}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
 
         {/* Informações */}
         <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">

@@ -56,10 +56,102 @@ export default function ActivePartners() {
     investment_rate: 3,
     notes: ''
   });
+  const [showInstallmentsModal, setShowInstallmentsModal] = useState(false);
+  const [selectedPurchaseForInstallments, setSelectedPurchaseForInstallments] = useState(null);
+  const [installments, setInstallments] = useState([]);
 
   useEffect(() => {
     loadPartners();
   }, []);
+
+  const loadInstallments = async (purchase) => {
+    try {
+      // Gera as 12 parcelas (começando após 60 dias)
+      const activationDate = new Date(purchase.activated_at);
+      const firstInstallmentDate = new Date(activationDate);
+      firstInstallmentDate.setDate(firstInstallmentDate.getDate() + 60); // 60 dias após ativação
+      
+      // Calcula valor mensal: valor investido * taxa / 100
+      const rate = purchase.investment_rate || 3; // 3% ou 5%
+      const monthlyValue = (purchase.plan_amount * rate) / 100;
+      
+      // Busca dados de purchase_periods se existir
+      const periods = purchase.purchase_periods || [];
+      
+      const allInstallments = [];
+      for (let i = 1; i <= 12; i++) {
+        const installmentDate = new Date(firstInstallmentDate);
+        installmentDate.setMonth(installmentDate.getMonth() + (i - 1));
+        
+        // Verifica se já existe status para esta parcela
+        const periodData = periods.find(p => p.period === i);
+        
+        allInstallments.push({
+          purchase_id: purchase.id,
+          purchase_name: purchase.plan_name,
+          plan_amount: purchase.plan_amount,
+          rate: rate,
+          period: i,
+          date: installmentDate.toISOString(),
+          value: monthlyValue,
+          paid: periodData?.status === 'paid',
+          status: installmentDate > new Date() ? 'pending' : 'available'
+        });
+      }
+      
+      setInstallments(allInstallments);
+      setSelectedPurchaseForInstallments(purchase);
+      setShowInstallmentsModal(true);
+    } catch (error) {
+      console.error('Erro ao carregar parcelas:', error);
+      toast.error('Erro ao carregar parcelas');
+    }
+  };
+
+  const toggleInstallmentPaid = async (installment) => {
+    try {
+      // Busca a compra para atualizar
+      const purchases = await base44.entities.PartnerPlanPurchase.filter({ id: installment.purchase_id });
+      if (!purchases || purchases.length === 0) return;
+      
+      const targetPurchase = purchases[0];
+      const periods = targetPurchase.purchase_periods || [];
+      const existingPeriod = periods.find(p => p.period === installment.period);
+      
+      let updatedPeriods;
+      if (existingPeriod) {
+        updatedPeriods = periods.map(p => 
+          p.period === installment.period 
+            ? { ...p, status: p.status === 'paid' ? 'pending' : 'paid' }
+            : p
+        );
+      } else {
+        updatedPeriods = [...periods, {
+          period: installment.period,
+          date: installment.date,
+          status: 'paid'
+        }];
+      }
+      
+      await base44.entities.PartnerPlanPurchase.update(installment.purchase_id, {
+        purchase_periods: updatedPeriods
+      });
+      
+      // Atualiza UI local
+      setInstallments(prev => 
+        prev.map(inst => 
+          inst.period === installment.period
+            ? { ...inst, paid: !inst.paid }
+            : inst
+        )
+      );
+      
+      toast.success(`Parcela ${installment.period} marcada como ${!installment.paid ? 'paga' : 'não paga'}`);
+    } catch (error) {
+      console.error('Erro ao atualizar parcela:', error);
+      toast.error('Erro ao atualizar parcela');
+    }
+  };
 
   const loadPartners = async () => {
     setIsLoading(true);
@@ -414,6 +506,13 @@ export default function ActivePartners() {
                           <div className="flex gap-2">
                             <Button
                               size="sm"
+                              onClick={() => loadInstallments(purchase)}
+                              className="bg-purple-600 hover:bg-purple-700"
+                            >
+                              💰 Parcelas
+                            </Button>
+                            <Button
+                              size="sm"
                               onClick={() => handleEdit(purchase)}
                               className="bg-blue-600 hover:bg-blue-700"
                             >
@@ -682,6 +781,154 @@ export default function ActivePartners() {
                   </Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* MODAL PARCELAS */}
+      {showInstallmentsModal && selectedPurchaseForInstallments && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="bg-gray-900 border-gray-700 max-w-6xl w-full max-h-[90vh] overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-2xl font-bold text-white">💰 Gerenciar Parcelas</CardTitle>
+                  <p className="text-blue-100 text-sm mt-1">
+                    {selectedPurchaseForInstallments.user_name} - {selectedPurchaseForInstallments.plan_name}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowInstallmentsModal(false);
+                    setSelectedPurchaseForInstallments(null);
+                  }}
+                  className="text-white hover:bg-white/20"
+                >
+                  <X className="w-6 h-6" />
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {installments.length === 0 ? (
+                <div className="text-center py-12">
+                  <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-400">Nenhuma parcela disponível ainda</p>
+                  <p className="text-gray-500 text-sm mt-2">
+                    As parcelas começam 60 dias após a ativação do plano
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Header da Compra */}
+                  <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h4 className="text-lg font-bold text-white">{installments[0].purchase_name}</h4>
+                        <p className="text-gray-400 text-sm mt-1">
+                          Investimento: R$ {installments[0].plan_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} • 
+                          Taxa: {installments[0].rate}% ao mês
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-green-400">
+                          {installments.filter(i => i.paid).length}/12
+                        </div>
+                        <p className="text-gray-500 text-xs">parcelas pagas</p>
+                      </div>
+                    </div>
+
+                    {/* Lista de Parcelas */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {installments.map((installment) => {
+                        const isPast = new Date(installment.date) < new Date();
+                        
+                        return (
+                          <div
+                            key={installment.period}
+                            className={`relative rounded-lg p-4 border-2 transition-all ${
+                              installment.paid
+                                ? 'bg-green-900/20 border-green-500/50'
+                                : isPast
+                                ? 'bg-yellow-900/20 border-yellow-500/50'
+                                : 'bg-gray-800/50 border-gray-600'
+                            }`}
+                          >
+                            {/* Badge Status */}
+                            {installment.paid && (
+                              <div className="absolute top-2 right-2">
+                                <div className="bg-green-500 rounded-full p-1">
+                                  <CheckCircle className="w-4 h-4 text-white" />
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Conteúdo */}
+                            <div className="mb-3">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-gray-400 text-xs font-medium">
+                                  Parcela {installment.period}
+                                </span>
+                                {!installment.paid && isPast && (
+                                  <span className="text-yellow-400 text-xs font-semibold">
+                                    Vencida
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="text-2xl font-bold text-white mb-1">
+                                R$ {installment.value.toFixed(2)}
+                              </div>
+                              
+                              <div className="text-gray-400 text-xs flex items-center gap-1">
+                                <Calendar className="w-3 h-3" />
+                                {new Date(installment.date).toLocaleDateString('pt-BR')}
+                              </div>
+                            </div>
+
+                            {/* Checkbox */}
+                            <button
+                              onClick={() => toggleInstallmentPaid(installment)}
+                              className={`w-full py-2 rounded-lg font-medium text-sm transition-all ${
+                                installment.paid
+                                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                              }`}
+                            >
+                              {installment.paid ? '✓ Pago' : 'Marcar como Pago'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Resumo */}
+                    <div className="mt-6 pt-4 border-t border-gray-700 grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <div className="text-gray-400 text-xs mb-1">Total Pago</div>
+                        <div className="text-green-400 font-bold text-lg">
+                          R$ {(installments.filter(i => i.paid).length * installments[0].value).toFixed(2)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400 text-xs mb-1">A Receber</div>
+                        <div className="text-blue-400 font-bold text-lg">
+                          R$ {((12 - installments.filter(i => i.paid).length) * installments[0].value).toFixed(2)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-gray-400 text-xs mb-1">Total</div>
+                        <div className="text-white font-bold text-lg">
+                          R$ {(12 * installments[0].value).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
