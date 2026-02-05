@@ -211,17 +211,17 @@ async function sendEmailViaBrevo(to: string, subject: string, htmlContent: strin
     console.log('🌐 Preparando requisição para Brevo...');
     console.log('📧 Destinatário:', to);
     console.log('📝 Assunto:', subject);
-    
+
     const requestBody = {
       sender: {
         name: 'Leilão no Zap',
-        email: 'noreply@leilaonozap.com.br'
+        email: 'no-reply@leilaonozap.com'
       },
       to: [{ email: to }],
       subject: subject,
       htmlContent: htmlContent
     };
-    
+
     console.log('📤 Enviando para Brevo API...');
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
@@ -292,7 +292,7 @@ Deno.serve(async (req: Request) => {
       console.log('🔑 Enviando código de verificação...');
       const name = userName || 'Usuário';
       const emailHtml = getCodeEmailTemplate(name, code);
-      
+
       console.log('📨 Chamando Brevo API...');
       const emailSent = await sendEmailViaBrevo(
         normalizedEmail,
@@ -367,7 +367,7 @@ Deno.serve(async (req: Request) => {
     if (error instanceof Error) {
       console.error('   Stack trace:', error.stack);
     }
-    return Response.json({ 
+    return Response.json({
       error: 'Erro ao processar solicitação: ' + errorMessage,
       details: error instanceof Error ? error.stack : undefined
     }, { status: 500 });
