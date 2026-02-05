@@ -267,6 +267,9 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       setGeneratedCode(code);
       setResetUserId(user.id);
 
+      console.log('📧 Tentando enviar código via função backend...');
+      console.log('📦 Payload:', { email: normalizedResetEmail, code, userName: user.full_name?.split(' ')[0] || 'Usuário' });
+      
       // Envia email via Brevo usando a cloud function
       const result = await base44.functions.invoke('sendPasswordResetEmail', {
         email: normalizedResetEmail,
@@ -274,14 +277,20 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         userName: user.full_name?.split(' ')[0] || 'Usuário'
       });
 
+      console.log('📬 Resposta da função:', result);
+
       // Verifica se houve erro na resposta da função
       if (result?.data?.error) {
+        console.error('❌ Erro na resposta:', result.data.error);
         throw new Error(result.data.error);
       }
       
       if (!result?.data?.success) {
+        console.error('❌ Função não retornou success');
         throw new Error('Falha ao enviar email');
       }
+      
+      console.log('✅ Email enviado com sucesso!');
 
       await base44.entities.SystemLog.create({
         step: 'Password_Reset_Code_Sent',
