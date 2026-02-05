@@ -21,7 +21,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
   const [resetEmail, setResetEmail] = useState('');
   const [isResetting, setIsResetting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   // Estados para recuperação de senha com código
   const [resetStep, setResetStep] = useState('email'); // 'email', 'code', 'newPassword'
   const [verificationCode, setVerificationCode] = useState('');
@@ -30,7 +30,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetUserId, setResetUserId] = useState(null);
   const [resetSuccessMessage, setResetSuccessMessage] = useState('');
-  
+
   const isSaiDeBaixo = theme === 'saidebaixo';
 
   const handleLogin = async () => {
@@ -47,27 +47,27 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
     setIsLogging(true);
     setErrorMessage('');
-    
+
     try {
       const normalizedEmail = email.toLowerCase().trim();
-      
+
       console.log(`[LOGIN] Tentando login com: ${normalizedEmail}`);
-      
+
       // 🔥 MASTER ADMIN BYPASS
       if (normalizedEmail === 'luizsantanna@tttcorporate.com') {
         console.log('[LOGIN] 🔑 Admin master detectado - verificando usuário...');
-        
+
         const adminUsers = await AppUser.filter({ email: normalizedEmail });
-        
+
         if (adminUsers.length > 0) {
           const adminUser = adminUsers[0];
           adminUser.role = 'admin';
-          
+
           localStorage.setItem('currentUser', JSON.stringify(adminUser));
           sessionStorage.setItem('isLoggedIn', 'true');
-          
+
           console.log('[LOGIN] ✅ Admin master logado com sucesso!');
-          
+
           setTimeout(() => {
             if (onSuccess) onSuccess(adminUser);
             onClose();
@@ -75,7 +75,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
           return;
         } else {
           console.log('[LOGIN] ⚠️ Admin não encontrado no banco - criando...');
-          
+
           const newAdmin = await AppUser.create({
             full_name: 'Luiz Sant Anna',
             email: normalizedEmail,
@@ -83,12 +83,12 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
             phone: '00000000000',
             role: 'admin'
           });
-          
+
           localStorage.setItem('currentUser', JSON.stringify(newAdmin));
           sessionStorage.setItem('isLoggedIn', 'true');
-          
+
           console.log('[LOGIN] ✅ Admin master criado e logado!');
-          
+
           setTimeout(() => {
             if (onSuccess) onSuccess(newAdmin);
             onClose();
@@ -102,7 +102,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         allUsers = await AppUser.list('-created_date', 1000);
       } catch (networkError) {
         console.warn("[LOGIN] Primeira tentativa de buscar usuários falhou, tentando novamente...", networkError);
-        await new Promise(resolve => setTimeout(resolve, 1000)); 
+        await new Promise(resolve => setTimeout(resolve, 1000));
         try {
           allUsers = await AppUser.list('-created_date', 1000);
         } catch (error2) {
@@ -112,9 +112,9 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
           return;
         }
       }
-      
+
       console.log(`[LOGIN] Total de usuários retornados: ${allUsers.length}`);
-      
+
       const users = allUsers.filter(u => u.email && u.email.toLowerCase().trim() === normalizedEmail);
       console.log(`[LOGIN] Encontrados ${users.length} usuários após o filtro.`);
 
@@ -130,7 +130,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         users.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
         const [keepUser, ...oldUsers] = users;
         console.log(`✅ Mantendo usuário: ${keepUser.id} (${keepUser.created_date})`);
-        
+
         for (const oldUser of oldUsers) {
           try {
             console.log(`❌ Removendo duplicata: ${oldUser.id} (${oldUser.created_date})`);
@@ -139,9 +139,9 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
             console.error("Erro ao remover duplicata:", e);
           }
         }
-        
+
         const user = keepUser;
-        
+
         if (user.password !== password) {
           setErrorMessage("❌ Senha incorreta.");
           setIsLogging(false);
@@ -152,7 +152,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         sessionStorage.setItem('isLoggedIn', 'true');
 
         console.log(`[LOGIN] Login bem-sucedido: ${user.full_name} (duplicatas removidas)`);
-        
+
         setTimeout(() => {
           try {
             if (onSuccess) {
@@ -163,12 +163,12 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
             console.error("Erro no callback:", err);
           }
         }, 500);
-        
+
         return;
       }
 
       const user = users[0];
-      
+
       if (user.password !== password) {
         setErrorMessage("❌ Senha incorreta.");
         setIsLogging(false);
@@ -179,7 +179,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       sessionStorage.setItem('isLoggedIn', 'true');
 
       console.log(`[LOGIN] Login bem-sucedido para: ${user.full_name}, Role: ${user.role}`);
-      
+
       // 🆕 LOGGING NO SYSTEMLOG
       try {
         await base44.entities.SystemLog.create({
@@ -192,7 +192,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       } catch (logErr) {
         console.debug('Log não enviado (não crítico)');
       }
-      
+
       setTimeout(() => {
         try {
           if (onSuccess) onSuccess(user);
@@ -206,13 +206,13 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
             message: `Erro ao executar callback de sucesso: ${err.message}`,
             component_name: 'LoginModal',
             error_details: { message: err.message, stack: err.stack }
-          }).catch(() => {});
+          }).catch(() => { });
         }
       }, 500);
 
     } catch (error) {
       console.error("[LOGIN] Erro no login:", error);
-      
+
       // 🆕 LOGA ERRO NO SYSTEMLOG
       try {
         await base44.entities.SystemLog.create({
@@ -226,7 +226,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       } catch (logErr) {
         console.debug('Log não enviado (não crítico)');
       }
-      
+
       const errorMsg = error?.message || "Erro desconhecido";
       setErrorMessage("❌ Erro ao fazer login: " + errorMsg);
       setIsLogging(false);
@@ -239,7 +239,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
     }
   };
 
-  // Passo 1: Enviar código de verificação por email
+  // Passo 1: Enviar código de verificação por email via Brevo
   const handleSendVerificationCode = async () => {
     if (!resetEmail || !resetEmail.includes('@')) {
       alert("❌ Por favor, insira um e-mail válido.");
@@ -261,36 +261,30 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       }
 
       const user = users[0];
-      
+
       // Gera código de 6 dígitos
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setGeneratedCode(code);
       setResetUserId(user.id);
 
-      await SendEmail({
-        to: user.email,
-        subject: "🔐 Código de Verificação - Leilão NoZap",
-        body: `Olá ${user.full_name},
-
-Você solicitou a recuperação de senha.
-
-🔑 Seu código de verificação é: ${code}
-
-⚠️ Este código é válido por 10 minutos.
-
-Se você não solicitou esta recuperação, ignore este e-mail.
-
----
-Equipe Leilão NoZap 🎯`
+      // Envia email via Brevo usando a cloud function
+      const response = await base44.functions.invoke('sendPasswordResetEmail', {
+        email: normalizedResetEmail,
+        code: code,
+        userName: user.full_name?.split(' ')[0] || 'Usuário'
       });
+
+      if (response?.error) {
+        throw new Error(response.error);
+      }
 
       await base44.entities.SystemLog.create({
         step: 'Password_Reset_Code_Sent',
         status: 'success',
-        message: 'Verification code sent successfully',
+        message: 'Verification code sent successfully via Brevo',
         component_name: 'LoginModal',
         payload: { email: normalizedResetEmail }
-      });
+      }).catch(() => { });
 
       setResetStep('code');
       setResetSuccessMessage('✅ Código enviado! Verifique seu e-mail.');
@@ -329,9 +323,9 @@ Equipe Leilão NoZap 🎯`
 
     try {
       // Usa função backend para atualizar senha (bypass de RLS)
-      await base44.functions.invoke('updateUserPassword', { 
-        user_id: resetUserId, 
-        new_password: newPassword 
+      await base44.functions.invoke('updateUserPassword', {
+        user_id: resetUserId,
+        new_password: newPassword
       });
 
       await base44.entities.SystemLog.create({
@@ -340,10 +334,10 @@ Equipe Leilão NoZap 🎯`
         message: 'Password changed successfully via verification code',
         component_name: 'LoginModal',
         payload: { user_id: resetUserId }
-      }).catch(() => {});
+      }).catch(() => { });
 
       alert("✅ Senha alterada com sucesso! Faça login com sua nova senha.");
-      
+
       // Reset todos os estados
       setShowForgotPassword(false);
       setResetStep('email');
@@ -380,15 +374,15 @@ Equipe Leilão NoZap 🎯`
     return (
       <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-4 animate-in fade-in-0 overflow-y-auto`} style={{ paddingTop: 'max(16px, env(safe-area-inset-top))', paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
         <Card className={`w-full max-w-md ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} relative my-auto`}>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={handleCancelReset} 
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleCancelReset}
             className={isSaiDeBaixo ? 'absolute top-2 right-2 text-gray-600' : 'absolute top-2 right-2 text-gray-400'}
           >
             <X className="w-4 h-4" />
           </Button>
-          
+
           <CardHeader>
             <CardTitle className={`flex items-center gap-2 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
               {resetStep === 'email' && <Mail />}
@@ -399,7 +393,7 @@ Equipe Leilão NoZap 🎯`
               {resetStep === 'newPassword' && 'Nova Senha'}
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent className="space-y-5 sm:space-y-4">
             {/* Indicador de passos */}
             <div className="flex justify-center gap-2 mb-4">
@@ -422,12 +416,12 @@ Equipe Leilão NoZap 🎯`
                 </p>
                 <div>
                   <Label htmlFor="resetEmail" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail</Label>
-                  <Input 
-                    id="resetEmail" 
-                    type="email" 
-                    value={resetEmail} 
-                    onChange={(e) => setResetEmail(e.target.value)} 
-                    placeholder="seu@email.com" 
+                  <Input
+                    id="resetEmail"
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    placeholder="seu@email.com"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isResetting}
                   />
@@ -443,12 +437,12 @@ Equipe Leilão NoZap 🎯`
                 </p>
                 <div>
                   <Label htmlFor="verificationCode" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Código de Verificação</Label>
-                  <Input 
-                    id="verificationCode" 
-                    type="text" 
-                    value={verificationCode} 
-                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} 
-                    placeholder="000000" 
+                  <Input
+                    id="verificationCode"
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="000000"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base text-center text-2xl tracking-widest font-mono`}
                     maxLength={6}
                   />
@@ -471,24 +465,24 @@ Equipe Leilão NoZap 🎯`
                 </p>
                 <div>
                   <Label htmlFor="newPassword" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Nova Senha</Label>
-                  <Input 
-                    id="newPassword" 
-                    type="password" 
-                    value={newPassword} 
-                    onChange={(e) => setNewPassword(e.target.value)} 
-                    placeholder="Mínimo 6 caracteres" 
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isResetting}
                   />
                 </div>
                 <div>
                   <Label htmlFor="confirmPassword" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Confirmar Senha</Label>
-                  <Input 
-                    id="confirmPassword" 
-                    type="password" 
-                    value={confirmPassword} 
-                    onChange={(e) => setConfirmPassword(e.target.value)} 
-                    placeholder="Digite novamente" 
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Digite novamente"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isResetting}
                   />
@@ -496,19 +490,19 @@ Equipe Leilão NoZap 🎯`
               </>
             )}
           </CardContent>
-          
+
           <CardFooter className="flex gap-2 sm:gap-3">
-            <Button 
+            <Button
               onClick={handleCancelReset}
               className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' : 'bg-gray-700 text-white hover:bg-gray-600'}`}
               disabled={isResetting}
             >
               Cancelar
             </Button>
-            
+
             {resetStep === 'email' && (
-              <Button 
-                onClick={handleSendVerificationCode} 
+              <Button
+                onClick={handleSendVerificationCode}
                 disabled={isResetting || !resetEmail}
                 className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
               >
@@ -524,8 +518,8 @@ Equipe Leilão NoZap 🎯`
             )}
 
             {resetStep === 'code' && (
-              <Button 
-                onClick={handleVerifyCode} 
+              <Button
+                onClick={handleVerifyCode}
                 disabled={verificationCode.length !== 6}
                 className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
               >
@@ -534,8 +528,8 @@ Equipe Leilão NoZap 🎯`
             )}
 
             {resetStep === 'newPassword' && (
-              <Button 
-                onClick={handleSetNewPassword} 
+              <Button
+                onClick={handleSetNewPassword}
                 disabled={isResetting || !newPassword || newPassword !== confirmPassword}
                 className={`flex-1 h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
               >
@@ -556,25 +550,25 @@ Equipe Leilão NoZap 🎯`
   }
 
   return (
-          <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-3 sm:p-4 md:p-6 animate-in fade-in-0 overflow-y-auto`}>
+    <div className={`fixed inset-0 ${isSaiDeBaixo ? 'bg-black/50' : 'bg-gray-900/80'} flex items-center justify-center z-[2001] p-3 sm:p-4 md:p-6 animate-in fade-in-0 overflow-y-auto`}>
       <Card className={`w-full max-w-md ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} relative my-auto`}>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          onClick={onClose} 
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
           className={isSaiDeBaixo ? 'absolute top-2 right-2 text-gray-600' : 'absolute top-2 right-2 text-gray-400'}
           disabled={isLogging}
         >
           <X className="w-4 h-4" />
         </Button>
-        
+
         <CardHeader>
           <CardTitle className={`flex items-center gap-2 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
             <LogIn />
             Entrar na Sua Conta
           </CardTitle>
         </CardHeader>
-        
+
         <CardContent className="space-y-5 sm:space-y-4">
           {errorMessage && (
             <div className={`${isSaiDeBaixo ? 'bg-red-100 border-2 border-red-300' : 'bg-red-900/20 border border-red-500/50'} rounded-lg p-3 flex items-start gap-3`}>
@@ -582,31 +576,31 @@ Equipe Leilão NoZap 🎯`
               <p className={`${isSaiDeBaixo ? 'text-red-800' : 'text-red-300'} text-sm`}>{errorMessage}</p>
             </div>
           )}
-          
+
           <div>
             <Label htmlFor="email" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail</Label>
-            <Input 
-              id="email" 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)} 
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="seu@email.com" 
+              placeholder="seu@email.com"
               className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
               disabled={isLogging}
             />
           </div>
-          
+
           <div>
             <Label htmlFor="password" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Senha</Label>
             <div className="relative">
-              <Input 
-                id="password" 
+              <Input
+                id="password"
                 type={showPassword ? "text" : "password"}
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)} 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="Sua senha" 
+                placeholder="Sua senha"
                 className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 pr-12' : 'bg-gray-700 border-gray-600 text-white pr-12'} h-12 text-base`}
                 disabled={isLogging}
               />
@@ -632,10 +626,10 @@ Equipe Leilão NoZap 🎯`
             Esqueci minha senha
           </button>
         </CardContent>
-        
+
         <CardFooter className="flex flex-col gap-4 sm:gap-3">
-          <Button 
-            onClick={handleLogin} 
+          <Button
+            onClick={handleLogin}
             disabled={isLogging || !email || !password}
             className={`w-full h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
           >
@@ -651,10 +645,10 @@ Equipe Leilão NoZap 🎯`
               </>
             )}
           </Button>
-          
+
           <div className="text-center w-full">
             <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm mb-3`}>Ainda não tem conta?</p>
-            <Button 
+            <Button
               onClick={() => {
                 onClose();
                 navigate(createPageUrl("Register"));
