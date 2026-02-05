@@ -208,6 +208,21 @@ function generateResetToken(): string {
 // Enviar email via Brevo API
 async function sendEmailViaBrevo(to: string, subject: string, htmlContent: string): Promise<boolean> {
   try {
+    console.log('🌐 Preparando requisição para Brevo...');
+    console.log('📧 Destinatário:', to);
+    console.log('📝 Assunto:', subject);
+    
+    const requestBody = {
+      sender: {
+        name: 'Leilão no Zap',
+        email: 'noreply@leilaonozap.com.br'
+      },
+      to: [{ email: to }],
+      subject: subject,
+      htmlContent: htmlContent
+    };
+    
+    console.log('📤 Enviando para Brevo API...');
     const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
@@ -215,27 +230,27 @@ async function sendEmailViaBrevo(to: string, subject: string, htmlContent: strin
         'api-key': BREVO_API_KEY,
         'content-type': 'application/json'
       },
-      body: JSON.stringify({
-        sender: {
-          name: 'Leilão no Zap',
-          email: 'noreply@leilaonozap.com.br'
-        },
-        to: [{ email: to }],
-        subject: subject,
-        htmlContent: htmlContent
-      })
+      body: JSON.stringify(requestBody)
     });
+
+    console.log('📬 Status da resposta Brevo:', response.status);
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('Erro Brevo API:', errorData);
+      console.error('❌ Erro Brevo API (status ' + response.status + '):', errorData);
       return false;
     }
 
+    const responseData = await response.json();
+    console.log('✅ Resposta Brevo:', responseData);
     console.log('✅ Email enviado com sucesso para:', to);
     return true;
   } catch (error) {
-    console.error('❌ Erro ao enviar email:', error);
+    console.error('❌ Exceção ao enviar email via Brevo:', error);
+    if (error instanceof Error) {
+      console.error('   Mensagem:', error.message);
+      console.error('   Stack:', error.stack);
+    }
     return false;
   }
 }
@@ -253,21 +268,32 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    console.log('📧 [sendPasswordResetEmail] Iniciando função...');
     const base44 = createClientFromRequest(req);
-    const payload = await req.json().catch(() => ({}));
+    const payload = await req.json().catch((err) => {
+      console.error('❌ Erro ao fazer parse do JSON:', err);
+      return {};
+    });
+
+    console.log('📦 Payload recebido:', { email: payload?.email, hasCode: !!payload?.code, userName: payload?.userName });
 
     const { email, code, userName } = payload;
 
     if (!email) {
+      console.error('❌ Email não fornecido');
       return Response.json({ error: 'Email é obrigatório' }, { status: 400 });
     }
 
     const normalizedEmail = email.toLowerCase().trim();
+    console.log('✉️ Email normalizado:', normalizedEmail);
 
     // Se recebeu um código, envia email com código de verificação
     if (code) {
+      console.log('🔑 Enviando código de verificação...');
       const name = userName || 'Usuário';
       const emailHtml = getCodeEmailTemplate(name, code);
+      
+      console.log('📨 Chamando Brevo API...');
       const emailSent = await sendEmailViaBrevo(
         normalizedEmail,
         '🔐 Código de Verificação - Leilão no Zap',
@@ -275,7 +301,7 @@ Deno.serve(async (req: Request) => {
       );
 
       if (!emailSent) {
-        console.error('❌ Falha ao enviar email com código');
+        console.error('❌ sendEmailViaBrevo retornou false');
         return Response.json({
           error: 'Não foi possível enviar o email. Tente novamente.'
         }, { status: 500 });
@@ -337,7 +363,13 @@ Deno.serve(async (req: Request) => {
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('Erro no sendPasswordResetEmail:', errorMessage);
-    return Response.json({ error: errorMessage }, { status: 500 });
+    console.error('❌ ERRO CRÍTICO em sendPasswordResetEmail:', errorMessage);
+    if (error instanceof Error) {
+      console.error('   Stack trace:', error.stack);
+    }
+    return Response.json({ 
+      error: 'Erro ao processar solicitação: ' + errorMessage,
+      details: error instanceof Error ? error.stack : undefined
+    }, { status: 500 });
   }
 });
