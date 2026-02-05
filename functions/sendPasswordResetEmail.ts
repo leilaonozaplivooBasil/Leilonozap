@@ -214,48 +214,42 @@ function generateResetToken(): string {
   return `${timestamp}-${randomPart}`;
 }
 
-// Enviar email via Brevo API
-async function sendEmailViaBrevo(to: string, subject: string, htmlContent: string): Promise<boolean> {
+// Enviar email via SMTP Brevo
+async function sendEmailViaSMTP(to: string, subject: string, htmlContent: string): Promise<boolean> {
   try {
-    console.log('🌐 Preparando requisição para Brevo...');
+    console.log('📧 Configurando cliente SMTP...');
     console.log('📧 Destinatário:', to);
     console.log('📝 Assunto:', subject);
 
-    const requestBody = {
-      sender: {
-        name: 'Leilão no Zap',
-        email: 'no-reply@leilaonozap.com'
+    const client = new SMTPClient({
+      connection: {
+        hostname: SMTP_CONFIG.host,
+        port: SMTP_CONFIG.port,
+        tls: true,
+        auth: {
+          username: SMTP_CONFIG.username,
+          password: SMTP_CONFIG.password,
+        },
       },
-      to: [{ email: to }],
-      subject: subject,
-      htmlContent: htmlContent
-    };
-
-    console.log('📤 Enviando para Brevo API...');
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'api-key': BREVO_API_KEY,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
     });
 
-    console.log('📬 Status da resposta Brevo:', response.status);
+    console.log('🔌 Conectando ao servidor SMTP...');
+    
+    await client.send({
+      from: "Leilão no Zap <no-reply@leilaonozap.com>",
+      to: to,
+      subject: subject,
+      content: "auto",
+      html: htmlContent,
+    });
 
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('❌ Erro Brevo API (status ' + response.status + '):', errorData);
-      return false;
-    }
-
-    const responseData = await response.json();
-    console.log('✅ Resposta Brevo:', responseData);
-    console.log('✅ Email enviado com sucesso para:', to);
+    console.log('✅ Email enviado via SMTP para:', to);
+    
+    await client.close();
+    
     return true;
   } catch (error) {
-    console.error('❌ Exceção ao enviar email via Brevo:', error);
+    console.error('❌ Erro ao enviar email via SMTP:', error);
     if (error instanceof Error) {
       console.error('   Mensagem:', error.message);
       console.error('   Stack:', error.stack);
