@@ -272,9 +272,10 @@ Deno.serve(async (req: Request) => {
   try {
     console.log('📧 [sendPasswordResetEmail] Iniciando função...');
 
-    // IMPORTANTE: Fazer parse do JSON ANTES de criar o client
+    // Clonar request para garantir que o body não seja consumido
+    const reqClone = req.clone();
     const base44 = createClientFromRequest(req);
-    const payload = await req.json();
+    const payload = await reqClone.json();
 
     console.log('📦 Payload recebido:', JSON.stringify(payload));
 
