@@ -296,8 +296,8 @@ Deno.serve(async (req: Request) => {
       const name = userName || 'Usuário';
       const emailHtml = getCodeEmailTemplate(name, code);
 
-      console.log('📨 Chamando Brevo API...');
-      const emailSent = await sendEmailViaBrevo(
+      console.log('📨 Enviando via SMTP...');
+      const emailSent = await sendEmailViaSMTP(
         normalizedEmail,
         '🔐 Código de Verificação - Leilão no Zap',
         emailHtml
