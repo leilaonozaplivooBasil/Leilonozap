@@ -4,6 +4,8 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 const BREVO_API_KEY = 'xsmtpsib-2dac89dc7b6c36da8498ca124e41003dfc53f32413c193b74ec22f3183ece960-JYNspueaUHRtbvGV';
 const APP_URL = 'https://leilaonozap.base44apps.com';
 
+// Last deploy: 2026-02-05 - Added detailed logging
+
 // Template HTML do email com código
 function getCodeEmailTemplate(userName: string, code: string): string {
   return `
