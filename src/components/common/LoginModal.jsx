@@ -267,31 +267,29 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       setGeneratedCode(code);
       setResetUserId(user.id);
 
-      console.log('📧 Tentando enviar código via integração SendEmail...');
-
-      const userName = user.full_name?.split(' ')[0] || 'Usuário';
-
-      // Envia email via integração do Base44
-      await SendEmail({
-        to: normalizedResetEmail,
-        subject: '🔐 Código de Verificação - Leilão no Zap',
-        body: `
-Olá ${userName},
-
-Você solicitou a recuperação de senha.
-
-📋 **Seu Código de Verificação:** ${code}
-
-⏰ Este código expira em 10 minutos.
-
-🛡️ Se você não solicitou isso, ignore este email.
-
----
-Equipe Leilão no Zap 🔨
-        `
+      console.log('📧 Tentando enviar código via função backend...');
+      console.log('📦 Payload:', { email: normalizedResetEmail, code, userName: user.full_name?.split(' ')[0] || 'Usuário' });
+      
+      const result = await base44.functions.invoke('sendPasswordResetEmail', {
+        email: normalizedResetEmail,
+        code: code,
+        userName: user.full_name?.split(' ')[0] || 'Usuário'
       });
 
-      console.log('✅ Email enviado com sucesso via SendEmail!');
+      console.log('📬 Resposta completa:', JSON.stringify(result, null, 2));
+
+      // Verifica erro
+      if (result?.error) {
+        console.error('❌ Erro retornado:', result.error);
+        throw new Error(result.error);
+      }
+      
+      if (!result?.success) {
+        console.error('❌ Sucesso = false');
+        throw new Error('Falha ao enviar email');
+      }
+      
+      console.log('✅ Email enviado com sucesso!');
 
       await base44.entities.SystemLog.create({
         step: 'Password_Reset_Code_Sent',
