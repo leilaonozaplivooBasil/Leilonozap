@@ -304,7 +304,7 @@ Deno.serve(async (req: Request) => {
       );
 
       if (!emailSent) {
-        console.error('❌ sendEmailViaBrevo retornou false');
+        console.error('❌ sendEmailViaSMTP retornou false');
         return Response.json({
           error: 'Não foi possível enviar o email. Tente novamente.'
         }, { status: 500 });
