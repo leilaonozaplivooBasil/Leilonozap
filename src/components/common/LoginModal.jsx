@@ -267,30 +267,91 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       setGeneratedCode(code);
       setResetUserId(user.id);
 
-      console.log('📧 Tentando enviar código via função backend...');
-      console.log('📦 Payload:', { email: normalizedResetEmail, code, userName: user.full_name?.split(' ')[0] || 'Usuário' });
-      
-      // Envia email via Brevo usando a cloud function
-      const result = await base44.functions.invoke('sendPasswordResetEmail', {
-        email: normalizedResetEmail,
-        code: code,
-        userName: user.full_name?.split(' ')[0] || 'Usuário'
+      console.log('📧 Tentando enviar código via API Brevo diretamente...');
+
+      const userName = user.full_name?.split(' ')[0] || 'Usuário';
+
+      // Template do email com código
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1a1a2e;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td align="center" style="padding: 40px 20px;">
+                <table style="width: 100%; max-width: 600px; background: linear-gradient(135deg, #1f2937 0%, #111827 100%); border-radius: 20px; overflow: hidden;">
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 40px; text-align: center;">
+                      <div style="font-size: 42px; margin-bottom: 10px;">🔨</div>
+                      <h1 style="margin: 0; color: #ffffff; font-size: 28px;">Leilão no Zap</h1>
+                      <p style="margin: 8px 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Código de Verificação</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 40px;">
+                      <h2 style="margin: 0 0 20px; color: #ffffff; font-size: 24px;">Olá, ${userName}! 👋</h2>
+                      <p style="margin: 0 0 25px; color: #9ca3af; font-size: 16px; line-height: 1.6;">
+                        Você solicitou a recuperação de senha. Use o código abaixo:
+                      </p>
+                      <table style="width: 100%;">
+                        <tr>
+                          <td align="center" style="padding: 20px 0 30px;">
+                            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); display: inline-block; padding: 20px 40px; border-radius: 16px;">
+                              <span style="color: #ffffff; font-size: 36px; font-weight: 700; letter-spacing: 8px; font-family: monospace;">${code}</span>
+                            </div>
+                          </td>
+                        </tr>
+                      </table>
+                      <div style="background: rgba(251, 191, 36, 0.1); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+                        <p style="margin: 0; color: #fbbf24; font-size: 14px;">⏰ <strong>Atenção:</strong> Este código expira em <strong>10 minutos</strong>.</p>
+                      </div>
+                      <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px;">
+                        <p style="margin: 0; color: #f87171; font-size: 14px;">🛡️ <strong>Não foi você?</strong> Ignore este email.</p>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background: rgba(0,0,0,0.3); padding: 30px; text-align: center;">
+                      <p style="margin: 0; color: #6b7280; font-size: 13px;">© ${new Date().getFullYear()} Leilão no Zap</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `;
+
+      // Envia email via Brevo API diretamente
+      const brevoResponse = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': 'xsmtpsib-2dac89dc7b6c36da8498ca124e41003dfc53f32413c193b74ec22f3183ece960-JYNspueaUHRtbvGV',
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify({
+          sender: { name: 'Leilão no Zap', email: 'no-reply@leilaonozap.com' },
+          to: [{ email: normalizedResetEmail }],
+          subject: '🔐 Código de Verificação - Leilão no Zap',
+          htmlContent: emailHtml
+        })
       });
 
-      console.log('📬 Resposta da função:', result);
+      console.log('📬 Status Brevo:', brevoResponse.status);
 
-      // Verifica se houve erro na resposta da função
-      if (result?.data?.error) {
-        console.error('❌ Erro na resposta:', result.data.error);
-        throw new Error(result.data.error);
+      if (!brevoResponse.ok) {
+        const errorText = await brevoResponse.text();
+        console.error('❌ Erro Brevo:', errorText);
+        throw new Error('Falha ao enviar email via Brevo');
       }
-      
-      if (!result?.data?.success) {
-        console.error('❌ Função não retornou success');
-        throw new Error('Falha ao enviar email');
-      }
-      
-      console.log('✅ Email enviado com sucesso!');
+
+      console.log('✅ Email enviado com sucesso via Brevo!');
 
       await base44.entities.SystemLog.create({
         step: 'Password_Reset_Code_Sent',
