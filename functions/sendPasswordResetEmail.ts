@@ -271,18 +271,17 @@ Deno.serve(async (req: Request) => {
 
   try {
     console.log('📧 [sendPasswordResetEmail] Iniciando função...');
-    const base44 = createClientFromRequest(req);
-    const payload = await req.json().catch((err) => {
-      console.error('❌ Erro ao fazer parse do JSON:', err);
-      return {};
-    });
 
-    console.log('📦 Payload recebido:', { email: payload?.email, hasCode: !!payload?.code, userName: payload?.userName });
+    // IMPORTANTE: Fazer parse do JSON ANTES de criar o client
+    const base44 = createClientFromRequest(req);
+    const payload = await req.json();
+
+    console.log('📦 Payload recebido:', JSON.stringify(payload));
 
     const { email, code, userName } = payload;
 
     if (!email) {
-      console.error('❌ Email não fornecido');
+      console.error('❌ Email não fornecido. Payload:', payload);
       return Response.json({ error: 'Email é obrigatório' }, { status: 400 });
     }
 
