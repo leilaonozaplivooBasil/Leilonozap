@@ -268,14 +268,19 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
       setResetUserId(user.id);
 
       // Envia email via Brevo usando a cloud function
-      const response = await base44.functions.invoke('sendPasswordResetEmail', {
+      const result = await base44.functions.invoke('sendPasswordResetEmail', {
         email: normalizedResetEmail,
         code: code,
         userName: user.full_name?.split(' ')[0] || 'Usuário'
       });
 
-      if (response?.error) {
-        throw new Error(response.error);
+      // Verifica se houve erro na resposta da função
+      if (result?.data?.error) {
+        throw new Error(result.data.error);
+      }
+      
+      if (!result?.data?.success) {
+        throw new Error('Falha ao enviar email');
       }
 
       await base44.entities.SystemLog.create({
