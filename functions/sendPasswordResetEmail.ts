@@ -216,12 +216,14 @@ function generateResetToken(): string {
 
 // Enviar email via SMTP Brevo
 async function sendEmailViaSMTP(to: string, subject: string, htmlContent: string): Promise<boolean> {
+  let client: SMTPClient | null = null;
+  
   try {
-    console.log('📧 Configurando cliente SMTP...');
-    console.log('📧 Destinatário:', to);
-    console.log('📝 Assunto:', subject);
+    console.log('📧 [SMTP] Configurando cliente SMTP...');
+    console.log('📧 [SMTP] Destinatário:', to);
+    console.log('📝 [SMTP] Assunto:', subject);
 
-    const client = new SMTPClient({
+    client = new SMTPClient({
       connection: {
         hostname: SMTP_CONFIG.host,
         port: SMTP_CONFIG.port,
@@ -233,9 +235,9 @@ async function sendEmailViaSMTP(to: string, subject: string, htmlContent: string
       },
     });
 
-    console.log('🔌 Conectando ao servidor SMTP...');
+    console.log('🔌 [SMTP] Conectando ao servidor SMTP...');
     
-    await client.send({
+    const sendResult = await client.send({
       from: "Leilão no Zap <no-reply@leilaonozap.com>",
       to: to,
       subject: subject,
@@ -243,18 +245,26 @@ async function sendEmailViaSMTP(to: string, subject: string, htmlContent: string
       html: htmlContent,
     });
 
-    console.log('✅ Email enviado via SMTP para:', to);
-    
-    await client.close();
+    console.log('📬 [SMTP] Resultado do envio:', sendResult);
+    console.log('✅ [SMTP] Email enviado com sucesso para:', to);
     
     return true;
   } catch (error) {
-    console.error('❌ Erro ao enviar email via SMTP:', error);
+    console.error('❌ [SMTP] Erro ao enviar email:', error);
     if (error instanceof Error) {
-      console.error('   Mensagem:', error.message);
-      console.error('   Stack:', error.stack);
+      console.error('   [SMTP] Mensagem:', error.message);
+      console.error('   [SMTP] Stack:', error.stack);
     }
-    return false;
+    throw error; // Propaga o erro para o handler principal
+  } finally {
+    if (client) {
+      try {
+        await client.close();
+        console.log('🔌 [SMTP] Conexão fechada');
+      } catch (closeError) {
+        console.warn('⚠️ [SMTP] Erro ao fechar conexão:', closeError);
+      }
+    }
   }
 }
 
