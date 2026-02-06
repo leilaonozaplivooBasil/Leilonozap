@@ -356,16 +356,18 @@ Deno.serve(async (req: Request) => {
 
     // Gerar template e enviar email
     const emailHtml = getLinkEmailTemplate(name, resetLink);
-    const emailSent = await sendEmailViaSMTP(
-      normalizedEmail,
-      '🔐 Recuperação de Senha - Leilão no Zap',
-      emailHtml
-    );
-
-    if (!emailSent) {
-      console.error('❌ Falha ao enviar email de recuperação');
+    
+    try {
+      await sendEmailViaSMTP(
+        normalizedEmail,
+        '🔐 Recuperação de Senha - Leilão no Zap',
+        emailHtml
+      );
+    } catch (smtpError) {
+      console.error('❌ Falha ao enviar email de recuperação:', smtpError);
       return Response.json({
-        error: 'Não foi possível enviar o email. Tente novamente.'
+        error: 'Não foi possível enviar o email. Tente novamente.',
+        details: smtpError instanceof Error ? smtpError.message : 'Erro desconhecido'
       }, { status: 500 });
     }
 
