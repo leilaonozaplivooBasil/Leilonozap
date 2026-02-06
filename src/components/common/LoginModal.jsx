@@ -278,13 +278,16 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
       console.log('📬 Resposta completa:', JSON.stringify(result, null, 2));
 
+      // Acessa a resposta correta (result.data)
+      const responseData = result.data;
+
       // Verifica erro
-      if (result?.error) {
-        console.error('❌ Erro retornado:', result.error);
-        throw new Error(result.error);
+      if (responseData?.error) {
+        console.error('❌ Erro retornado:', responseData.error);
+        throw new Error(responseData.error);
       }
-      
-      if (!result?.success) {
+
+      if (!responseData?.success) {
         console.error('❌ Sucesso = false');
         throw new Error('Falha ao enviar email');
       }
