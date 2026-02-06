@@ -315,7 +315,12 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
   // Passo 2: Verificar código
   const handleVerifyCode = () => {
-    if (verificationCode === generatedCode) {
+    console.log('🔍 Verificando código...');
+    console.log('   Código digitado:', verificationCode);
+    console.log('   Código esperado:', generatedCode);
+    console.log('   Tipos:', typeof verificationCode, typeof generatedCode);
+    
+    if (verificationCode.trim() === generatedCode.trim()) {
       setResetStep('newPassword');
       setResetSuccessMessage('✅ Código verificado! Defina sua nova senha.');
     } else {
