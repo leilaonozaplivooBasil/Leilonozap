@@ -205,57 +205,49 @@ function generateResetToken(): string {
   return `${timestamp}-${randomPart}`;
 }
 
-// Enviar email via SMTP Brevo
-async function sendEmailViaSMTP(to: string, subject: string, htmlContent: string): Promise<boolean> {
-  let client: SMTPClient | null = null;
-  
+// Enviar email via API REST do Brevo
+async function sendEmailViaBrevoAPI(to: string, subject: string, htmlContent: string): Promise<boolean> {
   try {
-    console.log('📧 [SMTP] Configurando cliente SMTP...');
-    console.log('📧 [SMTP] Destinatário:', to);
-    console.log('📝 [SMTP] Assunto:', subject);
+    const apiKey = Deno.env.get('BREVO_API_KEY');
+    
+    if (!apiKey) {
+      throw new Error('BREVO_API_KEY não configurada');
+    }
 
-    client = new SMTPClient({
-      connection: {
-        hostname: SMTP_CONFIG.host,
-        port: SMTP_CONFIG.port,
-        tls: true,
-        auth: {
-          username: SMTP_CONFIG.username,
-          password: SMTP_CONFIG.password,
-        },
+    console.log('📧 [Brevo API] Enviando email para:', to);
+    console.log('📝 [Brevo API] Assunto:', subject);
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': apiKey
       },
+      body: JSON.stringify({
+        sender: {
+          name: "Leilão no Zap",
+          email: "no-reply@leilaonozap.com"
+        },
+        to: [{ email: to }],
+        subject: subject,
+        htmlContent: htmlContent
+      })
     });
 
-    console.log('🔌 [SMTP] Conectando ao servidor SMTP...');
+    const responseData = await response.json();
     
-    const sendResult = await client.send({
-      from: "Leilão no Zap <no-reply@leilaonozap.com>",
-      to: to,
-      subject: subject,
-      content: "auto",
-      html: htmlContent,
-    });
+    if (!response.ok) {
+      console.error('❌ [Brevo API] Erro na resposta:', response.status, responseData);
+      throw new Error(`Brevo API error: ${response.status} - ${JSON.stringify(responseData)}`);
+    }
 
-    console.log('📬 [SMTP] Resultado do envio:', sendResult);
-    console.log('✅ [SMTP] Email enviado com sucesso para:', to);
-    
+    console.log('✅ [Brevo API] Email enviado com sucesso:', responseData);
     return true;
+    
   } catch (error) {
-    console.error('❌ [SMTP] Erro ao enviar email:', error);
-    if (error instanceof Error) {
-      console.error('   [SMTP] Mensagem:', error.message);
-      console.error('   [SMTP] Stack:', error.stack);
-    }
-    throw error; // Propaga o erro para o handler principal
-  } finally {
-    if (client) {
-      try {
-        await client.close();
-        console.log('🔌 [SMTP] Conexão fechada');
-      } catch (closeError) {
-        console.warn('⚠️ [SMTP] Erro ao fechar conexão:', closeError);
-      }
-    }
+    console.error('❌ [Brevo API] Erro ao enviar email:', error);
+    throw error;
   }
 }
 
