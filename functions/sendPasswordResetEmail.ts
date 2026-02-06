@@ -307,21 +307,23 @@ Deno.serve(async (req: Request) => {
       const emailHtml = getCodeEmailTemplate(name, code);
 
       console.log('📨 Enviando via SMTP...');
-      const emailSent = await sendEmailViaSMTP(
-        normalizedEmail,
-        '🔐 Código de Verificação - Leilão no Zap',
-        emailHtml
-      );
+      
+      try {
+        await sendEmailViaSMTP(
+          normalizedEmail,
+          '🔐 Código de Verificação - Leilão no Zap',
+          emailHtml
+        );
 
-      if (!emailSent) {
-        console.error('❌ sendEmailViaSMTP retornou false');
+        console.log(`✅ Código de verificação enviado para ${normalizedEmail}`);
+        return Response.json({ success: true, message: 'Código enviado com sucesso.' });
+      } catch (smtpError) {
+        console.error('❌ Erro ao enviar via SMTP:', smtpError);
         return Response.json({
-          error: 'Não foi possível enviar o email. Tente novamente.'
+          error: 'Não foi possível enviar o email. Tente novamente.',
+          details: smtpError instanceof Error ? smtpError.message : 'Erro desconhecido'
         }, { status: 500 });
       }
-
-      console.log(`✅ Código de verificação enviado para ${normalizedEmail}`);
-      return Response.json({ success: true, message: 'Código enviado com sucesso.' });
     }
 
     // Fluxo alternativo: enviar link de reset (usado pelas páginas ForgotPassword/ResetPassword)
