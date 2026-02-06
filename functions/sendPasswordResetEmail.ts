@@ -341,7 +341,7 @@ Deno.serve(async (req: Request) => {
     const emailHtml = getLinkEmailTemplate(name, resetLink);
     
     try {
-      await sendEmailViaSMTP(
+      await sendEmailViaBrevoAPI(
         normalizedEmail,
         '🔐 Recuperação de Senha - Leilão no Zap',
         emailHtml
