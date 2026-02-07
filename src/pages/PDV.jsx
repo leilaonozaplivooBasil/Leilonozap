@@ -1053,15 +1053,10 @@ ${boletoInfo}================================
     if (!confirm(`⚠️ Cancelar venda de ${sale.product_description}?\n\nIsso reverterá:\n- Quantidade ao estoque\n- Comissões\n- Impostos registrados`)) return;
 
     try {
-      // 1️⃣ Deleta comissões relacionadas primeiro
-      const commissions = await base44.entities.SaleCommission.filter({ sale_id: sale.id });
-      for (const commission of commissions) {
-        await base44.entities.SaleCommission.delete(commission.id);
-      }
-
-      // 2️⃣ Busca o produto original
-      const product = await base44.entities.Product.list();
-      const targetProduct = product.find(p => p.id === sale.product_id);
+      // 2️⃣ Busca o produto original (Product tem RLS read: null, então funciona)
+      const prodResp = await getPDVData({ ...getAdminCredentials(), action: 'products' });
+      const allProds = prodResp?.data?.products || [];
+      const targetProduct = allProds.find(p => p.id === sale.product_id);
       
       if (!targetProduct) {
         alert('❌ Produto não encontrado');
@@ -1073,16 +1068,16 @@ ${boletoInfo}================================
       const restoredSoldAmount = Math.max(0, (targetProduct.sold_amount || 0) - (sale.total_amount || 0));
       const restoredProfit = restoredSoldAmount - ((targetProduct.cost_price || 0) * ((targetProduct.quantity_sold || 0) - (sale.quantity_sold || 0)));
 
-      await base44.entities.Product.update(sale.product_id, {
+      await pdvAction({ ...getAdminCredentials(), action: 'updateProduct', product_id: sale.product_id, product_data: {
         quantity: restoredQuantity,
         quantity_sold: Math.max(0, (targetProduct.quantity_sold || 0) - (sale.quantity_sold || 0)),
         status: 'ESTOQUE',
         sold_amount: restoredSoldAmount,
         profit: restoredProfit
-      });
+      }});
 
-      // 4️⃣ Deleta a venda
-      await base44.entities.Sale.delete(sale.id);
+      // 4️⃣ Deleta a venda e comissões
+      await pdvAction({ ...getAdminCredentials(), action: 'deleteSale', sale_id: sale.id });
 
       alert('✅ Venda cancelada! Produto retornou ao estoque e comissões foram revertidas.');
       await loadTodaySales();
