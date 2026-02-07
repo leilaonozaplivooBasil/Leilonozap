@@ -302,9 +302,9 @@ export default function PDV() {
 
   const loadTaxSettings = async () => {
     try {
-      const settings = await base44.entities.TaxSettings.list();
-      if (settings && settings.length > 0) {
-        setTaxSettings(settings[0]);
+      const response = await getPDVData({ ...getAdminCredentials(), action: 'taxSettings' });
+      if (response?.data?.taxSettings) {
+        setTaxSettings(response.data.taxSettings);
       } else {
         // Cria configuração padrão se não existir
         const defaultSettings = {
@@ -317,8 +317,8 @@ export default function PDV() {
           profit_presumption_rate: 32,
           is_active: true
         };
-        const created = await base44.entities.TaxSettings.create(defaultSettings);
-        setTaxSettings(created);
+        const createResp = await pdvAction({ ...getAdminCredentials(), action: 'createTaxSettings', settings_data: defaultSettings });
+        setTaxSettings(createResp?.data?.taxSettings || defaultSettings);
       }
     } catch (error) {
       console.error('Erro ao carregar impostos:', error);
