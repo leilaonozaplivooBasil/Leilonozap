@@ -193,7 +193,8 @@ export default function PDV() {
 
   const loadAllSales = async () => {
     try {
-      const sales = await base44.entities.Sale.list('-sale_datetime', 5000);
+      const response = await getPDVData({ ...getAdminCredentials(), action: 'sales' });
+      const sales = response?.data?.allSales || [];
       setAllSales(sales);
       
       // Carrega dados de vendedores para o PDF
