@@ -268,8 +268,8 @@ export default function PDV() {
 
   const loadProducts = async () => {
     try {
-      const allProducts = await base44.entities.Product.filter({ status: 'ESTOQUE' });
-      const inStock = allProducts.filter(p => p.quantity > 0);
+      const response = await getPDVData({ ...getAdminCredentials(), action: 'products' });
+      const inStock = response?.data?.products || [];
       setProducts(inStock);
     } catch (error) {
       console.error('Erro ao carregar produtos:', error);
