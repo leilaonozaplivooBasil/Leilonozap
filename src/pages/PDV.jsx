@@ -1026,7 +1026,7 @@ ${boletoInfo}================================
       const newTotalAmount = editSaleData.quantity_sold * editSaleData.unit_price;
       const itemTaxes = calculateTaxes(newTotalAmount);
       
-      await base44.entities.Sale.update(editingSale.id, {
+      await pdvAction({ ...getAdminCredentials(), action: 'updateSale', sale_id: editingSale.id, sale_data: {
         quantity_sold: parseInt(editSaleData.quantity_sold),
         unit_price: parseFloat(editSaleData.unit_price),
         total_amount: newTotalAmount,
@@ -1036,7 +1036,7 @@ ${boletoInfo}================================
         boleto_cliente: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_cliente : null,
         boleto_documento: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_documento : null,
         boleto_parcelas: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_parcelas : null
-      });
+      }});
 
       alert('✅ Venda atualizada com sucesso!');
       setShowEditSaleModal(false);
