@@ -524,10 +524,13 @@ export default function InvestorDashboard() {
                       }}
                       transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                     >
-                      R$ {totalProfit.toLocaleString('pt-BR')}
+                      R$ {totalPaidProfit.toLocaleString('pt-BR')}
                     </motion.span>
                   </div>
-                  <p className="text-sm text-gray-300 font-semibold">Lucro Estimado Total</p>
+                  <p className="text-sm text-gray-300 font-semibold">Lucro Contabilizado</p>
+                  {totalProfit > totalPaidProfit && (
+                    <p className="text-xs text-gray-500">de R$ {totalProfit.toLocaleString('pt-BR')} estimado</p>
+                  )}
                 </motion.div>
               </div>
             </div>
