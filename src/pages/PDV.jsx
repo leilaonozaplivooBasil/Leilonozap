@@ -329,9 +329,8 @@ export default function PDV() {
     try {
       console.log('🔍 Carregando sessões de caixa...');
       
-      // Busca todas as sessões de caixa fechadas
-      const allSessions = await base44.entities.CashRegister.list('-closing_time', 500);
-      const closedSessions = allSessions.filter(s => s.status === 'closed');
+      const response = await getPDVData({ ...getAdminCredentials(), action: 'cashSessions' });
+      const closedSessions = response?.data?.cashSessions || [];
       console.log('✅ Total de sessões:', closedSessions.length);
       
       setCashSessions(closedSessions);
