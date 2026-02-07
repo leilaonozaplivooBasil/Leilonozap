@@ -212,7 +212,8 @@ export default function PDV() {
         return;
       }
 
-      const allCommissions = await base44.entities.SaleCommission.list();
+      const commResponse = await getPDVData({ ...getAdminCredentials(), action: 'commissions' });
+      const allCommissions = commResponse?.data?.commissions || [];
       const commissionsForSales = allCommissions.filter(c => saleIds.includes(c.sale_id));
       
       // Agrupa por venda
