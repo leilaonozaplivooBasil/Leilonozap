@@ -792,7 +792,7 @@ Transações: ${selectedSession.transactions_count || 0}
           boleto_cliente: paymentMethod === 'BOLETO PARCELADO' ? boletoData.cliente : null,
           boleto_documento: paymentMethod === 'BOLETO PARCELADO' ? boletoData.documento : null,
           boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
-        });
+        }});
 
         const saleRecord = saleResp?.data?.sale;
 
