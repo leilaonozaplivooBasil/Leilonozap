@@ -704,17 +704,20 @@ export default function InvestorDashboard() {
                         <div className="flex items-center gap-2 sm:gap-3">
                           <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                           <div>
-                            <p className="text-xs sm:text-sm text-gray-400">Retorno Previsto</p>
+                            <p className="text-xs sm:text-sm text-gray-400">Encerramento do Plano (12 meses)</p>
                             <p className="font-bold text-white text-sm sm:text-base">
                               {new Date(investment.estimatedReturn).toLocaleDateString('pt-BR')}
                             </p>
                           </div>
                         </div>
                         <div className="text-left sm:text-right w-full sm:w-auto">
-                          <p className="text-xl sm:text-2xl font-bold text-green-400">
-                            R$ {(investment.amount + investment.estimatedProfit).toLocaleString('pt-BR')}
+                          <p className="text-lg sm:text-xl font-bold text-green-400">
+                            R$ {(investment.paidProfit || 0).toLocaleString('pt-BR')}
                           </p>
-                          <p className="text-xs text-gray-400">valor total</p>
+                          <p className="text-xs text-gray-400">lucro contabilizado</p>
+                          <p className="text-xs text-gray-500">
+                            Total estimado: R$ {(investment.amount + investment.estimatedProfit).toLocaleString('pt-BR')}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
