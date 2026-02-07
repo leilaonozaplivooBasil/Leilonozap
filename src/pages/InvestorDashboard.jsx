@@ -152,6 +152,7 @@ export default function InvestorDashboard() {
                 console.log(`📦 Processando plano ${index + 1}/${purchases.length}:`, purchase.id);
                 // Se for investimento com rendimento
                 if (purchase.is_investment) {
+                  const rate = (purchase.investment_rate || 3) / 100;
                   investments.push({
                     id: purchase.id,
                     plan: `${purchase.plan_name} - Investimento ${purchase.investment_rate}%`,
@@ -163,7 +164,7 @@ export default function InvestorDashboard() {
                     investmentRate: purchase.investment_rate,
                     accumulatedReturn: purchase.accumulated_return || 0,
                     withdrawalDate: purchase.withdrawal_available_date,
-                    estimatedProfit: Math.round(purchase.plan_amount * 0.03),
+                    estimatedProfit: Math.round(purchase.plan_amount * rate),
                     estimatedReturn: purchase.withdrawal_available_date || new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
                   });
                 } else {
