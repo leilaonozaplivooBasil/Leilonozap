@@ -168,7 +168,8 @@ export default function InvestorDashboard() {
                     estimatedReturn: purchase.withdrawal_available_date || new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
                   });
                 } else {
-                  // Plano de compra normal (3% em 60 dias)
+                  // Plano de compra normal - taxa vem da entidade (padrão 3%)
+                  const purchaseRate = (purchase.investment_rate || 3) / 100;
                   investments.push({
                     id: purchase.id,
                     plan: purchase.plan_name,
@@ -177,7 +178,7 @@ export default function InvestorDashboard() {
                     currentStep: 0,
                     products: [],
                     isInvestment: false,
-                    estimatedProfit: Math.round(purchase.plan_amount * 0.03),
+                    estimatedProfit: Math.round(purchase.plan_amount * purchaseRate),
                     estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
                   });
                   console.log('✅ Plano de compra adicionado:', purchase.plan_name);
