@@ -395,19 +395,21 @@ Transações: ${selectedSession.transactions_count || 0}
 
   const loadCurrentCashRegister = async () => {
     try {
-      const openRegisters = await base44.entities.CashRegister.filter({ status: 'open' });
-      if (openRegisters.length > 0) {
-        const register = openRegisters[0];
+      const response = await getPDVData({ ...getAdminCredentials(), action: 'cashRegister' });
+      const register = response?.data?.currentCashRegister;
+      
+      if (register) {
         setCurrentCashRegister(register);
         console.log('✅ Caixa aberto:', register);
         
         // Carrega vendas deste caixa específico
-        const allSales = await base44.entities.Sale.list('-sale_datetime', 1000);
-        const salesInSession = allSales.filter(sale => {
-          const saleTime = new Date(sale.sale_datetime).getTime();
-          const openTime = new Date(register.opening_time).getTime();
-          return saleTime >= openTime;
+        const salesResp = await pdvAction({
+          ...getAdminCredentials(),
+          action: 'getSessionSales',
+          opening_time: register.opening_time,
+          closing_time: null
         });
+        const salesInSession = salesResp?.data?.sales || [];
         
         console.log(`✅ ${salesInSession.length} vendas carregadas do caixa atual`);
         setTodaySales(salesInSession);
