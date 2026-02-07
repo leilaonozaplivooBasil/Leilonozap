@@ -514,21 +514,14 @@ Transações: ${selectedSession.transactions_count || 0}
 
   const openCashRegister = async (isAutomatic = false) => {
     try {
-      const newRegister = await base44.entities.CashRegister.create({
-        status: 'open',
+      const response = await pdvAction({
+        ...getAdminCredentials(),
+        action: 'openCashRegister',
         operator_name: isAutomatic ? 'Sistema (Automático)' : (currentUser?.full_name || 'Admin'),
-        opening_time: new Date().toISOString(),
-        opening_balance: parseFloat(openingBalance) || 0,
-        total_sales: 0,
-        total_pix: 0,
-        total_cash: 0,
-        total_debit: 0,
-        total_credit: 0,
-        total_boleto: 0,
-        transactions_count: 0
+        opening_balance: parseFloat(openingBalance) || 0
       });
       
-      setCurrentCashRegister(newRegister);
+      setCurrentCashRegister(response?.data?.cashRegister);
       setShowOpenCashModal(false);
       setOpeningBalance(0);
       
