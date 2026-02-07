@@ -124,13 +124,19 @@ export default function InvestorDashboard() {
             
             console.log('🔍 Buscando planos para user_id:', user.id);
             
-            const purchases = await base44.entities.PartnerPlanPurchase.filter({ 
-              user_id: user.id,
+            // 🔧 SOLUÇÃO: Busca TODOS os planos ativos e filtra no JavaScript
+            // (problema: query composta do SDK não está funcionando corretamente)
+            const allActivePurchases = await base44.entities.PartnerPlanPurchase.filter({ 
               status: 'active'
-            }, '-activated_at', 100);
+            }, '-activated_at', 500);
             
-            console.log('📦 Planos encontrados:', purchases?.length || 0);
-            console.log('📦 Query executada:', { user_id: user.id, status: 'active' });
+            console.log('📦 Total de planos ativos no sistema:', allActivePurchases?.length || 0);
+            
+            // Filtra manualmente pelos planos do usuário atual
+            const purchases = allActivePurchases.filter(p => p.user_id === user.id);
+            
+            console.log('📦 Planos encontrados para este usuário:', purchases?.length || 0);
+            console.log('📦 IDs encontrados:', purchases?.map(p => p.id));
             
             if (purchases && purchases.length > 0) {
               console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
