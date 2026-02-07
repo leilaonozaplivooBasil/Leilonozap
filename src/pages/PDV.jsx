@@ -770,7 +770,7 @@ Transações: ${selectedSession.transactions_count || 0}
         
         const sellerData = selectedSeller ? sellers.find(s => s.id === selectedSeller) : null;
         
-        const saleRecord = await base44.entities.Sale.create({
+        const saleResp = await pdvAction({ ...getAdminCredentials(), action: 'createSale', sale_data: {
           order_code: orderCode,
           product_id: product.id,
           product_description: product.description,
