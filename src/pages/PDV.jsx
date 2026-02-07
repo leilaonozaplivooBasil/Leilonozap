@@ -476,7 +476,8 @@ Transações: ${selectedSession.transactions_count || 0}
 
   const loadSellerStats = async () => {
     try {
-      const allSales = await base44.entities.Sale.list('-sale_datetime', 2000);
+      const resp = await getPDVData({ ...getAdminCredentials(), action: 'sales' });
+      const allSales = resp?.data?.allSales || [];
       
       const sellerMap = {};
       allSales.forEach(sale => {
