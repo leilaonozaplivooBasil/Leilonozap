@@ -115,13 +115,22 @@ export default function InvestorDashboard() {
           try {
             // 1️⃣ PRIORIDADE: Buscar compras no sistema novo (PartnerPlanPurchase)
             // 🔥 BUSCA POR USER_ID (IMUTÁVEL E CONFIÁVEL)
+            console.log('🔍 DEBUG - User object:', { id: user.id, email: user.email, full_name: user.full_name });
+            
+            if (!user.id) {
+              console.error('❌ ERRO CRÍTICO: user.id está undefined!');
+              throw new Error('User ID não encontrado');
+            }
+            
+            console.log('🔍 Buscando planos para user_id:', user.id);
+            
             const purchases = await base44.entities.PartnerPlanPurchase.filter({ 
               user_id: user.id,
               status: 'active'
             }, '-activated_at', 100);
             
-            console.log('🔍 Buscando planos para user_id:', user.id);
             console.log('📦 Planos encontrados:', purchases?.length || 0);
+            console.log('📦 Query executada:', { user_id: user.id, status: 'active' });
             
             if (purchases && purchases.length > 0) {
               console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
