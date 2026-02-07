@@ -557,8 +557,11 @@ export default function InvestorDashboard() {
                   <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-gray-400 text-xs sm:text-sm">Lucro Estimado</p>
-                  <p className="text-xl sm:text-2xl font-bold text-green-400">+ R$ {totalProfit.toLocaleString('pt-BR')}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm">Lucro Contabilizado / Total</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-400">
+                    R$ {totalPaidProfit.toLocaleString('pt-BR')} 
+                    <span className="text-sm text-gray-500 font-normal"> / R$ {totalProfit.toLocaleString('pt-BR')}</span>
+                  </p>
                 </div>
               </div>
             </CardContent>
