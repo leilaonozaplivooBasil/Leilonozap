@@ -114,13 +114,13 @@ export default function InvestorDashboard() {
           
           try {
             // 1️⃣ PRIORIDADE: Buscar compras no sistema novo (PartnerPlanPurchase)
-            // 🔥 BUSCA POR EMAIL (MAIS CONFIÁVEL)
+            // 🔥 BUSCA POR USER_ID (IMUTÁVEL E CONFIÁVEL)
             const purchases = await base44.entities.PartnerPlanPurchase.filter({ 
-              user_email: user.email,
+              user_id: user.id,
               status: 'active'
             }, '-activated_at', 100);
             
-            console.log('🔍 Buscando planos para email:', user.email);
+            console.log('🔍 Buscando planos para user_id:', user.id);
             console.log('📦 Planos encontrados:', purchases?.length || 0);
             
             if (purchases && purchases.length > 0) {
