@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateContractPDF } from '@/functions/generateContractPDF';
+import { getPartnerPurchases } from '@/functions/getPartnerPurchases';
 import { toast } from 'sonner';
 
 import { 
