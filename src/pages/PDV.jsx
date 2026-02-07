@@ -341,13 +341,13 @@ export default function PDV() {
 
   const loadSessionSales = async (session) => {
     try {
-      const allSales = await base44.entities.Sale.list('-sale_datetime', 2000);
-      const salesInSession = allSales.filter(sale => {
-        const saleTime = new Date(sale.sale_datetime).getTime();
-        const openTime = new Date(session.opening_time).getTime();
-        const closeTime = session.closing_time ? new Date(session.closing_time).getTime() : Date.now();
-        return saleTime >= openTime && saleTime <= closeTime;
+      const response = await pdvAction({
+        ...getAdminCredentials(),
+        action: 'getSessionSales',
+        opening_time: session.opening_time,
+        closing_time: session.closing_time
       });
+      const salesInSession = response?.data?.sales || [];
       
       setSessionSales(salesInSession);
       setSelectedSession(session);
