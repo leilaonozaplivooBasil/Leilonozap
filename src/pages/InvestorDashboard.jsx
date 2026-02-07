@@ -607,7 +607,12 @@ export default function InvestorDashboard() {
                         </div>
                         <div className="text-left sm:text-right w-full sm:w-auto">
                           <p className="text-xl sm:text-2xl font-bold text-white">R$ {investment.amount.toLocaleString('pt-BR')}</p>
-                          <p className="text-xs sm:text-sm text-green-400 font-semibold">+ R$ {investment.estimatedProfit.toLocaleString('pt-BR')} lucro</p>
+                          <p className="text-xs sm:text-sm text-green-400 font-semibold">
+                            R$ {(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido de R$ {(investment.estimatedProfit || 0).toLocaleString('pt-BR')}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {investment.paidPeriods || 0}/{investment.totalPeriods || 12} parcelas • {investment.investmentRate || 3}% ao mês
+                          </p>
                         </div>
                       </div>
                     </CardHeader>
