@@ -110,9 +110,9 @@ import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
 import ProtectionDashboard from './pages/ProtectionDashboard';
 import Register from './pages/Register';
-import ResetPassword from './pages/ResetPassword';
 import RegisterBatches from './pages/RegisterBatches';
 import RegisterLicensee from './pages/RegisterLicensee';
+import ResetPassword from './pages/ResetPassword';
 import ShippingSettings from './pages/ShippingSettings';
 import StockPosition from './pages/StockPosition';
 import StoreRegistration from './pages/StoreRegistration';
@@ -191,9 +191,9 @@ export const PAGES = {
     "ProtecaoCriacao": ProtecaoCriacao,
     "ProtectionDashboard": ProtectionDashboard,
     "Register": Register,
-    "ResetPassword": ResetPassword,
     "RegisterBatches": RegisterBatches,
     "RegisterLicensee": RegisterLicensee,
+    "ResetPassword": ResetPassword,
     "ShippingSettings": ShippingSettings,
     "StockPosition": StockPosition,
     "StoreRegistration": StoreRegistration,
