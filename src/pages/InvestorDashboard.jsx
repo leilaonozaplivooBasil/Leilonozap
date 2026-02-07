@@ -301,7 +301,7 @@ export default function InvestorDashboard() {
     }
   ];
 
-  const investmentSteps = [
+  const getInvestmentSteps = (investment) => [
     {
       id: 1,
       title: "Produto Comprado",
@@ -346,7 +346,9 @@ export default function InvestorDashboard() {
       id: 5,
       title: "Lucro Contabilizado",
       icon: DollarSign,
-      description: "Seu retorno está garantido!",
+      description: investment 
+        ? `${investment.paidPeriods || 0} de ${investment.totalPeriods || 12} parcelas pagas • R$ ${(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido`
+        : "Seu retorno está garantido!",
       color: "text-green-400",
       bgColor: "bg-green-500/20",
       borderColor: "border-green-500/30",
