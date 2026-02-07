@@ -128,7 +128,9 @@ export default function InvestorDashboard() {
             const response = await getPartnerPurchases({ 
               mode: 'user', 
               user_id: user.id, 
-              status_filter: 'active' 
+              status_filter: 'active',
+              app_user_email: user.email,
+              app_user_id: user.id
             });
             const purchases = response?.data?.purchases || [];
             
