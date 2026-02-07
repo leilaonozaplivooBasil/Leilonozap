@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
+import { getPDVData } from '@/functions/getPDVData';
+import { pdvAction } from '@/functions/pdvAction';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,6 +24,18 @@ import DailyReportPDF from '@/components/pdv/DailyReportPDF';
 import { Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
+
+// Helper para obter credenciais do admin AppUser para bypassa RLS
+const getAdminCredentials = () => {
+  try {
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      return { app_user_email: user.email, app_user_id: user.id };
+    }
+  } catch (e) {}
+  return {};
+};
 
 export default function PDV() {
   const [products, setProducts] = useState([]);
