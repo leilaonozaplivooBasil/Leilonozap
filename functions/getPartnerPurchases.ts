@@ -3,21 +3,47 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
+    const body = await req.json().catch(() => ({}));
+    const { user_id, status_filter, mode, app_user_email, app_user_id } = body;
 
-    if (!user) {
+    // Verifica autenticação: plataforma OU AppUser
+    let isAuthenticated = false;
+    let isPlatformAdmin = false;
+
+    try {
+      const user = await base44.auth.me();
+      if (user) {
+        isAuthenticated = true;
+        if (user.role === 'admin') isPlatformAdmin = true;
+      }
+    } catch (e) {
+      // Sem token de plataforma - tenta via AppUser
+    }
+
+    // Fallback: verifica via AppUser
+    if (!isAuthenticated) {
+      if (app_user_email) {
+        const appUsers = await base44.asServiceRole.entities.AppUser.filter({ email: app_user_email });
+        if (appUsers.length > 0) {
+          isAuthenticated = true;
+          if (appUsers[0].role === 'admin') isPlatformAdmin = true;
+        }
+      } else if (app_user_id) {
+        const appUsers = await base44.asServiceRole.entities.AppUser.filter({ id: app_user_id });
+        if (appUsers.length > 0) {
+          isAuthenticated = true;
+          if (appUsers[0].role === 'admin') isPlatformAdmin = true;
+        }
+      }
+    }
+
+    if (!isAuthenticated) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const { user_id, status_filter, mode } = body;
-
     // mode = "admin" → retorna TODOS os ativos (para ActivePartners)
-    // mode = "user"  → retorna apenas do user_id informado (para InvestorDashboard)
-
     if (mode === 'admin') {
-      // Verifica se é admin
-      if (user.role !== 'admin') {
+      if (!isPlatformAdmin) {
         return Response.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
       }
 
@@ -30,8 +56,8 @@ Deno.serve(async (req) => {
       return Response.json({ success: true, purchases });
     }
 
+    // mode = "user" → retorna apenas do user_id informado (para InvestorDashboard)
     if (mode === 'user' && user_id) {
-      // Busca planos de um usuário específico
       const filter = { user_id };
       if (status_filter) {
         filter.status = status_filter;
