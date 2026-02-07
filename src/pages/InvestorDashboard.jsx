@@ -151,8 +151,17 @@ export default function InvestorDashboard() {
               purchases.forEach((purchase, index) => {
                 console.log(`📦 Processando plano ${index + 1}/${purchases.length}:`, purchase.id);
                 // Se for investimento com rendimento
+                // Taxa vem da entidade (padrão 3%)
+                const rate = (purchase.investment_rate || 3) / 100;
+                // Calcula parcelas pagas do purchase_periods
+                const periods = purchase.purchase_periods || [];
+                const paidPeriods = periods.filter(p => p.status === 'paid').length;
+                const monthlyProfit = Math.round(purchase.plan_amount * rate);
+                const paidProfit = paidPeriods * monthlyProfit;
+                // Lucro total estimado = 12 parcelas (1 ano)
+                const totalEstimatedProfit = 12 * monthlyProfit;
+                
                 if (purchase.is_investment) {
-                  const rate = (purchase.investment_rate || 3) / 100;
                   investments.push({
                     id: purchase.id,
                     plan: `${purchase.plan_name} - Investimento ${purchase.investment_rate}%`,
@@ -161,15 +170,18 @@ export default function InvestorDashboard() {
                     currentStep: 0,
                     products: [],
                     isInvestment: true,
-                    investmentRate: purchase.investment_rate,
+                    investmentRate: purchase.investment_rate || 3,
                     accumulatedReturn: purchase.accumulated_return || 0,
                     withdrawalDate: purchase.withdrawal_available_date,
-                    estimatedProfit: Math.round(purchase.plan_amount * rate),
+                    estimatedProfit: totalEstimatedProfit,
+                    monthlyProfit,
+                    paidPeriods,
+                    paidProfit,
+                    totalPeriods: 12,
+                    purchasePeriods: periods,
                     estimatedReturn: purchase.withdrawal_available_date || new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
                   });
                 } else {
-                  // Plano de compra normal - taxa vem da entidade (padrão 3%)
-                  const purchaseRate = (purchase.investment_rate || 3) / 100;
                   investments.push({
                     id: purchase.id,
                     plan: purchase.plan_name,
@@ -178,8 +190,14 @@ export default function InvestorDashboard() {
                     currentStep: 0,
                     products: [],
                     isInvestment: false,
-                    estimatedProfit: Math.round(purchase.plan_amount * purchaseRate),
-                    estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
+                    investmentRate: purchase.investment_rate || 3,
+                    estimatedProfit: totalEstimatedProfit,
+                    monthlyProfit,
+                    paidPeriods,
+                    paidProfit,
+                    totalPeriods: 12,
+                    purchasePeriods: periods,
+                    estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
                   });
                   console.log('✅ Plano de compra adicionado:', purchase.plan_name);
                 }
