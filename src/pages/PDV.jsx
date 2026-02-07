@@ -794,9 +794,11 @@ Transações: ${selectedSession.transactions_count || 0}
           boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
         });
 
+        const saleRecord = saleResp?.data?.sale;
+
         // 🆕 Registra comissão do licenciado
-        if (selectedSeller && comissaoLicenciadoItem > 0) {
-          await base44.entities.SaleCommission.create({
+        if (selectedSeller && comissaoLicenciadoItem > 0 && saleRecord) {
+          await pdvAction({ ...getAdminCredentials(), action: 'createSaleCommission', commission_data: {
             sale_id: saleRecord.id,
             seller_id: selectedSeller,
             seller_name: sellerData?.name || 'Vendedor',
@@ -804,15 +806,15 @@ Transações: ${selectedSession.transactions_count || 0}
             commission_value: commissionValue,
             commission_amount: comissaoLicenciadoItem,
             seller_role: 'licenciado'
-          });
+          }});
           
           console.log(`✅ Comissão licenciado: ${sellerData?.name} - R$ ${comissaoLicenciadoItem.toFixed(2)}`);
         }
 
         // 🆕 Registra comissão do licenciante
-        if (selectedLicenciante && comissaoLicencianteItem > 0) {
+        if (selectedLicenciante && comissaoLicencianteItem > 0 && saleRecord) {
           const licencianteData = sellers.find(s => s.id === selectedLicenciante);
-          await base44.entities.SaleCommission.create({
+          await pdvAction({ ...getAdminCredentials(), action: 'createSaleCommission', commission_data: {
             sale_id: saleRecord.id,
             seller_id: selectedLicenciante,
             seller_name: licencianteData?.name || 'Licenciante',
@@ -820,19 +822,19 @@ Transações: ${selectedSession.transactions_count || 0}
             commission_value: comissaoLicenciante,
             commission_amount: comissaoLicencianteItem,
             seller_role: 'licenciante'
-          });
+          }});
           
           console.log(`✅ Comissão licenciante: ${licencianteData?.name} - R$ ${comissaoLicencianteItem.toFixed(2)}`);
         }
 
         // Atualiza produto
-        await base44.entities.Product.update(product.id, {
+        await pdvAction({ ...getAdminCredentials(), action: 'updateProduct', product_id: product.id, product_data: {
           quantity: newQuantity,
           quantity_sold: novaQuantidadeVendida,
           status: newQuantity > 0 ? 'ESTOQUE' : `VENDIDO ${paymentMethod}`,
           sold_amount: novoSoldAmount,
           profit: novoLucroTotal
-        });
+        }});
 
         await new Promise(resolve => setTimeout(resolve, 300));
       }
