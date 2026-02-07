@@ -285,13 +285,13 @@ export default function PDV() {
 
       console.log('🔄 Recarregando vendas do caixa atual...');
       
-      // Busca vendas do período do caixa aberto (SEM CACHE)
-      const allSales = await base44.entities.Sale.list('-sale_datetime', 1000);
-      const salesInSession = allSales.filter(sale => {
-        const saleTime = new Date(sale.sale_datetime).getTime();
-        const openTime = new Date(currentCashRegister.opening_time).getTime();
-        return saleTime >= openTime;
+      const response = await pdvAction({ 
+        ...getAdminCredentials(), 
+        action: 'getSessionSales',
+        opening_time: currentCashRegister.opening_time,
+        closing_time: null
       });
+      const salesInSession = response?.data?.sales || [];
       
       console.log(`✅ ${salesInSession.length} vendas no caixa atual`);
       setTodaySales(salesInSession);
