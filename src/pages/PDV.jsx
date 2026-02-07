@@ -424,8 +424,8 @@ Transações: ${selectedSession.transactions_count || 0}
 
   const loadSellers = async () => {
     try {
-      const allSellers = await base44.entities.Seller.filter({ is_active: true });
-      setSellers(allSellers);
+      const response = await getPDVData({ ...getAdminCredentials(), action: 'sellers' });
+      setSellers(response?.data?.sellers || []);
     } catch (error) {
       console.error('Erro ao carregar vendedores:', error);
     }
