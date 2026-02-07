@@ -157,12 +157,9 @@ export default function ActivePartners() {
   const loadPartners = async () => {
     setIsLoading(true);
     try {
-      // 1️⃣ Buscar todas as compras de planos ativas no sistema novo
-      const purchases = await base44.entities.PartnerPlanPurchase.filter(
-        { status: 'active' }, 
-        '-activated_at', 
-        500
-      );
+      // 1️⃣ Buscar todas as compras ativas via backend function (bypassa RLS)
+      const response = await getPartnerPurchases({ mode: 'admin', status_filter: 'active' });
+      const purchases = response?.data?.purchases || [];
 
       // 2️⃣ Buscar usuários com planos ativos no sistema antigo (AppUser)
       const usersWithPlans = await base44.entities.AppUser.list('-partner_plan_activated_at', 500);
@@ -173,9 +170,6 @@ export default function ActivePartners() {
       // 4️⃣ Filtrar legacies: APENAS quem NÃO tem planos no sistema novo
       const legacyActivations = usersWithPlans
         .filter(user => {
-          // Só inclui se:
-          // - Tem dados de plano no AppUser
-          // - E NÃO tem nenhum registro no PartnerPlanPurchase
           return (
             user.active_partner_plan && 
             user.partner_plan_activated_at && 
@@ -194,12 +188,8 @@ export default function ActivePartners() {
           activation_source: 'legacy'
         }));
 
-      console.log('📊 Estatísticas de carregamento:');
-      console.log('- Planos no sistema novo:', purchases.length);
-      console.log('- Planos legacy (sem migração):', legacyActivations.length);
-      console.log('- Total de ativações exibidas:', purchases.length + legacyActivations.length);
+      console.log('📊 Planos sistema novo:', purchases.length, '| Legacy:', legacyActivations.length);
 
-      // ✅ Combinar: novo sistema + legacies SEM duplicação
       const allActivations = [...purchases, ...legacyActivations];
       setPartnerPurchases(allActivations);
     } catch (error) {
