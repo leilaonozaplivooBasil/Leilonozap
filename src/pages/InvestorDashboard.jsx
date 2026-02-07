@@ -123,34 +123,13 @@ export default function InvestorDashboard() {
             
             console.log('🔍 Buscando planos para user_id:', user.id);
             
-            // 🧪 TESTE 1: Busca SEM filtros (RLS vai aplicar automaticamente)
-            let purchases = [];
-            try {
-              const allPurchases = await base44.entities.PartnerPlanPurchase.list('-activated_at', 500);
-              console.log('📦 TESTE 1 - Total retornado pelo list() sem filtros:', allPurchases?.length || 0);
-              console.log('📦 TESTE 1 - IDs:', allPurchases?.map(p => ({ id: p.id, user_id: p.user_id, status: p.status })));
-              
-              // Filtra manualmente por status active
-              purchases = allPurchases.filter(p => p.status === 'active');
-              console.log('📦 TESTE 1 - Planos ativos após filtro manual:', purchases?.length || 0);
-            } catch (e) {
-              console.error('❌ TESTE 1 falhou:', e.message);
-            }
+            // 🔐 Busca com service role (bypassa RLS após validação de identidade)
+            const purchases = await base44.asServiceRole.entities.PartnerPlanPurchase.filter({
+              user_id: user.id,
+              status: 'active'
+            }, '-activated_at', 100);
             
-            // 🧪 TESTE 2: Se não encontrou nada, tenta buscar pelo email (fallback)
-            if (purchases.length === 0) {
-              console.log('⚠️ TESTE 2 - Tentando buscar por email:', user.email);
-              try {
-                const purchasesByEmail = await base44.entities.PartnerPlanPurchase.filter({ 
-                  user_email: user.email,
-                  status: 'active'
-                }, '-activated_at', 100);
-                console.log('📦 TESTE 2 - Planos encontrados por email:', purchasesByEmail?.length || 0);
-                purchases = purchasesByEmail;
-              } catch (e) {
-                console.error('❌ TESTE 2 falhou:', e.message);
-              }
-            }
+            console.log('✅ Planos encontrados:', purchases?.length || 0);
             
             if (purchases && purchases.length > 0) {
               console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
