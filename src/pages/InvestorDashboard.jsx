@@ -113,9 +113,8 @@ export default function InvestorDashboard() {
           const investments = [];
           
           try {
-            // 1️⃣ PRIORIDADE: Buscar compras no sistema novo (PartnerPlanPurchase)
-            // 🔥 BUSCA POR USER_ID (IMUTÁVEL E CONFIÁVEL)
-            console.log('🔍 DEBUG - User object:', { id: user.id, email: user.email, full_name: user.full_name });
+            // 🔍 DIAGNÓSTICO COMPLETO DO PROBLEMA
+            console.log('🔍 DEBUG - User object:', { id: user.id, email: user.email, full_name: user.full_name, role: user.role });
             
             if (!user.id) {
               console.error('❌ ERRO CRÍTICO: user.id está undefined!');
@@ -124,19 +123,34 @@ export default function InvestorDashboard() {
             
             console.log('🔍 Buscando planos para user_id:', user.id);
             
-            // 🔧 SOLUÇÃO: Busca TODOS os planos ativos e filtra no JavaScript
-            // (problema: query composta do SDK não está funcionando corretamente)
-            const allActivePurchases = await base44.entities.PartnerPlanPurchase.filter({ 
-              status: 'active'
-            }, '-activated_at', 500);
+            // 🧪 TESTE 1: Busca SEM filtros (RLS vai aplicar automaticamente)
+            let purchases = [];
+            try {
+              const allPurchases = await base44.entities.PartnerPlanPurchase.list('-activated_at', 500);
+              console.log('📦 TESTE 1 - Total retornado pelo list() sem filtros:', allPurchases?.length || 0);
+              console.log('📦 TESTE 1 - IDs:', allPurchases?.map(p => ({ id: p.id, user_id: p.user_id, status: p.status })));
+              
+              // Filtra manualmente por status active
+              purchases = allPurchases.filter(p => p.status === 'active');
+              console.log('📦 TESTE 1 - Planos ativos após filtro manual:', purchases?.length || 0);
+            } catch (e) {
+              console.error('❌ TESTE 1 falhou:', e.message);
+            }
             
-            console.log('📦 Total de planos ativos no sistema:', allActivePurchases?.length || 0);
-            
-            // Filtra manualmente pelos planos do usuário atual
-            const purchases = allActivePurchases.filter(p => p.user_id === user.id);
-            
-            console.log('📦 Planos encontrados para este usuário:', purchases?.length || 0);
-            console.log('📦 IDs encontrados:', purchases?.map(p => p.id));
+            // 🧪 TESTE 2: Se não encontrou nada, tenta buscar pelo email (fallback)
+            if (purchases.length === 0) {
+              console.log('⚠️ TESTE 2 - Tentando buscar por email:', user.email);
+              try {
+                const purchasesByEmail = await base44.entities.PartnerPlanPurchase.filter({ 
+                  user_email: user.email,
+                  status: 'active'
+                }, '-activated_at', 100);
+                console.log('📦 TESTE 2 - Planos encontrados por email:', purchasesByEmail?.length || 0);
+                purchases = purchasesByEmail;
+              } catch (e) {
+                console.error('❌ TESTE 2 falhou:', e.message);
+              }
+            }
             
             if (purchases && purchases.length > 0) {
               console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
