@@ -1003,11 +1003,11 @@ ${boletoInfo}================================
     if (!editingCommissionSale) return;
     
     try {
-      await base44.entities.Sale.update(editingCommissionSale.id, {
+      await pdvAction({ ...getAdminCredentials(), action: 'updateSale', sale_id: editingCommissionSale.id, sale_data: {
         commission_amount: parseFloat(editCommissionData.commission_amount),
         commission_type: editCommissionData.commission_type,
         commission_value: parseFloat(editCommissionData.commission_value)
-      });
+      }});
 
       alert('✅ Comissão atualizada com sucesso!');
       setShowEditCommissionModal(false);
