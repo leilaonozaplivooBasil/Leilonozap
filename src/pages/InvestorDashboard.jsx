@@ -123,13 +123,36 @@ export default function InvestorDashboard() {
             
             console.log('🔍 Buscando planos para user_id:', user.id);
             
+            // 🔍 DEBUG COMPLETO - Identificar problema
+            console.log('🔍 STEP 1 - User ID usado na busca:', user.id);
+            console.log('🔍 STEP 2 - User completo:', { id: user.id, email: user.email, full_name: user.full_name });
+            
             // 🔐 Busca com service role (bypassa RLS após validação de identidade)
             const purchases = await base44.asServiceRole.entities.PartnerPlanPurchase.filter({
               user_id: user.id,
               status: 'active'
             }, '-activated_at', 100);
             
-            console.log('✅ Planos encontrados:', purchases?.length || 0);
+            console.log('✅ STEP 3 - Total de planos retornados:', purchases?.length || 0);
+            console.log('✅ STEP 4 - Detalhes dos planos:', purchases?.map(p => ({
+              id: p.id,
+              user_id: p.user_id,
+              plan_name: p.plan_name,
+              status: p.status,
+              activated_at: p.activated_at
+            })));
+            
+            // 🧪 TESTE ADICIONAL: Busca SEM filtro de status para ver todos os registros
+            const allPurchasesForUser = await base44.asServiceRole.entities.PartnerPlanPurchase.filter({
+              user_id: user.id
+            }, '-activated_at', 100);
+            
+            console.log('🧪 STEP 5 - Todos os planos (incluindo inativos):', allPurchasesForUser?.length || 0);
+            console.log('🧪 STEP 6 - Status de todos:', allPurchasesForUser?.map(p => ({
+              id: p.id,
+              status: p.status,
+              plan_name: p.plan_name
+            })));
             
             if (purchases && purchases.length > 0) {
               console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
