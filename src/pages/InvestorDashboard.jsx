@@ -386,7 +386,8 @@ export default function InvestorDashboard() {
   };
 
   const totalInvested = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
-  const totalProfit = activeInvestments.reduce((sum, inv) => sum + inv.estimatedProfit, 0);
+  const totalProfit = activeInvestments.reduce((sum, inv) => sum + (inv.estimatedProfit || 0), 0);
+  const totalPaidProfit = activeInvestments.reduce((sum, inv) => sum + (inv.paidProfit || 0), 0);
 
   useEffect(() => {
     if (!showPlansModal || isPaused) return;
