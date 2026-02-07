@@ -372,10 +372,11 @@ export default function InvestorDashboard() {
     return 4;
   };
 
-  const getLiquidFillPercentage = (daysPassed) => {
-    const maxDays = 60;
-    const percentage = Math.min((daysPassed / maxDays) * 100, 100);
-    return percentage;
+  const getLiquidFillPercentage = (investment) => {
+    // Baseado nas parcelas pagas (12 parcelas = 100%)
+    const paid = investment?.paidPeriods || 0;
+    const total = investment?.totalPeriods || 12;
+    return Math.min((paid / total) * 100, 100);
   };
 
   const calculateProjection = (investment, returnRate) => {
