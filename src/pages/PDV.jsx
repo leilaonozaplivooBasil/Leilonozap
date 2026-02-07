@@ -542,24 +542,17 @@ Transações: ${selectedSession.transactions_count || 0}
     if (!currentCashRegister) return;
     
     try {
-      // Calcula totais do caixa atual
-      const cashSales = await base44.entities.Sale.filter({});
-      const salesInSession = cashSales.filter(sale => {
-        const saleTime = new Date(sale.sale_datetime).getTime();
-        const openTime = new Date(currentCashRegister.opening_time).getTime();
-        return saleTime >= openTime;
-      });
-
+      // Calcula totais do caixa atual usando vendas já carregadas
       const totals = {
         total_pix: 0,
         total_cash: 0,
         total_debit: 0,
         total_credit: 0,
         total_boleto: 0,
-        transactions_count: salesInSession.length
+        transactions_count: todaySales.length
       };
 
-      salesInSession.forEach(sale => {
+      todaySales.forEach(sale => {
         const amount = sale.total_amount || 0;
         if (sale.payment_method === 'PIX') totals.total_pix += amount;
         else if (sale.payment_method === 'DINHEIRO') totals.total_cash += amount;
@@ -568,21 +561,19 @@ Transações: ${selectedSession.transactions_count || 0}
         else if (sale.payment_method === 'BOLETO PARCELADO') totals.total_boleto += amount;
       });
 
-      const total_sales = Object.values(totals).reduce((sum, val) => 
-        typeof val === 'number' ? sum + val : sum, 0
-      );
+      const total_sales = totals.total_pix + totals.total_cash + totals.total_debit + totals.total_credit + totals.total_boleto;
 
       const notes = isAutomatic 
         ? 'Fechamento automático às 20h' 
         : closingNotes;
 
-      await base44.entities.CashRegister.update(currentCashRegister.id, {
-        status: 'closed',
-        closing_time: new Date().toISOString(),
+      await pdvAction({
+        ...getAdminCredentials(),
+        action: 'closeCashRegister',
+        register_id: currentCashRegister.id,
         closing_balance: parseFloat(closingBalance) || 0,
-        total_sales,
-        ...totals,
-        notes
+        notes,
+        totals: { total_sales, ...totals }
       });
 
       setCurrentCashRegister(null);
