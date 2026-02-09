@@ -372,19 +372,20 @@ _Enviado via CRM Leilão NoZap_`;
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 p-3 sm:p-6">
       <div className="max-w-[1800px] mx-auto">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">CRM - Gestão de Clientes</h1>
-          <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900">CRM - Gestão de Clientes</h1>
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               onClick={() => setShowSellerModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none text-xs sm:text-sm"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Novo Vendedor
+              <UserPlus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Novo Vendedor</span>
+              <span className="sm:hidden">Vendedor</span>
             </Button>
             <Button
               onClick={() => {
@@ -406,22 +407,23 @@ _Enviado via CRM Leilão NoZap_`;
                 });
                 setShowAddForm(true);
               }}
-              className="bg-gray-800 hover:bg-gray-700 text-white"
+              className="bg-gray-800 hover:bg-gray-700 text-white flex-1 sm:flex-none text-xs sm:text-sm"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Novo Cliente
+              <UserPlus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Novo Cliente</span>
+              <span className="sm:hidden">Cliente</span>
             </Button>
           </div>
         </div>
 
         {/* ESTATÍSTICAS */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Total de Contatos</p>
-                  <p className="text-3xl font-bold text-white">{stats.total}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Total de Contatos</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.total}</p>
                 </div>
                 <Users className="w-8 h-8 text-blue-400" />
               </div>
@@ -429,11 +431,11 @@ _Enviado via CRM Leilão NoZap_`;
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Leads</p>
-                  <p className="text-3xl font-bold text-white">{stats.leads}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Leads</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.leads}</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-yellow-400" />
               </div>
@@ -441,11 +443,11 @@ _Enviado via CRM Leilão NoZap_`;
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Clientes Ativos</p>
-                  <p className="text-3xl font-bold text-white">{stats.clientes}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Clientes Ativos</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.clientes}</p>
                 </div>
                 <Users className="w-8 h-8 text-green-400" />
               </div>
@@ -453,11 +455,11 @@ _Enviado via CRM Leilão NoZap_`;
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Faturamento Total</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Faturamento Total</p>
+                  <p className="text-lg sm:text-2xl font-bold text-white">
                     R$ {stats.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -468,19 +470,19 @@ _Enviado via CRM Leilão NoZap_`;
         </div>
 
         {/* TABS */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="bg-white border border-gray-200">
-            <TabsTrigger value="customers" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
+          <TabsList className="bg-white border border-gray-200 w-full sm:w-auto">
+            <TabsTrigger value="customers" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
-            <TabsTrigger value="sellers" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <TabsTrigger value="sellers" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex-1 sm:flex-none">
               Vendedores
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="customers">
             {/* FILTROS DE CLIENTES */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
