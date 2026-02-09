@@ -1091,31 +1091,31 @@ ${boletoInfo}================================
   return (
     <div className="min-h-screen bg-white">
       {/* HEADER VERDE NOZAP */}
-      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-4 shadow-lg">
-        <div className="max-w-[1800px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+      <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-3 sm:p-4 shadow-lg">
+        <div className="max-w-[1800px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Button
               variant="ghost"
               onClick={() => navigate(createPageUrl("ProductManagement"))}
-              className="text-white hover:bg-green-800/50"
+              className="text-white hover:bg-green-800/50 px-2 sm:px-4"
             >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Voltar
+              <ArrowLeft className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Voltar</span>
             </Button>
-            <h1 className="text-2xl font-bold">💰 PDV - Ponto de Venda</h1>
+            <h1 className="text-lg sm:text-2xl font-bold">💰 PDV</h1>
           </div>
-          <div className="text-right">
-            <p className="text-sm opacity-90">Operador: {currentUser?.full_name}</p>
+          <div className="text-left sm:text-right">
+            <p className="text-xs sm:text-sm opacity-90">Operador: {currentUser?.full_name}</p>
           </div>
         </div>
       </div>
 
-      <div className="max-w-[1800px] mx-auto p-6">
+      <div className="max-w-[1800px] mx-auto p-3 sm:p-6">
 
         {/* STATUS DO CAIXA */}
-        <Card className={`mb-6 ${currentCashRegister ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+        <Card className={`mb-4 sm:mb-6 ${currentCashRegister ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div className="flex items-center gap-3 flex-1">
                 <div className={`w-3 h-3 rounded-full ${currentCashRegister ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                 <div className="flex-1">
@@ -1163,9 +1163,9 @@ ${boletoInfo}================================
         </Card>
 
         {/* BARRA DE BUSCA */}
-        <div className="bg-gray-800 rounded-lg shadow-lg p-4 mb-6 border border-gray-700">
+        <div className="bg-gray-800 rounded-lg shadow-lg p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-700">
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-[300px]">
+            <div className="flex-1 min-w-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
@@ -1181,7 +1181,7 @@ ${boletoInfo}================================
 
         {/* RESUMO DO DIA - TEMA NOZAP */}
         <TooltipProvider>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Card className="bg-gray-800 border-gray-700 cursor-help hover:bg-gray-700/80 transition-colors">
@@ -1284,18 +1284,18 @@ ${boletoInfo}================================
         </TooltipProvider>
 
         {/* TABS - TEMA NOZAP */}
-        <Tabs defaultValue="pdv" className="mb-6">
-          <TabsList className="bg-white border border-gray-200">
-            <TabsTrigger value="pdv" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700">
+        <Tabs defaultValue="pdv" className="mb-4 sm:mb-6">
+          <TabsList className="bg-white border border-gray-200 w-full flex overflow-x-auto">
+            <TabsTrigger value="pdv" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
               🛒 Vendas
             </TabsTrigger>
-            <TabsTrigger value="extrato" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-700">
+            <TabsTrigger value="extrato" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
               📊 Extrato
             </TabsTrigger>
-            <TabsTrigger value="dashboard" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-700">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
               📈 Dashboard
             </TabsTrigger>
-            <TabsTrigger value="vendedores" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-700">
+            <TabsTrigger value="vendedores" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
               👥 Vendedores
             </TabsTrigger>
           </TabsList>
@@ -1815,9 +1815,9 @@ ${boletoInfo}================================
 
           <TabsContent value="extrato">
             <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <FileText className="w-5 h-5" />
+              <CardHeader className="p-3 sm:p-6">
+                <CardTitle className="text-white flex items-center gap-2 text-sm sm:text-base">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                   Extrato por Sessões de Caixa
                 </CardTitle>
               </CardHeader>
@@ -1835,12 +1835,12 @@ ${boletoInfo}================================
                         onClick={() => loadSessionSales(session)}
                         className="bg-gray-900/50 rounded-lg p-4 hover:bg-gray-700/50 cursor-pointer transition-all border border-gray-700 hover:border-gray-600"
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <Clock className="w-5 h-5 text-blue-400" />
+                            <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                              <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                               <div>
-                                <p className="text-white font-semibold">
+                                <p className="text-white font-semibold text-sm sm:text-base">
                                   {new Date(session.opening_time).toLocaleDateString('pt-BR')}
                                 </p>
                                 <p className="text-gray-400 text-xs">
@@ -1849,7 +1849,7 @@ ${boletoInfo}================================
                                 </p>
                               </div>
                             </div>
-                            <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
                               <span className="text-gray-400">
                                 👤 {session.operator_name}
                               </span>
@@ -1858,8 +1858,8 @@ ${boletoInfo}================================
                               </span>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-green-400 font-bold text-2xl">
+                          <div className="text-left sm:text-right">
+                            <p className="text-green-400 font-bold text-lg sm:text-2xl">
                               R$ {(session.total_sales || 0).toFixed(2)}
                             </p>
                             <p className="text-xs text-gray-500">Receita total</p>
@@ -1876,7 +1876,7 @@ ${boletoInfo}================================
           <TabsContent value="dashboard">
             <div className="space-y-6">
               {/* RESUMO GERAL */}
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -1950,14 +1950,14 @@ ${boletoInfo}================================
 
               {/* TODAS AS VENDAS INDIVIDUAIS */}
               <Card className="bg-gray-800 border-gray-700 mb-6">
-                <CardHeader>
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <ShoppingCart className="w-5 h-5" />
+                <CardHeader className="p-3 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <CardTitle className="text-white flex items-center gap-2 text-sm sm:text-base">
+                      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
                       Todas as Vendas ({allSales.length})
                     </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <div className="relative w-64">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                      <div className="relative w-full sm:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
                           placeholder="Buscar por código ou produto..."
@@ -2221,14 +2221,14 @@ ${boletoInfo}================================
           <TabsContent value="vendedores">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    Relatório de Vendedores - Diário
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <CardTitle className="text-white flex items-center gap-2 text-sm sm:text-base">
+                    <TrendingUp className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Relatório de Vendedores
                   </CardTitle>
                   <Button
                     onClick={loadAllSales}
-                    className="bg-orange-600 hover:bg-orange-700"
+                    className="bg-orange-600 hover:bg-orange-700 text-xs sm:text-sm"
                   >
                     🔄 Atualizar
                   </Button>
@@ -2281,22 +2281,22 @@ ${boletoInfo}================================
                         return (
                           <div key={date} className="bg-gray-900/50 rounded-lg p-5 border border-gray-700">
                             {/* HEADER DO DIA */}
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center gap-3">
-                                <Calendar className="w-5 h-5 text-blue-400" />
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+                              <div className="flex items-center gap-2 sm:gap-3">
+                                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                                 <div>
-                                  <h3 className="text-white font-bold text-lg">{date}</h3>
-                                  <p className="text-gray-400 text-sm">{dayCount} vendas realizadas</p>
+                                  <h3 className="text-white font-bold text-sm sm:text-lg">{date}</h3>
+                                  <p className="text-gray-400 text-xs sm:text-sm">{dayCount} vendas</p>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2 sm:gap-3">
                                 <DailyReportPDF 
                                   daySales={daySales} 
                                   date={date}
                                   sellersData={sellersForDay}
                                 />
                                 <div className="text-right">
-                                  <p className="text-green-400 font-bold text-2xl">
+                                  <p className="text-green-400 font-bold text-lg sm:text-2xl">
                                     R$ {dayTotal.toFixed(2)}
                                   </p>
                                   <p className="text-gray-500 text-xs">Total do dia</p>
