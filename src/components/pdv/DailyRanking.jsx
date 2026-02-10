@@ -138,8 +138,6 @@ export default function DailyRanking({ allSales }) {
   const [sharing, setSharing] = React.useState(false);
 
   const handleShare = async () => {
-    // share only image, no caption
-
     try {
       // capture exactly as currently visible (avoid UI changes before capture)
       if (document.fonts && document.fonts.ready) {
@@ -247,13 +245,21 @@ export default function DailyRanking({ allSales }) {
       const file = new File([blob], fileName, { type: 'image/png' });
       setSharing(true);
 
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file] });
+      // Monta mensagem personalizada
+      const firstPlace = ranking[0];
+      const message = firstPlace && firstPlace.name !== 'Sem dados' 
+        ? `🎉 *Parabéns aos nossos vendedores do dia ${targetDate}!*\n\n🏆 *DESTAQUE DO DIA*\n👑 ${firstPlace.name}\n💰 Total vendido: R$ ${fmt(firstPlace.total)}\n\nContinuem com esse ritmo incrível! 🚀`
+        : `📊 Ranking de Vendas do dia ${targetDate}`;
+
+      if (navigator.canShare && navigator.canShare({ files: [file], text: message })) {
+        await navigator.share({ files: [file], text: message });
         return;
       }
 
       const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      window.open(file_url, '_blank');
+      const encodedMessage = encodeURIComponent(message);
+      const whatsappUrl = `https://wa.me/?text=${encodedMessage}%0A%0A${encodeURIComponent(file_url)}`;
+      window.open(whatsappUrl, '_blank');
     } catch (e) {
       console.error('Falha ao compartilhar imagem', e);
     } finally {
