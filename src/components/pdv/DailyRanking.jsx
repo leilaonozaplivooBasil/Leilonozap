@@ -195,12 +195,13 @@ export default function DailyRanking({ allSales }) {
         { hpt: 22 }  // Cabeçalho da tabela
       ];
 
-      // Cores Leilão NoZap
+      // Cores Leilão NoZap (sem o #)
       const green = { rgb: "22C55E" };    // Verde principal
       const darkGray = { rgb: "1F2937" }; // Cinza escuro
-      const yellow = { rgb: "FCD34D" };   // Amarelo destaque
-      const lightGray = { rgb: "F3F4F6" };
+      const yellow = { rgb: "FBBF24" };   // Amarelo/dourado destaque
+      const lightGray = { rgb: "F9FAFB" };
       const white = { rgb: "FFFFFF" };
+      const black = { rgb: "000000" };
 
       // Título principal (A1) - Mesclado
       ws['!merges'] = [
@@ -224,22 +225,36 @@ export default function DailyRanking({ allSales }) {
 
       // Estilo do destaque do dia
       ws['A6'].s = {
-        font: { bold: true, sz: 16, color: white },
+        font: { bold: true, sz: 16, color: black },
         fill: { fgColor: yellow },
         alignment: { horizontal: 'center', vertical: 'center' },
         border: {
-          top: { style: 'medium', color: { rgb: "000000" } },
-          bottom: { style: 'medium', color: { rgb: "000000" } }
+          top: { style: 'medium', color: black },
+          bottom: { style: 'medium', color: black },
+          left: { style: 'medium', color: black },
+          right: { style: 'medium', color: black }
         }
       };
 
-      // Destaque info
+      // Destaque info (mesclar células B7:F7, B8:F8, B9:F9 para destacar valores)
+      ws['!merges'].push(
+        { s: { r: 6, c: 1 }, e: { r: 6, c: 5 } }, // Vendedor
+        { s: { r: 7, c: 1 }, e: { r: 7, c: 5 } }, // Total Vendido
+        { s: { r: 8, c: 1 }, e: { r: 8, c: 5 } }  // Comissão
+      );
+
       ['A7', 'A8', 'A9'].forEach(cell => {
         if (ws[cell]) {
           ws[cell].s = {
-            font: { bold: true, sz: 12 },
+            font: { bold: true, sz: 12, color: black },
             fill: { fgColor: lightGray },
-            alignment: { horizontal: 'left', vertical: 'center' }
+            alignment: { horizontal: 'left', vertical: 'center' },
+            border: {
+              top: { style: 'thin', color: { rgb: "D1D5DB" } },
+              bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
+              left: { style: 'thin', color: { rgb: "D1D5DB" } },
+              right: { style: 'thin', color: { rgb: "D1D5DB" } }
+            }
           };
         }
       });
@@ -247,8 +262,15 @@ export default function DailyRanking({ allSales }) {
       ['B7', 'B8', 'B9'].forEach(cell => {
         if (ws[cell]) {
           ws[cell].s = {
-            font: { sz: 12, color: darkGray },
-            alignment: { horizontal: 'left', vertical: 'center' }
+            font: { sz: 13, bold: true, color: green },
+            fill: { fgColor: { rgb: "ECFDF5" } }, // Verde muito claro
+            alignment: { horizontal: 'left', vertical: 'center' },
+            border: {
+              top: { style: 'thin', color: { rgb: "D1D5DB" } },
+              bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
+              left: { style: 'thin', color: { rgb: "D1D5DB" } },
+              right: { style: 'thin', color: { rgb: "D1D5DB" } }
+            }
           };
         }
       });
@@ -297,11 +319,13 @@ export default function DailyRanking({ allSales }) {
             ws[cell].s = {
               font: { 
                 sz: 11, 
-                bold: isFirst,
-                color: isFirst ? yellow : (isSecond || isThird ? { rgb: "F59E0B" } : { rgb: "000000" })
+                bold: isFirst || isSecond || isThird,
+                color: isFirst ? black : (isSecond || isThird ? black : black)
               },
               fill: { 
-                fgColor: isFirst ? { rgb: "FEF3C7" } : 
+                fgColor: isFirst ? { rgb: "FEF3C7" } :  // Amarelo claro
+                         isSecond ? { rgb: "E5E7EB" } : // Cinza prata
+                         isThird ? { rgb: "FDBA74" } :  // Laranja bronze
                          (i % 2 === 0 ? white : lightGray)
               },
               alignment: { 
@@ -309,10 +333,10 @@ export default function DailyRanking({ allSales }) {
                 vertical: 'center' 
               },
               border: {
-                top: { style: 'thin', color: { rgb: "E5E7EB" } },
-                bottom: { style: 'thin', color: { rgb: "E5E7EB" } },
-                left: { style: 'thin', color: { rgb: "E5E7EB" } },
-                right: { style: 'thin', color: { rgb: "E5E7EB" } }
+                top: { style: 'thin', color: { rgb: "D1D5DB" } },
+                bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
+                left: { style: 'thin', color: { rgb: "D1D5DB" } },
+                right: { style: 'thin', color: { rgb: "D1D5DB" } }
               }
             };
           }
