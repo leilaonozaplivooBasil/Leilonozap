@@ -148,129 +148,196 @@ export default function DailyRanking({ allSales }) {
       const yellow = [251, 191, 36];
       const lightGray = [249, 250, 251];
       const black = [0, 0, 0];
+      const white = [255, 255, 255];
 
-      let y = 20;
+      let y = 15;
 
-      // 🎨 TÍTULO PRINCIPAL
+      // LOGO NO TOPO (centralizada)
+      const logoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      try {
+        const img = await fetch(logoUrl);
+        const blob = await img.blob();
+        const reader = new FileReader();
+        await new Promise((resolve) => {
+          reader.onloadend = () => {
+            const base64data = reader.result;
+            doc.addImage(base64data, 'PNG', 80, y, 50, 15);
+            resolve();
+          };
+          reader.readAsDataURL(blob);
+        });
+        y += 20;
+      } catch (e) {
+        console.log('Logo não carregada, continuando sem ela');
+      }
+
+      // TÍTULO PRINCIPAL COM BORDA VERDE
+      doc.setDrawColor(...green);
+      doc.setLineWidth(1.5);
       doc.setFillColor(...darkGray);
-      doc.rect(10, y - 5, 190, 15, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
+      doc.roundedRect(10, y, 190, 18, 3, 3, 'FD');
+      doc.setTextColor(...white);
+      doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
-      doc.text('LEILÃO NOZAP - RANKING DE VENDAS DO DIA', 105, y + 5, { align: 'center' });
+      doc.text('RANKING DE VENDAS DO DIA', 105, y + 12, { align: 'center' });
       
-      y += 20;
+      y += 25;
 
-      // 📅 DATA E TOTAL
-      doc.setFontSize(11);
+      // BOX DE INFORMAÇÕES (Data e Total)
+      doc.setFillColor(245, 245, 245);
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.5);
+      doc.roundedRect(10, y, 90, 18, 2, 2, 'FD');
+      doc.roundedRect(110, y, 90, 18, 2, 2, 'FD');
+      
+      doc.setFontSize(10);
       doc.setTextColor(...black);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Data:', 15, y + 7);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Data: ${targetDate}`, 15, y);
-      doc.text(`Total do Dia: R$ ${fmt(dayTotal)}`, 15, y + 7);
+      doc.text(targetDate, 15, y + 13);
       
-      y += 20;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Total do Dia:', 115, y + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...green);
+      doc.text(`R$ ${fmt(dayTotal)}`, 115, y + 13);
+      
+      y += 25;
 
-      // 🏆 DESTAQUE DO DIA
+      // DESTAQUE DO DIA (com borda arredondada)
       doc.setFillColor(...yellow);
-      doc.rect(10, y - 5, 190, 10, 'F');
-      doc.setTextColor(...black);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('🏆 DESTAQUE DO DIA', 105, y + 2, { align: 'center' });
-      
-      y += 12;
-
-      // Box do destaque
-      doc.setFillColor(254, 243, 199);
-      doc.rect(10, y, 190, 25, 'F');
       doc.setDrawColor(...yellow);
-      doc.rect(10, y, 190, 25, 'S');
+      doc.setLineWidth(1);
+      doc.roundedRect(10, y, 190, 12, 3, 3, 'FD');
+      doc.setTextColor(...darkGray);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DESTAQUE DO DIA', 105, y + 8, { align: 'center' });
       
-      doc.setFontSize(12);
+      y += 15;
+
+      // Box do destaque com gradiente simulado
+      doc.setFillColor(255, 252, 240);
+      doc.setDrawColor(...yellow);
+      doc.setLineWidth(1);
+      doc.roundedRect(10, y, 190, 28, 3, 3, 'FD');
+      
+      doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...black);
-      doc.text('👑 ' + (firstPlace?.name || 'Sem dados'), 15, y + 8);
-      doc.text(`💰 Total vendido: R$ ${firstPlace ? fmt(firstPlace.total) : '0,00'}`, 15, y + 16);
+      doc.text((firstPlace?.name || 'Sem dados').toUpperCase(), 15, y + 10);
+      
+      doc.setFontSize(11);
+      doc.setTextColor(...green);
+      doc.text(`Total vendido: R$ ${firstPlace ? fmt(firstPlace.total) : '0,00'}`, 15, y + 18);
+      
+      doc.setTextColor(100, 100, 100);
       doc.setFont('helvetica', 'normal');
-      doc.text(`Comissão: R$ ${firstPlace ? fmt(firstPlace.comissaoLicenciado) : '0,00'}`, 15, y + 22);
+      doc.text(`Comissao: R$ ${firstPlace ? fmt(firstPlace.comissaoLicenciado) : '0,00'}`, 15, y + 24);
       
       y += 35;
 
-      // 🎯 TOP 10 VENDEDORES
+      // TOP 10 VENDEDORES (com borda verde)
       doc.setFillColor(...green);
-      doc.rect(10, y - 5, 190, 10, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(13);
+      doc.setDrawColor(...green);
+      doc.setLineWidth(1);
+      doc.roundedRect(10, y, 190, 12, 3, 3, 'FD');
+      doc.setTextColor(...white);
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('TOP 10 VENDEDORES', 105, y + 2, { align: 'center' });
+      doc.text('TOP 10 VENDEDORES', 105, y + 8, { align: 'center' });
       
-      y += 12;
+      y += 15;
 
       // Cabeçalho da tabela
       doc.setFillColor(...darkGray);
-      doc.rect(10, y, 190, 8, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(9);
+      doc.setDrawColor(...darkGray);
+      doc.rect(10, y, 190, 10, 'FD');
+      doc.setTextColor(...white);
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('Pos', 15, y + 5);
-      doc.text('Nome', 30, y + 5);
-      doc.text('Qtd', 110, y + 5);
-      doc.text('Valor Total', 130, y + 5);
-      doc.text('Comissão Lic.', 165, y + 5);
+      doc.text('Pos', 18, y + 7);
+      doc.text('Nome', 40, y + 7);
+      doc.text('Qtd', 118, y + 7);
+      doc.text('Valor Total', 145, y + 7);
+      doc.text('Comissao', 183, y + 7);
       
-      y += 8;
+      y += 10;
 
-      // Linhas do ranking
+      // Linhas do ranking com design melhorado
       ranking.forEach((r, i) => {
         const isFirst = i === 0;
         const isSecond = i === 1;
         const isThird = i === 2;
         
-        // Cor de fundo
+        // Cor de fundo do pódio
         if (isFirst) {
-          doc.setFillColor(254, 243, 199); // Ouro
+          doc.setFillColor(255, 250, 220); // Ouro claro
+          doc.setDrawColor(...yellow);
+          doc.setLineWidth(1);
         } else if (isSecond) {
-          doc.setFillColor(229, 231, 235); // Prata
+          doc.setFillColor(240, 240, 245); // Prata
+          doc.setDrawColor(192, 192, 192);
+          doc.setLineWidth(0.8);
         } else if (isThird) {
-          doc.setFillColor(253, 186, 116); // Bronze
+          doc.setFillColor(255, 245, 235); // Bronze
+          doc.setDrawColor(205, 127, 50);
+          doc.setLineWidth(0.8);
         } else {
-          doc.setFillColor(...(i % 2 === 0 ? [255, 255, 255] : lightGray));
+          doc.setFillColor(...(i % 2 === 0 ? [255, 255, 255] : [248, 248, 248]));
+          doc.setDrawColor(230, 230, 230);
+          doc.setLineWidth(0.3);
         }
         
-        doc.rect(10, y, 190, 7, 'F');
-        
-        // Bordas
-        doc.setDrawColor(209, 213, 219);
-        doc.rect(10, y, 190, 7, 'S');
+        doc.rect(10, y, 190, 9, 'FD');
         
         doc.setTextColor(...black);
         doc.setFontSize(9);
         doc.setFont('helvetica', isFirst || isSecond || isThird ? 'bold' : 'normal');
         
-        doc.text(String(i + 1), 15, y + 5);
-        doc.text(r.name.substring(0, 35), 30, y + 5);
-        doc.text(String(r.count), 115, y + 5, { align: 'center' });
-        doc.text(`R$ ${fmt(r.total)}`, 155, y + 5, { align: 'right' });
-        doc.text(`R$ ${fmt(r.comissaoLicenciado)}`, 195, y + 5, { align: 'right' });
+        // Badge de posição
+        if (isFirst || isSecond || isThird) {
+          const badgeColor = isFirst ? yellow : isSecond ? [192, 192, 192] : [205, 127, 50];
+          doc.setFillColor(...badgeColor);
+          doc.circle(18, y + 4.5, 3, 'F');
+          doc.setTextColor(...white);
+          doc.setFontSize(8);
+          doc.text(String(i + 1), 18, y + 6, { align: 'center' });
+          doc.setTextColor(...black);
+          doc.setFontSize(9);
+        } else {
+          doc.text(String(i + 1), 18, y + 6, { align: 'center' });
+        }
         
-        y += 7;
+        doc.text(r.name.substring(0, 32), 27, y + 6);
+        doc.text(String(r.count), 118, y + 6, { align: 'center' });
+        doc.setTextColor(...green);
+        doc.text(`R$ ${fmt(r.total)}`, 165, y + 6, { align: 'right' });
+        doc.setTextColor(100, 100, 100);
+        doc.text(`R$ ${fmt(r.comissaoLicenciado)}`, 195, y + 6, { align: 'right' });
+        doc.setTextColor(...black);
         
-        if (y > 270 && i < ranking.length - 1) {
+        y += 9;
+        
+        if (y > 265 && i < ranking.length - 1) {
           doc.addPage();
           y = 20;
         }
       });
 
-      // 🚀 MENSAGEM FINAL
-      y += 10;
+      // MENSAGEM FINAL
+      y += 8;
       if (y > 260) {
         doc.addPage();
         y = 20;
       }
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'italic');
+      doc.setFillColor(240, 255, 240);
+      doc.roundedRect(10, y, 190, 12, 2, 2, 'F');
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
       doc.setTextColor(...green);
-      doc.text('Parabéns a todos os vendedores! Continuem com esse ritmo incrível! 🚀', 105, y, { align: 'center' });
+      doc.text('Parabens a todos os vendedores! Continuem com esse ritmo incrivel!', 105, y + 8, { align: 'center' });
 
       // Salva PDF
       const fileName = `ranking-leilao-nozap-${targetDate.replace(/\//g, '-')}.pdf`;
