@@ -340,7 +340,7 @@ export default function Home() {
             // Atualização silenciosa em background após 15s
             if (age > 15000 && !isRetry) {
               setTimeout(() => {
-                Auction.list("-created_date", 20).then((data) => {
+                Auction.list("-created_date", 100).then((data) => {
                   if (Array.isArray(data) && data.length > 0) {
                     const serialized = JSON.stringify(data);
                     sessionStorage.setItem('auctions_cache', serialized);
@@ -362,8 +362,8 @@ export default function Home() {
     // Se não tem cache válido, busca do servidor
     try {
       const data = await Promise.race([
-      Auction.list("-created_date", 20),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000))]
+      Auction.list("-created_date", 100),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000))]
       );
       if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
