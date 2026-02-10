@@ -139,83 +139,197 @@ export default function DailyRanking({ allSales }) {
   const handleGenerateExcel = async () => {
     setGenerating(true);
     try {
-      // Cabeçalho da planilha
-      const headerData = [
-        ['RANKING DE VENDAS DO DIA'],
-        [`Data: ${targetDate}`],
-        [`Total do Dia: R$ ${fmt(dayTotal)}`],
-        [], // Linha vazia
-        ['🏆 TOP 10 VENDEDORES'],
-        ['Posição', 'Nome', 'Qtd Vendas', 'Valor Total', 'Comissão Licenciado', 'Comissão Licenciante']
-      ];
-
-      // Dados do ranking
-      const rankingData = ranking.map((r, i) => [
-        i + 1,
-        r.name,
-        r.count,
-        Number(r.total || 0),
-        Number(r.comissaoLicenciado || 0),
-        Number(r.comissaoLicenciante || 0)
-      ]);
-
-      // Mensagem de parabenização
       const firstPlace = ranking[0];
-      const congratsMessage = firstPlace && firstPlace.name !== 'Sem dados'
-        ? [
-            [],
-            ['🎉 DESTAQUE DO DIA'],
-            [`👑 ${firstPlace.name}`],
-            [`💰 Total vendido: R$ ${fmt(firstPlace.total)}`],
-            [],
-            ['Parabéns a todos os vendedores! Continuem com esse ritmo incrível! 🚀']
-          ]
-        : [];
-
-      // Combina tudo
-      const worksheetData = [...headerData, ...rankingData, ...congratsMessage];
-
-      // Cria worksheet
-      const ws = XLSX.utils.aoa_to_sheet(worksheetData);
-
-      // Formatação de largura das colunas
-      ws['!cols'] = [
-        { wch: 10 }, // Posição
-        { wch: 30 }, // Nome
-        { wch: 12 }, // Qtd Vendas
-        { wch: 15 }, // Valor Total
-        { wch: 20 }, // Comissão Licenciado
-        { wch: 20 }  // Comissão Licenciante
+      
+      // Estrutura de dados
+      const data = [
+        ['LEILÃO NOZAP - RANKING DE VENDAS DO DIA'],
+        [],
+        ['Data:', targetDate],
+        ['Total do Dia:', `R$ ${fmt(dayTotal)}`],
+        [],
+        ['🏆 DESTAQUE DO DIA'],
+        ['Vendedor:', firstPlace?.name || '-'],
+        ['Total Vendido:', firstPlace ? `R$ ${fmt(firstPlace.total)}` : '-'],
+        ['Comissão:', firstPlace ? `R$ ${fmt(firstPlace.comissaoLicenciado)}` : '-'],
+        [],
+        ['TOP 10 VENDEDORES'],
+        [],
+        ['Pos', 'Nome', 'Qtd', 'Valor Total', 'Comissão Lic.', 'Comissão Licenciante'],
+        ...ranking.map((r, i) => [
+          i + 1,
+          r.name,
+          r.count,
+          r.total,
+          r.comissaoLicenciado,
+          r.comissaoLicenciante
+        ])
       ];
 
-      // Formatação de células monetárias
-      const range = XLSX.utils.decode_range(ws['!ref']);
-      for (let R = 6; R <= range.e.r; R++) {
-        for (let C = 3; C <= 5; C++) {
-          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
-          const cell = ws[cellAddress];
-          if (cell && typeof cell.v === 'number') {
-            cell.z = 'R$ #,##0.00';
+      const ws = XLSX.utils.aoa_to_sheet(data);
+
+      // Largura das colunas
+      ws['!cols'] = [
+        { wch: 8 },  // Pos
+        { wch: 35 }, // Nome
+        { wch: 8 },  // Qtd
+        { wch: 18 }, // Valor Total
+        { wch: 18 }, // Comissão Lic
+        { wch: 22 }  // Comissão Licenciante
+      ];
+
+      // Altura das linhas
+      ws['!rows'] = [
+        { hpt: 35 }, // Título principal
+        { hpt: 5 },  // Espaço
+        { hpt: 20 }, // Data
+        { hpt: 20 }, // Total
+        { hpt: 5 },  // Espaço
+        { hpt: 25 }, // Destaque título
+        { hpt: 20 }, // Vendedor
+        { hpt: 20 }, // Total vendido
+        { hpt: 20 }, // Comissão
+        { hpt: 5 },  // Espaço
+        { hpt: 25 }, // Top 10 título
+        { hpt: 5 },  // Espaço
+        { hpt: 22 }  // Cabeçalho da tabela
+      ];
+
+      // Cores Leilão NoZap
+      const green = { rgb: "22C55E" };    // Verde principal
+      const darkGray = { rgb: "1F2937" }; // Cinza escuro
+      const yellow = { rgb: "FCD34D" };   // Amarelo destaque
+      const lightGray = { rgb: "F3F4F6" };
+      const white = { rgb: "FFFFFF" };
+
+      // Título principal (A1) - Mesclado
+      ws['!merges'] = [
+        { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, // Título
+        { s: { r: 5, c: 0 }, e: { r: 5, c: 5 } }, // Destaque
+        { s: { r: 10, c: 0 }, e: { r: 10, c: 5 } } // Top 10
+      ];
+
+      // Estilo do título principal
+      ws['A1'].s = {
+        font: { bold: true, sz: 20, color: white },
+        fill: { fgColor: darkGray },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: {
+          top: { style: 'thick', color: green },
+          bottom: { style: 'thick', color: green },
+          left: { style: 'thick', color: green },
+          right: { style: 'thick', color: green }
+        }
+      };
+
+      // Estilo do destaque do dia
+      ws['A6'].s = {
+        font: { bold: true, sz: 16, color: white },
+        fill: { fgColor: yellow },
+        alignment: { horizontal: 'center', vertical: 'center' },
+        border: {
+          top: { style: 'medium', color: { rgb: "000000" } },
+          bottom: { style: 'medium', color: { rgb: "000000" } }
+        }
+      };
+
+      // Destaque info
+      ['A7', 'A8', 'A9'].forEach(cell => {
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { bold: true, sz: 12 },
+            fill: { fgColor: lightGray },
+            alignment: { horizontal: 'left', vertical: 'center' }
+          };
+        }
+      });
+
+      ['B7', 'B8', 'B9'].forEach(cell => {
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { sz: 12, color: darkGray },
+            alignment: { horizontal: 'left', vertical: 'center' }
+          };
+        }
+      });
+
+      // Top 10 título
+      ws['A11'].s = {
+        font: { bold: true, sz: 14, color: white },
+        fill: { fgColor: green },
+        alignment: { horizontal: 'center', vertical: 'center' }
+      };
+
+      // Cabeçalho da tabela (linha 13)
+      for (let col = 0; col < 6; col++) {
+        const cell = XLSX.utils.encode_cell({ r: 12, c: col });
+        if (ws[cell]) {
+          ws[cell].s = {
+            font: { bold: true, sz: 11, color: white },
+            fill: { fgColor: darkGray },
+            alignment: { horizontal: 'center', vertical: 'center' },
+            border: {
+              top: { style: 'medium', color: { rgb: "000000" } },
+              bottom: { style: 'medium', color: { rgb: "000000" } },
+              left: { style: 'thin', color: { rgb: "CCCCCC" } },
+              right: { style: 'thin', color: { rgb: "CCCCCC" } }
+            }
+          };
+        }
+      }
+
+      // Linhas do ranking
+      for (let i = 0; i < ranking.length; i++) {
+        const row = 13 + i;
+        const isFirst = i === 0;
+        const isSecond = i === 1;
+        const isThird = i === 2;
+        
+        for (let col = 0; col < 6; col++) {
+          const cell = XLSX.utils.encode_cell({ r: row, c: col });
+          if (ws[cell]) {
+            // Formatação monetária para colunas D, E, F
+            if (col >= 3 && typeof ws[cell].v === 'number') {
+              ws[cell].z = 'R$ #,##0.00';
+            }
+
+            // Estilo da linha
+            ws[cell].s = {
+              font: { 
+                sz: 11, 
+                bold: isFirst,
+                color: isFirst ? yellow : (isSecond || isThird ? { rgb: "F59E0B" } : { rgb: "000000" })
+              },
+              fill: { 
+                fgColor: isFirst ? { rgb: "FEF3C7" } : 
+                         (i % 2 === 0 ? white : lightGray)
+              },
+              alignment: { 
+                horizontal: col === 1 ? 'left' : 'center', 
+                vertical: 'center' 
+              },
+              border: {
+                top: { style: 'thin', color: { rgb: "E5E7EB" } },
+                bottom: { style: 'thin', color: { rgb: "E5E7EB" } },
+                left: { style: 'thin', color: { rgb: "E5E7EB" } },
+                right: { style: 'thin', color: { rgb: "E5E7EB" } }
+              }
+            };
           }
         }
       }
 
-      // Cria workbook
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Ranking');
-
-      // Gera arquivo
-      const fileName = `ranking-vendas-${targetDate.replace(/\//g, '-')}.xlsx`;
+      
+      const fileName = `ranking-leilao-nozap-${targetDate.replace(/\//g, '-')}.xlsx`;
       XLSX.writeFile(wb, fileName);
 
-      // Mensagem para WhatsApp
       const whatsappMessage = firstPlace && firstPlace.name !== 'Sem dados'
         ? `🎉 *Parabéns aos nossos vendedores do dia ${targetDate}!*\n\n🏆 *DESTAQUE DO DIA*\n👑 ${firstPlace.name}\n💰 Total vendido: R$ ${fmt(firstPlace.total)}\n\nContinuem com esse ritmo incrível! 🚀`
         : `📊 Ranking de Vendas do dia ${targetDate}`;
 
-      // Copia mensagem para área de transferência
       await navigator.clipboard.writeText(whatsappMessage).catch(() => {});
-      
       alert('✅ Planilha gerada com sucesso!\n\n📋 Mensagem copiada para área de transferência.\n\nCole no WhatsApp e anexe o arquivo Excel baixado.');
     } catch (error) {
       console.error('Erro ao gerar planilha:', error);
