@@ -1,8 +1,8 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Share2, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
-import html2canvas from "html2canvas";
+import { FileSpreadsheet, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import * as XLSX from "xlsx";
 import { base44 } from "@/api/base44Client";
 
 const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/7f0e3593f_Designsemnome1.png";
@@ -134,149 +134,100 @@ export default function DailyRanking({ allSales }) {
 
   const fmt = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const containerRef = React.useRef(null);
-  const [sharing, setSharing] = React.useState(false);
+  const [generating, setGenerating] = React.useState(false);
 
-  const handleShare = async () => {
+  const handleGenerateExcel = async () => {
+    setGenerating(true);
     try {
-      // capture exactly as currently visible (avoid UI changes before capture)
-      if (document.fonts && document.fonts.ready) {
-        await document.fonts.ready;
-      }
-      await new Promise((r) => requestAnimationFrame(() => r()));
+      // Cabeçalho da planilha
+      const headerData = [
+        ['RANKING DE VENDAS DO DIA'],
+        [`Data: ${targetDate}`],
+        [`Total do Dia: R$ ${fmt(dayTotal)}`],
+        [], // Linha vazia
+        ['🏆 TOP 10 VENDEDORES'],
+        ['Posição', 'Nome', 'Qtd Vendas', 'Valor Total', 'Comissão Licenciado', 'Comissão Licenciante']
+      ];
 
-      const node = containerRef.current;
-      const rect = node.getBoundingClientRect();
-      const width = Math.max(1, Math.round(node.offsetWidth || rect.width));
-      const height = Math.max(1, Math.round(node.offsetHeight || rect.height));
+      // Dados do ranking
+      const rankingData = ranking.map((r, i) => [
+        i + 1,
+        r.name,
+        r.count,
+        Number(r.total || 0),
+        Number(r.comissaoLicenciado || 0),
+        Number(r.comissaoLicenciante || 0)
+      ]);
 
-      // Ensure images are loaded
-      const imgs = Array.from(node.querySelectorAll('img'));
-      await Promise.all(imgs.map((img) => {
-        try { img.crossOrigin = 'anonymous'; } catch {}
-        if (img.decode) return img.decode().catch(() => {});
-        return new Promise((res) => {
-          if (img.complete) return res();
-          img.addEventListener('load', () => res(), { once: true });
-          img.addEventListener('error', () => res(), { once: true });
-        });
-      }));
+      // Mensagem de parabenização
+      const firstPlace = ranking[0];
+      const congratsMessage = firstPlace && firstPlace.name !== 'Sem dados'
+        ? [
+            [],
+            ['🎉 DESTAQUE DO DIA'],
+            [`👑 ${firstPlace.name}`],
+            [`💰 Total vendido: R$ ${fmt(firstPlace.total)}`],
+            [],
+            ['Parabéns a todos os vendedores! Continuem com esse ritmo incrível! 🚀']
+          ]
+        : [];
 
-      const bg = getComputedStyle(node).backgroundColor || '#0b0b0b';
-      let canvas;
+      // Combina tudo
+      const worksheetData = [...headerData, ...rankingData, ...congratsMessage];
 
-      const attempt = async (opts) => {
-        const c = await html2canvas(node, {
-          backgroundColor: '#0b0b0b',
-          useCORS: true,
-          ...opts,
-          onclone: (doc) => {
-            const el = doc.querySelector('[data-ranking-capture="1"]');
-            if (el) {
-              el.style.backgroundColor = '#0b0b0b';
-              el.style.width = `${width}px`;
-              el.style.maxWidth = `${width}px`;
-              el.style.overflow = 'hidden';
-              el.style.position = 'relative';
-              el.style.isolation = 'isolate';
-              // Hide everything outside the capture container
-              const all = Array.from(doc.querySelectorAll('body *'));
-              all.forEach(e => {
-                if (!e.closest('[data-ranking-capture="1"]')) {
-                  if (e.tagName !== 'HTML' && e.tagName !== 'BODY') {
-                    e.style.display = 'none';
-                  }
-                }
-              });
-            }
-            const imgs = Array.from(doc.querySelectorAll('img'));
-            imgs.forEach(img => img.setAttribute('crossorigin', 'anonymous'));
-            doc.body.style.backgroundColor = '#0b0b0b';
+      // Cria worksheet
+      const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+
+      // Formatação de largura das colunas
+      ws['!cols'] = [
+        { wch: 10 }, // Posição
+        { wch: 30 }, // Nome
+        { wch: 12 }, // Qtd Vendas
+        { wch: 15 }, // Valor Total
+        { wch: 20 }, // Comissão Licenciado
+        { wch: 20 }  // Comissão Licenciante
+      ];
+
+      // Formatação de células monetárias
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for (let R = 6; R <= range.e.r; R++) {
+        for (let C = 3; C <= 5; C++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = ws[cellAddress];
+          if (cell && typeof cell.v === 'number') {
+            cell.z = 'R$ #,##0.00';
           }
-        });
-        if (!c || !c.width || !c.height) throw new Error('empty');
-        try {
-          const ctx = c.getContext('2d');
-          const samples = [
-            [1, 1],
-            [Math.floor(c.width / 2), Math.floor(c.height / 2)],
-            [c.width - 2, c.height - 2]
-          ];
-          const allWhite = samples.every(([x, y]) => {
-            const d = ctx.getImageData(Math.max(0, x), Math.max(0, y), 1, 1).data;
-            return d[0] > 250 && d[1] > 250 && d[2] > 250;
-          });
-          if (allWhite) throw new Error('blank');
-        } catch (_) { /* ignore sampling errors */ }
-        return c;
-      };
-
-      try {
-        canvas = await attempt({
-          foreignObjectRendering: false,
-          scrollX: 0,
-          scrollY: 0,
-          width,
-          height,
-          scale: Math.max(1, Math.min(3, window.devicePixelRatio || 1))
-        });
-      } catch (e1) {
-        try {
-          canvas = await attempt({
-            foreignObjectRendering: true,
-            allowTaint: true,
-            scale: 1
-          });
-        } catch (e2) {
-          canvas = await html2canvas(node, { backgroundColor: '#0b0b0b', useCORS: true });
         }
       }
-      const ctx = canvas.getContext('2d');
-      if (ctx && ctx.imageSmoothingQuality) ctx.imageSmoothingQuality = 'high';
 
-      let blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png', 1));
-      if (!blob) {
-        const dataUrl = canvas.toDataURL('image/png');
-        blob = await (await fetch(dataUrl)).blob();
-      }
-      if (!blob) throw new Error('Falha ao gerar imagem');
+      // Cria workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Ranking');
 
-      const fileName = `ranking-${targetDate.replace(/\//g, '-')}.png`;
-      const file = new File([blob], fileName, { type: 'image/png' });
-      setSharing(true);
+      // Gera arquivo
+      const fileName = `ranking-vendas-${targetDate.replace(/\//g, '-')}.xlsx`;
+      XLSX.writeFile(wb, fileName);
 
-      // Monta mensagem personalizada
-      const firstPlace = ranking[0];
-      const message = firstPlace && firstPlace.name !== 'Sem dados' 
+      // Mensagem para WhatsApp
+      const whatsappMessage = firstPlace && firstPlace.name !== 'Sem dados'
         ? `🎉 *Parabéns aos nossos vendedores do dia ${targetDate}!*\n\n🏆 *DESTAQUE DO DIA*\n👑 ${firstPlace.name}\n💰 Total vendido: R$ ${fmt(firstPlace.total)}\n\nContinuem com esse ritmo incrível! 🚀`
         : `📊 Ranking de Vendas do dia ${targetDate}`;
 
-      if (navigator.canShare && navigator.canShare({ files: [file], text: message })) {
-        await navigator.share({ files: [file], text: message });
-        return;
-      }
-
-      // Fallback: download da imagem + copiar mensagem
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      // Copia mensagem para clipboard
-      await navigator.clipboard.writeText(message).catch(() => {});
-      alert('Imagem baixada! Mensagem copiada. Cole no WhatsApp e anexe a imagem.');
-    } catch (e) {
-      console.error('Falha ao compartilhar imagem', e);
+      // Copia mensagem para área de transferência
+      await navigator.clipboard.writeText(whatsappMessage).catch(() => {});
+      
+      alert('✅ Planilha gerada com sucesso!\n\n📋 Mensagem copiada para área de transferência.\n\nCole no WhatsApp e anexe o arquivo Excel baixado.');
+    } catch (error) {
+      console.error('Erro ao gerar planilha:', error);
+      alert('❌ Erro ao gerar planilha. Tente novamente.');
     } finally {
-      setSharing(false);
+      setGenerating(false);
     }
   };
 
   return (
     <div className="mb-6">
-      <div ref={containerRef} data-ranking-capture="1" className="relative bg-black text-white rounded-2xl p-5 md:p-6 border border-gray-800 mb-6 mx-auto w-full max-w-[420px] sm:max-w-[560px] md:max-w-2xl overflow-hidden min-h-[220px]">
+      <div className="relative bg-black text-white rounded-2xl p-5 md:p-6 border border-gray-800 mb-6 mx-auto w-full max-w-[420px] sm:max-w-[560px] md:max-w-2xl overflow-hidden min-h-[220px]">
       {/* Header com logos */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-9 sm:h-10 md:h-12 object-contain" onError={(e)=>{e.currentTarget.style.display='none';}} />
@@ -341,14 +292,14 @@ export default function DailyRanking({ allSales }) {
       </div>
       {/* Ações */}
       <div className="mt-4 flex items-center justify-end">
-        <Button onClick={handleShare} disabled={sharing} className="bg-green-600 hover:bg-green-700 disabled:opacity-50">
-          {sharing ? (
+        <Button onClick={handleGenerateExcel} disabled={generating} className="bg-green-600 hover:bg-green-700 disabled:opacity-50">
+          {generating ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando imagem...
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando planilha...
             </>
           ) : (
             <>
-              <Share2 className="w-4 h-4 mr-2" /> Compartilhar no WhatsApp
+              <FileSpreadsheet className="w-4 h-4 mr-2" /> Gerar Planilha Excel
             </>
           )}
         </Button>
