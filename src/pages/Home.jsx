@@ -159,8 +159,18 @@ export default function Home() {
 
     // Removido: filtro específico 'sai_de_baixo' (desativado permanentemente)
 
-    // NOZAP - FILTRO BASE
-    filtered = auctions.filter((a) => a?.partner_store !== 'sai_de_baixo' && !a.is_investment_plan);
+    // NOZAP - FILTRO BASE + ESTOQUE
+    filtered = auctions.filter((a) => {
+      // Exclui sai_de_baixo e planos de investimento
+      if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
+      
+      // 🆕 Exclui produtos com estoque zero (quantity <= 0 ou ausente)
+      // Nota: auctions vêm de Product via product_id, mas podem não ter quantity diretamente
+      // Se não tem quantity definida, assume que existe estoque (leilões antigos)
+      if (a.quantity !== undefined && a.quantity <= 0) return false;
+      
+      return true;
+    });
 
     // REGIÃO
     if (userRegion) {
