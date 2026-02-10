@@ -331,9 +331,39 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         doc.text('TOTAL COMISSÕES LICENCIANTES:', margin + 75, yPos + 4);
         doc.text(`R$ ${fmt(subtotalComissaoLicenciantes)}`, margin + 145, yPos + 4);
         yPos += 15;
-      }
+        }
 
-      yPos += 5;
+        // ========== TOTAL GERAL DE COMISSÕES ==========
+        if (yPos > pageHeight - 40) {
+        doc.addPage();
+        yPos = 20;
+        }
+
+        const totalGeralComissoes = totalComissaoLicenciado + totalComissaoLicenciante;
+
+        // Box destacado para total geral
+        doc.setFillColor(255, 243, 205); // Fundo amarelo claro
+        doc.rect(margin, yPos, pageWidth - margin * 2, 20, 'F');
+        doc.setDrawColor(255, 165, 0); // Borda laranja
+        doc.setLineWidth(1);
+        doc.rect(margin, yPos, pageWidth - margin * 2, 20);
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('💰 TOTAL GERAL DE COMISSÕES A PAGAR:', margin + 5, yPos + 8);
+
+        doc.setTextColor(255, 100, 0); // Laranja escuro
+        doc.setFontSize(16);
+        doc.text(`R$ ${fmt(totalGeralComissoes)}`, margin + 145, yPos + 8);
+
+        // Subtotal por tipo (pequeno)
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`(Licenciados: R$ ${fmt(totalComissaoLicenciado)} + Licenciantes: R$ ${fmt(totalComissaoLicenciante)})`, margin + 5, yPos + 15);
+
+        yPos += 25;
 
       // ========== DETALHAMENTO DAS VENDAS (SEMPRE NA SEGUNDA PÁGINA) ==========
       doc.addPage();
