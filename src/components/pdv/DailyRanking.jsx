@@ -256,10 +256,17 @@ export default function DailyRanking({ allSales }) {
         return;
       }
 
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      const encodedMessage = encodeURIComponent(message);
-      const whatsappUrl = `https://wa.me/?text=${encodedMessage}%0A%0A${encodeURIComponent(file_url)}`;
-      window.open(whatsappUrl, '_blank');
+      // Fallback: download da imagem + copiar mensagem
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      // Copia mensagem para clipboard
+      await navigator.clipboard.writeText(message).catch(() => {});
+      alert('Imagem baixada! Mensagem copiada. Cole no WhatsApp e anexe a imagem.');
     } catch (e) {
       console.error('Falha ao compartilhar imagem', e);
     } finally {
