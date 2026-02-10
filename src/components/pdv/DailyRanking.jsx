@@ -6,7 +6,7 @@ import { jsPDF } from "jspdf";
 import { base44 } from "@/api/base44Client";
 
 const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/82f638978_image.png";
-const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/83b99793e_leilonozap3.png";
+const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/c478ca710_LogoLeiloNoZap.PNG";
 
 export default function DailyRanking({ allSales }) {
   const [sellersRanking, setSellersRanking] = React.useState([]);
