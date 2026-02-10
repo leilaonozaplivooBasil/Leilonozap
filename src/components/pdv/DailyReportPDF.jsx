@@ -46,7 +46,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       // Logo (mantém proporção original)
       if (logoDataUrl) {
         try {
-          const logoWidth = 40;
+          const logoWidth = 28;
           doc.addImage(logoDataUrl, 'PNG', margin, 8, logoWidth, 0);
         } catch (e) {
           console.warn('Erro ao adicionar logo');
