@@ -5,7 +5,7 @@ import { FileSpreadsheet, Trophy, Calendar as CalendarIcon, Loader2 } from "luci
 import { jsPDF } from "jspdf";
 import { base44 } from "@/api/base44Client";
 
-const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/82f638978_image.png";
+const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/7f0e3593f_Designsemnome1.png";
 const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/c478ca710_LogoLeiloNoZap.PNG";
 
 export default function DailyRanking({ allSales }) {
