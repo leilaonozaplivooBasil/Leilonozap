@@ -351,7 +351,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text('💰 TOTAL GERAL DE COMISSÕES A PAGAR:', margin + 5, yPos + 8);
+        doc.text('TOTAL GERAL DE COMISSOES A PAGAR:', margin + 5, yPos + 8);
 
         doc.setTextColor(255, 100, 0); // Laranja escuro
         doc.setFontSize(16);
