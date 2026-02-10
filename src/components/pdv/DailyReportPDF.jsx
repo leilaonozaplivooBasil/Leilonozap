@@ -46,7 +46,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       // Logo
       if (logoDataUrl) {
         try {
-          doc.addImage(logoDataUrl, 'PNG', margin, 8, 35, 30);
+          doc.addImage(logoDataUrl, 'PNG', margin, 10, 30, 25);
         } catch (e) {
           console.warn('Erro ao adicionar logo');
         }
