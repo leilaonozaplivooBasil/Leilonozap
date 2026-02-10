@@ -28,6 +28,7 @@ import { useRealtimeSync } from '../components/system/RealtimeSync';
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import RecommendedSection from '../components/recommendations/RecommendedSection';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import LiveStats from '../components/home/LiveStats';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -596,16 +597,7 @@ export default function Home() {
                 </Link>
               </div>
 
-              <div className="flex items-center gap-4 text-sm text-gray-400">
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-4 h-4" />
-                  <span>{auctions.length > 0 ? Math.min(auctions.length * 8 + 42, 200) : 50} online</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>R$ {auctions.length > 0 ? (auctions.length * 1250 + 5000).toLocaleString('pt-BR') : '15.000'} em lances hoje</span>
-                </div>
-              </div>
+              <LiveStats />
 
               {/* BOTÕES DESKTOP - POSIÇÃO ABSOLUTA DIREITA */}
               <div className="hidden lg:flex gap-3 absolute top-0 right-0">
