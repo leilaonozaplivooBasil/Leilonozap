@@ -2267,16 +2267,29 @@ ${boletoInfo}================================
                         const dayCount = daySales.length;
 
                         // Filtra dados de vendedores apenas deste dia
-                        const sellersForDay = sellersDataForPDF.filter(seller => 
-                          seller.sales?.some(sale => 
-                            new Date(sale.sale_datetime).toLocaleDateString('pt-BR') === date
-                          )
-                        ).map(seller => ({
-                          ...seller,
-                          sales: seller.sales.filter(sale => 
-                            new Date(sale.sale_datetime).toLocaleDateString('pt-BR') === date
-                          )
-                        }));
+                        const sellersForDay = sellersDataForPDF
+                          .map(seller => {
+                            // Filtra vendas apenas deste dia específico
+                            const salesThisDay = seller.sales.filter(sale => 
+                              new Date(sale.sale_datetime).toLocaleDateString('pt-BR') === date
+                            );
+                            
+                            // Só retorna vendedor se ele tiver vendas neste dia
+                            if (salesThisDay.length === 0) return null;
+                            
+                            // Recalcula comissão total apenas para as vendas deste dia
+                            const totalCommissionThisDay = salesThisDay.reduce((sum, sale) => 
+                              sum + (sale.seller_commission || 0), 0
+                            );
+                            
+                            return {
+                              ...seller,
+                              sales: salesThisDay,
+                              sales_count: salesThisDay.length,
+                              total_commission: totalCommissionThisDay
+                            };
+                          })
+                          .filter(Boolean); // Remove vendedores sem vendas no dia
 
                         return (
                           <div key={date} className="bg-gray-900/50 rounded-lg p-5 border border-gray-700">

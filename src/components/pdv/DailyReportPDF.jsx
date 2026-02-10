@@ -15,6 +15,10 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
     setIsGenerating(true);
     
     try {
+      console.log('📊 Gerando PDF para data:', date);
+      console.log('📊 Total de vendas recebidas:', daySales.length);
+      console.log('📊 Dados de vendedores:', sellersData);
+      
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -72,12 +76,17 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       const totalVendas = daySales.length;
       const totalValor = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
       
-      // Busca comissões
+      console.log('💰 Total de vendas para PDF:', totalVendas);
+      console.log('💰 Valor total:', totalValor);
+      
+      // Busca comissões APENAS das vendas deste dia
       let totalComissaoLicenciado = 0;
       let totalComissaoLicenciante = 0;
       
       if (sellersData && sellersData.length > 0) {
+        console.log('👥 Processando comissões de', sellersData.length, 'vendedores');
         sellersData.forEach(seller => {
+          console.log(`  - ${seller.seller_name}: ${seller.sales?.length || 0} vendas`);
           seller.sales?.forEach(sale => {
             // Comissão do licenciado (vendedor)
             totalComissaoLicenciado += sale.seller_commission || 0;
@@ -88,6 +97,8 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
             }
           });
         });
+        console.log('💵 Total comissão licenciados:', totalComissaoLicenciado);
+        console.log('💵 Total comissão licenciantes:', totalComissaoLicenciante);
       }
 
       // Box de Resumo com bordas
