@@ -1122,9 +1122,9 @@ export default function AuctionRoom() {
     setIsBuyingNow(true);
 
     try {
-      // 🆕 ARREMATE = LANCE ATUAL + 30%
+      // 🆕 ARREMATE = LANCE ATUAL + 45%
       const currentPrice = auction.current_price || auction.starting_price;
-      const buyNowPrice = currentPrice * 1.3;
+      const buyNowPrice = currentPrice * 1.45;
 
       // Cria mensagem de arremate
       await AuctionMessage.create({
@@ -1693,8 +1693,8 @@ export default function AuctionRoom() {
                   <span className="font-semibold text-white">R$ {currentPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Arremate (+30%):</span>
-                  <span className="text-2xl font-bold text-orange-400">R$ {(currentPrice * 1.3).toFixed(2)}</span>
+                  <span className="text-gray-400">Arremate (+45%):</span>
+                  <span className="text-2xl font-bold text-orange-400">R$ {(currentPrice * 1.45).toFixed(2)}</span>
                 </div>
               </div>
             </div>
