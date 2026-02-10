@@ -234,7 +234,7 @@ export default function DailyRanking({ allSales }) {
         } else if (isThird) {
           doc.setFillColor(253, 186, 116); // Bronze
         } else {
-          doc.setFillColor(i % 2 === 0 ? 255 : ...lightGray);
+          doc.setFillColor(...(i % 2 === 0 ? [255, 255, 255] : lightGray));
         }
         
         doc.rect(10, y, 190, 7, 'F');
