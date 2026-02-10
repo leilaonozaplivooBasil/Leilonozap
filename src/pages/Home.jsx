@@ -88,6 +88,7 @@ export default function Home() {
     filters: {},
     onUpdate: (freshAuctions) => {
       if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
+        console.log(`🔄 [Home] Sync recebeu ${freshAuctions.length} leilões, ${freshAuctions.filter(a => a.status === 'active').length} ativos`);
         const serialized = JSON.stringify(freshAuctions);
         sessionStorage.setItem('auctions_cache', serialized);
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
