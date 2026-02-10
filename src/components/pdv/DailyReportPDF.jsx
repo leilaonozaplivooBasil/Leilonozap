@@ -43,10 +43,11 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setFillColor(17, 24, 39); // bg-gray-900
       doc.rect(0, 0, pageWidth, 45, 'F');
 
-      // Logo
+      // Logo (mantém proporção original)
       if (logoDataUrl) {
         try {
-          doc.addImage(logoDataUrl, 'PNG', margin, 10, 30, 25);
+          const logoWidth = 40;
+          doc.addImage(logoDataUrl, 'PNG', margin, 8, logoWidth, 0);
         } catch (e) {
           console.warn('Erro ao adicionar logo');
         }
