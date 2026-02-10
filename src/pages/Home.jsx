@@ -197,7 +197,7 @@ export default function Home() {
       if (a.status !== 'active' && b.status === 'active') return 1;
       return a.status === 'active' ? new Date(a.end_time) - new Date(b.end_time) : new Date(b.end_time) - new Date(a.end_time);
     });
-  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion]);
+  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap]);
 
   const loadUserFavorites = React.useCallback(async (userId, retryCount = 0) => {
     if (!userId) return;
