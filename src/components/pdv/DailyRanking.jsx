@@ -2,7 +2,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FileSpreadsheet, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
-import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
 import { base44 } from "@/api/base44Client";
 
 const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/7f0e3593f_Designsemnome1.png";
@@ -136,228 +136,156 @@ export default function DailyRanking({ allSales }) {
 
   const [generating, setGenerating] = React.useState(false);
 
-  const handleGenerateExcel = async () => {
+  const handleGeneratePDF = async () => {
     setGenerating(true);
     try {
       const firstPlace = ranking[0];
+      const doc = new jsPDF();
       
-      // Estrutura de dados
-      const data = [
-        ['LEILÃO NOZAP - RANKING DE VENDAS DO DIA'],
-        [],
-        ['Data:', targetDate],
-        ['Total do Dia:', `R$ ${fmt(dayTotal)}`],
-        [],
-        ['🏆 DESTAQUE DO DIA'],
-        ['Vendedor:', firstPlace?.name || '-'],
-        ['Total Vendido:', firstPlace ? `R$ ${fmt(firstPlace.total)}` : '-'],
-        ['Comissão:', firstPlace ? `R$ ${fmt(firstPlace.comissaoLicenciado)}` : '-'],
-        [],
-        ['TOP 10 VENDEDORES'],
-        [],
-        ['Pos', 'Nome', 'Qtd', 'Valor Total', 'Comissão Lic.', 'Comissão Licenciante'],
-        ...ranking.map((r, i) => [
-          i + 1,
-          r.name,
-          r.count,
-          r.total,
-          r.comissaoLicenciado,
-          r.comissaoLicenciante
-        ])
-      ];
+      // Cores Leilão NoZap
+      const green = [34, 197, 94];
+      const darkGray = [31, 41, 55];
+      const yellow = [251, 191, 36];
+      const lightGray = [249, 250, 251];
+      const black = [0, 0, 0];
 
-      const ws = XLSX.utils.aoa_to_sheet(data);
+      let y = 20;
 
-      // Largura das colunas
-      ws['!cols'] = [
-        { wch: 8 },  // Pos
-        { wch: 35 }, // Nome
-        { wch: 8 },  // Qtd
-        { wch: 18 }, // Valor Total
-        { wch: 18 }, // Comissão Lic
-        { wch: 22 }  // Comissão Licenciante
-      ];
+      // 🎨 TÍTULO PRINCIPAL
+      doc.setFillColor(...darkGray);
+      doc.rect(10, y - 5, 190, 15, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LEILÃO NOZAP - RANKING DE VENDAS DO DIA', 105, y + 5, { align: 'center' });
+      
+      y += 20;
 
-      // Altura das linhas
-      ws['!rows'] = [
-        { hpt: 35 }, // Título principal
-        { hpt: 5 },  // Espaço
-        { hpt: 20 }, // Data
-        { hpt: 20 }, // Total
-        { hpt: 5 },  // Espaço
-        { hpt: 25 }, // Destaque título
-        { hpt: 20 }, // Vendedor
-        { hpt: 20 }, // Total vendido
-        { hpt: 20 }, // Comissão
-        { hpt: 5 },  // Espaço
-        { hpt: 25 }, // Top 10 título
-        { hpt: 5 },  // Espaço
-        { hpt: 22 }  // Cabeçalho da tabela
-      ];
+      // 📅 DATA E TOTAL
+      doc.setFontSize(11);
+      doc.setTextColor(...black);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Data: ${targetDate}`, 15, y);
+      doc.text(`Total do Dia: R$ ${fmt(dayTotal)}`, 15, y + 7);
+      
+      y += 20;
 
-      // Cores Leilão NoZap (sem o #)
-      const green = { rgb: "22C55E" };    // Verde principal
-      const darkGray = { rgb: "1F2937" }; // Cinza escuro
-      const yellow = { rgb: "FBBF24" };   // Amarelo/dourado destaque
-      const lightGray = { rgb: "F9FAFB" };
-      const white = { rgb: "FFFFFF" };
-      const black = { rgb: "000000" };
+      // 🏆 DESTAQUE DO DIA
+      doc.setFillColor(...yellow);
+      doc.rect(10, y - 5, 190, 10, 'F');
+      doc.setTextColor(...black);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('🏆 DESTAQUE DO DIA', 105, y + 2, { align: 'center' });
+      
+      y += 12;
 
-      // Título principal (A1) - Mesclado
-      ws['!merges'] = [
-        { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }, // Título
-        { s: { r: 5, c: 0 }, e: { r: 5, c: 5 } }, // Destaque
-        { s: { r: 10, c: 0 }, e: { r: 10, c: 5 } } // Top 10
-      ];
+      // Box do destaque
+      doc.setFillColor(254, 243, 199);
+      doc.rect(10, y, 190, 25, 'F');
+      doc.setDrawColor(...yellow);
+      doc.rect(10, y, 190, 25, 'S');
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...black);
+      doc.text('👑 ' + (firstPlace?.name || 'Sem dados'), 15, y + 8);
+      doc.text(`💰 Total vendido: R$ ${firstPlace ? fmt(firstPlace.total) : '0,00'}`, 15, y + 16);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Comissão: R$ ${firstPlace ? fmt(firstPlace.comissaoLicenciado) : '0,00'}`, 15, y + 22);
+      
+      y += 35;
 
-      // Estilo do título principal
-      ws['A1'].s = {
-        font: { bold: true, sz: 20, color: white },
-        fill: { fgColor: darkGray },
-        alignment: { horizontal: 'center', vertical: 'center' },
-        border: {
-          top: { style: 'thick', color: green },
-          bottom: { style: 'thick', color: green },
-          left: { style: 'thick', color: green },
-          right: { style: 'thick', color: green }
-        }
-      };
+      // 🎯 TOP 10 VENDEDORES
+      doc.setFillColor(...green);
+      doc.rect(10, y - 5, 190, 10, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('TOP 10 VENDEDORES', 105, y + 2, { align: 'center' });
+      
+      y += 12;
 
-      // Estilo do destaque do dia
-      ws['A6'].s = {
-        font: { bold: true, sz: 16, color: black },
-        fill: { fgColor: yellow },
-        alignment: { horizontal: 'center', vertical: 'center' },
-        border: {
-          top: { style: 'medium', color: black },
-          bottom: { style: 'medium', color: black },
-          left: { style: 'medium', color: black },
-          right: { style: 'medium', color: black }
-        }
-      };
-
-      // Destaque info (mesclar células B7:F7, B8:F8, B9:F9 para destacar valores)
-      ws['!merges'].push(
-        { s: { r: 6, c: 1 }, e: { r: 6, c: 5 } }, // Vendedor
-        { s: { r: 7, c: 1 }, e: { r: 7, c: 5 } }, // Total Vendido
-        { s: { r: 8, c: 1 }, e: { r: 8, c: 5 } }  // Comissão
-      );
-
-      ['A7', 'A8', 'A9'].forEach(cell => {
-        if (ws[cell]) {
-          ws[cell].s = {
-            font: { bold: true, sz: 12, color: black },
-            fill: { fgColor: lightGray },
-            alignment: { horizontal: 'left', vertical: 'center' },
-            border: {
-              top: { style: 'thin', color: { rgb: "D1D5DB" } },
-              bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
-              left: { style: 'thin', color: { rgb: "D1D5DB" } },
-              right: { style: 'thin', color: { rgb: "D1D5DB" } }
-            }
-          };
-        }
-      });
-
-      ['B7', 'B8', 'B9'].forEach(cell => {
-        if (ws[cell]) {
-          ws[cell].s = {
-            font: { sz: 13, bold: true, color: green },
-            fill: { fgColor: { rgb: "ECFDF5" } }, // Verde muito claro
-            alignment: { horizontal: 'left', vertical: 'center' },
-            border: {
-              top: { style: 'thin', color: { rgb: "D1D5DB" } },
-              bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
-              left: { style: 'thin', color: { rgb: "D1D5DB" } },
-              right: { style: 'thin', color: { rgb: "D1D5DB" } }
-            }
-          };
-        }
-      });
-
-      // Top 10 título
-      ws['A11'].s = {
-        font: { bold: true, sz: 14, color: white },
-        fill: { fgColor: green },
-        alignment: { horizontal: 'center', vertical: 'center' }
-      };
-
-      // Cabeçalho da tabela (linha 13)
-      for (let col = 0; col < 6; col++) {
-        const cell = XLSX.utils.encode_cell({ r: 12, c: col });
-        if (ws[cell]) {
-          ws[cell].s = {
-            font: { bold: true, sz: 11, color: white },
-            fill: { fgColor: darkGray },
-            alignment: { horizontal: 'center', vertical: 'center' },
-            border: {
-              top: { style: 'medium', color: { rgb: "000000" } },
-              bottom: { style: 'medium', color: { rgb: "000000" } },
-              left: { style: 'thin', color: { rgb: "CCCCCC" } },
-              right: { style: 'thin', color: { rgb: "CCCCCC" } }
-            }
-          };
-        }
-      }
+      // Cabeçalho da tabela
+      doc.setFillColor(...darkGray);
+      doc.rect(10, y, 190, 8, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Pos', 15, y + 5);
+      doc.text('Nome', 30, y + 5);
+      doc.text('Qtd', 110, y + 5);
+      doc.text('Valor Total', 130, y + 5);
+      doc.text('Comissão Lic.', 165, y + 5);
+      
+      y += 8;
 
       // Linhas do ranking
-      for (let i = 0; i < ranking.length; i++) {
-        const row = 13 + i;
+      ranking.forEach((r, i) => {
         const isFirst = i === 0;
         const isSecond = i === 1;
         const isThird = i === 2;
         
-        for (let col = 0; col < 6; col++) {
-          const cell = XLSX.utils.encode_cell({ r: row, c: col });
-          if (ws[cell]) {
-            // Formatação monetária para colunas D, E, F
-            if (col >= 3 && typeof ws[cell].v === 'number') {
-              ws[cell].z = 'R$ #,##0.00';
-            }
-
-            // Estilo da linha
-            ws[cell].s = {
-              font: { 
-                sz: 11, 
-                bold: isFirst || isSecond || isThird,
-                color: isFirst ? black : (isSecond || isThird ? black : black)
-              },
-              fill: { 
-                fgColor: isFirst ? { rgb: "FEF3C7" } :  // Amarelo claro
-                         isSecond ? { rgb: "E5E7EB" } : // Cinza prata
-                         isThird ? { rgb: "FDBA74" } :  // Laranja bronze
-                         (i % 2 === 0 ? white : lightGray)
-              },
-              alignment: { 
-                horizontal: col === 1 ? 'left' : 'center', 
-                vertical: 'center' 
-              },
-              border: {
-                top: { style: 'thin', color: { rgb: "D1D5DB" } },
-                bottom: { style: 'thin', color: { rgb: "D1D5DB" } },
-                left: { style: 'thin', color: { rgb: "D1D5DB" } },
-                right: { style: 'thin', color: { rgb: "D1D5DB" } }
-              }
-            };
-          }
+        // Cor de fundo
+        if (isFirst) {
+          doc.setFillColor(254, 243, 199); // Ouro
+        } else if (isSecond) {
+          doc.setFillColor(229, 231, 235); // Prata
+        } else if (isThird) {
+          doc.setFillColor(253, 186, 116); // Bronze
+        } else {
+          doc.setFillColor(i % 2 === 0 ? 255 : ...lightGray);
         }
+        
+        doc.rect(10, y, 190, 7, 'F');
+        
+        // Bordas
+        doc.setDrawColor(209, 213, 219);
+        doc.rect(10, y, 190, 7, 'S');
+        
+        doc.setTextColor(...black);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', isFirst || isSecond || isThird ? 'bold' : 'normal');
+        
+        doc.text(String(i + 1), 15, y + 5);
+        doc.text(r.name.substring(0, 35), 30, y + 5);
+        doc.text(String(r.count), 115, y + 5, { align: 'center' });
+        doc.text(`R$ ${fmt(r.total)}`, 155, y + 5, { align: 'right' });
+        doc.text(`R$ ${fmt(r.comissaoLicenciado)}`, 195, y + 5, { align: 'right' });
+        
+        y += 7;
+        
+        if (y > 270 && i < ranking.length - 1) {
+          doc.addPage();
+          y = 20;
+        }
+      });
+
+      // 🚀 MENSAGEM FINAL
+      y += 10;
+      if (y > 260) {
+        doc.addPage();
+        y = 20;
       }
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(...green);
+      doc.text('Parabéns a todos os vendedores! Continuem com esse ritmo incrível! 🚀', 105, y, { align: 'center' });
 
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Ranking');
-      
-      const fileName = `ranking-leilao-nozap-${targetDate.replace(/\//g, '-')}.xlsx`;
-      XLSX.writeFile(wb, fileName);
+      // Salva PDF
+      const fileName = `ranking-leilao-nozap-${targetDate.replace(/\//g, '-')}.pdf`;
+      doc.save(fileName);
 
+      // Mensagem WhatsApp
       const whatsappMessage = firstPlace && firstPlace.name !== 'Sem dados'
         ? `🎉 *Parabéns aos nossos vendedores do dia ${targetDate}!*\n\n🏆 *DESTAQUE DO DIA*\n👑 ${firstPlace.name}\n💰 Total vendido: R$ ${fmt(firstPlace.total)}\n\nContinuem com esse ritmo incrível! 🚀`
         : `📊 Ranking de Vendas do dia ${targetDate}`;
 
       await navigator.clipboard.writeText(whatsappMessage).catch(() => {});
-      alert('✅ Planilha gerada com sucesso!\n\n📋 Mensagem copiada para área de transferência.\n\nCole no WhatsApp e anexe o arquivo Excel baixado.');
+      alert('✅ PDF gerado com sucesso!\n\n📋 Mensagem copiada para área de transferência.\n\nCole no WhatsApp e anexe o PDF baixado.');
     } catch (error) {
-      console.error('Erro ao gerar planilha:', error);
-      alert('❌ Erro ao gerar planilha. Tente novamente.');
+      console.error('Erro ao gerar PDF:', error);
+      alert('❌ Erro ao gerar PDF. Tente novamente.');
     } finally {
       setGenerating(false);
     }
@@ -430,14 +358,14 @@ export default function DailyRanking({ allSales }) {
       </div>
       {/* Ações */}
       <div className="mt-4 flex items-center justify-end">
-        <Button onClick={handleGenerateExcel} disabled={generating} className="bg-green-600 hover:bg-green-700 disabled:opacity-50">
+        <Button onClick={handleGeneratePDF} disabled={generating} className="bg-green-600 hover:bg-green-700 disabled:opacity-50">
           {generating ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando planilha...
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando PDF...
             </>
           ) : (
             <>
-              <FileSpreadsheet className="w-4 h-4 mr-2" /> Gerar Planilha Excel
+              <FileSpreadsheet className="w-4 h-4 mr-2" /> Gerar PDF do Ranking
             </>
           )}
         </Button>
