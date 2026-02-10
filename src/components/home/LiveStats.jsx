@@ -18,14 +18,14 @@ export default function LiveStats() {
 
   const loadStats = async () => {
     try {
-      // 1. Usuários online (últimos 30 segundos)
-      const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString();
-      const recentViews = await base44.entities.AuctionView.list('-last_viewed', 200);
-      const activeUsers = recentViews.filter(view => {
-        const lastViewed = new Date(view.last_viewed || view.updated_date);
-        return lastViewed >= new Date(thirtySecondsAgo);
+      // 1. Usuários online (sessões ativas nos últimos 60 segundos)
+      const sixtySecondsAgo = new Date(Date.now() - 60 * 1000).toISOString();
+      const sessions = await base44.entities.LiveSession.list('-last_heartbeat', 300);
+      const activeSessions = sessions.filter(session => {
+        const lastHeartbeat = new Date(session.last_heartbeat);
+        return lastHeartbeat >= new Date(sixtySecondsAgo);
       });
-      const uniqueOnlineUsers = new Set(activeUsers.map(v => v.user_id)).size;
+      const uniqueOnlineUsers = activeSessions.length;
 
       // 2. Total de lances do dia (soma dos valores)
       const today = new Date();

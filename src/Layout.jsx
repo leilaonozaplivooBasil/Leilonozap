@@ -12,6 +12,7 @@ import Footer from "@/components/common/Footer";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import CPFModal from "@/components/common/CPFModal";
+import { useActiveSession } from "@/components/system/useActiveSession";
 
       import { Button } from "@/components/ui/button";
       import { base44 } from '@/api/base44Client';
@@ -46,6 +47,9 @@ export default function Layout({ children, currentPageName }) {
   const [cartCount, setCartCount] = useState(0);
   const [showCartPopup, setShowCartPopup] = useState(false);
   const [showCPFModal, setShowCPFModal] = useState(false);
+
+  // 🆕 Rastreamento de sessão ativa
+  useActiveSession(currentUser);
 
   // Atualiza contador do carrinho
   useEffect(() => {
