@@ -557,7 +557,7 @@ export default function Home() {
                 <span>Leilões <span className="text-green-400">Ativos</span> Agora!</span>
               </h1>
               <p className="text-gray-300 mb-4 text-base lg:text-lg">
-                {auctions.length} leilões rolando. Entre na sala e dê seu lance!
+                {auctions.filter(a => a.status === 'active').length} leilões rolando. Entre na sala e dê seu lance!
               </p>
 
               {/* BOTÕES - MOBILE ABAIXO DO TEXTO, DESKTOP NO LADO */}
