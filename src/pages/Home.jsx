@@ -82,6 +82,7 @@ export default function Home() {
   const [favoriteAuctions, setFavoriteAuctions] = useState([]);
   const [banners, setBanners] = useState([]);
   const [userRegion, setUserRegion] = useState(null);
+  const [productStockMap, setProductStockMap] = useState({});
 
   const { refresh: refreshAuctions } = useRealtimeSync({
     entityName: 'Auction',
@@ -161,13 +162,12 @@ export default function Home() {
 
     // NOZAP - FILTRO BASE + ESTOQUE
     filtered = auctions.filter((a) => {
-      // Exclui sai_de_baixo e planos de investimento
       if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
       
-      // 🆕 Exclui produtos com estoque zero (quantity <= 0 ou ausente)
-      // Nota: auctions vêm de Product via product_id, mas podem não ter quantity diretamente
-      // Se não tem quantity definida, assume que existe estoque (leilões antigos)
-      if (a.quantity !== undefined && a.quantity <= 0) return false;
+      // 🆕 FILTRO DE ESTOQUE: Verifica se produto vinculado tem estoque > 0
+      if (a.product_id && productStockMap[a.product_id] !== undefined) {
+        if (productStockMap[a.product_id] <= 0) return false;
+      }
       
       return true;
     });
@@ -334,6 +334,21 @@ export default function Home() {
     }
   }, [loadUserFavorites]);
 
+  const loadProductStock = React.useCallback(async () => {
+    try {
+      const products = await base44.entities.Product.list();
+      const stockMap = {};
+      products.forEach(p => {
+        if (p.id) {
+          stockMap[p.id] = p.quantity || 0;
+        }
+      });
+      setProductStockMap(stockMap);
+    } catch (error) {
+      console.debug('Erro ao carregar estoque:', error);
+    }
+  }, []);
+
   const loadAuctions = React.useCallback(async (isRetry = false) => {
     const cachedData = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
@@ -440,6 +455,7 @@ export default function Home() {
       // EXECUTA EM PARALELO - NÃO BLOQUEIA
       loadAuctions();
       loadCurrentUser();
+      loadProductStock();
 
       // Banners do cache imediatamente
       const cachedBanners = sessionStorage.getItem('home_banners_cache');
