@@ -1414,11 +1414,33 @@ export default function AuctionRoom() {
           </div>
           <Button
             onClick={async () => {
-              if (confirm('⚠️ REATIVAR?')) {
+              if (confirm('⚠️ REATIVAR? (vai limpar histórico de lances)')) {
                 try {
-                  await Auction.update(auction.id, { status: 'active' });
-                  alert('✅ Reativado!');
-                  await syncAuctionDataOnly();
+                  // 1. Limpar lances
+                  const allBids = await base44.entities.Bid.filter({ auction_id: auction.id });
+                  for (const bid of allBids) {
+                    await base44.entities.Bid.delete(bid.id);
+                  }
+                  
+                  // 2. Limpar mensagens
+                  const allMessages = await AuctionMessage.filter({ auction_id: auction.id });
+                  for (const msg of allMessages) {
+                    await AuctionMessage.delete(msg.id);
+                  }
+                  
+                  // 3. Reativar por mais 5 dias
+                  const newEndTime = new Date(Date.now() + (5 * 24 * 60 * 60 * 1000)).toISOString();
+                  await Auction.update(auction.id, { 
+                    status: 'active',
+                    end_time: newEndTime,
+                    current_price: auction.starting_price,
+                    winner_id: null,
+                    winner_name: null,
+                    order_status: null,
+                    tracking_code: null
+                  });
+                  
+                  alert('✅ Reativado! Histórico limpo.');
                   window.location.reload();
                 } catch (error) {
                   alert('❌ Erro: ' + error.message);
