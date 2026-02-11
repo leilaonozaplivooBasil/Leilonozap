@@ -11,7 +11,6 @@ import ErrorBoundary from "@/components/system/ErrorBoundary";
 import Footer from "@/components/common/Footer";
 import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
-import CPFModal from "@/components/common/CPFModal";
 import { useActiveSession } from "@/components/system/useActiveSession";
 
       import { Button } from "@/components/ui/button";
@@ -46,7 +45,6 @@ export default function Layout({ children, currentPageName }) {
   const [expandedCategory, setExpandedCategory] = useState(null);
   const [cartCount, setCartCount] = useState(0);
   const [showCartPopup, setShowCartPopup] = useState(false);
-  const [showCPFModal, setShowCPFModal] = useState(false);
 
   // 🆕 Rastreamento de sessão ativa
   useActiveSession(currentUser);
@@ -79,14 +77,7 @@ export default function Layout({ children, currentPageName }) {
     };
   }, []);
 
-  // Verifica se usuário precisa adicionar CPF
-  useEffect(() => {
-    if (currentUser && (!currentUser.cpf || currentUser.cpf.trim() === '' || currentUser.cpf === '00000000000')) {
-      setShowCPFModal(true);
-    } else {
-      setShowCPFModal(false);
-    }
-  }, [currentUser]);
+
 
   const handleLogout = React.useCallback(() => {
     console.log("🚪 INICIANDO LOGOUT...");
@@ -1011,18 +1002,6 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
-
-        {/* CPF Modal */}
-        {showCPFModal && currentUser && (
-          <CPFModal 
-            currentUser={currentUser}
-            onClose={() => {
-              setShowCPFModal(false);
-              // Recarrega dados do usuário
-              syncUserData();
-            }}
-          />
-        )}
 
         </div>
       
