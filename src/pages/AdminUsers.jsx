@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Eye, EyeOff, Mail, Key, Loader2, Pencil, Save, X, User, Shield } from 'lucide-react';
+import { Search, Eye, EyeOff, Mail, Key, Loader2, Pencil, Save, X, User, Shield, ChevronRight, ChevronDown, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -25,6 +25,8 @@ export default function AdminUsers() {
   const [editFormData, setEditFormData] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
+  const [viewMode, setViewMode] = useState('tree'); // 'tree' ou 'list'
+  const [expandedNodes, setExpandedNodes] = useState({});
   const navigate = useNavigate();
 
   const loadData = useCallback(async () => {
@@ -67,6 +69,114 @@ export default function AdminUsers() {
       setFilteredUsers(users);
     }
   }, [searchTerm, users]);
+
+  // Constrói árvore hierárquica
+  const userTree = useMemo(() => {
+    const buildTree = (parentId = null, level = 0) => {
+      return users
+        .filter(u => u.referred_by_id === parentId)
+        .map(user => ({
+          ...user,
+          level,
+          children: buildTree(user.id, level + 1)
+        }));
+    };
+    return buildTree(null);
+  }, [users]);
+
+  const toggleNode = (userId) => {
+    setExpandedNodes(prev => ({
+      ...prev,
+      [userId]: !prev[userId]
+    }));
+  };
+
+  const renderUserNode = (node, isSearchActive) => {
+    const hasChildren = node.children && node.children.length > 0;
+    const isExpanded = expandedNodes[node.id];
+    const matchesSearch = !searchTerm || 
+      node.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      node.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      node.nickname?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    if (!matchesSearch && !isSearchActive) return null;
+
+    return (
+      <div key={node.id} style={{ marginLeft: `${node.level * 24}px` }}>
+        <div className="bg-gray-700 rounded-lg p-4 mb-2 flex items-center justify-between">
+          <div className="flex items-center gap-3 flex-1">
+            {hasChildren && (
+              <button
+                onClick={() => toggleNode(node.id)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+              </button>
+            )}
+            {!hasChildren && <div className="w-5" />}
+            
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-white font-semibold">{node.full_name}</h3>
+                <Badge variant={node.role === 'admin' ? 'destructive' : node.role === 'licensee' ? 'default' : 'secondary'}>
+                  {node.role}
+                </Badge>
+                {hasChildren && (
+                  <Badge variant="outline" className="text-gray-400 border-gray-500">
+                    {node.children.length} indicado{node.children.length > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+              <p className="text-gray-400 text-sm">{node.email}</p>
+              <p className="text-gray-500 text-sm">Apelido: {node.nickname || 'N/A'}</p>
+              
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-gray-400 text-sm">Senha:</span>
+                <code className="bg-gray-800 px-2 py-1 rounded text-green-400 text-sm">
+                  {showPasswords[node.id] ? node.password : '••••••••'}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => togglePasswordVisibility(node.id)}
+                  className="h-6 w-6 p-0"
+                >
+                  {showPasswords[node.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openEditModal(node)}
+              className="border-green-600 text-green-400 hover:bg-green-600/20"
+            >
+              <Pencil className="w-4 h-4 mr-2" />
+              Editar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleResetPassword(node)}
+              className="border-gray-600 text-gray-300 hover:bg-gray-600"
+            >
+              <Mail className="w-4 h-4 mr-2" />
+              Resetar
+            </Button>
+          </div>
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div>
+            {node.children.map(child => renderUserNode(child, isSearchActive))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const handleResetPassword = async (user) => {
     if (!confirm(`Resetar senha de ${user.full_name}?`)) return;
@@ -194,7 +304,7 @@ Equipe Leilão NoZap 🎯
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
@@ -204,60 +314,93 @@ Equipe Leilão NoZap 🎯
                   className="pl-10 bg-gray-700 border-gray-600 text-white"
                 />
               </div>
+              <Button
+                variant={viewMode === 'tree' ? 'default' : 'outline'}
+                onClick={() => setViewMode('tree')}
+                className={viewMode === 'tree' ? 'bg-green-600' : 'border-gray-600 text-gray-300'}
+              >
+                <Users className="w-4 h-4 mr-2" />
+                Árvore
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                onClick={() => setViewMode('list')}
+                className={viewMode === 'list' ? 'bg-green-600' : 'border-gray-600 text-gray-300'}
+              >
+                Lista
+              </Button>
             </div>
 
-            <div className="space-y-2">
-              {filteredUsers.map(user => (
-                <div key={user.id} className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-white font-semibold">{user.full_name}</h3>
-                      <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'licensee' ? 'default' : 'secondary'}>
-                        {user.role}
-                      </Badge>
+            <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
+              <p className="text-gray-300 text-sm">
+                📊 Total de usuários: <span className="font-bold text-green-400">{users.length}</span>
+                {searchTerm && ` • Filtrados: ${filteredUsers.length}`}
+              </p>
+            </div>
+
+            {viewMode === 'tree' ? (
+              <div className="space-y-2">
+                {userTree.map(node => renderUserNode(node, !!searchTerm))}
+                {userTree.length === 0 && (
+                  <p className="text-center text-gray-400 py-8">
+                    Nenhum usuário raiz encontrado
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredUsers.map(user => (
+                  <div key={user.id} className="bg-gray-700 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-white font-semibold">{user.full_name}</h3>
+                        <Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'licensee' ? 'default' : 'secondary'}>
+                          {user.role}
+                        </Badge>
+                      </div>
+                      <p className="text-gray-400 text-sm">{user.email}</p>
+                      <p className="text-gray-500 text-sm">Apelido: {user.nickname || 'N/A'}</p>
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-gray-400 text-sm">Senha:</span>
+                        <code className="bg-gray-800 px-2 py-1 rounded text-green-400 text-sm">
+                          {showPasswords[user.id] ? user.password : '••••••••'}
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => togglePasswordVisibility(user.id)}
+                          className="h-6 w-6 p-0"
+                        >
+                          {showPasswords[user.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </Button>
+                      </div>
                     </div>
-                    <p className="text-gray-400 text-sm">{user.email}</p>
-                    <p className="text-gray-500 text-sm">Apelido: {user.nickname || 'N/A'}</p>
-                    
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-gray-400 text-sm">Senha:</span>
-                      <code className="bg-gray-800 px-2 py-1 rounded text-green-400 text-sm">
-                        {showPasswords[user.id] ? user.password : '••••••••'}
-                      </code>
+
+                    <div className="flex gap-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => togglePasswordVisibility(user.id)}
-                        className="h-6 w-6 p-0"
+                        onClick={() => openEditModal(user)}
+                        className="border-green-600 text-green-400 hover:bg-green-600/20"
                       >
-                        {showPasswords[user.id] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        <Pencil className="w-4 h-4 mr-2" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResetPassword(user)}
+                        className="border-gray-600 text-gray-300 hover:bg-gray-600"
+                      >
+                        <Mail className="w-4 h-4 mr-2" />
+                        Resetar Senha
                       </Button>
                     </div>
                   </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditModal(user)}
-                      className="border-green-600 text-green-400 hover:bg-green-600/20"
-                    >
-                      <Pencil className="w-4 h-4 mr-2" />
-                      Editar
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleResetPassword(user)}
-                      className="border-gray-600 text-gray-300 hover:bg-gray-600"
-                    >
-                      <Mail className="w-4 h-4 mr-2" />
-                      Resetar Senha
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
 
             {filteredUsers.length === 0 && (
               <p className="text-center text-gray-400 py-8">
