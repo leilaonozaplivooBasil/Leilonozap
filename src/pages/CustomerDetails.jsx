@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
   ArrowLeft, Save, Mail, Phone, MapPin, Calendar,
-  User, ShoppingCart, TrendingUp, CheckCircle, Clock
+  User, ShoppingCart, TrendingUp, CheckCircle, Clock, Search, Package
 } from 'lucide-react';
 
 export default function CustomerDetails() {
@@ -20,6 +20,9 @@ export default function CustomerDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({});
+  const [products, setProducts] = useState([]);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -31,7 +34,19 @@ export default function CustomerDetails() {
     }
 
     loadCustomer(customerId);
+    loadProducts();
   }, [location]);
+
+  const loadProducts = async () => {
+    try {
+      const allProducts = await base44.entities.Product.list('-created_date', 500);
+      // Filtra apenas produtos com estoque disponível
+      const inStock = allProducts.filter(p => (p.quantity || 0) > 0);
+      setProducts(inStock);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
+    }
+  };
 
   const loadCustomer = async (id) => {
     try {
@@ -123,8 +138,8 @@ export default function CustomerDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-5xl mx-auto">
+    <div className="min-h-screen bg-gray-100 p-6" onClick={() => setShowProductDropdown(false)}>
+      <div className="max-w-5xl mx-auto" onClick={(e) => e.stopPropagation()}>
         
         {/* HEADER */}
         <div className="flex items-center justify-between mb-6">
@@ -370,14 +385,72 @@ export default function CustomerDetails() {
                 </select>
               </div>
 
-              <div>
+              <div className="relative">
                 <Label className="text-gray-700">Produto em Negociação</Label>
-                <Input
-                  value={formData.purchase_product}
-                  onChange={(e) => setFormData({ ...formData, purchase_product: e.target.value })}
-                  className="bg-white text-gray-900"
-                  placeholder="Ex: Geladeira Frost Free 400L"
-                />
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    value={formData.purchase_product}
+                    onChange={(e) => {
+                      setFormData({ ...formData, purchase_product: e.target.value });
+                      setProductSearchTerm(e.target.value);
+                      setShowProductDropdown(e.target.value.length > 0);
+                    }}
+                    onFocus={() => setShowProductDropdown(formData.purchase_product.length > 0)}
+                    className="bg-white text-gray-900 pl-10"
+                    placeholder="Ex: Geladeira Frost Free 400L"
+                  />
+                </div>
+                
+                {showProductDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {products
+                      .filter(p => 
+                        p.description?.toLowerCase().includes((formData.purchase_product || '').toLowerCase()) ||
+                        p.lot?.toLowerCase().includes((formData.purchase_product || '').toLowerCase())
+                      )
+                      .slice(0, 10)
+                      .map(product => (
+                        <button
+                          key={product.id}
+                          type="button"
+                          onClick={() => {
+                            setFormData({ ...formData, purchase_product: product.description });
+                            setShowProductDropdown(false);
+                          }}
+                          className="w-full text-left px-4 py-3 hover:bg-gray-100 border-b border-gray-100 transition-colors"
+                        >
+                          <div className="flex items-start gap-3">
+                            <Package className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-gray-900 truncate">{product.description}</p>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-gray-600">
+                                <span>Lote: {product.lot || 'N/A'}</span>
+                                <span>•</span>
+                                <span className="text-green-600 font-bold">Estoque: {product.quantity || 0}</span>
+                                {product.selling_price_retail && (
+                                  <>
+                                    <span>•</span>
+                                    <span>R$ {product.selling_price_retail.toFixed(2)}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))
+                    }
+                    {products.filter(p => 
+                      p.description?.toLowerCase().includes((formData.purchase_product || '').toLowerCase()) ||
+                      p.lot?.toLowerCase().includes((formData.purchase_product || '').toLowerCase())
+                    ).length === 0 && (
+                      <div className="px-4 py-8 text-center text-gray-400">
+                        <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Nenhum produto encontrado em estoque</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
