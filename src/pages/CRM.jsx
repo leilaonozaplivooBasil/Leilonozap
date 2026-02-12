@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Users, UserPlus, Search, Filter, Mail, Phone,
-  DollarSign, TrendingUp, Edit, Trash2, X, Save, Send, UserCheck, UserX
+  DollarSign, TrendingUp, Edit, Trash2, X, Save, Send, UserCheck, UserX,
+  ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
@@ -315,7 +316,14 @@ _Enviado via CRM Leilão NoZap_`;
     total: customers.length,
     leads: customers.filter(c => c.status === 'lead').length,
     clientes: customers.filter(c => c.status === 'cliente').length,
-    totalSpent: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0)
+    totalSpent: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
+    semCompra: customers.filter(c => (c.purchase_status || 'sem_compra') === 'sem_compra').length,
+    emNegociacao: customers.filter(c => c.purchase_status === 'em_negociacao').length,
+    aguardandoPagamento: customers.filter(c => c.purchase_status === 'aguardando_pagamento').length,
+    pago: customers.filter(c => c.purchase_status === 'pago').length,
+    enviado: customers.filter(c => c.purchase_status === 'enviado').length,
+    entregue: customers.filter(c => c.purchase_status === 'entregue').length,
+    cancelado: customers.filter(c => c.purchase_status === 'cancelado').length
   };
 
   const getStatusColor = (status) => {
@@ -416,7 +424,7 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
         </div>
 
-        {/* ESTATÍSTICAS */}
+        {/* ESTATÍSTICAS PRINCIPAIS */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-3 sm:p-4">
@@ -464,6 +472,79 @@ _Enviado via CRM Leilão NoZap_`;
                   </p>
                 </div>
                 <DollarSign className="w-8 h-8 text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* ESTATÍSTICAS DE STATUS DA COMPRA */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <Card className="bg-white border-gray-200">
+            <CardContent className="p-3">
+              <div className="text-center">
+                <ShoppingCart className="w-6 h-6 mx-auto mb-2 text-gray-400" />
+                <p className="text-gray-600 text-xs mb-1">Sem Compra</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.semCompra}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200">
+            <CardContent className="p-3">
+              <div className="text-center">
+                <MessageSquare className="w-6 h-6 mx-auto mb-2 text-blue-500" />
+                <p className="text-gray-600 text-xs mb-1">Em Negociação</p>
+                <p className="text-2xl font-bold text-blue-600">{stats.emNegociacao}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200">
+            <CardContent className="p-3">
+              <div className="text-center">
+                <Clock className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
+                <p className="text-gray-600 text-xs mb-1">Aguardando Pag.</p>
+                <p className="text-2xl font-bold text-yellow-600">{stats.aguardandoPagamento}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200">
+            <CardContent className="p-3">
+              <div className="text-center">
+                <CheckCircle className="w-6 h-6 mx-auto mb-2 text-green-500" />
+                <p className="text-gray-600 text-xs mb-1">Pago</p>
+                <p className="text-2xl font-bold text-green-600">{stats.pago}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200">
+            <CardContent className="p-3">
+              <div className="text-center">
+                <Package className="w-6 h-6 mx-auto mb-2 text-purple-500" />
+                <p className="text-gray-600 text-xs mb-1">Enviado</p>
+                <p className="text-2xl font-bold text-purple-600">{stats.enviado}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200">
+            <CardContent className="p-3">
+              <div className="text-center">
+                <Truck className="w-6 h-6 mx-auto mb-2 text-emerald-500" />
+                <p className="text-gray-600 text-xs mb-1">Entregue</p>
+                <p className="text-2xl font-bold text-emerald-600">{stats.entregue}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border-gray-200">
+            <CardContent className="p-3">
+              <div className="text-center">
+                <XCircle className="w-6 h-6 mx-auto mb-2 text-red-500" />
+                <p className="text-gray-600 text-xs mb-1">Cancelado</p>
+                <p className="text-2xl font-bold text-red-600">{stats.cancelado}</p>
               </div>
             </CardContent>
           </Card>
