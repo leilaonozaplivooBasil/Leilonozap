@@ -63,6 +63,7 @@ export default function CRM() {
   const [showProductSearch, setShowProductSearch] = useState(false);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [availableProducts, setAvailableProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
@@ -83,6 +84,7 @@ export default function CRM() {
 
   const loadProducts = async () => {
     try {
+      setLoadingProducts(true);
       const data = await base44.entities.Product.list('-created_date', 500);
       // Filtra produtos com estoque disponível (quantidade > 0)
       const inStock = data.filter(p => {
@@ -93,6 +95,9 @@ export default function CRM() {
       console.log(`✅ ${inStock.length} produtos carregados com estoque`);
     } catch (error) {
       console.error('❌ Erro ao carregar produtos:', error);
+      setAvailableProducts([]);
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -1337,7 +1342,18 @@ _Enviado via CRM Leilão NoZap_`;
                         {/* Resultados da Busca */}
                         {productSearchTerm && (
                           <div className="max-h-52 overflow-y-auto bg-gray-900 rounded-lg border border-gray-600 shadow-lg">
-                            {filteredProductsForModal.length > 0 ? (
+                            {loadingProducts ? (
+                              <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto mb-3"></div>
+                                <p>Carregando produtos...</p>
+                              </div>
+                            ) : availableProducts.length === 0 ? (
+                              <div className="px-4 py-8 text-center text-yellow-400 text-sm">
+                                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                <p className="font-semibold">Nenhum produto disponível</p>
+                                <p className="text-xs mt-1 text-gray-500">Cadastre produtos no estoque primeiro</p>
+                              </div>
+                            ) : filteredProductsForModal.length > 0 ? (
                               filteredProductsForModal.slice(0, 10).map(product => (
                                 <button
                                   key={product.id}
@@ -1356,8 +1372,11 @@ _Enviado via CRM Leilão NoZap_`;
                             ) : (
                               <div className="px-4 py-8 text-center text-gray-400 text-sm">
                                 <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                                <p>Nenhum produto encontrado</p>
+                                <p>Nenhum produto encontrado com "{productSearchTerm}"</p>
                                 <p className="text-xs mt-1">Tente outro termo de busca</p>
+                                <p className="text-xs text-green-400 mt-2">
+                                  {availableProducts.length} produtos disponíveis no total
+                                </p>
                               </div>
                             )}
                           </div>
