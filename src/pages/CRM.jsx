@@ -82,6 +82,13 @@ export default function CRM() {
     loadProducts();
   }, [navigate]);
 
+  // Carregar produtos automaticamente ao abrir modal
+  useEffect(() => {
+    if (showAddForm && availableProducts.length === 0) {
+      loadProducts();
+    }
+  }, [showAddForm]);
+
   const loadProducts = async () => {
     try {
       setLoadingProducts(true);
@@ -126,11 +133,13 @@ export default function CRM() {
     try {
       setIsLoading(true);
       const data = await base44.entities.Customer.list('-created_date', 500);
-      setCustomers(data);
-      setFilteredCustomers(data);
+      setCustomers(data || []);
+      setFilteredCustomers(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
-      alert('❌ Erro ao carregar clientes');
+      setCustomers([]);
+      setFilteredCustomers([]);
+      alert('❌ Erro ao carregar clientes - tente novamente');
     } finally {
       setIsLoading(false);
     }
