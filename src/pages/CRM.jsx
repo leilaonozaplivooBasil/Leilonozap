@@ -39,6 +39,7 @@ export default function CRM() {
     name: '',
     phone: '',
     email: '',
+    license_type: '',
     is_active: true
   });
   const navigate = useNavigate();
@@ -204,6 +205,7 @@ export default function CRM() {
       name: seller.name,
       phone: seller.phone,
       email: seller.email || '',
+      license_type: seller.license_type || '',
       is_active: seller.is_active
     });
     setShowSellerModal(true);
@@ -236,6 +238,7 @@ export default function CRM() {
         name: '',
         phone: '',
         email: '',
+        license_type: '',
         is_active: true
       });
       setShowSellerModal(false);
@@ -804,6 +807,7 @@ _Enviado via CRM Leilão NoZap_`;
                         <th className="text-left p-3 font-semibold text-white">Nome</th>
                         <th className="text-left p-3 font-semibold text-white">Telefone</th>
                         <th className="text-left p-3 font-semibold text-white">Email</th>
+                        <th className="text-center p-3 font-semibold text-white">Licença</th>
                         <th className="text-center p-3 font-semibold text-white">Status</th>
                         <th className="text-center p-3 font-semibold text-white">Ações</th>
                       </tr>
@@ -828,6 +832,23 @@ _Enviado via CRM Leilão NoZap_`;
                               <Mail className="w-3 h-3" />
                               {seller.email || '-'}
                             </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge className={
+                              seller.license_type === 'loja_distribuidor' ? 'bg-purple-100 text-purple-800' :
+                              seller.license_type === 'loja_lider' ? 'bg-orange-100 text-orange-800' :
+                              seller.license_type === 'loja_profissional' ? 'bg-blue-100 text-blue-800' :
+                              seller.license_type === 'loja_start' ? 'bg-green-100 text-green-800' :
+                              seller.license_type === 'loja_inicial' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }>
+                              {seller.license_type === 'loja_distribuidor' ? 'Loja Distribuidor' :
+                               seller.license_type === 'loja_lider' ? 'Loja Líder' :
+                               seller.license_type === 'loja_profissional' ? 'Loja Profissional' :
+                               seller.license_type === 'loja_start' ? 'Loja Start' :
+                               seller.license_type === 'loja_inicial' ? 'Loja Inicial' :
+                               '-'}
+                            </Badge>
                           </td>
                           <td className="p-3 text-center">
                             <Badge className={seller.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
@@ -892,6 +913,7 @@ _Enviado via CRM Leilão NoZap_`;
                         name: '',
                         phone: '',
                         email: '',
+                        license_type: '',
                         is_active: true
                       });
                     }}
@@ -933,6 +955,23 @@ _Enviado via CRM Leilão NoZap_`;
                       onChange={(e) => setSellerFormData({ ...sellerFormData, email: e.target.value })}
                       className="bg-gray-700 text-white"
                     />
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-300">Tipo de Licença *</Label>
+                    <select
+                      value={sellerFormData.license_type}
+                      onChange={(e) => setSellerFormData({ ...sellerFormData, license_type: e.target.value })}
+                      className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600"
+                      required
+                    >
+                      <option value="">-- Selecione --</option>
+                      <option value="loja_inicial">Loja Inicial</option>
+                      <option value="loja_start">Loja Start</option>
+                      <option value="loja_profissional">Loja Profissional</option>
+                      <option value="loja_lider">Loja Líder</option>
+                      <option value="loja_distribuidor">Loja Distribuidor</option>
+                    </select>
                   </div>
 
                   <div className="flex gap-2">
