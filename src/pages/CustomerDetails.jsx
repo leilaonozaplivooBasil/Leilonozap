@@ -415,7 +415,11 @@ export default function CustomerDetails() {
                           key={product.id}
                           type="button"
                           onClick={() => {
-                            setFormData({ ...formData, purchase_product: product.description });
+                            setFormData({ 
+                              ...formData, 
+                              purchase_product: product.description,
+                              purchase_value: product.selling_price_retail || product.cost_price || 0
+                            });
                             setShowProductDropdown(false);
                           }}
                           className="w-full text-left px-4 py-3 hover:bg-gray-100 border-b border-gray-100 transition-colors"
