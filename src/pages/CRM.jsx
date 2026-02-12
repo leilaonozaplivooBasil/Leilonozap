@@ -84,10 +84,15 @@ export default function CRM() {
   const loadProducts = async () => {
     try {
       const data = await base44.entities.Product.list('-created_date', 500);
-      const inStock = data.filter(p => (p.quantity || 0) > 0);
+      // Filtra produtos com estoque disponível (quantidade > 0)
+      const inStock = data.filter(p => {
+        const qty = p.quantity || 0;
+        return qty > 0;
+      });
       setAvailableProducts(inStock);
+      console.log(`✅ ${inStock.length} produtos carregados com estoque`);
     } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
+      console.error('❌ Erro ao carregar produtos:', error);
     }
   };
 
@@ -200,10 +205,15 @@ export default function CRM() {
     });
   };
 
-  const filteredProductsForModal = availableProducts.filter(p =>
-    p.description?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-    p.lot?.toLowerCase().includes(productSearchTerm.toLowerCase())
-  );
+  const filteredProductsForModal = React.useMemo(() => {
+    if (!productSearchTerm) return [];
+    const search = productSearchTerm.toLowerCase().trim();
+    return availableProducts.filter(p => {
+      const desc = (p.description || '').toLowerCase();
+      const lot = (p.lot || '').toLowerCase();
+      return desc.includes(search) || lot.includes(search);
+    });
+  }, [productSearchTerm, availableProducts]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
