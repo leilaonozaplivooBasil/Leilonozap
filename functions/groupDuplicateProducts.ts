@@ -9,8 +9,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized - Admin only' }, { status: 403 });
     }
 
-    // Busca todos os produtos
-    const allProducts = await base44.asServiceRole.entities.Product.list('-created_date', 2000);
+    // Busca todos os produtos em uma única chamada
+    const allProducts = await base44.asServiceRole.entities.Product.list('-created_date', 3000);
     
     if (!allProducts || allProducts.length === 0) {
       return Response.json({ success: true, message: 'Nenhum produto encontrado', grouped: 0, deleted: 0 });
@@ -31,8 +31,11 @@ Deno.serve(async (req) => {
     let gruposProcessados = 0;
     let produtosDeletados = 0;
     let produtosAtualizados = 0;
+    const produtosParaDeletar = [];
+    const produtosParaAtualizar = [];
+    const detalhesGrupos = [];
 
-    // Processa cada grupo
+    // Processa cada grupo (preparação em memória)
     for (const chave in grupos) {
       const produtosDoGrupo = grupos[chave];
       
@@ -57,7 +60,7 @@ Deno.serve(async (req) => {
       let soldAmountTotal = produtoPrincipal.sold_amount || 0;
       let profitTotal = produtoPrincipal.profit || 0;
 
-      const produtosParaDeletar = [];
+      const deletados = [];
 
       for (let i = 1; i < produtosDoGrupo.length; i++) {
         const prod = produtosDoGrupo[i];
@@ -69,27 +72,44 @@ Deno.serve(async (req) => {
         quantidadeVendidaTotal += (prod.quantity_sold || 0);
         soldAmountTotal += (prod.sold_amount || 0);
         profitTotal += (prod.profit || 0);
+        deletados.push(prod.id);
         produtosParaDeletar.push(prod.id);
       }
 
-      // Atualiza o produto principal com valores somados
-      await base44.asServiceRole.entities.Product.update(produtoPrincipal.id, {
-        quantity: quantidadeTotal,
-        cost_price: custoTotal,
-        qty_perfeito: qtyPerfeitoTotal,
-        qty_bom: qtyBomTotal,
-        qty_oficina: qtyOficinaTotal,
-        quantity_sold: quantidadeVendidaTotal,
-        sold_amount: soldAmountTotal,
-        profit: profitTotal
+      // Prepara atualização
+      produtosParaAtualizar.push({
+        id: produtoPrincipal.id,
+        data: {
+          quantity: quantidadeTotal,
+          cost_price: custoTotal,
+          qty_perfeito: qtyPerfeitoTotal,
+          qty_bom: qtyBomTotal,
+          qty_oficina: qtyOficinaTotal,
+          quantity_sold: quantidadeVendidaTotal,
+          sold_amount: soldAmountTotal,
+          profit: profitTotal
+        }
       });
-      produtosAtualizados++;
 
-      // Deleta os produtos duplicados
-      for (const id of produtosParaDeletar) {
-        await base44.asServiceRole.entities.Product.delete(id);
-        produtosDeletados++;
-      }
+      detalhesGrupos.push({
+        nome: produtoPrincipal.description,
+        lote: produtoPrincipal.lot,
+        mantido: produtoPrincipal.id,
+        removidos: deletados,
+        quantidade_final: quantidadeTotal
+      });
+    }
+
+    // Executa atualizações em lote
+    for (const update of produtosParaAtualizar) {
+      await base44.asServiceRole.entities.Product.update(update.id, update.data);
+      produtosAtualizados++;
+    }
+
+    // Executa exclusões em lote
+    for (const id of produtosParaDeletar) {
+      await base44.asServiceRole.entities.Product.delete(id);
+      produtosDeletados++;
     }
 
     return Response.json({
@@ -97,7 +117,8 @@ Deno.serve(async (req) => {
       message: `Agrupamento concluído com sucesso`,
       grupos_processados: gruposProcessados,
       produtos_atualizados: produtosAtualizados,
-      produtos_deletados: produtosDeletados
+      produtos_deletados: produtosDeletados,
+      detalhes: detalhesGrupos
     });
 
   } catch (error) {
