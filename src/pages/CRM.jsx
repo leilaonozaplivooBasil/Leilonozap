@@ -21,6 +21,7 @@ export default function CRM() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [purchaseStatusFilter, setPurchaseStatusFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -117,8 +118,12 @@ export default function CRM() {
       filtered = filtered.filter(c => c.source === sourceFilter);
     }
 
+    if (purchaseStatusFilter !== 'all') {
+      filtered = filtered.filter(c => (c.purchase_status || 'sem_compra') === purchaseStatusFilter);
+    }
+
     setFilteredCustomers(filtered);
-  }, [searchTerm, statusFilter, sourceFilter, customers]);
+  }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, customers]);
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
@@ -477,74 +482,123 @@ _Enviado via CRM Leilão NoZap_`;
           </Card>
         </div>
 
-        {/* ESTATÍSTICAS DE STATUS DA COMPRA */}
+        {/* ESTATÍSTICAS DE STATUS DA COMPRA - CLICÁVEIS COMO FILTROS */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <Card className="bg-white border-gray-200">
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'sem_compra' 
+                ? 'bg-gray-800 border-gray-600 ring-2 ring-gray-500' 
+                : 'bg-white border-gray-200 hover:bg-gray-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'sem_compra' ? 'all' : 'sem_compra')}
+          >
             <CardContent className="p-3">
               <div className="text-center">
-                <ShoppingCart className="w-6 h-6 mx-auto mb-2 text-gray-400" />
-                <p className="text-gray-600 text-xs mb-1">Sem Compra</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.semCompra}</p>
+                <ShoppingCart className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-400'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-600'}`}>Sem Compra</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'sem_compra' ? 'text-white' : 'text-gray-900'}`}>{stats.semCompra}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-200">
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'em_negociacao' 
+                ? 'bg-blue-600 border-blue-500 ring-2 ring-blue-400' 
+                : 'bg-white border-gray-200 hover:bg-blue-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'em_negociacao' ? 'all' : 'em_negociacao')}
+          >
             <CardContent className="p-3">
               <div className="text-center">
-                <MessageSquare className="w-6 h-6 mx-auto mb-2 text-blue-500" />
-                <p className="text-gray-600 text-xs mb-1">Em Negociação</p>
-                <p className="text-2xl font-bold text-blue-600">{stats.emNegociacao}</p>
+                <MessageSquare className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-blue-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-gray-600'}`}>Em Negociação</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'em_negociacao' ? 'text-white' : 'text-blue-600'}`}>{stats.emNegociacao}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-200">
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'aguardando_pagamento' 
+                ? 'bg-yellow-600 border-yellow-500 ring-2 ring-yellow-400' 
+                : 'bg-white border-gray-200 hover:bg-yellow-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'aguardando_pagamento' ? 'all' : 'aguardando_pagamento')}
+          >
             <CardContent className="p-3">
               <div className="text-center">
-                <Clock className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
-                <p className="text-gray-600 text-xs mb-1">Aguardando Pag.</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.aguardandoPagamento}</p>
+                <Clock className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-yellow-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-gray-600'}`}>Aguardando Pag.</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-white' : 'text-yellow-600'}`}>{stats.aguardandoPagamento}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-200">
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'pago' 
+                ? 'bg-green-600 border-green-500 ring-2 ring-green-400' 
+                : 'bg-white border-gray-200 hover:bg-green-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'pago' ? 'all' : 'pago')}
+          >
             <CardContent className="p-3">
               <div className="text-center">
-                <CheckCircle className="w-6 h-6 mx-auto mb-2 text-green-500" />
-                <p className="text-gray-600 text-xs mb-1">Pago</p>
-                <p className="text-2xl font-bold text-green-600">{stats.pago}</p>
+                <CheckCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-green-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-gray-600'}`}>Pago</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'pago' ? 'text-white' : 'text-green-600'}`}>{stats.pago}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-200">
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'enviado' 
+                ? 'bg-purple-600 border-purple-500 ring-2 ring-purple-400' 
+                : 'bg-white border-gray-200 hover:bg-purple-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'enviado' ? 'all' : 'enviado')}
+          >
             <CardContent className="p-3">
               <div className="text-center">
-                <Package className="w-6 h-6 mx-auto mb-2 text-purple-500" />
-                <p className="text-gray-600 text-xs mb-1">Enviado</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.enviado}</p>
+                <Package className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-purple-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-gray-600'}`}>Enviado</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'enviado' ? 'text-white' : 'text-purple-600'}`}>{stats.enviado}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-200">
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'entregue' 
+                ? 'bg-emerald-600 border-emerald-500 ring-2 ring-emerald-400' 
+                : 'bg-white border-gray-200 hover:bg-emerald-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'entregue' ? 'all' : 'entregue')}
+          >
             <CardContent className="p-3">
               <div className="text-center">
-                <Truck className="w-6 h-6 mx-auto mb-2 text-emerald-500" />
-                <p className="text-gray-600 text-xs mb-1">Entregue</p>
-                <p className="text-2xl font-bold text-emerald-600">{stats.entregue}</p>
+                <Truck className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-emerald-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-gray-600'}`}>Entregue</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'entregue' ? 'text-white' : 'text-emerald-600'}`}>{stats.entregue}</p>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white border-gray-200">
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'cancelado' 
+                ? 'bg-red-600 border-red-500 ring-2 ring-red-400' 
+                : 'bg-white border-gray-200 hover:bg-red-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'cancelado' ? 'all' : 'cancelado')}
+          >
             <CardContent className="p-3">
               <div className="text-center">
-                <XCircle className="w-6 h-6 mx-auto mb-2 text-red-500" />
-                <p className="text-gray-600 text-xs mb-1">Cancelado</p>
-                <p className="text-2xl font-bold text-red-600">{stats.cancelado}</p>
+                <XCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-red-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-gray-600'}`}>Cancelado</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'cancelado' ? 'text-white' : 'text-red-600'}`}>{stats.cancelado}</p>
               </div>
             </CardContent>
           </Card>
@@ -603,6 +657,7 @@ _Enviado via CRM Leilão NoZap_`;
               setSearchTerm('');
               setStatusFilter('all');
               setSourceFilter('all');
+              setPurchaseStatusFilter('all');
             }}
             variant="outline"
             className="bg-white border-gray-300 text-gray-900 hover:bg-gray-100"
