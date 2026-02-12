@@ -39,17 +39,21 @@ export function useActiveSession(currentUser) {
           await base44.entities.LiveSession.create(sessionData);
         }
       } catch (error) {
-        console.debug('Session heartbeat error:', error.message);
+        // Silenciosamente ignora rate limit
+        if (error.status !== 429) {
+          console.debug('Session heartbeat error:', error.message);
+        }
       }
     };
 
-    // Heartbeat inicial
-    updateSession();
+    // Heartbeat inicial com delay de 5s (evita sobrecarga no mount)
+    const initialTimeout = setTimeout(updateSession, 5000);
 
-    // Heartbeat a cada 30s
-    intervalRef.current = setInterval(updateSession, 30000);
+    // Heartbeat a cada 2 minutos (reduzido de 30s para evitar rate limit)
+    intervalRef.current = setInterval(updateSession, 120000);
 
     return () => {
+      clearTimeout(initialTimeout);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
