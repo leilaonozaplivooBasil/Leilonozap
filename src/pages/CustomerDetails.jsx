@@ -561,6 +561,36 @@ export default function CustomerDetails() {
             </CardContent>
           </Card>
 
+          {/* PRODUTOS DE INTERESSE */}
+          {customer.interested_products && customer.interested_products.length > 0 && (
+            <Card className="bg-blue-50 border-blue-200 lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    <Package className="w-5 h-5 text-blue-600" />
+                    Produtos de Interesse
+                  </CardTitle>
+                  <Button
+                    onClick={() => setShowNegotiationModal(true)}
+                    size="sm"
+                    className="bg-orange-600 hover:bg-orange-700"
+                  >
+                    Criar Negociação
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {customer.interested_products.map(p => (
+                    <Badge key={p.product_id} className="bg-blue-600 text-white px-3 py-1">
+                      {p.product_name}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* NEGOCIAÇÕES */}
           <div className="lg:col-span-2">
             <div className="flex items-center justify-between mb-4">
