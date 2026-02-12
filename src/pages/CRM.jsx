@@ -1161,10 +1161,10 @@ _Enviado via CRM Leilão NoZap_`;
         {/* MODAL DE FORMULÁRIO */}
         {showAddForm && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <Card className="bg-gray-800 border-gray-700 max-w-4xl w-full my-8">
-              <CardHeader>
+            <Card className="bg-gray-800 border-gray-700 max-w-4xl w-full my-8 max-h-[90vh] overflow-hidden flex flex-col">
+              <CardHeader className="border-b border-gray-700 flex-shrink-0">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white">
+                  <CardTitle className="text-white text-xl font-bold">
                     {editingCustomer ? '✏️ Editar Cliente' : '➕ Novo Cliente'}
                   </CardTitle>
                   <Button
@@ -1173,14 +1173,16 @@ _Enviado via CRM Leilão NoZap_`;
                     onClick={() => {
                       setShowAddForm(false);
                       setEditingCustomer(null);
+                      setShowProductSearch(false);
+                      setProductSearchTerm('');
                     }}
-                    className="text-gray-400 hover:text-white"
+                    className="text-gray-400 hover:text-white hover:bg-gray-700"
                   >
                     <X className="w-5 h-5" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-y-auto flex-1 p-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -1315,81 +1317,99 @@ _Enviado via CRM Leilão NoZap_`;
                     </div>
 
                     {/* PRODUTOS DE INTERESSE */}
-                    <div className="col-span-full">
-                      <Button
-                        type="button"
-                        onClick={() => setShowProductSearch(!showProductSearch)}
-                        variant="outline"
-                        className="w-full border-gray-600 text-white hover:bg-gray-700 mb-3"
-                      >
-                        <Package className="w-4 h-4 mr-2" />
-                        {showProductSearch ? '▼' : '▶'} Marcar Produtos de Interesse (opcional)
-                      </Button>
+                    <div className="col-span-full border-t border-gray-700 pt-4 mt-4">
+                      <Label className="text-gray-300 text-base font-semibold mb-3 block">
+                        📦 Produtos de Interesse (opcional)
+                      </Label>
+                      
+                      <div className="space-y-3">
+                        {/* Input de Busca - Sempre Visível */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            placeholder="Digite para buscar produtos por nome ou lote..."
+                            value={productSearchTerm}
+                            onChange={(e) => setProductSearchTerm(e.target.value)}
+                            className="pl-10 bg-gray-700 text-white border-gray-600 focus:border-green-500"
+                          />
+                        </div>
 
-                      {showProductSearch && (
-                        <div className="space-y-3 bg-gray-700 p-4 rounded-lg border border-gray-600">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <Input
-                              placeholder="Buscar produto por nome ou lote..."
-                              value={productSearchTerm}
-                              onChange={(e) => setProductSearchTerm(e.target.value)}
-                              className="pl-10 bg-gray-600 text-white border-gray-500"
-                            />
-                          </div>
-
-                          {productSearchTerm && (
-                            <div className="max-h-48 overflow-y-auto bg-gray-800 rounded border border-gray-600">
-                              {filteredProductsForModal.slice(0, 10).map(product => (
+                        {/* Resultados da Busca */}
+                        {productSearchTerm && (
+                          <div className="max-h-52 overflow-y-auto bg-gray-900 rounded-lg border border-gray-600 shadow-lg">
+                            {filteredProductsForModal.length > 0 ? (
+                              filteredProductsForModal.slice(0, 10).map(product => (
                                 <button
                                   key={product.id}
                                   type="button"
                                   onClick={() => addInterestedProduct(product)}
-                                  className="w-full text-left px-3 py-2 hover:bg-gray-700 border-b border-gray-600 text-white transition-colors"
+                                  className="w-full text-left px-4 py-3 hover:bg-gray-700 border-b border-gray-700 last:border-b-0 text-white transition-colors group"
                                 >
-                                  <p className="font-semibold text-sm">{product.description}</p>
-                                  <p className="text-xs text-gray-400">
-                                    Lote: {product.lot || 'N/A'} • Estoque: {product.quantity}
+                                  <p className="font-semibold text-sm group-hover:text-green-400 transition-colors">
+                                    {product.description}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Lote: {product.lot || 'N/A'} • Estoque: <span className="text-green-400 font-semibold">{product.quantity} un.</span>
                                   </p>
                                 </button>
-                              ))}
-                              {filteredProductsForModal.length === 0 && (
-                                <div className="px-3 py-6 text-center text-gray-400 text-sm">
-                                  Nenhum produto encontrado
-                                </div>
-                              )}
-                            </div>
-                          )}
+                              ))
+                            ) : (
+                              <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                <p>Nenhum produto encontrado</p>
+                                <p className="text-xs mt-1">Tente outro termo de busca</p>
+                              </div>
+                            )}
+                          </div>
+                        )}
 
-                          {formData.interested_products.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
+                        {/* Lista de Produtos Selecionados */}
+                        {formData.interested_products.length > 0 && (
+                          <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                            <Label className="text-gray-400 text-xs mb-2 block">
+                              ✅ Produtos Marcados ({formData.interested_products.length}/10)
+                            </Label>
+                            <div className="flex flex-wrap gap-2">
                               {formData.interested_products.map(p => (
-                                <Badge key={p.product_id} className="bg-green-600 text-white pr-1 flex items-center gap-1">
-                                  <span className="truncate max-w-[200px]">{p.product_name}</span>
+                                <Badge 
+                                  key={p.product_id} 
+                                  className="bg-green-600 hover:bg-green-700 text-white pl-3 pr-2 py-1.5 flex items-center gap-2 transition-all"
+                                >
+                                  <span className="truncate max-w-[200px] text-sm">{p.product_name}</span>
                                   <button
                                     type="button"
                                     onClick={() => removeInterestedProduct(p.product_id)}
-                                    className="ml-1 hover:text-red-300 transition-colors"
+                                    className="hover:bg-red-500/20 rounded-full p-0.5 transition-colors"
                                   >
-                                    <X className="w-3 h-3" />
+                                    <X className="w-3.5 h-3.5" />
                                   </button>
                                 </Badge>
                               ))}
                             </div>
-                          )}
+                            {formData.interested_products.length >= 10 && (
+                              <p className="text-xs text-yellow-400 mt-2">
+                                ⚠️ Limite máximo atingido (10 produtos)
+                              </p>
+                            )}
+                          </div>
+                        )}
 
-                          <p className="text-xs text-gray-400">
-                            ✅ {formData.interested_products.length}/10 produtos marcados
-                          </p>
-                        </div>
-                      )}
+                        {/* Mensagem quando nenhum produto está marcado */}
+                        {formData.interested_products.length === 0 && !productSearchTerm && (
+                          <div className="bg-gray-900/30 p-3 rounded-lg border border-dashed border-gray-700 text-center">
+                            <p className="text-xs text-gray-500">
+                              Nenhum produto marcado ainda. Use a busca acima para adicionar.
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                  <div className="flex gap-3 pt-4 border-t border-gray-700 sticky bottom-0 bg-gray-800 -mx-6 px-6 -mb-6 pb-6">
+                    <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 py-3">
                       <Save className="w-4 h-4 mr-2" />
-                      {editingCustomer ? 'Atualizar' : 'Salvar'}
+                      {editingCustomer ? 'Atualizar Cliente' : 'Salvar Cliente'}
                     </Button>
                     <Button
                       type="button"
@@ -1397,10 +1417,11 @@ _Enviado via CRM Leilão NoZap_`;
                       onClick={() => {
                         setShowAddForm(false);
                         setEditingCustomer(null);
+                        setShowProductSearch(false);
+                        setProductSearchTerm('');
                       }}
-                      className="border-gray-600 text-gray-300"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700 px-6"
                     >
-                      <X className="w-4 h-4 mr-2" />
                       Cancelar
                     </Button>
                   </div>
