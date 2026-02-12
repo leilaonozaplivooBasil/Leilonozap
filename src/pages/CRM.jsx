@@ -1351,7 +1351,14 @@ _Enviado via CRM Leilão NoZap_`;
                               <div className="px-4 py-8 text-center text-yellow-400 text-sm">
                                 <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
                                 <p className="font-semibold">Nenhum produto disponível</p>
-                                <p className="text-xs mt-1 text-gray-500">Cadastre produtos no estoque primeiro</p>
+                                <p className="text-xs mt-1 text-gray-500">Produtos com estoque não carregados</p>
+                                <button
+                                  type="button"
+                                  onClick={loadProducts}
+                                  className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                                >
+                                  🔄 Recarregar Produtos
+                                </button>
                               </div>
                             ) : filteredProductsForModal.length > 0 ? (
                               filteredProductsForModal.slice(0, 10).map(product => (
