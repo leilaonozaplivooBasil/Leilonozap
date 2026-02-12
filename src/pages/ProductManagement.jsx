@@ -10,6 +10,7 @@ import {
   Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
   Trash2, RotateCcw
 } from 'lucide-react';
+import { groupDuplicateProducts } from '@/functions/groupDuplicateProducts';
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import {
@@ -399,6 +400,28 @@ export default function ProductManagement() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button
+              onClick={async () => {
+                if (!confirm('Agrupar produtos duplicados? Isso irá somar quantidades de produtos com o mesmo nome.')) return;
+                try {
+                  setIsLoading(true);
+                  const result = await base44.functions.invoke('groupDuplicateProducts', {});
+                  alert(`✅ Agrupamento concluído!\n\n${result.data.grupos_processados} grupos processados\n${result.data.produtos_atualizados} produtos atualizados\n${result.data.produtos_deletados} duplicados removidos`);
+                  sessionStorage.removeItem('products_cache_v3');
+                  sessionStorage.removeItem('products_cache_time_v3');
+                  await loadData();
+                } catch (error) {
+                  console.error('Erro:', error);
+                  alert('❌ Erro ao agrupar produtos');
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Agrupar Duplicados
+            </Button>
             <Button
               onClick={() => navigate(createPageUrl("AddCatalogProduct"))}
               className="bg-purple-600 hover:bg-purple-700 text-white"
