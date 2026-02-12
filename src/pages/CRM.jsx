@@ -57,8 +57,12 @@ export default function CRM() {
     address_city: '',
     address_state: '',
     address_zip_code: '',
-    last_contact: new Date().toISOString().split('T')[0]
+    last_contact: new Date().toISOString().split('T')[0],
+    interested_products: []
   });
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [availableProducts, setAvailableProducts] = useState([]);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
@@ -74,7 +78,18 @@ export default function CRM() {
     loadCustomers();
     loadSellers();
     loadNegotiations();
+    loadProducts();
   }, [navigate]);
+
+  const loadProducts = async () => {
+    try {
+      const data = await base44.entities.Product.list('-created_date', 500);
+      const inStock = data.filter(p => (p.quantity || 0) > 0);
+      setAvailableProducts(inStock);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
+    }
+  };
 
   const loadNegotiations = async () => {
     try {
@@ -152,10 +167,43 @@ export default function CRM() {
       address_city: customer.address_city || '',
       address_state: customer.address_state || '',
       address_zip_code: customer.address_zip_code || '',
-      last_contact: customer.last_contact || new Date().toISOString().split('T')[0]
+      last_contact: customer.last_contact || new Date().toISOString().split('T')[0],
+      interested_products: customer.interested_products || []
     });
     setShowAddForm(true);
   };
+
+  const addInterestedProduct = (product) => {
+    const exists = formData.interested_products.find(p => p.product_id === product.id);
+    if (exists) {
+      alert('Produto já adicionado!');
+      return;
+    }
+    if (formData.interested_products.length >= 10) {
+      alert('Máximo de 10 produtos!');
+      return;
+    }
+    setFormData({
+      ...formData,
+      interested_products: [
+        ...formData.interested_products,
+        { product_id: product.id, product_name: product.description }
+      ]
+    });
+    setProductSearchTerm('');
+  };
+
+  const removeInterestedProduct = (productId) => {
+    setFormData({
+      ...formData,
+      interested_products: formData.interested_products.filter(p => p.product_id !== productId)
+    });
+  };
+
+  const filteredProductsForModal = availableProducts.filter(p =>
+    p.description?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+    p.lot?.toLowerCase().includes(productSearchTerm.toLowerCase())
+  );
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -181,10 +229,13 @@ export default function CRM() {
         address_city: '',
         address_state: '',
         address_zip_code: '',
-        last_contact: new Date().toISOString().split('T')[0]
+        last_contact: new Date().toISOString().split('T')[0],
+        interested_products: []
       });
       setShowAddForm(false);
       setEditingCustomer(null);
+      setShowProductSearch(false);
+      setProductSearchTerm('');
       await loadCustomers();
     } catch (error) {
       console.error('Erro ao salvar:', error);
@@ -431,8 +482,11 @@ _Enviado via CRM Leilão NoZap_`;
                   address_city: '',
                   address_state: '',
                   address_zip_code: '',
-                  last_contact: new Date().toISOString().split('T')[0]
+                  last_contact: new Date().toISOString().split('T')[0],
+                  interested_products: []
                 });
+                setShowProductSearch(false);
+                setProductSearchTerm('');
                 setShowAddForm(true);
               }}
               className="bg-gray-800 hover:bg-gray-700 text-white flex-1 sm:flex-none text-xs sm:text-sm"
@@ -1248,6 +1302,77 @@ _Enviado via CRM Leilão NoZap_`;
                         className="bg-gray-700 text-white"
                         rows={3}
                       />
+                    </div>
+
+                    {/* PRODUTOS DE INTERESSE */}
+                    <div className="col-span-full">
+                      <Button
+                        type="button"
+                        onClick={() => setShowProductSearch(!showProductSearch)}
+                        variant="outline"
+                        className="w-full border-gray-600 text-white hover:bg-gray-700 mb-3"
+                      >
+                        <Package className="w-4 h-4 mr-2" />
+                        {showProductSearch ? '▼' : '▶'} Marcar Produtos de Interesse (opcional)
+                      </Button>
+
+                      {showProductSearch && (
+                        <div className="space-y-3 bg-gray-700 p-4 rounded-lg border border-gray-600">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Input
+                              placeholder="Buscar produto por nome ou lote..."
+                              value={productSearchTerm}
+                              onChange={(e) => setProductSearchTerm(e.target.value)}
+                              className="pl-10 bg-gray-600 text-white border-gray-500"
+                            />
+                          </div>
+
+                          {productSearchTerm && (
+                            <div className="max-h-48 overflow-y-auto bg-gray-800 rounded border border-gray-600">
+                              {filteredProductsForModal.slice(0, 10).map(product => (
+                                <button
+                                  key={product.id}
+                                  type="button"
+                                  onClick={() => addInterestedProduct(product)}
+                                  className="w-full text-left px-3 py-2 hover:bg-gray-700 border-b border-gray-600 text-white transition-colors"
+                                >
+                                  <p className="font-semibold text-sm">{product.description}</p>
+                                  <p className="text-xs text-gray-400">
+                                    Lote: {product.lot || 'N/A'} • Estoque: {product.quantity}
+                                  </p>
+                                </button>
+                              ))}
+                              {filteredProductsForModal.length === 0 && (
+                                <div className="px-3 py-6 text-center text-gray-400 text-sm">
+                                  Nenhum produto encontrado
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {formData.interested_products.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {formData.interested_products.map(p => (
+                                <Badge key={p.product_id} className="bg-green-600 text-white pr-1 flex items-center gap-1">
+                                  <span className="truncate max-w-[200px]">{p.product_name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeInterestedProduct(p.product_id)}
+                                    className="ml-1 hover:text-red-300 transition-colors"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+
+                          <p className="text-xs text-gray-400">
+                            ✅ {formData.interested_products.length}/10 produtos marcados
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
