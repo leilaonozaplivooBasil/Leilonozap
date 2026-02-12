@@ -6,11 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import PDV from './PDV';
 import {
   Users, UserPlus, Search, Filter, Mail, Phone,
   DollarSign, TrendingUp, Edit, Trash2, X, Save, Send, UserCheck, UserX,
-  ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle
+  ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle, Briefcase
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +34,7 @@ export default function CRM() {
   const [allSellers, setAllSellers] = useState([]);
   const [editingSeller, setEditingSeller] = useState(null);
   const [activeTab, setActiveTab] = useState('customers');
+  const [negotiations, setNegotiations] = useState([]);
   const [sellerFormData, setSellerFormData] = useState({
     name: '',
     phone: '',
@@ -73,7 +73,17 @@ export default function CRM() {
     }
     loadCustomers();
     loadSellers();
+    loadNegotiations();
   }, [navigate]);
+
+  const loadNegotiations = async () => {
+    try {
+      const data = await base44.entities.Negotiation.list('-created_date', 200);
+      setNegotiations(data);
+    } catch (error) {
+      console.error('Erro ao carregar negociações:', error);
+    }
+  };
 
   const loadSellers = async () => {
     try {
@@ -332,7 +342,8 @@ _Enviado via CRM Leilão NoZap_`;
     pago: customers.filter(c => c.purchase_status === 'pago').length,
     enviado: customers.filter(c => c.purchase_status === 'enviado').length,
     entregue: customers.filter(c => c.purchase_status === 'entregue').length,
-    cancelado: customers.filter(c => c.purchase_status === 'cancelado').length
+    cancelado: customers.filter(c => c.purchase_status === 'cancelado').length,
+    volumeNegociacao: negotiations.filter(n => n.status === 'em_andamento').reduce((sum, n) => sum + (n.total_value || 0), 0)
   };
 
   const getStatusColor = (status) => {
@@ -434,7 +445,7 @@ _Enviado via CRM Leilão NoZap_`;
         </div>
 
         {/* ESTATÍSTICAS PRINCIPAIS */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
@@ -467,6 +478,20 @@ _Enviado via CRM Leilão NoZap_`;
                   <p className="text-xl sm:text-3xl font-bold text-white">{stats.clientes}</p>
                 </div>
                 <Users className="w-8 h-8 text-green-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-orange-600 border-orange-500">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-orange-100 text-xs sm:text-sm mb-1">Volume em Negociação</p>
+                  <p className="text-lg sm:text-2xl font-bold text-white">
+                    R$ {stats.volumeNegociacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <Briefcase className="w-8 h-8 text-orange-100" />
               </div>
             </CardContent>
           </Card>
@@ -611,9 +636,6 @@ _Enviado via CRM Leilão NoZap_`;
         {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
           <TabsList className="bg-white border border-gray-200 w-full sm:w-auto">
-            <TabsTrigger value="pdv" className="data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 sm:flex-none">
-              PDV
-            </TabsTrigger>
             <TabsTrigger value="customers" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
@@ -621,10 +643,6 @@ _Enviado via CRM Leilão NoZap_`;
               Vendedores
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="pdv">
-            <PDV />
-          </TabsContent>
 
           <TabsContent value="customers">
             {/* FILTROS DE CLIENTES */}

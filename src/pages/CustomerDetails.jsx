@@ -8,9 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import NegotiationModal from '@/components/crm/NegotiationModal';
+import NegotiationsList from '@/components/crm/NegotiationsList';
 import {
   ArrowLeft, Save, Mail, Phone, MapPin, Calendar,
-  User, ShoppingCart, TrendingUp, CheckCircle, Clock, Search, Package
+  User, ShoppingCart, TrendingUp, CheckCircle, Clock, Search, Package, Briefcase
 } from 'lucide-react';
 
 export default function CustomerDetails() {
@@ -23,6 +25,9 @@ export default function CustomerDetails() {
   const [products, setProducts] = useState([]);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [negotiations, setNegotiations] = useState([]);
+  const [showNegotiationModal, setShowNegotiationModal] = useState(false);
+  const [sellers, setSellers] = useState([]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -35,7 +40,27 @@ export default function CustomerDetails() {
 
     loadCustomer(customerId);
     loadProducts();
+    loadNegotiations(customerId);
+    loadSellers();
   }, [location]);
+
+  const loadNegotiations = async (customerId) => {
+    try {
+      const data = await base44.entities.Negotiation.filter({ customer_id: customerId });
+      setNegotiations(data.sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
+    } catch (error) {
+      console.error('Erro ao carregar negociações:', error);
+    }
+  };
+
+  const loadSellers = async () => {
+    try {
+      const data = await base44.entities.Seller.filter({ is_active: true });
+      setSellers(data);
+    } catch (error) {
+      console.error('Erro ao carregar vendedores:', error);
+    }
+  };
 
   const loadProducts = async () => {
     try {
@@ -535,7 +560,43 @@ export default function CustomerDetails() {
               />
             </CardContent>
           </Card>
+
+          {/* NEGOCIAÇÕES */}
+          <div className="lg:col-span-2">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <Briefcase className="w-6 h-6 text-orange-600" />
+                Negociações
+              </h2>
+              <Button
+                onClick={() => setShowNegotiationModal(true)}
+                className="bg-orange-600 hover:bg-orange-700"
+              >
+                <Briefcase className="w-4 h-4 mr-2" />
+                Nova Negociação
+              </Button>
+            </div>
+            <NegotiationsList 
+              negotiations={negotiations}
+              onNegotiationClick={(neg) => {
+                console.log('Negociação clicada:', neg);
+              }}
+            />
+          </div>
         </div>
+
+        {/* MODAL DE NEGOCIAÇÃO */}
+        {showNegotiationModal && (
+          <NegotiationModal
+            customer={customer}
+            sellers={sellers}
+            onClose={() => setShowNegotiationModal(false)}
+            onSave={() => {
+              loadNegotiations(customer.id);
+              loadCustomer(customer.id);
+            }}
+          />
+        )}
 
         {/* BOTÃO SALVAR INFERIOR */}
         <div className="mt-6 flex justify-end">
