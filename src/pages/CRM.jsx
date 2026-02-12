@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import PDV from './PDV';
 import {
   Users, UserPlus, Search, Filter, Mail, Phone,
   DollarSign, TrendingUp, Edit, Trash2, X, Save, Send, UserCheck, UserX,
@@ -607,6 +608,9 @@ _Enviado via CRM Leilão NoZap_`;
         {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
           <TabsList className="bg-white border border-gray-200 w-full sm:w-auto">
+            <TabsTrigger value="pdv" className="data-[state=active]:bg-green-600 data-[state=active]:text-white flex-1 sm:flex-none">
+              PDV
+            </TabsTrigger>
             <TabsTrigger value="customers" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
@@ -614,6 +618,10 @@ _Enviado via CRM Leilão NoZap_`;
               Vendedores
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="pdv">
+            <PDV />
+          </TabsContent>
 
           <TabsContent value="customers">
             {/* FILTROS DE CLIENTES */}
