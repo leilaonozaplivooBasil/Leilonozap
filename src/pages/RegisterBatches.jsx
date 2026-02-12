@@ -245,27 +245,52 @@ export default function RegisterBatches() {
     setProgress('🔄 Convertendo produtos para estoque...');
     
     try {
-      let totalCriados = 0;
+      // Agrupa produtos por nome dentro de cada lote
+      const produtosAgrupados = {};
       
-      (batch.lotes || []).forEach((lote, loteIdx) => {
-        (lote.produtos || []).forEach((produto, prodIdx) => {
-          for (let i = 0; i < (produto.quantidade || 1); i++) {
-            // ✅ Cria cada produto individual
-            base44.entities.Product.create({
+      (batch.lotes || []).forEach((lote) => {
+        (lote.produtos || []).forEach((produto) => {
+          const nomeCompleto = produto.descricao || `Produto ${produto.codigo || 'N/A'}`;
+          const chave = `${lote.numero_lote}_${nomeCompleto}`;
+          
+          if (produtosAgrupados[chave]) {
+            // Soma quantidade ao produto existente
+            produtosAgrupados[chave].quantidade += (produto.quantidade || 1);
+            produtosAgrupados[chave].cost_price += (batch.custo_por_unidade || 0) * (produto.quantidade || 1);
+          } else {
+            // Cria novo grupo
+            produtosAgrupados[chave] = {
               date: batch.data_lancamento ? new Date(batch.data_lancamento).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
               lot: lote.numero_lote,
-              description: produto.descricao || `Produto ${produto.codigo || 'N/A'}`,
-              quantity: 1,
-              cost_price: batch.custo_por_unidade || 0,
+              description: nomeCompleto,
+              quantidade: produto.quantidade || 1,
+              cost_price: (batch.custo_por_unidade || 0) * (produto.quantidade || 1),
               selling_price_retail: 0,
               selling_price_wholesale: 0,
               status: 'ESTOQUE',
               purchase_order: batch.numero_leilao
-            }).catch(err => console.error(`Erro ao criar produto:`, err));
-            totalCriados++;
+            };
           }
         });
       });
+
+      // Cria produtos agrupados
+      let totalCriados = 0;
+      for (const chave in produtosAgrupados) {
+        const prod = produtosAgrupados[chave];
+        await base44.entities.Product.create({
+          date: prod.date,
+          lot: prod.lot,
+          description: prod.description,
+          quantity: prod.quantidade,
+          cost_price: prod.cost_price,
+          selling_price_retail: prod.selling_price_retail,
+          selling_price_wholesale: prod.selling_price_wholesale,
+          status: prod.status,
+          purchase_order: prod.purchase_order
+        });
+        totalCriados++;
+      }
 
       // Atualiza o batch para "convertido"
       await base44.entities.BatchRegistration.update(batch.id, {
@@ -274,7 +299,7 @@ export default function RegisterBatches() {
 
       setProgress('');
       setIsProcessing(false);
-      alert(`✅ ${totalCriados} produtos adicionados ao estoque!`);
+      alert(`✅ ${totalCriados} produtos agrupados adicionados ao estoque!`);
       await loadBatches();
       
     } catch (error) {
@@ -291,32 +316,57 @@ export default function RegisterBatches() {
     
     try {
       const lote = batch.lotes[loteIndex];
-      let totalCriados = 0;
       
-      (lote.produtos || []).forEach(produto => {
-        for (let i = 0; i < (produto.quantidade || 1); i++) {
-          // ✅ Cria cada produto individual
-          base44.entities.Product.create({
+      // Agrupa produtos por nome
+      const produtosAgrupados = {};
+      
+      (lote.produtos || []).forEach((produto) => {
+        const nomeCompleto = produto.descricao || `Produto ${produto.codigo || 'N/A'}`;
+        
+        if (produtosAgrupados[nomeCompleto]) {
+          // Soma quantidade ao produto existente
+          produtosAgrupados[nomeCompleto].quantidade += (produto.quantidade || 1);
+          produtosAgrupados[nomeCompleto].cost_price += (batch.custo_por_unidade || 0) * (produto.quantidade || 1);
+        } else {
+          // Cria novo grupo
+          produtosAgrupados[nomeCompleto] = {
             date: batch.data_lancamento ? new Date(batch.data_lancamento).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
             lot: lote.numero_lote,
-            description: produto.descricao || `Produto ${produto.codigo || 'N/A'}`,
-            quantity: 1,
-            cost_price: batch.custo_por_unidade || 0,
+            description: nomeCompleto,
+            quantidade: produto.quantidade || 1,
+            cost_price: (batch.custo_por_unidade || 0) * (produto.quantidade || 1),
             selling_price_retail: 0,
             selling_price_wholesale: 0,
             status: 'ESTOQUE',
             purchase_order: batch.numero_leilao
-          }).catch(err => console.error(`Erro ao criar produto:`, err));
-          totalCriados++;
+          };
         }
       });
+
+      // Cria produtos agrupados
+      let totalCriados = 0;
+      for (const nome in produtosAgrupados) {
+        const prod = produtosAgrupados[nome];
+        await base44.entities.Product.create({
+          date: prod.date,
+          lot: prod.lot,
+          description: prod.description,
+          quantity: prod.quantidade,
+          cost_price: prod.cost_price,
+          selling_price_retail: prod.selling_price_retail,
+          selling_price_wholesale: prod.selling_price_wholesale,
+          status: prod.status,
+          purchase_order: prod.purchase_order
+        });
+        totalCriados++;
+      }
 
       // Recarrega o cache de status
       await checkLotesStatus([batch]);
 
       setProgress('');
       setIsProcessing(false);
-      alert(`✅ ${totalCriados} produtos do lote adicionados ao estoque!`);
+      alert(`✅ ${totalCriados} produtos agrupados do lote adicionados ao estoque!`);
       await loadBatches();
     } catch (error) {
       console.error('❌ Erro ao lançar lote:', error);
