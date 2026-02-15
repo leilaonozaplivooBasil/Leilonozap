@@ -83,6 +83,46 @@ Deno.serve(async (req) => {
 
         console.log('✅ AsaasPayment atualizado para confirmed');
 
+        // 🎯 ATIVAR PLANO DE PARCEIRO (se aplicável)
+        if (asaasPayment.partner_licensee_id && asaasPayment.partner_plan_code) {
+            console.log('💼 Ativando plano de parceiro...');
+            
+            const users = await base44.asServiceRole.entities.AppUser.filter({ id: asaasPayment.partner_licensee_id });
+            const user = users && users.length > 0 ? users[0] : null;
+
+            if (user) {
+                // Criar cronograma de 12 parcelas mensais
+                const schedule = [];
+                const startDate = new Date();
+                for (let i = 1; i <= 12; i++) {
+                    const paymentDate = new Date(startDate);
+                    paymentDate.setDate(paymentDate.getDate() + (i * 30));
+                    schedule.push({
+                        period: i,
+                        date: paymentDate.toISOString(),
+                        status: 'scheduled'
+                    });
+                }
+
+                await base44.asServiceRole.entities.PartnerPlanPurchase.create({
+                    user_id: user.id,
+                    user_name: user.full_name,
+                    user_email: user.email,
+                    plan_name: asaasPayment.partner_plan_code,
+                    plan_amount: asaasPayment.value,
+                    activated_at: new Date().toISOString(),
+                    status: 'active',
+                    is_investment: true,
+                    investment_rate: 3,
+                    purchase_periods: schedule,
+                    activation_source: 'webhook_auto',
+                    payment_id: paymentId
+                });
+
+                console.log('✅ PartnerPlanPurchase criado automaticamente');
+            }
+        }
+
         // ✅ PASSO 2: Atualizar CatalogSale (se aplicável)
         if (asaasPayment.catalog_sale_id) {
             const catalogSales = await base44.asServiceRole.entities.CatalogSale.filter(
