@@ -1211,7 +1211,7 @@ export default function InvestorDashboard() {
                     try {
                       toast.info("Gerando QR Code PIX...");
 
-                      const response = await base44.functions.invoke('createAbacatePayPix', {
+                      const response = await base44.functions.invoke('createPartnerPlanPix', {
                         licensee_id: currentUser.id,
                         user_name: name,
                         user_email: email,
@@ -1311,7 +1311,7 @@ export default function InvestorDashboard() {
                     try {
                       toast.info("Verificando pagamento PIX...");
 
-                      const response = await base44.functions.invoke('checkAbacatePayPix', {
+                      const response = await base44.functions.invoke('checkPartnerPlanPayment', {
                         billing_id: pixData.billing_id
                       });
 
