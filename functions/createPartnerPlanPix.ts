@@ -38,6 +38,31 @@ Deno.serve(async (req) => {
         const cleanCpf = user_cpf.replace(/\D/g, '');
         const cleanPhone = user_phone.replace(/\D/g, '');
 
+        // Valida CPF
+        const validateCPF = (cpf) => {
+            if (cpf.length !== 11) return false;
+            if (/^(\d)\1+$/.test(cpf)) return false;
+            let sum = 0;
+            for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+            let remainder = (sum * 10) % 11;
+            if (remainder === 10 || remainder === 11) remainder = 0;
+            if (remainder !== parseInt(cpf[9])) return false;
+            sum = 0;
+            for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+            remainder = (sum * 10) % 11;
+            if (remainder === 10 || remainder === 11) remainder = 0;
+            return remainder === parseInt(cpf[10]);
+        };
+
+        if (!validateCPF(cleanCpf)) {
+            return Response.json({ error: 'CPF inválido' }, { status: 400 });
+        }
+
+        // Valida telefone (deve ter 10 ou 11 dígitos)
+        if (cleanPhone.length < 10 || cleanPhone.length > 11) {
+            return Response.json({ error: 'Telefone inválido (deve ter 10 ou 11 dígitos)' }, { status: 400 });
+        }
+
         // PASSO 1: Criar ou buscar cliente
         console.log('📋 Buscando cliente ASAAS...');
         
