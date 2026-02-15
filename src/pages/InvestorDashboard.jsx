@@ -1221,16 +1221,27 @@ export default function InvestorDashboard() {
                       });
 
                       console.log('🔍 Response completo:', response);
+                      console.log('🔍 response.data:', response?.data);
                       
-                      if (response?.success || response?.data?.success) {
-                        const pixInfo = response?.data || response;
-                        setPixData(pixInfo);
-                        toast.success("QR Code gerado com sucesso!");
+                      // ✅ FIX: response.data já vem como objeto direto
+                      const pixInfo = response?.data || response;
+                      
+                      console.log('🔍 pixInfo extraído:', pixInfo);
+                      console.log('🔍 pixInfo.success:', pixInfo?.success);
+                      console.log('🔍 pixInfo.qr_code_base64:', pixInfo?.qr_code_base64 ? 'EXISTS' : 'MISSING');
+                      
+                      if (pixInfo?.success) {
+                        setPixData({
+                          billing_id: pixInfo.billing_id || pixInfo.payment_id,
+                          qr_code_base64: pixInfo.qr_code_base64,
+                          pix_code: pixInfo.pix_code
+                        });
+                        toast.success("✅ QR Code gerado com sucesso!");
                       } else {
-                        const errorMsg = response?.error || response?.data?.error || "Erro ao gerar QR Code";
-                        const errorDetails = response?.details || response?.data?.details;
+                        const errorMsg = pixInfo?.error || "Erro ao gerar QR Code";
+                        const errorDetails = pixInfo?.details;
                         console.error('❌ Erro ao gerar PIX:', { errorMsg, errorDetails });
-                        toast.error(errorMsg + (errorDetails ? ` (${JSON.stringify(errorDetails)})` : ''));
+                        toast.error(errorMsg + (errorDetails ? ` - ${JSON.stringify(errorDetails)}` : ''));
                       }
                     } catch (error) {
                       console.error('❌ Erro:', error);
