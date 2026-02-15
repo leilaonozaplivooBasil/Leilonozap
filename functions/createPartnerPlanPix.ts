@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
                     name: user_name,
                     email: user_email,
                     cpfCnpj: cleanCpf,
-                    mobilePhone: cleanPhone,
+                    mobilePhone: cleanPhone.length === 11 ? cleanPhone : `55${cleanPhone}`,
                     notificationDisabled: false
                 })
             });

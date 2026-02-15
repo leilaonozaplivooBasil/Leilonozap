@@ -1220,11 +1220,17 @@ export default function InvestorDashboard() {
                         plan_code: selectedPlan.name
                       });
 
-                      if (response?.data?.success) {
-                        setPixData(response.data);
+                      console.log('🔍 Response completo:', response);
+                      
+                      if (response?.success || response?.data?.success) {
+                        const pixInfo = response?.data || response;
+                        setPixData(pixInfo);
                         toast.success("QR Code gerado com sucesso!");
                       } else {
-                        toast.error(response?.data?.error || "Erro ao gerar QR Code");
+                        const errorMsg = response?.error || response?.data?.error || "Erro ao gerar QR Code";
+                        const errorDetails = response?.details || response?.data?.details;
+                        console.error('❌ Erro ao gerar PIX:', { errorMsg, errorDetails });
+                        toast.error(errorMsg + (errorDetails ? ` (${JSON.stringify(errorDetails)})` : ''));
                       }
                     } catch (error) {
                       console.error('❌ Erro:', error);
