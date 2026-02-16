@@ -3,23 +3,38 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const { start_date, end_date, user_id, requester_email } = await req.json();
+    const body = await req.json();
+    const { start_date, end_date, user_id, requester_email } = body;
     
-    // Lista de emails autorizados (validação no frontend já garante isso)
+    console.log('📦 Export request received:', { 
+      requester_email, 
+      bodyKeys: Object.keys(body),
+      fullBody: body 
+    });
+    
+    // Lista de emails autorizados
     const allowedEmails = [
       'erbrito.sistemas@gmail.com', 
       'jonhhenrique29@hotmail.com',
       'luizsantanna@tttcorporate.com'
     ];
     
-    // Validação simples pelo email enviado no payload
+    console.log('🔐 Checking authorization:', {
+      email: requester_email,
+      isAllowed: allowedEmails.includes(requester_email),
+      allowedEmails
+    });
+    
+    // Validação pelo email
     if (!requester_email || !allowedEmails.includes(requester_email)) {
+      console.error('❌ Access denied for:', requester_email);
       return Response.json({ 
-        error: 'Acesso negado - email não autorizado' 
+        error: `Acesso negado - email '${requester_email}' não autorizado`,
+        allowed: allowedEmails
       }, { status: 403 });
     }
     
-    console.log('Export approved for:', requester_email);
+    console.log('✅ Export approved for:', requester_email);
 
     // Query com filtros
     let query = {};
