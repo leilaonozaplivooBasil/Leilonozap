@@ -24,11 +24,14 @@ export default function AuditSnapshot() {
 
   const downloadSnapshot = async () => {
     setLoading(true);
+    
+    console.log('🔐 Tentando baixar snapshot com email:', me?.email);
+    
     try {
       const response = await base44.functions.invoke('exportAuditData', {
         start_date: startDate,
         end_date: endDate,
-        requester_email: me?.email
+        requester_email: me?.email || localStorage.getItem('currentUser') ? JSON.parse(localStorage.getItem('currentUser')).email : null
       });
 
       // Cria blob e faz download
