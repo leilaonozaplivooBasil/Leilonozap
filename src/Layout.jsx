@@ -13,11 +13,9 @@ import CartPopup from "@/components/cart/CartPopup";
 import PaymentConfirmationPopup from "@/components/payment/PaymentConfirmationPopup";
 import CPFModal from "@/components/common/CPFModal";
 
-      import { Button } from "@/components/ui/button";
-      import { base44 } from '@/api/base44Client';
-
-const AppUser = base44.entities.AppUser;
-const User = { me: () => base44.auth.me() };
+import { Button } from "@/components/ui/button";
+import { base44 } from '@/api/base44Client';
+import LogoTransparent from '@/assets/logo-transparent.png'; // Importando logo local
 import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon, ShoppingCart as CartIcon } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,6 +28,8 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
+
+import "./Layout.css";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -62,13 +62,13 @@ export default function Layout({ children, currentPageName }) {
 
     updateCartCount();
     window.addEventListener('cartUpdated', updateCartCount);
-    
+
     // Evento para abrir popup do carrinho
     const handleOpenCartPopup = () => {
       setShowCartPopup(true);
     };
     window.addEventListener('openCartPopup', handleOpenCartPopup);
-    
+
     return () => {
       window.removeEventListener('cartUpdated', updateCartCount);
       window.removeEventListener('openCartPopup', handleOpenCartPopup);
@@ -86,36 +86,36 @@ export default function Layout({ children, currentPageName }) {
 
   const handleLogout = React.useCallback(() => {
     console.log("🚪 INICIANDO LOGOUT...");
-    
+
     localStorage.removeItem('currentUser');
     sessionStorage.removeItem('isLoggedIn');
-    
+
     setCurrentUser(null);
-    
+
     console.log("✅ LOGOUT COMPLETO - Estado limpo!");
-    
+
     navigate(createPageUrl("Home"), { replace: true });
   }, [navigate]);
 
   const syncUserData = React.useCallback(async () => {
     const savedUserJSON = localStorage.getItem('currentUser');
     const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-    
+
     if (!savedUserJSON || !isLoggedIn) {
       return;
     }
-    
+
     try {
       const userFromStorage = JSON.parse(savedUserJSON);
       const usersInDB = await AppUser.filter({ id: userFromStorage.id });
-      
+
       if (usersInDB && usersInDB.length > 0) {
         const freshUser = usersInDB[0];
-        
+
         if (freshUser.email === 'luizsantanna@tttcorporate.com') {
           freshUser.role = 'admin';
         }
-        
+
         localStorage.setItem('currentUser', JSON.stringify(freshUser));
         setCurrentUser(freshUser);
       }
@@ -170,7 +170,7 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     const handleError = (event) => {
       console.error('🚨 Erro global capturado:', event.error || event.reason);
-      
+
       try {
         base44.entities.SystemLog.create({
           step: 'Global_UncaughtError',
@@ -183,7 +183,7 @@ export default function Layout({ children, currentPageName }) {
           },
           url: window.location.href,
           user_agent: navigator.userAgent
-        }).catch(() => {});
+        }).catch(() => { });
       } catch (e) {
         // Falha silenciosa
       }
@@ -228,34 +228,34 @@ export default function Layout({ children, currentPageName }) {
 
     const urlParams = new URLSearchParams(window.location.search);
     const refCode = urlParams.get('ref');
-              if (refCode) {
-                if (!sessionStorage.getItem('referralCode')) {
-                  sessionStorage.setItem('referralCode', refCode);
-                  console.log(`Código de indicação '${refCode}' capturado.`);
-                }
-                // Registra visita ao catálogo (uma vez por sessão por ref)
-                const visitKey = `catalog_visit_logged_${refCode}`;
-                if (!sessionStorage.getItem(visitKey)) {
-                  sessionStorage.setItem(visitKey, 'true');
-                  (async () => {
-                    try {
-                      const users = await base44.entities.AppUser.filter({ referral_code: refCode });
-                      const licensee = users && users[0];
-                      if (licensee && (licensee.career_levels || []).includes('licenciado_catalogo')) {
-                        await base44.entities.CatalogVisit.create({
-                          licensee_id: licensee.id,
-                          referral_code: refCode,
-                          page: window.location.pathname + window.location.search,
-                          user_agent: navigator.userAgent,
-                          visited_at: new Date().toISOString()
-                        });
-                      }
-                    } catch (e) {
-                      console.debug('CatalogVisit log skipped');
-                    }
-                  })();
-                }
-              }
+    if (refCode) {
+      if (!sessionStorage.getItem('referralCode')) {
+        sessionStorage.setItem('referralCode', refCode);
+        console.log(`Código de indicação '${refCode}' capturado.`);
+      }
+      // Registra visita ao catálogo (uma vez por sessão por ref)
+      const visitKey = `catalog_visit_logged_${refCode}`;
+      if (!sessionStorage.getItem(visitKey)) {
+        sessionStorage.setItem(visitKey, 'true');
+        (async () => {
+          try {
+            const users = await base44.entities.AppUser.filter({ referral_code: refCode });
+            const licensee = users && users[0];
+            if (licensee && (licensee.career_levels || []).includes('licenciado_catalogo')) {
+              await base44.entities.CatalogVisit.create({
+                licensee_id: licensee.id,
+                referral_code: refCode,
+                page: window.location.pathname + window.location.search,
+                user_agent: navigator.userAgent,
+                visited_at: new Date().toISOString()
+              });
+            }
+          } catch (e) {
+            console.debug('CatalogVisit log skipped');
+          }
+        })();
+      }
+    }
 
     // Captura código de influenciador (para Sai de Baixo)
     const infCode = urlParams.get('inf');
@@ -267,13 +267,13 @@ export default function Layout({ children, currentPageName }) {
     }
 
     const initApp = async () => {
-            if (hasInitializedRef.current) {
-              return;
-            }
+      if (hasInitializedRef.current) {
+        return;
+      }
 
-            hasInitializedRef.current = true;
+      hasInitializedRef.current = true;
 
-        try {
+      try {
         // 🛡️ PROTEÇÃO CRÍTICA: Envolve TUDO em try-catch para evitar crashes
         let userFound = false;
 
@@ -283,7 +283,7 @@ export default function Layout({ children, currentPageName }) {
         if (savedUserJSON && isLoggedIn) {
           try {
             const userFromStorage = JSON.parse(savedUserJSON);
-            
+
             // 🛡️ PROTEÇÃO: Valida se userFromStorage existe e tem ID
             if (!userFromStorage || !userFromStorage.id) {
               console.warn("⚠️ Dados de usuário inválidos no localStorage");
@@ -311,8 +311,8 @@ export default function Layout({ children, currentPageName }) {
                 try {
                   const influencerCode = sessionStorage.getItem('influencerCode');
                   if (influencerCode && !sessionStorage.getItem('influencer_lead_registered')) {
-                    await base44.functions.invoke('registerInfluencerLead', { 
-                      influencer_code: influencerCode 
+                    await base44.functions.invoke('registerInfluencerLead', {
+                      influencer_code: influencerCode
                     });
                     sessionStorage.setItem('influencer_lead_registered', 'true');
                     console.log('✅ Lead de influenciador registrado');
@@ -352,37 +352,37 @@ export default function Layout({ children, currentPageName }) {
 
         if (!userFound) {
           try {
-              const platformUser = await User.me();
-              if (platformUser && platformUser.email) {
-                  try {
-                    const usersInDB = await AppUser.filter({ email: platformUser.email });
-                    let finalUser = platformUser;
-                    if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
-                      finalUser = usersInDB[0];
-                    }
+            const platformUser = await User.me();
+            if (platformUser && platformUser.email) {
+              try {
+                const usersInDB = await AppUser.filter({ email: platformUser.email });
+                let finalUser = platformUser;
+                if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
+                  finalUser = usersInDB[0];
+                }
 
-                    if (finalUser.email === 'luizsantanna@tttcorporate.com') {
-                        finalUser.role = 'admin';
-                    }
-                    localStorage.setItem('currentUser', JSON.stringify(finalUser));
-                    sessionStorage.setItem('isLoggedIn', 'true');
-                    setCurrentUser(finalUser);
-                    userFound = true;
-                    console.log("✅ Usuário da plataforma carregado:", finalUser?.full_name || 'Sem nome');
-                  } catch (dbError) {
-                    // Erro ao buscar no banco, usa dados da plataforma
-                    console.log("⚠️ Erro ao buscar AppUser, usando dados da plataforma");
-                    if (platformUser.email === 'luizsantanna@tttcorporate.com') {
-                        platformUser.role = 'admin';
-                    }
-                    localStorage.setItem('currentUser', JSON.stringify(platformUser));
-                    sessionStorage.setItem('isLoggedIn', 'true');
-                    setCurrentUser(platformUser);
-                    userFound = true;
-                  }
+                if (finalUser.email === 'luizsantanna@tttcorporate.com') {
+                  finalUser.role = 'admin';
+                }
+                localStorage.setItem('currentUser', JSON.stringify(finalUser));
+                sessionStorage.setItem('isLoggedIn', 'true');
+                setCurrentUser(finalUser);
+                userFound = true;
+                console.log("✅ Usuário da plataforma carregado:", finalUser?.full_name || 'Sem nome');
+              } catch (dbError) {
+                // Erro ao buscar no banco, usa dados da plataforma
+                console.log("⚠️ Erro ao buscar AppUser, usando dados da plataforma");
+                if (platformUser.email === 'luizsantanna@tttcorporate.com') {
+                  platformUser.role = 'admin';
+                }
+                localStorage.setItem('currentUser', JSON.stringify(platformUser));
+                sessionStorage.setItem('isLoggedIn', 'true');
+                setCurrentUser(platformUser);
+                userFound = true;
               }
+            }
           } catch (platformError) {
-              console.log("ℹ️ Nenhum usuário da plataforma logado");
+            console.log("ℹ️ Nenhum usuário da plataforma logado");
           }
         }
 
@@ -427,9 +427,9 @@ export default function Layout({ children, currentPageName }) {
           setTimeout(() => window.location.reload(), 100);
         }
       }
-      };
+    };
 
-      initApp();
+    initApp();
   }, []); // Roda apenas UMA VEZ ao montar o componente
 
   // ❌ REMOVIDO - Sync desnecessário, já temos cache
@@ -459,8 +459,8 @@ export default function Layout({ children, currentPageName }) {
   ];
 
   const adminMenuItems = [
-    { 
-      title: "🤖 Arquiteto IA", 
+    {
+      title: "🤖 Arquiteto IA",
       pageName: "ArquitetoIA",
       highlight: true
     },
@@ -468,29 +468,29 @@ export default function Layout({ children, currentPageName }) {
       title: "🧪 Ambiente de Teste",
       pageName: "AmbienteDeTeste"
     },
-    { 
-    title: "Leilões", 
-    isCategory: true,
-    items: [
-    { title: "Criar Leilão", pageName: "CreateAuction" },
-    { title: "👑 Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
-    { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
-    { title: "✨ Direto de Fábrica", pageName: "DiretoDeFabrica" },
-    { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
-    ]
+    {
+      title: "Leilões",
+      isCategory: true,
+      items: [
+        { title: "Criar Leilão", pageName: "CreateAuction" },
+        { title: "👑 Criar Leilão de Luxo", pageName: "CreateLuxuryAuction" },
+        { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
+        { title: "✨ Direto de Fábrica", pageName: "DiretoDeFabrica" },
+        { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
+      ]
     },
-    { 
-    title: "Gestão do Aplicativo", 
-    isCategory: true,
-    items: [
-    { title: "Gestão de Produtos", pageName: "ProductManagement" },
-    { title: "🎨 Gerenciar Banners", pageName: "BannerManagement" },
-    { title: "📦 Gerenciar Catálogo", pageName: "CatalogManagement" },
-    { title: "🔑 Acessos VIP", pageName: "LuxuryAccessManager" },
-    { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
-    { title: "💳 Transações", pageName: "TransactionHistory" },
-    { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
-    ]
+    {
+      title: "Gestão do Aplicativo",
+      isCategory: true,
+      items: [
+        { title: "Gestão de Produtos", pageName: "ProductManagement" },
+        { title: "🎨 Gerenciar Banners", pageName: "BannerManagement" },
+        { title: "📦 Gerenciar Catálogo", pageName: "CatalogManagement" },
+        { title: "🔑 Acessos VIP", pageName: "LuxuryAccessManager" },
+        { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
+        { title: "💳 Transações", pageName: "TransactionHistory" },
+        { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
+      ]
     },
     { title: "💰 PDV", pageName: "PDV" },
     { title: "📊 CRM", pageName: "CRM" },
@@ -520,15 +520,15 @@ export default function Layout({ children, currentPageName }) {
 
   const finalMenuItems = (isCatalogPage && !isProfileFromCatalog && !isLicensingFromCatalog)
     ? [
-        { title: "Catálogo", pageName: "Catalog" },
-        { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
-      ]
+      { title: "Catálogo", pageName: "Catalog" },
+      { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
+    ]
     : (isProfileFromCatalog || isLicensingFromCatalog)
-    ? [
+      ? [
         { title: "Catálogo", pageName: "Catalog" },
         { title: "Sistema de Alavancagem", pageName: "Licensing", addFromCatalog: true }
       ]
-    : [
+      : [
         { title: "Leilões", pageName: "Home" },
         { title: "Lojista", pageName: "LojistaDashboard" },
         { title: "Sistema de Alavancagem", pageName: "Licensing" },
@@ -544,7 +544,7 @@ export default function Layout({ children, currentPageName }) {
       <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-[10000]">
         <div className="text-center">
           <img
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            src={LogoTransparent}
             alt="Leilão NoZap"
             className="h-24 w-auto mx-auto mb-8 loading-logo" // Adjusted size and removed rounded-full
           />
@@ -603,17 +603,17 @@ export default function Layout({ children, currentPageName }) {
   return (
     <ErrorBoundary>
       <GlobalMonitor />
-      
+
       <div className="min-h-screen bg-gray-900">
         <nav className="fixed top-0 left-0 right-0 z-50 shadow-lg border-b bg-gray-800 border-gray-700" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
-              
-              {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO */}
+
+              {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO (Assets Local) */}
               <div className="flex items-center gap-4">
-                <img 
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
-                  alt="Leilão NoZap" 
+                <img
+                  src={LogoTransparent}
+                  alt="Leilão NoZap"
                   className="h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
                   onClick={() => navigate(createPageUrl(isCatalogPage ? "Catalog" : "Home"))}
                 />
@@ -621,18 +621,17 @@ export default function Layout({ children, currentPageName }) {
 
               {/* MENU DESKTOP */}
               {!isLojistaPage && (
-              <div className="hidden md:flex md:gap-x-6 items-center">
-                
-                {/* ITENS DO MENU */}
+                <div className="hidden md:flex md:gap-x-6 items-center">
+
+                  {/* ITENS DO MENU */}
                   {finalMenuItems.map((item) => (
                     <Link
                       key={item.title}
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
-                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                        currentPageName === item.pageName
-                          ? "text-green-400"
-                          : "text-gray-300 hover:text-white"
-                      }`}
+                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === item.pageName
+                        ? "text-green-400"
+                        : "text-gray-300 hover:text-white"
+                        }`}
                     >
                       {item.icon === 'cart' && <CartIcon className="w-4 h-4" />}
                       {item.title}
@@ -650,143 +649,140 @@ export default function Layout({ children, currentPageName }) {
 
                   {/* PERFIL - ENTRE COMPARTILHAR E CARRINHO (só se logado) */}
                   {isLoggedIn && isCatalogPage && (
-                  <Link
-                    to={createPageUrl("Profile") + (isCatalogPage ? "?from=catalog" : "")}
-                    className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                      currentPageName === "Profile"
+                    <Link
+                      to={createPageUrl("Profile") + (isCatalogPage ? "?from=catalog" : "")}
+                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === "Profile"
                         ? "text-green-400"
                         : "text-gray-300 hover:text-white"
-                    }`}
-                  >
-                    <UserIcon className="w-4 h-4" />
-                    Perfil
-                  </Link>
+                        }`}
+                    >
+                      <UserIcon className="w-4 h-4" />
+                      Perfil
+                    </Link>
                   )}
 
                   {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO (antes do Painel/Sair) */}
                   {isCatalogPage && (
-                  <Link
-                    to={createPageUrl("Cart")}
-                    className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${
-                      currentPageName === "Cart"
+                    <Link
+                      to={createPageUrl("Cart")}
+                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === "Cart"
                         ? "text-green-400"
                         : "text-gray-300 hover:text-white"
-                    }`}
-                  >
-                    <CartIcon className="w-4 h-4" />
-                    Carrinho
-                  </Link>
+                        }`}
+                    >
+                      <CartIcon className="w-4 h-4" />
+                      Carrinho
+                    </Link>
                   )}
 
-                {/* PAINEL DE CONTROLE - SÓ ADMIN */}
-                {isAdmin && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300">
-                        <Settings className="h-4 w-4" />
-                        Painel de Controle
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white max-h-[500px] overflow-y-auto">
-                      <DropdownMenuLabel className="text-purple-400">Administração</DropdownMenuLabel>
-                      <DropdownMenuSeparator className="bg-gray-700" />
-                      {adminMenuItems.map((item) => (
-                        item.isCategory ? (
-                          <DropdownMenuSub key={item.title}>
-                            <DropdownMenuSubTrigger className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
+                  {/* PAINEL DE CONTROLE - SÓ ADMIN */}
+                  {isAdmin && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300">
+                          <Settings className="h-4 w-4" />
+                          Painel de Controle
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white max-h-[500px] overflow-y-auto">
+                        <DropdownMenuLabel className="text-purple-400">Administração</DropdownMenuLabel>
+                        <DropdownMenuSeparator className="bg-gray-700" />
+                        {adminMenuItems.map((item) => (
+                          item.isCategory ? (
+                            <DropdownMenuSub key={item.title}>
+                              <DropdownMenuSubTrigger className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
+                                {item.title}
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="bg-gray-800 border-gray-700 text-white">
+                                {item.items.map((subItem) => (
+                                  <DropdownMenuItem
+                                    key={subItem.pageName}
+                                    onClick={() => navigate(createPageUrl(subItem.pageName))}
+                                    className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700"
+                                  >
+                                    {subItem.title}
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          ) : (
+                            <DropdownMenuItem
+                              key={item.pageName}
+                              onClick={() => navigate(createPageUrl(item.pageName))}
+                              className={`cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${item.highlight ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-l-2 border-purple-500' : ''
+                                }`}
+                            >
                               {item.title}
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuSubContent className="bg-gray-800 border-gray-700 text-white">
-                              {item.items.map((subItem) => (
-                                <DropdownMenuItem 
-                                  key={subItem.pageName}
-                                  onClick={() => navigate(createPageUrl(subItem.pageName))}
-                                  className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700"
-                                >
-                                  {subItem.title}
-                                </DropdownMenuItem>
-                              ))}
-                            </DropdownMenuSubContent>
-                          </DropdownMenuSub>
-                        ) : (
-                          <DropdownMenuItem 
-                            key={item.pageName}
-                            onClick={() => navigate(createPageUrl(item.pageName))}
-                            className={`cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${
-                              item.highlight ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-l-2 border-purple-500' : ''
-                            }`}
-                          >
-                            {item.title}
-                          </DropdownMenuItem>
-                        )
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-                
-                {/* BOTÃO ENTRAR - SÓ SE NÃO LOGADO */}
-                {!isLoggedIn && (
-                  <Button
-                    onClick={() => setShowLoginModal(true)}
-                    className="flex items-center gap-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <UserIcon className="h-4 w-4" />
-                    Entrar
-                  </Button>
-                )}
-                
-                {/* BOTÃO SAIR - SÓ SE LOGADO */}
-                {isLoggedIn && (
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 text-sm font-semibold transition-colors ml-2 text-red-400 hover:text-red-300"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sair
-                  </button>
-                  )}
-                  </div>
+                            </DropdownMenuItem>
+                          )
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
 
-                  {/* BOTÃO MOBILE */}
-                  {!isLojistaPage && (
-                  <div className="flex md:hidden items-center gap-2">
-                    {/* CARRINHO MOBILE - APENAS EM PÁGINAS DO CATÁLOGO */}
-                    {isCatalogPage && (
-                      <Link
-                        to={createPageUrl("Cart")}
-                        className="relative p-2 text-gray-300 hover:text-white transition-colors"
-                      >
-                        <CartIcon className="h-6 w-6" />
-                        {cartCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                            {cartCount > 99 ? '99+' : cartCount}
-                          </span>
-                        )}
-                      </Link>
-                    )}
-                  <button
-                  type="button"
-                  onClick={() => setMobileMenuOpen(true)}
-                  className="inline-flex items-center justify-center rounded-md p-2.5 text-gray-400 hover:text-white"
-                  >
-                  <Menu className="h-6 w-6" />
-                  </button>
-                  </div>
+                  {/* BOTÃO ENTRAR - SÓ SE NÃO LOGADO */}
+                  {!isLoggedIn && (
+                    <Button
+                      onClick={() => setShowLoginModal(true)}
+                      className="flex items-center gap-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <UserIcon className="h-4 w-4" />
+                      Entrar
+                    </Button>
                   )}
-                  </div>
-                  </div>
-                  </nav>
+
+                  {/* BOTÃO SAIR - SÓ SE LOGADO */}
+                  {isLoggedIn && (
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 text-sm font-semibold transition-colors ml-2 text-red-400 hover:text-red-300"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sair
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* BOTÃO MOBILE */}
+              {!isLojistaPage && (
+                <div className="flex md:hidden items-center gap-2">
+                  {/* CARRINHO MOBILE - APENAS EM PÁGINAS DO CATÁLOGO */}
+                  {isCatalogPage && (
+                    <Link
+                      to={createPageUrl("Cart")}
+                      className="relative p-2 text-gray-300 hover:text-white transition-colors"
+                    >
+                      <CartIcon className="h-6 w-6" />
+                      {cartCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                          {cartCount > 99 ? '99+' : cartCount}
+                        </span>
+                      )}
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen(true)}
+                    className="inline-flex items-center justify-center rounded-md p-2.5 text-gray-400 hover:text-white"
+                  >
+                    <Menu className="h-6 w-6" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </nav>
 
         {/* MENU MOBILE - SLIDE LATERAL */}
         {mobileMenuOpen && (
           <>
             {/* Overlay */}
-            <div 
+            <div
               className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] animate-in fade-in duration-200"
               onClick={() => setMobileMenuOpen(false)}
             />
-            
+
             {/* Menu Lateral */}
             <div className="fixed inset-y-0 right-0 w-[85%] max-w-sm z-[101] shadow-2xl animate-in slide-in-from-right duration-300 bg-gray-900">
               <div className="flex flex-col h-full">
@@ -805,68 +801,65 @@ export default function Layout({ children, currentPageName }) {
 
                 {/* Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-1">
-              
+
                   {/* ITENS DO MENU */}
-                    {finalMenuItems.map((item) => (
-                      <Link
-                        key={item.title}
-                        to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
-                          currentPageName === item.pageName
-                            ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                            : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                  {finalMenuItems.map((item) => (
+                    <Link
+                      key={item.title}
+                      to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${currentPageName === item.pageName
+                        ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
                         }`}
-                      >
-                        {item.icon === 'cart' && <CartIcon className="w-5 h-5" />}
-                        {item.title}
-                      </Link>
-                    ))}
-
-                    {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO */}
-                    {isCatalogPage && (
-                      <Link
-                        to={createPageUrl("Cart")}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
-                          currentPageName === "Cart"
-                            ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                            : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
-                        }`}
-                      >
-                        <CartIcon className="w-5 h-5" />
-                        Carrinho
-                      </Link>
-                    )}
-
-                    {/* COMPARTILHAR */}
-                    <button
-                      onClick={() => {
-                        setMobileMenuOpen(false);
-                        setShowShareModal(true);
-                        }}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
                     >
-                      <Share2 className="h-5 w-5" />
-                      Compartilhar
-                    </button>
+                      {item.icon === 'cart' && <CartIcon className="w-5 h-5" />}
+                      {item.title}
+                    </Link>
+                  ))}
 
-                    {/* PERFIL - APENAS EM PÁGINAS DO CATÁLOGO (com parâmetro from=catalog) */}
-                    {isCatalogPage && isLoggedIn && (
-                      <Link
-                        to={createPageUrl("Profile") + "?from=catalog"}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${
-                          currentPageName === "Profile"
-                            ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                            : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                  {/* CARRINHO - APENAS EM PÁGINAS DO CATÁLOGO */}
+                  {isCatalogPage && (
+                    <Link
+                      to={createPageUrl("Cart")}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${currentPageName === "Cart"
+                        ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
                         }`}
-                      >
-                        <UserIcon className="w-5 h-5" />
-                        Perfil
-                      </Link>
-                    )}
-              
+                    >
+                      <CartIcon className="w-5 h-5" />
+                      Carrinho
+                    </Link>
+                  )}
+
+                  {/* COMPARTILHAR */}
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setShowShareModal(true);
+                    }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
+                  >
+                    <Share2 className="h-5 w-5" />
+                    Compartilhar
+                  </button>
+
+                  {/* PERFIL - APENAS EM PÁGINAS DO CATÁLOGO (com parâmetro from=catalog) */}
+                  {isCatalogPage && isLoggedIn && (
+                    <Link
+                      to={createPageUrl("Profile") + "?from=catalog"}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${currentPageName === "Profile"
+                        ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                        : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                        }`}
+                    >
+                      <UserIcon className="w-5 h-5" />
+                      Perfil
+                    </Link>
+                  )}
+
 
 
                   {/* PAINEL MOBILE - SÓ ADMIN */}
@@ -881,10 +874,10 @@ export default function Layout({ children, currentPageName }) {
                               className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
                             >
                               <span>{item.title}</span>
-                              <svg 
+                              <svg
                                 className={`w-4 h-4 transition-transform ${expandedCategory === item.title ? 'rotate-180' : ''}`}
-                                fill="none" 
-                                stroke="currentColor" 
+                                fill="none"
+                                stroke="currentColor"
                                 viewBox="0 0 24 24"
                               >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -910,19 +903,18 @@ export default function Layout({ children, currentPageName }) {
                             key={item.pageName}
                             to={createPageUrl(item.pageName)}
                             onClick={() => setMobileMenuOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${
-                              item.highlight 
-                                ? "bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 hover:from-purple-600/40 hover:to-blue-600/40" 
-                                : "text-gray-300 hover:bg-gray-800 hover:text-white"
-                            }`}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${item.highlight
+                              ? "bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 hover:from-purple-600/40 hover:to-blue-600/40"
+                              : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                              }`}
                           >
                             {item.title}
                           </Link>
                         )
                       ))}
-                        </div>
+                    </div>
                   )}
-              
+
                   {/* ENTRAR MOBILE - SÓ SE NÃO LOGADO */}
                   {!isLoggedIn && (
                     <button
@@ -936,15 +928,15 @@ export default function Layout({ children, currentPageName }) {
                       Entrar na Conta
                     </button>
                   )}
-              
+
                   {/* SAIR MOBILE - SÓ SE LOGADO */}
                   {isLoggedIn && (
                     <button
                       onClick={() => {
                         setMobileMenuOpen(false);
                         handleLogout();
-                        }}
-                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-4 text-red-400 hover:bg-red-600/20 hover:text-red-300 border-t border-gray-700"
+                      }}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-4 text-red-400 hover:bg-red-600/20 hover:text-red-300 border-t border-gray-700"
                     >
                       <LogOut className="h-5 w-5" />
                       Sair da Conta
@@ -986,8 +978,8 @@ export default function Layout({ children, currentPageName }) {
         {showTerms && <TermsModal onClose={() => setShowTerms(false)} />}
         {showShareModal && <ShareAppModal isOpen={showShareModal} onClose={() => setShowShareModal(false)} context={isCatalogPage ? "catalog" : "default"} />}
         {showLoginModal && (
-          <LoginModal 
-            onClose={() => setShowLoginModal(false)} 
+          <LoginModal
+            onClose={() => setShowLoginModal(false)}
             onSuccess={(user) => {
               setCurrentUser(user);
               setShowLoginModal(false);
@@ -1000,17 +992,18 @@ export default function Layout({ children, currentPageName }) {
         )}
 
         {/* Cart Popup */}
-        <CartPopup 
-          isOpen={showCartPopup} 
-          onClose={() => setShowCartPopup(false)} 
+        <CartPopup
+          isOpen={showCartPopup}
+          onClose={() => setShowCartPopup(false)}
         />
 
         {/* Payment Confirmation Popup */}
         <PaymentConfirmationPopup />
 
+
         {/* CPF Modal */}
         {showCPFModal && currentUser && (
-          <CPFModal 
+          <CPFModal
             currentUser={currentUser}
             onClose={() => {
               setShowCPFModal(false);
@@ -1020,66 +1013,8 @@ export default function Layout({ children, currentPageName }) {
           />
         )}
 
-        </div>
-      
-      <style>{`
-        @keyframes fadeInScale {
-          0% {
-            opacity: 0;
-            transform: scale(0.8);
-          }
-          100% {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
+      </div>
 
-        @keyframes loadingProgress {
-          0% {
-            width: 0%;
-          }
-          100% {
-            width: 100%;
-          }
-        }
-
-        .loading-logo {
-          animation: fadeInScale 0.5s ease-out;
-          filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
-        }
-
-        .loading-bar-container {
-          width: 200px;
-          height: 4px;
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 2px;
-          overflow: hidden;
-          margin: 0 auto;
-        }
-
-        .loading-bar {
-          height: 100%;
-          background: linear-gradient(90deg, #22c55e, #16a34a);
-          border-radius: 2px;
-          animation: loadingProgress 1s ease-out forwards;
-          box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
-        }
-
-        @keyframes pulse-subtle {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: scale(1.05);
-            opacity: 0.95;
-          }
-        }
-        
-        .animate-pulse-subtle {
-          animation: pulse-subtle 2s ease-in-out infinite;
-        }
-      `}</style>
     </ErrorBoundary>
   );
 }

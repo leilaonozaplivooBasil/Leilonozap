@@ -7,6 +7,9 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { OfflineScreen, OfflineBanner, ReconnectedBanner } from '@/components/OfflineScreen';
+import { useState, useCallback } from 'react';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -65,13 +68,50 @@ const AuthenticatedApp = () => {
 
 
 function App() {
+  const { isOnline, wasOffline, checkConnection } = useOnlineStatus();
+  const [showReconnected, setShowReconnected] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+
+  // Marca que o app já carregou pelo menos uma vez
+  const handleAppLoaded = useCallback(() => {
+    if (!hasLoadedOnce) {
+      setHasLoadedOnce(true);
+    }
+  }, [hasLoadedOnce]);
+
+  // Mostra banner de reconexão quando volta
+  const handleRetry = useCallback(async () => {
+    const connected = await checkConnection();
+    if (connected) {
+      setShowReconnected(true);
+      // Força recarregar dados
+      queryClientInstance.invalidateQueries();
+    }
+  }, [checkConnection]);
+
+  // Se nunca carregou e está offline, mostra tela de offline completa
+  if (!isOnline && !hasLoadedOnce) {
+    return <OfflineScreen onRetry={handleRetry} />;
+  }
 
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
+        {/* Banner de offline (quando já carregou mas perdeu conexão) */}
+        {!isOnline && hasLoadedOnce && (
+          <OfflineBanner onRetry={handleRetry} />
+        )}
+
+        {/* Banner de reconexão */}
+        {showReconnected && (
+          <ReconnectedBanner onDismiss={() => setShowReconnected(false)} />
+        )}
+
         <Router>
           <NavigationTracker />
-          <AuthenticatedApp />
+          <div onLoad={handleAppLoaded}>
+            <AuthenticatedApp />
+          </div>
         </Router>
         <Toaster />
       </QueryClientProvider>

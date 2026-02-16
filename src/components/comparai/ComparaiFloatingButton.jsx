@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sparkles, X } from 'lucide-react';
+import ComparaiIcon from '@/assets/comparai-icon.png';
 
 export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
   const [showInfo, setShowInfo] = useState(false);
@@ -18,10 +19,9 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
   return (
     <>
       {/* BOTÃO FLUTUANTE FIXO - SEM TOOLTIP */}
-      <div 
-        className={`fixed bottom-32 left-6 z-50 transition-all duration-700 ${
-          isFlying ? 'left-1/2 bottom-1/2 -translate-x-1/2 translate-y-1/2 scale-150' : ''
-        } ${showInfo ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}
+      <div
+        className={`fixed bottom-32 left-6 z-50 transition-all duration-700 ${isFlying ? 'left-1/2 bottom-1/2 -translate-x-1/2 translate-y-1/2 scale-150' : ''
+          } ${showInfo ? 'opacity-0 scale-0' : 'opacity-100 scale-100'}`}
       >
         <button
           onClick={handleClick}
@@ -29,12 +29,12 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
           className="w-20 h-20 rounded-full shadow-2xl shadow-blue-500/50 transition-all duration-300 hover:scale-110 relative animate-float border-0 p-0 bg-transparent cursor-pointer disabled:cursor-not-allowed"
           title="Comparai - Comparação Inteligente"
         >
-          <img 
-            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+          <img
+            src={ComparaiIcon}
             alt="Comparai"
             className="w-full h-full object-cover rounded-full"
           />
-          
+
           <div className="absolute inset-0 rounded-full bg-blue-400 animate-ping opacity-20"></div>
         </button>
       </div>
@@ -43,7 +43,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
       {showInfo && (
         <Dialog open={showInfo} onOpenChange={setShowInfo}>
           <DialogContent className="max-w-2xl bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900 text-white border-blue-500/30 max-h-[90vh] overflow-y-auto">
-            
+
             <button
               onClick={() => setShowInfo(false)}
               className="absolute top-4 right-4 z-50 w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 transition-colors"
@@ -54,8 +54,8 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
 
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3 text-2xl pr-12">
-                <img 
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                <img
+                  src={ComparaiIcon}
                   alt="Comparai"
                   className="w-16 h-16 rounded-full bg-white p-2 shadow-lg"
                 />
@@ -74,7 +74,7 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
                   <div>
                     <h3 className="text-xl font-bold text-blue-300 mb-3">🤖 O que é o Comparai?</h3>
                     <p className="text-gray-300 leading-relaxed">
-                      Uma <span className="font-bold text-blue-400">inteligência artificial independente</span> que busca produtos em 
+                      Uma <span className="font-bold text-blue-400">inteligência artificial independente</span> que busca produtos em
                       <span className="font-bold text-green-400"> tempo real</span> em dezenas de sites da internet!
                     </p>
                   </div>
@@ -149,9 +149,9 @@ export default function ComparaiFloatingButton({ auctions, mode = 'home' }) {
               </div>
 
               {/* BOTÃO FECHAR */}
-              <Button 
-                onClick={() => setShowInfo(false)} 
-                variant="outline" 
+              <Button
+                onClick={() => setShowInfo(false)}
+                variant="outline"
                 className="w-full border-blue-500 text-blue-400 hover:bg-blue-900/20"
               >
                 Entendi! Vou Testar nos Produtos

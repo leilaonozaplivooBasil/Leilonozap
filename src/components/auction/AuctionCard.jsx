@@ -22,6 +22,8 @@ import { useState as useReactState } from "react"; // Para o modal
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
 import PechincaBadge from '../comparai/PechincaBadge';
 import ComparaiModal from '../comparai/ComparaiModal';
+import LogoTransparent from '@/assets/logo-transparent.png';
+import ComparaiIcon from '@/assets/comparai-icon.png';
 
 // 🔍 DEBUG: Log para verificar se auction está sendo passado
 const logAuctionData = (auction) => {
@@ -130,7 +132,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       alert("Erro: Leilão inválido");
       return;
     }
-    
+
     console.log("🎯 [CARD] Navegando para sala do leilão:", auction.id);
     const roomUrl = createPageUrl("AuctionRoom") + `?id=${auction.id}`;
     console.log("🎯 [CARD] URL completa:", roomUrl);
@@ -161,11 +163,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // 🆕 LIMPA O TÍTULO PARA EXIBIÇÃO
   const displayTitle = auction.title
     ? auction.title
-        .replace(/leil[aã]o\s*no\s*zap\s*-?\s*/gi, '')
-        .replace(/leil[aã]o\s*nozap\s*-?\s*/gi, '')
-        .replace(/nozap\s*-?\s*/gi, '')
-        .replace(/^[-\s]+/, '') // Remove hífens/espaços do início
-        .trim()
+      .replace(/leil[aã]o\s*no\s*zap\s*-?\s*/gi, '')
+      .replace(/leil[aã]o\s*nozap\s*-?\s*/gi, '')
+      .replace(/nozap\s*-?\s*/gi, '')
+      .replace(/^[-\s]+/, '') // Remove hífens/espaços do início
+      .trim()
     : '';
 
   // 🆕 COMPARTILHAR - CORRIGIDO SEM stopImmediatePropagation
@@ -173,17 +175,17 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     // 🔥 PARA O EVENTO
     e.preventDefault();
     e.stopPropagation();
-    
+
     console.log('🔥 COMPARTILHAR ACIONADO!');
-    
+
     const productUrl = `${window.location.origin}/AuctionRoom?id=${auction.id}`;
     const currentPrice = auction.current_price || auction.starting_price;
-    
+
     if (!auction.id || !displayTitle) {
       alert('Erro ao compartilhar');
       return;
     }
-    
+
     const shareMessage = `🔨📦 LEILÃO NO🔥ZAP!
 
 📱 ${displayTitle}
@@ -198,15 +200,15 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       // 🍎 iOS
       if (isIOS && navigator.share && navigator.canShare) {
         const imageUrl = auction.image_urls?.[0];
-        
+
         if (imageUrl) {
           try {
             const response = await fetch(imageUrl);
             if (!response.ok) throw new Error('Erro ao baixar imagem');
-            
+
             const blob = await response.blob();
             const file = new File([blob], 'produto.jpg', { type: blob.type });
-            
+
             if (navigator.canShare({ files: [file] })) {
               await navigator.share({
                 title: `🔨📦 ${displayTitle}`,
@@ -219,7 +221,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             // Fallback sem imagem
           }
         }
-        
+
         await navigator.share({
           title: `🔨📦 ${displayTitle}`,
           text: shareMessage,
@@ -230,18 +232,18 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       // 🤖 ANDROID
       if (isAndroid) {
         const imageUrl = auction.image_urls?.[0];
-        
+
         if (imageUrl && navigator.share && navigator.canShare) {
           try {
             const response = await fetch(imageUrl);
             if (!response.ok) throw new Error('Erro ao baixar imagem');
-            
+
             const blob = await response.blob();
-            const file = new File([blob], 'produto.jpg', { 
+            const file = new File([blob], 'produto.jpg', {
               type: 'image/jpeg',
               lastModified: new Date().getTime()
             });
-            
+
             if (navigator.canShare({ files: [file] })) {
               await navigator.share({
                 title: `🔨📦 ${displayTitle}`,
@@ -254,7 +256,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             // Fallback
           }
         }
-        
+
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
         window.open(whatsappUrl, '_blank');
         return;
@@ -262,7 +264,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
       // 💻 DESKTOP
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
-      
+
     } catch (err) {
       if (err.name !== 'AbortError') {
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
@@ -274,7 +276,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // Sem verificações de tempo que podem falhar por dados desatualizados.
   // 🆕 VERIFICAÇÃO MAIS ROBUSTA DE STATUS
   const isActive = localStatus === 'active' && auction.status === 'active';
-  
+
   const currentPrice = auction.current_price || auction.starting_price;
 
   // 🆕 CALCULA ECONOMIA SE TIVER market_price
@@ -316,9 +318,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     const seconds = diffSeconds % 60;
 
     const formattedTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    
-    return { 
-      text: formattedTime, 
+
+    return {
+      text: formattedTime,
       isUrgent: hours === 0 && minutes < 10
     };
   };
@@ -344,7 +346,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   }, [auction.status, auction.end_time]);
 
   // 🎨 ESTILOS CONDICIONAIS BASEADOS NO VARIANT
-  const cardStyles = variant === "sai_de_baixo" 
+  const cardStyles = variant === "sai_de_baixo"
     ? "group relative overflow-hidden bg-white border-2 border-gray-200 hover:border-red-600 transition-all duration-300 hover:shadow-xl cursor-pointer"
     : "group relative overflow-hidden bg-gray-800/50 backdrop-blur-sm border border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 cursor-pointer";
 
@@ -353,11 +355,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
   return (
     <>
-      <Card 
+      <Card
         className={cardStyles}
         onClick={handleCardClick}
       >
-        <div 
+        <div
           className="relative overflow-hidden w-full aspect-square bg-white"
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
@@ -365,26 +367,24 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
         >
           <div className="w-full h-full relative">
             {images.map((img, index) => (
-              <img 
+              <img
                 key={index}
                 src={img}
                 alt={`${auction.title} - imagem ${index + 1}`}
                 loading="lazy"
                 decoding="async"
-                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${
-                  index === currentImageIndex ? 'opacity-100' : 'opacity-0'
-                }`}
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 object-contain transition-opacity duration-300 ease-in-out max-w-full max-h-full ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+                  }`}
                 onError={(e) => {
-                  e.target.src = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
+                  e.target.src = LogoTransparent;
                   e.target.classList.add('p-4');
                 }}
               />
             ))}
-            
-            <div 
-              className={`absolute top-0 left-0 w-full h-full bg-white flex items-center justify-center transition-opacity duration-300 ${
-                images.length > 0 ? 'opacity-0' : 'opacity-100'
-              }`}
+
+            <div
+              className={`absolute top-0 left-0 w-full h-full bg-white flex items-center justify-center transition-opacity duration-300 ${images.length > 0 ? 'opacity-0' : 'opacity-100'
+                }`}
             >
               <div className="text-center text-gray-500">
                 <div className="text-4xl mb-2">📦</div>
@@ -395,30 +395,29 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
           {/* Ícone de Play/Pause */}
           {isHovering && images.length > 1 && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 rounded-full w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
-            {isPaused ? (
-              <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
-            ) : (
-              <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
-            )}
-          </div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/50 rounded-full w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center pointer-events-none transition-opacity duration-200">
+              {isPaused ? (
+                <Play className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
+              ) : (
+                <Pause className="w-6 h-6 sm:w-7 sm:h-7 text-white fill-white" />
+              )}
+            </div>
           )}
-          
+
           {images.length > 1 && (
             <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none">
               {images.map((_, index) => (
                 <div
                   key={index}
-                  className={`rounded-full transition-all duration-300 ${
-                    index === currentImageIndex 
-                      ? 'w-2 h-2 bg-white shadow' 
-                      : 'w-1.5 h-1.5 bg-white/60'
-                  }`}
+                  className={`rounded-full transition-all duration-300 ${index === currentImageIndex
+                    ? 'w-2 h-2 bg-white shadow'
+                    : 'w-1.5 h-1.5 bg-white/60'
+                    }`}
                 />
               ))}
             </div>
           )}
-          
+
           {/* 🆕 SÓ MOSTRA BADGE SE FOR DE FÁBRICA */}
           {auction.product_source === 'factory_new' && (
             <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10 pointer-events-none">
@@ -433,7 +432,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             {/* Botão COMPARTILHAR - MESMO TAMANHO DO FAVORITO */}
             <button
               onClick={handleShare}
-              onMouseDown={(e) => e.stopPropagation()} 
+              onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
               className="w-10 h-10 shadow-lg bg-blue-600/90 hover:bg-blue-500 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm cursor-pointer active:scale-95 border border-blue-700"
             >
@@ -442,9 +441,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
             {/* 🆕 BOTÃO FAVORITAR */}
             {showFavoriteButton && userId && (
-              <FavoriteButton 
-                auctionId={auction.id} 
-                userId={userId} 
+              <FavoriteButton
+                auctionId={auction.id}
+                userId={userId}
                 size="md"
                 context={favoriteContext}
               />
@@ -454,8 +453,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           {/* 🆕 BOTÃO EDITAR (BOTTOM RIGHT NA IMAGEM) - SÓ ADMIN */}
           {isAdmin && (
             <div className="absolute bottom-2 sm:bottom-3 right-2 sm:right-3 z-20">
-              <Link 
-                to={createPageUrl("EditAuction") + `?id=${auction.id}`} 
+              <Link
+                to={createPageUrl("EditAuction") + `?id=${auction.id}`}
                 onClick={(e) => e.stopPropagation()}
               >
                 <button className="w-10 h-10 shadow-lg bg-gray-700/90 hover:bg-gray-600 text-white rounded-full transition-all duration-300 flex items-center justify-center backdrop-blur-sm active:scale-95">
@@ -472,7 +471,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
 
         </div>
-        
+
         <CardContent className="p-3 sm:p-4 md:p-5">
           <h3 className={`font-bold text-sm sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere`}>
             {displayTitle}
@@ -500,9 +499,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 </div>
               </div>
             )}
-            </div>
+          </div>
 
-            <div className={`flex items-center justify-between text-sm ${secondaryTextColor} mb-4`}>
+          <div className={`flex items-center justify-between text-sm ${secondaryTextColor} mb-4`}>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
                 <Users className="w-4 h-4" />
@@ -518,8 +517,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           {!isActive && (
             <div className="bg-green-900/20 border border-green-800/40 rounded-xl p-3 mb-4 text-center">
               <div className="flex items-center justify-center gap-2 mb-2">
-                <img 
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+                <img
+                  src={LogoTransparent}
                   alt="Leilão NoZap"
                   className="w-8 h-8"
                 />
@@ -527,7 +526,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                   ARREMATADO!
                 </span>
               </div>
-              
+
               {auction.winner_name ? (
                 <div className="text-green-400 font-semibold text-sm mb-1">
                   🏆 {auction.winner_name}
@@ -543,30 +542,30 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           {isActive ? (
             <div className="space-y-2 sm:space-y-3">
               {/* O link "Mais Informações" vai para uma página diferente do clique no card */}
-              <Link 
-                to={createPageUrl("AuctionDetails") + `?id=${auction.id}`} 
-                onClick={(e) => e.stopPropagation()} 
+              <Link
+                to={createPageUrl("AuctionDetails") + `?id=${auction.id}`}
+                onClick={(e) => e.stopPropagation()}
                 className="block"
-              > 
-                <Button 
-                  variant="outline" 
+              >
+                <Button
+                  variant="outline"
                   className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
                 >
                   <Info className="w-4 h-4 mr-2" />
                   Mais Informações
                 </Button>
               </Link>
-              
+
               {/* 🆕 BOTÃO COMPARAI NO CARD - Abre modal, não navega */}
-              <Button 
+              <Button
                 onClick={(e) => {
                   e.stopPropagation(); // Impede que o clique no botão ative o clique do card
                   setShowComparai(true);
                 }}
                 className="w-full min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm sm:text-base"
               >
-                <img 
-                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
+                <img
+                  src={ComparaiIcon}
                   alt="Comparai"
                   className="w-4 h-4 sm:w-5 sm:h-5 mr-2"
                 />
@@ -574,8 +573,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               </Button>
 
               {/* Este link vai para a mesma página que o clique no card, mas é um CTA explícito */}
-              <Link 
-                to={createPageUrl("AuctionRoom") + `?id=${auction.id}`} 
+              <Link
+                to={createPageUrl("AuctionRoom") + `?id=${auction.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   console.log("🎯 [BOTÃO CTA] Navegando para sala:", auction.id);
@@ -593,9 +592,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           ) : (
             <div className="space-y-2 sm:space-y-3">
               {/* O link "Ver Detalhes do Lote" vai para uma página diferente do clique no card */}
-              <Link 
-                to={createPageUrl("AuctionDetails") + `?id=${auction.id}`} 
-                onClick={(e) => e.stopPropagation()} 
+              <Link
+                to={createPageUrl("AuctionDetails") + `?id=${auction.id}`}
+                onClick={(e) => e.stopPropagation()}
                 className="block"
               >
                 <Button variant="outline" className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base">
@@ -604,9 +603,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 </Button>
               </Link>
               {/* O link "Ver Leilões Ativos" vai para uma página diferente do clique no card */}
-              <Link 
-                to={createPageUrl("Home") + "?filter=ativos"} 
-                onClick={(e) => e.stopPropagation()} 
+              <Link
+                to={createPageUrl("Home") + "?filter=ativos"}
+                onClick={(e) => e.stopPropagation()}
                 className="block"
               >
                 <Button variant="outline" className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base">
@@ -621,9 +620,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
       {/* Modal Comparai */}
       {showComparai && (
-        <ComparaiModal 
-          auction={auction} 
-          onClose={() => setShowComparai(false)} 
+        <ComparaiModal
+          auction={auction}
+          onClose={() => setShowComparai(false)}
         />
       )}
     </>
