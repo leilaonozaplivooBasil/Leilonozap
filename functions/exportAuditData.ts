@@ -102,9 +102,6 @@ Deno.serve(async (req) => {
         'Content-Disposition': `attachment; filename="audit-snapshot-${new Date().toISOString().split('T')[0]}.json"`
       }
     });
-    };
-
-
 
   } catch (error) {
     console.error('Erro ao exportar dados de auditoria:', error);
