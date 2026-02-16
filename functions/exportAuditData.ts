@@ -5,8 +5,9 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
 
-    // Apenas admin pode exportar dados de auditoria
-    if (user?.role !== 'admin') {
+    // Apenas admin ou usuários autorizados podem exportar dados de auditoria
+    const allowedEmails = ['erbrito.sistemas@gmail.com', 'jonhhenrique29@hotmail.com'];
+    if (user?.role !== 'admin' && !allowedEmails.includes(user?.email)) {
       return Response.json({ error: 'Acesso negado' }, { status: 403 });
     }
 
