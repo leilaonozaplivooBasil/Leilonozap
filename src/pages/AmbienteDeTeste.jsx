@@ -156,7 +156,7 @@ export default function AmbienteDeTeste() {
             <Button className="bg-green-600 hover:bg-green-700 text-white border-none shadow-md shadow-green-600/20" onClick={simulate} disabled={isSimulating || !anchorUser}>
               {isSimulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Simular
             </Button>
-            {(me?.role === 'admin' || me?.email === 'jonhhenrique29@hotmail.com') && (
+            {(me?.role === 'admin' || me?.email === 'jonhhenrique29@hotmail.com' || me?.email === 'erbrito.sistemas@gmail.com') && (
               <Button className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-md shadow-blue-600/20" onClick={syncToProduction} disabled={isSyncing}>
                 {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔄'} Sincronizar
               </Button>
@@ -172,7 +172,7 @@ export default function AmbienteDeTeste() {
           </Card>
         )}
 
-        {!me || (me.role !== "admin" && me.email !== "jonhhenrique29@hotmail.com") ? (
+        {!me || (me.role !== "admin" && me.email !== "jonhhenrique29@hotmail.com" && me.email !== "erbrito.sistemas@gmail.com") ? (
           <Card className="bg-gray-800/90 border-gray-700 text-white">
             <CardContent className="p-6">
               <div className="flex items-start gap-3 text-white">

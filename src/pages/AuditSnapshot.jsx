@@ -51,7 +51,7 @@ export default function AuditSnapshot() {
     }
   };
 
-  if (!me || me.role !== 'admin') {
+  if (!me || (me.role !== 'admin' && me.email !== 'erbrito.sistemas@gmail.com' && me.email !== 'jonhhenrique29@hotmail.com')) {
     return (
       <div className="min-h-screen bg-gray-900 text-white p-6 flex items-center justify-center">
         <Card className="bg-gray-800 border-gray-700">
