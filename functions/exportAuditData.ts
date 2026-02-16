@@ -3,14 +3,38 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    // Apenas admin pode exportar dados de auditoria
-    if (user?.role !== 'admin') {
-      return Response.json({ error: 'Acesso negado' }, { status: 403 });
+    const body = await req.json();
+    const { start_date, end_date, user_id, requester_email } = body;
+    
+    console.log('📦 Export request received:', { 
+      requester_email, 
+      bodyKeys: Object.keys(body),
+      fullBody: body 
+    });
+    
+    // Lista de emails autorizados
+    const allowedEmails = [
+      'erbrito.sistemas@gmail.com', 
+      'jonhhenrique29@hotmail.com',
+      'luizsantanna@tttcorporate.com'
+    ];
+    
+    console.log('🔐 Checking authorization:', {
+      email: requester_email,
+      isAllowed: allowedEmails.includes(requester_email),
+      allowedEmails
+    });
+    
+    // Validação pelo email
+    if (!requester_email || !allowedEmails.includes(requester_email)) {
+      console.error('❌ Access denied for:', requester_email);
+      return Response.json({ 
+        error: `Acesso negado - email '${requester_email}' não autorizado`,
+        allowed: allowedEmails
+      }, { status: 403 });
     }
-
-    const { start_date, end_date, user_id } = await req.json();
+    
+    console.log('✅ Export approved for:', requester_email);
 
     // Query com filtros
     let query = {};
@@ -104,9 +128,6 @@ Deno.serve(async (req) => {
         'Content-Disposition': `attachment; filename="audit-snapshot-${new Date().toISOString().split('T')[0]}.json"`
       }
     });
-    };
-
-
 
   } catch (error) {
     console.error('Erro ao exportar dados de auditoria:', error);
