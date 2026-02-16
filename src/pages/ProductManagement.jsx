@@ -10,7 +10,7 @@ import {
   Download, Save, X, PackagePlus, Calculator, ShoppingCart, BookOpen,
   Trash2, RotateCcw
 } from 'lucide-react';
-import { groupDuplicateProducts } from '@/functions/groupDuplicateProducts';
+
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
 import {
@@ -93,7 +93,7 @@ export default function ProductManagement() {
     const totalSold = filteredProducts.reduce((sum, p) => sum + (p.quantity_sold || 0), 0);
     const totalRevenue = filteredProducts.reduce((sum, p) => sum + (p.sold_amount || 0), 0);
     const totalProfit = filteredProducts.reduce((sum, p) => sum + (p.profit || 0), 0);
-    
+
     const functionalProducts = filteredProducts.filter(p => (p.qty_perfeito > 0 || p.qty_bom > 0));
     const totalValueFunctional = functionalProducts.reduce((sum, p) => {
       const functionalQty = (p.qty_perfeito || 0) + (p.qty_bom || 0);
@@ -107,7 +107,7 @@ export default function ProductManagement() {
 
   const loadData = useCallback(async (retryCount = 0) => {
     if (isLoadingData) return;
-    
+
     setIsLoadingData(true);
     try {
       const savedUser = localStorage.getItem('currentUser');
@@ -125,7 +125,7 @@ export default function ProductManagement() {
       // Cache agressivo de 5 minutos
       const cachedProducts = sessionStorage.getItem('products_cache_v3');
       const cacheTime = sessionStorage.getItem('products_cache_time_v3');
-      
+
       if (cachedProducts && cacheTime && retryCount === 0) {
         const age = Date.now() - parseInt(cacheTime);
         if (age < 300000) { // 5 minutos
@@ -142,14 +142,14 @@ export default function ProductManagement() {
       const allProducts = await base44.entities.Product.list('-created_date', 1000);
       setProducts(allProducts);
       setFilteredProducts(allProducts);
-      
+
       // Salva no cache
       sessionStorage.setItem('products_cache_v3', JSON.stringify(allProducts));
       sessionStorage.setItem('products_cache_time_v3', Date.now().toString());
-      
+
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
-      
+
       // Se for rate limit, usa cache antigo
       if (error.message?.includes('Rate limit')) {
         const cachedProducts = sessionStorage.getItem('products_cache_v3');
@@ -177,7 +177,7 @@ export default function ProductManagement() {
     const bom = product.qty_bom || 0;
     const ruim = product.qty_ruim || 0;
     const oficina = (product.qty_oficina || 0) + ruim; // Ruim agora conta como oficina
-    
+
     if (perfeito >= bom && perfeito >= oficina) return 'perfeito';
     if (bom >= oficina) return 'bom';
     return 'oficina';
@@ -274,7 +274,7 @@ export default function ProductManagement() {
         await base44.entities.Product.create(dataToSave);
         alert('✅ Produto cadastrado!');
       }
-      
+
       setFormData({
         date: new Date().toISOString().split('T')[0],
         lot: '',
@@ -294,7 +294,7 @@ export default function ProductManagement() {
       });
       setShowAddForm(false);
       setEditingProduct(null);
-      
+
       // Limpa cache e recarrega com delay
       sessionStorage.removeItem('products_cache_v3');
       sessionStorage.removeItem('products_cache_time_v3');
@@ -330,28 +330,28 @@ export default function ProductManagement() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-white border-gray-200">
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => navigate(createPageUrl("RegisterBatches"))}
                   className="cursor-pointer hover:bg-gray-100"
                 >
                   <PackagePlus className="w-4 h-4 mr-2" />
                   Registrar Lotes
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => navigate(createPageUrl("PDV"))}
                   className="cursor-pointer hover:bg-gray-100"
                 >
                   <DollarSign className="w-4 h-4 mr-2" />
                   PDV
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => navigate(createPageUrl("ProductOperationHistory"))}
                   className="cursor-pointer hover:bg-gray-100"
                 >
                   <BookOpen className="w-4 h-4 mr-2" />
                   Histórico de Operação
                 </DropdownMenuItem>
-                <DropdownMenuItem 
+                <DropdownMenuItem
                   onClick={() => {
                     if (products.length === 0) {
                       alert('Nenhum produto para exportar');
@@ -705,8 +705,8 @@ export default function ProductManagement() {
                 </thead>
                 <tbody>
                   {currentProducts.map((product, index) => (
-                    <tr 
-                      key={product.id} 
+                    <tr
+                      key={product.id}
                       className={`border-b border-gray-100 hover:bg-gray-100 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
                     >
                       <td className="p-3 text-gray-900 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.product_code || product.codigo || product.code || '-'}</td>
@@ -716,11 +716,11 @@ export default function ProductManagement() {
                       <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_perfeito || 0}</td>
                       <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_bom || 0}</td>
                       <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
-                      <td 
+                      <td
                         className="p-3 text-gray-900 text-sm cursor-pointer hover:bg-gray-200 transition-colors max-w-xs"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setExpandedNotes(prev => ({...prev, [product.id]: !prev[product.id]}));
+                          setExpandedNotes(prev => ({ ...prev, [product.id]: !prev[product.id] }));
                         }}
                       >
                         <div className={expandedNotes[product.id] ? '' : 'truncate'}>
@@ -808,18 +808,18 @@ export default function ProductManagement() {
                 <span className="text-sm text-gray-600 mr-2">
                   Página {currentPage} de {totalPages}
                 </span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="text-gray-600 border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handlePreviousPage}
                   disabled={currentPage === 1}
                 >
                   &lt;
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="text-gray-600 border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages}
@@ -861,7 +861,7 @@ export default function ProductManagement() {
                       <Input
                         type="date"
                         value={formData.date}
-                        onChange={(e) => setFormData({...formData, date: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                         className="bg-gray-700 text-white"
                       />
                     </div>
@@ -870,7 +870,7 @@ export default function ProductManagement() {
                       <Label className="text-gray-300">Lote</Label>
                       <Input
                         value={formData.lot}
-                        onChange={(e) => setFormData({...formData, lot: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, lot: e.target.value })}
                         className="bg-gray-700 text-white"
                         placeholder="Ex: 15575"
                       />
@@ -880,7 +880,7 @@ export default function ProductManagement() {
                       <Label className="text-gray-300">Nota Fiscal</Label>
                       <Input
                         value={formData.purchase_order}
-                        onChange={(e) => setFormData({...formData, purchase_order: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, purchase_order: e.target.value })}
                         className="bg-gray-700 text-white"
                         placeholder="Ex: 0001"
                       />
@@ -890,7 +890,7 @@ export default function ProductManagement() {
                       <Label className="text-gray-300">Nome do Depósito</Label>
                       <select
                         value={formData.deposit_name}
-                        onChange={(e) => setFormData({...formData, deposit_name: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, deposit_name: e.target.value })}
                         className="w-full bg-gray-700 text-white rounded-md px-3 py-2 border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="Bangu">Bangu</option>
@@ -903,7 +903,7 @@ export default function ProductManagement() {
                       <Label className="text-gray-300">Descrição *</Label>
                       <Input
                         value={formData.description}
-                        onChange={(e) => setFormData({...formData, description: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                         className="bg-gray-700 text-white"
                         placeholder="Ex: Fritadeira Air Fryer 8L"
                         required
@@ -915,7 +915,7 @@ export default function ProductManagement() {
                       <Input
                         type="number"
                         value={formData.quantity}
-                        onChange={(e) => setFormData({...formData, quantity: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                         className="bg-gray-700 text-white"
                         min="1"
                       />
@@ -929,7 +929,7 @@ export default function ProductManagement() {
                           <Input
                             type="number"
                             value={formData.qty_perfeito}
-                            onChange={(e) => setFormData({...formData, qty_perfeito: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, qty_perfeito: e.target.value })}
                             className="bg-gray-700 text-white"
                             min="0"
                           />
@@ -939,7 +939,7 @@ export default function ProductManagement() {
                           <Input
                             type="number"
                             value={formData.qty_bom}
-                            onChange={(e) => setFormData({...formData, qty_bom: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, qty_bom: e.target.value })}
                             className="bg-gray-700 text-white"
                             min="0"
                           />
@@ -949,7 +949,7 @@ export default function ProductManagement() {
                           <Input
                             type="number"
                             value={formData.qty_oficina}
-                            onChange={(e) => setFormData({...formData, qty_oficina: e.target.value})}
+                            onChange={(e) => setFormData({ ...formData, qty_oficina: e.target.value })}
                             className="bg-gray-700 text-white"
                             min="0"
                           />
@@ -963,7 +963,7 @@ export default function ProductManagement() {
                         type="number"
                         step="0.01"
                         value={formData.cost_price}
-                        onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
                         className="bg-gray-700 text-white"
                         required
                       />
@@ -989,7 +989,7 @@ export default function ProductManagement() {
                         type="number"
                         step="0.01"
                         value={formData.selling_price_retail}
-                        onChange={(e) => setFormData({...formData, selling_price_retail: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, selling_price_retail: e.target.value })}
                         className="bg-gray-700 text-white"
                       />
                     </div>
@@ -998,7 +998,7 @@ export default function ProductManagement() {
                       <Label className="text-gray-300">Observações</Label>
                       <Textarea
                         value={formData.notes}
-                        onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                         className="bg-gray-700 text-white"
                         placeholder="Adicione observações sobre o produto..."
                         rows={3}
@@ -1119,7 +1119,7 @@ export default function ProductManagement() {
                   <Label className="text-gray-300">Nome do Operador *</Label>
                   <Input
                     value={operationData.operatorName}
-                    onChange={(e) => setOperationData({...operationData, operatorName: e.target.value})}
+                    onChange={(e) => setOperationData({ ...operationData, operatorName: e.target.value })}
                     className="bg-gray-700 text-white"
                     placeholder="Digite seu nome"
                   />
@@ -1128,7 +1128,7 @@ export default function ProductManagement() {
                   <Label className="text-gray-300">Motivo da {operationType === 'zerar_estoque' ? 'zeração de estoque' : 'exclusão'} *</Label>
                   <Textarea
                     value={operationData.reason}
-                    onChange={(e) => setOperationData({...operationData, reason: e.target.value})}
+                    onChange={(e) => setOperationData({ ...operationData, reason: e.target.value })}
                     className="bg-gray-700 text-white"
                     placeholder="Descreva o motivo..."
                     rows={3}
