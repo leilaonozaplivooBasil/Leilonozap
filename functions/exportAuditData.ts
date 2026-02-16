@@ -14,11 +14,11 @@ Deno.serve(async (req) => {
 
     // Query com filtros
     let query = {};
-    
+
     if (start_date) {
       query.created_date = { $gte: start_date };
     }
-    
+
     if (user_id) {
       query.user_id = user_id;
     }
@@ -61,7 +61,9 @@ Deno.serve(async (req) => {
         percentage: c.percentage,
         role: c.role,
         created_date: c.created_date,
-        sale_type: c.sale_type
+        sale_type: c.sale_type,
+        status: c.status,
+        paid_at: c.paid_at
       })),
       sales: catalogSales.map(s => ({
         id: s.id,
@@ -81,8 +83,8 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Erro ao exportar dados de auditoria:', error);
-    return Response.json({ 
-      error: error.message 
+    return Response.json({
+      error: error.message
     }, { status: 500 });
   }
 });

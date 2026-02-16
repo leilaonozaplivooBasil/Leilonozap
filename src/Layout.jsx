@@ -485,6 +485,8 @@ export default function Layout({ children, currentPageName }) {
         { title: "💰 Configurar Pagamentos", pageName: "PaymentSettings" },
         { title: "💳 Transações", pageName: "TransactionHistory" },
         { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
+        { title: "🧮 Auditoria de Comissões", pageName: "CommissionPilot" },
+        { title: "🧮 Piloto de Comissões", pageName: "CommissionPilot" },
       ]
     },
     { title: "💰 PDV", pageName: "PDV" },
