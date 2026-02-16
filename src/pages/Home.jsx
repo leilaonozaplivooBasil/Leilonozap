@@ -28,6 +28,7 @@ import { useRealtimeSync } from '../components/system/RealtimeSync';
 import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
 import RecommendedSection from '../components/recommendations/RecommendedSection';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import LiveStats from '../components/home/LiveStats';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -81,12 +82,14 @@ export default function Home() {
   const [favoriteAuctions, setFavoriteAuctions] = useState([]);
   const [banners, setBanners] = useState([]);
   const [userRegion, setUserRegion] = useState(null);
+  const [productStockMap, setProductStockMap] = useState({});
 
   const { refresh: refreshAuctions } = useRealtimeSync({
     entityName: 'Auction',
     filters: {},
     onUpdate: (freshAuctions) => {
       if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
+        console.log(`🔄 [Home] Sync recebeu ${freshAuctions.length} leilões, ${freshAuctions.filter(a => a.status === 'active').length} ativos`);
         const serialized = JSON.stringify(freshAuctions);
         sessionStorage.setItem('auctions_cache', serialized);
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
@@ -157,8 +160,17 @@ export default function Home() {
 
     // Removido: filtro específico 'sai_de_baixo' (desativado permanentemente)
 
-    // NOZAP - FILTRO BASE
-    filtered = auctions.filter((a) => a?.partner_store !== 'sai_de_baixo' && !a.is_investment_plan);
+    // NOZAP - FILTRO BASE + ESTOQUE
+    filtered = auctions.filter((a) => {
+      if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
+      
+      // 🆕 FILTRO DE ESTOQUE: Verifica se produto vinculado tem estoque > 0
+      if (a.product_id && productStockMap[a.product_id] !== undefined) {
+        if (productStockMap[a.product_id] <= 0) return false;
+      }
+      
+      return true;
+    });
 
     // REGIÃO
     if (userRegion) {
@@ -185,7 +197,7 @@ export default function Home() {
       if (a.status !== 'active' && b.status === 'active') return 1;
       return a.status === 'active' ? new Date(a.end_time) - new Date(b.end_time) : new Date(b.end_time) - new Date(a.end_time);
     });
-  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion]);
+  }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap]);
 
   const loadUserFavorites = React.useCallback(async (userId, retryCount = 0) => {
     if (!userId) return;
@@ -322,6 +334,21 @@ export default function Home() {
     }
   }, [loadUserFavorites]);
 
+  const loadProductStock = React.useCallback(async () => {
+    try {
+      const products = await base44.entities.Product.list();
+      const stockMap = {};
+      products.forEach(p => {
+        if (p.id) {
+          stockMap[p.id] = p.quantity || 0;
+        }
+      });
+      setProductStockMap(stockMap);
+    } catch (error) {
+      console.debug('Erro ao carregar estoque:', error);
+    }
+  }, []);
+
   const loadAuctions = React.useCallback(async (isRetry = false) => {
     const cachedData = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
@@ -339,7 +366,7 @@ export default function Home() {
             // Atualização silenciosa em background após 15s
             if (age > 15000 && !isRetry) {
               setTimeout(() => {
-                Auction.list("-created_date", 20).then((data) => {
+                Auction.list("-created_date", 100).then((data) => {
                   if (Array.isArray(data) && data.length > 0) {
                     const serialized = JSON.stringify(data);
                     sessionStorage.setItem('auctions_cache', serialized);
@@ -361,8 +388,8 @@ export default function Home() {
     // Se não tem cache válido, busca do servidor
     try {
       const data = await Promise.race([
-      Auction.list("-created_date", 20),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 4000))]
+      Auction.list("-created_date", 100),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000))]
       );
       if (Array.isArray(data) && data.length > 0) {
         setAuctions(data);
@@ -428,6 +455,7 @@ export default function Home() {
       // EXECUTA EM PARALELO - NÃO BLOQUEIA
       loadAuctions();
       loadCurrentUser();
+      loadProductStock();
 
       // Banners do cache imediatamente
       const cachedBanners = sessionStorage.getItem('home_banners_cache');
@@ -556,7 +584,7 @@ export default function Home() {
                 <span>Leilões <span className="text-green-400">Ativos</span> Agora!</span>
               </h1>
               <p className="text-gray-300 mb-4 text-base lg:text-lg">
-                {auctions.length} leilões rolando. Entre na sala e dê seu lance!
+                {auctions.filter(a => a.status === 'active').length} leilões rolando. Entre na sala e dê seu lance!
               </p>
 
               {/* BOTÕES - MOBILE ABAIXO DO TEXTO, DESKTOP NO LADO */}
@@ -596,16 +624,7 @@ export default function Home() {
                 </Link>
               </div>
 
-              <div className="flex items-center gap-4 text-sm text-gray-400">
-                <div className="flex items-center gap-1.5">
-                  <Eye className="w-4 h-4" />
-                  <span>{auctions.length > 0 ? Math.min(auctions.length * 8 + 42, 200) : 50} online</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>R$ {auctions.length > 0 ? (auctions.length * 1250 + 5000).toLocaleString('pt-BR') : '15.000'} em lances hoje</span>
-                </div>
-              </div>
+              <LiveStats />
 
               {/* BOTÕES DESKTOP - POSIÇÃO ABSOLUTA DIREITA */}
               <div className="hidden lg:flex gap-3 absolute top-0 right-0">

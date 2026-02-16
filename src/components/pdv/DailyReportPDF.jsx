@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { FileText, Loader2, Download } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { jsPDF } from 'jspdf';
-import NoZapLogo from '@/assets/logo-transparent.png';
+
+const NoZapLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
 
 export default function DailyReportPDF({ daySales, date, sellersData }) {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -12,8 +13,12 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
   const generatePDF = async () => {
     setIsGenerating(true);
-
+    
     try {
+      console.log('📊 Gerando PDF para data:', date);
+      console.log('📊 Total de vendas recebidas:', daySales.length);
+      console.log('📊 Dados de vendedores:', sellersData);
+      
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -38,10 +43,11 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setFillColor(17, 24, 39); // bg-gray-900
       doc.rect(0, 0, pageWidth, 45, 'F');
 
-      // Logo
+      // Logo (mantém proporção original)
       if (logoDataUrl) {
         try {
-          doc.addImage(logoDataUrl, 'PNG', margin, 8, 35, 30);
+          const logoWidth = 28;
+          doc.addImage(logoDataUrl, 'PNG', margin, 8, logoWidth, 0);
         } catch (e) {
           console.warn('Erro ao adicionar logo');
         }
@@ -70,13 +76,18 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       // ========== RESUMO GERAL ==========
       const totalVendas = daySales.length;
       const totalValor = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-
-      // Busca comissões
+      
+      console.log('💰 Total de vendas para PDF:', totalVendas);
+      console.log('💰 Valor total:', totalValor);
+      
+      // Busca comissões APENAS das vendas deste dia
       let totalComissaoLicenciado = 0;
       let totalComissaoLicenciante = 0;
-
+      
       if (sellersData && sellersData.length > 0) {
+        console.log('👥 Processando comissões de', sellersData.length, 'vendedores');
         sellersData.forEach(seller => {
+          console.log(`  - ${seller.seller_name}: ${seller.sales?.length || 0} vendas`);
           seller.sales?.forEach(sale => {
             // Comissão do licenciado (vendedor)
             totalComissaoLicenciado += sale.seller_commission || 0;
@@ -87,6 +98,8 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
             }
           });
         });
+        console.log('💵 Total comissão licenciados:', totalComissaoLicenciado);
+        console.log('💵 Total comissão licenciantes:', totalComissaoLicenciante);
       }
 
       // Box de Resumo com bordas
@@ -113,7 +126,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(0, 0, 0);
-
+      
       doc.text(`${totalVendas}`, col1, yPos + 20);
       doc.text(`R$ ${fmt(totalValor)}`, col2, yPos + 20);
       doc.text(`R$ ${fmt(totalComissaoLicenciado)}`, col3, yPos + 20);
@@ -127,7 +140,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setFont('helvetica', 'bold');
       doc.text('COMISSÕES DOS LICENCIADOS (VENDEDORES)', margin, yPos);
       yPos += 3;
-
+      
       // Linha separadora do título
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.5);
@@ -143,7 +156,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setDrawColor(180, 180, 180);
       doc.setLineWidth(0.5);
       doc.rect(margin, yPos, pageWidth - margin * 2, 7);
-
+      
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
@@ -215,7 +228,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setFont('helvetica', 'bold');
       doc.text('COMISSÕES DOS LICENCIANTES (INDICADORES)', margin, yPos);
       yPos += 3;
-
+      
       // Linha separadora do título
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.5);
@@ -224,7 +237,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
       // Agrupa comissões por licenciante
       const licenciantesMap = {};
-
+      
       if (sellersData && sellersData.length > 0) {
         sellersData.forEach(seller => {
           seller.sales?.forEach(sale => {
@@ -265,7 +278,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         doc.setDrawColor(180, 180, 180);
         doc.setLineWidth(0.5);
         doc.rect(margin, yPos, pageWidth - margin * 2, 7);
-
+        
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
@@ -319,9 +332,39 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         doc.text('TOTAL COMISSÕES LICENCIANTES:', margin + 75, yPos + 4);
         doc.text(`R$ ${fmt(subtotalComissaoLicenciantes)}`, margin + 145, yPos + 4);
         yPos += 15;
-      }
+        }
 
-      yPos += 5;
+        // ========== TOTAL GERAL DE COMISSÕES ==========
+        if (yPos > pageHeight - 40) {
+        doc.addPage();
+        yPos = 20;
+        }
+
+        const totalGeralComissoes = totalComissaoLicenciado + totalComissaoLicenciante;
+
+        // Box destacado para total geral
+        doc.setFillColor(255, 243, 205); // Fundo amarelo claro
+        doc.rect(margin, yPos, pageWidth - margin * 2, 20, 'F');
+        doc.setDrawColor(255, 165, 0); // Borda laranja
+        doc.setLineWidth(1);
+        doc.rect(margin, yPos, pageWidth - margin * 2, 20);
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TOTAL GERAL DE COMISSOES A PAGAR:', margin + 5, yPos + 8);
+
+        doc.setTextColor(255, 100, 0); // Laranja escuro
+        doc.setFontSize(16);
+        doc.text(`R$ ${fmt(totalGeralComissoes)}`, margin + 145, yPos + 8);
+
+        // Subtotal por tipo (pequeno)
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`(Licenciados: R$ ${fmt(totalComissaoLicenciado)} + Licenciantes: R$ ${fmt(totalComissaoLicenciante)})`, margin + 5, yPos + 15);
+
+        yPos += 25;
 
       // ========== DETALHAMENTO DAS VENDAS (SEMPRE NA SEGUNDA PÁGINA) ==========
       doc.addPage();
@@ -337,17 +380,17 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setDrawColor(180, 180, 180);
       doc.setLineWidth(0.5);
       doc.rect(margin, yPos, pageWidth - margin * 2, 8);
-
+      
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
-
+      
       doc.text('HORA', margin + 3, yPos + 5);
       doc.text('VENDEDOR', margin + 25, yPos + 5);
       doc.text('PRODUTO', margin + 70, yPos + 5);
       doc.text('VALOR', margin + 140, yPos + 5);
       doc.text('COMISSÃO', margin + 165, yPos + 5);
-
+      
       yPos += 10;
 
       // Ordena vendas por horário
@@ -360,7 +403,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         if (yPos > pageHeight - 20) {
           doc.addPage();
           yPos = 20;
-
+          
           // Repete cabeçalho da tabela
           doc.setDrawColor(180, 180, 180);
           doc.setLineWidth(0.5);
@@ -418,12 +461,12 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       const totalPages = doc.internal.getNumberOfPages();
       for (let i = 1; i <= totalPages; i++) {
         doc.setPage(i);
-
+        
         // Linha separadora
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.3);
         doc.line(margin, pageHeight - 12, pageWidth - margin, pageHeight - 12);
-
+        
         doc.setTextColor(100, 100, 100);
         doc.setFontSize(7);
         doc.setFont('helvetica', 'normal');
@@ -445,8 +488,8 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
   };
 
   return (
-    <Button
-      onClick={generatePDF}
+    <Button 
+      onClick={generatePDF} 
       disabled={isGenerating}
       className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
     >

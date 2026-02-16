@@ -48,6 +48,52 @@ export default function LojistaDashboard() {
    
   }, []);
 
+  // 🔔 Atualização em tempo real - Vendas do Catálogo
+  useEffect(() => {
+    if (!currentStore?.id) return;
+
+    const unsubscribeCatalog = CatalogSaleEntity.subscribe((event) => {
+      // Verifica se a venda é desta loja
+      if (event.data?.seller_id === currentStore.id) {
+        console.log('🔔 Nova venda do catálogo detectada:', event.data);
+        loadDashboardData(currentStore.id);
+        
+        if (event.type === 'create') {
+          toast.success(`🎉 Nova venda: ${event.data.product_title}`);
+        } else if (event.type === 'update' && event.data.status === 'paid') {
+          toast.success(`💰 Pagamento confirmado: ${event.data.product_title}`);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeCatalog();
+    };
+  }, [currentStore]);
+
+  // 🔔 Atualização em tempo real - Leilões
+  useEffect(() => {
+    if (!currentStore?.id) return;
+
+    const unsubscribeAuction = AuctionEntity.subscribe((event) => {
+      // Verifica se o leilão é desta loja
+      if (event.data?.seller_id === currentStore.id) {
+        console.log('🔔 Atualização de leilão detectada:', event.data);
+        loadDashboardData(currentStore.id);
+        
+        if (event.type === 'update' && event.data.status === 'sold') {
+          toast.success(`🎊 Leilão vendido: ${event.data.title}`);
+        } else if (event.type === 'update' && event.data.status === 'ended' && event.data.winner_id) {
+          toast.success(`🏆 Leilão arrematado: ${event.data.title}`);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribeAuction();
+    };
+  }, [currentStore]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setIsLoading(true);

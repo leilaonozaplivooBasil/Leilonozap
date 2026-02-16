@@ -83,7 +83,7 @@ export function useRealtimeSync({
         setTimeout(() => reject(new Error('Timeout')), 15000)
       );
       
-      const dataPromise = Entity.filter(filters, '-updated_date', 100);
+      const dataPromise = Entity.list('-updated_date', 100);
       
       const data = await Promise.race([dataPromise, timeoutPromise]);
       

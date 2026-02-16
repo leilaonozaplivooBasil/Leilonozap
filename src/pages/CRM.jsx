@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Users, UserPlus, Search, Filter, Mail, Phone,
-  DollarSign, TrendingUp, Edit, Trash2, X, Save, Send, UserCheck, UserX
+  DollarSign, TrendingUp, Edit, Trash2, X, Save, Send, UserCheck, UserX,
+  ShoppingCart, MessageSquare, Clock, CheckCircle, Package, Truck, XCircle, Briefcase
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
@@ -20,6 +21,7 @@ export default function CRM() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
+  const [purchaseStatusFilter, setPurchaseStatusFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -32,10 +34,12 @@ export default function CRM() {
   const [allSellers, setAllSellers] = useState([]);
   const [editingSeller, setEditingSeller] = useState(null);
   const [activeTab, setActiveTab] = useState('customers');
+  const [negotiations, setNegotiations] = useState([]);
   const [sellerFormData, setSellerFormData] = useState({
     name: '',
     phone: '',
     email: '',
+    license_type: '',
     is_active: true
   });
   const navigate = useNavigate();
@@ -53,8 +57,13 @@ export default function CRM() {
     address_city: '',
     address_state: '',
     address_zip_code: '',
-    last_contact: new Date().toISOString().split('T')[0]
+    last_contact: new Date().toISOString().split('T')[0],
+    interested_products: []
   });
+  const [showProductSearch, setShowProductSearch] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [availableProducts, setAvailableProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
@@ -69,7 +78,44 @@ export default function CRM() {
     }
     loadCustomers();
     loadSellers();
+    loadNegotiations();
+    loadProducts();
   }, [navigate]);
+
+  // Carregar produtos automaticamente ao abrir modal
+  useEffect(() => {
+    if (showAddForm && availableProducts.length === 0) {
+      loadProducts();
+    }
+  }, [showAddForm]);
+
+  const loadProducts = async () => {
+    try {
+      setLoadingProducts(true);
+      const data = await base44.entities.Product.list('-created_date', 500);
+      // Filtra produtos com estoque disponível (quantidade > 0)
+      const inStock = data.filter(p => {
+        const qty = p.quantity || 0;
+        return qty > 0;
+      });
+      setAvailableProducts(inStock);
+      console.log(`✅ ${inStock.length} produtos carregados com estoque`);
+    } catch (error) {
+      console.error('❌ Erro ao carregar produtos:', error);
+      setAvailableProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const loadNegotiations = async () => {
+    try {
+      const data = await base44.entities.Negotiation.list('-created_date', 200);
+      setNegotiations(data);
+    } catch (error) {
+      console.error('Erro ao carregar negociações:', error);
+    }
+  };
 
   const loadSellers = async () => {
     try {
@@ -87,11 +133,13 @@ export default function CRM() {
     try {
       setIsLoading(true);
       const data = await base44.entities.Customer.list('-created_date', 500);
-      setCustomers(data);
-      setFilteredCustomers(data);
+      setCustomers(data || []);
+      setFilteredCustomers(data || []);
     } catch (error) {
       console.error('Erro ao carregar clientes:', error);
-      alert('❌ Erro ao carregar clientes');
+      setCustomers([]);
+      setFilteredCustomers([]);
+      alert('❌ Erro ao carregar clientes - tente novamente');
     } finally {
       setIsLoading(false);
     }
@@ -116,8 +164,12 @@ export default function CRM() {
       filtered = filtered.filter(c => c.source === sourceFilter);
     }
 
+    if (purchaseStatusFilter !== 'all') {
+      filtered = filtered.filter(c => (c.purchase_status || 'sem_compra') === purchaseStatusFilter);
+    }
+
     setFilteredCustomers(filtered);
-  }, [searchTerm, statusFilter, sourceFilter, customers]);
+  }, [searchTerm, statusFilter, sourceFilter, purchaseStatusFilter, customers]);
 
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
@@ -134,10 +186,48 @@ export default function CRM() {
       address_city: customer.address_city || '',
       address_state: customer.address_state || '',
       address_zip_code: customer.address_zip_code || '',
-      last_contact: customer.last_contact || new Date().toISOString().split('T')[0]
+      last_contact: customer.last_contact || new Date().toISOString().split('T')[0],
+      interested_products: customer.interested_products || []
     });
     setShowAddForm(true);
   };
+
+  const addInterestedProduct = (product) => {
+    const exists = formData.interested_products.find(p => p.product_id === product.id);
+    if (exists) {
+      alert('Produto já adicionado!');
+      return;
+    }
+    if (formData.interested_products.length >= 10) {
+      alert('Máximo de 10 produtos!');
+      return;
+    }
+    setFormData({
+      ...formData,
+      interested_products: [
+        ...formData.interested_products,
+        { product_id: product.id, product_name: product.description }
+      ]
+    });
+    setProductSearchTerm('');
+  };
+
+  const removeInterestedProduct = (productId) => {
+    setFormData({
+      ...formData,
+      interested_products: formData.interested_products.filter(p => p.product_id !== productId)
+    });
+  };
+
+  const filteredProductsForModal = React.useMemo(() => {
+    if (!productSearchTerm) return [];
+    const search = productSearchTerm.toLowerCase().trim();
+    return availableProducts.filter(p => {
+      const desc = (p.description || '').toLowerCase();
+      const lot = (p.lot || '').toLowerCase();
+      return desc.includes(search) || lot.includes(search);
+    });
+  }, [productSearchTerm, availableProducts]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -163,10 +253,13 @@ export default function CRM() {
         address_city: '',
         address_state: '',
         address_zip_code: '',
-        last_contact: new Date().toISOString().split('T')[0]
+        last_contact: new Date().toISOString().split('T')[0],
+        interested_products: []
       });
       setShowAddForm(false);
       setEditingCustomer(null);
+      setShowProductSearch(false);
+      setProductSearchTerm('');
       await loadCustomers();
     } catch (error) {
       console.error('Erro ao salvar:', error);
@@ -197,6 +290,7 @@ export default function CRM() {
       name: seller.name,
       phone: seller.phone,
       email: seller.email || '',
+      license_type: seller.license_type || '',
       is_active: seller.is_active
     });
     setShowSellerModal(true);
@@ -229,6 +323,7 @@ export default function CRM() {
         name: '',
         phone: '',
         email: '',
+        license_type: '',
         is_active: true
       });
       setShowSellerModal(false);
@@ -315,7 +410,15 @@ _Enviado via CRM Leilão NoZap_`;
     total: customers.length,
     leads: customers.filter(c => c.status === 'lead').length,
     clientes: customers.filter(c => c.status === 'cliente').length,
-    totalSpent: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0)
+    totalSpent: customers.reduce((sum, c) => sum + (c.total_spent || 0), 0),
+    semCompra: customers.filter(c => (c.purchase_status || 'sem_compra') === 'sem_compra').length,
+    emNegociacao: customers.filter(c => c.purchase_status === 'em_negociacao').length,
+    aguardandoPagamento: customers.filter(c => c.purchase_status === 'aguardando_pagamento').length,
+    pago: customers.filter(c => c.purchase_status === 'pago').length,
+    enviado: customers.filter(c => c.purchase_status === 'enviado').length,
+    entregue: customers.filter(c => c.purchase_status === 'entregue').length,
+    cancelado: customers.filter(c => c.purchase_status === 'cancelado').length,
+    volumeNegociacao: negotiations.filter(n => n.status === 'em_andamento').reduce((sum, n) => sum + (n.total_value || 0), 0)
   };
 
   const getStatusColor = (status) => {
@@ -372,19 +475,20 @@ _Enviado via CRM Leilão NoZap_`;
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 p-3 sm:p-6">
       <div className="max-w-[1800px] mx-auto">
 
         {/* HEADER */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">CRM - Gestão de Clientes</h1>
-          <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-3xl font-bold text-gray-900">CRM - Gestão de Clientes</h1>
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               onClick={() => setShowSellerModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white flex-1 sm:flex-none text-xs sm:text-sm"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Novo Vendedor
+              <UserPlus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Novo Vendedor</span>
+              <span className="sm:hidden">Vendedor</span>
             </Button>
             <Button
               onClick={() => {
@@ -402,26 +506,30 @@ _Enviado via CRM Leilão NoZap_`;
                   address_city: '',
                   address_state: '',
                   address_zip_code: '',
-                  last_contact: new Date().toISOString().split('T')[0]
+                  last_contact: new Date().toISOString().split('T')[0],
+                  interested_products: []
                 });
+                setShowProductSearch(false);
+                setProductSearchTerm('');
                 setShowAddForm(true);
               }}
-              className="bg-gray-800 hover:bg-gray-700 text-white"
+              className="bg-gray-800 hover:bg-gray-700 text-white flex-1 sm:flex-none text-xs sm:text-sm"
             >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Novo Cliente
+              <UserPlus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Novo Cliente</span>
+              <span className="sm:hidden">Cliente</span>
             </Button>
           </div>
         </div>
 
-        {/* ESTATÍSTICAS */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* ESTATÍSTICAS PRINCIPAIS */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Total de Contatos</p>
-                  <p className="text-3xl font-bold text-white">{stats.total}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Total de Contatos</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.total}</p>
                 </div>
                 <Users className="w-8 h-8 text-blue-400" />
               </div>
@@ -429,11 +537,11 @@ _Enviado via CRM Leilão NoZap_`;
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Leads</p>
-                  <p className="text-3xl font-bold text-white">{stats.leads}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Leads</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.leads}</p>
                 </div>
                 <TrendingUp className="w-8 h-8 text-yellow-400" />
               </div>
@@ -441,23 +549,37 @@ _Enviado via CRM Leilão NoZap_`;
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Clientes Ativos</p>
-                  <p className="text-3xl font-bold text-white">{stats.clientes}</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Clientes Ativos</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{stats.clientes}</p>
                 </div>
                 <Users className="w-8 h-8 text-green-400" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-4">
+          <Card className="bg-orange-600 border-orange-500">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Faturamento Total</p>
-                  <p className="text-2xl font-bold text-white">
+                  <p className="text-orange-100 text-xs sm:text-sm mb-1">Volume em Negociação</p>
+                  <p className="text-lg sm:text-2xl font-bold text-white">
+                    R$ {stats.volumeNegociacao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+                <Briefcase className="w-8 h-8 text-orange-100" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gray-800 border-gray-700">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Faturamento Total</p>
+                  <p className="text-lg sm:text-2xl font-bold text-white">
                     R$ {stats.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -467,20 +589,142 @@ _Enviado via CRM Leilão NoZap_`;
           </Card>
         </div>
 
+        {/* ESTATÍSTICAS DE STATUS DA COMPRA - CLICÁVEIS COMO FILTROS */}
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'sem_compra' 
+                ? 'bg-gray-800 border-gray-600 ring-2 ring-gray-500' 
+                : 'bg-white border-gray-200 hover:bg-gray-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'sem_compra' ? 'all' : 'sem_compra')}
+          >
+            <CardContent className="p-3">
+              <div className="text-center">
+                <ShoppingCart className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-400'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-600'}`}>Sem Compra</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'sem_compra' ? 'text-white' : 'text-gray-900'}`}>{stats.semCompra}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'em_negociacao' 
+                ? 'bg-blue-600 border-blue-500 ring-2 ring-blue-400' 
+                : 'bg-white border-gray-200 hover:bg-blue-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'em_negociacao' ? 'all' : 'em_negociacao')}
+          >
+            <CardContent className="p-3">
+              <div className="text-center">
+                <MessageSquare className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-blue-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-gray-600'}`}>Em Negociação</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'em_negociacao' ? 'text-white' : 'text-blue-600'}`}>{stats.emNegociacao}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'aguardando_pagamento' 
+                ? 'bg-yellow-600 border-yellow-500 ring-2 ring-yellow-400' 
+                : 'bg-white border-gray-200 hover:bg-yellow-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'aguardando_pagamento' ? 'all' : 'aguardando_pagamento')}
+          >
+            <CardContent className="p-3">
+              <div className="text-center">
+                <Clock className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-yellow-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-gray-600'}`}>Aguardando Pag.</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-white' : 'text-yellow-600'}`}>{stats.aguardandoPagamento}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'pago' 
+                ? 'bg-green-600 border-green-500 ring-2 ring-green-400' 
+                : 'bg-white border-gray-200 hover:bg-green-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'pago' ? 'all' : 'pago')}
+          >
+            <CardContent className="p-3">
+              <div className="text-center">
+                <CheckCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-green-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-gray-600'}`}>Pago</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'pago' ? 'text-white' : 'text-green-600'}`}>{stats.pago}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'enviado' 
+                ? 'bg-purple-600 border-purple-500 ring-2 ring-purple-400' 
+                : 'bg-white border-gray-200 hover:bg-purple-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'enviado' ? 'all' : 'enviado')}
+          >
+            <CardContent className="p-3">
+              <div className="text-center">
+                <Package className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-purple-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-gray-600'}`}>Enviado</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'enviado' ? 'text-white' : 'text-purple-600'}`}>{stats.enviado}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'entregue' 
+                ? 'bg-emerald-600 border-emerald-500 ring-2 ring-emerald-400' 
+                : 'bg-white border-gray-200 hover:bg-emerald-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'entregue' ? 'all' : 'entregue')}
+          >
+            <CardContent className="p-3">
+              <div className="text-center">
+                <Truck className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-emerald-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-gray-600'}`}>Entregue</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'entregue' ? 'text-white' : 'text-emerald-600'}`}>{stats.entregue}</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className={`cursor-pointer transition-all ${
+              purchaseStatusFilter === 'cancelado' 
+                ? 'bg-red-600 border-red-500 ring-2 ring-red-400' 
+                : 'bg-white border-gray-200 hover:bg-red-50'
+            }`}
+            onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'cancelado' ? 'all' : 'cancelado')}
+          >
+            <CardContent className="p-3">
+              <div className="text-center">
+                <XCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-red-500'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-gray-600'}`}>Cancelado</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'cancelado' ? 'text-white' : 'text-red-600'}`}>{stats.cancelado}</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* TABS */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList className="bg-white border border-gray-200">
-            <TabsTrigger value="customers" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
+          <TabsList className="bg-white border border-gray-200 w-full sm:w-auto">
+            <TabsTrigger value="customers" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
-            <TabsTrigger value="sellers" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <TabsTrigger value="sellers" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex-1 sm:flex-none">
               Vendedores
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="customers">
             {/* FILTROS DE CLIENTES */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
@@ -520,6 +764,7 @@ _Enviado via CRM Leilão NoZap_`;
               setSearchTerm('');
               setStatusFilter('all');
               setSourceFilter('all');
+              setPurchaseStatusFilter('all');
             }}
             variant="outline"
             className="bg-white border-gray-300 text-gray-900 hover:bg-gray-100"
@@ -658,6 +903,7 @@ _Enviado via CRM Leilão NoZap_`;
                         <th className="text-left p-3 font-semibold text-white">Nome</th>
                         <th className="text-left p-3 font-semibold text-white">Telefone</th>
                         <th className="text-left p-3 font-semibold text-white">Email</th>
+                        <th className="text-center p-3 font-semibold text-white">Licença</th>
                         <th className="text-center p-3 font-semibold text-white">Status</th>
                         <th className="text-center p-3 font-semibold text-white">Ações</th>
                       </tr>
@@ -682,6 +928,23 @@ _Enviado via CRM Leilão NoZap_`;
                               <Mail className="w-3 h-3" />
                               {seller.email || '-'}
                             </div>
+                          </td>
+                          <td className="p-3 text-center">
+                            <Badge className={
+                              seller.license_type === 'loja_distribuidor' ? 'bg-purple-100 text-purple-800' :
+                              seller.license_type === 'loja_lider' ? 'bg-orange-100 text-orange-800' :
+                              seller.license_type === 'loja_profissional' ? 'bg-blue-100 text-blue-800' :
+                              seller.license_type === 'loja_start' ? 'bg-green-100 text-green-800' :
+                              seller.license_type === 'loja_inicial' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-gray-100 text-gray-800'
+                            }>
+                              {seller.license_type === 'loja_distribuidor' ? 'Loja Distribuidor' :
+                               seller.license_type === 'loja_lider' ? 'Loja Líder' :
+                               seller.license_type === 'loja_profissional' ? 'Loja Profissional' :
+                               seller.license_type === 'loja_start' ? 'Loja Start' :
+                               seller.license_type === 'loja_inicial' ? 'Loja Inicial' :
+                               '-'}
+                            </Badge>
                           </td>
                           <td className="p-3 text-center">
                             <Badge className={seller.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
@@ -746,6 +1009,7 @@ _Enviado via CRM Leilão NoZap_`;
                         name: '',
                         phone: '',
                         email: '',
+                        license_type: '',
                         is_active: true
                       });
                     }}
@@ -787,6 +1051,23 @@ _Enviado via CRM Leilão NoZap_`;
                       onChange={(e) => setSellerFormData({ ...sellerFormData, email: e.target.value })}
                       className="bg-gray-700 text-white"
                     />
+                  </div>
+
+                  <div>
+                    <Label className="text-gray-300">Tipo de Licença *</Label>
+                    <select
+                      value={sellerFormData.license_type}
+                      onChange={(e) => setSellerFormData({ ...sellerFormData, license_type: e.target.value })}
+                      className="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600"
+                      required
+                    >
+                      <option value="">-- Selecione --</option>
+                      <option value="loja_inicial">Loja Inicial</option>
+                      <option value="loja_start">Loja Start</option>
+                      <option value="loja_profissional">Loja Profissional</option>
+                      <option value="loja_lider">Loja Líder</option>
+                      <option value="loja_distribuidor">Loja Distribuidor</option>
+                    </select>
                   </div>
 
                   <div className="flex gap-2">
@@ -894,10 +1175,10 @@ _Enviado via CRM Leilão NoZap_`;
         {/* MODAL DE FORMULÁRIO */}
         {showAddForm && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <Card className="bg-gray-800 border-gray-700 max-w-4xl w-full my-8">
-              <CardHeader>
+            <Card className="bg-gray-800 border-gray-700 max-w-4xl w-full my-8 max-h-[90vh] overflow-hidden flex flex-col">
+              <CardHeader className="border-b border-gray-700 flex-shrink-0">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-white">
+                  <CardTitle className="text-white text-xl font-bold">
                     {editingCustomer ? '✏️ Editar Cliente' : '➕ Novo Cliente'}
                   </CardTitle>
                   <Button
@@ -906,14 +1187,16 @@ _Enviado via CRM Leilão NoZap_`;
                     onClick={() => {
                       setShowAddForm(false);
                       setEditingCustomer(null);
+                      setShowProductSearch(false);
+                      setProductSearchTerm('');
                     }}
-                    className="text-gray-400 hover:text-white"
+                    className="text-gray-400 hover:text-white hover:bg-gray-700"
                   >
                     <X className="w-5 h-5" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-y-auto flex-1 p-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -1046,12 +1329,122 @@ _Enviado via CRM Leilão NoZap_`;
                         rows={3}
                       />
                     </div>
+
+                    {/* PRODUTOS DE INTERESSE */}
+                    <div className="col-span-full border-t border-gray-700 pt-4 mt-4">
+                      <Label className="text-gray-300 text-base font-semibold mb-3 block">
+                        📦 Produtos de Interesse (opcional)
+                      </Label>
+                      
+                      <div className="space-y-3">
+                        {/* Input de Busca - Sempre Visível */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          <Input
+                            placeholder="Digite para buscar produtos por nome ou lote..."
+                            value={productSearchTerm}
+                            onChange={(e) => setProductSearchTerm(e.target.value)}
+                            className="pl-10 bg-gray-700 text-white border-gray-600 focus:border-green-500"
+                          />
+                        </div>
+
+                        {/* Resultados da Busca */}
+                        {productSearchTerm && (
+                          <div className="max-h-52 overflow-y-auto bg-gray-900 rounded-lg border border-gray-600 shadow-lg">
+                            {loadingProducts ? (
+                              <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-400 mx-auto mb-3"></div>
+                                <p>Carregando produtos...</p>
+                              </div>
+                            ) : availableProducts.length === 0 ? (
+                              <div className="px-4 py-8 text-center text-yellow-400 text-sm">
+                                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                <p className="font-semibold">Nenhum produto disponível</p>
+                                <p className="text-xs mt-1 text-gray-500">Produtos com estoque não carregados</p>
+                                <button
+                                  type="button"
+                                  onClick={loadProducts}
+                                  className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs font-semibold transition-colors"
+                                >
+                                  🔄 Recarregar Produtos
+                                </button>
+                              </div>
+                            ) : filteredProductsForModal.length > 0 ? (
+                              filteredProductsForModal.slice(0, 10).map(product => (
+                                <button
+                                  key={product.id}
+                                  type="button"
+                                  onClick={() => addInterestedProduct(product)}
+                                  className="w-full text-left px-4 py-3 hover:bg-gray-700 border-b border-gray-700 last:border-b-0 text-white transition-colors group"
+                                >
+                                  <p className="font-semibold text-sm group-hover:text-green-400 transition-colors">
+                                    {product.description}
+                                  </p>
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Lote: {product.lot || 'N/A'} • Estoque: <span className="text-green-400 font-semibold">{product.quantity} un.</span>
+                                  </p>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-4 py-8 text-center text-gray-400 text-sm">
+                                <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                <p>Nenhum produto encontrado com "{productSearchTerm}"</p>
+                                <p className="text-xs mt-1">Tente outro termo de busca</p>
+                                <p className="text-xs text-green-400 mt-2">
+                                  {availableProducts.length} produtos disponíveis no total
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Lista de Produtos Selecionados */}
+                        {formData.interested_products.length > 0 && (
+                          <div className="bg-gray-900/50 p-4 rounded-lg border border-gray-700">
+                            <Label className="text-gray-400 text-xs mb-2 block">
+                              ✅ Produtos Marcados ({formData.interested_products.length}/10)
+                            </Label>
+                            <div className="flex flex-wrap gap-2">
+                              {formData.interested_products.map(p => (
+                                <Badge 
+                                  key={p.product_id} 
+                                  className="bg-green-600 hover:bg-green-700 text-white pl-3 pr-2 py-1.5 flex items-center gap-2 transition-all"
+                                >
+                                  <span className="truncate max-w-[200px] text-sm">{p.product_name}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeInterestedProduct(p.product_id)}
+                                    className="hover:bg-red-500/20 rounded-full p-0.5 transition-colors"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                            {formData.interested_products.length >= 10 && (
+                              <p className="text-xs text-yellow-400 mt-2">
+                                ⚠️ Limite máximo atingido (10 produtos)
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Mensagem quando nenhum produto está marcado */}
+                        {formData.interested_products.length === 0 && !productSearchTerm && (
+                          <div className="bg-gray-900/30 p-3 rounded-lg border border-dashed border-gray-700 text-center">
+                            <p className="text-xs text-gray-500">
+                              Nenhum produto marcado ainda. Use a busca acima para adicionar.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
+                  <div className="flex gap-3 pt-4 border-t border-gray-700 sticky bottom-0 bg-gray-800 -mx-6 px-6 -mb-6 pb-6">
+                    <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700 py-3">
                       <Save className="w-4 h-4 mr-2" />
-                      {editingCustomer ? 'Atualizar' : 'Salvar'}
+                      {editingCustomer ? 'Atualizar Cliente' : 'Salvar Cliente'}
                     </Button>
                     <Button
                       type="button"
@@ -1059,10 +1452,11 @@ _Enviado via CRM Leilão NoZap_`;
                       onClick={() => {
                         setShowAddForm(false);
                         setEditingCustomer(null);
+                        setShowProductSearch(false);
+                        setProductSearchTerm('');
                       }}
-                      className="border-gray-600 text-gray-300"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-700 px-6"
                     >
-                      <X className="w-4 h-4 mr-2" />
                       Cancelar
                     </Button>
                   </div>

@@ -1122,7 +1122,9 @@ export default function AuctionRoom() {
     setIsBuyingNow(true);
 
     try {
-      const buyNowPrice = parseFloat(auction.buy_now_price);
+      // 🆕 ARREMATE = LANCE ATUAL + 45%
+      const currentPrice = auction.current_price || auction.starting_price;
+      const buyNowPrice = currentPrice * 1.45;
 
       // Cria mensagem de arremate
       await AuctionMessage.create({
@@ -1412,11 +1414,33 @@ export default function AuctionRoom() {
           </div>
           <Button
             onClick={async () => {
-              if (confirm('⚠️ REATIVAR?')) {
+              if (confirm('⚠️ REATIVAR? (vai limpar histórico de lances)')) {
                 try {
-                  await Auction.update(auction.id, { status: 'active' });
-                  alert('✅ Reativado!');
-                  await syncAuctionDataOnly();
+                  // 1. Limpar lances
+                  const allBids = await base44.entities.Bid.filter({ auction_id: auction.id });
+                  for (const bid of allBids) {
+                    await base44.entities.Bid.delete(bid.id);
+                  }
+                  
+                  // 2. Limpar mensagens
+                  const allMessages = await AuctionMessage.filter({ auction_id: auction.id });
+                  for (const msg of allMessages) {
+                    await AuctionMessage.delete(msg.id);
+                  }
+                  
+                  // 3. Reativar por mais 5 dias
+                  const newEndTime = new Date(Date.now() + (5 * 24 * 60 * 60 * 1000)).toISOString();
+                  await Auction.update(auction.id, { 
+                    status: 'active',
+                    end_time: newEndTime,
+                    current_price: auction.starting_price,
+                    winner_id: null,
+                    winner_name: null,
+                    order_status: null,
+                    tracking_code: null
+                  });
+                  
+                  alert('✅ Reativado! Histórico limpo.');
                   window.location.reload();
                 } catch (error) {
                   alert('❌ Erro: ' + error.message);
@@ -1685,9 +1709,15 @@ export default function AuctionRoom() {
             <div className="bg-gray-700 rounded-lg p-4 mb-6">
               <img src={mainImageUrl} alt={auction.title} className="w-full h-40 object-cover rounded-lg mb-3" />
               <h4 className="text-lg font-semibold text-white mb-2">{auction.title}</h4>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-400">Preço de Arremate:</span>
-                <span className="text-2xl font-bold text-orange-400">R$ {parseFloat(auction.buy_now_price).toFixed(2)}</span>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-400">Lance Atual:</span>
+                  <span className="font-semibold text-white">R$ {currentPrice.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Arremate (+45%):</span>
+                  <span className="text-2xl font-bold text-orange-400">R$ {(currentPrice * 1.45).toFixed(2)}</span>
+                </div>
               </div>
             </div>
 

@@ -369,58 +369,58 @@ export default function ActivePartners() {
   const uniquePartners = new Set(partnerPurchases.map(p => p.user_id)).size;
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-4 md:p-8">
+    <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Parceiros Ativos</h1>
-          <p className="text-gray-400">Gerencie todos os planos de parceria ativos</p>
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-bold mb-1 sm:mb-2">Parceiros Ativos</h1>
+          <p className="text-gray-400 text-sm sm:text-base">Gerencie todos os planos de parceria ativos</p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-8">
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Parceiros Únicos</p>
-                  <p className="text-3xl font-bold text-white">{uniquePartners}</p>
-                  <p className="text-xs text-gray-500 mt-1">{partnerPurchases.length} ativações totais</p>
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Parceiros Únicos</p>
+                  <p className="text-xl sm:text-3xl font-bold text-white">{uniquePartners}</p>
+                  <p className="text-xs text-gray-500 mt-1">{partnerPurchases.length} ativações</p>
                 </div>
-                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <Users className="w-6 h-6 text-green-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <Users className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Total Investido</p>
-                  <p className="text-3xl font-bold text-green-400">
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Total Investido</p>
+                  <p className="text-xl sm:text-3xl font-bold text-green-400">
                     R$ {totalInvested.toLocaleString('pt-BR')}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center">
-                  <DollarSign className="w-6 h-6 text-green-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-500/20 rounded-full flex items-center justify-center">
+                  <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm mb-1">Retorno Previsto (3%)</p>
-                  <p className="text-3xl font-bold text-blue-400">
+                  <p className="text-gray-400 text-xs sm:text-sm mb-1">Retorno Previsto (3%)</p>
+                  <p className="text-xl sm:text-3xl font-bold text-blue-400">
                     R$ {(totalInvested * 0.03).toLocaleString('pt-BR')}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-blue-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                 </div>
               </div>
             </CardContent>
@@ -478,13 +478,13 @@ export default function ActivePartners() {
                     </div>
                   )}
                   
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <CardContent className="p-3 sm:p-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                       {/* Info da Compra */}
                       <div className="lg:col-span-2 space-y-3">
-                        <div className="flex items-start justify-between">
+                        <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
                           <div>
-                            <h3 className="text-xl font-bold text-white">{purchase.user_name}</h3>
+                            <h3 className="text-base sm:text-xl font-bold text-white">{purchase.user_name}</h3>
                             <p className="text-gray-400 text-sm">{purchase.user_email}</p>
                             <Badge className="mt-2 bg-green-600 text-white text-xs">
                               {purchase.activation_source === 'manual' 
@@ -494,11 +494,11 @@ export default function ActivePartners() {
                                 : '💰 Lucre Conosco'}
                             </Badge>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1 sm:gap-2 flex-wrap">
                             <Button
                               size="sm"
                               onClick={() => loadInstallments(purchase)}
-                              className="bg-green-600 hover:bg-green-700"
+                              className="bg-green-600 hover:bg-green-700 text-xs sm:text-sm"
                             >
                               💰 Parcelas
                             </Button>
@@ -779,13 +779,13 @@ export default function ActivePartners() {
 
       {/* MODAL PARCELAS */}
       {showInstallmentsModal && selectedPurchaseForInstallments && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="bg-gray-900 border-gray-700 max-w-6xl w-full max-h-[90vh] overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 p-6">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+          <Card className="bg-gray-900 border-gray-700 max-w-6xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-green-600 to-green-700 p-3 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-2xl font-bold text-white">💰 Gerenciar Parcelas</CardTitle>
-                  <p className="text-green-100 text-sm mt-1">
+                  <CardTitle className="text-lg sm:text-2xl font-bold text-white">💰 Parcelas</CardTitle>
+                  <p className="text-green-100 text-xs sm:text-sm mt-1">
                     {selectedPurchaseForInstallments.user_name} - {selectedPurchaseForInstallments.plan_name}
                   </p>
                 </div>
@@ -803,7 +803,7 @@ export default function ActivePartners() {
               </div>
             </CardHeader>
 
-            <CardContent className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+            <CardContent className="p-3 sm:p-6 overflow-y-auto max-h-[calc(95vh-120px)] sm:max-h-[calc(90vh-140px)]">
               {installments.length === 0 ? (
                 <div className="text-center py-12">
                   <Calendar className="w-16 h-16 text-gray-600 mx-auto mb-4" />
@@ -833,7 +833,7 @@ export default function ActivePartners() {
                     </div>
 
                     {/* Lista de Parcelas */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                       {installments.map((installment) => {
                         const isPast = new Date(installment.date) < new Date();
                         
@@ -858,9 +858,9 @@ export default function ActivePartners() {
                             )}
 
                             {/* Conteúdo */}
-                            <div className="mb-3">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-gray-400 text-xs font-medium">
+                            <div className="mb-2 sm:mb-3">
+                              <div className="flex items-center justify-between mb-1 sm:mb-2">
+                                <span className="text-gray-400 text-[10px] sm:text-xs font-medium">
                                   Parcela {installment.period}
                                 </span>
                                 {!installment.paid && isPast && (
@@ -870,7 +870,7 @@ export default function ActivePartners() {
                                 )}
                               </div>
                               
-                              <div className="text-2xl font-bold text-white mb-1">
+                              <div className="text-base sm:text-2xl font-bold text-white mb-1">
                                 R$ {installment.value.toFixed(2)}
                               </div>
                               
@@ -897,7 +897,7 @@ export default function ActivePartners() {
                     </div>
 
                     {/* Resumo */}
-                    <div className="mt-6 pt-4 border-t border-gray-700 grid grid-cols-3 gap-4 text-center">
+                    <div className="mt-4 sm:mt-6 pt-3 sm:pt-4 border-t border-gray-700 grid grid-cols-3 gap-2 sm:gap-4 text-center">
                       <div>
                         <div className="text-gray-400 text-xs mb-1">Total Pago</div>
                         <div className="text-green-400 font-bold text-lg">
