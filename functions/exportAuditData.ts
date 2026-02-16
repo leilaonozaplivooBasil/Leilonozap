@@ -23,11 +23,15 @@ Deno.serve(async (req) => {
       query.user_id = user_id;
     }
 
-    // Busca dados para auditoria
-    const [commissions, users, catalogSales] = await Promise.all([
+    // Busca dados para auditoria - SNAPSHOT COMPLETO
+    const [commissions, users, catalogSales, products, auctions] = await Promise.all([
       base44.asServiceRole.entities.CommissionRecord.filter(query),
       base44.asServiceRole.entities.AppUser.list(),
       base44.asServiceRole.entities.CatalogSale.filter(
+        start_date ? { created_date: { $gte: start_date } } : {}
+      ),
+      base44.asServiceRole.entities.Product.list(),
+      base44.asServiceRole.entities.Auction.filter(
         start_date ? { created_date: { $gte: start_date } } : {}
       )
     ]);
@@ -72,14 +76,37 @@ Deno.serve(async (req) => {
         status: s.status,
         buyer_name: s.buyer_name,
         licensee_id: s.licensee_id,
-        created_date: s.created_date
+        created_date: s.created_date,
+        quantity: s.quantity,
+        shipping_cost: s.shipping_cost
+      })),
+      products: products.map(p => ({
+        id: p.id,
+        description: p.description,
+        price_catalog: p.price_catalog,
+        catalog_active: p.catalog_active
+      })),
+      auctions: auctions.map(a => ({
+        id: a.id,
+        title: a.title,
+        current_price: a.current_price,
+        status: a.status,
+        winner_id: a.winner_id,
+        created_date: a.created_date
       }))
     };
 
-    return Response.json({
-      success: true,
-      data: auditData
+    // Headers para download como arquivo
+    return new Response(JSON.stringify(auditData, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="audit-snapshot-${new Date().toISOString().split('T')[0]}.json"`
+      }
     });
+    };
+
+
 
   } catch (error) {
     console.error('Erro ao exportar dados de auditoria:', error);
