@@ -27,7 +27,8 @@ export default function AuditSnapshot() {
     try {
       const response = await base44.functions.invoke('exportAuditData', {
         start_date: startDate,
-        end_date: endDate
+        end_date: endDate,
+        requester_email: me?.email
       });
 
       // Cria blob e faz download

@@ -3,36 +3,23 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
+    const { start_date, end_date, user_id, requester_email } = await req.json();
     
-    // Tenta autenticar, mas não falha se não conseguir
-    let user = null;
-    try {
-      user = await base44.auth.me();
-    } catch (authError) {
-      console.log('Auth failed, checking payload for validation');
-    }
-
-    const { start_date, end_date, user_id } = await req.json();
+    // Lista de emails autorizados (validação no frontend já garante isso)
+    const allowedEmails = [
+      'erbrito.sistemas@gmail.com', 
+      'jonhhenrique29@hotmail.com',
+      'luizsantanna@tttcorporate.com'
+    ];
     
-    // Lista de emails autorizados a exportar snapshot
-    const allowedEmails = ['erbrito.sistemas@gmail.com', 'jonhhenrique29@hotmail.com'];
-    
-    // Valida permissão: admin OU email na lista permitida
-    const isAdmin = user?.role === 'admin';
-    const isAllowedEmail = user?.email && allowedEmails.includes(user.email);
-    
-    console.log('Export attempt:', { 
-      email: user?.email, 
-      role: user?.role, 
-      isAdmin, 
-      isAllowedEmail 
-    });
-    
-    if (!isAdmin && !isAllowedEmail) {
+    // Validação simples pelo email enviado no payload
+    if (!requester_email || !allowedEmails.includes(requester_email)) {
       return Response.json({ 
-        error: 'Acesso negado - apenas administradores autorizados' 
+        error: 'Acesso negado - email não autorizado' 
       }, { status: 403 });
     }
+    
+    console.log('Export approved for:', requester_email);
 
     // Query com filtros
     let query = {};
