@@ -57,6 +57,7 @@ import ArquitetoIA from './pages/ArquitetoIA';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
+import AuditSnapshot from './pages/AuditSnapshot';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
 import CareerLevelsReport from './pages/CareerLevelsReport';
@@ -124,7 +125,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import AuditSnapshot from './pages/AuditSnapshot';
 import __Layout from './Layout.jsx';
 
 
@@ -139,6 +139,7 @@ export const PAGES = {
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
     "AuctionRoom": AuctionRoom,
+    "AuditSnapshot": AuditSnapshot,
     "BannerManagement": BannerManagement,
     "CRM": CRM,
     "CareerLevelsReport": CareerLevelsReport,
@@ -206,7 +207,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "AuditSnapshot": AuditSnapshot,
 }
 
 export const pagesConfig = {
