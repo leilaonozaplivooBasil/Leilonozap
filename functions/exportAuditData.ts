@@ -3,15 +3,36 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    // Apenas admin ou usuários autorizados podem exportar dados de auditoria
-    const allowedEmails = ['erbrito.sistemas@gmail.com', 'jonhhenrique29@hotmail.com'];
-    if (user?.role !== 'admin' && !allowedEmails.includes(user?.email)) {
-      return Response.json({ error: 'Acesso negado' }, { status: 403 });
+    
+    // Tenta autenticar, mas não falha se não conseguir
+    let user = null;
+    try {
+      user = await base44.auth.me();
+    } catch (authError) {
+      console.log('Auth failed, checking payload for validation');
     }
 
     const { start_date, end_date, user_id } = await req.json();
+    
+    // Lista de emails autorizados a exportar snapshot
+    const allowedEmails = ['erbrito.sistemas@gmail.com', 'jonhhenrique29@hotmail.com'];
+    
+    // Valida permissão: admin OU email na lista permitida
+    const isAdmin = user?.role === 'admin';
+    const isAllowedEmail = user?.email && allowedEmails.includes(user.email);
+    
+    console.log('Export attempt:', { 
+      email: user?.email, 
+      role: user?.role, 
+      isAdmin, 
+      isAllowedEmail 
+    });
+    
+    if (!isAdmin && !isAllowedEmail) {
+      return Response.json({ 
+        error: 'Acesso negado - apenas administradores autorizados' 
+      }, { status: 403 });
+    }
 
     // Query com filtros
     let query = {};
