@@ -177,13 +177,56 @@ Deno.serve(async (req) => {
 
             if (auctions && auctions.length > 0) {
                 const auction = auctions[0];
-                
+
                 await base44.asServiceRole.entities.Auction.update(auction.id, {
                     order_status: 'paid',
                     payment_confirmed_date: new Date().toISOString()
                 });
 
                 console.log('✅ Leilão atualizado:', auction.id);
+            }
+        }
+
+        // ✅ PASSO 4: Creditar Carteira (se for depósito de carteira)
+        if (asaasPayment.is_wallet_deposit && asaasPayment.wallet_deposit_user_id) {
+            try {
+                const wallets = await base44.asServiceRole.entities.Wallet.filter(
+                    { user_id: asaasPayment.wallet_deposit_user_id },
+                    null,
+                    1
+                );
+
+                let wallet;
+                if (wallets && wallets.length > 0) {
+                    wallet = wallets[0];
+                    // Atualizar saldo existente
+                    const newBalance = (wallet.balance || 0) + asaasPayment.value;
+                    await base44.asServiceRole.entities.Wallet.update(wallet.id, {
+                        balance: newBalance
+                    });
+                    console.log('✅ Carteira creditada:', asaasPayment.wallet_deposit_user_id, 'Novo saldo:', newBalance);
+                } else {
+                    // Criar nova carteira
+                    await base44.asServiceRole.entities.Wallet.create({
+                        user_id: asaasPayment.wallet_deposit_user_id,
+                        balance: asaasPayment.value
+                    });
+                    console.log('✅ Carteira criada e creditada:', asaasPayment.wallet_deposit_user_id, 'Saldo:', asaasPayment.value);
+                }
+
+                // Registrar transação de depósito
+                await base44.asServiceRole.entities.WalletTransaction.create({
+                    user_id: asaasPayment.wallet_deposit_user_id,
+                    type: 'deposit',
+                    direction: 'credit',
+                    amount: asaasPayment.value,
+                    status: 'confirmed',
+                    description: `Depósito via ${asaasPayment.billing_type} - ${paymentId}`
+                });
+                console.log('✅ Transação de depósito registrada');
+            } catch (walletErr) {
+                console.error('❌ Erro ao creditar carteira:', walletErr.message);
+                // Não falha o webhook inteiro, apenas registra o erro
             }
         }
 
