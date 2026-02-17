@@ -874,6 +874,13 @@ export default function AuctionRoom() {
       return;
     }
 
+    // 🆕 VERIFICA SALDO ANTES DE DAR LANCE
+    if (userWallet && userWallet.balance < amount) {
+      console.warn(`⚠️ Saldo insuficiente: ${userWallet.balance} < ${amount}`);
+      setShowLowBalanceModal(true);
+      return;
+    }
+
     if (isSubmittingRef.current || isSubmittingBid) {
       return;
     }
