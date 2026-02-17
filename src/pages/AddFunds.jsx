@@ -451,21 +451,24 @@ export default function AddFunds() {
                     <CardTitle className="text-white text-base font-bold">Últimos Depósitos</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 relative">
-                  {recentTransactions.map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-700 last:border-0">
-                      <div>
-                        <p className="text-white text-sm font-semibold">
-                          R$ {tx.amount.toFixed(2)}
-                        </p>
-                        <p className="text-gray-400 text-xs">
-                          {new Date(tx.created_date).toLocaleDateString('pt-BR')}
-                        </p>
+                    {recentTransactions.map((tx) => (
+                      <div key={tx.id} className="flex items-center justify-between p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10 hover:border-purple-400/30 transition-all">
+                        <div>
+                          <p className="text-white text-base font-bold">
+                            R$ {tx.amount.toFixed(2)}
+                          </p>
+                          <p className="text-gray-400 text-xs mt-1">
+                            {new Date(tx.created_date).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                        <div className="relative">
+                          <div className="absolute inset-0 bg-green-500/20 rounded-full blur-md"></div>
+                          <Badge className="relative backdrop-blur-sm bg-green-500/20 text-green-400 border-green-500/30 font-semibold">
+                            Confirmado
+                          </Badge>
+                        </div>
                       </div>
-                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                        Confirmado
-                      </Badge>
-                    </div>
-                  ))}
+                    ))}
                 </CardContent>
               </Card>
             )}
