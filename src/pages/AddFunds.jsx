@@ -89,8 +89,8 @@ export default function AddFunds() {
   };
 
   const handleProceedToPayment = async () => {
-    if (!selectedAmount || selectedAmount < 30) {
-      alert("O valor mínimo para depósito é R$ 30,00");
+    if (!selectedAmount || selectedAmount < 1) {
+      alert("O valor mínimo para depósito é R$ 1,00");
       return;
     }
 
@@ -266,7 +266,7 @@ export default function AddFunds() {
                     <div className="flex-1">
                       <Input
                         type="text"
-                        placeholder="Digite o valor (mínimo R$ 30)"
+                        placeholder="Digite o valor (mínimo R$ 1)"
                         value={customAmount}
                         onChange={handleCustomAmountChange}
                         className="backdrop-blur-sm bg-black/30 border-white/20 text-white text-lg h-16 rounded-2xl focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all placeholder:text-gray-500"
@@ -274,7 +274,7 @@ export default function AddFunds() {
                     </div>
                     <Button
                       onClick={handleProceedToPayment}
-                      disabled={!selectedAmount || selectedAmount < 30 || processing}
+                      disabled={!selectedAmount || selectedAmount < 1 || processing}
                       className="relative group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold px-10 h-16 text-lg rounded-2xl shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-0"
                     >
                       <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -293,7 +293,7 @@ export default function AddFunds() {
                   </div>
 
                   {/* Resumo do que será creditado */}
-                  {selectedAmount && selectedAmount >= 30 && (
+                  {selectedAmount && selectedAmount >= 1 && (
                     <div className="relative group/summary overflow-hidden mt-4">
                       <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl blur-sm group-hover/summary:blur-md transition-all"></div>
                       <div className="relative p-4 backdrop-blur-xl bg-gradient-to-br from-green-500/5 to-emerald-500/5 border border-green-400/20 rounded-2xl">
@@ -347,7 +347,7 @@ export default function AddFunds() {
 
                   <div className="flex items-center gap-1.5 text-gray-400 text-xs backdrop-blur-sm bg-black/20 p-2 rounded-lg border border-white/5 mt-3">
                     <Shield className="w-3 h-3 flex-shrink-0" />
-                    <span>Mín: R$ 30 | Máx: R$ 10.000</span>
+                    <span>Mín: R$ 1 | Máx: R$ 10.000</span>
                   </div>
                 </CardContent>
               </Card>
