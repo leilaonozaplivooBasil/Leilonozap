@@ -1063,34 +1063,39 @@ export default function Layout({ children, currentPageName }) {
           animation: pulse-subtle 2s ease-in-out infinite;
         }
 
-        /* Scrollbar minimalista global */
+        /* Scrollbar minimalista global - fundo 100% transparente */
+        * {
+          scrollbar-color: #10b981 transparent !important;
+          scrollbar-width: thin;
+        }
+        
         *::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
+          width: 8px;
+          height: 8px;
+          background: transparent !important;
         }
         
         *::-webkit-scrollbar-track {
           background: transparent !important;
-          -webkit-appearance: none;
+          border: none !important;
+          box-shadow: none !important;
         }
         
         *::-webkit-scrollbar-thumb {
           background: linear-gradient(to bottom, #10b981, #059669) !important;
-          border-radius: 3px;
-          opacity: 0.3;
-          border: none;
-          -webkit-appearance: none;
+          border-radius: 4px;
+          min-height: 40px;
+          border: 2px solid transparent !important;
+          background-clip: content-box !important;
         }
         
         *::-webkit-scrollbar-thumb:hover {
-          opacity: 0.6;
           background: linear-gradient(to bottom, #059669, #047857) !important;
+          background-clip: content-box !important;
         }
         
-        /* Firefox */
-        * {
-          scrollbar-color: #10b981 transparent !important;
-          scrollbar-width: thin;
+        *::-webkit-scrollbar-corner {
+          background: transparent !important;
         }
       `}</style>
     </ErrorBoundary>
