@@ -23,6 +23,11 @@ import { toast } from 'sonner';
 const Auction = base44.entities.Auction;
 
 export default function AuctionCheckoutModern() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isWalletDeposit, setIsWalletDeposit] = useState(false);
+  const [depositAmount, setDepositAmount] = useState(0);
+  
   const [auction, setAuction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
@@ -42,7 +47,6 @@ export default function AuctionCheckoutModern() {
   const [pixData, setPixData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState('info'); // 'info', 'payment', 'success'
-  const navigate = useNavigate();
 
   const searchCep = async (cep) => {
     const cleanCep = cep.replace(/\D/g, '');
