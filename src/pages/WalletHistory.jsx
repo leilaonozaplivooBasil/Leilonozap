@@ -224,7 +224,7 @@ export default function WalletHistory() {
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/30 to-emerald-500/30 flex items-center justify-center mb-4 border border-green-400/30">
                   <CreditCard className="w-6 h-6 text-green-400" />
                 </div>
-                <p className="text-cyan-300/70 text-sm font-light uppercase tracking-widest">Adicionar Fundos</p>
+                <p className="text-green-300/70 text-sm font-light uppercase tracking-widest">Adicionar Fundos</p>
               </div>
               <Button
                 onClick={() => navigate(createPageUrl("AddFunds"))}
