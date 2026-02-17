@@ -199,7 +199,7 @@ Deno.serve(async (req) => {
             billing_type: billing_type,
             value: amount,
             status: paymentStatus,
-            external_reference: externalReference,
+            external_reference: externalReference || paymentData.id, // Usa ID de pagamento se não houver referência
             catalog_sale_id: catalog_sale_id || null,
             auction_id: auction_id || null,
             buyer_id: catalog_sale_id ? (await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }))[0]?.buyer_id : null,
