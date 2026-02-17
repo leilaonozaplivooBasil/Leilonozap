@@ -287,8 +287,7 @@ export default function AddFunds() {
                     Outro Valor
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4 relative">
-                <div className="space-y-4">
+                <CardContent className="relative">
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <Input
