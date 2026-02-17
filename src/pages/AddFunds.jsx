@@ -321,13 +321,17 @@ export default function AddFunds() {
 
                   {/* Resumo do que será creditado */}
                   {selectedAmount && selectedAmount >= 30 && (
-                    <div className="p-4 bg-gradient-to-br from-green-800/30 to-emerald-900/30 border border-green-500/30 rounded-lg">
-                      <div className="flex items-center gap-2 mb-3">
-                        <Wallet className="w-4 h-4 text-green-400" />
-                        <span className="text-white font-semibold text-sm">Será Creditado</span>
-                      </div>
-                      
-                      <div className="space-y-2">
+                    <div className="relative group/summary overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-2xl blur-md group-hover/summary:blur-lg transition-all"></div>
+                      <div className="relative p-6 backdrop-blur-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-400/30 rounded-2xl">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-green-500/20 rounded-xl border border-green-400/30">
+                            <Wallet className="w-5 h-5 text-green-400" />
+                          </div>
+                          <span className="text-white font-bold text-base">Será Creditado</span>
+                        </div>
+                        
+                        <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <span className="text-gray-400 text-sm">Valor do depósito:</span>
                           <span className="text-white font-semibold">R$ {selectedAmount.toFixed(2)}</span>
