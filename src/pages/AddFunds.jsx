@@ -128,27 +128,37 @@ export default function AddFunds() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-green-900/20 via-gray-900 to-black py-12 px-4 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDMpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20"></div>
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-green-500/10 rounded-full blur-[120px] animate-pulse"></div>
+      <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px] animate-pulse delay-1000"></div>
+      
+      <div className="max-w-7xl mx-auto relative z-10">
         
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-12">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="text-gray-400 hover:text-white mb-4"
+            className="text-gray-400 hover:text-white mb-6 backdrop-blur-sm bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
 
-          <div className="flex items-center gap-4 mb-2">
-            <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl">
-              <Wallet className="w-8 h-8 text-white" />
+          <div className="flex items-center gap-6">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl blur-xl group-hover:blur-2xl transition-all opacity-60"></div>
+              <div className="relative p-5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl shadow-2xl">
+                <Wallet className="w-10 h-10 text-white" />
+              </div>
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-white">Adicionar Saldo</h1>
-              <p className="text-gray-400">Escolha o valor e recarregue sua carteira</p>
+              <h1 className="text-4xl font-bold text-white mb-2 bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                Adicionar Saldo
+              </h1>
+              <p className="text-gray-400 text-lg">Recarregue sua carteira de forma rápida e segura</p>
             </div>
           </div>
         </div>
