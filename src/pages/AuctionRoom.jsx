@@ -1788,6 +1788,18 @@ export default function AuctionRoom() {
 
       <ComparaiButton auction={auction} />
 
+      {/* 🆕 Modal de Saldo Baixo */}
+      <LowBalanceModal
+        isOpen={showLowBalanceModal}
+        currentBalance={userWallet?.balance || 0}
+        requiredAmount={currentPrice + auction?.increment || 0}
+        onWatchAsSpectator={() => {
+          setShowLowBalanceModal(false);
+          setIsSpectatorMode(true);
+        }}
+        onClose={() => setShowLowBalanceModal(false)}
+      />
+
       <style>{`
         .auction-page-container { display: flex; flex-direction: column; height: 100vh; background-color: #111827; overflow: hidden; }
         
