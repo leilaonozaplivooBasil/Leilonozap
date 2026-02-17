@@ -24,16 +24,35 @@ export default function WalletHistory() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadUser = () => {
-      const savedUserJSON = localStorage.getItem('currentUser');
-      const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-      
-      if (savedUserJSON && isLoggedIn) {
-        const user = JSON.parse(savedUserJSON);
-        setCurrentUser(user);
-        loadTransactions(user.id);
-      } else {
-        toast.error("Faça login para continuar");
+    const loadUser = async () => {
+      try {
+        const savedUserJSON = localStorage.getItem('currentUser');
+        const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+        
+        if (savedUserJSON && isLoggedIn) {
+          let user = JSON.parse(savedUserJSON);
+          
+          // Valida se o ID é legítimo (não é um índice de React)
+          if (!user.id || user.id.includes('index-')) {
+            console.warn("⚠️ [WalletHistory] ID inválido no cache, buscando do banco...");
+            // Busca o usuário real pelo email
+            if (user.email) {
+              const users = await base44.entities.AppUser.filter({ email: user.email });
+              if (users.length > 0) {
+                user = users[0];
+                localStorage.setItem('currentUser', JSON.stringify(user));
+              }
+            }
+          }
+          
+          setCurrentUser(user);
+          loadTransactions(user.id);
+        } else {
+          toast.error("Faça login para continuar");
+          navigate(createPageUrl("Home"));
+        }
+      } catch (error) {
+        console.error("Erro ao carregar usuário:", error);
         navigate(createPageUrl("Home"));
       }
     };
