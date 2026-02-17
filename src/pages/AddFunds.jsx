@@ -239,80 +239,83 @@ export default function AddFunds() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="flex-1">
-                    <Input
-                      type="text"
-                      placeholder="Digite o valor (mínimo R$ 30)"
-                      value={customAmount}
-                      onChange={handleCustomAmountChange}
-                      className="bg-gray-900 border-gray-600 text-white text-lg h-14"
-                    />
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="flex-1">
+                      <Input
+                        type="text"
+                        placeholder="Digite o valor (mínimo R$ 30)"
+                        value={customAmount}
+                        onChange={handleCustomAmountChange}
+                        className="bg-gray-900 border-gray-600 text-white text-lg h-14"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleProceedToPayment}
+                      disabled={!selectedAmount || selectedAmount < 30 || processing}
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold px-8 h-14 text-lg"
+                    >
+                      {processing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Processando
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5 mr-2" />
+                          Pagar
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <Button
-                    onClick={handleProceedToPayment}
-                    disabled={!selectedAmount || selectedAmount < 30 || processing}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold px-8 h-14 text-lg"
-                  >
-                    {processing ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Processando
-                      </>
-                    ) : (
-                      <>
-                        <Zap className="w-5 h-5 mr-2" />
-                        Pagar
-                      </>
-                    )}
-                  </Button>
+
+                  {/* Resumo do que será creditado */}
+                  {selectedAmount && selectedAmount >= 30 && (
+                    <div className="p-4 bg-gradient-to-br from-green-800/30 to-emerald-900/30 border border-green-500/30 rounded-lg">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Wallet className="w-4 h-4 text-green-400" />
+                        <span className="text-white font-semibold text-sm">Será Creditado</span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400 text-sm">Valor do depósito:</span>
+                          <span className="text-white font-semibold">R$ {selectedAmount.toFixed(2)}</span>
+                        </div>
+                        
+                        {(() => {
+                          const matchingPkg = packages.find(p => p.amount === selectedAmount);
+                          const bonus = matchingPkg?.bonus_percentage || 0;
+                          const bonusAmount = bonus > 0 ? (selectedAmount * (bonus / 100)) : 0;
+                          const totalAmount = selectedAmount + bonusAmount;
+                          
+                          return (
+                            <>
+                              {bonus > 0 && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-green-400 text-sm flex items-center gap-1">
+                                    <Gift className="w-3 h-3" />
+                                    Bônus ({bonus}%):
+                                  </span>
+                                  <span className="text-green-400 font-semibold">+ R$ {bonusAmount.toFixed(2)}</span>
+                                </div>
+                              )}
+                              
+                              <div className="pt-2 border-t border-gray-600 flex items-center justify-between">
+                                <span className="text-white font-bold">Total na carteira:</span>
+                                <span className="text-green-400 font-bold text-lg">R$ {totalAmount.toFixed(2)}</span>
+                              </div>
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
                 </div>
+
                 <p className="text-gray-400 text-xs">
                   Valor mínimo: R$ 30,00 | Valor máximo: R$ 10.000,00
                 </p>
-
-                {/* Resumo do que será creditado */}
-                {selectedAmount && selectedAmount >= 30 && (
-                  <div className="mt-4 p-4 bg-gradient-to-br from-green-800/30 to-emerald-900/30 border border-green-500/30 rounded-lg">
-                    <div className="flex items-center gap-2 mb-3">
-                      <Wallet className="w-4 h-4 text-green-400" />
-                      <span className="text-white font-semibold text-sm">Será Creditado</span>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400 text-sm">Valor do depósito:</span>
-                        <span className="text-white font-semibold">R$ {selectedAmount.toFixed(2)}</span>
-                      </div>
-                      
-                      {(() => {
-                        const matchingPkg = packages.find(p => p.amount === selectedAmount);
-                        const bonus = matchingPkg?.bonus_percentage || 0;
-                        const bonusAmount = bonus > 0 ? (selectedAmount * (bonus / 100)) : 0;
-                        const totalAmount = selectedAmount + bonusAmount;
-                        
-                        return (
-                          <>
-                            {bonus > 0 && (
-                              <div className="flex items-center justify-between">
-                                <span className="text-green-400 text-sm flex items-center gap-1">
-                                  <Gift className="w-3 h-3" />
-                                  Bônus ({bonus}%):
-                                </span>
-                                <span className="text-green-400 font-semibold">+ R$ {bonusAmount.toFixed(2)}</span>
-                              </div>
-                            )}
-                            
-                            <div className="pt-2 border-t border-gray-600 flex items-center justify-between">
-                              <span className="text-white font-bold">Total na carteira:</span>
-                              <span className="text-green-400 font-bold text-lg">R$ {totalAmount.toFixed(2)}</span>
-                            </div>
-                          </>
-                        );
-                      })()}
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
 
