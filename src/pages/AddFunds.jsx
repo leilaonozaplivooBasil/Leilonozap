@@ -95,28 +95,7 @@ export default function AddFunds() {
     }
 
     setProcessing(true);
-
-    try {
-      // Criar pagamento via ASAAS
-      const response = await base44.functions.invoke('createAsaasPayment', {
-        user_id: user.id,
-        amount: selectedAmount,
-        description: `Depósito de R$ ${selectedAmount.toFixed(2)} na carteira`,
-        payment_type: "wallet_deposit"
-      });
-
-      if (response.data.success && response.data.payment) {
-        // Redirecionar para página de pagamento ou mostrar QR code
-        window.location.href = response.data.payment.invoiceUrl || response.data.payment.bankSlipUrl;
-      } else {
-        alert("Erro ao gerar pagamento. Tente novamente.");
-      }
-    } catch (error) {
-      console.error("Erro ao processar pagamento:", error);
-      alert("Erro ao processar pagamento. Tente novamente.");
-    } finally {
-      setProcessing(false);
-    }
+    navigate(createPageUrl("AuctionCheckoutModern"));
   };
 
   if (loading) {

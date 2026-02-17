@@ -55,6 +55,7 @@ import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import AmbienteDeTeste from './pages/AmbienteDeTeste';
 import ArquitetoIA from './pages/ArquitetoIA';
+import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
@@ -126,7 +127,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
 import __Layout from './Layout.jsx';
 
 
@@ -139,6 +139,7 @@ export const PAGES = {
     "AdminWithdrawals": AdminWithdrawals,
     "AmbienteDeTeste": AmbienteDeTeste,
     "ArquitetoIA": ArquitetoIA,
+    "AuctionCheckoutModern": AuctionCheckoutModern,
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
     "AuctionRoom": AuctionRoom,
@@ -210,7 +211,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "AuctionCheckoutModern": AuctionCheckoutModern,
 }
 
 export const pagesConfig = {
