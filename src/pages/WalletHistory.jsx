@@ -179,8 +179,8 @@ export default function WalletHistory() {
         {/* Grid de Saldos Futurístico */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           {/* Saldo Principal */}
-          <Card className="md:col-span-2 border-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-blue-500/10"></div>
+          <Card className="md:col-span-2 border-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl shadow-lg overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5"></div>
             <CardContent className="p-8 relative z-10">
               <div className="flex items-start justify-between mb-8">
                 <div>
