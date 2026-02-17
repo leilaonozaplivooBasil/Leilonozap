@@ -31,9 +31,9 @@ const statusConfigSaiDeBaixo = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-100 text-red-700 border-red-300" },
 };
 
-const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => {
+const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
     const statusConfig = isSaiDeBaixo ? statusConfigSaiDeBaixo : statusConfigNozap;
-    const config = statusConfig[auction.order_status] || statusConfig.awaiting_payment;
+    const config = statusConfig[auction.order_status] || statusConfig.paid;
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
 
     return (
@@ -74,29 +74,15 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
                     <p className="text-green-400 text-xl font-black">R$ {auction.current_price.toFixed(2)}</p>
                 </div>
 
-                {/* Botões de Ação - COMPACTOS */}
-                <div className="flex flex-col gap-2">
-                    {auction.order_status === 'awaiting_payment' && (
-                        <Button 
-                            onClick={() => onPayClick(auction)}
-                            size="sm"
-                            className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300"
-                        >
-                            <CreditCard className="w-3.5 h-3.5 mr-1.5" />
-                            Confirmar Pedido
-                        </Button>
-                    )}
-
-                    <Button 
-                        onClick={() => onTrackClick(auction)}
-                        variant="outline"
-                        size="sm"
-                        className="w-full bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-600 transition-all duration-300"
-                    >
-                        <Eye className="w-3.5 h-3.5 mr-1.5" />
-                        Acompanhar Pedido
-                    </Button>
-                </div>
+                {/* Botão de Ação - Apenas Acompanhar */}
+                <Button 
+                    onClick={() => onTrackClick(auction)}
+                    size="sm"
+                    className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300"
+                >
+                    <Eye className="w-3.5 h-3.5 mr-1.5" />
+                    Acompanhar Pedido
+                </Button>
             </CardContent>
         </Card>
     );
