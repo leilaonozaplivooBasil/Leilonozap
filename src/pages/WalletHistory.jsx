@@ -325,28 +325,28 @@ export default function WalletHistory() {
                       )}
                     </div>
                     {transactions.length > ITEMS_PER_PAGE && (
-                       <div className="flex items-center justify-between mt-8 pt-6 border-t border-cyan-400/20">
-                         <Button
-                           onClick={handlePreviousPage}
-                           disabled={currentPage.overview === 0}
-                           variant="outline"
-                           className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                         >
-                           ← Anterior
-                         </Button>
-                         <span className="text-cyan-300/60 text-sm font-light">
-                           Página {currentPage.overview + 1} de {getTotalPages(transactions)}
-                         </span>
-                         <Button
-                           onClick={handleNextPage}
-                           disabled={currentPage.overview >= getTotalPages(transactions) - 1}
-                           variant="outline"
-                           className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                         >
-                           Próxima →
-                         </Button>
-                       </div>
-                     )}
+                       <div className="flex items-center justify-between mt-8 pt-6 border-t border-green-400/20">
+                          <Button
+                            onClick={handlePreviousPage}
+                            disabled={currentPage.overview === 0}
+                            variant="outline"
+                            className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          >
+                            ← Anterior
+                          </Button>
+                          <span className="text-green-300/60 text-sm font-light">
+                            Página {currentPage.overview + 1} de {getTotalPages(transactions)}
+                          </span>
+                          <Button
+                            onClick={handleNextPage}
+                            disabled={currentPage.overview >= getTotalPages(transactions) - 1}
+                            variant="outline"
+                            className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                          >
+                            Próxima →
+                          </Button>
+                        </div>
+                      )}
                   </div>
                 )}
 
