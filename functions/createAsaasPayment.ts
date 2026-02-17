@@ -110,11 +110,16 @@ Deno.serve(async (req) => {
         };
 
         if (billing_type === 'CREDIT_CARD' && card_data) {
+            // Validação de cartão obrigatória
+            if (!card_data.holderName || !card_data.number || !card_data.expiryMonth || !card_data.expiryYear || !card_data.ccv) {
+                return Response.json({ error: 'Dados do cartão incompletos' }, { status: 400 });
+            }
+
             paymentPayload.creditCard = {
                 holderName: card_data.holderName,
                 number: card_data.number,
-                expiryMonth: String(card_data.expiryMonth).padStart(2, '0'),
-                expiryYear: String(card_data.expiryYear),
+                expiryMonth: parseInt(card_data.expiryMonth),
+                expiryYear: parseInt(card_data.expiryYear),
                 ccv: card_data.ccv
             };
 
@@ -123,13 +128,15 @@ Deno.serve(async (req) => {
                 email: buyer_email,
                 cpfCnpj: cleanCpf,
                 phone: cleanPhone,
-                postalCode: card_data.address?.zip_code || addressZip?.replace(/\D/g, ''),
-                addressNumber: card_data.address?.number || addressNumber,
-                addressComplement: card_data.address?.complement || addressComplement || '',
-                street: card_data.address?.street || addressStreet,
-                city: card_data.address?.city || addressCity,
-                state: card_data.address?.state || addressState
+                postalCode: card_data.address?.zip_code || '',
+                addressNumber: card_data.address?.number || '',
+                addressComplement: card_data.address?.complement || '',
+                street: card_data.address?.street || '',
+                city: card_data.address?.city || '',
+                state: card_data.address?.state || ''
             };
+
+            paymentPayload.installmentCount = 1;
         }
 
         // 🛡️ VALIDAÇÃO RIGOROSA PRÉ-ENVIO
