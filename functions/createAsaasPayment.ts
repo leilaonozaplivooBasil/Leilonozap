@@ -54,42 +54,54 @@ Deno.serve(async (req) => {
         console.log('📋 Buscando/criando cliente...');
         
         let customerId = null;
-        const searchRes = await fetch(
-            `https://api.asaas.com/v3/customers?cpfCnpj=${cleanCpf}`,
-            {
-                headers: {
-                    'access_token': apiKey,
-                    'Content-Type': 'application/json'
+        try {
+            const searchRes = await Promise.race([
+                fetch(`https://api.asaas.com/v3/customers?cpfCnpj=${cleanCpf}`, {
+                    headers: {
+                        'access_token': apiKey,
+                        'Content-Type': 'application/json'
+                    }
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Search timeout')), 10000))
+            ]);
+
+            const searchData = await searchRes.json();
+            if (searchData?.data && Array.isArray(searchData.data) && searchData.data.length > 0) {
+                customerId = searchData.data[0].id;
+                console.log('✅ Cliente existente:', customerId);
+            } else {
+                const createRes = await Promise.race([
+                    fetch('https://api.asaas.com/v3/customers', {
+                        method: 'POST',
+                        headers: {
+                            'access_token': apiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: buyer_name,
+                            email: buyer_email,
+                            cpfCnpj: cleanCpf,
+                            mobilePhone: cleanPhone
+                        })
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Create customer timeout')), 10000))
+                ]);
+
+                const createData = await createRes.json();
+                if (createData?.errors) {
+                    console.error('❌ Erro ao criar cliente:', createData.errors);
+                    return Response.json({ error: 'Erro ao criar cliente', details: createData.errors }, { status: 400 });
                 }
+                if (!createData?.id) {
+                    console.error('❌ Resposta inválida ao criar cliente:', createData);
+                    return Response.json({ error: 'Resposta inválida da API Asaas ao criar cliente' }, { status: 500 });
+                }
+                customerId = createData.id;
+                console.log('✅ Cliente criado:', customerId);
             }
-        );
-
-        const searchData = await searchRes.json();
-        if (searchData.data && searchData.data.length > 0) {
-            customerId = searchData.data[0].id;
-            console.log('✅ Cliente existente:', customerId);
-        } else {
-            const createRes = await fetch('https://api.asaas.com/v3/customers', {
-                method: 'POST',
-                headers: {
-                    'access_token': apiKey,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    name: buyer_name,
-                    email: buyer_email,
-                    cpfCnpj: cleanCpf,
-                    mobilePhone: cleanPhone
-                })
-            });
-
-            const createData = await createRes.json();
-            if (createData.errors) {
-                console.error('❌ Erro ao criar cliente:', createData.errors);
-                return Response.json({ error: 'Erro ao criar cliente', details: createData.errors }, { status: 400 });
-            }
-            customerId = createData.id;
-            console.log('✅ Cliente criado:', customerId);
+        } catch (customerError) {
+            console.error('❌ Erro ao buscar/criar cliente:', customerError.message);
+            return Response.json({ error: `Erro ao processar cliente: ${customerError.message}` }, { status: 500 });
         }
 
         // 2️⃣ CRIAR COBRANÇA
