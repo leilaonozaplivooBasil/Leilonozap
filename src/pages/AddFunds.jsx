@@ -332,36 +332,41 @@ export default function AddFunds() {
                         </div>
                         
                         <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 text-sm">Valor do depósito:</span>
-                          <span className="text-white font-semibold">R$ {selectedAmount.toFixed(2)}</span>
-                        </div>
-                        
-                        {(() => {
-                          const matchingPkg = packages.find(p => p.amount === selectedAmount);
-                          const bonus = matchingPkg?.bonus_percentage || 0;
-                          const bonusAmount = bonus > 0 ? (selectedAmount * (bonus / 100)) : 0;
-                          const totalAmount = selectedAmount + bonusAmount;
+                          <div className="flex items-center justify-between p-3 backdrop-blur-sm bg-black/20 rounded-xl">
+                            <span className="text-gray-300 text-sm font-medium">Valor do depósito:</span>
+                            <span className="text-white font-bold text-lg">R$ {selectedAmount.toFixed(2)}</span>
+                          </div>
                           
-                          return (
-                            <>
-                              {bonus > 0 && (
-                                <div className="flex items-center justify-between">
-                                  <span className="text-green-400 text-sm flex items-center gap-1">
-                                    <Gift className="w-3 h-3" />
-                                    Bônus ({bonus}%):
-                                  </span>
-                                  <span className="text-green-400 font-semibold">+ R$ {bonusAmount.toFixed(2)}</span>
+                          {(() => {
+                            const matchingPkg = packages.find(p => p.amount === selectedAmount);
+                            const bonus = matchingPkg?.bonus_percentage || 0;
+                            const bonusAmount = bonus > 0 ? (selectedAmount * (bonus / 100)) : 0;
+                            const totalAmount = selectedAmount + bonusAmount;
+                            
+                            return (
+                              <>
+                                {bonus > 0 && (
+                                  <div className="flex items-center justify-between p-3 backdrop-blur-sm bg-yellow-500/10 rounded-xl border border-yellow-400/20">
+                                    <span className="text-yellow-300 text-sm flex items-center gap-2 font-medium">
+                                      <Gift className="w-4 h-4" />
+                                      Bônus ({bonus}%)
+                                    </span>
+                                    <span className="text-yellow-300 font-bold text-lg">+ R$ {bonusAmount.toFixed(2)}</span>
+                                  </div>
+                                )}
+                                
+                                <div className="relative mt-2 overflow-hidden">
+                                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl"></div>
+                                  <div className="relative p-4 backdrop-blur-sm bg-black/30 rounded-xl border border-green-400/30 flex items-center justify-between">
+                                    <span className="text-white font-bold text-base">Total na carteira:</span>
+                                    <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text font-bold text-2xl">
+                                      R$ {totalAmount.toFixed(2)}
+                                    </span>
+                                  </div>
                                 </div>
-                              )}
-                              
-                              <div className="pt-2 border-t border-gray-600 flex items-center justify-between">
-                                <span className="text-white font-bold">Total na carteira:</span>
-                                <span className="text-green-400 font-bold text-lg">R$ {totalAmount.toFixed(2)}</span>
-                              </div>
-                            </>
-                          );
-                        })()}
+                              </>
+                            );
+                          })()}
                       </div>
                     </div>
                   )}
