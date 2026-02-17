@@ -113,22 +113,17 @@ Deno.serve(async (req) => {
             paymentPayload.creditCard = {
                 holderName: card_data.holderName,
                 number: card_data.number,
-                expiryMonth: card_data.expiryMonth,
-                expiryYear: card_data.expiryYear,
+                expiryMonth: String(card_data.expiryMonth).padStart(2, '0'),
+                expiryYear: String(card_data.expiryYear),
                 ccv: card_data.ccv
             };
 
-            if (card_data.address) {
-                paymentPayload.creditCardHolderInfo = {
-                    name: buyer_name,
-                    email: buyer_email,
-                    cpfCnpj: cleanCpf,
-                    postalCode: card_data.address.zip_code,
-                    addressNumber: card_data.address.number,
-                    addressComplement: card_data.address.complement || '',
-                    phone: cleanPhone
-                };
-            }
+            paymentPayload.creditCardHolderInfo = {
+                name: buyer_name,
+                email: buyer_email,
+                cpfCnpj: cleanCpf,
+                phone: cleanPhone
+            };
         }
 
         console.log('📤 Enviando ao ASAAS:', JSON.stringify(paymentPayload, null, 2));
