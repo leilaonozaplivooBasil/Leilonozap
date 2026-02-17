@@ -24,22 +24,23 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
 
   return (
     <Card className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20 text-white overflow-hidden flex flex-col hover:border-white/20 hover:shadow-xl hover:shadow-black/30 transition-all duration-300 group">
-      {/* Imagem do Produto - Destaque Principal */}
-      <div className="relative w-full h-48 sm:h-52 overflow-hidden bg-gray-900/50 border-b border-white/5">
-        <img 
-          src={mainImage} 
-          alt={order.product_title} 
-          className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300" 
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      {/* Imagem Quadrada Compacta */}
+      <div className="flex justify-center items-center pt-4 pb-2">
+        <div className="relative w-32 h-32 bg-gray-900/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center group-hover:border-white/20 transition-all">
+          <img 
+            src={mainImage} 
+            alt={order.product_title} 
+            className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" 
+          />
+        </div>
       </div>
 
       {/* Conteúdo */}
       <CardHeader className="flex-col gap-2 p-4 pb-3">
-        <CardTitle className="text-base font-semibold line-clamp-2 text-white group-hover:text-green-300 transition-colors">
+        <CardTitle className="text-base font-semibold line-clamp-2 text-white group-hover:text-green-300 transition-colors text-center">
           {order.product_title}
         </CardTitle>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-gray-400 text-center">
           {new Date(order.created_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: '2-digit' })}
         </p>
       </CardHeader>
