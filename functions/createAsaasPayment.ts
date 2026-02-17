@@ -7,8 +7,6 @@ Deno.serve(async (req) => {
         // ⚠️ REMOVIDO: Validação de auth (frontend já valida)
         // Backend functions podem ser chamadas sem auth quando invocadas via SDK
 
-        const reqData = await req.json();
-        
         const {
             catalog_sale_id,
             auction_id,
@@ -17,11 +15,14 @@ Deno.serve(async (req) => {
             buyer_cpf,
             buyer_phone,
             amount,
-            billing_type = reqData.billingType || 'PIX', // Aceita ambos: billing_type ou billingType
+            billing_type,
             billingType,
             description,
             card_data // Dados do cartão (se CREDIT_CARD)
-        } = reqData;
+        } = await req.json();
+
+        // ✅ Aceita ambos: billing_type (snake_case) ou billingType (camelCase)
+        const finalBillingType = billing_type || billingType || 'PIX';
 
         // Validações
         if (!amount || amount <= 0) {
