@@ -419,7 +419,6 @@ export default function Profile() {
   }
 
   const userStats = [
-    { label: "Pontos", value: currentUser.points || 0, icon: Crown, color: "text-yellow-400" },
     { label: "Lances Dados", value: userBids.length, icon: Zap, color: "text-green-400" },
     { label: "Leilões Vencidos", value: currentUser.won_auctions || 0, icon: Trophy, color: "text-purple-400" }
   ];
