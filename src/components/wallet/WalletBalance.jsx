@@ -71,20 +71,12 @@ export default function WalletBalance({ userId, showActions = true, onBalanceLoa
             <div className="flex flex-col gap-1.5">
               <Button
                 size="sm"
-                onClick={() => navigate(createPageUrl("WalletDeposit"))}
-                className="bg-white/20 hover:bg-white/30 text-white border-0 h-8 text-xs"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Depositar
-              </Button>
-              <Button
-                size="sm"
                 variant="ghost"
                 onClick={() => navigate(createPageUrl("WalletHistory"))}
                 className="text-white hover:bg-white/10 h-8 text-xs"
               >
                 <History className="w-3.5 h-3.5 mr-1.5" />
-                Histórico
+                Carteira
               </Button>
             </div>
           )}
