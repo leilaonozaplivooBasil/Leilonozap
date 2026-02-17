@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
          await base44.asServiceRole.entities.AsaasPayment.create({
               payment_id: paymentData.id,
               customer_id: customerId,
-              billing_type: billing_type,
+              billing_type: finalBillingType,
               value: amount,
               status: paymentStatus,
               external_reference: externalReference || paymentData.id,
