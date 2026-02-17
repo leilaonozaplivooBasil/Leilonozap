@@ -224,8 +224,17 @@ Deno.serve(async (req) => {
                      }
                  }
 
+                 // Estratégia 4: Se não achou, tentar por nome
+                 if (!walletDepositUserId && buyer_name) {
+                     users = await base44.asServiceRole.entities.AppUser.filter({ full_name: buyer_name });
+                     if (users && users.length > 0) {
+                         walletDepositUserId = users[0].id;
+                         console.log('✅ User encontrado por nome:', walletDepositUserId);
+                     }
+                 }
+
                  if (!walletDepositUserId) {
-                     console.warn('⚠️ Não conseguiu encontrar user por email, CPF ou telefone. Webhook tentará resolver depois.');
+                     console.warn('⚠️ Não conseguiu encontrar user por email, CPF, telefone ou nome. Webhook tentará resolver depois.');
                  }
              } catch (e) {
                  console.warn('⚠️ Erro ao buscar user para wallet deposit:', e.message);
