@@ -206,7 +206,7 @@ export default function WalletHistory() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-cyan-300/50 text-xs font-light uppercase tracking-wider">Saídas</p>
+                  <p className="text-green-300/50 text-xs font-light uppercase tracking-wider">Saídas</p>
                   <div className="flex items-center gap-2">
                     <ArrowDownLeft className="w-5 h-5 text-red-400" />
                     <p className="text-2xl font-bold text-red-400">R$ {totalUsed.toFixed(2)}</p>
