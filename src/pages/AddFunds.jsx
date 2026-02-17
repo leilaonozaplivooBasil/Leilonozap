@@ -317,20 +317,20 @@ export default function AddFunds() {
 
                   {/* Resumo do que será creditado */}
                   {selectedAmount && selectedAmount >= 30 && (
-                    <div className="relative group/summary overflow-hidden mt-6">
+                    <div className="relative group/summary overflow-hidden mt-4">
                       <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl blur-sm group-hover/summary:blur-md transition-all"></div>
-                      <div className="relative p-6 backdrop-blur-xl bg-gradient-to-br from-green-500/5 to-emerald-500/5 border border-green-400/20 rounded-2xl">
-                        <div className="flex items-center gap-3 mb-4">
-                          <div className="p-2 bg-green-500/20 rounded-xl border border-green-400/30">
-                            <Wallet className="w-5 h-5 text-green-400" />
+                      <div className="relative p-4 backdrop-blur-xl bg-gradient-to-br from-green-500/5 to-emerald-500/5 border border-green-400/20 rounded-2xl">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="p-1.5 bg-green-500/20 rounded-lg border border-green-400/30">
+                            <Wallet className="w-4 h-4 text-green-400" />
                           </div>
-                          <span className="text-white font-bold text-base">Será Creditado</span>
+                          <span className="text-white font-bold text-sm">Será Creditado</span>
                         </div>
-                        
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 backdrop-blur-sm bg-black/20 rounded-xl">
-                            <span className="text-gray-300 text-sm font-medium">Valor do depósito:</span>
-                            <span className="text-white font-bold text-lg">R$ {selectedAmount.toFixed(2)}</span>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between p-2.5 backdrop-blur-sm bg-black/20 rounded-lg">
+                            <span className="text-gray-300 text-xs font-medium">Valor do depósito:</span>
+                            <span className="text-white font-bold text-base">R$ {selectedAmount.toFixed(2)}</span>
                           </div>
                           
                           {(() => {
@@ -368,9 +368,9 @@ export default function AddFunds() {
                     </div>
                   )}
 
-                  <div className="flex items-center gap-2 text-gray-400 text-xs backdrop-blur-sm bg-black/20 p-3 rounded-xl border border-white/5 mt-4">
-                    <Shield className="w-3 h-3" />
-                    <span>Valor mínimo: R$ 30,00 | Valor máximo: R$ 10.000,00</span>
+                  <div className="flex items-center gap-1.5 text-gray-400 text-xs backdrop-blur-sm bg-black/20 p-2 rounded-lg border border-white/5 mt-3">
+                    <Shield className="w-3 h-3 flex-shrink-0" />
+                    <span>Mín: R$ 30 | Máx: R$ 10.000</span>
                   </div>
                 </CardContent>
               </Card>
