@@ -469,16 +469,20 @@ export default function AddFunds() {
                         </div>
                       </div>
                     ))}
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             )}
 
             {/* Informações de Pagamento */}
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white text-base">Como Funciona?</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-gray-400">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+              <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent"></div>
+                <CardHeader className="relative">
+                  <CardTitle className="text-white text-base font-bold">Como Funciona?</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm relative">
                 <div className="flex items-start gap-2">
                   <span className="text-green-400 font-bold">1.</span>
                   <p>Escolha o valor que deseja adicionar</p>
