@@ -1067,17 +1067,19 @@ export default function Layout({ children, currentPageName }) {
         *::-webkit-scrollbar {
           width: 6px;
           height: 6px;
-          background: transparent;
         }
         
         *::-webkit-scrollbar-track {
           background: transparent !important;
+          -webkit-appearance: none;
         }
         
         *::-webkit-scrollbar-thumb {
           background: linear-gradient(to bottom, #10b981, #059669) !important;
           border-radius: 3px;
           opacity: 0.3;
+          border: none;
+          -webkit-appearance: none;
         }
         
         *::-webkit-scrollbar-thumb:hover {
