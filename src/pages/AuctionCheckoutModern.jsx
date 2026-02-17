@@ -504,7 +504,11 @@ export default function AuctionCheckoutModern() {
                 {/* Produto */}
                 <div className="bg-gradient-to-br from-gray-800/50 to-gray-700/30 rounded-lg p-4 border border-gray-700/50">
                   <div className="space-y-3">
-                    {auction.image_urls && auction.image_urls[0] ? (
+                    {isWalletDeposit ? (
+                      <div className="w-full h-40 bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-lg flex items-center justify-center border border-green-500/30">
+                        <Wallet className="w-12 h-12 text-green-400" />
+                      </div>
+                    ) : auction.image_urls && auction.image_urls[0] ? (
                       <img
                         src={auction.image_urls[0]}
                         alt={auction.title}
@@ -517,10 +521,10 @@ export default function AuctionCheckoutModern() {
                     )}
                     <div>
                       <h4 className="font-semibold text-white line-clamp-2 mb-2">
-                        {auction.title}
+                        {isWalletDeposit ? 'Depósito na Carteira' : auction.title}
                       </h4>
                       <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text">
-                        R$ {auction.current_price.toFixed(2)}
+                        R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}
                       </p>
                     </div>
                   </div>
