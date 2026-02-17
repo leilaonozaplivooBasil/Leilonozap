@@ -228,7 +228,10 @@ export default function MyWinningsPage() {
                             </div>
 
                             {/* Botão de Adicionar */}
-                            <Button className="w-full sm:w-auto bg-white text-green-700 hover:bg-green-50 font-bold px-8 py-6 text-base shadow-xl shadow-black/20 hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                            <Button 
+                                onClick={() => navigate(createPageUrl("WalletDeposit"))}
+                                className="w-full sm:w-auto bg-white text-green-700 hover:bg-green-50 font-bold px-8 py-6 text-base shadow-xl shadow-black/20 hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                            >
                                 <CreditCard className="w-5 h-5 mr-2.5" />
                                 Adicionar Saldo
                             </Button>
