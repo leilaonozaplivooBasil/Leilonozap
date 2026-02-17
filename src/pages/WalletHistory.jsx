@@ -433,8 +433,8 @@ export default function WalletHistory() {
                                 </div>
                                 <div>
                                   <p className="text-white font-semibold">Saldo Utilizado</p>
-                                  <p className="text-cyan-300/60 text-sm font-light">{transaction.description || "Utilização em transação"}</p>
-                                  <div className="flex items-center gap-2 text-cyan-300/40 text-xs mt-1">
+                                  <p className="text-green-300/60 text-sm font-light">{transaction.description || "Utilização em transação"}</p>
+                                  <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
                                     {new Date(transaction.created_date).toLocaleString('pt-BR')}
                                   </div>
