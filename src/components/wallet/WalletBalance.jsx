@@ -64,7 +64,7 @@ export default function WalletBalance({ userId, showActions = true, onBalanceLoa
           <div>
             <div className="flex items-center gap-2 text-white/80 text-sm mb-1">
               <Wallet className="w-4 h-4" />
-              <span>Saldo em Conta</span>
+              <span>Carteira Virtual</span>
             </div>
             <p className="text-2xl font-bold text-white">
               R$ {balance.toFixed(2)}
