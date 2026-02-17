@@ -484,8 +484,8 @@ export default function LojistaDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             {/* Total Vendido */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
-              <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 hover:border-green-400/30 transition-all shadow-2xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all animate-liquid-glow"></div>
+              <Card className="relative backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 border border-green-400/30 hover:border-green-400/50 transition-all shadow-2xl overflow-hidden liquid-glass-card">
                 <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent"></div>
                 <CardContent className="relative pt-8 pb-6">
                   <div className="flex items-center justify-between">
