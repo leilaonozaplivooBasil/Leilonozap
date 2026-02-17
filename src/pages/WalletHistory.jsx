@@ -267,10 +267,10 @@ export default function WalletHistory() {
               <button
                 onClick={() => handleTabChange("usage")}
                 className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
-                  activeTab === "usage"
-                    ? "text-red-300 border-red-400"
-                    : "text-cyan-200/50 hover:text-cyan-300 border-transparent"
-                }`}
+                   activeTab === "usage"
+                     ? "text-red-300 border-red-400"
+                     : "text-green-200/50 hover:text-green-300 border-transparent"
+                 }`}
               >
                 <TrendingDown className="w-5 h-5 inline mr-2" />
                 Saídas <span className="ml-1 text-xs">({walletUsage.length})</span>
