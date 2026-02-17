@@ -337,8 +337,8 @@ export default function WalletHistory() {
                               <div className="flex items-center gap-4">
                                 <TrendingUp className="w-5 h-5 text-green-500" />
                                 <div>
-                                  <p className="text-white font-semibold">Depósito Realizado</p>
-                                  <p className="text-gray-400 text-sm">{transaction.description || "Depósito de saldo"}</p>
+                                  <p className="text-white font-semibold">Depósito</p>
+                                  <p className="text-gray-400 text-sm">{transaction.description || "R$ 0.00"}</p>
                                   <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
                                 </div>
                               </div>
