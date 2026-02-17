@@ -467,7 +467,7 @@ export default function Profile() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Info */}
           <div className="lg:col-span-2">
-            <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800 border border-gray-700'}>
+            <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className={`flex items-center gap-2 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
                   <UserIcon className="w-5 h-5" />
