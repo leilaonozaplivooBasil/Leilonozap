@@ -169,7 +169,85 @@ export default function AuctionCheckoutModern() {
   };
 
   const handleCreatePayment = async () => {
-    toast.info('Integração de pagamento em desenvolvimento...');
+    // Validação básica
+    if (!firstName.trim() || !email.trim() || !phone.trim() || !cpf.trim()) {
+      toast.error('Preencha todos os dados pessoais');
+      return;
+    }
+
+    if (!addressStreet.trim() || !addressNumber.trim() || !addressCity.trim() || !addressState.trim() || !addressZip.trim()) {
+      toast.error('Preencha o endereço completo');
+      return;
+    }
+
+    if (paymentType === 'CREDIT_CARD') {
+      const cardClean = cardNumber.replace(/\D/g, '');
+      if (cardClean.length !== 16) {
+        toast.error('Cartão deve ter 16 dígitos');
+        return;
+      }
+      if (!cardMonth || !cardYear || !cardCvv.trim() || !cardHolder.trim()) {
+        toast.error('Preencha todos os dados do cartão');
+        return;
+      }
+    }
+
+    if (!auction) {
+      toast.error('Pedido não encontrado');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const amount = isWalletDeposit ? depositAmount : auction.current_price;
+
+      const payload = {
+        auction_id: !isWalletDeposit ? auction.id : null,
+        buyer_name: firstName.trim(),
+        buyer_email: email.trim(),
+        buyer_cpf: cpf.replace(/\D/g, ''),
+        buyer_phone: phone.replace(/\D/g, ''),
+        amount: Number(amount),
+        billing_type: paymentType,
+        description: isWalletDeposit ? 'Depósito na carteira' : `Arremate - ${auction.title}`
+      };
+
+      if (paymentType === 'CREDIT_CARD') {
+        payload.card_data = {
+          holderName: cardHolder.trim(),
+          number: cardNumber.replace(/\D/g, ''),
+          expiryMonth: parseInt(cardMonth),
+          expiryYear: parseInt(cardYear),
+          ccv: cardCvv.replace(/\D/g, ''),
+          address: {
+            zip_code: addressZip.replace(/\D/g, ''),
+            number: addressNumber,
+            complement: addressComplement
+          }
+        };
+      }
+
+      console.log('📤 Enviando ao Asaas:', payload);
+
+      const response = await base44.functions.invoke('createAsaasPayment', payload);
+      const data = response?.data || response;
+
+      console.log('📥 Resposta Asaas:', data);
+
+      if (data?.success) {
+        setPixData(data);
+        setStep('payment');
+        toast.success('✅ Pagamento criado com sucesso!');
+      } else {
+        toast.error(data?.error || 'Erro ao criar pagamento');
+      }
+    } catch (error) {
+      console.error('❌ Erro Asaas:', error);
+      toast.error(`Erro: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   useEffect(() => {
