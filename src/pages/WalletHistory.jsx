@@ -149,11 +149,7 @@ export default function WalletHistory() {
       <div className="max-w-6xl mx-auto">
         <Button
           variant="ghost"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            navigate(-2);
-          }}
+          onClick={() => navigate(createPageUrl("Profile"))}
           className="text-gray-400 hover:text-white mb-6"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
