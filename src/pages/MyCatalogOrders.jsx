@@ -25,8 +25,8 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
   return (
     <Card className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20 text-white overflow-hidden flex flex-col hover:border-white/20 hover:shadow-xl hover:shadow-black/30 transition-all duration-300 group">
       {/* Imagem Quadrada Compacta */}
-      <div className="flex justify-center items-center pt-4 pb-2">
-        <div className="relative w-32 h-32 bg-gray-900/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center group-hover:border-white/20 transition-all">
+      <div className="flex justify-center items-center pt-3 pb-2">
+        <div className="relative w-28 h-28 bg-gray-900/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center group-hover:border-white/20 transition-all">
           <img 
             src={mainImage} 
             alt={order.product_title} 
