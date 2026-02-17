@@ -356,8 +356,8 @@ export default function WalletHistory() {
                     <div className="space-y-4">
                       {deposits.length === 0 ? (
                         <div className="text-center py-16">
-                          <Plus className="w-16 h-16 text-green-400/20 mx-auto mb-4" />
-                          <p className="text-cyan-300/50 font-light mb-6">Nenhum depósito registrado</p>
+                           <Plus className="w-16 h-16 text-green-400/20 mx-auto mb-4" />
+                           <p className="text-green-300/50 font-light mb-6">Nenhum depósito registrado</p>
                           <Button onClick={() => navigate(createPageUrl("AddFunds"))} className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold shadow-lg shadow-green-500/50">
                             Fazer Primeiro Depósito
                           </Button>
