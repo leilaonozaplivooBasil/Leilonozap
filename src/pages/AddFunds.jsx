@@ -95,7 +95,8 @@ export default function AddFunds() {
     }
 
     setProcessing(true);
-    navigate(createPageUrl("AuctionCheckoutModern"));
+    // Redireciona para AuctionCheckoutModern sem necessidade de auction_id
+    navigate(createPageUrl("AuctionCheckoutModern"), { state: { amount: selectedAmount } });
   };
 
   if (loading) {
