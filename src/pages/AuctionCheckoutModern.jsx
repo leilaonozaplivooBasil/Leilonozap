@@ -16,7 +16,8 @@ import {
   QrCode,
   Zap,
   AlertCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Wallet
 } from 'lucide-react';
 import { toast } from 'sonner';
 
