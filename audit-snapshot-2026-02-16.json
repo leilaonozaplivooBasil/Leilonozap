@@ -1,0 +1,1859 @@
+{
+  "export_date": "2026-02-16T20:53:26.196Z",
+  "filters": {
+    "start_date": "2026-01-01",
+    "end_date": "2026-02-16"
+  },
+  "summary": {
+    "total_commissions": 0,
+    "total_users": 26,
+    "total_sales": 0,
+    "total_commission_amount": 0
+  },
+  "users": [
+    {
+      "id": "6980f87bb0e86065df73fddb",
+      "full_name": "Elismar Rodrigues Brito",
+      "email": "erbrito.sistemas@gmail.com",
+      "career_levels": [
+        "usuario"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "696c13ad8d8e3f74f19345d0",
+      "referral_code": null
+    },
+    {
+      "id": "6979205eb30397ea74dc0d7a",
+      "full_name": "Iara Figueiredo",
+      "email": "iahabbib@yahoo.com.br",
+      "career_levels": [
+        "usuario",
+        "licenciado_catalogo",
+        "influencer",
+        "trainee",
+        "plano_lider"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "696fb43386d2d2aea8e1e6e4",
+      "referral_code": null
+    },
+    {
+      "id": "6972a6f6ffc279014b105afe",
+      "full_name": "Edson Castro Antinarelli de Araújo",
+      "email": "egbrasilconsultoria@gmail.com",
+      "career_levels": [
+        "usuario"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "696c13ad8d8e3f74f19345d0",
+      "referral_code": null
+    },
+    {
+      "id": "696fb43386d2d2aea8e1e6e4",
+      "full_name": "Elyon Damasceno Sant'anna",
+      "email": "creiciane.silva65@gmail.com",
+      "career_levels": [
+        "usuario",
+        "influencer",
+        "licenciado_catalogo",
+        "plano_lojista",
+        "fundador",
+        "executivo",
+        "trainee",
+        "conselheiro",
+        "kit_start"
+      ],
+      "commission_balance": 176.66,
+      "total_commissions_generated": 176.66,
+      "referred_by_id": "696fa2ee855ae1215ee28528",
+      "referral_code": "eloynsantanna"
+    },
+    {
+      "id": "696fa2ee855ae1215ee28528",
+      "full_name": "Maria Sophina Damaceno Sant'anna",
+      "email": "luizsantannago@gmail.com",
+      "career_levels": [
+        "usuario",
+        "influencer",
+        "licenciado_catalogo",
+        "plano_lojista",
+        "distribuidor",
+        "conselheiro",
+        "fundador",
+        "kit_start"
+      ],
+      "commission_balance": 11.66,
+      "total_commissions_generated": 11.66,
+      "referred_by_id": "68db1ef1de1b03c2b2b93647",
+      "referral_code": "1GE5ZZH6"
+    },
+    {
+      "id": "696fa293e04bcaa388dd360d",
+      "full_name": "Diana Lima dos Santos",
+      "email": "diana.dls81@gmail.com",
+      "career_levels": [
+        "usuario",
+        "influencer",
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "696fa1e031c1b2a7d8ac69cf",
+      "referral_code": "NOQO2947"
+    },
+    {
+      "id": "696fa1e031c1b2a7d8ac69cf",
+      "full_name": "Sandra de Jesus Salomão",
+      "email": "sandrajsalomao011@gmail.com",
+      "career_levels": [
+        "usuario",
+        "influencer"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "68ea4bd9fcd9ec14d930a845",
+      "referral_code": "974QH6KJ"
+    },
+    {
+      "id": "696c13ad8d8e3f74f19345d0",
+      "full_name": "Leilão NoZap - Site Oficial",
+      "email": "site@leilaonozap.com",
+      "career_levels": [
+        "licenciado_aplicativo"
+      ],
+      "commission_balance": 3.71,
+      "total_commissions_generated": 3.71,
+      "referred_by_id": "68db0ff2c19838a827fb6e5f",
+      "referral_code": "SITE2025"
+    },
+    {
+      "id": "696c139ed7cceee51ace6723",
+      "full_name": "jonathan henrique andrade lima",
+      "email": "jonhhenrique29@hotmail.com",
+      "career_levels": [
+        "usuario",
+        "trainee",
+        "licenciado_catalogo",
+        "licenciado_aplicativo"
+      ],
+      "commission_balance": 4.05,
+      "total_commissions_generated": 4.05,
+      "referred_by_id": "693607c732985657183e8ea3",
+      "referral_code": "JONATHAN2024"
+    },
+    {
+      "id": "696bcc0831b99360419f7053",
+      "full_name": "DISTRIBUIDOR ",
+      "email": "gestaoeoperacao@leilaonozap.com",
+      "career_levels": [
+        "licenciado_aplicativo",
+        "usuario",
+        "distribuidor",
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 12.1,
+      "total_commissions_generated": 12.1,
+      "referred_by_id": "68db0ff2c19838a827fb6e5f",
+      "referral_code": "SITE2025"
+    },
+    {
+      "id": "69581f3beb18ee1e9eb6cb43",
+      "full_name": "LOGISTICA ",
+      "email": "tothetopdrive@gmail.com",
+      "career_levels": [
+        "usuario",
+        "plano_lojista",
+        "licenciado_aplicativo",
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 36.3,
+      "total_commissions_generated": 36.3,
+      "referred_by_id": "696bcc0831b99360419f7053",
+      "referral_code": "SDLBP6JE"
+    },
+    {
+      "id": "693ae90c3fc90d35c1aa1929",
+      "full_name": "Robert Patrick",
+      "email": "natrilhadavida001@gmail.com",
+      "career_levels": [
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 18.23,
+      "total_commissions_generated": 18.23,
+      "referred_by_id": "696c139ed7cceee51ace6723",
+      "referral_code": "robertjyi7"
+    },
+    {
+      "id": "6936dfd7e5b6acb6e80fb945",
+      "full_name": "Cristiano Jorge Ribeiro Silva",
+      "email": "mgvt21@outlook.com",
+      "career_levels": [
+        "licenciado_aplicativo",
+        "usuario",
+        "licenciado_catalogo",
+        "trainee"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "6936083b0386082c9413fc23",
+      "referral_code": "cristians9lc"
+    },
+    {
+      "id": "6936083b0386082c9413fc23",
+      "full_name": "TOP TECH DIGITAL",
+      "email": "relacionamento@leilaonozap.com",
+      "career_levels": [
+        "plano_lider",
+        "licenciado_aplicativo",
+        "usuario",
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 12.28,
+      "total_commissions_generated": 12.1,
+      "referred_by_id": "69581f3beb18ee1e9eb6cb43",
+      "referral_code": "jonathanglvp"
+    },
+    {
+      "id": "693607c732985657183e8ea3",
+      "full_name": "lais andrade lima",
+      "email": "lais_andralima@hotmail.com",
+      "career_levels": [
+        "licenciado_aplicativo",
+        "usuario",
+        "trainee",
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 4.182674249999999,
+      "total_commissions_generated": 0,
+      "referred_by_id": "6936083b0386082c9413fc23",
+      "referral_code": "laisbm59"
+    },
+    {
+      "id": "68f702dcb75fc44cf077e7eb",
+      "full_name": "Luciano Pinheiro",
+      "email": "luciano4.100@hotmail.com",
+      "career_levels": [
+        "licenciado_catalogo",
+        "fundador",
+        "conselheiro",
+        "diretoria",
+        "influencer",
+        "licenciado_aplicativo",
+        "usuario"
+      ],
+      "commission_balance": 3.08,
+      "total_commissions_generated": 3.08,
+      "referred_by_id": "68db0ff2c19838a827fb6e5f",
+      "referral_code": "AC0O29I8"
+    },
+    {
+      "id": "68ea4bd9fcd9ec14d930a845",
+      "full_name": "JOSÉ AMANCIO XAVIER FILHO",
+      "email": "fxajose@gmail.com",
+      "career_levels": [
+        "licenciado_aplicativo",
+        "usuario",
+        "licenciado_catalogo",
+        "diretoria",
+        "conselheiro",
+        "fundador"
+      ],
+      "commission_balance": 3.08,
+      "total_commissions_generated": 3.08,
+      "referred_by_id": "68db0ff2c19838a827fb6e5f",
+      "referral_code": "jos19d6"
+    },
+    {
+      "id": "68e3c5e8b390eaac80c10640",
+      "full_name": "Flavio",
+      "email": "monteiro29@gmail.com",
+      "career_levels": [
+        "licenciado_aplicativo",
+        "usuario",
+        "conselheiro",
+        "fundador",
+        "diretoria",
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 3.08,
+      "total_commissions_generated": 3.08,
+      "referred_by_id": "68db0ff2c19838a827fb6e5f",
+      "referral_code": "flaviorqqq"
+    },
+    {
+      "id": "68e0778614425b6a6cf0cb7c",
+      "full_name": "LICENCIADO TESTE",
+      "email": "administracao@leilaonozap.com",
+      "career_levels": [
+        "licenciado_aplicativo",
+        "usuario",
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "68dfae2be568172caa98aa19",
+      "referral_code": "SITE2025"
+    },
+    {
+      "id": "68dfae2be568172caa98aa19",
+      "full_name": "Elenice Lima",
+      "email": "nicelimaa21@gmail.com",
+      "career_levels": [
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 135.96,
+      "total_commissions_generated": 135.9,
+      "referred_by_id": "6936083b0386082c9413fc23",
+      "referral_code": "elenicebu9f"
+    },
+    {
+      "id": "68df3452c001829eb37eccf3",
+      "full_name": "Luiz claudio marques de paula",
+      "email": "luizmarquespaula@gmail.com",
+      "career_levels": [
+        "usuario"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "696c13ad8d8e3f74f19345d0",
+      "referral_code": "luiz3sog"
+    },
+    {
+      "id": "68df0da309858f586fa19834",
+      "full_name": "Marco Roque Aureliano ",
+      "email": "roque.aureliano86@gmail.com",
+      "career_levels": [
+        "usuario"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "696c13ad8d8e3f74f19345d0",
+      "referral_code": "marcoar3a"
+    },
+    {
+      "id": "68df0a8b3559383dbe1001d8",
+      "full_name": "JULIA REIS DE SOUSA",
+      "email": "juliasousaa500@gmail.com",
+      "career_levels": [
+        "usuario"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "696c13ad8d8e3f74f19345d0",
+      "referral_code": "juliaiwkq"
+    },
+    {
+      "id": "68db4cacb5b030efa82ccbd8",
+      "full_name": "Luiz Sant'anna ",
+      "email": "santannaequipe@gmail.com",
+      "career_levels": [
+        "usuario",
+        "licenciado_aplicativo"
+      ],
+      "commission_balance": 0,
+      "total_commissions_generated": 0,
+      "referred_by_id": "68dfae2be568172caa98aa19",
+      "referral_code": "luizbwvr"
+    },
+    {
+      "id": "68db1ef1de1b03c2b2b93647",
+      "full_name": "Gleice Sant' anna ",
+      "email": "gleicetoptrader@gmail.com",
+      "career_levels": [
+        "usuario",
+        "licenciado_aplicativo",
+        "conselheiro",
+        "fundador",
+        "diretoria",
+        "diretor",
+        "licenciado_catalogo"
+      ],
+      "commission_balance": 5.09,
+      "total_commissions_generated": 5.09,
+      "referred_by_id": "68db0ff2c19838a827fb6e5f",
+      "referral_code": "rainhaff9t"
+    },
+    {
+      "id": "68db0ff2c19838a827fb6e5f",
+      "full_name": "LUIZ ALBERTO SANTANNA FILHO",
+      "email": "luizsantanna@tttcorporate.com",
+      "career_levels": [
+        "fundador",
+        "conselheiro",
+        "ceo",
+        "usuario",
+        "licenciado_aplicativo",
+        "diretor",
+        "diretoria",
+        "licenciado_catalogo",
+        "kit_start",
+        "executivo",
+        "influencer"
+      ],
+      "commission_balance": 45.1697,
+      "total_commissions_generated": 44.12,
+      "referred_by_id": null,
+      "referral_code": "heloimsantanna"
+    }
+  ],
+  "commissions": [],
+  "sales": [],
+  "products": [
+    {
+      "id": "698fab4c2fff972dd9bf7399",
+      "description": "Caixa de Som Acústica Bluetooth 250W Philco PCX3800",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179a288db62882182148",
+      "description": "TOALHA AVELUDADA TRANSFER FLUMINENSE",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179abbea55b3b3dde484",
+      "description": "TOALHA FELPUDA DE BANHO ESTAMPADA BARBIE",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179affdde288b49a1de9",
+      "description": "TOALHA AVELUDADA TRANSFER FLAMENGO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179a089188cf468a5d2b",
+      "description": "TOALHA AVELUDADA ESTAMPADA STITCH",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179a71d2b89cc693d0ad",
+      "description": "TOALHA AVELUDADA TRANFER FLAMENGO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179a0a44de676d0c2b76",
+      "description": "TOALHA AVELUDADA TRANFER VASCO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179a8c62cb14dda65de7",
+      "description": "TOALHA AVELUDADA TRANFER BOTAFOGO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179a17f12d666651b156",
+      "description": "TOALHA AVELUDADA ESTAMPADA COLORAMA",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179ab9415773b6ce0123",
+      "description": "JOGO DE CAMA 100% ALGODÃO CASAL ESTAMPADO IRIS",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698e179a9c5ea70d59ce3061",
+      "description": "PANO DE COPA ESTAMPADO BOM DIA ",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698d011fef2a23bf2019a2a7",
+      "description": "ESPATULA INOX CORTADOR RASPADOR P/ Massas Legumes",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698cff6cbf9a4573ee6f09d1",
+      "description": "LICENCIADO - START",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698b44eb4f88e97b3a2e8b33",
+      "description": "Sofa Poltrona Inflavel Com Puff Cor:Cinza",
+      "price_catalog": 179.99,
+      "catalog_active": true
+    },
+    {
+      "id": "698b44a76652a700cc876f27",
+      "description": "Robô Limpeza Automático Passa Pano Recarregável Eficiente",
+      "price_catalog": 249.91,
+      "catalog_active": true
+    },
+    {
+      "id": "698b43a7f0c9a8871e3215af",
+      "description": "Mochila de Costas Oficial Pooh e Seus Amigos (Disney)",
+      "price_catalog": 149.9,
+      "catalog_active": true
+    },
+    {
+      "id": "698b435838a43e7b19e7fc0f",
+      "description": "Mini Aspirador De Po Sem Fio Portatil Limpa Tudo Casa Carro ",
+      "price_catalog": 59.99,
+      "catalog_active": true
+    },
+    {
+      "id": "698b42dd5ae96b3afe7068df",
+      "description": "Maquina Boxe Musical Eletrônico Inteligente Academia",
+      "price_catalog": 210,
+      "catalog_active": true
+    },
+    {
+      "id": "698abab6f556bbf9331cd1bc",
+      "description": "Porta Talheres com Escorregador Organizador Cozinha Utensíli",
+      "price_catalog": 25.99,
+      "catalog_active": true
+    },
+    {
+      "id": "698aba6ddc16a4cc5eef14c1",
+      "description": "Mochila Escolar Capivara Love You Self",
+      "price_catalog": 99.9,
+      "catalog_active": true
+    },
+    {
+      "id": "698aba1039a60c358cd164d7",
+      "description": "Kit 3 Peças Abridor Dosador Rolha Aço Inox Vinho Conjunto",
+      "price_catalog": 44.99,
+      "catalog_active": true
+    },
+    {
+      "id": "698ab9cec2e11825f0602498",
+      "description": "Grelha Grill Elétrico por Indução Antiaderente Portátil",
+      "price_catalog": 249.9,
+      "catalog_active": true
+    },
+    {
+      "id": "698ab981255f26df031c1800",
+      "description": "Forro De Papel Airfryer Forma Antiaderente 50 Unidades",
+      "price_catalog": 12.99,
+      "catalog_active": true
+    },
+    {
+      "id": "698ab8e0e749c2f7ae7b2419",
+      "description": "Ferro De Passar Vertical Vapor Compacto 300ml Branco",
+      "price_catalog": 86.99,
+      "catalog_active": true
+    },
+    {
+      "id": "698ab8a9e37a90e7ca6a1ae5",
+      "description": "Chaleira Elétrica Digital Glass PCHD 1,7 Litros Philco",
+      "price_catalog": 289.9,
+      "catalog_active": true
+    },
+    {
+      "id": "698ab872525f4545535a82ca",
+      "description": "CAIXA AMPLIFICADA Lights Mondial 250W",
+      "price_catalog": 297,
+      "catalog_active": true
+    },
+    {
+      "id": "698ab831c435d26a1c83d580",
+      "description": "Cafeteira Elétrica Doméstica",
+      "price_catalog": 69.99,
+      "catalog_active": true
+    },
+    {
+      "id": "698ab506dc16a4cc5eef120d",
+      "description": "Extrator Espremedor Profissional Elétrico Sucos",
+      "price_catalog": 349.9,
+      "catalog_active": true
+    },
+    {
+      "id": "698ab4969f3a67bf4add5217",
+      "description": "Cortador Legumes Manual Ralador Fatiador Vegetais Queijos ",
+      "price_catalog": 159.9,
+      "catalog_active": true
+    },
+    {
+      "id": "698a37a6dde785edb9522461",
+      "description": "LICENCIADO - KIT INICIAL",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "698210025ccd59ae08dd8504",
+      "description": "TOP IN HOUSE HOSPEDAGEM ",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69810769ed6a3fdfded9534d",
+      "description": "Panela Elétrica Mini 1,2l Cozinha Arroz Sopa Porridge Branco",
+      "price_catalog": 139.9,
+      "catalog_active": true
+    },
+    {
+      "id": "697bb50d9526e33a9e6fff57",
+      "description": "Processador Batedor Manual Aço Inox Alho E Cebola Branco",
+      "price_catalog": 23.985,
+      "catalog_active": true
+    },
+    {
+      "id": "697b59013f9b9275ccf517e2",
+      "description": "Buettner toalha de banho Praia Piscina veludo 100% algodão Oficial Time Flamengo",
+      "price_catalog": 29.849999999999998,
+      "catalog_active": true
+    },
+    {
+      "id": "69793d1a1da5c57f0bfb21ce",
+      "description": "CADERNO 10 MATERIAS 160 FOLHAS - BEST NOTES",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce71a03bbb037c31f86",
+      "description": "MOCHILA COM PORTA NOTEBOOK - SEANITE",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce71a03bbb037c31f76",
+      "description": "CADEIRA EIFFEL BRANCO",
+      "price_catalog": 119.9,
+      "catalog_active": true
+    },
+    {
+      "id": "69793ce71a03bbb037c31f77",
+      "description": "BOLSA - STITCH",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce71a03bbb037c31f7a",
+      "description": "ESTOJO BOX - POOH",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce71a03bbb037c31f7e",
+      "description": "ESTOJO TRIPLO - CITY EXPLORER",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce71a03bbb037c31f81",
+      "description": "MOCHILA - POOH",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce7aa4383cf3a99136d",
+      "description": "MOCHILA COM CARRINHO - UNICORNIO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce7aa4383cf3a991356",
+      "description": "CADERNO 10 MATERIAS 160 FOLHAS - STITCH",
+      "price_catalog": 29.9,
+      "catalog_active": true
+    },
+    {
+      "id": "69793ce7aa4383cf3a99135c",
+      "description": "ESTOJO BOX DUPLO - COLLEGE STAR",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce7aa4383cf3a99135e",
+      "description": "LANCHERIA TÉRMICA - UNICORNIO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce7aa4383cf3a99135f",
+      "description": "MOCHILA - CAPIVARA",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce7aa4383cf3a991368",
+      "description": "MOCHILA - LOUD",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69793ce7aa4383cf3a991370",
+      "description": "CADERNO 10 MATERIAS 160 FOLHAS - FLAMENGO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6977cfb8cfcfc450981efc6a",
+      "description": "Maquina Cascata Fonte De Chocolate Fondue 3 Andares Buffet",
+      "price_catalog": 112.47,
+      "catalog_active": true
+    },
+    {
+      "id": "6977ce9cb55dbcff02ceb2b1",
+      "description": "Mini Processador Manivela Manual De Alimentos Frutas Tempero",
+      "price_catalog": 23.99,
+      "catalog_active": true
+    },
+    {
+      "id": "6977a4c10640a99430f8b5db",
+      "description": "Descascador De Alho Triturador De Alimentos Portátil B",
+      "price_catalog": 23.57,
+      "catalog_active": true
+    },
+    {
+      "id": "69778c8674198f00a234b39e",
+      "description": "Triturador Alimentos Carne Legumes Elétrico 2l Aço Inox - FRETE GRÁTIS!",
+      "price_catalog": 120,
+      "catalog_active": true
+    },
+    {
+      "id": "6969072f9d5eaec0eb931a08",
+      "description": "LICENCIADO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6966e27f1383c58d0d24a056",
+      "description": "HOSPEDAGEM TOP IN HOUSE",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6966d3d9c9825ceb99b73ba2",
+      "description": "TOALHA DE BANHO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949ae68970258d5649e131c",
+      "description": " POLITRIZ ORBITAL FT-1023 FORT",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69499b0a9071f88d707d5929",
+      "description": "SAND/GRILL MONDIAL MASTERGRILL S20 pt/inx 110V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69499b08f885b53271c169bb",
+      "description": "SAND/GRILL MONDIAL FAST GRILL S12 pt 110V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69499b06d4252aa81c385094",
+      "description": "SAND/GRILL MONDIAL INOX RED S19 vm/inx 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69499b042d5eeaa9fcb980a0",
+      "description": "OMELETEIRA ELÉTRICA MONDIAL pt 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694992180c38364b6ffd634a",
+      "description": "LAVADORA WAP ALTA PRESSAO AGIL 1800 127 V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694989b4eab7c14e0cfe7287",
+      "description": "VIX-PT BICICLETA ELETRICA VIX PRETO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694989b20d19c62bc0e11e8a",
+      "description": "READY-BR MOTO ELETRICA READY BRANCA",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694989b1ebdca4fe54d3de1e",
+      "description": "READY-BR MOTONETA ELETRICA READY prata",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694989ad4448bbfd35652a51",
+      "description": "VITTE-PLUS-VM BICICLETA ELETRICA VITTE PLUS VERMELHA"
+    },
+    {
+      "id": "694984107b46606537af35c2",
+      "description": "CENTRIFUGADOR DE ALIMENTOS JUICE 700 BRITANIA ",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949840fab8af4642ad6316a",
+      "description": "CHALEIRA ELÉTRICA DIGITAL GLASS 1,7L PCHD PHILCO",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949840db84d7f276e903d99",
+      "description": "PANELA ELÉTRICA DE PRESSÃO MIDEA 6L",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949840cd71c904566c59df0",
+      "description": "PANELA ELÉTRICA DE ARROZ PHILCO PH5P VISOR GLASS INOX",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949840bb92f60c6038f9f79",
+      "description": "FRITADEIRA AIRFRY MONDIAL FAMILY 4L",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694984096a3555f62a53d9a6",
+      "description": "FRITADEIRA AIRFRY MONDIAL POTENCIA DE 1900W",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69498407edbed669148825f8",
+      "description": "FRITADEIRA AIRFRY WAP GRAND FAMILY 5L",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694983f8d293f77979dbe1b8",
+      "description": "TANQUINHO DE LAVAR ROUPA SUPER STAR LAVE MAIS",
+      "price_catalog": 297,
+      "catalog_active": true
+    },
+    {
+      "id": "694983f3b84d7f276e903d89",
+      "description": "GELADEIRA 3 PORTAS ELECTROLUX IM8S INVERTER FROST FREE INOX 590L",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694983e471928176eb95bdbd",
+      "description": "GELADEIRA ELECTROLUX FROST FREE 410L",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694983dd3cb6a2fca970c97d",
+      "description": "Geladeira Electrolux Frost Free inverte 400L"
+    },
+    {
+      "id": "694983d81892afcbf5d9f893",
+      "description": "GELADEIRA FROST FREE COM DISPENSER",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694983d4b519a0a821c5def2",
+      "description": "GELADEIRA ELECTROLUX FROST FREE FACE INOX 431L",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694983ccf4742a683239c93d",
+      "description": "GELADEIRA ELECTROLUX DUPLEX 431L",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b6d80661573aa9a8c04",
+      "description": "CAIXA DE SOM AMPLIFICADA PCX35000",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b6ceda3c04daea0a3f2",
+      "description": "MULTIPROCESSADOR PHILIPS WALITA VIVA 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b6a6f3755d80f7e2c6e",
+      "description": "PANELA PRESSAO ELET 5L MONDIAL PE38 PT/INX",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b692b5ce884723597ee",
+      "description": "MULTIPROCESSOR BRITANIA ALL IN ONE BMP1000 PT 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b676f3755d80f7e2c69",
+      "description": "PANELA PRESSAO ELET BRITANIA BPP026 PR/PT",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b662b5ce884723597ed",
+      "description": "FRITADEIRA ELET LENOXX PRF907 PT 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b641314858a34200303",
+      "description": "MULTIPROCESSADOR MONDIAL MPN018 PT/INX 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b623febb73db1cc382f",
+      "description": "MULTIPROCESSADOR BRITANIA ALL IN ONE BMP900 PT 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497b61995b83ca67228a75",
+      "description": "CAIXA AMPLIFICADA 900W LENOVO LCA15",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949765d9d0ffcb257f0f994",
+      "description": "CAIXA AMPLIFICADOR PHILCO PCX3800 250w",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974cb54f66a01e1565271",
+      "description": "RADIO BOOMBOX LENOXX BD150 biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974c7aeca446064a60cf5",
+      "description": "TV SMART AIWA AWS TV 43 BIV",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974c42daaa00ab6a8feb4",
+      "description": "CAIXA AMPLIFICADA MONDIAL CM550 BIV",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974c25a69e27798a7c683",
+      "description": "CAIXA AMPLIFICADA MONDIAL CM150 BIV",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974c07db4ecd991af4e58",
+      "description": "CAFETEIRA LENOXX PCA PT 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974bf1832e6004b22b30f",
+      "description": "CAFETEIRA 18X LENOXX EASY PCA 019 VM 110V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974bd2a7c129cf5dc8592",
+      "description": "CAFETEIRA18x LENOXX EASY PCA 018 PT 110V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974bb18d844ffcec930be",
+      "description": "SERRA MARMORE 1100W HAMMER SM 1100 127V",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974b9061b15740abbedba",
+      "description": "SERRA MARM 1100w BED BD115 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974b8aeca446064a60cec",
+      "description": "LAVADORA ELECTRO ALT PRESSAO EWS30 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974b697c454038d36cadd",
+      "description": "LAVADORA FAST 120 AGILE  1600w ",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974b52e2d6528a13fb2f2",
+      "description": "LAVADORA FAST 120 1600w lwash 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974b4ff809df51a00500a",
+      "description": "MULTIPROCESSADOR MONDIAL pt/inx 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974b3ff809df51a005008",
+      "description": "FRITADEIRA 31 CADENCE AIRFRYER pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974b1e8e40ffec2cc1638",
+      "description": "FRITADEIRA AIRFRYER 41 BRITANIA BRF21 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974b07d2c1fda1fdf1a55",
+      "description": "FORNO 10l BRITANIA 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974aede90492ca8bd3d21",
+      "description": "LED SPOT 5w AVANT BV BR",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974ad2bc028cff62b8c18",
+      "description": "PROCESSADOR MANUAL TWISTER cv202538",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974abc3d21d70059d6cbb",
+      "description": "LETRA LED cv151194 CAZZA pt",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974a94b4bd07fab092a4d",
+      "description": "RELOGIO 30cm cv92210 cazza vd/rs",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974a854f66a01e1565264",
+      "description": "LUZ NOTURNA LED BESOURINHO 1w avant am bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974a6b2e9b3c75300e069",
+      "description": "LUZ NOTURNA LED CORUJINHA 1w avant am bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974a5a9f956f850ce4ecb",
+      "description": "RELOGIO 20 rd pq cv151601 cazza br",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974a375af7ff65893167d",
+      "description": "ESPREMEDOR / AMASSAD inx cv192195 cchef",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974a1bd3f8e3fe14758dd",
+      "description": "RELOGIO 26cm rd cupcakes cv202345 cazza",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949749f54f66a01e156525f",
+      "description": "LUMINARIA eleganc fit led 18w avant br bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949749d416fe6de97ee63e1",
+      "description": "DUCHA HIGIENICA pp eco civitt cr",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949749c2daaa00ab6a8fea3",
+      "description": "FILTRO DE LINHA  6tomada multilaser wi221 pt",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949749b17e5a13a3409f7a2",
+      "description": "TORNEIRA mov filtro eco duda pt/cr",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497499c9cfc1350dedaade",
+      "description": "PAINEL LED sobrep rd 24w avant br bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497498104e96a8ba84e797",
+      "description": "DUCHA HIGIENICA civitt cr",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949749633d403be125381e8",
+      "description": "RELOGIO 26cm rd limao cv202348 cazza",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497495a7453cfc9fedadb7",
+      "description": "CAMPAINHA s/fio 32toq 26930b ilumi",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949749426ae3eda968d42f2",
+      "description": "TORNEIRA mov filtro 5515 civitt br",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497491ecb26393345d7dbd",
+      "description": "LANTERNA RECARREGAVEL sup led big rayovac bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497490570f3555489e95db",
+      "description": "MIXER BRITANIA bmx350p pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949748f615fa39aee400a5d",
+      "description": "COLCHAO INFLAVEL infl casal c/bomba de pe embutida",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949748d7e8ed7a929d5c566",
+      "description": "SECADOR BRITANIA bsc4000 az 220v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949748c7fc738e4111da7fe",
+      "description": "neb/inalad medicate aircomp md1500t",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949748aad7bbe635422498d",
+      "description": "ASSENTO ORTOPEDICO DR COLUNA RELAXMED cf270",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949748932097cb61c67b9bc",
+      "description": "LANTERNA LED 1w avant bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974878c70e16c80ab0c9f",
+      "description": "SAPATEIRA 21 PARES arthi 1860",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497486eb681e37fcc0e940",
+      "description": "FERRO BRITANIA VAPOR EXTRA bfv200az 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974850046edf65ced379a",
+      "description": "TELEFONE S/FIO id+rml MOTOROLA auri2000mdr2",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974837f7a1620634b1ba2",
+      "description": "ESCOVA ALISADORA iamo sstraight sort bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497482da07d1ab3edf379a",
+      "description": "MODELADOR CACHOS PHILCO DUO SHINE bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497481e2b5fc27d1d7286f",
+      "description": "ESCOVA MODELADORA 2x1 BRITANIA bec04 br bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949747f666777b6179caaf3",
+      "description": "ESCOVA ALISADORA BRITANIA SHINE bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949747e788474cdea5b839d",
+      "description": "RADIO cd/mp3/fm/aux PHILCO ph61",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949747d5a69e27798a7c65d",
+      "description": "LIQUIDIFICADOR MONDIAL 199 vm 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949747b176d9a06a1714fe7",
+      "description": "LIQUIDIFICADOR MONDIAL 1900 pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949747af851127d855a39e5",
+      "description": "LIQUIDIFICADOR MONDIAL EASY 1550 br 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974793a5f7f30c475825c",
+      "description": "LIQUIDIFICADOR MONDIAL 199 pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974772caadb874531586b",
+      "description": "LIQUIDIFICADOR BRITANIA DIAMANTE 800 vm 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497476ec9a667c59dec48b",
+      "description": "MOP GIRATORIO PRATIK cv212776 cazza sort",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949747339bf9279b6a35ead",
+      "description": "MALETA FERRAMENTA 103pc xline bosch titaniu",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497472e4faeb4572239474",
+      "description": "MALETA FERRAMENTA BOSH 50pcs xline",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949747112b326fc63932a33",
+      "description": "MALETA FERRAMENTA BOSH 33pcs xline",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497470622243cf67f449ad",
+      "description": "MALETA FERRAMENTA BOSH 41pcs xline",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949746e7d9c992a6aff187b",
+      "description": "LAMINA SERRA MANUAL 24d BOSH",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949746d248ee5a331f79ddb",
+      "description": "KIT PROMOLINE 32pcs BOSCH",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949746ba83ce8f0207557f3",
+      "description": "jg pontas/brocas mad/concrt 15pcs bosch",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949746a2d89725906c3388b",
+      "description": "jg ponta montada 25pcs mn x-line bosch",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949746928544bac881bf06e",
+      "description": "jg fixacao 173pcs bosch",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974670430fbeb562aefc5",
+      "description": "jg broca mad/met/concrt 15pc xline bosch",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497466c53a33380979dd68",
+      "description": "jg bits 25pcs big bit bosch",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974656cb5aba1ae9667b1",
+      "description": "disco diam stand ceram liso-105mm bosch",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497463061b15740abbed96",
+      "description": "cj polir 9261 bosh",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974628dfc831de29e3a84",
+      "description": "cj lixar 8pcs 9260 bosch",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949746099f1d6c846bd5d6a",
+      "description": "PARAFUSADEIRA E FURADEIRA pf-09m biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949745f9a217e742f5b5e0f",
+      "description": "PARAFUSADEIRA MANUAL 67pcs skil",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949745cd618f9702309df1c",
+      "description": "LIXADEIRA ORBITAL 240w MONDIAL flo-02 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949743cac2a1e06a5f086b5",
+      "description": "KIT paraf/furad 12v c/13pcs mondial fpf06m biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949743afa670e8dd893f64c",
+      "description": "kit paraf 3,6v 20pcs c/malt 2000 skil",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497439dac77292a66b49f4",
+      "description": "KIT FURADEIRA 3/8 650w c/12 pcs MONDIAL nffi-07m 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949743846f8bcf224a6c3e2",
+      "description": "FURADEIRA 3/8 550w mondial fi-09 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949743673768306acf37de4",
+      "description": "FURADEIRA imp 3/8 6600 skil 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949743503296d8c4de0588d",
+      "description": "ESMERILHADEIRA 850w mondial fes-02 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497433f7e32363b5bd0c77",
+      "description": "LAVADORA BRITANIA SEMIAUTO blrs100b 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949743225b8ca9bb9ae799c",
+      "description": "LAVADORA 10kg blr03 br britania 110v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497430e8acb40050c5f03d",
+      "description": "LIQUIDIFICADOR ARNO POWERMAX ln55 pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949742e595598d4d0f17ae7",
+      "description": "LIQUIDIFICADOR ARNO POWER MIX lq12 br 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497421ce70406023606a17",
+      "description": "LIQUIDIFICADOR ARNO POWER MAX ln63 vm 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497417949e871500c699bf",
+      "description": "v.coluna mondial vsp40cnb 6p 40cm pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974166ec7a562e3aff027",
+      "description": "FRITADEIRA PHILCO JUMBO pfr13p 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694974149d38034d425e16dc",
+      "description": "FORNO 441 PHILCO pfe44p pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497413c3d21d70059d6c7f",
+      "description": "BEBEDOURO AGUA COLORMAQ 220v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497412096855862d5967b9",
+      "description": "PANELA PRESSAO ELTRICA 51 BRITANIA pr/pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949741172a60f95a8213ea0",
+      "description": "PANELA ELETRICA ARROZ nks MILANO ml2900 br 220v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949740f4dc5aa8265a0b585",
+      "description": "MICRO ONDAS 261 bri br/esp 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949740e65b0b1f989b323b7",
+      "description": "MICROONDAS 201 PHILCO br/esp 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949740d37753e9fe89118f1",
+      "description": "MAQUINA COSTURA PHILCO pmc16bp biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949740bceafbd25da6e4ff9",
+      "description": "FORNO ELETRICO PHILCO 381 pfe40p 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949740a227da79372315329",
+      "description": "CHURRAS ELETRICA BRITANIA GOURMET cgb2n2 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497408cf9dbd8802a9c892",
+      "description": "CAFETEIRA 2x cadence singlec caf210 br 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497407e847493cc3078b1d",
+      "description": "CAFETEIRA 15x britania cp15 vm 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497406260ebae8a6a2f91b",
+      "description": "BATEDEIRA planet BRITANIA bbp700p 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497404552ea1f45f5a5467",
+      "description": "BATEDEIRA MESA MONDIAL pratica b44b pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949740339bf9279b6a35e7a",
+      "description": "paraf/furad 10,8v 42382/030 c/mlt 30pc t",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497401530a11441db1d6e1",
+      "description": "ARCO SERRA 12 43301/012 tramon",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949740025f853c9067a79c2",
+      "description": "jg alicates 3pcs 43408/120 tramon",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973feeab529f2e724d802",
+      "description": "furad imp 3/8 42362/011 500w tramontina",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973fd5280e60c7a9a75f4",
+      "description": "kit furad 3/8 650w c/12 pcs mondial nffi-07m 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973f34d36329acb26e7ee",
+      "description": "ESMERILHADEIRA 850w mondial fes-02 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973f27a76f99948bf97a8",
+      "description": "kit paraf 4,8v c/46pcs tramon 42380/046 biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973f062b468b1cbe4cc4f",
+      "description": "PARAFUSADEIRA 4,8v mondial fpf05 biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973edce1f5d3231ba3145",
+      "description": "jg broc/ponteiras 110pcs mlt 43145/110 t",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973ebb613063c3e730527",
+      "description": "FURADEIRA 3/8 500w tramontina 42362/210 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973e8d1e0d406eb2eabac",
+      "description": "MARTELETE sdsplus 42424/010 1050w tramon",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973e618e5671467de132a",
+      "description": "ASPIRADOR DE PO BRITANIA bas1380v 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973e5b85010758d95fbfd",
+      "description": "UMIDIFICADOR 41 iamo ultrasson ys43087 br bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973e4d7559fd5e1ec1bf5",
+      "description": "umid 31 glife ultrassonico zg1000 bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973e29894669e66d7ef54",
+      "description": "PASSADEIRA VAPOR MONDIAL vp09 110v br/az",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973e1a75fdfc0486bdb5f",
+      "description": "aspirad auto 42345/060 12v/60w tramon",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973e026ca693979b24c97",
+      "description": "asp po vertical pas1600p philco 110v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973de125adac176cb41e5",
+      "description": "asp po vertical ap36 vm mondial 110v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973ddc054a765192f153d",
+      "description": "asp po robo rb09 vm mondial bivolt"
+    },
+    {
+      "id": "694973dbea9aa1c25eb82af5",
+      "description": "ap passar vap philco pvp10 vd bv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973dada07d1ab3edf3709",
+      "description": "RADIO PORTATIL MONDIAL BOOMBOX bx18 bi",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973d8bffc5c57dcbf3edb",
+      "description": "DVD KARAOKE MONDIAL USB d20 bi",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973d77d9c992a6aff182e",
+      "description": "cx acust bluet 80w vicini vc7080a",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973d5a33028e3bb7868ba",
+      "description": "cx acust 300w bluet vicini vc7302",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973d4c1903e3056c04793",
+      "description": "CAIXA AMPLIFICADA MONDIAL cm150 biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973d386df04001b902fd9",
+      "description": "CAIXA AMPLIFICADA MONDIAL cm 400 biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973d1c52aeacc7161464a",
+      "description": "CAIXA AMPLIFICADA LENOXX ca60 BIV",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973d097c454038d36ca4b",
+      "description": "FERRO vap b&d fx2100 az 220v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973ce46f8bcf224a6c3ae",
+      "description": "FERRO sec b&d f300 br/rs, ., 220v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973cd09032feac7717995",
+      "description": "FERRO sec b&d f300 br/rs 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973cb475c22080241300c",
+      "description": "FERRO VAPOR fx3060 black e decker 110v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973cab85010758d95fbeb",
+      "description": "FERRO VAPOR fx1000 black e decker 220v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973c859bdfaccc54ffaaa",
+      "description": "FERRO VAPOR fx1000 black e decker 110v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973c7a3ff2797398cd4a1",
+      "description": "GRILL PHILCO pressgrill pgr07p pt 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973c5d7559fd5e1ec1be9",
+      "description": "FRITADEIRA AIRFRYER MONDIAL afn40bi pt/inx 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973c4e166496cf734783f",
+      "description": "MULTIPROCESSADOR MONDIAL mpn01be pt/inx 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973c2723f7b65fb4e53d3",
+      "description": "FRITADEIRA PHILCO JUMBO pfr13p 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973c1104e96a8ba84e6ff",
+      "description": "CAIXA SOM GRADIENTE gms300 power box biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973bff5c42e343f7450f6",
+      "description": "CAIXA ACUSTICA bluet 80w vicini vc7080a",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973be8090d61bf17d58b3",
+      "description": "CAIXA ACUSTICA 300w bluet vicini vc7302",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973bc530a11441db1d6ba",
+      "description": "CAIXA AMPLIFICADA MONDIAL mondial cm250 biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973b9c054a765192f1537",
+      "description": "CAIXA AMPLIFICADORA LENOXX ca307 biv",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694973b8a3bb39140ce7503e",
+      "description": "CAIXA AMPLIFICADORA 60w sumay slim box",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694972b6af9d1830af0bd4f3",
+      "description": "BALANÇA mecanica 130kg top rio vd",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694972b4b53a47737de35f1d",
+      "description": "kit furad 3/8 650w c/12 pcs mondial nffi-07m 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694972b3b168b39aa52c6146",
+      "description": "ESMERILHADEIRA 850w MONDIAL 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694972b159bdfaccc54ffa0f",
+      "description": "vt britania cancun control cr 3p br 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694972af9ee59db5771ee921",
+      "description": "FERRO VAPOR MONDIAL 110v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694972ad328713a05b406541",
+      "description": "asp po vertical ap36 vm mondial 110v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "694972a5061b15740abbec9e",
+      "description": "MULTIPROCESSADOR MONDIAL pt/inx 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949729c18e59c3068327a05",
+      "description": "LAVADORA WAP ALTA PRESSAO AGIL 1800 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949729a72a60f95a8213de0",
+      "description": "asp po/ag wap gtw12 inx 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949729639bf9279b6a35dac",
+      "description": "LAVAD apress blk edit k2500 karcher 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "69497292ade201651c1d1c6d",
+      "description": "LAVAD apress k398m 1500w karcher, 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949728dcda86ee0960e2ce5",
+      "description": "ESMERILHADEIRA 850w mondial fes-02 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    },
+    {
+      "id": "6949728321b92a29678c8f30",
+      "description": "FORNO ELETRICO PHILCO 461 pfe46b 127v",
+      "price_catalog": null,
+      "catalog_active": false
+    }
+  ],
+  "auctions": []
+}
