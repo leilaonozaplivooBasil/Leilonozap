@@ -170,9 +170,9 @@ export default function AddFunds() {
             
             {/* Saldo Atual */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-3xl blur-md group-hover:blur-lg transition-all"></div>
               <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent"></div>
                 <CardContent className="p-8 relative">
                   <div className="flex items-center justify-between">
                     <div>
