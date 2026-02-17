@@ -209,44 +209,66 @@ export default function AddFunds() {
                   const hasBonus = pkg.bonus_percentage > 0;
                   
                   return (
-                    <Card
-                      key={pkg.id}
-                      onClick={() => handlePackageSelect(pkg.amount)}
-                      className={`cursor-pointer transition-all duration-300 ${
-                        isSelected
-                          ? "bg-gradient-to-br from-green-500 to-emerald-600 border-green-400 scale-105"
-                          : "bg-gray-800 border-gray-700 hover:border-green-500/50 hover:scale-102"
-                      }`}
-                    >
-                      <CardContent className="p-6 text-center relative">
-                        {hasBonus && (
-                          <Badge className="absolute -top-2 -right-2 bg-yellow-500 text-gray-900 font-bold">
-                            +{pkg.bonus_percentage}%
-                          </Badge>
-                        )}
-                        
-                        {isSelected && (
-                          <div className="absolute -top-2 -left-2 p-1 bg-white rounded-full">
-                            <Check className="w-4 h-4 text-green-600" />
-                          </div>
-                        )}
+                    <div key={pkg.id} className="relative group">
+                      <div className={`absolute inset-0 rounded-3xl blur-xl transition-all ${
+                        isSelected 
+                          ? "bg-gradient-to-br from-green-500/40 to-emerald-500/40" 
+                          : "bg-white/5 group-hover:bg-green-500/20"
+                      }`}></div>
+                      <Card
+                        onClick={() => handlePackageSelect(pkg.amount)}
+                        className={`relative cursor-pointer transition-all duration-500 border overflow-hidden ${
+                          isSelected
+                            ? "backdrop-blur-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-400/50 scale-105 shadow-2xl shadow-green-500/20"
+                            : "backdrop-blur-xl bg-white/5 border-white/10 hover:border-green-500/30 hover:scale-102 hover:bg-white/10"
+                        }`}
+                      >
+                        <CardContent className="p-6 text-center relative">
+                          {hasBonus && (
+                            <div className="absolute -top-2 -right-2 z-10">
+                              <div className="relative">
+                                <div className="absolute inset-0 bg-yellow-500 rounded-full blur-md animate-pulse"></div>
+                                <Badge className="relative bg-gradient-to-r from-yellow-400 to-orange-500 text-gray-900 font-bold border-0 shadow-lg">
+                                  +{pkg.bonus_percentage}%
+                                </Badge>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {isSelected && (
+                            <div className="absolute -top-2 -left-2 z-10">
+                              <div className="relative">
+                                <div className="absolute inset-0 bg-white rounded-full blur-sm"></div>
+                                <div className="relative p-1 bg-white rounded-full shadow-lg">
+                                  <Check className="w-4 h-4 text-green-600" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
-                        <p className={`text-3xl font-bold mb-2 ${isSelected ? "text-white" : "text-green-400"}`}>
-                          R$ {pkg.amount.toFixed(0)}
-                        </p>
-                        <p className={`text-sm ${isSelected ? "text-green-100" : "text-gray-400"}`}>
-                          {pkg.label}
-                        </p>
-
-                        {hasBonus && (
-                          <div className="mt-3 pt-3 border-t border-white/20">
-                            <p className="text-xs text-white font-semibold">
-                              Receba R$ {(pkg.amount * (pkg.bonus_percentage / 100)).toFixed(2)} de bônus!
+                          <div className={`transition-all ${isSelected ? "scale-110" : ""}`}>
+                            <p className={`text-4xl font-bold mb-2 transition-all ${
+                              isSelected 
+                                ? "text-transparent bg-gradient-to-br from-white to-green-200 bg-clip-text" 
+                                : "text-green-400"
+                            }`}>
+                              R$ {pkg.amount.toFixed(0)}
+                            </p>
+                            <p className={`text-sm font-medium ${isSelected ? "text-green-100" : "text-gray-400"}`}>
+                              {pkg.label}
                             </p>
                           </div>
-                        )}
-                      </CardContent>
-                    </Card>
+
+                          {hasBonus && (
+                            <div className="mt-4 pt-4 border-t border-white/10">
+                              <p className={`text-xs font-semibold ${isSelected ? "text-yellow-300" : "text-yellow-400/80"}`}>
+                                🎁 Ganhe R$ {(pkg.amount * (pkg.bonus_percentage / 100)).toFixed(2)}
+                              </p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    </div>
                   );
                 })}
               </div>
