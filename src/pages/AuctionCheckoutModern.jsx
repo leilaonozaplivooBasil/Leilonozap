@@ -109,8 +109,32 @@ export default function AuctionCheckoutModern() {
     return true;
   };
 
+  const validateCardData = () => {
+    if (paymentType !== 'CREDIT_CARD') return true;
+    
+    const cleanCard = cardNumber.replace(/\D/g, '');
+    if (cleanCard.length !== 16) {
+      toast.error('Cartão deve ter 16 dígitos');
+      return false;
+    }
+    if (!cardMonth || !cardYear) {
+      toast.error('Data de validade obrigatória');
+      return false;
+    }
+    if (cardCvv.replace(/\D/g, '').length !== 3) {
+      toast.error('CVV deve ter 3 dígitos');
+      return false;
+    }
+    if (!cardHolder.trim()) {
+      toast.error('Nome do titular obrigatório');
+      return false;
+    }
+    return true;
+  };
+
   const handleCreatePayment = async () => {
     if (!validateForm()) return;
+    if (!validateCardData()) return;
     if (!auction) {
       toast.error('Pedido não encontrado');
       return;
@@ -121,9 +145,21 @@ export default function AuctionCheckoutModern() {
 
     try {
       const amount = isWalletDeposit ? depositAmount : auction.current_price;
+      const cardData = paymentType === 'CREDIT_CARD' ? {
+        holderName: cardHolder.trim(),
+        number: cardNumber.replace(/\D/g, ''),
+        expiryMonth: parseInt(cardMonth),
+        expiryYear: parseInt(cardYear),
+        ccv: cardCvv.replace(/\D/g, ''),
+        address: {
+          zip_code: addressZip.replace(/\D/g, ''),
+          number: addressNumber,
+          complement: addressComplement
+        }
+      } : null;
+
       const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
         auction_id: isWalletDeposit ? null : auction.id,
-        user_id: currentUser.id,
         buyer_name: firstName.trim(),
         buyer_email: email.trim(),
         buyer_cpf: cpf.trim(),
@@ -131,7 +167,7 @@ export default function AuctionCheckoutModern() {
         amount: amount,
         billing_type: paymentType,
         description: isWalletDeposit ? `Depósito de R$ ${amount.toFixed(2)} na carteira` : `Arremate - ${auction.title}`,
-        payment_type: isWalletDeposit ? "wallet_deposit" : "auction"
+        card_data: cardData
       });
 
       setIsProcessing(false);
@@ -140,7 +176,7 @@ export default function AuctionCheckoutModern() {
       if (paymentResponse?.data?.success) {
         setPixData({ ...paymentResponse.data, billing_type: paymentType });
         setStep('payment');
-        toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Processando...');
+        toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
       } else {
         toast.error('Erro ao criar pagamento');
         throw new Error(paymentResponse?.data?.error || 'Erro desconhecido');
