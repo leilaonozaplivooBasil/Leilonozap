@@ -21,6 +21,7 @@ import ViewTracker from "../components/recommendations/ViewTracker";
 import FavoriteButton from "../components/recommendations/FavoriteButton";
 import WinnerModal from "../components/auction/WinnerModal";
 import LowBalanceModal from "../components/auction/LowBalanceModal";
+import { Wallet } from "lucide-react";
 
 import { getServerTime } from "@/functions/getServerTime";
 
