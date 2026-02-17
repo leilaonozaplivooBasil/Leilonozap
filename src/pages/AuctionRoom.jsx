@@ -1842,33 +1842,38 @@ export default function AuctionRoom() {
           scroll-behavior: smooth;
         }
         
-        /* Scrollbar moderno minimalista */
+        /* Scrollbar moderno minimalista - fundo 100% transparente */
+        .auction-messages {
+          scrollbar-color: #10b981 transparent !important;
+          scrollbar-width: thin;
+        }
+        
         .auction-messages::-webkit-scrollbar {
-          width: 6px;
+          width: 8px;
+          background: transparent !important;
         }
         
         .auction-messages::-webkit-scrollbar-track {
           background: transparent !important;
-          -webkit-appearance: none;
+          border: none !important;
+          box-shadow: none !important;
         }
         
         .auction-messages::-webkit-scrollbar-thumb {
           background: linear-gradient(to bottom, #10b981, #059669) !important;
-          border-radius: 3px;
-          opacity: 0.3;
-          border: none;
-          -webkit-appearance: none;
+          border-radius: 4px;
+          min-height: 40px;
+          border: 2px solid transparent !important;
+          background-clip: content-box !important;
         }
         
         .auction-messages::-webkit-scrollbar-thumb:hover {
-          opacity: 0.6;
           background: linear-gradient(to bottom, #059669, #047857) !important;
+          background-clip: content-box !important;
         }
         
-        /* Firefox */
-        .auction-messages {
-          scrollbar-color: #10b981 transparent !important;
-          scrollbar-width: thin;
+        .auction-messages::-webkit-scrollbar-corner {
+          background: transparent !important;
         }
         
         .message-bubble-wrapper { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; max-width: 90%; animation: slideIn 0.3s ease-out; }
