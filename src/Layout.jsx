@@ -548,7 +548,38 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        <style>{`
+        <Style>{`
+          /* Scrollbar Global Minimalista */
+          ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+          }
+
+          ::-webkit-scrollbar-track {
+            background: transparent;
+          }
+
+          ::-webkit-scrollbar-thumb {
+            background: linear-gradient(to bottom, #10b981, #059669);
+            border-radius: 3px;
+            opacity: 0.3;
+          }
+
+          ::-webkit-scrollbar-thumb:hover {
+            opacity: 0.6;
+            background: linear-gradient(to bottom, #059669, #047857);
+          }
+
+          /* Firefox */
+          * {
+            scrollbar-color: rgba(16, 185, 129, 0.3) transparent;
+            scrollbar-width: thin;
+          }
+
+          *:hover {
+            scrollbar-color: rgba(16, 185, 129, 0.6) transparent;
+          }
+
           @keyframes fadeInScale {
             0% {
               opacity: 0;
