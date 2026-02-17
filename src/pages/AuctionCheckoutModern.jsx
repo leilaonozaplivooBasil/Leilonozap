@@ -48,6 +48,13 @@ export default function AuctionCheckoutModern() {
   const [pixData, setPixData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState('info'); // 'info', 'payment', 'success'
+  
+  // Cartão de crédito
+  const [cardHolder, setCardHolder] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardMonth, setCardMonth] = useState('');
+  const [cardYear, setCardYear] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
 
   const searchCep = async (cep) => {
     const cleanCep = cep.replace(/\D/g, '');
