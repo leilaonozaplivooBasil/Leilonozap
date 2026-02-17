@@ -25,9 +25,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Valor inválido' }, { status: 400 });
         }
 
-        if (!catalog_sale_id && !auction_id) {
-            return Response.json({ error: 'Referência obrigatória (catalog_sale_id ou auction_id)' }, { status: 400 });
-        }
+        // ✅ PERMITIR depósito de carteira sem referência (ambos null é aceitável para wallet)
+        // Apenas validar se for pagamento de leilão/catálogo
 
         const apiKey = Deno.env.get('ASAAS_API_KEY');
         if (!apiKey) {
