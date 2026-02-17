@@ -166,12 +166,12 @@ export default function WalletHistory() {
         {/* Header Futurístico */}
         <div className="mb-10">
           <div className="flex items-center gap-4 mb-3">
-            <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg shadow-cyan-500/50">
+            <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg shadow-green-500/50">
               <WalletIcon className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-5xl font-black bg-gradient-to-r from-cyan-300 via-blue-300 to-cyan-300 bg-clip-text text-transparent">Carteira Virtual</h1>
-              <p className="text-cyan-200/70 text-sm font-light mt-1">Plataforma Tecnológica de Gestão Financeira</p>
+              <h1 className="text-5xl font-black bg-gradient-to-r from-green-300 via-emerald-300 to-green-300 bg-clip-text text-transparent">Carteira Virtual</h1>
+              <p className="text-green-200/70 text-sm font-light mt-1">Plataforma Tecnológica de Gestão Financeira</p>
             </div>
           </div>
         </div>
