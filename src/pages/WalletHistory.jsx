@@ -184,10 +184,10 @@ export default function WalletHistory() {
             <CardContent className="p-8 relative z-10">
               <div className="flex items-start justify-between mb-8">
                 <div>
-                  <p className="text-cyan-300/70 text-sm font-light uppercase tracking-widest mb-3">Saldo Disponível</p>
-                  <div className="flex items-baseline gap-2">
-                    <p className="text-6xl font-black text-white">R$</p>
-                    <p className="text-6xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                   <p className="text-green-300/70 text-sm font-light uppercase tracking-widest mb-3">Saldo Disponível</p>
+                   <div className="flex items-baseline gap-2">
+                     <p className="text-6xl font-black text-white">R$</p>
+                     <p className="text-6xl font-black bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
                       {wallet?.balance?.toFixed(2) || '0.00'}
                     </p>
                   </div>
