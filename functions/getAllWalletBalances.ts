@@ -10,8 +10,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Acesso negado' }, { status: 403 });
         }
 
-        // Buscar todas as wallets
-        const wallets = await base44.asServiceRole.entities.Wallet.list();
+        // Buscar apenas wallets com paginação (limite 500)
+        const wallets = await base44.asServiceRole.entities.Wallet.list(undefined, 500);
         
         if (!wallets || wallets.length === 0) {
             return Response.json({
@@ -21,22 +21,11 @@ Deno.serve(async (req) => {
             });
         }
 
-        // Buscar todos os usuários para mapear
-        const users = await base44.asServiceRole.entities.AppUser.list();
-        const userMap = {};
-        users.forEach(u => {
-            userMap[u.id] = u;
-        });
-
-        // Montar resposta com dados detalhados
+        // Formatar resposta simples (sem buscar usuários)
         const walletData = wallets.map(w => ({
             user_id: w.user_id,
-            user_name: userMap[w.user_id]?.full_name || 'Usuário não encontrado',
-            user_email: userMap[w.user_id]?.email || '-',
-            balance: w.balance || 0,
-            created_date: w.created_date,
-            updated_date: w.updated_date
-        })).sort((a, b) => b.balance - a.balance); // Ordena por saldo decrescente
+            balance: w.balance || 0
+        })).sort((a, b) => b.balance - a.balance);
 
         const totalBalance = walletData.reduce((sum, w) => sum + w.balance, 0);
         const usersWithBalance = walletData.filter(w => w.balance > 0).length;
