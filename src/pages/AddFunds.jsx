@@ -147,7 +147,6 @@ export default function AddFunds() {
 
           <div className="flex items-center gap-6">
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl blur-xl group-hover:blur-2xl transition-all opacity-60"></div>
               <div className="relative p-5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl shadow-2xl">
                 <Wallet className="w-10 h-10 text-white" />
               </div>
