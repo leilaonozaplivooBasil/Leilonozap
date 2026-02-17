@@ -944,10 +944,10 @@ export default function LojistaDashboard() {
 
         @keyframes liquidGlow {
           0%, 100% {
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.05), inset 0 0 20px rgba(255, 255, 255, 0.02);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.02), inset 0 0 10px rgba(255, 255, 255, 0.01);
           }
           50% {
-            box-shadow: 0 0 40px rgba(255, 255, 255, 0.1), inset 0 0 40px rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.04), inset 0 0 20px rgba(255, 255, 255, 0.02);
           }
         }
 
