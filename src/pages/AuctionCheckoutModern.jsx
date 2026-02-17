@@ -303,7 +303,225 @@ export default function AuctionCheckoutModern() {
           {/* Coluna Principal - Formulário */}
           <div className="lg:col-span-2">
             {step === 'info' && (
-              <div className="space-y-6">
+              <div className="space-y-4">
+                {/* Dados Pessoais - Accordion */}
+                <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl overflow-hidden transition-all">
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === 'personal' ? null : 'personal')}
+                    className="w-full p-0"
+                  >
+                    <CardHeader className="pb-4 cursor-pointer hover:bg-white/5 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold">
+                            {isPersonalComplete ? <Check className="w-5 h-5" /> : '1'}
+                          </div>
+                          <div className="text-left">
+                            <CardTitle className="text-xl">Dados Pessoais</CardTitle>
+                            {isPersonalComplete && <p className="text-xs text-green-400">✓ Completo</p>}
+                          </div>
+                        </div>
+                        <ChevronDown 
+                          className={`w-5 h-5 text-gray-400 transition-transform ${
+                            expandedSection === 'personal' ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </div>
+                    </CardHeader>
+                  </button>
+
+                  {expandedSection === 'personal' && (
+                    <CardContent className="space-y-4 pt-0">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Nome Completo
+                        </label>
+                        <Input
+                          type="text"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          placeholder="Seu nome completo"
+                          className="bg-gray-800/50 border-gray-700 text-white h-12"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            CPF
+                          </label>
+                          <Input
+                            type="text"
+                            value={cpf}
+                            onChange={(e) => setCpf(e.target.value)}
+                            placeholder="000.000.000-00"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Telefone
+                          </label>
+                          <Input
+                            type="tel"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="(00) 00000-0000"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Email
+                        </label>
+                        <Input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="seu@email.com"
+                          className="bg-gray-800/50 border-gray-700 text-white h-12"
+                        />
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+
+                {/* Endereço de Entrega - Accordion */}
+                <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl overflow-hidden transition-all">
+                  <button
+                    onClick={() => setExpandedSection(expandedSection === 'address' ? null : 'address')}
+                    className="w-full p-0"
+                  >
+                    <CardHeader className="pb-4 cursor-pointer hover:bg-white/5 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white font-bold">
+                            {isAddressComplete ? <Check className="w-5 h-5" /> : '2'}
+                          </div>
+                          <div className="text-left">
+                            <CardTitle className="text-xl">Endereço de Entrega</CardTitle>
+                            {isAddressComplete && <p className="text-xs text-green-400">✓ Completo</p>}
+                          </div>
+                        </div>
+                        <ChevronDown 
+                          className={`w-5 h-5 text-gray-400 transition-transform ${
+                            expandedSection === 'address' ? 'rotate-180' : ''
+                          }`}
+                        />
+                      </div>
+                    </CardHeader>
+                  </button>
+
+                  {expandedSection === 'address' && (
+                    <CardContent className="space-y-4 pt-0">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            CEP
+                          </label>
+                          <Input
+                            type="text"
+                            value={addressZip}
+                            onChange={handleCepChange}
+                            placeholder="00000-000"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                            disabled={isLoadingCep}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Número
+                          </label>
+                          <Input
+                            type="text"
+                            value={addressNumber}
+                            onChange={(e) => setAddressNumber(e.target.value)}
+                            placeholder="123"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Endereço
+                        </label>
+                        <Input
+                          type="text"
+                          value={addressStreet}
+                          onChange={(e) => setAddressStreet(e.target.value)}
+                          placeholder="Rua ou Avenida"
+                          className="bg-gray-800/50 border-gray-700 text-white h-12"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Bairro
+                          </label>
+                          <Input
+                            type="text"
+                            value={addressNeighborhood}
+                            onChange={(e) => setAddressNeighborhood(e.target.value)}
+                            placeholder="Bairro"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Complemento
+                          </label>
+                          <Input
+                            type="text"
+                            value={addressComplement}
+                            onChange={(e) => setAddressComplement(e.target.value)}
+                            placeholder="Apto, sala, etc"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Cidade
+                          </label>
+                          <Input
+                            type="text"
+                            value={addressCity}
+                            onChange={(e) => setAddressCity(e.target.value)}
+                            placeholder="Cidade"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            UF
+                          </label>
+                          <Input
+                            type="text"
+                            value={addressState}
+                            onChange={(e) => setAddressState(e.target.value.toUpperCase())}
+                            placeholder="SP"
+                            maxLength="2"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12 uppercase"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                        <p className="text-blue-300 text-sm flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          Depois do pagamento, falaremos sobre o frete via WhatsApp
+                        </p>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+
                 {/* Pagamento com Cartão de Crédito */}
                 {paymentType === 'CREDIT_CARD' && (
                   <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl">
