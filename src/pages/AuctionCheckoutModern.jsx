@@ -296,6 +296,108 @@ export default function AuctionCheckoutModern() {
           <div className="lg:col-span-2">
             {step === 'info' && (
               <div className="space-y-6">
+                {/* Pagamento com Cartão de Crédito */}
+                {paymentType === 'CREDIT_CARD' && (
+                  <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl">
+                    <CardHeader className="pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold">
+                          💳
+                        </div>
+                        <CardTitle className="text-xl">Dados do Cartão</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Nome do Titular
+                        </label>
+                        <Input
+                          type="text"
+                          value={cardHolder}
+                          onChange={(e) => setCardHolder(e.target.value.toUpperCase())}
+                          placeholder="NOME COMPLETO"
+                          className="bg-gray-800/50 border-gray-700 text-white h-12 uppercase"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                          Número do Cartão
+                        </label>
+                        <Input
+                          type="text"
+                          value={cardNumber}
+                          onChange={(e) => {
+                            let v = e.target.value.replace(/\D/g, '').slice(0, 16);
+                            if (v.length > 0) v = v.match(/.{1,4}/g).join(' ');
+                            setCardNumber(v);
+                          }}
+                          placeholder="0000 0000 0000 0000"
+                          maxLength="19"
+                          className="bg-gray-800/50 border-gray-700 text-white h-12 font-mono"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Mês
+                          </label>
+                          <Input
+                            type="text"
+                            value={cardMonth}
+                            onChange={(e) => {
+                              let v = e.target.value.replace(/\D/g, '').slice(0, 2);
+                              if (v && parseInt(v) > 12) v = '12';
+                              setCardMonth(v);
+                            }}
+                            placeholder="MM"
+                            maxLength="2"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12 text-center"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            Ano
+                          </label>
+                          <Input
+                            type="text"
+                            value={cardYear}
+                            onChange={(e) => {
+                              let v = e.target.value.replace(/\D/g, '').slice(0, 4);
+                              setCardYear(v);
+                            }}
+                            placeholder="YYYY"
+                            maxLength="4"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12 text-center"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                            CVV
+                          </label>
+                          <Input
+                            type="text"
+                            value={cardCvv}
+                            onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                            placeholder="000"
+                            maxLength="3"
+                            className="bg-gray-800/50 border-gray-700 text-white h-12 text-center font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                        <p className="text-yellow-300 text-sm flex items-start gap-2">
+                          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          Seus dados de cartão são criptografados e processados de forma segura pela ASAAS
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
                 {/* Dados Pessoais */}
                 <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl">
                   <CardHeader className="pb-4">
