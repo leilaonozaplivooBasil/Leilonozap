@@ -932,7 +932,7 @@ export default function Profile() {
                   const config = statusConfig[order.status] || statusConfig.pending_payment;
                   
                   return (
-                    <Card key={order.id} className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'}>
+                    <Card key={order.id} className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow' : 'bg-gray-800 border border-gray-700 hover:border-green-500/30 transition-all'}>
                       <CardContent className="p-4">
                         <div className="flex gap-4 mb-3">
                           {order.product_image && (
