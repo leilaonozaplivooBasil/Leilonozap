@@ -78,8 +78,7 @@ export default function LowBalanceModal({
           {/* Watch as Spectator */}
           <Button
             onClick={onWatchAsSpectator}
-            variant="outline"
-            className="w-full h-12 border-gray-600 text-gray-300 hover:bg-gray-700 font-semibold"
+            className="w-full h-12 bg-gray-700 hover:bg-gray-600 text-gray-200 font-semibold transition-colors"
           >
             👀 Assistir como Telespectador
           </Button>
@@ -87,8 +86,7 @@ export default function LowBalanceModal({
           {/* Close */}
           <Button
             onClick={onClose}
-            variant="ghost"
-            className="w-full h-10 text-gray-400 hover:text-gray-300"
+            className="w-full h-10 bg-gray-700/50 hover:bg-red-600 text-gray-300 hover:text-white font-semibold transition-colors"
           >
             Cancelar
           </Button>
