@@ -192,8 +192,8 @@ export default function WalletHistory() {
                     </p>
                   </div>
                 </div>
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/30 to-blue-500/30 flex items-center justify-center border border-cyan-400/30">
-                  <WalletIcon className="w-10 h-10 text-cyan-400" />
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500/30 to-emerald-500/30 flex items-center justify-center border border-green-400/30">
+                   <WalletIcon className="w-10 h-10 text-green-400" />
                 </div>
               </div>
 
