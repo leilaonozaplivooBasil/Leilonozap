@@ -154,7 +154,19 @@ export default function AuctionRoom() {
       const savedUser = localStorage.getItem('currentUser');
       const isLoggedIn = sessionStorage.getItem('isLoggedIn');
       if (savedUser && isLoggedIn) {
-        setCurrentUser(JSON.parse(savedUser));
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+        
+        // 🆕 Carrega saldo da carteira
+        try {
+          const wallets = await base44.entities.Wallet.filter({ user_id: user.id });
+          if (wallets && wallets.length > 0) {
+            setUserWallet(wallets[0]);
+            console.log(`💰 Saldo do usuário: R$ ${wallets[0].balance.toFixed(2)}`);
+          }
+        } catch (error) {
+          console.warn("Erro ao carregar saldo da carteira:", error.message);
+        }
       } else {
         setCurrentUser(null);
       }
