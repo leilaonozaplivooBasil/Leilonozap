@@ -19,7 +19,6 @@ import {
   Edit3, 
   Save,
   LogOut,
-  Crown,
   Loader2,
   Camera,
   Check,
