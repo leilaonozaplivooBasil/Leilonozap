@@ -197,9 +197,9 @@ export default function WalletHistory() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-6 pt-6 border-t border-cyan-400/20">
-                <div className="space-y-2">
-                  <p className="text-cyan-300/50 text-xs font-light uppercase tracking-wider">Entradas</p>
+              <div className="grid grid-cols-2 gap-6 pt-6 border-t border-green-400/20">
+                 <div className="space-y-2">
+                   <p className="text-green-300/50 text-xs font-light uppercase tracking-wider">Entradas</p>
                   <div className="flex items-center gap-2">
                     <ArrowUpRight className="w-5 h-5 text-green-400" />
                     <p className="text-2xl font-bold text-green-400">R$ {totalDeposited.toFixed(2)}</p>
