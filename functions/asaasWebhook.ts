@@ -70,20 +70,20 @@ Deno.serve(async (req) => {
                     processed: false
                 });
 
-        // Buscar AsaasPayment no banco
-        const asaasPayments = await base44.asServiceRole.entities.AsaasPayment.filter(
-            { payment_id: paymentId },
-            null,
-            1
-        );
+                // Buscar AsaasPayment no banco
+                const asaasPayments = await base44.asServiceRole.entities.AsaasPayment.filter(
+                    { payment_id: paymentId },
+                    null,
+                    1
+                );
 
-        if (!asaasPayments || asaasPayments.length === 0) {
-            console.error('❌ AsaasPayment não encontrado:', paymentId);
-            return Response.json({ received: true });
-        }
+                if (!asaasPayments || asaasPayments.length === 0) {
+                    console.error('❌ AsaasPayment não encontrado:', paymentId);
+                    return;
+                }
 
-        const asaasPayment = asaasPayments[0];
-        console.log('✅ AsaasPayment encontrado:', asaasPayment.id);
+                const asaasPayment = asaasPayments[0];
+                console.log('✅ AsaasPayment encontrado:', asaasPayment.id);
 
         // ✅ PASSO 1: Atualizar AsaasPayment
         await base44.asServiceRole.entities.AsaasPayment.update(asaasPayment.id, {
