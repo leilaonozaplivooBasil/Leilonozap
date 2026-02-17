@@ -23,56 +23,74 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
   const mainImage = order.product_image || "https://via.placeholder.com/150";
 
   return (
-    <Card className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20 text-white overflow-hidden flex flex-col hover:border-white/20 hover:shadow-xl hover:shadow-black/30 transition-all duration-300 group">
-      {/* Imagem Quadrada Compacta */}
-      <div className="flex justify-center items-center pt-3 pb-2">
-        <div className="relative w-28 h-28 bg-gray-900/50 rounded-lg border border-white/10 overflow-hidden flex items-center justify-center group-hover:border-white/20 transition-all">
-          <img 
-            src={mainImage} 
-            alt={order.product_title} 
-            className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" 
-          />
+    <div className="group cursor-pointer">
+      <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/30 text-white overflow-hidden flex flex-col h-full hover:border-green-500/40 hover:shadow-xl hover:shadow-green-500/20 transition-all duration-300">
+        
+        {/* IMAGEM - Destaque Principal */}
+        <div className="relative w-full bg-gradient-to-b from-gray-700/20 to-gray-900/40 px-5 pt-5 pb-4 flex justify-center">
+          <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+            <img 
+              src={mainImage} 
+              alt={order.product_title} 
+              className="w-full h-full object-contain p-2" 
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Conteúdo */}
-      <CardHeader className="flex-col gap-2 p-4 pb-3">
-        <CardTitle className="text-base font-semibold line-clamp-2 text-white group-hover:text-green-300 transition-colors text-center">
-          {order.product_title}
-        </CardTitle>
-        <p className="text-xs text-gray-400 text-center">
-          {new Date(order.created_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: '2-digit' })}
-        </p>
-      </CardHeader>
-
-      <CardContent className="px-4 py-3 flex-grow">
-        <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 p-3.5 rounded-lg flex justify-between items-center">
-          <span className="text-gray-300 text-sm font-medium">Total:</span>
-          <span className="font-bold text-lg text-green-400">
-            R$ {(order.total_amount || order.sale_price || 0).toFixed(2)}
-          </span>
+        {/* NOME DO PRODUTO */}
+        <div className="px-4 pt-3 pb-2">
+          <h3 className="text-sm font-bold text-white line-clamp-2 leading-snug group-hover:text-green-300 transition-colors">
+            {order.product_title}
+          </h3>
         </div>
-      </CardContent>
 
-      <CardFooter className="bg-gray-900/30 px-4 py-3 flex flex-col gap-3 border-t border-white/5">
-        <Badge className={`flex items-center gap-2 text-xs font-semibold ${config.color} w-fit border`}>
-          <config.icon className="w-3.5 h-3.5" />
-          {config.text}
-        </Badge>
+        {/* DATA */}
+        <div className="px-4 pb-3">
+          <p className="text-xs text-gray-500">
+            {new Date(order.created_date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: '2-digit' })}
+          </p>
+        </div>
+
+        {/* SEPARADOR */}
+        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mx-4" />
+
+        {/* TOTAL */}
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400 font-medium">Total:</span>
+            <span className="font-bold text-green-400 text-base">
+              R$ {(order.total_amount || order.sale_price || 0).toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        {/* STATUS */}
+        <div className="px-4 pb-3">
+          <Badge className={`flex items-center gap-1.5 text-xs font-semibold ${config.color} border w-full justify-center py-1.5`}>
+            <config.icon className="w-3 h-3" />
+            <span>{config.text}</span>
+          </Badge>
+        </div>
+
+        {/* BOTÃO CTA */}
         <button
           onClick={() => onTrackClick(order)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-green-500/30"
+          className="mx-4 mb-4 py-2.5 px-3 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-green-500/40 flex items-center justify-center gap-2 group/btn"
         >
-          <Eye className="w-4 h-4" />
-          Acompanhar
+          <Eye className="w-4 h-4 group-hover/btn:translate-x-0.5 transition-transform" />
+          Acompanhar Pedido
         </button>
+
+        {/* RASTREIO (se houver) */}
         {order.tracking_code && (
-          <p className="text-xs text-gray-400 text-center">
-            Rastreio: <span className="text-green-400 font-mono font-semibold">{order.tracking_code}</span>
-          </p>
+          <div className="px-4 pb-4 text-center">
+            <p className="text-xs text-gray-500">
+              Rastreio: <span className="text-green-400 font-mono font-semibold text-xs">{order.tracking_code}</span>
+            </p>
+          </div>
         )}
-      </CardFooter>
-    </Card>
+      </Card>
+    </div>
   );
 };
 
