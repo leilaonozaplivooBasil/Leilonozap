@@ -34,33 +34,43 @@ export default function WalletHistory() {
           
           console.log("🔍 [WalletHistory] Usuário do cache:", { id: user.id, email: user.email });
           
-          // Valida se o ID é legítimo (tem mais de 8 caracteres e não é um índice de React)
+          // Valida se o email é realmente um email válido
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          const isInvalidEmail = !user.email || !emailRegex.test(user.email);
           const isInvalidId = !user.id || user.id.length < 8 || user.id.includes('index-') || user.id.includes('js-c');
           
-          if (isInvalidId) {
-            console.warn("⚠️ [WalletHistory] ID inválido detectado:", user.id);
-            console.warn("⚠️ Tentando recuperar usuário real pelo email...");
+          if (isInvalidEmail || isInvalidId) {
+            console.warn("⚠️ [WalletHistory] Dados corrompidos detectados - Email inválido:", user.email, "ID:", user.id);
+            console.warn("⚠️ Tentando recuperar usuário da plataforma...");
             
             // Limpa o cache corrompido
             localStorage.removeItem('currentUser');
             sessionStorage.removeItem('isLoggedIn');
             
-            // Busca o usuário real pelo email
-            if (user.email) {
-              console.log("🔍 [WalletHistory] Buscando usuário pelo email:", user.email);
-              const users = await base44.entities.AppUser.filter({ email: user.email });
-              console.log("✅ [WalletHistory] Usuários encontrados:", users.length, users);
-              
-              if (users.length > 0) {
-                user = users[0];
-                console.log("✅ [WalletHistory] Usuário correto recuperado:", { id: user.id, email: user.email });
+            // Tenta buscar o usuário da plataforma Base44
+            try {
+              const platformUser = await base44.auth.me();
+              if (platformUser && platformUser.email) {
+                console.log("✅ [WalletHistory] Usuário recuperado da plataforma:", platformUser.email);
+                
+                // Busca ou cria registro no AppUser
+                const appUsers = await base44.entities.AppUser.filter({ email: platformUser.email });
+                if (appUsers.length > 0) {
+                  user = appUsers[0];
+                } else {
+                  user = platformUser;
+                }
+                
                 localStorage.setItem('currentUser', JSON.stringify(user));
                 sessionStorage.setItem('isLoggedIn', 'true');
               } else {
-                throw new Error("Usuário não encontrado no banco de dados");
+                throw new Error("Plataforma não retornou usuário válido");
               }
-            } else {
-              throw new Error("Email do usuário não disponível");
+            } catch (platformError) {
+              console.error("❌ Erro ao recuperar da plataforma:", platformError.message);
+              toast.error("Sessão expirada. Faça login novamente.");
+              navigate(createPageUrl("Home"));
+              return;
             }
           }
           
