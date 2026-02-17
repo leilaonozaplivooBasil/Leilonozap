@@ -614,22 +614,16 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 Comparar Preços
               </Button>
 
-              {/* Este link vai para a mesma página que o clique no card, mas é um CTA explícito */}
-              <Link 
-                to={createPageUrl("AuctionRoom") + `?id=${auction.id}`} 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log("🎯 [BOTÃO CTA] Navegando para sala:", auction.id);
-                }}
-                className="block"
-              >
-                <Button className={variant === "sai_de_baixo"
+              {/* Botão de Entrar e Dar Lance com verificação de saldo */}
+              <Button 
+                onClick={handleEnterAuction}
+                className={variant === "sai_de_baixo"
                   ? "w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300 text-sm sm:text-base"
-                  : "w-full min-h-[48px] bg-gradient-to-r from-amber-500 via-orange-600 to-red-600 text-white font-bold shadow-lg shadow-orange-500/20 transition-all duration-300 transform hover:scale-105 hover:shadow-orange-500/40 text-sm sm:text-base"}>
-                  <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-fire" />
-                  Entrar e Dar Lance
-                </Button>
-              </Link>
+                  : "w-full min-h-[48px] bg-gradient-to-r from-amber-500 via-orange-600 to-red-600 text-white font-bold shadow-lg shadow-orange-500/20 transition-all duration-300 transform hover:scale-105 hover:shadow-orange-500/40 text-sm sm:text-base"}
+              >
+                <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-fire" />
+                Entrar e Dar Lance
+              </Button>
             </div>
           ) : (
             <div className="space-y-2 sm:space-y-3">
