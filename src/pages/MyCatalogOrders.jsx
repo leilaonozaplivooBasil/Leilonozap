@@ -24,24 +24,26 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
 
   return (
     <Card className="bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20 text-white overflow-hidden flex flex-col hover:border-white/20 hover:shadow-xl hover:shadow-black/30 transition-all duration-300 group">
-      <CardHeader className="flex-row items-start gap-4 p-4 pb-3">
-        <div className="relative">
-          <img 
-            src={mainImage} 
-            alt={order.product_title} 
-            className="w-24 h-24 object-cover rounded-xl border border-white/10 group-hover:border-white/20 transition-all" 
-          />
-          <div className="absolute inset-0 rounded-xl bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-        <div className="flex-grow">
-          <CardTitle className="text-base font-semibold mb-2 line-clamp-2 text-white group-hover:text-green-300 transition-colors">
-            {order.product_title}
-          </CardTitle>
-          <p className="text-xs text-gray-400">
-            {new Date(order.created_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: '2-digit' })}
-          </p>
-        </div>
+      {/* Imagem do Produto - Destaque Principal */}
+      <div className="relative w-full h-48 sm:h-52 overflow-hidden bg-gray-900/50 border-b border-white/5">
+        <img 
+          src={mainImage} 
+          alt={order.product_title} 
+          className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      </div>
+
+      {/* Conteúdo */}
+      <CardHeader className="flex-col gap-2 p-4 pb-3">
+        <CardTitle className="text-base font-semibold line-clamp-2 text-white group-hover:text-green-300 transition-colors">
+          {order.product_title}
+        </CardTitle>
+        <p className="text-xs text-gray-400">
+          {new Date(order.created_date).toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: '2-digit' })}
+        </p>
       </CardHeader>
+
       <CardContent className="px-4 py-3 flex-grow">
         <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 p-3.5 rounded-lg flex justify-between items-center">
           <span className="text-gray-300 text-sm font-medium">Total:</span>
@@ -50,6 +52,7 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
           </span>
         </div>
       </CardContent>
+
       <CardFooter className="bg-gray-900/30 px-4 py-3 flex flex-col gap-3 border-t border-white/5">
         <Badge className={`flex items-center gap-2 text-xs font-semibold ${config.color} w-fit border`}>
           <config.icon className="w-3.5 h-3.5" />
