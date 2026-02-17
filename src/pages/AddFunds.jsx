@@ -480,27 +480,39 @@ export default function AddFunds() {
                   <CardTitle className="text-white text-base font-bold">Como Funciona?</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm relative">
-                  <div className="flex items-start gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm border border-green-400/30 flex items-center justify-center">
-                      <span className="text-green-400 font-bold text-sm">1</span>
+                  <div className="flex items-start gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10 hover:border-green-400/30 transition-all group/item">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-green-500/15 rounded-full blur-sm group-hover/item:blur-md transition-all"></div>
+                      <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm border border-green-400/30 flex items-center justify-center">
+                        <span className="text-green-400 font-bold text-sm">1</span>
+                      </div>
                     </div>
                     <p className="text-gray-300 pt-1">Escolha o valor que deseja adicionar</p>
                   </div>
-                  <div className="flex items-start gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-blue-400/30 flex items-center justify-center">
-                      <span className="text-blue-400 font-bold text-sm">2</span>
+                  <div className="flex items-start gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10 hover:border-blue-400/30 transition-all group/item">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-blue-500/15 rounded-full blur-sm group-hover/item:blur-md transition-all"></div>
+                      <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-blue-400/30 flex items-center justify-center">
+                        <span className="text-blue-400 font-bold text-sm">2</span>
+                      </div>
                     </div>
                     <p className="text-gray-300 pt-1">Realize o pagamento via PIX ou Boleto</p>
                   </div>
-                  <div className="flex items-start gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-purple-400/30 flex items-center justify-center">
-                      <span className="text-purple-400 font-bold text-sm">3</span>
+                  <div className="flex items-start gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10 hover:border-purple-400/30 transition-all group/item">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-purple-500/15 rounded-full blur-sm group-hover/item:blur-md transition-all"></div>
+                      <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-purple-400/30 flex items-center justify-center">
+                        <span className="text-purple-400 font-bold text-sm">3</span>
+                      </div>
                     </div>
                     <p className="text-gray-300 pt-1">Saldo creditado automaticamente após confirmação</p>
                   </div>
-                  <div className="flex items-start gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10">
-                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-sm border border-yellow-400/30 flex items-center justify-center">
-                      <span className="text-yellow-400 font-bold text-sm">4</span>
+                  <div className="flex items-start gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10 hover:border-yellow-400/30 transition-all group/item">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-yellow-500/15 rounded-full blur-sm group-hover/item:blur-md transition-all"></div>
+                      <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-sm border border-yellow-400/30 flex items-center justify-center">
+                        <span className="text-yellow-400 font-bold text-sm">4</span>
+                      </div>
                     </div>
                     <p className="text-gray-300 pt-1">Use em qualquer leilão sem burocracia!</p>
                   </div>
