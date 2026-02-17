@@ -122,7 +122,13 @@ Deno.serve(async (req) => {
                 name: buyer_name,
                 email: buyer_email,
                 cpfCnpj: cleanCpf,
-                phone: cleanPhone
+                phone: cleanPhone,
+                postalCode: card_data.address?.zip_code || addressZip?.replace(/\D/g, ''),
+                addressNumber: card_data.address?.number || addressNumber,
+                addressComplement: card_data.address?.complement || addressComplement || '',
+                street: card_data.address?.street || addressStreet,
+                city: card_data.address?.city || addressCity,
+                state: card_data.address?.state || addressState
             };
         }
 
