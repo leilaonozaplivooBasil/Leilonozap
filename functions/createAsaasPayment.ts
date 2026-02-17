@@ -241,28 +241,39 @@ Deno.serve(async (req) => {
              }
          }
 
+         // Buscar buyer_id apenas se for catalog_sale
+         let buyerId = null;
+         if (catalog_sale_id) {
+             try {
+                 const sales = await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }, null, 1);
+                 buyerId = sales && sales.length > 0 ? sales[0].buyer_id : null;
+             } catch (e) {
+                 console.warn('⚠️ Erro ao buscar buyer_id de CatalogSale:', e.message);
+             }
+         }
+
          await base44.asServiceRole.entities.AsaasPayment.create({
-             payment_id: paymentData.id,
-             customer_id: customerId,
-             billing_type: billing_type,
-             value: amount,
-             status: paymentStatus,
-             external_reference: externalReference || paymentData.id,
-             catalog_sale_id: catalog_sale_id || null,
-             auction_id: auction_id || null,
-             wallet_deposit_user_id: walletDepositUserId,
-             is_wallet_deposit: isWalletDeposit,
-             buyer_id: catalog_sale_id ? (await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }))[0]?.buyer_id : null,
-             buyer_name: buyer_name,
-             buyer_email: buyer_email,
-             buyer_cpf: cleanCpf,
-             pix_qr_code: pixQrCode,
-             pix_payload: pixPayload,
-             boleto_url: paymentData.bankSlipUrl || null,
-             invoice_url: paymentData.invoiceUrl || null,
-             due_date: paymentData.dueDate,
-             payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
-         });
+              payment_id: paymentData.id,
+              customer_id: customerId,
+              billing_type: billing_type,
+              value: amount,
+              status: paymentStatus,
+              external_reference: externalReference || paymentData.id,
+              catalog_sale_id: catalog_sale_id || null,
+              auction_id: auction_id || null,
+              wallet_deposit_user_id: walletDepositUserId,
+              is_wallet_deposit: isWalletDeposit,
+              buyer_id: buyerId,
+              buyer_name: buyer_name,
+              buyer_email: buyer_email,
+              buyer_cpf: cleanCpf,
+              pix_qr_code: pixQrCode,
+              pix_payload: pixPayload,
+              boleto_url: paymentData.bankSlipUrl || null,
+              invoice_url: paymentData.invoiceUrl || null,
+              due_date: paymentData.dueDate,
+              payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
+          });
 
         console.log('✅ AsaasPayment registrado no banco');
 
