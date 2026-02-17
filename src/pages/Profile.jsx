@@ -877,9 +877,9 @@ export default function Profile() {
             {userBids.length > 0 ? (
               <div className="space-y-3">
                 {userBids.slice(0, 10).map((bid) => (
-                  <div key={bid.id} className={`flex justify-between items-center p-3 ${isSaiDeBaixo ? 'bg-gray-50 border-2 border-gray-200' : 'bg-gray-800 border border-gray-700'} rounded-lg`}>
-                    <div>
-                      <p className={`font-medium ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Lance de R$ {bid.bid_amount.toFixed(2)}</p>
+                   <div key={bid.id} className={`flex justify-between items-center p-3 ${isSaiDeBaixo ? 'bg-gray-50 border-2 border-gray-200' : 'bg-gray-800 border border-gray-700'} rounded-lg`}>
+                     <div>
+                       <p className={`font-medium ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Lance de R$ {(bid.bid_amount || 0).toFixed(2)}</p>
                       <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
                         em {new Date(bid.created_date).toLocaleDateString('pt-BR')}
                       </p>
