@@ -281,8 +281,8 @@ export default function WalletHistory() {
             {isLoading ? (
               <div className="text-center py-16">
                 <div className="inline-block">
-                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-500/30 border-t-cyan-400 mx-auto mb-4"></div>
-                  <p className="text-cyan-300/70 font-light">Carregando transações...</p>
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-500/30 border-t-green-400 mx-auto mb-4"></div>
+                   <p className="text-green-300/70 font-light">Carregando transações...</p>
                 </div>
               </div>
             ) : (
