@@ -399,35 +399,44 @@ export default function AddFunds() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 relative">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-green-500/20 rounded-lg">
-                    <Zap className="w-4 h-4 text-green-400" />
+                  <div className="flex items-start gap-4 p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10 hover:border-green-400/30 transition-all group/item">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-green-500/30 rounded-xl blur-md group-hover/item:blur-lg transition-all"></div>
+                      <div className="relative p-3 bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-xl border border-green-400/20">
+                        <Zap className="w-5 h-5 text-green-400" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-sm mb-1">Pagamento Instantâneo</p>
+                      <p className="text-gray-400 text-xs">Arrematação sem espera</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-white font-semibold text-sm">Pagamento Instantâneo</p>
-                    <p className="text-gray-400 text-xs">Arrematação sem espera</p>
-                  </div>
-                </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-blue-500/20 rounded-lg">
-                    <Shield className="w-4 h-4 text-blue-400" />
+                  <div className="flex items-start gap-4 p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10 hover:border-blue-400/30 transition-all group/item">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-md group-hover/item:blur-lg transition-all"></div>
+                      <div className="relative p-3 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm rounded-xl border border-blue-400/20">
+                        <Shield className="w-5 h-5 text-blue-400" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-sm mb-1">100% Seguro</p>
+                      <p className="text-gray-400 text-xs">Transações protegidas</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-white font-semibold text-sm">100% Seguro</p>
-                    <p className="text-gray-400 text-xs">Transações protegidas</p>
-                  </div>
-                </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="p-2 bg-purple-500/20 rounded-lg">
-                    <Clock className="w-4 h-4 text-purple-400" />
+                  <div className="flex items-start gap-4 p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10 hover:border-purple-400/30 transition-all group/item">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-purple-500/30 rounded-xl blur-md group-hover/item:blur-lg transition-all"></div>
+                      <div className="relative p-3 bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm rounded-xl border border-purple-400/20">
+                        <Clock className="w-5 h-5 text-purple-400" />
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-white font-bold text-sm mb-1">Disponível 24/7</p>
+                      <p className="text-gray-400 text-xs">Recarregue a qualquer momento</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-white font-semibold text-sm">Disponível 24/7</p>
-                    <p className="text-gray-400 text-xs">Recarregue a qualquer momento</p>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
