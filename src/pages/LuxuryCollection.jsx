@@ -117,11 +117,11 @@ const filtered = useMemo(() => {
       <div className="min-h-screen bg-gray-900 relative overflow-hidden flex items-center justify-center">
         <style>{`
           @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-          @keyframes shimmer { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } }
-          @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 30px rgba(217, 119, 6, 0.3), 0 0 60px rgba(217, 119, 6, 0.15); } 50% { box-shadow: 0 0 50px rgba(217, 119, 6, 0.5), 0 0 90px rgba(217, 119, 6, 0.25); } }
-          .modal-card { animation: glow-pulse 3s ease-in-out infinite; }
-          .shimmer-bg { animation: shimmer 2s ease-in-out infinite; }
-          .float-crown { animation: float 3s ease-in-out infinite; }
+          @keyframes shimmer { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.5; } }
+          @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(217, 119, 6, 0.15), 0 0 40px rgba(217, 119, 6, 0.08); } 50% { box-shadow: 0 0 30px rgba(217, 119, 6, 0.25), 0 0 60px rgba(217, 119, 6, 0.12); } }
+          .modal-card { animation: glow-pulse 4.5s ease-in-out infinite; }
+          .shimmer-bg { animation: shimmer 2.5s ease-in-out infinite; }
+          .float-crown { animation: float 3.5s ease-in-out infinite; }
         `}</style>
         
         {/* Background gradient premium */}
