@@ -818,9 +818,9 @@ export default function Profile() {
               <CardHeader>
                 <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Estatísticas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-0">
+              <CardContent className="space-y-0 py-2">
                 {userStats.map((stat) => (
-                  <div key={stat.label} className="flex items-center justify-between">
+                  <div key={stat.label} className="flex items-center justify-between py-1">
                     <div className="flex items-center gap-3">
                       <stat.icon className={`w-5 h-5 ${stat.color}`} />
                       <span className={`text-sm ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>{stat.label}</span>
