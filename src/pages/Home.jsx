@@ -808,8 +808,8 @@ export default function Home() {
                   <div className="flex-1">
                     <h3 className="text-xl font-bold text-yellow-400 mb-2">Conexão Instável</h3>
                     <p className="text-gray-300 mb-4">{loadError}</p>
-                    <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3 mb-4">
-                      <p className="text-sm text-blue-300">
+                    <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-3 mb-4">
+                      <p className="text-sm text-green-300">
                         💡 <strong>Dica:</strong> Verifique sua conexão de internet e tente novamente.
                       </p>
                     </div>
