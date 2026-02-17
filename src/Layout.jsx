@@ -1062,6 +1062,33 @@ export default function Layout({ children, currentPageName }) {
         .animate-pulse-subtle {
           animation: pulse-subtle 2s ease-in-out infinite;
         }
+
+        /* Scrollbar minimalista global */
+        *::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        
+        *::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        
+        *::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #10b981, #059669);
+          border-radius: 3px;
+          opacity: 0.3;
+        }
+        
+        *::-webkit-scrollbar-thumb:hover {
+          opacity: 0.6;
+          background: linear-gradient(to bottom, #059669, #047857);
+        }
+        
+        /* Firefox */
+        * {
+          scrollbar-color: #10b981 transparent;
+          scrollbar-width: thin;
+        }
       `}</style>
     </ErrorBoundary>
   );
