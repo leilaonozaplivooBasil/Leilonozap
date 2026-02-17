@@ -32,16 +32,35 @@ export default function WalletHistory() {
         if (savedUserJSON && isLoggedIn) {
           let user = JSON.parse(savedUserJSON);
           
-          // Valida se o ID é legítimo (não é um índice de React)
-          if (!user.id || user.id.includes('index-')) {
-            console.warn("⚠️ [WalletHistory] ID inválido no cache, buscando do banco...");
+          console.log("🔍 [WalletHistory] Usuário do cache:", { id: user.id, email: user.email });
+          
+          // Valida se o ID é legítimo (tem mais de 8 caracteres e não é um índice de React)
+          const isInvalidId = !user.id || user.id.length < 8 || user.id.includes('index-') || user.id.includes('js-c');
+          
+          if (isInvalidId) {
+            console.warn("⚠️ [WalletHistory] ID inválido detectado:", user.id);
+            console.warn("⚠️ Tentando recuperar usuário real pelo email...");
+            
+            // Limpa o cache corrompido
+            localStorage.removeItem('currentUser');
+            sessionStorage.removeItem('isLoggedIn');
+            
             // Busca o usuário real pelo email
             if (user.email) {
+              console.log("🔍 [WalletHistory] Buscando usuário pelo email:", user.email);
               const users = await base44.entities.AppUser.filter({ email: user.email });
+              console.log("✅ [WalletHistory] Usuários encontrados:", users.length, users);
+              
               if (users.length > 0) {
                 user = users[0];
+                console.log("✅ [WalletHistory] Usuário correto recuperado:", { id: user.id, email: user.email });
                 localStorage.setItem('currentUser', JSON.stringify(user));
+                sessionStorage.setItem('isLoggedIn', 'true');
+              } else {
+                throw new Error("Usuário não encontrado no banco de dados");
               }
+            } else {
+              throw new Error("Email do usuário não disponível");
             }
           }
           
@@ -52,7 +71,9 @@ export default function WalletHistory() {
           navigate(createPageUrl("Home"));
         }
       } catch (error) {
-        console.error("Erro ao carregar usuário:", error);
+        console.error("❌ Erro ao carregar usuário:", error.message);
+        localStorage.removeItem('currentUser');
+        sessionStorage.removeItem('isLoggedIn');
         navigate(createPageUrl("Home"));
       }
     };
