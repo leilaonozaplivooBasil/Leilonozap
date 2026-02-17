@@ -707,6 +707,12 @@ export default function AuctionRoom() {
         await loadCurrentUser();
         await initialLoadData();
         
+        // 🆕 Ativa modo telespectador se vir do parâmetro
+        if (spectatorModeParam) {
+          setIsSpectatorMode(true);
+          console.log("🎬 [SPECTATOR] Modo telespectador ativado via URL");
+        }
+        
         hasInitializedRef.current = true;
         
       } catch (error) {
