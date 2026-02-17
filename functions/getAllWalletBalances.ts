@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
             total_users_with_wallet: walletData.length,
             users_with_positive_balance: usersWithBalance,
             total_balance_deposited: totalBalance.toFixed(2),
-            wallets: walletData,
+            wallets: walletData.slice(0, 100), // Mostrar só top 100 por saldo
+            wallet_count: walletData.length,
             summary: {
                 average_balance: (totalBalance / walletData.length).toFixed(2),
                 max_balance: Math.max(...walletData.map(w => w.balance)).toFixed(2),
