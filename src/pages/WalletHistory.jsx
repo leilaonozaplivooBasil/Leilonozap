@@ -228,7 +228,7 @@ export default function WalletHistory() {
               </div>
               <Button
                 onClick={() => navigate(createPageUrl("AddFunds"))}
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold h-12 shadow-lg shadow-green-500/50 transition-all duration-300 border-0"
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold h-12 shadow-md transition-all duration-300 border-0"
               >
                 <Plus className="w-5 h-5 mr-2" />
                 Depositar Agora
