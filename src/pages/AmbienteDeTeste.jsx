@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { Loader2, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Loader2, RefreshCw, CheckCircle2, AlertTriangle, Plus, X } from "lucide-react";
 
 export default function AmbienteDeTeste() {
   const [loadingUsers, setLoadingUsers] = useState(true);
@@ -19,6 +19,11 @@ export default function AmbienteDeTeste() {
   const [me, setMe] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState("");
+  const [showWalletTest, setShowWalletTest] = useState(false);
+  const [walletUserId, setWalletUserId] = useState("");
+  const [walletAmount, setWalletAmount] = useState(100);
+  const [isCreatingWallet, setIsCreatingWallet] = useState(false);
+  const [walletMessage, setWalletMessage] = useState("");
 
   // Load current user and all AppUsers (for anchor select)
   useEffect(() => {
@@ -120,6 +125,61 @@ export default function AmbienteDeTeste() {
     }
   };
 
+  const createWalletTest = async () => {
+    if (!walletUserId || !walletAmount) {
+      setWalletMessage("❌ Selecione usuário e insira o valor");
+      return;
+    }
+    
+    setIsCreatingWallet(true);
+    setWalletMessage("");
+    try {
+      const selectedUser = users.find(u => u.id === walletUserId);
+      if (!selectedUser) {
+        setWalletMessage("❌ Usuário não encontrado");
+        return;
+      }
+
+      const amount = Number(walletAmount);
+      if (amount <= 0) {
+        setWalletMessage("❌ Valor deve ser maior que 0");
+        return;
+      }
+
+      // Atualiza ou cria carteira
+      let wallet = await base44.entities.Wallet.filter({ user_id: walletUserId });
+      if (wallet && wallet.length > 0) {
+        await base44.entities.Wallet.update(wallet[0].id, {
+          balance: (wallet[0].balance || 0) + amount
+        });
+      } else {
+        await base44.entities.Wallet.create({
+          user_id: walletUserId,
+          balance: amount
+        });
+      }
+
+      // Registra transação no histórico
+      await base44.entities.WalletTransaction.create({
+        user_id: walletUserId,
+        type: "deposit",
+        direction: "credit",
+        amount: amount,
+        status: "confirmed",
+        description: `Teste de carteira - Saldo adicionado: R$ ${amount.toFixed(2)}`
+      });
+
+      setWalletMessage(`✅ Saldo de R$ ${amount.toFixed(2)} adicionado para ${selectedUser.full_name}`);
+      setWalletUserId("");
+      setWalletAmount(100);
+      setTimeout(() => setShowWalletTest(false), 2000);
+    } catch (e) {
+      setWalletMessage("❌ Erro ao criar teste: " + e.message);
+    } finally {
+      setIsCreatingWallet(false);
+    }
+  };
+
   // Auto-simulate on changes (debounced)
   useEffect(() => {
     if (!anchorUser || !saleValue) return;
@@ -156,6 +216,9 @@ export default function AmbienteDeTeste() {
             <Button className="bg-green-600 hover:bg-green-700 text-white border-none shadow-md shadow-green-600/20" onClick={simulate} disabled={isSimulating || !anchorUser}>
               {isSimulating ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Simular
             </Button>
+            <Button className="bg-purple-600 hover:bg-purple-700 text-white border-none shadow-md shadow-purple-600/20" onClick={() => setShowWalletTest(!showWalletTest)}>
+              <Plus className="w-4 h-4" /> Teste Carteira
+            </Button>
             {(me?.role === 'admin' || me?.email === 'jonhhenrique29@hotmail.com' || me?.email === 'erbrito.sistemas@gmail.com') && (
               <Button className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-md shadow-blue-600/20" onClick={syncToProduction} disabled={isSyncing}>
                 {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔄'} Sincronizar
@@ -186,6 +249,65 @@ export default function AmbienteDeTeste() {
           </Card>
         ) : (
           <>
+            {showWalletTest && (
+              <Card className="bg-purple-900/30 border-purple-700 text-white">
+                <CardHeader className="flex-row items-center justify-between">
+                  <CardTitle className="text-lg text-white">💳 Teste de Carteira</CardTitle>
+                  <button onClick={() => setShowWalletTest(false)} className="text-gray-400 hover:text-white">
+                    <X className="w-5 h-5" />
+                  </button>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-2 text-sm text-white">Selecione o usuário</label>
+                      {loadingUsers ? (
+                        <div className="flex items-center gap-2 text-white"><Loader2 className="w-4 h-4 animate-spin" /> Carregando...</div>
+                      ) : (
+                        <Select value={walletUserId} onValueChange={setWalletUserId}>
+                          <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+                            <SelectValue placeholder="Escolha um usuário" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-900/95 border-gray-700 text-white max-h-72">
+                            {users.map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.full_name || u.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block mb-2 text-sm text-white">Valor a adicionar (R$)</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={walletAmount}
+                        onChange={(e) => setWalletAmount(e.target.value)}
+                        className="bg-gray-900 border-gray-700 text-white"
+                      />
+                    </div>
+                  </div>
+                  {walletMessage && (
+                    <div className={`text-sm p-3 rounded ${walletMessage.includes("✅") ? "bg-green-900/30 text-green-300" : "bg-red-900/30 text-red-300"}`}>
+                      {walletMessage}
+                    </div>
+                  )}
+                  <Button 
+                    onClick={createWalletTest} 
+                    disabled={isCreatingWallet || !walletUserId}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {isCreatingWallet ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                    Adicionar Saldo
+                  </Button>
+                  <p className="text-xs text-gray-400">Este teste criará um depósito confirmado no histórico da carteira.</p>
+                </CardContent>
+              </Card>
+            )}
+
             <Card className="bg-gray-800/90 border-gray-700 text-white">
               <CardHeader>
                 <CardTitle className="text-lg text-white">Parâmetros da Simulação</CardTitle>
