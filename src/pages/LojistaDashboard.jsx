@@ -891,6 +891,96 @@ export default function LojistaDashboard() {
         </Dialog>
         </div>
       </div>
+
+      <style>{`
+        @keyframes liquidDrift {
+          0%, 100% {
+            transform: translate(0px, 0px) scale(1);
+            opacity: 0.1;
+          }
+          25% {
+            transform: translate(20px, -20px) scale(1.05);
+            opacity: 0.15;
+          }
+          50% {
+            transform: translate(-10px, 30px) scale(1.1);
+            opacity: 0.12;
+          }
+          75% {
+            transform: translate(30px, 10px) scale(1.02);
+            opacity: 0.14;
+          }
+        }
+
+        @keyframes liquidDriftReverse {
+          0%, 100% {
+            transform: translate(0px, 0px) scale(1);
+            opacity: 0.1;
+          }
+          25% {
+            transform: translate(-30px, 20px) scale(1.05);
+            opacity: 0.15;
+          }
+          50% {
+            transform: translate(10px, -30px) scale(1.1);
+            opacity: 0.12;
+          }
+          75% {
+            transform: translate(-20px, -10px) scale(1.02);
+            opacity: 0.14;
+          }
+        }
+
+        @keyframes liquidPulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.05;
+          }
+          50% {
+            transform: scale(1.15);
+            opacity: 0.1;
+          }
+        }
+
+        @keyframes liquidGlow {
+          0%, 100% {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.05), inset 0 0 20px rgba(255, 255, 255, 0.02);
+          }
+          50% {
+            box-shadow: 0 0 40px rgba(255, 255, 255, 0.1), inset 0 0 40px rgba(255, 255, 255, 0.05);
+          }
+        }
+
+        .animate-liquid-drift {
+          animation: liquidDrift 8s ease-in-out infinite;
+        }
+
+        .animate-liquid-drift-reverse {
+          animation: liquidDriftReverse 10s ease-in-out infinite;
+        }
+
+        .animate-liquid-pulse {
+          animation: liquidPulse 6s ease-in-out infinite;
+        }
+
+        .animate-liquid-glow {
+          animation: liquidGlow 4s ease-in-out infinite;
+        }
+
+        .liquid-glass-card {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          transition: all 0.5s cubic-bezier(0.23, 1, 0.320, 1);
+        }
+
+        .liquid-glass-card:hover {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
+          border-color: rgba(255, 255, 255, 0.3);
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+      `}</style>
     </div>
   );
 }
