@@ -118,7 +118,7 @@ const filtered = useMemo(() => {
         <style>{`
           @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
           @keyframes shimmer { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.5; } }
-          @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 20px rgba(217, 119, 6, 0.15), 0 0 40px rgba(217, 119, 6, 0.08); } 50% { box-shadow: 0 0 30px rgba(217, 119, 6, 0.25), 0 0 60px rgba(217, 119, 6, 0.12); } }
+          @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 15px rgba(217, 119, 6, 0.08), 0 0 30px rgba(217, 119, 6, 0.04); } 50% { box-shadow: 0 0 20px rgba(217, 119, 6, 0.12), 0 0 40px rgba(217, 119, 6, 0.06); } }
           .modal-card { animation: glow-pulse 4.5s ease-in-out infinite; }
           .shimmer-bg { animation: shimmer 2.5s ease-in-out infinite; }
           .float-crown { animation: float 3.5s ease-in-out infinite; }
@@ -127,7 +127,7 @@ const filtered = useMemo(() => {
         {/* Background gradient premium */}
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-[#0a0e1a] to-gray-900" />
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-amber-500/5" />
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/3 via-transparent to-amber-500/3" />
           
           {/* Orbes de luz premium */}
           <div className="pointer-events-none absolute -top-40 -right-20 w-96 h-96 rounded-full bg-gradient-to-br from-amber-400/20 to-yellow-300/10 blur-3xl" />
@@ -145,7 +145,7 @@ const filtered = useMemo(() => {
           <div className="absolute -inset-0.5 bg-gradient-to-b from-amber-400/10 to-transparent rounded-3xl" />
 
           {/* Card principal */}
-          <div className="modal-card relative bg-gradient-to-br from-gray-800/90 via-gray-800/80 to-gray-900/90 backdrop-blur-xl border border-amber-500/40 rounded-3xl p-8 shadow-2xl">
+          <div className="modal-card relative bg-gradient-to-br from-gray-800/90 via-gray-800/80 to-gray-900/90 backdrop-blur-xl border border-amber-500/15 rounded-3xl p-8 shadow-2xl">
             {/* Padrão diagonal sutil */}
             <div className="absolute inset-0 opacity-5 rounded-3xl" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(217, 119, 6, 0.1) 35px, rgba(217, 119, 6, 0.1) 70px)' }} />
             
