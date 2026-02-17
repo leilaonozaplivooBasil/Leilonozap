@@ -65,6 +65,9 @@ export default function AuctionRoom() {
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [isBuyingNow, setIsBuyingNow] = useState(false);
+  const [isSpectatorMode, setIsSpectatorMode] = useState(false);
+  const [showLowBalanceModal, setShowLowBalanceModal] = useState(false);
+  const [userWallet, setUserWallet] = useState(null);
 
   const isAndroid = /Android/i.test(navigator.userAgent);
 
