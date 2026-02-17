@@ -203,7 +203,7 @@ export default function AddFunds() {
                 </div>
                 <h2 className="text-2xl font-bold text-white">Pacotes Rápidos</h2>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5 p-3">
                 {packages.map((pkg) => {
                   const isSelected = selectedAmount === pkg.amount;
                   const hasBonus = pkg.bonus_percentage > 0;
@@ -217,7 +217,7 @@ export default function AddFunds() {
                       }`}></div>
                       <Card
                         onClick={() => handlePackageSelect(pkg.amount)}
-                        className={`relative cursor-pointer transition-all duration-500 border overflow-hidden ${
+                        className={`relative cursor-pointer transition-all duration-500 border ${
                           isSelected
                             ? "backdrop-blur-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 border-green-400/50 scale-105 shadow-2xl shadow-green-500/20"
                             : "backdrop-blur-xl bg-white/5 border-white/10 hover:border-green-500/30 hover:scale-102 hover:bg-white/10"
