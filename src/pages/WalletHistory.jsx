@@ -176,42 +176,59 @@ export default function WalletHistory() {
           </div>
         </div>
 
-        {/* Saldo Principal - Destaque */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 md:col-span-2 shadow-lg">
-            <CardContent className="p-8">
-              <div className="flex items-center justify-between">
+        {/* Grid de Saldos Futurístico */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+          {/* Saldo Principal */}
+          <Card className="md:col-span-2 border-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-transparent to-blue-500/10"></div>
+            <CardContent className="p-8 relative z-10">
+              <div className="flex items-start justify-between mb-8">
                 <div>
-                  <p className="text-green-100 text-sm font-medium mb-2">Saldo Disponível</p>
-                  <p className="text-4xl font-bold text-white">
-                    R$ {wallet?.balance?.toFixed(2) || '0.00'}
-                  </p>
+                  <p className="text-cyan-300/70 text-sm font-light uppercase tracking-widest mb-3">Saldo Disponível</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-6xl font-black text-white">R$</p>
+                    <p className="text-6xl font-black bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent">
+                      {wallet?.balance?.toFixed(2) || '0.00'}
+                    </p>
+                  </div>
                 </div>
-                <WalletIcon className="w-16 h-16 text-white/20" />
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500/30 to-blue-500/30 flex items-center justify-center border border-cyan-400/30">
+                  <WalletIcon className="w-10 h-10 text-cyan-400" />
+                </div>
               </div>
-              <div className="mt-6 pt-6 border-t border-white/20 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-green-100 text-xs font-medium mb-1">Total Depositado</p>
-                  <p className="text-xl font-bold text-white">R$ {totalDeposited.toFixed(2)}</p>
+
+              <div className="grid grid-cols-2 gap-6 pt-6 border-t border-cyan-400/20">
+                <div className="space-y-2">
+                  <p className="text-cyan-300/50 text-xs font-light uppercase tracking-wider">Entradas</p>
+                  <div className="flex items-center gap-2">
+                    <ArrowUpRight className="w-5 h-5 text-green-400" />
+                    <p className="text-2xl font-bold text-green-400">R$ {totalDeposited.toFixed(2)}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-green-100 text-xs font-medium mb-1">Total Utilizado</p>
-                  <p className="text-xl font-bold text-white">R$ {totalUsed.toFixed(2)}</p>
+                <div className="space-y-2">
+                  <p className="text-cyan-300/50 text-xs font-light uppercase tracking-wider">Saídas</p>
+                  <div className="flex items-center gap-2">
+                    <ArrowDownLeft className="w-5 h-5 text-red-400" />
+                    <p className="text-2xl font-bold text-red-400">R$ {totalUsed.toFixed(2)}</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Botão Depositar */}
-          <Card className="bg-gray-800/50 border-gray-700 backdrop-blur-sm shadow-lg">
-            <CardContent className="p-8 flex flex-col justify-between h-full">
+          {/* Card Depositar */}
+          <Card className="border-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-transparent to-emerald-500/10"></div>
+            <CardContent className="p-8 flex flex-col justify-between h-full relative z-10">
               <div>
-                <CreditCard className="w-8 h-8 text-green-400 mb-2" />
-                <p className="text-gray-300 text-sm font-medium mb-4">Adicionar Saldo</p>
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/30 to-emerald-500/30 flex items-center justify-center mb-4 border border-green-400/30">
+                  <CreditCard className="w-6 h-6 text-green-400" />
+                </div>
+                <p className="text-cyan-300/70 text-sm font-light uppercase tracking-widest">Adicionar Fundos</p>
               </div>
               <Button
                 onClick={() => navigate(createPageUrl("AddFunds"))}
-                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold h-12 shadow-lg"
+                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold h-12 shadow-lg shadow-green-500/50 transition-all duration-300 border-0"
               >
                 <Plus className="w-5 h-5 mr-2" />
                 Depositar Agora
