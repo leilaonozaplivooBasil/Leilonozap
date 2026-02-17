@@ -104,7 +104,7 @@ export default function AuctionCheckoutModern() {
   const handleCreatePayment = async () => {
     if (!validateForm()) return;
     if (!auction) {
-      toast.error('Leilão não encontrado');
+      toast.error('Pedido não encontrado');
       return;
     }
 
@@ -112,15 +112,18 @@ export default function AuctionCheckoutModern() {
     toast.loading('Processando pagamento...', { id: 'checkout-loading' });
 
     try {
+      const amount = isWalletDeposit ? depositAmount : auction.current_price;
       const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
-        auction_id: auction.id,
+        auction_id: isWalletDeposit ? null : auction.id,
+        user_id: currentUser.id,
         buyer_name: firstName.trim(),
         buyer_email: email.trim(),
         buyer_cpf: cpf.trim(),
         buyer_phone: phone.trim(),
-        amount: auction.current_price,
+        amount: amount,
         billing_type: paymentType,
-        description: `Arremate - ${auction.title}`
+        description: isWalletDeposit ? `Depósito de R$ ${amount.toFixed(2)} na carteira` : `Arremate - ${auction.title}`,
+        payment_type: isWalletDeposit ? "wallet_deposit" : "auction"
       });
 
       setIsProcessing(false);
