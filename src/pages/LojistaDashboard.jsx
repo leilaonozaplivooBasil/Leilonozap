@@ -337,45 +337,84 @@ export default function LojistaDashboard() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-gray-800 border-gray-700">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-16 h-16 bg-green-600 rounded-full flex items-center justify-center">
-              <Store className="w-8 h-8 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA2MCAwIEwgMCAwIDAgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40"></div>
+        
+        {/* Gradients */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+        <div className="relative z-10 w-full max-w-md">
+          <Card className="backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent"></div>
+            
+            <CardHeader className="relative text-center pt-8 pb-6 border-b border-white/10">
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-2xl blur-lg"></div>
+                  <div className="relative p-4 bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-2xl border border-green-400/30">
+                    <Store className="w-8 h-8 text-green-400" />
+                  </div>
+                </div>
+              </div>
+              <CardTitle className="text-3xl font-bold text-white mb-2">Portal do Lojista</CardTitle>
+              <p className="text-gray-300 text-sm">Acesse seu painel de vendas</p>
+            </CardHeader>
+
+            <CardContent className="relative pt-8 space-y-5">
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <Label className="text-gray-200 text-sm font-semibold mb-2 block">Usuário</Label>
+                  <Input
+                    placeholder="Digite seu login"
+                    value={loginForm.login}
+                    onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
+                    className="backdrop-blur-sm bg-white/5 border-white/20 text-white placeholder:text-gray-400 h-12 focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-gray-200 text-sm font-semibold mb-2 block">Senha</Label>
+                  <Input
+                    type="password"
+                    placeholder="Digite sua senha"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                    className="backdrop-blur-sm bg-white/5 border-white/20 text-white placeholder:text-gray-400 h-12 focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all"
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-green-500/30 transition-all"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+
+            <div className="relative border-t border-white/10 bg-white/5 px-6 py-4 text-center">
+              <p className="text-gray-400 text-xs">
+                © 2024 Leilão NoZap - Portal do Lojista
+              </p>
             </div>
-            <CardTitle className="text-2xl text-white">Portal do Lojista</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Input
-                  placeholder="Login"
-                  value={loginForm.login}
-                  onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
-                  className="bg-gray-900 border-gray-700 text-white"
-                  required
-                />
-              </div>
-              <div>
-                <Input
-                  type="password"
-                  placeholder="Senha"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  className="bg-gray-900 border-gray-700 text-white"
-                  required
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-green-600 hover:bg-green-700"
-                disabled={isLoading}
-              >
-                {isLoading ? "Entrando..." : "Entrar"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+          </Card>
+
+          <p className="text-center text-gray-400 text-xs mt-6">
+            Dúvidas? Entre em contato com o suporte
+          </p>
+        </div>
       </div>
     );
   }
