@@ -832,7 +832,7 @@ export default function Profile() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800 border border-gray-700'}>
+            <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader>
                 <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Ações</CardTitle>
               </CardHeader>
