@@ -48,10 +48,10 @@ export default function WalletHistory() {
         "-created_date",
         100
       );
-      const wallets = await base44.entities.Wallet.filter({ user_id: userId });
+      const depositWallets = await base44.entities.DepositWallet.filter({ user_id: userId });
       setTransactions(data);
-      if (wallets.length > 0) {
-        setWallet(wallets[0]);
+      if (depositWallets.length > 0) {
+        setWallet(depositWallets[0]);
       }
     } catch (error) {
       console.error("Erro ao carregar transações:", error);
