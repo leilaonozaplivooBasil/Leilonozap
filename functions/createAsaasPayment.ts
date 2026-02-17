@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
             buyer_email,
             buyer_cpf,
             buyer_phone,
-            amount,
+            amount: rawAmount,
             billing_type,
             billingType,
             description,
@@ -23,12 +23,14 @@ Deno.serve(async (req) => {
 
         // ✅ Aceita ambos: billing_type (snake_case) ou billingType (camelCase)
         const finalBillingType = billing_type || billingType || 'PIX';
-        console.log('🔍 Tipo de cobrança detectado:', finalBillingType);
+        
+        // ✅ Converter amount para number com segurança
+        const amount = parseFloat(rawAmount);
+        console.log('💰 Amount processado:', amount, 'Type:', typeof amount);
 
         // Validações
-        console.log('✓ Validando amount:', amount, 'Type:', typeof amount);
-        if (!amount || amount <= 0) {
-            console.error('❌ Amount inválido:', amount);
+        if (isNaN(amount) || amount <= 0) {
+            console.error('❌ Amount inválido:', rawAmount, '→', amount);
             return Response.json({ error: 'Valor inválido' }, { status: 400 });
         }
         console.log('✓ Amount válido');

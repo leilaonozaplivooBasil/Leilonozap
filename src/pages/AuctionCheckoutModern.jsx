@@ -180,7 +180,7 @@ export default function AuctionCheckoutModern() {
   toast.loading('Processando pagamento...', { id: 'checkout-loading' });
 
   try {
-  const amount = isWalletDeposit ? depositAmount : auction.current_price;
+  const amount = parseFloat(isWalletDeposit ? depositAmount : auction.current_price);
   const cardData = paymentType === 'CREDIT_CARD' ? {
     holderName: cardHolder.trim(),
     number: cardNumber.replace(/\D/g, ''),
