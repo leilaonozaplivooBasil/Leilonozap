@@ -425,7 +425,7 @@ export default function WalletHistory() {
                         </div>
                       ) : (
                         getPaginatedData(walletUsage).map((transaction) => (
-                          <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-red-400/20 rounded-xl hover:border-red-400/50 hover:shadow-lg hover:shadow-red-400/20 transition-all duration-300">
+                          <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-red-400/20 rounded-xl hover:border-red-400/50 hover:shadow-sm transition-all duration-300">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
                                 <div className="p-3 rounded-lg bg-red-500/20 border border-red-400/30">
