@@ -20,6 +20,7 @@ import AuctionTimeDebugger from "../components/system/AuctionTimeDebugger";
 import ViewTracker from "../components/recommendations/ViewTracker";
 import FavoriteButton from "../components/recommendations/FavoriteButton";
 import WinnerModal from "../components/auction/WinnerModal";
+import LowBalanceModal from "../components/auction/LowBalanceModal";
 
 import { getServerTime } from "@/functions/getServerTime";
 
