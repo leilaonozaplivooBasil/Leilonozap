@@ -1645,7 +1645,7 @@ export default function AuctionRoom() {
         </div>
       </main>
 
-      {isAuctionActive && (
+      {isAuctionActive && !isSpectatorMode && (
         <footer className="bid-input-container">
           <BidInput
             currentPrice={currentPrice}
@@ -1656,6 +1656,19 @@ export default function AuctionRoom() {
             onBuyNow={handleBuyNow}
           />
         </footer>
+      )}
+
+      {/* 🆕 MODO TELESPECTADOR - Botão flutuante para adicionar saldo */}
+      {isAuctionActive && isSpectatorMode && currentUser && (
+        <div className="fixed bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+          <Button
+            onClick={() => setShowLowBalanceModal(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold px-6 sm:px-8 h-12 sm:h-14 shadow-lg shadow-green-500/40 animate-pulse-subtle"
+          >
+            <Wallet className="w-5 h-5 mr-2" />
+            Participar do Leilão
+          </Button>
+        </div>
       )}
 
       <div className={`mobile-bottom-sheet ${showMobilePanel ? 'mobile-bottom-sheet--open' : ''}`}>
