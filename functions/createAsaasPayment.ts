@@ -352,7 +352,7 @@ Deno.serve(async (req) => {
         return Response.json({
             success: true,
             payment_id: paymentData.id,
-            billing_type: billing_type,
+            billing_type: finalBillingType,
             payment_status: paymentStatus,
             pix_qr_code: pixQrCode,
             pix_payload: pixPayload,
