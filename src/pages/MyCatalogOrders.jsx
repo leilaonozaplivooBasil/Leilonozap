@@ -27,12 +27,15 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
       <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/30 text-white overflow-hidden flex flex-col h-full hover:border-green-500/40 hover:shadow-xl hover:shadow-green-500/20 transition-all duration-300">
         
         {/* IMAGEM - Destaque Principal */}
-        <div className="relative w-full bg-gradient-to-b from-gray-700/20 to-gray-900/40 px-5 pt-5 pb-4 flex justify-center">
-          <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+        <div className="relative w-full bg-gradient-to-b from-gray-600/30 to-gray-900/60 px-5 pt-6 pb-5 flex justify-center">
+          <div className="relative w-32 h-32 rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-gray-900/40 border border-white/20 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg shadow-black/40">
             <img 
               src={mainImage} 
               alt={order.product_title} 
-              className="w-full h-full object-contain p-2" 
+              onError={(e) => {
+                e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='12' fill='%239CA3AF' text-anchor='middle' dy='.3em'%3EImagem%3C/text%3E%3C/svg%3E"
+              }}
+              className="w-full h-full object-cover" 
             />
           </div>
         </div>
