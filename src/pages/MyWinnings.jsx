@@ -37,30 +37,49 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
 
     return (
-        <Card className={`${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800/60 border border-gray-700/80 text-white'} overflow-hidden flex flex-col`}>
-            <CardHeader className="flex-row items-start gap-4 p-4">
-                 <img src={mainImage} alt={auction.title} className={`w-24 h-24 object-cover rounded-lg ${isSaiDeBaixo ? 'border-2 border-gray-200' : 'border border-gray-700'}`} />
-                 <div className="flex-grow">
-                    <CardTitle className={`text-lg mb-1 line-clamp-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>{auction.title}</CardTitle>
-                    <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Arrematado em: {new Date(auction.updated_date).toLocaleDateString('pt-BR')}</p>
-                 </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 flex-grow">
-                 <div className={`${isSaiDeBaixo ? 'bg-gray-50' : 'bg-gray-700/50'} p-3 rounded-lg flex justify-between items-center`}>
-                    <span className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Valor do Arremate:</span>
-                    <span className={`font-bold text-xl ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>R$ {auction.current_price.toFixed(2)}</span>
-                 </div>
-            </CardContent>
-            <CardFooter className={`${isSaiDeBaixo ? 'bg-gray-50' : 'bg-gray-900/50'} p-4 flex flex-col gap-3`}>
-                <Badge className={`flex items-center gap-2 text-sm ${config.color} w-fit`}>
-                    <config.icon className="w-4 h-4" />
-                    {config.text}
-                </Badge>
-                <div className="flex flex-col sm:flex-row gap-2 w-full">
+        <Card className="group bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 overflow-hidden hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-1">
+            {/* Imagem em destaque */}
+            <div className="relative h-48 overflow-hidden">
+                <img 
+                    src={mainImage} 
+                    alt={auction.title} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/40 to-transparent" />
+                
+                {/* Badge de Status Flutuante */}
+                <div className="absolute top-3 right-3">
+                    <Badge className={`flex items-center gap-1.5 text-xs backdrop-blur-md ${config.color} shadow-lg`}>
+                        <config.icon className="w-3.5 h-3.5" />
+                        {config.text}
+                    </Badge>
+                </div>
+            </div>
+
+            <CardContent className="p-5 space-y-4">
+                {/* Título e Data */}
+                <div>
+                    <h3 className="text-white font-bold text-lg line-clamp-2 mb-2 group-hover:text-green-400 transition-colors">
+                        {auction.title}
+                    </h3>
+                    <p className="text-gray-500 text-sm flex items-center gap-1.5">
+                        <Trophy className="w-3.5 h-3.5" />
+                        Arrematado em {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
+                    </p>
+                </div>
+
+                {/* Valor em Destaque */}
+                <div className="bg-gradient-to-br from-green-600/10 to-green-700/5 border border-green-500/20 rounded-xl p-4">
+                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Valor do Arremate</p>
+                    <p className="text-green-400 text-2xl font-black">R$ {auction.current_price.toFixed(2)}</p>
+                </div>
+
+                {/* Botões de Ação */}
+                <div className="flex flex-col gap-2.5 pt-2">
                     {auction.order_status === 'awaiting_payment' && (
                         <Button 
                             onClick={() => onPayClick(auction)}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold"
+                            className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300"
                         >
                             <CreditCard className="w-4 h-4 mr-2" />
                             Confirmar Pedido
@@ -70,13 +89,13 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
                     <Button 
                         onClick={() => onTrackClick(auction)}
                         variant="outline"
-                        className={`flex-1 ${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 hover:bg-gray-100' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
+                        className="w-full bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-600 transition-all duration-300"
                     >
                         <Eye className="w-4 h-4 mr-2" />
                         Acompanhar Pedido
                     </Button>
                 </div>
-            </CardFooter>
+            </CardContent>
         </Card>
     );
 };
@@ -166,34 +185,49 @@ export default function MyWinningsPage() {
     }
 
     return (
-        <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-gradient-to-br from-gray-50 to-gray-100' : 'bg-gray-900'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} p-3 sm:p-4 md:p-6 lg:p-8`}>
+        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white p-3 sm:p-4 md:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
-                <div className="mb-6 sm:mb-8">
-                    <h1 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                        <Trophy className={`w-6 h-6 sm:w-8 sm:h-8 ${isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}`} />
-                        Meus Arremates
-                    </h1>
-                    <p className={`text-sm sm:text-base ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} mt-2`}>
-                      Produtos que você arrematou
-                    </p>
+                {/* Header Redesenhado */}
+                <div className="mb-8 sm:mb-10">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-3 rounded-2xl shadow-lg shadow-yellow-500/25">
+                            <Trophy className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                                Meus Arremates
+                            </h1>
+                            <p className="text-gray-400 text-sm sm:text-base mt-1">
+                                Produtos que você conquistou nos leilões
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Card da Carteira */}
-                <Card className="bg-gradient-to-br from-green-600 to-green-700 border-green-500/30 mb-6 sm:mb-8 shadow-xl">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-white flex items-center gap-2">
-                            <Wallet className="w-6 h-6" />
-                            Carteira Digital
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
-                            <p className="text-green-100 text-sm mb-1">Saldo Disponível</p>
-                            <p className="text-white text-3xl font-bold">R$ {walletBalance.toFixed(2)}</p>
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-3">
-                            <Button className="flex-1 bg-white text-green-700 hover:bg-green-50 font-semibold">
-                                <CreditCard className="w-4 h-4 mr-2" />
+                {/* Card da Carteira - Design Premium */}
+                <Card className="relative overflow-hidden bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 border-none mb-6 sm:mb-8 shadow-2xl shadow-green-500/25">
+                    {/* Efeito de Brilho */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent" />
+                    
+                    <CardContent className="relative p-6 sm:p-8">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                            {/* Info da Carteira */}
+                            <div className="flex items-start gap-4">
+                                <div className="bg-white/15 backdrop-blur-xl p-3.5 rounded-2xl">
+                                    <Wallet className="w-7 h-7 text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-green-100 text-sm font-medium mb-1.5">Saldo Disponível</p>
+                                    <p className="text-white text-4xl font-black tracking-tight">
+                                        R$ {walletBalance.toFixed(2)}
+                                    </p>
+                                    <p className="text-green-200/70 text-xs mt-1">Use para pagar seus arremates</p>
+                                </div>
+                            </div>
+
+                            {/* Botão de Adicionar */}
+                            <Button className="w-full sm:w-auto bg-white text-green-700 hover:bg-green-50 font-bold px-8 py-6 text-base shadow-xl shadow-black/20 hover:shadow-2xl hover:scale-105 transition-all duration-300">
+                                <CreditCard className="w-5 h-5 mr-2.5" />
                                 Adicionar Saldo
                             </Button>
                         </div>
@@ -203,16 +237,21 @@ export default function MyWinningsPage() {
 
 
                 {winnings.length === 0 ? (
-                    <div className={`text-center py-16 ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800/50'} rounded-2xl`}>
-                        <ShoppingBag className={`w-16 h-16 mx-auto ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-500'} mb-4`} />
-                        <h2 className={`text-xl font-semibold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>Você ainda não arrematou nada</h2>
-                        <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} mb-6`}>Participe de um leilão e dê seu lance para começar a sua coleção!</p>
-                        <Link to={createPageUrl(isSaiDeBaixo ? "SaiDeBaixo" : "Home")}>
-                            <Button className={isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}>Ver Leilões Ativos</Button>
+                    <div className="text-center py-20 bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-sm rounded-3xl border border-gray-700/50">
+                        <div className="bg-gradient-to-br from-gray-700 to-gray-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                            <ShoppingBag className="w-10 h-10 text-gray-400" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-3">Você ainda não arrematou nada</h2>
+                        <p className="text-gray-400 mb-8 max-w-md mx-auto">Participe de um leilão e dê seu lance para começar a sua coleção de produtos incríveis!</p>
+                        <Link to={createPageUrl("Home")}>
+                            <Button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold px-8 py-6 text-base shadow-xl shadow-green-500/25 hover:shadow-green-500/40 hover:scale-105 transition-all duration-300">
+                                <Trophy className="w-5 h-5 mr-2" />
+                                Ver Leilões Ativos
+                            </Button>
                         </Link>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                         {winnings.map(auction => (
                             <WonAuctionCard 
                                 key={auction.id} 
