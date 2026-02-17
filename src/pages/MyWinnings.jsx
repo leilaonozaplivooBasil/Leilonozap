@@ -8,7 +8,7 @@ const Auction = base44.entities.Auction;
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye } from 'lucide-react';
+import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -88,6 +88,7 @@ export default function MyWinningsPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [debugLogs, setDebugLogs] = useState([]);
     const [showDebug, setShowDebug] = useState(false);
+    const [walletBalance, setWalletBalance] = useState(0);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -110,6 +111,12 @@ export default function MyWinningsPage() {
                 }
                 const user = JSON.parse(savedUser);
                 setCurrentUser(user);
+                
+                // Busca saldo da carteira
+                const wallets = await base44.entities.Wallet.filter({ user_id: user.id });
+                if (wallets && wallets.length > 0) {
+                    setWalletBalance(wallets[0].balance || 0);
+                }
                 
                 const allAuctions = await Auction.list("-updated_date", 500);
                 const wonAuctions = allAuctions.filter(auction => 
@@ -170,6 +177,28 @@ export default function MyWinningsPage() {
                       Produtos que você arrematou
                     </p>
                 </div>
+
+                {/* Card da Carteira */}
+                <Card className="bg-gradient-to-br from-green-600 to-green-700 border-green-500/30 mb-6 sm:mb-8 shadow-xl">
+                    <CardHeader className="pb-3">
+                        <CardTitle className="text-white flex items-center gap-2">
+                            <Wallet className="w-6 h-6" />
+                            Carteira Digital
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+                            <p className="text-green-100 text-sm mb-1">Saldo Disponível</p>
+                            <p className="text-white text-3xl font-bold">R$ {walletBalance.toFixed(2)}</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <Button className="flex-1 bg-white text-green-700 hover:bg-green-50 font-semibold">
+                                <CreditCard className="w-4 h-4 mr-2" />
+                                Adicionar Saldo
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
 
 
 
