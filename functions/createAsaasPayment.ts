@@ -4,9 +4,9 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
         
-        // ⚠️ REMOVIDO: Validação de auth (frontend já valida)
-        // Backend functions podem ser chamadas sem auth quando invocadas via SDK
-
+        const rawData = await req.json();
+        console.log('📥 Dados recebidos:', JSON.stringify(rawData, null, 2));
+        
         const {
             catalog_sale_id,
             auction_id,
@@ -18,16 +18,26 @@ Deno.serve(async (req) => {
             billing_type,
             billingType,
             description,
-            card_data // Dados do cartão (se CREDIT_CARD)
-        } = await req.json();
+            card_data
+        } = rawData;
 
         // ✅ Aceita ambos: billing_type (snake_case) ou billingType (camelCase)
         const finalBillingType = billing_type || billingType || 'PIX';
+        console.log('🔍 Tipo de cobrança detectado:', finalBillingType);
 
         // Validações
+        console.log('✓ Validando amount:', amount, 'Type:', typeof amount);
         if (!amount || amount <= 0) {
+            console.error('❌ Amount inválido:', amount);
             return Response.json({ error: 'Valor inválido' }, { status: 400 });
         }
+        console.log('✓ Amount válido');
+        
+        if (!buyer_name || !buyer_email || !buyer_cpf) {
+            console.error('❌ Dados do comprador incompletos:', { buyer_name, buyer_email, buyer_cpf });
+            return Response.json({ error: 'Dados do comprador incompletos' }, { status: 400 });
+        }
+        console.log('✓ Dados do comprador válidos');
 
         // ✅ PERMITIR depósito de carteira sem referência (ambos null é aceitável para wallet)
         // Apenas validar se for pagamento de leilão/catálogo
