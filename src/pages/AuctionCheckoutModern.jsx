@@ -225,7 +225,15 @@ export default function AuctionCheckoutModern() {
           number: cardNumber.replace(/\D/g, ''),
           expiryMonth: parseInt(cardMonth),
           expiryYear: yearFinal,
-          ccv: cardCvv.replace(/\D/g, '')
+          ccv: cardCvv.replace(/\D/g, ''),
+          address: {
+            zip_code: addressZip.replace(/\D/g, ''),
+            number: addressNumber,
+            complement: addressComplement,
+            street: addressStreet,
+            city: addressCity,
+            state: addressState
+          }
         };
       }
 
