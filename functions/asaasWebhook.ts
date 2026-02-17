@@ -85,17 +85,17 @@ Deno.serve(async (req) => {
                 const asaasPayment = asaasPayments[0];
                 console.log('✅ AsaasPayment encontrado:', asaasPayment.id);
 
-        // ✅ PASSO 1: Atualizar AsaasPayment
-        await base44.asServiceRole.entities.AsaasPayment.update(asaasPayment.id, {
-            status: 'confirmed',
-            payment_date: new Date().toISOString(),
-            webhook_event_id: eventId
-        });
+                // ✅ PASSO 1: Atualizar AsaasPayment
+                await base44.asServiceRole.entities.AsaasPayment.update(asaasPayment.id, {
+                    status: 'confirmed',
+                    payment_date: new Date().toISOString(),
+                    webhook_event_id: eventId
+                });
 
-        console.log('✅ AsaasPayment atualizado para confirmed');
+                console.log('✅ AsaasPayment atualizado para confirmed');
 
-        // 🎯 ATIVAR PLANO DE PARCEIRO (se aplicável)
-        if (asaasPayment.partner_licensee_id && asaasPayment.partner_plan_code) {
+                // 🎯 ATIVAR PLANO DE PARCEIRO (se aplicável)
+                if (asaasPayment.partner_licensee_id && asaasPayment.partner_plan_code) {
             console.log('💼 Ativando plano de parceiro...');
             
             const users = await base44.asServiceRole.entities.AppUser.filter({ id: asaasPayment.partner_licensee_id });
