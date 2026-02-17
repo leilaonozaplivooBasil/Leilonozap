@@ -1845,26 +1845,27 @@ export default function AuctionRoom() {
         /* Scrollbar moderno minimalista */
         .auction-messages::-webkit-scrollbar {
           width: 6px;
-        }
-        
-        .auction-messages::-webkit-scrollbar-track {
           background: transparent;
         }
         
+        .auction-messages::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        
         .auction-messages::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #10b981, #059669);
+          background: linear-gradient(to bottom, #10b981, #059669) !important;
           border-radius: 3px;
           opacity: 0.3;
         }
         
         .auction-messages::-webkit-scrollbar-thumb:hover {
           opacity: 0.6;
-          background: linear-gradient(to bottom, #059669, #047857);
+          background: linear-gradient(to bottom, #059669, #047857) !important;
         }
         
         /* Firefox */
         .auction-messages {
-          scrollbar-color: #10b981 transparent;
+          scrollbar-color: #10b981 transparent !important;
           scrollbar-width: thin;
         }
         
