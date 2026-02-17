@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
         let pixPayload = null;
         let paymentStatus = 'pending';
 
-        if (billing_type === 'PIX') {
+        if (finalBillingType === 'PIX') {
             const qrCodeResponse = await fetch(
                 `https://api.asaas.com/v3/payments/${paymentData.id}/pixQrCode`,
                 {
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
                 pixPayload = qrCodeData.payload;
                 console.log('✅ QR Code PIX gerado');
             }
-        } else if (billing_type === 'CREDIT_CARD') {
+        } else if (finalBillingType === 'CREDIT_CARD') {
             // Cartão é processado instantaneamente pelo ASAAS
             // Verificar se foi aprovado
             if (paymentData.status === 'CONFIRMED' || paymentData.status === 'RECEIVED') {
