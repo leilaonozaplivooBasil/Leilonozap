@@ -214,17 +214,18 @@ export default function AuctionCheckoutModern() {
       };
 
       if (paymentType === 'CREDIT_CARD') {
+        // Garante que expiryYear tem 4 dígitos
+        let yearFinal = parseInt(cardYear);
+        if (yearFinal < 100) {
+          yearFinal = yearFinal + 2000; // 25 vira 2025
+        }
+
         payload.card_data = {
           holderName: cardHolder.trim(),
           number: cardNumber.replace(/\D/g, ''),
           expiryMonth: parseInt(cardMonth),
-          expiryYear: parseInt(cardYear),
-          ccv: cardCvv.replace(/\D/g, ''),
-          address: {
-            zip_code: addressZip.replace(/\D/g, ''),
-            number: addressNumber,
-            complement: addressComplement
-          }
+          expiryYear: yearFinal,
+          ccv: cardCvv.replace(/\D/g, '')
         };
       }
 
