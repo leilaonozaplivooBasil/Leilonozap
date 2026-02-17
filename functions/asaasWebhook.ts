@@ -23,41 +23,52 @@ Deno.serve(async (req) => {
             payment_id: paymentId,
             timestamp: new Date().toISOString()
         });
-        
-        if (eventId) {
-            const existingLogs = await base44.asServiceRole.entities.WebhookLog.filter(
-                { resource_id: paymentId || eventId, event_type: data.event },
-                null,
-                1
-            );
 
-            if (existingLogs && existingLogs.length > 0) {
-                console.log('⏭️ Evento já processado (idempotência):', eventId);
-                return Response.json({ received: true, cached: true });
+        // 🚀 RESPONDER IMEDIATAMENTE AO ASAAS
+        const responsePromise = Response.json({ received: true });
+
+        // ⏭️ VERIFICAR IDEMPOTÊNCIA (rápido)
+        if (eventId) {
+            try {
+                const existingLogs = await base44.asServiceRole.entities.WebhookLog.filter(
+                    { resource_id: paymentId || eventId, event_type: data.event },
+                    null,
+                    1
+                );
+
+                if (existingLogs && existingLogs.length > 0) {
+                    console.log('⏭️ Evento já processado (idempotência):', eventId);
+                    return responsePromise;
+                }
+            } catch (e) {
+                console.warn('⚠️ Erro ao verificar idempotência:', e.message);
             }
         }
 
-        // Registrar evento
-        await base44.asServiceRole.entities.WebhookLog.create({
-            provider: 'ASAAS',
-            event_type: data.event,
-            resource_id: paymentId || eventId,
-            body: data,
-            processed: false
-        });
-
-        // 🔒 Processar apenas eventos de pagamento confirmado
+        // 🔒 VALIDAÇÃO RÁPIDA
         if (data.event !== 'PAYMENT_CONFIRMED' && data.event !== 'PAYMENT_RECEIVED') {
             console.log('⏭️ Evento não é confirmação de pagamento:', data.event);
-            return Response.json({ received: true });
+            return responsePromise;
         }
 
         if (!paymentId) {
             console.error('❌ Payment ID inválido');
-            return Response.json({ error: 'Invalid payment ID' }, { status: 400 });
+            return responsePromise;
         }
 
         console.log('✅ Payment ID:', paymentId);
+
+        // 🔄 PROCESSAR EM BACKGROUND (após responder)
+        (async () => {
+            try {
+                // Registrar evento
+                await base44.asServiceRole.entities.WebhookLog.create({
+                    provider: 'ASAAS',
+                    event_type: data.event,
+                    resource_id: paymentId || eventId,
+                    body: data,
+                    processed: false
+                });
 
         // Buscar AsaasPayment no banco
         const asaasPayments = await base44.asServiceRole.entities.AsaasPayment.filter(
