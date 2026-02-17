@@ -239,8 +239,8 @@ export default function WalletHistory() {
 
         {/* Abas de Transações */}
         <Card className="border-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl shadow-lg overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/3 via-transparent to-blue-500/3"></div>
-          <CardHeader className="border-b border-cyan-400/20 relative z-10">
+          <div className="absolute inset-0 bg-gradient-to-br from-green-500/3 via-transparent to-emerald-500/3"></div>
+          <CardHeader className="border-b border-green-400/20 relative z-10">
             <div className="flex gap-2 md:gap-6">
               <button
                 onClick={() => handleTabChange("overview")}
