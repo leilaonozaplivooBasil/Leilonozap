@@ -76,7 +76,13 @@ export default function MyCatalogOrders() {
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('todos');
   const navigate = useNavigate();
+
+  const filteredOrders = useMemo(() => {
+    if (activeFilter === 'todos') return orders;
+    return orders.filter(order => order.status === activeFilter);
+  }, [orders, activeFilter]);
 
   // Adiciona parâmetro from=catalog na URL para o layout mostrar o menu correto
   useEffect(() => {
