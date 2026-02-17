@@ -15,6 +15,12 @@ export default function WalletHistory() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [wallet, setWallet] = useState(null);
+  const [currentPage, setCurrentPage] = useState({
+    overview: 0,
+    deposits: 0,
+    usage: 0
+  });
+  const ITEMS_PER_PAGE = 10;
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -101,6 +107,43 @@ export default function WalletHistory() {
   const totalDeposited = deposits.reduce((sum, t) => sum + t.amount, 0);
   const totalUsed = walletUsage.reduce((sum, t) => sum + t.amount, 0);
 
+  // Funções de paginação
+  const getPaginatedData = (data) => {
+    const startIndex = currentPage[activeTab] * ITEMS_PER_PAGE;
+    return data.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  };
+
+  const getTotalPages = (data) => {
+    return Math.ceil(data.length / ITEMS_PER_PAGE);
+  };
+
+  const getDataForTab = () => {
+    if (activeTab === "overview") return transactions;
+    if (activeTab === "deposits") return deposits;
+    return walletUsage;
+  };
+
+  const handlePreviousPage = () => {
+    setCurrentPage(prev => ({
+      ...prev,
+      [activeTab]: Math.max(0, prev[activeTab] - 1)
+    }));
+  };
+
+  const handleNextPage = () => {
+    const totalPages = getTotalPages(getDataForTab());
+    setCurrentPage(prev => ({
+      ...prev,
+      [activeTab]: Math.min(totalPages - 1, prev[activeTab] + 1)
+    }));
+  };
+
+  // Reset página ao mudar de aba
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setCurrentPage(prev => ({ ...prev, [tab]: 0 }));
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -175,7 +218,7 @@ export default function WalletHistory() {
           <CardHeader className="border-b border-gray-700">
             <div className="flex gap-6">
               <button
-                onClick={() => setActiveTab("overview")}
+                onClick={() => handleTabChange("overview")}
                 className={`pb-4 px-2 font-semibold transition-all border-b-2 ${
                   activeTab === "overview"
                     ? "text-green-400 border-green-400"
@@ -186,7 +229,7 @@ export default function WalletHistory() {
                 Todas as Transações
               </button>
               <button
-                onClick={() => setActiveTab("deposits")}
+                onClick={() => handleTabChange("deposits")}
                 className={`pb-4 px-2 font-semibold transition-all border-b-2 ${
                   activeTab === "deposits"
                     ? "text-green-400 border-green-400"
@@ -197,7 +240,7 @@ export default function WalletHistory() {
                 Depósitos ({deposits.length})
               </button>
               <button
-                onClick={() => setActiveTab("usage")}
+                onClick={() => handleTabChange("usage")}
                 className={`pb-4 px-2 font-semibold transition-all border-b-2 ${
                   activeTab === "usage"
                     ? "text-green-400 border-green-400"
@@ -219,98 +262,173 @@ export default function WalletHistory() {
               <>
                 {/* Overview - Todas as Transações */}
                 {activeTab === "overview" && (
-                  <div className="space-y-3">
-                    {transactions.length === 0 ? (
-                      <div className="text-center py-12">
-                        <DollarSign className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                        <p className="text-gray-400">Nenhuma transação ainda</p>
-                      </div>
-                    ) : (
-                      transactions.map((transaction) => (
-                        <div key={transaction.id} className="p-4 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-gray-600 transition-all">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              {getTransactionIcon(transaction.type, transaction.direction)}
-                              <div>
-                                <p className="text-white font-semibold">{getTypeLabel(transaction.type)}</p>
-                                <p className="text-gray-400 text-sm">{transaction.description || "Sem descrição"}</p>
-                                <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                  <div>
+                    <div className="space-y-3">
+                      {transactions.length === 0 ? (
+                        <div className="text-center py-12">
+                          <DollarSign className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                          <p className="text-gray-400">Nenhuma transação ainda</p>
+                        </div>
+                      ) : (
+                        getPaginatedData(transactions).map((transaction) => (
+                          <div key={transaction.id} className="p-4 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-gray-600 transition-all">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                {getTransactionIcon(transaction.type, transaction.direction)}
+                                <div>
+                                  <p className="text-white font-semibold">{getTypeLabel(transaction.type)}</p>
+                                  <p className="text-gray-400 text-sm">{transaction.description || "Sem descrição"}</p>
+                                  <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className={`text-lg font-bold ${getTransactionColor(transaction.direction)}`}>
+                                  {transaction.direction === "credit" ? "+" : "-"}R$ {transaction.amount.toFixed(2)}
+                                </p>
+                                {getStatusBadge(transaction.status)}
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className={`text-lg font-bold ${getTransactionColor(transaction.direction)}`}>
-                                {transaction.direction === "credit" ? "+" : "-"}R$ {transaction.amount.toFixed(2)}
-                              </p>
-                              {getStatusBadge(transaction.status)}
-                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))
+                      )}
+                    </div>
+                    {transactions.length > ITEMS_PER_PAGE && (
+                      <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-700">
+                        <Button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage.overview === 0}
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          ← Anterior
+                        </Button>
+                        <span className="text-gray-400 text-sm">
+                          Página {currentPage.overview + 1} de {getTotalPages(transactions)}
+                        </span>
+                        <Button
+                          onClick={handleNextPage}
+                          disabled={currentPage.overview >= getTotalPages(transactions) - 1}
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Próxima →
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}
 
                 {/* Depósitos */}
                 {activeTab === "deposits" && (
-                  <div className="space-y-3">
-                    {deposits.length === 0 ? (
-                      <div className="text-center py-12">
-                        <Plus className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                        <p className="text-gray-400">Nenhum depósito realizado</p>
-                        <Button onClick={() => navigate(createPageUrl("AddFunds"))} className="mt-4 bg-green-600 hover:bg-green-700">
-                          Fazer Primeiro Depósito
-                        </Button>
-                      </div>
-                    ) : (
-                      deposits.map((transaction) => (
-                        <div key={transaction.id} className="p-4 bg-gray-900/50 border border-green-500/20 rounded-lg hover:border-green-500/50 transition-all">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <TrendingUp className="w-5 h-5 text-green-500" />
-                              <div>
-                                <p className="text-white font-semibold">Depósito Realizado</p>
-                                <p className="text-gray-400 text-sm">{transaction.description || "Depósito de saldo"}</p>
-                                <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                  <div>
+                    <div className="space-y-3">
+                      {deposits.length === 0 ? (
+                        <div className="text-center py-12">
+                          <Plus className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                          <p className="text-gray-400">Nenhum depósito realizado</p>
+                          <Button onClick={() => navigate(createPageUrl("AddFunds"))} className="mt-4 bg-green-600 hover:bg-green-700">
+                            Fazer Primeiro Depósito
+                          </Button>
+                        </div>
+                      ) : (
+                        getPaginatedData(deposits).map((transaction) => (
+                          <div key={transaction.id} className="p-4 bg-gray-900/50 border border-green-500/20 rounded-lg hover:border-green-500/50 transition-all">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <TrendingUp className="w-5 h-5 text-green-500" />
+                                <div>
+                                  <p className="text-white font-semibold">Depósito Realizado</p>
+                                  <p className="text-gray-400 text-sm">{transaction.description || "Depósito de saldo"}</p>
+                                  <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-bold text-green-400">+R$ {transaction.amount.toFixed(2)}</p>
+                                {getStatusBadge(transaction.status)}
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold text-green-400">+R$ {transaction.amount.toFixed(2)}</p>
-                              {getStatusBadge(transaction.status)}
-                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))
+                      )}
+                    </div>
+                    {deposits.length > ITEMS_PER_PAGE && (
+                      <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-700">
+                        <Button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage.deposits === 0}
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          ← Anterior
+                        </Button>
+                        <span className="text-gray-400 text-sm">
+                          Página {currentPage.deposits + 1} de {getTotalPages(deposits)}
+                        </span>
+                        <Button
+                          onClick={handleNextPage}
+                          disabled={currentPage.deposits >= getTotalPages(deposits) - 1}
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Próxima →
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}
 
                 {/* Utilizações */}
                 {activeTab === "usage" && (
-                  <div className="space-y-3">
-                    {walletUsage.length === 0 ? (
-                      <div className="text-center py-12">
-                        <DollarSign className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                        <p className="text-gray-400">Nenhuma utilização de saldo em leilões</p>
-                      </div>
-                    ) : (
-                      walletUsage.map((transaction) => (
-                        <div key={transaction.id} className="p-4 bg-gray-900/50 border border-red-500/20 rounded-lg hover:border-red-500/50 transition-all">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                              <TrendingDown className="w-5 h-5 text-red-500" />
-                              <div>
-                                <p className="text-white font-semibold">Saldo Utilizado em Leilão</p>
-                                <p className="text-gray-400 text-sm">{transaction.description || "Utilização de saldo"}</p>
-                                <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                  <div>
+                    <div className="space-y-3">
+                      {walletUsage.length === 0 ? (
+                        <div className="text-center py-12">
+                          <DollarSign className="w-12 h-12 text-gray-600 mx-auto mb-3" />
+                          <p className="text-gray-400">Nenhuma utilização de saldo em leilões</p>
+                        </div>
+                      ) : (
+                        getPaginatedData(walletUsage).map((transaction) => (
+                          <div key={transaction.id} className="p-4 bg-gray-900/50 border border-red-500/20 rounded-lg hover:border-red-500/50 transition-all">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <TrendingDown className="w-5 h-5 text-red-500" />
+                                <div>
+                                  <p className="text-white font-semibold">Saldo Utilizado em Leilão</p>
+                                  <p className="text-gray-400 text-sm">{transaction.description || "Utilização de saldo"}</p>
+                                  <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-bold text-red-400">-R$ {transaction.amount.toFixed(2)}</p>
+                                {getStatusBadge(transaction.status)}
                               </div>
                             </div>
-                            <div className="text-right">
-                              <p className="text-lg font-bold text-red-400">-R$ {transaction.amount.toFixed(2)}</p>
-                              {getStatusBadge(transaction.status)}
-                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))
+                      )}
+                    </div>
+                    {walletUsage.length > ITEMS_PER_PAGE && (
+                      <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-700">
+                        <Button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage.usage === 0}
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          ← Anterior
+                        </Button>
+                        <span className="text-gray-400 text-sm">
+                          Página {currentPage.usage + 1} de {getTotalPages(walletUsage)}
+                        </span>
+                        <Button
+                          onClick={handleNextPage}
+                          disabled={currentPage.usage >= getTotalPages(walletUsage) - 1}
+                          variant="outline"
+                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          Próxima →
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}
