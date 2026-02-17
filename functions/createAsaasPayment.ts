@@ -143,13 +143,16 @@ Deno.serve(async (req) => {
         });
 
         const payData = await payRes.json();
-        console.log('📥 Resposta ASAAS:', { status: payRes.status, ...payData });
+        console.log('📥 Resposta ASAAS Status:', payRes.status);
+        console.log('📥 Resposta ASAAS Completa:', JSON.stringify(payData, null, 2));
 
-        if (payData.errors) {
-            console.error('❌ Erro ASAAS:', payData.errors);
+        if (!payRes.ok || payData.errors) {
+            console.error('❌ Erro ASAAS (HTTP):', { status: payRes.status, errors: payData.errors, message: payData.message });
             return Response.json({ 
-                error: 'Erro ao processar pagamento', 
-                details: payData.errors 
+                success: false,
+                error: payData.message || payData.errors?.[0]?.description || 'Erro ao processar pagamento', 
+                details: payData.errors,
+                asaas_status: payRes.status
             }, { status: 400 });
         }
 
