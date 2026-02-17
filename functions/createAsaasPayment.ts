@@ -195,13 +195,37 @@ Deno.serve(async (req) => {
         // 🔒 PASSO 4: Registrar no banco de dados
          const isWalletDeposit = !catalog_sale_id && !auction_id;
 
-         // Para depósito de carteira, obter user_id do buyer_email
+         // Para depósito de carteira, obter user_id do buyer_email (com fallback para CPF e telefone)
          let walletDepositUserId = null;
          if (isWalletDeposit) {
              try {
-                 const users = await base44.asServiceRole.entities.AppUser.filter({ email: buyer_email });
+                 // Estratégia 1: Buscar por email
+                 let users = await base44.asServiceRole.entities.AppUser.filter({ email: buyer_email });
                  if (users && users.length > 0) {
                      walletDepositUserId = users[0].id;
+                     console.log('✅ User encontrado por email:', walletDepositUserId);
+                 }
+
+                 // Estratégia 2: Se não achou, tentar por CPF
+                 if (!walletDepositUserId && cleanCpf) {
+                     users = await base44.asServiceRole.entities.AppUser.filter({ cpf: cleanCpf });
+                     if (users && users.length > 0) {
+                         walletDepositUserId = users[0].id;
+                         console.log('✅ User encontrado por CPF:', walletDepositUserId);
+                     }
+                 }
+
+                 // Estratégia 3: Se não achou, tentar por telefone
+                 if (!walletDepositUserId && cleanPhone) {
+                     users = await base44.asServiceRole.entities.AppUser.filter({ phone: cleanPhone });
+                     if (users && users.length > 0) {
+                         walletDepositUserId = users[0].id;
+                         console.log('✅ User encontrado por telefone:', walletDepositUserId);
+                     }
+                 }
+
+                 if (!walletDepositUserId) {
+                     console.warn('⚠️ Não conseguiu encontrar user por email, CPF ou telefone. Webhook tentará resolver depois.');
                  }
              } catch (e) {
                  console.warn('⚠️ Erro ao buscar user para wallet deposit:', e.message);
