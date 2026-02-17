@@ -50,21 +50,28 @@ export default function WalletHistory() {
             // Tenta buscar o usuário da plataforma Base44
             try {
               const platformUser = await base44.auth.me();
-              if (platformUser && platformUser.email) {
-                console.log("✅ [WalletHistory] Usuário recuperado da plataforma:", platformUser.email);
+              console.log("🔍 [WalletHistory] Dados da plataforma:", platformUser);
+              
+              if (platformUser && platformUser.email && emailRegex.test(platformUser.email)) {
+                console.log("✅ [WalletHistory] Email válido da plataforma:", platformUser.email);
                 
-                // Busca ou cria registro no AppUser
+                // Busca usuário no AppUser pelo email da plataforma
                 const appUsers = await base44.entities.AppUser.filter({ email: platformUser.email });
+                console.log("🔍 [WalletHistory] AppUsers encontrados:", appUsers.length);
+                
                 if (appUsers.length > 0) {
                   user = appUsers[0];
+                  console.log("✅ [WalletHistory] Usuário recuperado do AppUser:", { id: user.id, email: user.email });
                 } else {
+                  console.warn("⚠️ [WalletHistory] Nenhum AppUser encontrado, usando dados da plataforma");
                   user = platformUser;
                 }
                 
                 localStorage.setItem('currentUser', JSON.stringify(user));
                 sessionStorage.setItem('isLoggedIn', 'true');
               } else {
-                throw new Error("Plataforma não retornou usuário válido");
+                console.error("❌ [WalletHistory] Email inválido da plataforma:", platformUser?.email);
+                throw new Error("Plataforma não retornou email válido");
               }
             } catch (platformError) {
               console.error("❌ Erro ao recuperar da plataforma:", platformError.message);
