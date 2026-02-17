@@ -118,7 +118,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     }
   };
 
-  // 🆕 FUNÇÃO DE NAVEGAÇÃO PARA SALA
+  // 🆕 FUNÇÃO DE NAVEGAÇÃO PARA SALA COM VERIFICAÇÃO DE SALDO
   const handleCardClick = (e) => {
     // Previne clique se for em botão filho ou link filho
     if (e.target.closest('button') || e.target.closest('a')) {
@@ -135,6 +135,47 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     const roomUrl = createPageUrl("AuctionRoom") + `?id=${auction.id}`;
     console.log("🎯 [CARD] URL completa:", roomUrl);
     navigate(roomUrl);
+  };
+
+  // 🆕 FUNÇÃO PARA ENTRAR E DAR LANCE COM VERIFICAÇÃO DE SALDO
+  const handleEnterAuction = async (e) => {
+    e.stopPropagation();
+    
+    if (!auction || !auction.id) {
+      alert("Erro: Leilão inválido");
+      return;
+    }
+
+    // Verifica se usuário está logado
+    const savedUser = localStorage.getItem('currentUser');
+    if (!savedUser) {
+      // Navega para sala sem logado (mostrará login modal lá)
+      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
+      return;
+    }
+
+    try {
+      const user = JSON.parse(savedUser);
+      
+      // 🆕 Carrega saldo do usuário
+      const wallets = await base44.entities.Wallet.filter({ user_id: user.id });
+      const wallet = wallets && wallets.length > 0 ? wallets[0] : null;
+      
+      const minBid = auction.current_price + auction.increment;
+      
+      if (wallet && wallet.balance < minBid) {
+        // Saldo insuficiente - vai para AuctionRoom em modo telespectador
+        navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}&spectator=true`);
+        return;
+      }
+      
+      // Saldo ok - abre sala normalmente
+      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
+    } catch (error) {
+      console.error("Erro ao verificar saldo:", error);
+      // Em caso de erro, navega normalmente
+      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
+    }
   };
 
   // Limpeza ao desmontar
