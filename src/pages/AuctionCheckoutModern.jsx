@@ -753,8 +753,17 @@ export default function AuctionCheckoutModern() {
                     </div>
 
                     <Button
-                      onClick={handleCreatePayment}
-                      disabled={isProcessing || !isFormValid}
+                      onClick={() => {
+                        if (!isFormValid) {
+                          toast.error('Preencha todos os campos obrigatórios');
+                          // Expande a seção incompleta
+                          if (!isPersonalComplete) setExpandedSection('personal');
+                          else if (!isAddressComplete) setExpandedSection('address');
+                          return;
+                        }
+                        handleCreatePayment();
+                      }}
+                      disabled={isProcessing}
                       className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-base"
                     >
                       {isProcessing ? (
