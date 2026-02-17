@@ -298,7 +298,7 @@ export default function WalletHistory() {
                         </div>
                       ) : (
                         getPaginatedData(transactions).map((transaction) => (
-                          <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-cyan-400/20 rounded-xl hover:border-cyan-400/50 hover:shadow-sm transition-all duration-300">
+                          <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-green-400/20 rounded-xl hover:border-green-400/50 hover:shadow-sm transition-all duration-300">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
                                 <div className={`p-3 rounded-lg ${transaction.direction === 'credit' ? 'bg-green-500/20 border border-green-400/30' : 'bg-red-500/20 border border-red-400/30'}`}>
@@ -306,8 +306,8 @@ export default function WalletHistory() {
                                 </div>
                                 <div>
                                   <p className="text-white font-semibold">{getTypeLabel(transaction.type)}</p>
-                                  <p className="text-cyan-300/60 text-sm font-light">{transaction.description || "Sem descrição"}</p>
-                                  <div className="flex items-center gap-2 text-cyan-300/40 text-xs mt-1">
+                                  <p className="text-green-300/60 text-sm font-light">{transaction.description || "Sem descrição"}</p>
+                                  <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
                                     {new Date(transaction.created_date).toLocaleString('pt-BR')}
                                   </div>
