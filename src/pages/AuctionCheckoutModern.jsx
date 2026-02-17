@@ -157,11 +157,28 @@ export default function AuctionCheckoutModern() {
         const savedUser = JSON.parse(savedUserJSON);
         setCurrentUser(savedUser);
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const auctionId = urlParams.get('auction_id');
+        // Verifica se veio de AddFunds (depósito de carteira)
+        const stateAmount = location.state?.amount;
+        if (stateAmount) {
+          setIsWalletDeposit(true);
+          setDepositAmount(stateAmount);
+          setAuction({
+            id: 'wallet-deposit',
+            title: 'Depósito de Saldo',
+            current_price: stateAmount,
+            image_urls: []
+          });
+        } else {
+          // Modo leilão - procura por auction_id na URL
+          const urlParams = new URLSearchParams(window.location.search);
+          const auctionId = urlParams.get('auction_id');
 
-        // Se tem auction_id, carrega leilão; senão é depósito de carteira
-        if (auctionId) {
+          if (!auctionId) {
+            toast.error('Operação não encontrada');
+            navigate(createPageUrl('Home'));
+            return;
+          }
+
           const auctions = await Auction.filter({ id: auctionId });
           if (auctions.length === 0) {
             toast.error('Leilão não encontrado');
@@ -169,14 +186,6 @@ export default function AuctionCheckoutModern() {
             return;
           }
           setAuction(auctions[0]);
-        } else {
-          // Modo depósito - cria um "auction" fictício com dados da carteira
-          setAuction({
-            id: 'wallet-deposit',
-            title: 'Depósito de Saldo',
-            current_price: 0, // Será atualizado se necessário
-            image_urls: []
-          });
         }
 
         setFirstName(savedUser.full_name || '');
@@ -199,7 +208,7 @@ export default function AuctionCheckoutModern() {
     };
 
     loadData();
-  }, []);
+  }, [location.state]);
 
   if (isLoading) {
     return (
