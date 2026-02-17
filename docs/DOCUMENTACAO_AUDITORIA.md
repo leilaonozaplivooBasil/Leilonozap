@@ -2,14 +2,23 @@
 
 Este documento descreve a implementação oficial da Auditoria de Comissões no backend da Base44, composta por duas funções principais: `commissionPilot` e `auditUserCommissions`.
 
-## 1. Visão Geral
+## 1. Objetivo e Propósito
 
-O sistema de auditoria foi migrado para o backend (Edge Functions) para garantir performance e acesso direto aos dados seguros.
+O **Sistema de Auditoria (SIA)** opera como uma **ferramenta de apoio paralelo** e independente ao sistema principal de comissões. 
+
+Seu objetivo não é apenas simular, mas **garantir a segurança total** dos pagamentos aos associados, confrontando matematicamente o que *deveria* ser pago (Regras de Ouro) com o que *foi* efetivamente pago no banco de dados.
+
+Ele serve como um "Juiz Independente" que:
+1.  Recalcula cada centavo devido usando uma lógica isolada.
+2.  Destaque imediatamente qualquer divergência (a menor fração de centavo).
+3.  Assegura que as regras do plano de carreira estão sendo cumpridas à risca.
+
+As funções abaixo rodam no backend (Edge Functions) para acesso direto e seguro aos dados.
 
 | Função | Arquivo Fonte | Objetivo |
 | :--- | :--- | :--- |
-| **commissionPilot** | `functions/commissionPilot.ts` | Auditar uma **Venda Específica** (Real ou Simulada). Recalcula toda a distribuição e compara com o banco. |
-| **auditUserCommissions** | `functions/auditUserCommissions.ts` | Auditar um **Usuário Específico**. Varre todo o histórico dele em busca de duplicidades e erros. |
+| **commissionPilot** | `functions/commissionPilot.ts` | **Auditoria de Venda**. Reconstrói a venda do zero para validar matematicamente os pagamentos realizados. |
+| **auditUserCommissions** | `functions/auditUserCommissions.ts` | **Auditoria de Conta**. Varre a carteira do usuário em busca de duplicidades, falhas de rateio ou pagamentos indevidos. |
 
 ---
 
