@@ -244,9 +244,7 @@ export default function MyWinningsPage() {
                                 key={auction.id} 
                                 auction={auction} 
                                 onTrackClick={handleTrackClick}
-                                onPayClick={handlePayClick}
                                 isSaiDeBaixo={false}
-                                isProcessing={isProcessing}
                             />
                         ))}
                     </div>
