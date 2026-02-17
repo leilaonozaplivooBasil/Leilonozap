@@ -832,35 +832,44 @@ export default function Profile() {
             {/* Quick Actions */}
             <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Ações</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Ações Rápidas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2">
                 {!fromCatalog && (
-                  <Button 
-                    variant="outline" 
-                    className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
+                  <button 
                     onClick={() => navigate(createPageUrl(isSaiDeBaixo ? "SaiDeBaixo" : "Home") + "?favorites=true")}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
+                      isSaiDeBaixo 
+                        ? 'bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 text-red-700 hover:from-red-100 hover:to-rose-100 hover:border-red-400 hover:shadow-md' 
+                        : 'bg-gradient-to-r from-red-500/10 to-rose-500/10 border-2 border-red-500/30 text-red-300 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/20'
+                    }`}
                   >
-                    <span className="text-red-500 mr-2">❤️</span>
-                    Meus Favoritos
-                  </Button>
+                    <span className="text-xl">❤️</span>
+                    <span>Meus Favoritos</span>
+                  </button>
                 )}
-                <Button 
-                  variant="outline" 
-                  className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
+                <button 
                   onClick={() => navigate(createPageUrl("MyCatalogOrders"))}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
+                    isSaiDeBaixo 
+                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100 hover:border-green-400 hover:shadow-md' 
+                      : 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-2 border-green-500/30 text-green-300 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/20'
+                  }`}
                 >
-                  <Package className="w-4 h-4 mr-2 text-green-400" />
-                  Meus Pedidos
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className={`w-full ${isSaiDeBaixo ? 'bg-white border-red-300 text-red-600 hover:bg-red-50' : 'bg-gray-700 border-red-500/50 text-red-400 hover:bg-gray-600'}`}
+                  <Package className="w-5 h-5" />
+                  <span>Meus Pedidos</span>
+                </button>
+                <button 
                   onClick={handleLogout}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
+                    isSaiDeBaixo 
+                      ? 'bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-400 hover:shadow-md' 
+                      : 'bg-gradient-to-r from-red-500/10 to-orange-500/10 border-2 border-red-500/30 text-red-300 hover:from-red-500/20 hover:to-orange-500/20 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/20'
+                  }`}
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair da Conta
-                </Button>
+                  <LogOut className="w-5 h-5" />
+                  <span>Sair da Conta</span>
+                </button>
               </CardContent>
             </Card>
           </div>
