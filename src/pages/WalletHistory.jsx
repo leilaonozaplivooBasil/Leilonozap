@@ -217,8 +217,8 @@ export default function WalletHistory() {
           </Card>
 
           {/* Card Depositar */}
-          <Card className="border-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-transparent to-emerald-500/10"></div>
+          <Card className="border-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl shadow-lg overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-emerald-500/5"></div>
             <CardContent className="p-8 flex flex-col justify-between h-full relative z-10">
               <div>
                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/30 to-emerald-500/30 flex items-center justify-center mb-4 border border-green-400/30">
