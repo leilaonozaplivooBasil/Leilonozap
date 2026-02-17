@@ -199,12 +199,12 @@ export default function WalletHistory() {
           <Card className="bg-gray-800/50 border-gray-700 backdrop-blur-sm shadow-lg">
             <CardContent className="p-8 flex flex-col justify-between h-full">
               <div>
-                <CreditCard className="w-8 h-8 text-blue-400 mb-2" />
+                <CreditCard className="w-8 h-8 text-green-400 mb-2" />
                 <p className="text-gray-300 text-sm font-medium mb-4">Adicionar Saldo</p>
               </div>
               <Button
                 onClick={() => navigate(createPageUrl("AddFunds"))}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold h-12 shadow-lg"
+                className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold h-12 shadow-lg"
               >
                 <Plus className="w-5 h-5 mr-2" />
                 Depositar Agora
