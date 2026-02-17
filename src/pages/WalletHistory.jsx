@@ -268,7 +268,7 @@ export default function WalletHistory() {
                 onClick={() => handleTabChange("usage")}
                 className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
                   activeTab === "usage"
-                    ? "text-red-300 border-red-400 shadow-lg shadow-red-400/50"
+                    ? "text-red-300 border-red-400"
                     : "text-cyan-200/50 hover:text-cyan-300 border-transparent"
                 }`}
               >
