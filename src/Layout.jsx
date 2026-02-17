@@ -15,7 +15,9 @@ import { useActiveSession } from "@/components/system/useActiveSession";
 
 import { Button } from "@/components/ui/button";
 import { base44 } from '@/api/base44Client';
-import LogoTransparent from '@/assets/logo-transparent.png'; // Importando logo local
+
+const AppUser = base44.entities.AppUser;
+const User = { me: () => base44.auth.me() };
 import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon, ShoppingCart as CartIcon } from "lucide-react";
 import {
   DropdownMenu,
@@ -28,8 +30,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
-
-import "./Layout.css";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -486,7 +486,6 @@ export default function Layout({ children, currentPageName }) {
         { title: "💳 Transações", pageName: "TransactionHistory" },
         { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
         { title: "🧮 Auditoria de Comissões", pageName: "CommissionPilot" },
-        { title: "🧮 Piloto de Comissões", pageName: "CommissionPilot" },
       ]
     },
     { title: "💰 PDV", pageName: "PDV" },
@@ -541,7 +540,7 @@ export default function Layout({ children, currentPageName }) {
       <div className="fixed inset-0 bg-gray-900 flex items-center justify-center z-[10000]">
         <div className="text-center">
           <img
-            src={LogoTransparent}
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
             alt="Leilão NoZap"
             className="h-24 w-auto mx-auto mb-8 loading-logo" // Adjusted size and removed rounded-full
           />
@@ -606,10 +605,10 @@ export default function Layout({ children, currentPageName }) {
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex h-16 justify-between items-center">
 
-              {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO (Assets Local) */}
+              {/* ✅ LOGO TRANSPARENTE - NOVA VERSÃO */}
               <div className="flex items-center gap-4">
                 <img
-                  src={LogoTransparent}
+                  src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
                   alt="Leilão NoZap"
                   className="h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
                   onClick={() => navigate(createPageUrl(isCatalogPage ? "Catalog" : "Home"))}
@@ -626,8 +625,8 @@ export default function Layout({ children, currentPageName }) {
                       key={item.title}
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
                       className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === item.pageName
-                        ? "text-green-400"
-                        : "text-gray-300 hover:text-white"
+                          ? "text-green-400"
+                          : "text-gray-300 hover:text-white"
                         }`}
                     >
                       {item.icon === 'cart' && <CartIcon className="w-4 h-4" />}
@@ -649,8 +648,8 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       to={createPageUrl("Profile") + (isCatalogPage ? "?from=catalog" : "")}
                       className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === "Profile"
-                        ? "text-green-400"
-                        : "text-gray-300 hover:text-white"
+                          ? "text-green-400"
+                          : "text-gray-300 hover:text-white"
                         }`}
                     >
                       <UserIcon className="w-4 h-4" />
@@ -663,8 +662,8 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       to={createPageUrl("Cart")}
                       className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === "Cart"
-                        ? "text-green-400"
-                        : "text-gray-300 hover:text-white"
+                          ? "text-green-400"
+                          : "text-gray-300 hover:text-white"
                         }`}
                     >
                       <CartIcon className="w-4 h-4" />
@@ -806,8 +805,8 @@ export default function Layout({ children, currentPageName }) {
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${currentPageName === item.pageName
-                        ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                        : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
                         }`}
                     >
                       {item.icon === 'cart' && <CartIcon className="w-5 h-5" />}
@@ -821,8 +820,8 @@ export default function Layout({ children, currentPageName }) {
                       to={createPageUrl("Cart")}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${currentPageName === "Cart"
-                        ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                        : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
                         }`}
                     >
                       <CartIcon className="w-5 h-5" />
@@ -848,8 +847,8 @@ export default function Layout({ children, currentPageName }) {
                       to={createPageUrl("Profile") + "?from=catalog"}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${currentPageName === "Profile"
-                        ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                        : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
+                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
                         }`}
                     >
                       <UserIcon className="w-5 h-5" />
@@ -901,8 +900,8 @@ export default function Layout({ children, currentPageName }) {
                             to={createPageUrl(item.pageName)}
                             onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${item.highlight
-                              ? "bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 hover:from-purple-600/40 hover:to-blue-600/40"
-                              : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                                ? "bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 hover:from-purple-600/40 hover:to-blue-600/40"
+                                : "text-gray-300 hover:bg-gray-800 hover:text-white"
                               }`}
                           >
                             {item.title}
@@ -999,6 +998,99 @@ export default function Layout({ children, currentPageName }) {
 
       </div>
 
+      <style>{`
+        @keyframes fadeInScale {
+          0% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes loadingProgress {
+          0% {
+            width: 0%;
+          }
+          100% {
+            width: 100%;
+          }
+        }
+
+        .loading-logo {
+          animation: fadeInScale 0.5s ease-out;
+          filter: drop-shadow(0 0 20px rgba(34, 197, 94, 0.6));
+        }
+
+        .loading-bar-container {
+          width: 200px;
+          height: 4px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 2px;
+          overflow: hidden;
+          margin: 0 auto;
+        }
+
+        .loading-bar {
+          height: 100%;
+          background: linear-gradient(90deg, #22c55e, #16a34a);
+          border-radius: 2px;
+          animation: loadingProgress 1s ease-out forwards;
+          box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+        }
+
+        @keyframes pulse-subtle {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.05);
+            opacity: 0.95;
+          }
+        }
+        
+        .animate-pulse-subtle {
+          animation: pulse-subtle 2s ease-in-out infinite;
+        }
+
+        /* Scrollbar minimalista global - fundo 100% transparente */
+        * {
+          scrollbar-color: #10b981 transparent !important;
+          scrollbar-width: thin;
+        }
+        
+        *::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+          background: transparent !important;
+        }
+        
+        *::-webkit-scrollbar-track {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        
+        *::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #10b981, #059669) !important;
+          border-radius: 4px;
+          min-height: 40px;
+          border: 2px solid transparent !important;
+          background-clip: content-box !important;
+        }
+        
+        *::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #059669, #047857) !important;
+          background-clip: content-box !important;
+        }
+        
+        *::-webkit-scrollbar-corner {
+          background: transparent !important;
+        }
+      `}</style>
     </ErrorBoundary>
   );
 }

@@ -25,9 +25,8 @@ Deno.serve(async (req) => {
             return Response.json({ error: 'Valor inválido' }, { status: 400 });
         }
 
-        if (!catalog_sale_id && !auction_id) {
-            return Response.json({ error: 'Referência obrigatória (catalog_sale_id ou auction_id)' }, { status: 400 });
-        }
+        // ✅ PERMITIR depósito de carteira sem referência (ambos null é aceitável para wallet)
+        // Apenas validar se for pagamento de leilão/catálogo
 
         const apiKey = Deno.env.get('ASAAS_API_KEY');
         if (!apiKey) {
@@ -194,26 +193,87 @@ Deno.serve(async (req) => {
         }
 
         // 🔒 PASSO 4: Registrar no banco de dados
-        await base44.asServiceRole.entities.AsaasPayment.create({
-            payment_id: paymentData.id,
-            customer_id: customerId,
-            billing_type: billing_type,
-            value: amount,
-            status: paymentStatus,
-            external_reference: externalReference,
-            catalog_sale_id: catalog_sale_id || null,
-            auction_id: auction_id || null,
-            buyer_id: catalog_sale_id ? (await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }))[0]?.buyer_id : null,
-            buyer_name: buyer_name,
-            buyer_email: buyer_email,
-            buyer_cpf: cleanCpf,
-            pix_qr_code: pixQrCode,
-            pix_payload: pixPayload,
-            boleto_url: paymentData.bankSlipUrl || null,
-            invoice_url: paymentData.invoiceUrl || null,
-            due_date: paymentData.dueDate,
-            payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
-        });
+         const isWalletDeposit = !catalog_sale_id && !auction_id;
+
+         // Para depósito de carteira, obter user_id do buyer_email (com fallback para CPF e telefone)
+         let walletDepositUserId = null;
+         if (isWalletDeposit) {
+             try {
+                 // Estratégia 1: Buscar por email
+                 let users = await base44.asServiceRole.entities.AppUser.filter({ email: buyer_email });
+                 if (users && users.length > 0) {
+                     walletDepositUserId = users[0].id;
+                     console.log('✅ User encontrado por email:', walletDepositUserId);
+                 }
+
+                 // Estratégia 2: Se não achou, tentar por CPF
+                 if (!walletDepositUserId && cleanCpf) {
+                     users = await base44.asServiceRole.entities.AppUser.filter({ cpf: cleanCpf });
+                     if (users && users.length > 0) {
+                         walletDepositUserId = users[0].id;
+                         console.log('✅ User encontrado por CPF:', walletDepositUserId);
+                     }
+                 }
+
+                 // Estratégia 3: Se não achou, tentar por telefone
+                 if (!walletDepositUserId && cleanPhone) {
+                     users = await base44.asServiceRole.entities.AppUser.filter({ phone: cleanPhone });
+                     if (users && users.length > 0) {
+                         walletDepositUserId = users[0].id;
+                         console.log('✅ User encontrado por telefone:', walletDepositUserId);
+                     }
+                 }
+
+                 // Estratégia 4: Se não achou, tentar por nome
+                 if (!walletDepositUserId && buyer_name) {
+                     users = await base44.asServiceRole.entities.AppUser.filter({ full_name: buyer_name });
+                     if (users && users.length > 0) {
+                         walletDepositUserId = users[0].id;
+                         console.log('✅ User encontrado por nome:', walletDepositUserId);
+                     }
+                 }
+
+                 if (!walletDepositUserId) {
+                     console.warn('⚠️ Não conseguiu encontrar user por email, CPF, telefone ou nome. Webhook tentará resolver depois.');
+                 }
+             } catch (e) {
+                 console.warn('⚠️ Erro ao buscar user para wallet deposit:', e.message);
+             }
+         }
+
+         // Buscar buyer_id apenas se for catalog_sale
+         let buyerId = null;
+         if (catalog_sale_id) {
+             try {
+                 const sales = await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }, null, 1);
+                 buyerId = sales && sales.length > 0 ? sales[0].buyer_id : null;
+             } catch (e) {
+                 console.warn('⚠️ Erro ao buscar buyer_id de CatalogSale:', e.message);
+             }
+         }
+
+         await base44.asServiceRole.entities.AsaasPayment.create({
+              payment_id: paymentData.id,
+              customer_id: customerId,
+              billing_type: billing_type,
+              value: amount,
+              status: paymentStatus,
+              external_reference: externalReference || paymentData.id,
+              catalog_sale_id: catalog_sale_id || null,
+              auction_id: auction_id || null,
+              wallet_deposit_user_id: walletDepositUserId,
+              is_wallet_deposit: isWalletDeposit,
+              buyer_id: buyerId,
+              buyer_name: buyer_name,
+              buyer_email: buyer_email,
+              buyer_cpf: cleanCpf,
+              pix_qr_code: pixQrCode,
+              pix_payload: pixPayload,
+              boleto_url: paymentData.bankSlipUrl || null,
+              invoice_url: paymentData.invoiceUrl || null,
+              due_date: paymentData.dueDate,
+              payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
+          });
 
         console.log('✅ AsaasPayment registrado no banco');
 
@@ -242,6 +302,45 @@ Deno.serve(async (req) => {
                     asaas_payment_id: paymentData.id
                 });
                 console.log('✅ Auction atualizada para PAID');
+            } else if (isWalletDeposit && walletDepositUserId) {
+                // 🆕 CREDITAR DEPOSITWALLET INSTANTANEAMENTE PARA CARTÃO
+                console.log('💳 Creditando DepositWallet instantaneamente (cartão aprovado)...');
+                try {
+                    const depositWallets = await base44.asServiceRole.entities.DepositWallet.filter(
+                        { user_id: walletDepositUserId },
+                        null,
+                        1
+                    );
+
+                    let depositWallet;
+                    if (depositWallets && depositWallets.length > 0) {
+                        depositWallet = depositWallets[0];
+                        const newBalance = (depositWallet.balance || 0) + amount;
+                        await base44.asServiceRole.entities.DepositWallet.update(depositWallet.id, {
+                            balance: newBalance
+                        });
+                        console.log('✅ DepositWallet creditada instantaneamente:', newBalance);
+                    } else {
+                        await base44.asServiceRole.entities.DepositWallet.create({
+                            user_id: walletDepositUserId,
+                            balance: amount
+                        });
+                        console.log('✅ DepositWallet criada com saldo:', amount);
+                    }
+
+                    // Registrar transação
+                    await base44.asServiceRole.entities.WalletTransaction.create({
+                        user_id: walletDepositUserId,
+                        type: 'deposit',
+                        direction: 'credit',
+                        amount: amount,
+                        status: 'confirmed',
+                        description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
+                    });
+                    console.log('✅ Transação de wallet registrada');
+                } catch (walletErr) {
+                    console.error('❌ Erro ao creditar carteira:', walletErr.message);
+                }
             }
         }
 

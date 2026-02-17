@@ -1,61 +1,72 @@
-# Documentação da Auditoria de Comissões (SIA)
+# Documentação do Sistema de Auditoria (SIA) - Base44
 
-Este documento descreve como o sistema calcula as comissões "Esperadas" para auditar contra os valores "Reais" pagos.
+Este documento descreve a implementação oficial da Auditoria de Comissões no backend da Base44, composta por duas funções principais: `commissionPilot` e `auditUserCommissions`.
 
-## 1. Regras de Cálculo (Lógica Esperada)
+## 1. Visão Geral
 
-O sistema segue a seguinte ordem de prioridade para distribuir a comissão de uma venda:
+O sistema de auditoria foi migrado para o backend (Edge Functions) para garantir performance e acesso direto aos dados seguros.
 
-### A. Identificação do Vendedor (Âncora)
-- O usuário que realizou a venda (`licensee_id`) é considerado o **Âncora**.
-- Se a venda não tiver um licenciado vinculado, nenhuma comissão é distribuída para a rede (vai 100% para a empresa).
-
-### B. Tabela de Percentuais (Total: 26%)
-O sistema tenta distribuir os seguintes percentuais sobre o valor total da venda:
-
-| Cargo / Nível | Percentual | Tipo de Distribuição |
+| Função | Arquivo Fonte | Objetivo |
 | :--- | :--- | :--- |
-| **Licenciado Catálogo** | 13.0% | Multinível (Hierarquia) |
-| **Trainee** | 0.5% | Multinível (Hierarquia) |
-| **Executivo** | 0.5% | Multinível (Hierarquia) |
-| **Kit Start** | 1.0% | Multinível (Hierarquia) |
-| **Plano Líder** | 1.0% | Multinível (Hierarquia) |
-| **Plano Lojista** | 3.0% | Multinível (Hierarquia) |
-| **Distribuidor** | 1.0% | Multinível (Hierarquia) |
-| **Diretor** | 0.5% | Pool Global (Rateio) |
-| **Diretoria** | 0.5% | Pool Global (Rateio) |
-| **CEO** | 3.0% | Pool Global (Rateio) |
-| **Conselheiro** | 1.0% | Pool Global (Rateio) |
-| **Fundador** | 1.0% | Pool Global (Rateio) |
-
-### C. Regras de Distribuição
-
-#### 1. Distribuição Multinível (Hierárquica)
-Para cargos até "Distribuidor":
-- **Se o Âncora (Vendedor) possui o cargo ou superior:** O próprio Âncora recebe essa fatia.
-- **Se o Âncora não possui o cargo:** O sistema sobe a rede de indicação (Uplines) até encontrar alguém que tenha o cargo.
-- **Se ninguém na linha ascendente tiver o cargo:** O valor sobra para a empresa (`Company Rollup`).
-
-#### 2. Distribuição Global (Pool de Diretoria)
-Para cargos de "Diretor" acima (Diretoria, CEO, Conselheiro, Fundador):
-- O valor é dividido igualmente entre **TODOS** os usuários qualificados no sistema com aquele cargo (excluindo o usuário "Site Oficial").
-- Não depende da linha de indicação; é um rateio global.
+| **commissionPilot** | `functions/commissionPilot.ts` | Auditar uma **Venda Específica** (Real ou Simulada). Recalcula toda a distribuição e compara com o banco. |
+| **auditUserCommissions** | `functions/auditUserCommissions.ts` | Auditar um **Usuário Específico**. Varre todo o histórico dele em busca de duplicidades e erros. |
 
 ---
 
-## 2. Como Verificar (Auditar)
+## 2. Função: `commissionPilot` (Auditoria de Venda)
 
-Para verificar se as comissões pagas estão corretas:
+Esta função é o motor de cálculo. Ela reconstrói a árvore de distribuição para uma venda e diz quem deveria ter recebido o quê.
 
-1.  Acesse o **Painel de Auditoria** em `/CommissionPilot`.
-2.  Carregue o arquivo de snapshot (`audit-snapshot-2026-02-16.json` ou gere um novo na aba Online).
-3.  Observe a coluna **Status** na tabela de resultados:
-    -   🟢 **OK:** O valor pago no banco (`Real`) é igual ao calculado pelas regras (`Esperado`).
-    -   🔴 **Divergente:** O valor pago é diferente (ou faltou pagamento, ou pagou a mais).
-4.  Clique na linha da venda para ver os detalhes:
-    -   **Trace de Auditoria:** Mostra passo a passo como o sistema calculou o valor esperado ("Quem é o âncora", "Quem captura o nível Trainee", etc).
-    -   **Comparativo:** Mostra lado a lado quem recebeu no Banco vs Quem deveria ter recebido.
+### Como Funciona
+1.  **Entrada:** Recebe um `sale_id` (para auditar venda real) ou `simulate_amount` + `simulate_licensee_id` (para simulação).
+2.  **Cadeia:** Reconstrói a linha ascendente (uplines) do vendedor no momento.
+3.  **Cálculo:** Aplica as "Regras de Ouro" (13% Licenciado, Pools de Diretoria, Hierarquia).
+4.  **Comparação:** Se for venda real, busca os registros na tabela `commission_record` e compara com o calculado.
 
-### Links Úteis
-- **Painel de Auditoria:** [http://localhost:5173/CommissionPilot](http://localhost:5173/CommissionPilot)
-- **Gerar Novo Snapshot:** [http://localhost:5173/AuditSnapshot](http://localhost:5173/AuditSnapshot) (Requer Login Admin `erbrito...`)
+### Regras de Distribuição (Vigentes no Código)
+
+| Cargo | Percentual | Regra |
+| :--- | :--- | :--- |
+| **Licenciado Catálogo** | 13.0% | Multinível (Captura ou Sobe) |
+| **Trainee a Distribuidor** | Variável | Multinível (Se o abaixo não tem, sobe) |
+| **Diretor a Fundador** | 0.5% - 3.0% | **Pool Global** (Rateio entre todos os qualificados) |
+
+> **Nota:** Se ninguém na hierarquia for elegível para um nível multinível, o valor vai para a empresa (`company_rollup`).
+
+### Exemplo de Uso (JSON Payload)
+```json
+{
+  "sale_id": "uuid-da-venda-aqui"
+}
+```
+*Retorna:* Objeto `simulation` (esperado) e `actual_records` (real).
+
+---
+
+## 3. Função: `auditUserCommissions` (Auditoria de Usuário)
+
+Esta função serve para "passar um pente fino" na conta de um usuário específico em busca de anomalias financeiras.
+
+### O que ela verifica?
+1.  **Duplicidades:** Se o usuário recebeu mais de um registro de comissão para a mesma venda e mesmo cargo (Erro crítico).
+2.  **Rateio de Diretor:** Se o usuário é diretor, verifica se ele recebeu valor IGUAL aos outros diretores na mesma venda (apontando erros de arredondamento ou exclusão).
+3.  **Soma de Percentuais:** Verifica se o total distribuído na venda fecha em ~26%.
+4.  **Âncora Ausente:** Verifica se a venda teve o registro obrigatório de 13% do Licenciado.
+
+### Exemplo de Uso (JSON Payload)
+```json
+{
+  "email": "usuario@exemplo.com"
+}
+```
+*Retorna:* Um relatório de integridade (`summary`) com listas de `checks` (duplicidades, erros, etc).
+
+---
+
+## 4. Onde Encontrar no Código
+
+As implementações oficiais estão em:
+-   `/functions/commissionPilot.ts`
+-   `/functions/auditUserCommissions.ts`
+
+Estas funções são executadas via Edge Functions do Supabase e podem ser chamadas pelo painel administrativo ou via API (com permissão de Admin).

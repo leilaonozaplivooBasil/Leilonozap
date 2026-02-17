@@ -8,7 +8,7 @@ const Auction = base44.entities.Auction;
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye } from 'lucide-react';
+import { Loader2, ShoppingBag, CreditCard, Trophy, Package, Truck, CheckCircle, Eye, Wallet } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -31,52 +31,59 @@ const statusConfigSaiDeBaixo = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-100 text-red-700 border-red-300" },
 };
 
-const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => {
+const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
     const statusConfig = isSaiDeBaixo ? statusConfigSaiDeBaixo : statusConfigNozap;
-    const config = statusConfig[auction.order_status] || statusConfig.awaiting_payment;
+    const config = statusConfig[auction.order_status] || statusConfig.paid;
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
 
     return (
-        <Card className={`${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800/60 border border-gray-700/80 text-white'} overflow-hidden flex flex-col`}>
-            <CardHeader className="flex-row items-start gap-4 p-4">
-                 <img src={mainImage} alt={auction.title} className={`w-24 h-24 object-cover rounded-lg ${isSaiDeBaixo ? 'border-2 border-gray-200' : 'border border-gray-700'}`} />
-                 <div className="flex-grow">
-                    <CardTitle className={`text-lg mb-1 line-clamp-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>{auction.title}</CardTitle>
-                    <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Arrematado em: {new Date(auction.updated_date).toLocaleDateString('pt-BR')}</p>
-                 </div>
-            </CardHeader>
-            <CardContent className="px-4 pb-4 flex-grow">
-                 <div className={`${isSaiDeBaixo ? 'bg-gray-50' : 'bg-gray-700/50'} p-3 rounded-lg flex justify-between items-center`}>
-                    <span className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}>Valor do Arremate:</span>
-                    <span className={`font-bold text-xl ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>R$ {auction.current_price.toFixed(2)}</span>
-                 </div>
-            </CardContent>
-            <CardFooter className={`${isSaiDeBaixo ? 'bg-gray-50' : 'bg-gray-900/50'} p-4 flex flex-col gap-3`}>
-                <Badge className={`flex items-center gap-2 text-sm ${config.color} w-fit`}>
-                    <config.icon className="w-4 h-4" />
-                    {config.text}
-                </Badge>
-                <div className="flex flex-col sm:flex-row gap-2 w-full">
-                    {auction.order_status === 'awaiting_payment' && (
-                        <Button 
-                            onClick={() => onPayClick(auction)}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold"
-                        >
-                            <CreditCard className="w-4 h-4 mr-2" />
-                            Confirmar Pedido
-                        </Button>
-                    )}
-
-                    <Button 
-                        onClick={() => onTrackClick(auction)}
-                        variant="outline"
-                        className={`flex-1 ${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900 hover:bg-gray-100' : 'bg-gray-700 border-gray-600 text-white hover:bg-gray-600'}`}
-                    >
-                        <Eye className="w-4 h-4 mr-2" />
-                        Acompanhar Pedido
-                    </Button>
+        <Card className="group bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 overflow-hidden hover:border-green-500/50 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(34,197,94,0.12)]">
+            {/* Imagem em destaque - MAIOR */}
+            <div className="relative h-64 overflow-hidden bg-gray-900">
+                <img 
+                    src={mainImage} 
+                    alt={auction.title} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-gray-900/20 to-transparent" />
+                
+                {/* Badge de Status Flutuante */}
+                <div className="absolute top-3 right-3">
+                    <Badge className={`flex items-center gap-1.5 text-xs backdrop-blur-md ${config.color} shadow-lg`}>
+                        <config.icon className="w-3.5 h-3.5" />
+                        {config.text}
+                    </Badge>
                 </div>
-            </CardFooter>
+            </div>
+
+            <CardContent className="p-4 space-y-3">
+                {/* Título e Data - COMPACTO */}
+                <div>
+                    <h3 className="text-white font-bold text-base line-clamp-2 mb-1 group-hover:text-green-400 transition-colors">
+                        {auction.title}
+                    </h3>
+                    <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <Trophy className="w-3 h-3" />
+                        {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
+                    </p>
+                </div>
+
+                {/* Valor em Destaque - COMPACTO */}
+                <div className="bg-gradient-to-br from-green-600/10 to-green-700/5 border border-green-500/20 rounded-lg p-3">
+                    <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">Valor do Arremate</p>
+                    <p className="text-green-400 text-xl font-black">R$ {auction.current_price.toFixed(2)}</p>
+                </div>
+
+                {/* Botão de Ação - Apenas Acompanhar */}
+                <Button 
+                    onClick={() => onTrackClick(auction)}
+                    size="sm"
+                    className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300"
+                >
+                    <Eye className="w-3.5 h-3.5 mr-1.5" />
+                    Acompanhar Pedido
+                </Button>
+            </CardContent>
         </Card>
     );
 };
@@ -88,6 +95,7 @@ export default function MyWinningsPage() {
     const [isProcessing, setIsProcessing] = useState(false);
     const [debugLogs, setDebugLogs] = useState([]);
     const [showDebug, setShowDebug] = useState(false);
+    const [walletBalance, setWalletBalance] = useState(0);
 
     const location = useLocation();
     const navigate = useNavigate();
@@ -110,6 +118,12 @@ export default function MyWinningsPage() {
                 }
                 const user = JSON.parse(savedUser);
                 setCurrentUser(user);
+                
+                // Busca saldo da carteira
+                const wallets = await base44.entities.Wallet.filter({ user_id: user.id });
+                if (wallets && wallets.length > 0) {
+                    setWalletBalance(wallets[0].balance || 0);
+                }
                 
                 const allAuctions = await Auction.list("-updated_date", 500);
                 const wonAuctions = allAuctions.filter(auction => 
@@ -135,10 +149,6 @@ export default function MyWinningsPage() {
         navigate(createPageUrl(trackingPage) + `?auction_id=${auction.id}`);
     };
 
-    const handlePayClick = (auction) => {
-        navigate(createPageUrl('CatalogCheckout2') + `?auction_id=${auction.id}`);
-    };
-
 
 
     if (isLoading) {
@@ -159,39 +169,82 @@ export default function MyWinningsPage() {
     }
 
     return (
-        <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-gradient-to-br from-gray-50 to-gray-100' : 'bg-gray-900'} ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} p-3 sm:p-4 md:p-6 lg:p-8`}>
+        <div className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-black text-white p-3 sm:p-4 md:p-6 lg:p-8">
             <div className="max-w-7xl mx-auto">
-                <div className="mb-6 sm:mb-8">
-                    <h1 className={`text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                        <Trophy className={`w-6 h-6 sm:w-8 sm:h-8 ${isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}`} />
-                        Meus Arremates
-                    </h1>
-                    <p className={`text-sm sm:text-base ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} mt-2`}>
-                      Produtos que você arrematou
-                    </p>
+                {/* Header Redesenhado */}
+                <div className="mb-8 sm:mb-10">
+                    <div className="flex items-center gap-4 mb-3">
+                        <div className="bg-gradient-to-br from-yellow-400 to-orange-500 p-3 rounded-2xl shadow-lg shadow-yellow-500/25">
+                            <Trophy className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl sm:text-4xl font-black bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+                                Meus Arremates
+                            </h1>
+                            <p className="text-gray-400 text-sm sm:text-base mt-1">
+                                Produtos que você conquistou nos leilões
+                            </p>
+                        </div>
+                    </div>
                 </div>
+
+                {/* Card da Carteira - Design Premium */}
+                <Card className="relative overflow-hidden bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 border-none mb-6 sm:mb-8 shadow-2xl shadow-green-500/25">
+                    {/* Efeito de Brilho */}
+                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent" />
+                    
+                    <CardContent className="relative p-6 sm:p-8">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                            {/* Info da Carteira */}
+                            <div className="flex items-start gap-4">
+                                <div className="bg-white/15 backdrop-blur-xl p-3.5 rounded-2xl">
+                                    <Wallet className="w-7 h-7 text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-green-100 text-sm font-medium mb-1.5">Saldo Disponível</p>
+                                    <p className="text-white text-4xl font-black tracking-tight">
+                                        R$ {walletBalance.toFixed(2)}
+                                    </p>
+                                    <p className="text-green-200/70 text-xs mt-1">Use para pagar seus arremates</p>
+                                </div>
+                            </div>
+
+                            {/* Botão de Adicionar */}
+                            <Button 
+                                onClick={() => navigate(createPageUrl("AddFunds"))}
+                                className="w-full sm:w-auto bg-white text-green-700 hover:bg-green-50 font-bold px-8 py-6 text-base shadow-xl shadow-black/20 hover:shadow-2xl hover:scale-105 transition-all duration-300"
+                            >
+                                <CreditCard className="w-5 h-5 mr-2.5" />
+                                Adicionar Saldo
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
 
 
 
                 {winnings.length === 0 ? (
-                    <div className={`text-center py-16 ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800/50'} rounded-2xl`}>
-                        <ShoppingBag className={`w-16 h-16 mx-auto ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-500'} mb-4`} />
-                        <h2 className={`text-xl font-semibold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>Você ainda não arrematou nada</h2>
-                        <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} mb-6`}>Participe de um leilão e dê seu lance para começar a sua coleção!</p>
-                        <Link to={createPageUrl(isSaiDeBaixo ? "SaiDeBaixo" : "Home")}>
-                            <Button className={isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}>Ver Leilões Ativos</Button>
+                    <div className="text-center py-20 bg-gradient-to-br from-gray-800/40 to-gray-900/40 backdrop-blur-sm rounded-3xl border border-gray-700/50">
+                        <div className="bg-gradient-to-br from-gray-700 to-gray-800 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                            <ShoppingBag className="w-10 h-10 text-gray-400" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white mb-3">Você ainda não arrematou nada</h2>
+                        <p className="text-gray-400 mb-8 max-w-md mx-auto">Participe de um leilão e dê seu lance para começar a sua coleção de produtos incríveis!</p>
+                        <Link to={createPageUrl("Home")}>
+                            <Button className="bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-bold px-8 py-6 text-base shadow-xl shadow-green-500/25 hover:shadow-green-500/40 hover:scale-105 transition-all duration-300">
+                                <Trophy className="w-5 h-5 mr-2" />
+                                Ver Leilões Ativos
+                            </Button>
                         </Link>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
                         {winnings.map(auction => (
                             <WonAuctionCard 
                                 key={auction.id} 
                                 auction={auction} 
                                 onTrackClick={handleTrackClick}
-                                onPayClick={handlePayClick}
                                 isSaiDeBaixo={false}
-                                isProcessing={isProcessing}
                             />
                         ))}
                     </div>

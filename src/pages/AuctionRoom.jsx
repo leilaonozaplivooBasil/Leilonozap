@@ -20,6 +20,8 @@ import AuctionTimeDebugger from "../components/system/AuctionTimeDebugger";
 import ViewTracker from "../components/recommendations/ViewTracker";
 import FavoriteButton from "../components/recommendations/FavoriteButton";
 import WinnerModal from "../components/auction/WinnerModal";
+import LowBalanceModal from "../components/auction/LowBalanceModal";
+import { Wallet } from "lucide-react";
 
 import { getServerTime } from "@/functions/getServerTime";
 
@@ -40,6 +42,7 @@ export default function AuctionRoom() {
   
   const auctionId = searchParams.get("id") || new URLSearchParams(location.search).get("id");
   const showFloatingBalance = searchParams.get("useBalance") === "true";
+  const spectatorModeParam = searchParams.get("spectator") === "true";
 
   const [auction, setAuction] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -65,6 +68,9 @@ export default function AuctionRoom() {
   const [showWinnerModal, setShowWinnerModal] = useState(false);
   const [showBuyNowModal, setShowBuyNowModal] = useState(false);
   const [isBuyingNow, setIsBuyingNow] = useState(false);
+  const [isSpectatorMode, setIsSpectatorMode] = useState(false);
+  const [showLowBalanceModal, setShowLowBalanceModal] = useState(false);
+  const [userWallet, setUserWallet] = useState(null);
 
   const isAndroid = /Android/i.test(navigator.userAgent);
 
@@ -150,7 +156,21 @@ export default function AuctionRoom() {
       const savedUser = localStorage.getItem('currentUser');
       const isLoggedIn = sessionStorage.getItem('isLoggedIn');
       if (savedUser && isLoggedIn) {
-        setCurrentUser(JSON.parse(savedUser));
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+        
+        // 🆕 Carrega saldo da carteira de depósitos
+        try {
+          const depositWallets = await base44.entities.DepositWallet.filter({ user_id: user.id });
+          if (depositWallets && depositWallets.length > 0) {
+            setUserWallet(depositWallets[0]);
+            console.log(`💰 Saldo de depósito do usuário: R$ ${depositWallets[0].balance.toFixed(2)}`);
+          } else {
+            console.log(`⚠️ Nenhuma DepositWallet encontrada para ${user.id}`);
+          }
+        } catch (error) {
+          console.warn("Erro ao carregar saldo da carteira:", error.message);
+        }
       } else {
         setCurrentUser(null);
       }
@@ -690,6 +710,12 @@ export default function AuctionRoom() {
         await loadCurrentUser();
         await initialLoadData();
         
+        // 🆕 Ativa modo telespectador se vir do parâmetro
+        if (spectatorModeParam) {
+          setIsSpectatorMode(true);
+          console.log("🎬 [SPECTATOR] Modo telespectador ativado via URL");
+        }
+        
         hasInitializedRef.current = true;
         
       } catch (error) {
@@ -855,6 +881,13 @@ export default function AuctionRoom() {
       } else {
         setShowGuestModal(true);
       }
+      return;
+    }
+
+    // 🆕 VERIFICA SALDO ANTES DE DAR LANCE
+    if (!userWallet || userWallet.balance < amount) {
+      console.warn(`⚠️ Saldo insuficiente/inexistente: ${userWallet ? userWallet.balance : 'NENHUMA'} < ${amount}`);
+      setShowLowBalanceModal(true);
       return;
     }
 
@@ -1629,7 +1662,7 @@ export default function AuctionRoom() {
         </div>
       </main>
 
-      {isAuctionActive && (
+      {isAuctionActive && !isSpectatorMode && (
         <footer className="bid-input-container">
           <BidInput
             currentPrice={currentPrice}
@@ -1640,6 +1673,19 @@ export default function AuctionRoom() {
             onBuyNow={handleBuyNow}
           />
         </footer>
+      )}
+
+      {/* 🆕 MODO TELESPECTADOR - Botão flutuante para adicionar saldo */}
+      {isAuctionActive && isSpectatorMode && currentUser && (
+        <div className="fixed bottom-6 sm:bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+          <Button
+            onClick={() => setShowLowBalanceModal(true)}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold px-6 sm:px-8 h-12 sm:h-14 shadow-lg shadow-green-500/40 animate-pulse-subtle"
+          >
+            <Wallet className="w-5 h-5 mr-2" />
+            Participar do Leilão
+          </Button>
+        </div>
       )}
 
       <div className={`mobile-bottom-sheet ${showMobilePanel ? 'mobile-bottom-sheet--open' : ''}`}>
@@ -1759,6 +1805,18 @@ export default function AuctionRoom() {
 
       <ComparaiButton auction={auction} />
 
+      {/* 🆕 Modal de Saldo Baixo */}
+      <LowBalanceModal
+        isOpen={showLowBalanceModal}
+        currentBalance={userWallet?.balance || 0}
+        requiredAmount={currentPrice + auction?.increment || 0}
+        onWatchAsSpectator={() => {
+          setShowLowBalanceModal(false);
+          setIsSpectatorMode(true);
+        }}
+        onClose={() => setShowLowBalanceModal(false)}
+      />
+
       <style>{`
         .auction-page-container { display: flex; flex-direction: column; height: 100vh; background-color: #111827; overflow: hidden; }
         
@@ -1784,6 +1842,40 @@ export default function AuctionRoom() {
           display: flex; 
           flex-direction: column;
           scroll-behavior: smooth;
+        }
+        
+        /* Scrollbar moderno minimalista - fundo 100% transparente */
+        .auction-messages {
+          scrollbar-color: #10b981 transparent !important;
+          scrollbar-width: thin;
+        }
+        
+        .auction-messages::-webkit-scrollbar {
+          width: 8px;
+          background: transparent !important;
+        }
+        
+        .auction-messages::-webkit-scrollbar-track {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        
+        .auction-messages::-webkit-scrollbar-thumb {
+          background: linear-gradient(to bottom, #10b981, #059669) !important;
+          border-radius: 4px;
+          min-height: 40px;
+          border: 2px solid transparent !important;
+          background-clip: content-box !important;
+        }
+        
+        .auction-messages::-webkit-scrollbar-thumb:hover {
+          background: linear-gradient(to bottom, #059669, #047857) !important;
+          background-clip: content-box !important;
+        }
+        
+        .auction-messages::-webkit-scrollbar-corner {
+          background: transparent !important;
         }
         
         .message-bubble-wrapper { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 16px; max-width: 90%; animation: slideIn 0.3s ease-out; }

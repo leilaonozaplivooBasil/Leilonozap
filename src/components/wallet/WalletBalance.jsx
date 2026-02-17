@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Wallet, Plus, History } from "lucide-react";
+import { Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -55,39 +55,21 @@ export default function WalletBalance({ userId, showActions = true, onBalanceLoa
   }
 
   return (
-    <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 shadow-lg">
+    <Card 
+      onClick={() => showActions && navigate(createPageUrl("WalletHistory"))}
+      className={`bg-gradient-to-br from-green-600 to-green-700 border-0 shadow-lg ${showActions ? 'cursor-pointer hover:from-green-700 hover:to-green-800 transition-all' : ''}`}
+    >
       <CardContent className="p-3">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2 text-white/80 text-sm mb-1">
               <Wallet className="w-4 h-4" />
-              <span>Saldo em Conta</span>
+              <span>Carteira Virtual</span>
             </div>
             <p className="text-2xl font-bold text-white">
               R$ {balance.toFixed(2)}
             </p>
           </div>
-          {showActions && (
-            <div className="flex flex-col gap-1.5">
-              <Button
-                size="sm"
-                onClick={() => navigate(createPageUrl("WalletDeposit"))}
-                className="bg-white/20 hover:bg-white/30 text-white border-0 h-8 text-xs"
-              >
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
-                Depositar
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => navigate(createPageUrl("WalletHistory"))}
-                className="text-white hover:bg-white/10 h-8 text-xs"
-              >
-                <History className="w-3.5 h-3.5 mr-1.5" />
-                Histórico
-              </Button>
-            </div>
-          )}
         </div>
       </CardContent>
 

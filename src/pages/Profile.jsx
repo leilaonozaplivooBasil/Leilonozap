@@ -19,7 +19,6 @@ import {
   Edit3, 
   Save,
   LogOut,
-  Crown,
   Loader2,
   Camera,
   Check,
@@ -419,39 +418,44 @@ export default function Profile() {
   }
 
   const userStats = [
-    { label: "Pontos", value: currentUser.points || 0, icon: Crown, color: "text-yellow-400" },
     { label: "Lances Dados", value: userBids.length, icon: Zap, color: "text-green-400" },
     { label: "Leilões Vencidos", value: currentUser.won_auctions || 0, icon: Trophy, color: "text-purple-400" }
   ];
 
   return (
-    <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900' : 'bg-gray-900 text-white'} p-4 sm:p-6 lg:p-8`}>
-      <div className="max-w-5xl mx-auto">
-        {/* Header com Tabs */}
-        <div className="mb-8">
-          <h1 className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-4`}>Meu Perfil</h1>
-          <div className="flex gap-3 border-b border-gray-700">
+    <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-white text-gray-900' : 'bg-gray-900 text-white'} p-4 sm:p-6 lg:p-8`}>
+      <div className="max-w-6xl mx-auto">
+        {/* Header moderno */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className={`text-5xl font-black ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>Meu Perfil</h1>
+              <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>Gerencie sua conta e informações</p>
+            </div>
+          </div>
+          
+          <div className={`flex gap-2 border-b-2 ${isSaiDeBaixo ? 'border-gray-200' : 'border-gray-800'}`}>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`pb-3 px-4 font-semibold transition-all ${
+              className={`pb-4 px-6 font-bold text-lg transition-all duration-300 ${
                 activeTab === 'profile'
-                  ? `${isSaiDeBaixo ? 'text-red-600 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
-                  : `${isSaiDeBaixo ? 'text-gray-600 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`
+                  ? `${isSaiDeBaixo ? 'text-gray-900 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
+                  : `${isSaiDeBaixo ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'}`
               }`}
             >
-              <UserIcon className="w-4 h-4 inline mr-2" />
+              <UserIcon className="w-5 h-5 inline mr-2" />
               Perfil
             </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`pb-3 px-4 font-semibold transition-all ${
+              className={`pb-4 px-6 font-bold text-lg transition-all duration-300 ${
                 activeTab === 'orders'
-                  ? `${isSaiDeBaixo ? 'text-red-600 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
-                  : `${isSaiDeBaixo ? 'text-gray-600 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`
+                  ? `${isSaiDeBaixo ? 'text-gray-900 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
+                  : `${isSaiDeBaixo ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'}`
               }`}
             >
-              <Package className="w-4 h-4 inline mr-2" />
-              Meus Pedidos ({catalogOrders.filter(o => o.status !== 'canceled').length})
+              <Package className="w-5 h-5 inline mr-2" />
+              Meus Pedidos <span className="font-semibold">({catalogOrders.filter(o => o.status !== 'canceled').length})</span>
             </button>
           </div>
         </div>
@@ -461,7 +465,7 @@ export default function Profile() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Info */}
           <div className="lg:col-span-2">
-            <Card className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200 shadow-lg' : 'bg-gray-800/50 border-gray-700/80 backdrop-blur-sm'}>
+            <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className={`flex items-center gap-2 ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
                   <UserIcon className="w-5 h-5" />
@@ -808,13 +812,13 @@ export default function Profile() {
             <WalletBalance userId={currentUser.id} showActions={true} />
             
             {/* Statistics */}
-            <Card className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200 shadow-lg' : 'bg-gray-800/50 border-gray-700/80 backdrop-blur-sm'}>
+            <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader>
                 <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Estatísticas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-0 p-0">
                 {userStats.map((stat) => (
-                  <div key={stat.label} className="flex items-center justify-between">
+                  <div key={stat.label} className="flex items-center justify-between px-6 py-2">
                     <div className="flex items-center gap-3">
                       <stat.icon className={`w-5 h-5 ${stat.color}`} />
                       <span className={`text-sm ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>{stat.label}</span>
@@ -826,44 +830,53 @@ export default function Profile() {
             </Card>
 
             {/* Quick Actions */}
-            <Card className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200 shadow-lg' : 'bg-gray-800/50 border-gray-700/80 backdrop-blur-sm'}>
+            <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
               <CardHeader>
-                <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Ações</CardTitle>
+                <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Ações Rápidas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2">
                 {!fromCatalog && (
-                  <Button 
-                    variant="outline" 
-                    className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
+                  <button 
                     onClick={() => navigate(createPageUrl(isSaiDeBaixo ? "SaiDeBaixo" : "Home") + "?favorites=true")}
+                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
+                      isSaiDeBaixo 
+                        ? 'bg-gradient-to-r from-red-50 to-rose-50 border-2 border-red-200 text-red-700 hover:from-red-100 hover:to-rose-100 hover:border-red-400 hover:shadow-md' 
+                        : 'bg-gradient-to-r from-red-500/10 to-rose-500/10 border-2 border-red-500/30 text-red-300 hover:from-red-500/20 hover:to-rose-500/20 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/20'
+                    }`}
                   >
-                    <span className="text-red-500 mr-2">❤️</span>
-                    Meus Favoritos
-                  </Button>
+                    <span className="text-xl">❤️</span>
+                    <span>Meus Favoritos</span>
+                  </button>
                 )}
-                <Button 
-                  variant="outline" 
-                  className={isSaiDeBaixo ? "w-full bg-white border-gray-300 text-gray-900 font-semibold hover:bg-gray-100" : "w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600"}
+                <button 
                   onClick={() => navigate(createPageUrl("MyCatalogOrders"))}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
+                    isSaiDeBaixo 
+                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 text-green-700 hover:from-green-100 hover:to-emerald-100 hover:border-green-400 hover:shadow-md' 
+                      : 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-2 border-green-500/30 text-green-300 hover:from-green-500/20 hover:to-emerald-500/20 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/20'
+                  }`}
                 >
-                  <Package className="w-4 h-4 mr-2 text-green-400" />
-                  Meus Pedidos
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className={`w-full ${isSaiDeBaixo ? 'bg-white border-red-300 text-red-600 hover:bg-red-50' : 'bg-gray-700 border-red-500/50 text-red-400 hover:bg-gray-600'}`}
+                  <Package className="w-5 h-5" />
+                  <span>Meus Pedidos</span>
+                </button>
+                <button 
                   onClick={handleLogout}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-lg font-semibold transition-all duration-300 ${
+                    isSaiDeBaixo 
+                      ? 'bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200 text-red-700 hover:from-red-100 hover:to-orange-100 hover:border-red-400 hover:shadow-md' 
+                      : 'bg-gradient-to-r from-red-500/10 to-orange-500/10 border-2 border-red-500/30 text-red-300 hover:from-red-500/20 hover:to-orange-500/20 hover:border-red-500/50 hover:shadow-lg hover:shadow-red-500/20'
+                  }`}
                 >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Sair da Conta
-                </Button>
+                  <LogOut className="w-5 h-5" />
+                  <span>Sair da Conta</span>
+                </button>
               </CardContent>
             </Card>
           </div>
         </div>
 
         {/* Recent Bids */}
-        <Card className={`mt-8 ${isSaiDeBaixo ? 'bg-white border-2 border-gray-200 shadow-lg' : 'bg-gray-800/50 border-gray-700/80 backdrop-blur-sm'}`}>
+        <Card className={`mt-12 ${isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}`}>
           <CardHeader>
             <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Meus Lances Recentes</CardTitle>
           </CardHeader>
@@ -871,9 +884,9 @@ export default function Profile() {
             {userBids.length > 0 ? (
               <div className="space-y-3">
                 {userBids.slice(0, 10).map((bid) => (
-                  <div key={bid.id} className={`flex justify-between items-center p-3 ${isSaiDeBaixo ? 'bg-gray-50 border-2 border-gray-200' : 'bg-gray-800 border border-gray-700'} rounded-lg`}>
-                    <div>
-                      <p className={`font-medium ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Lance de R$ {bid.bid_amount.toFixed(2)}</p>
+                   <div key={bid.id} className={`flex justify-between items-center p-3 ${isSaiDeBaixo ? 'bg-gray-50 border-2 border-gray-200' : 'bg-gray-800 border border-gray-700'} rounded-lg`}>
+                     <div>
+                       <p className={`font-medium ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Lance de R$ {(bid.bid_amount || 0).toFixed(2)}</p>
                       <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
                         em {new Date(bid.created_date).toLocaleDateString('pt-BR')}
                       </p>
@@ -902,7 +915,7 @@ export default function Profile() {
         {activeTab === 'orders' && (
           <div className="space-y-6">
             {catalogOrders.length === 0 ? (
-              <Card className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'}>
+              <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>
                 <CardContent className="py-12 text-center">
                   <ShoppingBag className={`w-16 h-16 mx-auto mb-4 ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-600'}`} />
                   <h3 className={`text-xl font-semibold mb-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
@@ -926,7 +939,7 @@ export default function Profile() {
                   const config = statusConfig[order.status] || statusConfig.pending_payment;
                   
                   return (
-                    <Card key={order.id} className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'}>
+                    <Card key={order.id} className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20 hover:border-green-500/30 transition-all'}>
                       <CardContent className="p-4">
                         <div className="flex gap-4 mb-3">
                           {order.product_image && (
@@ -944,7 +957,7 @@ export default function Profile() {
                               {new Date(order.created_date).toLocaleDateString('pt-BR')}
                             </p>
                             <p className={`font-bold text-lg ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
-                              R$ {order.total_amount.toFixed(2)}
+                              R$ {(order.total_amount || 0).toFixed(2)}
                             </p>
                           </div>
                         </div>

@@ -337,131 +337,223 @@ export default function LojistaDashboard() {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md bg-gray-800 border-gray-700">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 w-16 h-16 bg-green-600 rounded-full flex items-center justify-center">
-              <Store className="w-8 h-8 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA2MCAwIEwgMCAwIDAgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAzKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40"></div>
+        
+        {/* Gradients */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-green-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+        <div className="relative z-10 w-full max-w-md">
+          <Card className="backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent"></div>
+            
+            <CardHeader className="relative text-center pt-8 pb-6 border-b border-white/10">
+              <div className="flex justify-center mb-6">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/30 to-emerald-500/30 rounded-2xl blur-lg"></div>
+                  <div className="relative p-4 bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-2xl border border-green-400/30">
+                    <Store className="w-8 h-8 text-green-400" />
+                  </div>
+                </div>
+              </div>
+              <CardTitle className="text-3xl font-bold text-white mb-2">Portal do Lojista</CardTitle>
+              <p className="text-gray-300 text-sm">Acesse seu painel de vendas</p>
+            </CardHeader>
+
+            <CardContent className="relative pt-8 space-y-5">
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <Label className="text-gray-200 text-sm font-semibold mb-2 block">Usuário</Label>
+                  <Input
+                    placeholder="Digite seu login"
+                    value={loginForm.login}
+                    onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
+                    className="backdrop-blur-sm bg-white/5 border-white/20 text-white placeholder:text-gray-400 h-12 focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-gray-200 text-sm font-semibold mb-2 block">Senha</Label>
+                  <Input
+                    type="password"
+                    placeholder="Digite sua senha"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                    className="backdrop-blur-sm bg-white/5 border-white/20 text-white placeholder:text-gray-400 h-12 focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all"
+                    required
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-green-500/30 transition-all"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Entrando...
+                    </>
+                  ) : (
+                    "Entrar"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+
+            <div className="relative border-t border-white/10 bg-white/5 px-6 py-4 text-center">
+              <p className="text-gray-400 text-xs">
+                © 2024 Leilão NoZap - Portal do Lojista
+              </p>
             </div>
-            <CardTitle className="text-2xl text-white">Portal do Lojista</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <Input
-                  placeholder="Login"
-                  value={loginForm.login}
-                  onChange={(e) => setLoginForm({ ...loginForm, login: e.target.value })}
-                  className="bg-gray-900 border-gray-700 text-white"
-                  required
-                />
-              </div>
-              <div>
-                <Input
-                  type="password"
-                  placeholder="Senha"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  className="bg-gray-900 border-gray-700 text-white"
-                  required
-                />
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-green-600 hover:bg-green-700"
-                disabled={isLoading}
-              >
-                {isLoading ? "Entrando..." : "Entrar"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+          </Card>
+
+          <p className="text-center text-gray-400 text-xs mt-6">
+            Dúvidas? Entre em contato com o suporte
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-8 gap-4">
-          <div className="flex items-center gap-4">
-            {currentStore.logo_url && (
-              <img src={currentStore.logo_url} alt="Logo" className="w-16 h-16 object-cover rounded-lg" />
-            )}
-            <div>
-              <h1 className="text-3xl font-bold text-white">{currentStore.store_name}</h1>
-              <p className="text-gray-400">Painel de Controle</p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSA2MCAwIEwgMCAwIDAgNjAiIGZpbGw9Im5vbmUiIHN0cm9rZT0icmdiYSgyNTUsMjU1LDI1NSwwLjAyKSIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2dyaWQpIi8+PC9zdmc+')] opacity-40"></div>
+      
+      <div className="absolute top-20 left-0 w-96 h-96 bg-green-500/10 rounded-full blur-3xl animate-liquid-drift"></div>
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-liquid-drift-reverse"></div>
+      <div className="absolute top-1/2 left-1/3 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl animate-liquid-pulse"></div>
+
+      <div className="relative z-10 p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-12 gap-6">
+            <div className="flex items-center gap-6">
+              {currentStore.logo_url && (
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-transparent rounded-2xl blur-lg group-hover:blur-xl transition-all"></div>
+                  <img 
+                    src={currentStore.logo_url} 
+                    alt="Logo" 
+                    className="relative w-20 h-20 object-cover rounded-2xl border border-green-400/30 shadow-lg shadow-green-500/20" 
+                  />
+                </div>
+              )}
+              <div>
+                <h1 className="text-4xl font-bold text-white mb-1">{currentStore.store_name}</h1>
+                <p className="text-gray-400 text-sm">Painel de Controle Premium</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-3">
+              {currentStore.can_create_sai_de_baixo && (
+                <Button
+                  onClick={() => navigate(createPageUrl("CreateAuctionSaiDeBaixo"))}
+                  className="bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white shadow-lg shadow-red-500/30"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  Novo Leilão
+                </Button>
+              )}
+              
+              {(currentStore.can_create_direto_fabrica || currentStore.can_create_arremate_devolucoes) && (
+                <Button
+                  onClick={() => navigate(createPageUrl("CreateAuction"))}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/30"
+                >
+                  <Package className="w-4 h-4 mr-2" />
+                  Novo Leilão NoZap
+                </Button>
+              )}
+              
+              <Button 
+                onClick={handleLogout} 
+                className="bg-white/10 hover:bg-white/20 border border-white/30 text-white backdrop-blur-sm transition-all"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sair
+              </Button>
             </div>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Botões de Criar Leilão baseados nas permissões */}
-            {currentStore.can_create_sai_de_baixo && (
-              <Button
-                onClick={() => navigate(createPageUrl("CreateAuctionSaiDeBaixo"))}
-                className="bg-red-600 hover:bg-red-700 text-white"
-              >
-                <Package className="w-4 h-4 mr-2" />
-                Criar Leilão Sai de Baixo
-              </Button>
-            )}
-            
-            {(currentStore.can_create_direto_fabrica || currentStore.can_create_arremate_devolucoes) && (
-              <Button
-                onClick={() => navigate(createPageUrl("CreateAuction"))}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <Package className="w-4 h-4 mr-2" />
-                Criar Leilão NoZap
-              </Button>
-            )}
-            
-            <Button onClick={handleLogout} variant="outline" className="border-gray-600 text-gray-300">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sair
-            </Button>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            {/* Total Vendido */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all animate-liquid-glow"></div>
+              <Card className="relative backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 border border-green-400/30 hover:border-green-400/50 transition-all shadow-2xl overflow-hidden liquid-glass-card">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent"></div>
+                <CardContent className="relative pt-8 pb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Total Vendido</p>
+                      <p className="text-4xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text">
+                        R$ {stats.totalSales.toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl"></div>
+                      <div className="relative p-4 bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-2xl border border-green-400/30">
+                        <DollarSign className="w-8 h-8 text-green-400" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Leilões Ativos */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-cyan-500/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all animate-liquid-glow" style={{ animationDelay: '0.5s' }}></div>
+              <Card className="relative backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 border border-blue-400/30 hover:border-blue-400/50 transition-all shadow-2xl overflow-hidden liquid-glass-card" style={{ animationDelay: '0.3s' }}>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent"></div>
+                <CardContent className="relative pt-8 pb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Leilões Ativos</p>
+                      <p className="text-4xl font-bold text-transparent bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text">
+                        {stats.activeAuctions}
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl"></div>
+                      <div className="relative p-4 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm rounded-2xl border border-blue-400/30">
+                        <TrendingUp className="w-8 h-8 text-blue-400" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Produtos Vendidos */}
+            <div className="group relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all animate-liquid-glow" style={{ animationDelay: '1s' }}></div>
+              <Card className="relative backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 border border-purple-400/30 hover:border-purple-400/50 transition-all shadow-2xl overflow-hidden liquid-glass-card" style={{ animationDelay: '0.6s' }}>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent"></div>
+                <CardContent className="relative pt-8 pb-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Produtos Vendidos</p>
+                      <p className="text-4xl font-bold text-transparent bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text">
+                        {stats.soldProducts}
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-purple-500/20 rounded-full blur-xl"></div>
+                      <div className="relative p-4 bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm rounded-2xl border border-purple-400/30">
+                        <Package className="w-8 h-8 text-purple-400" />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Total Vendido</p>
-                  <p className="text-3xl font-bold text-green-400">R$ {stats.totalSales.toFixed(2)}</p>
-                </div>
-                <DollarSign className="w-12 h-12 text-green-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Leilões Ativos</p>
-                  <p className="text-3xl font-bold text-blue-400">{stats.activeAuctions}</p>
-                </div>
-                <TrendingUp className="w-12 h-12 text-blue-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-400 text-sm">Produtos Vendidos</p>
-                  <p className="text-3xl font-bold text-purple-400">{stats.soldProducts}</p>
-                </div>
-                <Package className="w-12 h-12 text-purple-400" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Tabs */}
          <Tabs defaultValue="auctions" className="w-full">
@@ -797,7 +889,98 @@ export default function LojistaDashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
+
+      <style>{`
+        @keyframes liquidDrift {
+          0%, 100% {
+            transform: translate(0px, 0px) scale(1);
+            opacity: 0.1;
+          }
+          25% {
+            transform: translate(20px, -20px) scale(1.05);
+            opacity: 0.15;
+          }
+          50% {
+            transform: translate(-10px, 30px) scale(1.1);
+            opacity: 0.12;
+          }
+          75% {
+            transform: translate(30px, 10px) scale(1.02);
+            opacity: 0.14;
+          }
+        }
+
+        @keyframes liquidDriftReverse {
+          0%, 100% {
+            transform: translate(0px, 0px) scale(1);
+            opacity: 0.1;
+          }
+          25% {
+            transform: translate(-30px, 20px) scale(1.05);
+            opacity: 0.15;
+          }
+          50% {
+            transform: translate(10px, -30px) scale(1.1);
+            opacity: 0.12;
+          }
+          75% {
+            transform: translate(-20px, -10px) scale(1.02);
+            opacity: 0.14;
+          }
+        }
+
+        @keyframes liquidPulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.05;
+          }
+          50% {
+            transform: scale(1.15);
+            opacity: 0.1;
+          }
+        }
+
+        @keyframes liquidGlow {
+          0%, 100% {
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.02), inset 0 0 10px rgba(255, 255, 255, 0.01);
+          }
+          50% {
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.04), inset 0 0 20px rgba(255, 255, 255, 0.02);
+          }
+        }
+
+        .animate-liquid-drift {
+          animation: liquidDrift 8s ease-in-out infinite;
+        }
+
+        .animate-liquid-drift-reverse {
+          animation: liquidDriftReverse 10s ease-in-out infinite;
+        }
+
+        .animate-liquid-pulse {
+          animation: liquidPulse 6s ease-in-out infinite;
+        }
+
+        .animate-liquid-glow {
+          animation: liquidGlow 4s ease-in-out infinite;
+        }
+
+        .liquid-glass-card {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+          backdrop-filter: blur(15px);
+          -webkit-backdrop-filter: blur(15px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          transition: all 0.5s cubic-bezier(0.23, 1, 0.320, 1);
+        }
+
+        .liquid-glass-card:hover {
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+          border-color: rgba(255, 255, 255, 0.15);
+          box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.15);
+        }
+      `}</style>
     </div>
   );
 }

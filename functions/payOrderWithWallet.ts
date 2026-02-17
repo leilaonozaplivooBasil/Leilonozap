@@ -100,11 +100,22 @@ Deno.serve(async (req) => {
         });
 
         // Atualizar status do leilão
-        await base44.asServiceRole.entities.Auction.update(order_id, {
-            order_status: 'paid'
-        });
+         await base44.asServiceRole.entities.Auction.update(order_id, {
+             order_status: 'paid'
+         });
 
-        console.log('✅ Pagamento concluído!');
+         // Processar comissão do influenciador (3% do valor do leilão)
+         try {
+             await base44.asServiceRole.functions.invoke('processAuctionInfluencerCommission', {
+                 auction_id: order_id,
+                 event: { type: 'update', entity_name: 'Auction', entity_id: order_id }
+             });
+             console.log('✅ Comissão de influenciador processada');
+         } catch (commErr) {
+             console.warn('⚠️ Erro ao processar comissão:', commErr.message);
+         }
+
+         console.log('✅ Pagamento concluído!');
 
         return Response.json({ 
             success: true,

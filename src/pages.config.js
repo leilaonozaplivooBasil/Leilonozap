@@ -49,11 +49,13 @@
  */
 import ActivePartners from './pages/ActivePartners';
 import AddCatalogProduct from './pages/AddCatalogProduct';
+import AddFunds from './pages/AddFunds';
 import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import AmbienteDeTeste from './pages/AmbienteDeTeste';
 import ArquitetoIA from './pages/ArquitetoIA';
+import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
@@ -132,11 +134,13 @@ import __Layout from './Layout.jsx';
 export const PAGES = {
     "ActivePartners": ActivePartners,
     "AddCatalogProduct": AddCatalogProduct,
+    "AddFunds": AddFunds,
     "AdminCatalogSales": AdminCatalogSales,
     "AdminUsers": AdminUsers,
     "AdminWithdrawals": AdminWithdrawals,
     "AmbienteDeTeste": AmbienteDeTeste,
     "ArquitetoIA": ArquitetoIA,
+    "AuctionCheckoutModern": AuctionCheckoutModern,
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
     "AuctionRoom": AuctionRoom,
@@ -151,7 +155,6 @@ export const PAGES = {
     "CatalogManagement": CatalogManagement,
     "CatalogOrderTracking": CatalogOrderTracking,
     "CatalogProductDetails": CatalogProductDetails,
-    "Checkout": Checkout,
     "Checkout": Checkout,
     "CommissionPilot": CommissionPilot,
     "CommissionDistributionFull": CommissionDistributionFull,
