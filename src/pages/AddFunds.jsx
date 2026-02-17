@@ -342,20 +342,20 @@ export default function AddFunds() {
                             return (
                               <>
                                 {bonus > 0 && (
-                                  <div className="flex items-center justify-between p-3 backdrop-blur-sm bg-yellow-500/10 rounded-xl border border-yellow-400/20">
-                                    <span className="text-yellow-300 text-sm flex items-center gap-2 font-medium">
-                                      <Gift className="w-4 h-4" />
+                                  <div className="flex items-center justify-between p-2.5 backdrop-blur-sm bg-yellow-500/10 rounded-lg border border-yellow-400/20">
+                                    <span className="text-yellow-300 text-xs flex items-center gap-1.5 font-medium">
+                                      <Gift className="w-3.5 h-3.5" />
                                       Bônus ({bonus}%)
                                     </span>
-                                    <span className="text-yellow-300 font-bold text-lg">+ R$ {bonusAmount.toFixed(2)}</span>
+                                    <span className="text-yellow-300 font-bold text-base">+ R$ {bonusAmount.toFixed(2)}</span>
                                   </div>
                                 )}
                                 
-                                <div className="relative mt-2 overflow-hidden">
-                                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl"></div>
-                                  <div className="relative p-4 backdrop-blur-sm bg-black/30 rounded-xl border border-green-400/30 flex items-center justify-between">
-                                    <span className="text-white font-bold text-base">Total na carteira:</span>
-                                    <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text font-bold text-2xl">
+                                <div className="relative overflow-hidden">
+                                  <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-lg"></div>
+                                  <div className="relative p-3 backdrop-blur-sm bg-black/30 rounded-lg border border-green-400/30 flex items-center justify-between">
+                                    <span className="text-white font-bold text-xs">Total:</span>
+                                    <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text font-bold text-lg">
                                       R$ {totalAmount.toFixed(2)}
                                     </span>
                                   </div>
