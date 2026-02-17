@@ -193,48 +193,96 @@ export default function MyCatalogOrders() {
     );
   }
 
+  const filterOptions = [
+    { id: 'todos', label: 'Todos', count: orders.length },
+    { id: 'pending_payment', label: 'Aguardando Pagamento', count: orders.filter(o => o.status === 'pending_payment').length },
+    { id: 'paid', label: 'Pagos', count: orders.filter(o => o.status === 'paid').length },
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-3 sm:p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800 text-white p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-8 sm:mb-10">
           <Button
             variant="ghost"
             onClick={() => navigate(-1)}
-            className="text-gray-400 hover:text-white mb-4"
+            className="text-gray-400 hover:text-white mb-4 transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
           
-          <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3 text-white">
-            <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
-            Meus Pedidos do Catálogo
-          </h1>
-          <p className="text-sm sm:text-base text-gray-400 mt-2">
-            Acompanhe suas compras do catálogo
-          </p>
+          <div className="flex items-center gap-3 sm:gap-4 mb-2">
+            <div className="p-2.5 sm:p-3 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30">
+              <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-black text-white">Meus Pedidos</h1>
+              <p className="text-xs sm:text-sm text-gray-400 mt-0.5">
+                {orders.length} pedido{orders.length !== 1 ? 's' : ''} no total
+              </p>
+            </div>
+          </div>
         </div>
 
         {orders.length === 0 ? (
-          <div className="text-center py-16 bg-gray-800/50 rounded-2xl">
-            <ShoppingBag className="w-16 h-16 mx-auto text-gray-500 mb-4" />
+          <div className="text-center py-16 bg-gray-800/30 backdrop-blur-xl rounded-2xl border border-white/5">
+            <ShoppingBag className="w-16 h-16 mx-auto text-gray-600 mb-4" />
             <h2 className="text-xl font-semibold text-white mb-2">Você ainda não fez nenhum pedido</h2>
             <p className="text-gray-400 mb-6">Explore nosso catálogo e faça sua primeira compra!</p>
             <Link to={createPageUrl("Catalog")}>
-              <Button className="bg-green-600 hover:bg-green-700">Ver Catálogo</Button>
+              <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500">Ver Catálogo</Button>
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {orders.map(order => (
-              <CatalogOrderCard 
-                key={order.id} 
-                order={order} 
-                onTrackClick={handleTrackClick}
-              />
-            ))}
-          </div>
+          <>
+            {/* Filtros */}
+            <div className="mb-8 flex flex-wrap gap-2">
+              <div className="flex items-center gap-2 mr-2 text-gray-400 text-sm">
+                <Filter className="w-4 h-4" />
+                <span className="font-semibold">Filtrar:</span>
+              </div>
+              {filterOptions.map(option => (
+                <button
+                  key={option.id}
+                  onClick={() => setActiveFilter(option.id)}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${
+                    activeFilter === option.id
+                      ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
+                      : 'bg-gray-800/50 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
+                  }`}
+                >
+                  {option.label}
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    activeFilter === option.id
+                      ? 'bg-white/20'
+                      : 'bg-gray-700'
+                  }`}>
+                    {option.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Cards */}
+            {filteredOrders.length === 0 ? (
+              <div className="text-center py-12 bg-gray-800/20 rounded-xl border border-white/5">
+                <Package className="w-12 h-12 mx-auto text-gray-600 mb-3" />
+                <p className="text-gray-400">Nenhum pedido nesta categoria</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {filteredOrders.map(order => (
+                  <CatalogOrderCard 
+                    key={order.id} 
+                    order={order} 
+                    onTrackClick={handleTrackClick}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
