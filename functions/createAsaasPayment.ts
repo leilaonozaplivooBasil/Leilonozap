@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
         }
 
         // 🔒 PASSO 2: Criar cobrança no ASAAS
-        console.log('💳 Criando cobrança no ASAAS...', { billing_type, amount, customer: customerId });
+        console.log('💳 Criando cobrança no ASAAS...', { billing_type: finalBillingType, amount, customer: customerId });
         
         const externalReference = catalog_sale_id || auction_id;
         
@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
         
         const paymentPayload = {
             customer: customerId,
-            billingType: billing_type,
+            billingType: finalBillingType,
             value: amount,
             dueDate: dueDateStr,
             description: description || `Pedido ${externalReference}`,
@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
         };
 
         // Se for cartão, adicionar dados do cartão
-        if (billing_type === 'CREDIT_CARD' && card_data) {
+        if (finalBillingType === 'CREDIT_CARD' && card_data) {
             
             paymentPayload.creditCard = {
                 holderName: card_data.holderName,
