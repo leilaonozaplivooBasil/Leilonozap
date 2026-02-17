@@ -437,16 +437,20 @@ export default function AddFunds() {
                       <p className="text-gray-400 text-xs">Recarregue a qualquer momento</p>
                     </div>
                   </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Transações Recentes */}
             {recentTransactions.length > 0 && (
-              <Card className="bg-gray-800 border-gray-700">
-                <CardHeader>
-                  <CardTitle className="text-white text-base">Últimos Depósitos</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+                <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent"></div>
+                  <CardHeader className="relative">
+                    <CardTitle className="text-white text-base font-bold">Últimos Depósitos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 relative">
                   {recentTransactions.map((tx) => (
                     <div key={tx.id} className="flex items-center justify-between py-2 border-b border-gray-700 last:border-0">
                       <div>
