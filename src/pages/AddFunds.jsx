@@ -370,6 +370,52 @@ export default function AddFunds() {
               </CardContent>
             </Card>
 
+            {/* Card de Resumo */}
+            {selectedAmount && selectedAmount >= 30 && (
+              <Card className="bg-gradient-to-br from-green-800/30 to-emerald-900/30 border-green-500/30">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2 text-base">
+                    <Wallet className="w-5 h-5 text-green-400" />
+                    Será Creditado
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-400 text-sm">Valor do depósito:</span>
+                      <span className="text-white font-semibold">R$ {selectedAmount.toFixed(2)}</span>
+                    </div>
+                    
+                    {(() => {
+                      const matchingPkg = packages.find(p => p.amount === selectedAmount);
+                      const bonus = matchingPkg?.bonus_percentage || 0;
+                      const bonusAmount = bonus > 0 ? (selectedAmount * (bonus / 100)) : 0;
+                      const totalAmount = selectedAmount + bonusAmount;
+                      
+                      return (
+                        <>
+                          {bonus > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-green-400 text-sm flex items-center gap-1">
+                                <Gift className="w-3 h-3" />
+                                Bônus ({bonus}%):
+                              </span>
+                              <span className="text-green-400 font-semibold">+ R$ {bonusAmount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          
+                          <div className="pt-3 border-t border-gray-700 flex items-center justify-between">
+                            <span className="text-white font-bold">Total na carteira:</span>
+                            <span className="text-green-400 font-bold text-xl">R$ {totalAmount.toFixed(2)}</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
           </div>
 
         </div>
