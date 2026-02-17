@@ -293,8 +293,8 @@ export default function WalletHistory() {
                     <div className="space-y-4">
                       {transactions.length === 0 ? (
                         <div className="text-center py-16">
-                          <DollarSign className="w-16 h-16 text-cyan-400/20 mx-auto mb-4" />
-                          <p className="text-cyan-300/50 font-light">Nenhuma transação registrada</p>
+                           <DollarSign className="w-16 h-16 text-green-400/20 mx-auto mb-4" />
+                           <p className="text-green-300/50 font-light">Nenhuma transação registrada</p>
                         </div>
                       ) : (
                         getPaginatedData(transactions).map((transaction) => (
