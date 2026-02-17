@@ -38,8 +38,8 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
 
     return (
         <Card className="group bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 overflow-hidden hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 hover:-translate-y-1">
-            {/* Imagem em destaque */}
-            <div className="relative h-48 overflow-hidden">
+            {/* Imagem em destaque - MAIOR */}
+            <div className="relative h-64 overflow-hidden">
                 <img 
                     src={mainImage} 
                     alt={auction.title} 
@@ -56,32 +56,33 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
                 </div>
             </div>
 
-            <CardContent className="p-5 space-y-4">
-                {/* Título e Data */}
+            <CardContent className="p-4 space-y-3">
+                {/* Título e Data - COMPACTO */}
                 <div>
-                    <h3 className="text-white font-bold text-lg line-clamp-2 mb-2 group-hover:text-green-400 transition-colors">
+                    <h3 className="text-white font-bold text-base line-clamp-2 mb-1 group-hover:text-green-400 transition-colors">
                         {auction.title}
                     </h3>
-                    <p className="text-gray-500 text-sm flex items-center gap-1.5">
-                        <Trophy className="w-3.5 h-3.5" />
-                        Arrematado em {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
+                    <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <Trophy className="w-3 h-3" />
+                        {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
                     </p>
                 </div>
 
-                {/* Valor em Destaque */}
-                <div className="bg-gradient-to-br from-green-600/10 to-green-700/5 border border-green-500/20 rounded-xl p-4">
-                    <p className="text-gray-400 text-xs uppercase tracking-wider mb-1">Valor do Arremate</p>
-                    <p className="text-green-400 text-2xl font-black">R$ {auction.current_price.toFixed(2)}</p>
+                {/* Valor em Destaque - COMPACTO */}
+                <div className="bg-gradient-to-br from-green-600/10 to-green-700/5 border border-green-500/20 rounded-lg p-3">
+                    <p className="text-gray-400 text-[10px] uppercase tracking-wider mb-0.5">Valor do Arremate</p>
+                    <p className="text-green-400 text-xl font-black">R$ {auction.current_price.toFixed(2)}</p>
                 </div>
 
-                {/* Botões de Ação */}
-                <div className="flex flex-col gap-2.5 pt-2">
+                {/* Botões de Ação - COMPACTOS */}
+                <div className="flex flex-col gap-2">
                     {auction.order_status === 'awaiting_payment' && (
                         <Button 
                             onClick={() => onPayClick(auction)}
+                            size="sm"
                             className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold shadow-lg shadow-green-500/25 hover:shadow-green-500/40 transition-all duration-300"
                         >
-                            <CreditCard className="w-4 h-4 mr-2" />
+                            <CreditCard className="w-3.5 h-3.5 mr-1.5" />
                             Confirmar Pedido
                         </Button>
                     )}
@@ -89,9 +90,10 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
                     <Button 
                         onClick={() => onTrackClick(auction)}
                         variant="outline"
+                        size="sm"
                         className="w-full bg-gray-800/50 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white hover:border-gray-600 transition-all duration-300"
                     >
-                        <Eye className="w-4 h-4 mr-2" />
+                        <Eye className="w-3.5 h-3.5 mr-1.5" />
                         Acompanhar Pedido
                     </Button>
                 </div>
