@@ -372,14 +372,14 @@ export default function AddFunds() {
 
             {/* Card de Resumo */}
             {selectedAmount && selectedAmount >= 30 && (
-              <Card className="bg-gradient-to-br from-green-800/30 to-emerald-900/30 border-green-500/30 h-full flex flex-col">
+              <Card className="bg-gradient-to-br from-green-800/30 to-emerald-900/30 border-green-500/30">
                 <CardHeader>
                   <CardTitle className="text-white flex items-center gap-2 text-base">
                     <Wallet className="w-5 h-5 text-green-400" />
                     Será Creditado
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="flex-1 flex items-center">
+                <CardContent>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-gray-400 text-sm">Valor do depósito:</span>
