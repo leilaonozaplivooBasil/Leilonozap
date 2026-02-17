@@ -237,42 +237,43 @@ export default function WalletHistory() {
           </Card>
         </div>
 
-        {/* Abas de Transações */}
-        <Card className="bg-gray-800/50 border-gray-700 backdrop-blur-sm shadow-lg">
-          <CardHeader className="border-b border-gray-700">
-            <div className="flex gap-6">
+        {/* Abas de Transações Futurísticas */}
+        <Card className="border-0 bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-xl shadow-2xl overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5"></div>
+          <CardHeader className="border-b border-cyan-400/20 relative z-10">
+            <div className="flex gap-2 md:gap-6">
               <button
                 onClick={() => handleTabChange("overview")}
-                className={`pb-4 px-2 font-semibold transition-all border-b-2 ${
+                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
                   activeTab === "overview"
-                    ? "text-green-400 border-green-400"
-                    : "text-gray-400 hover:text-white border-transparent"
+                    ? "text-cyan-300 border-cyan-400 shadow-lg shadow-cyan-400/50"
+                    : "text-cyan-200/50 hover:text-cyan-300 border-transparent"
                 }`}
               >
                 <TrendingDown className="w-5 h-5 inline mr-2" />
-                Todas as Transações
+                Todas
               </button>
               <button
                 onClick={() => handleTabChange("deposits")}
-                className={`pb-4 px-2 font-semibold transition-all border-b-2 ${
+                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
                   activeTab === "deposits"
-                    ? "text-green-400 border-green-400"
-                    : "text-gray-400 hover:text-white border-transparent"
+                    ? "text-green-300 border-green-400 shadow-lg shadow-green-400/50"
+                    : "text-cyan-200/50 hover:text-cyan-300 border-transparent"
                 }`}
               >
                 <TrendingUp className="w-5 h-5 inline mr-2" />
-                Depósitos ({deposits.length})
+                Entradas <span className="ml-1 text-xs">({deposits.length})</span>
               </button>
               <button
                 onClick={() => handleTabChange("usage")}
-                className={`pb-4 px-2 font-semibold transition-all border-b-2 ${
+                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
                   activeTab === "usage"
-                    ? "text-green-400 border-green-400"
-                    : "text-gray-400 hover:text-white border-transparent"
+                    ? "text-red-300 border-red-400 shadow-lg shadow-red-400/50"
+                    : "text-cyan-200/50 hover:text-cyan-300 border-transparent"
                 }`}
               >
                 <TrendingDown className="w-5 h-5 inline mr-2" />
-                Utilizações ({walletUsage.length})
+                Saídas <span className="ml-1 text-xs">({walletUsage.length})</span>
               </button>
             </div>
           </CardHeader>
