@@ -157,7 +157,7 @@ export default function WalletHistory() {
         <Button
           variant="ghost"
           onClick={() => navigate(createPageUrl("Profile"))}
-          className="text-cyan-300 hover:text-cyan-200 hover:bg-cyan-900/20 mb-8 transition-all"
+          className="text-green-300 hover:text-green-200 hover:bg-green-900/20 mb-8 transition-all"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar
