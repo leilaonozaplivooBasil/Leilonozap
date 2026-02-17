@@ -163,8 +163,9 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       
       const minBid = auction.current_price + auction.increment;
       
-      if (wallet && wallet.balance < minBid) {
-        // Saldo insuficiente - vai para AuctionRoom em modo telespectador
+      // 🐛 FIX: Se NÃO tem wallet OU saldo insuficiente → modo telespectador
+      if (!wallet || wallet.balance < minBid) {
+        console.warn(`⚠️ Saldo insuficiente/inexistente. Wallet: ${wallet ? wallet.balance : 'NENHUMA'} < ${minBid}`);
         navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}&spectator=true`);
         return;
       }
@@ -173,8 +174,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
       navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
     } catch (error) {
       console.error("Erro ao verificar saldo:", error);
-      // Em caso de erro, navega normalmente
-      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}`);
+      // Em caso de erro, vai modo telespectador por segurança
+      navigate(createPageUrl("AuctionRoom") + `?id=${auction.id}&spectator=true`);
     }
   };
 
