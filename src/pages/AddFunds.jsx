@@ -507,10 +507,9 @@ export default function AddFunds() {
                     </div>
                     <p className="text-gray-300 pt-1">Use em qualquer leilão sem burocracia!</p>
                   </div>
-              </CardContent>
-            </Card>
-
-
+                </CardContent>
+              </Card>
+            </div>
 
           </div>
 
