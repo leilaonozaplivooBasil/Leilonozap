@@ -169,68 +169,65 @@ export default function AuctionCheckoutModern() {
   };
 
   const handleCreatePayment = async () => {
-  if (!validateForm()) return;
-  if (!validateCardData()) return;
-  if (!auction) {
-  toast.error('Pedido não encontrado');
-  return;
-  }
-
-  setIsProcessing(true);
-  toast.loading('Processando pagamento...', { id: 'checkout-loading' });
-
-  try {
-  const amount = isWalletDeposit ? depositAmount : auction.current_price;
-  const cardData = paymentType === 'CREDIT_CARD' ? {
-    holderName: cardHolder.trim(),
-    number: cardNumber.replace(/\D/g, ''),
-    expiryMonth: parseInt(cardMonth),
-    expiryYear: parseInt(cardYear),
-    ccv: cardCvv.replace(/\D/g, ''),
-    address: {
-      zip_code: addressZip.replace(/\D/g, ''),
-      number: addressNumber,
-      complement: addressComplement
+    if (!validateForm()) return;
+    if (!validateCardData()) return;
+    if (!auction) {
+      toast.error('Pedido não encontrado');
+      return;
     }
-  } : null;
 
-  console.log('📤 Enviando para backend:', { auction_id: isWalletDeposit ? null : auction.id, amount, billing_type: paymentType });
+    setIsProcessing(true);
+    toast.loading('Processando pagamento...', { id: 'checkout-loading' });
 
-  const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
-    auction_id: isWalletDeposit ? null : auction.id,
-    buyer_name: firstName.trim(),
-    buyer_email: email.trim(),
-    buyer_cpf: cpf.trim(),
-    buyer_phone: phone.trim(),
-    amount: amount,
-    billing_type: paymentType,
-    description: isWalletDeposit ? `Depósito de R$ ${amount.toFixed(2)} na carteira` : `Arremate - ${auction.title}`,
-    card_data: cardData
-  });
+    try {
+      const finalAmount = isWalletDeposit ? depositAmount : auction.current_price;
+      
+      const cardData = paymentType === 'CREDIT_CARD' ? {
+        holderName: cardHolder.trim(),
+        number: cardNumber.replace(/\D/g, ''),
+        expiryMonth: parseInt(cardMonth),
+        expiryYear: parseInt(cardYear),
+        ccv: cardCvv.replace(/\D/g, ''),
+        address: {
+          zip_code: addressZip.replace(/\D/g, ''),
+          number: addressNumber,
+          complement: addressComplement
+        }
+      } : null;
 
-  console.log('📥 Resposta do backend:', paymentResponse);
+      console.log('📤 Enviando:', { amount: finalAmount, type: typeof finalAmount, billing_type: paymentType });
 
-  setIsProcessing(false);
-  toast.dismiss('checkout-loading');
+      const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
+        auction_id: !isWalletDeposit ? auction.id : null,
+        buyer_name: firstName.trim(),
+        buyer_email: email.trim(),
+        buyer_cpf: cpf.trim(),
+        buyer_phone: phone.trim(),
+        amount: finalAmount,
+        billing_type: paymentType,
+        description: isWalletDeposit ? `Depósito na carteira` : `Arremate - ${auction.title}`,
+        card_data: cardData
+      });
 
-  // ✅ CORREÇÃO: Verificar a estrutura correta da resposta
-  const responseData = paymentResponse?.data || paymentResponse;
+      console.log('📥 Resposta:', paymentResponse);
+      setIsProcessing(false);
+      toast.dismiss('checkout-loading');
 
-  if (responseData?.success === true) {
-    setPixData(responseData);
-    setStep('payment');
-    toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
-  } else {
-    const errorMsg = responseData?.error || 'Erro desconhecido ao processar pagamento';
-    console.error('❌ Erro na resposta:', errorMsg);
-    toast.error(errorMsg);
-  }
-  } catch (error) {
-  console.error('❌ Erro de rede/sistema:', error.message);
-  setIsProcessing(false);
-  toast.dismiss('checkout-loading');
-  toast.error(`Erro: ${error.message}`);
-  }
+      const responseData = paymentResponse?.data || paymentResponse;
+
+      if (responseData?.success) {
+        setPixData(responseData);
+        setStep('payment');
+        toast.success('✅ Pagamento processado!');
+      } else {
+        toast.error(responseData?.error || 'Erro ao processar pagamento');
+      }
+    } catch (error) {
+      setIsProcessing(false);
+      toast.dismiss('checkout-loading');
+      console.error('❌ Erro:', error);
+      toast.error(`Erro: ${error.message}`);
+    }
   };
 
   useEffect(() => {
