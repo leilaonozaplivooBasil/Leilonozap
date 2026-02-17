@@ -908,7 +908,7 @@ export default function Profile() {
         {activeTab === 'orders' && (
           <div className="space-y-6">
             {catalogOrders.length === 0 ? (
-              <Card className={isSaiDeBaixo ? 'bg-white border-2 border-gray-200' : 'bg-gray-800 border-gray-700'}>
+              <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800 border border-gray-700'}>
                 <CardContent className="py-12 text-center">
                   <ShoppingBag className={`w-16 h-16 mx-auto mb-4 ${isSaiDeBaixo ? 'text-gray-400' : 'text-gray-600'}`} />
                   <h3 className={`text-xl font-semibold mb-2 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
