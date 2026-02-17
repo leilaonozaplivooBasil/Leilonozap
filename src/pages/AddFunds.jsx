@@ -320,7 +320,7 @@ export default function AddFunds() {
 
                   {/* Resumo do que será creditado */}
                   {selectedAmount && selectedAmount >= 30 && (
-                    <div className="relative group/summary overflow-hidden">
+                    <div className="relative group/summary overflow-hidden mt-6">
                       <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-2xl blur-md group-hover/summary:blur-lg transition-all"></div>
                       <div className="relative p-6 backdrop-blur-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-400/30 rounded-2xl">
                         <div className="flex items-center gap-3 mb-4">
@@ -368,7 +368,8 @@ export default function AddFunds() {
                           })()}
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-2 text-gray-400 text-xs backdrop-blur-sm bg-black/20 p-3 rounded-xl border border-white/5 mt-4">
                     <Shield className="w-3 h-3" />
