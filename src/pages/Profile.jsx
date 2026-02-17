@@ -818,7 +818,7 @@ export default function Profile() {
               <CardHeader>
                 <CardTitle className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Estatísticas</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-0">
                 {userStats.map((stat) => (
                   <div key={stat.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
