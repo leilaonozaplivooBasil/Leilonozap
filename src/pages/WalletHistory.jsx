@@ -417,22 +417,27 @@ export default function WalletHistory() {
                 {/* Utilizações */}
                 {activeTab === "usage" && (
                   <div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {walletUsage.length === 0 ? (
-                        <div className="text-center py-12">
-                          <DollarSign className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                          <p className="text-gray-400">Nenhuma utilização de saldo em leilões</p>
+                        <div className="text-center py-16">
+                          <DollarSign className="w-16 h-16 text-red-400/20 mx-auto mb-4" />
+                          <p className="text-cyan-300/50 font-light">Nenhuma saída registrada</p>
                         </div>
                       ) : (
                         getPaginatedData(walletUsage).map((transaction) => (
-                          <div key={transaction.id} className="p-4 bg-gray-900/50 border border-red-500/20 rounded-lg hover:border-red-500/50 transition-all">
+                          <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-red-400/20 rounded-xl hover:border-red-400/50 hover:shadow-lg hover:shadow-red-400/20 transition-all duration-300">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                <TrendingDown className="w-5 h-5 text-red-500" />
+                                <div className="p-3 rounded-lg bg-red-500/20 border border-red-400/30">
+                                  <TrendingDown className="w-5 h-5 text-red-400" />
+                                </div>
                                 <div>
-                                  <p className="text-white font-semibold">Saldo Utilizado em Leilão</p>
-                                  <p className="text-gray-400 text-sm">{transaction.description || "Utilização de saldo"}</p>
-                                  <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                                  <p className="text-white font-semibold">Saldo Utilizado</p>
+                                  <p className="text-cyan-300/60 text-sm font-light">{transaction.description || "Utilização em transação"}</p>
+                                  <div className="flex items-center gap-2 text-cyan-300/40 text-xs mt-1">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(transaction.created_date).toLocaleString('pt-BR')}
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -445,28 +450,28 @@ export default function WalletHistory() {
                       )}
                     </div>
                     {walletUsage.length > ITEMS_PER_PAGE && (
-                      <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-700">
-                        <Button
-                          onClick={handlePreviousPage}
-                          disabled={currentPage.usage === 0}
-                          variant="outline"
-                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          ← Anterior
-                        </Button>
-                        <span className="text-gray-400 text-sm">
-                          Página {currentPage.usage + 1} de {getTotalPages(walletUsage)}
-                        </span>
-                        <Button
-                          onClick={handleNextPage}
-                          disabled={currentPage.usage >= getTotalPages(walletUsage) - 1}
-                          variant="outline"
-                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Próxima →
-                        </Button>
-                      </div>
-                    )}
+                       <div className="flex items-center justify-between mt-8 pt-6 border-t border-cyan-400/20">
+                         <Button
+                           onClick={handlePreviousPage}
+                           disabled={currentPage.usage === 0}
+                           variant="outline"
+                           className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                         >
+                           ← Anterior
+                         </Button>
+                         <span className="text-cyan-300/60 text-sm font-light">
+                           Página {currentPage.usage + 1} de {getTotalPages(walletUsage)}
+                         </span>
+                         <Button
+                           onClick={handleNextPage}
+                           disabled={currentPage.usage >= getTotalPages(walletUsage) - 1}
+                           variant="outline"
+                           className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                         >
+                           Próxima →
+                         </Button>
+                       </div>
+                     )}
                   </div>
                 )}
               </>
