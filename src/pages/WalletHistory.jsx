@@ -325,28 +325,28 @@ export default function WalletHistory() {
                       )}
                     </div>
                     {transactions.length > ITEMS_PER_PAGE && (
-                      <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-700">
-                        <Button
-                          onClick={handlePreviousPage}
-                          disabled={currentPage.overview === 0}
-                          variant="outline"
-                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          ← Anterior
-                        </Button>
-                        <span className="text-gray-400 text-sm">
-                          Página {currentPage.overview + 1} de {getTotalPages(transactions)}
-                        </span>
-                        <Button
-                          onClick={handleNextPage}
-                          disabled={currentPage.overview >= getTotalPages(transactions) - 1}
-                          variant="outline"
-                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Próxima →
-                        </Button>
-                      </div>
-                    )}
+                       <div className="flex items-center justify-between mt-8 pt-6 border-t border-cyan-400/20">
+                         <Button
+                           onClick={handlePreviousPage}
+                           disabled={currentPage.overview === 0}
+                           variant="outline"
+                           className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                         >
+                           ← Anterior
+                         </Button>
+                         <span className="text-cyan-300/60 text-sm font-light">
+                           Página {currentPage.overview + 1} de {getTotalPages(transactions)}
+                         </span>
+                         <Button
+                           onClick={handleNextPage}
+                           disabled={currentPage.overview >= getTotalPages(transactions) - 1}
+                           variant="outline"
+                           className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                         >
+                           Próxima →
+                         </Button>
+                       </div>
+                     )}
                   </div>
                 )}
 
