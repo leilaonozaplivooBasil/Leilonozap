@@ -647,35 +647,6 @@ export default function AuctionCheckoutModern() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Produto */}
-                <div className="bg-gradient-to-br from-gray-800/50 to-gray-700/30 rounded-lg p-4 border border-gray-700/50">
-                  <div className="space-y-3">
-                    {isWalletDeposit ? (
-                      <div className="w-full h-40 bg-gradient-to-br from-green-600/20 to-emerald-600/20 rounded-lg flex items-center justify-center border border-green-500/30">
-                        <Wallet className="w-12 h-12 text-green-400" />
-                      </div>
-                    ) : auction.image_urls && auction.image_urls[0] ? (
-                      <img
-                        src={auction.image_urls[0]}
-                        alt={auction.title}
-                        className="w-full h-40 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-full h-40 bg-gray-700/50 rounded-lg flex items-center justify-center">
-                        <ImageIcon className="w-12 h-12 text-gray-600" />
-                      </div>
-                    )}
-                    <div>
-                      <h4 className="font-semibold text-white line-clamp-2 mb-2">
-                        {isWalletDeposit ? 'Depósito na Carteira' : auction.title}
-                      </h4>
-                      <p className="text-2xl font-bold text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text">
-                        R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
                 {/* Resumo */}
                 <div className="space-y-3 py-4 border-y border-white/10">
                   <div className="flex justify-between text-sm">
