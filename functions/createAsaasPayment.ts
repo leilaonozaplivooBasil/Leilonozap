@@ -282,7 +282,7 @@ Deno.serve(async (req) => {
         console.log('✅ AsaasPayment registrado no banco');
 
         // Se cartão foi aprovado, confirmar a venda automaticamente
-        if (billing_type === 'CREDIT_CARD' && paymentStatus === 'confirmed') {
+        if (finalBillingType === 'CREDIT_CARD' && paymentStatus === 'confirmed') {
             if (catalog_sale_id) {
                 await base44.asServiceRole.entities.CatalogSale.update(catalog_sale_id, {
                     status: 'paid',
