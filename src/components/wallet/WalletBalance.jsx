@@ -55,7 +55,10 @@ export default function WalletBalance({ userId, showActions = true, onBalanceLoa
   }
 
   return (
-    <Card className="bg-gradient-to-br from-green-600 to-green-700 border-0 shadow-lg">
+    <Card 
+      onClick={() => showActions && navigate(createPageUrl("WalletHistory"))}
+      className={`bg-gradient-to-br from-green-600 to-green-700 border-0 shadow-lg ${showActions ? 'cursor-pointer hover:from-green-700 hover:to-green-800 transition-all' : ''}`}
+    >
       <CardContent className="p-3">
         <div className="flex items-start justify-between">
           <div>
@@ -67,14 +70,6 @@ export default function WalletBalance({ userId, showActions = true, onBalanceLoa
               R$ {balance.toFixed(2)}
             </p>
           </div>
-          {showActions && (
-            <Button
-              onClick={() => navigate(createPageUrl("WalletHistory"))}
-              className="bg-white text-green-700 hover:bg-white/90 h-9 text-sm font-semibold px-4 shadow-lg"
-            >
-              Carteira
-            </Button>
-          )}
         </div>
       </CardContent>
 
