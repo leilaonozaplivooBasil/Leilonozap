@@ -1067,26 +1067,27 @@ export default function Layout({ children, currentPageName }) {
         *::-webkit-scrollbar {
           width: 6px;
           height: 6px;
-        }
-        
-        *::-webkit-scrollbar-track {
           background: transparent;
         }
         
+        *::-webkit-scrollbar-track {
+          background: transparent !important;
+        }
+        
         *::-webkit-scrollbar-thumb {
-          background: linear-gradient(to bottom, #10b981, #059669);
+          background: linear-gradient(to bottom, #10b981, #059669) !important;
           border-radius: 3px;
           opacity: 0.3;
         }
         
         *::-webkit-scrollbar-thumb:hover {
           opacity: 0.6;
-          background: linear-gradient(to bottom, #059669, #047857);
+          background: linear-gradient(to bottom, #059669, #047857) !important;
         }
         
         /* Firefox */
         * {
-          scrollbar-color: #10b981 transparent;
+          scrollbar-color: #10b981 transparent !important;
           scrollbar-width: thin;
         }
       `}</style>
