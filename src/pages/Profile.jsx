@@ -425,33 +425,39 @@ export default function Profile() {
   ];
 
   return (
-    <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-gradient-to-br from-gray-50 to-gray-100 text-gray-900' : 'bg-gray-900 text-white'} p-4 sm:p-6 lg:p-8`}>
-      <div className="max-w-5xl mx-auto">
-        {/* Header com Tabs */}
-        <div className="mb-8">
-          <h1 className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-4`}>Meu Perfil</h1>
-          <div className="flex gap-3 border-b border-gray-700">
+    <div className={`min-h-screen ${isSaiDeBaixo ? 'bg-white text-gray-900' : 'bg-gray-900 text-white'} p-4 sm:p-6 lg:p-8`}>
+      <div className="max-w-6xl mx-auto">
+        {/* Header moderno */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className={`text-5xl font-black ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>Meu Perfil</h1>
+              <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>Gerencie sua conta e informações</p>
+            </div>
+          </div>
+          
+          <div className={`flex gap-2 border-b-2 ${isSaiDeBaixo ? 'border-gray-200' : 'border-gray-800'}`}>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`pb-3 px-4 font-semibold transition-all ${
+              className={`pb-4 px-6 font-bold text-lg transition-all duration-300 ${
                 activeTab === 'profile'
-                  ? `${isSaiDeBaixo ? 'text-red-600 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
-                  : `${isSaiDeBaixo ? 'text-gray-600 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`
+                  ? `${isSaiDeBaixo ? 'text-gray-900 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
+                  : `${isSaiDeBaixo ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'}`
               }`}
             >
-              <UserIcon className="w-4 h-4 inline mr-2" />
+              <UserIcon className="w-5 h-5 inline mr-2" />
               Perfil
             </button>
             <button
               onClick={() => setActiveTab('orders')}
-              className={`pb-3 px-4 font-semibold transition-all ${
+              className={`pb-4 px-6 font-bold text-lg transition-all duration-300 ${
                 activeTab === 'orders'
-                  ? `${isSaiDeBaixo ? 'text-red-600 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
-                  : `${isSaiDeBaixo ? 'text-gray-600 hover:text-gray-900' : 'text-gray-400 hover:text-white'}`
+                  ? `${isSaiDeBaixo ? 'text-gray-900 border-b-2 border-red-600' : 'text-green-400 border-b-2 border-green-400'}`
+                  : `${isSaiDeBaixo ? 'text-gray-400 hover:text-gray-600' : 'text-gray-500 hover:text-gray-300'}`
               }`}
             >
-              <Package className="w-4 h-4 inline mr-2" />
-              Meus Pedidos ({catalogOrders.filter(o => o.status !== 'canceled').length})
+              <Package className="w-5 h-5 inline mr-2" />
+              Meus Pedidos <span className="font-semibold">({catalogOrders.filter(o => o.status !== 'canceled').length})</span>
             </button>
           </div>
         </div>
