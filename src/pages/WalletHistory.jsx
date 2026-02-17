@@ -246,7 +246,7 @@ export default function WalletHistory() {
                 onClick={() => handleTabChange("overview")}
                 className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
                   activeTab === "overview"
-                    ? "text-cyan-300 border-cyan-400 shadow-lg shadow-cyan-400/50"
+                    ? "text-cyan-300 border-cyan-400"
                     : "text-cyan-200/50 hover:text-cyan-300 border-transparent"
                 }`}
               >
