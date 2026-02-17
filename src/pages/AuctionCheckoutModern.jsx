@@ -153,20 +153,25 @@ export default function AuctionCheckoutModern() {
         const urlParams = new URLSearchParams(window.location.search);
         const auctionId = urlParams.get('auction_id');
 
-        if (!auctionId) {
-          toast.error('Leilão não encontrado');
-          navigate(createPageUrl('MyWinnings'));
-          return;
+        // Se tem auction_id, carrega leilão; senão é depósito de carteira
+        if (auctionId) {
+          const auctions = await Auction.filter({ id: auctionId });
+          if (auctions.length === 0) {
+            toast.error('Leilão não encontrado');
+            navigate(createPageUrl('MyWinnings'));
+            return;
+          }
+          setAuction(auctions[0]);
+        } else {
+          // Modo depósito - cria um "auction" fictício com dados da carteira
+          setAuction({
+            id: 'wallet-deposit',
+            title: 'Depósito de Saldo',
+            current_price: 0, // Será atualizado se necessário
+            image_urls: []
+          });
         }
 
-        const auctions = await Auction.filter({ id: auctionId });
-        if (auctions.length === 0) {
-          toast.error('Leilão não encontrado');
-          navigate(createPageUrl('MyWinnings'));
-          return;
-        }
-
-        setAuction(auctions[0]);
         setFirstName(savedUser.full_name || '');
         setEmail(savedUser.email || '');
         setPhone(savedUser.phone || '');
