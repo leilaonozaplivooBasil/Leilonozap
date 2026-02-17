@@ -49,7 +49,6 @@
  */
 import ActivePartners from './pages/ActivePartners';
 import AddCatalogProduct from './pages/AddCatalogProduct';
-import AddFunds from './pages/AddFunds';
 import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
@@ -126,13 +125,13 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
+import AddFunds from './pages/AddFunds';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "ActivePartners": ActivePartners,
     "AddCatalogProduct": AddCatalogProduct,
-    "AddFunds": AddFunds,
     "AdminCatalogSales": AdminCatalogSales,
     "AdminUsers": AdminUsers,
     "AdminWithdrawals": AdminWithdrawals,
@@ -209,6 +208,7 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
+    "AddFunds": AddFunds,
 }
 
 export const pagesConfig = {

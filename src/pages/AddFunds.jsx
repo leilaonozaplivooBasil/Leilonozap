@@ -238,7 +238,7 @@ export default function AddFunds() {
                   Outro Valor
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="flex gap-3">
                   <div className="flex-1">
                     <Input
@@ -267,9 +267,52 @@ export default function AddFunds() {
                     )}
                   </Button>
                 </div>
-                <p className="text-gray-400 text-xs mt-2">
+                <p className="text-gray-400 text-xs">
                   Valor mínimo: R$ 30,00 | Valor máximo: R$ 10.000,00
                 </p>
+
+                {/* Resumo do que será creditado */}
+                {selectedAmount && selectedAmount >= 30 && (
+                  <div className="mt-4 p-4 bg-gradient-to-br from-green-800/30 to-emerald-900/30 border border-green-500/30 rounded-lg">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Wallet className="w-4 h-4 text-green-400" />
+                      <span className="text-white font-semibold text-sm">Será Creditado</span>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400 text-sm">Valor do depósito:</span>
+                        <span className="text-white font-semibold">R$ {selectedAmount.toFixed(2)}</span>
+                      </div>
+                      
+                      {(() => {
+                        const matchingPkg = packages.find(p => p.amount === selectedAmount);
+                        const bonus = matchingPkg?.bonus_percentage || 0;
+                        const bonusAmount = bonus > 0 ? (selectedAmount * (bonus / 100)) : 0;
+                        const totalAmount = selectedAmount + bonusAmount;
+                        
+                        return (
+                          <>
+                            {bonus > 0 && (
+                              <div className="flex items-center justify-between">
+                                <span className="text-green-400 text-sm flex items-center gap-1">
+                                  <Gift className="w-3 h-3" />
+                                  Bônus ({bonus}%):
+                                </span>
+                                <span className="text-green-400 font-semibold">+ R$ {bonusAmount.toFixed(2)}</span>
+                              </div>
+                            )}
+                            
+                            <div className="pt-2 border-t border-gray-600 flex items-center justify-between">
+                              <span className="text-white font-bold">Total na carteira:</span>
+                              <span className="text-green-400 font-bold text-lg">R$ {totalAmount.toFixed(2)}</span>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
