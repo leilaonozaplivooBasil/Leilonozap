@@ -129,6 +129,23 @@ Deno.serve(async (req) => {
       valora_pay_balance: +(currentValora + commissionAmount).toFixed(2)
     });
 
+    // 🆕 Duplo registro em CommissionWallet
+    const commWallets = await base44.asServiceRole.entities.CommissionWallet.filter({ user_id: influencer.id });
+    if (commWallets && commWallets.length > 0) {
+      const cw = commWallets[0];
+      await base44.asServiceRole.entities.CommissionWallet.update(cw.id, {
+        app_commission: +(Number(cw.app_commission || 0) + commissionAmount).toFixed(2),
+        total: +(Number(cw.app_commission || 0) + Number(cw.catalog_commission || 0) + commissionAmount).toFixed(2)
+      });
+    } else {
+      await base44.asServiceRole.entities.CommissionWallet.create({
+        user_id: influencer.id,
+        app_commission: commissionAmount,
+        catalog_commission: 0,
+        total: commissionAmount
+      });
+    }
+
     console.log(`✅ Comissão App processada: R$${commissionAmount} para ${influencer.full_name} (${influencer.id})`);
 
     return Response.json({

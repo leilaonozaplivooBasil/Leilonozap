@@ -195,29 +195,29 @@ Deno.serve(async (req) => {
                     }
                 }
 
-                // ✅ PASSO 4: Creditar Carteira (se for depósito de carteira)
+                // ✅ PASSO 4: Creditar DepositWallet (se for depósito de carteira)
                 if (asaasPayment.is_wallet_deposit && asaasPayment.wallet_deposit_user_id) {
                     try {
-                        const wallets = await base44.asServiceRole.entities.Wallet.filter(
+                        const depositWallets = await base44.asServiceRole.entities.DepositWallet.filter(
                             { user_id: asaasPayment.wallet_deposit_user_id },
                             null,
                             1
                         );
 
-                        let wallet;
-                        if (wallets && wallets.length > 0) {
-                            wallet = wallets[0];
-                            const newBalance = (wallet.balance || 0) + asaasPayment.value;
-                            await base44.asServiceRole.entities.Wallet.update(wallet.id, {
+                        let depositWallet;
+                        if (depositWallets && depositWallets.length > 0) {
+                            depositWallet = depositWallets[0];
+                            const newBalance = (depositWallet.balance || 0) + asaasPayment.value;
+                            await base44.asServiceRole.entities.DepositWallet.update(depositWallet.id, {
                                 balance: newBalance
                             });
-                            console.log('✅ Carteira creditada:', asaasPayment.wallet_deposit_user_id, 'Novo saldo:', newBalance);
+                            console.log('✅ DepositWallet creditada:', asaasPayment.wallet_deposit_user_id, 'Novo saldo:', newBalance);
                         } else {
-                            await base44.asServiceRole.entities.Wallet.create({
+                            await base44.asServiceRole.entities.DepositWallet.create({
                                 user_id: asaasPayment.wallet_deposit_user_id,
                                 balance: asaasPayment.value
                             });
-                            console.log('✅ Carteira criada e creditada:', asaasPayment.wallet_deposit_user_id, 'Saldo:', asaasPayment.value);
+                            console.log('✅ DepositWallet criada e creditada:', asaasPayment.wallet_deposit_user_id, 'Saldo:', asaasPayment.value);
                         }
 
                         await base44.asServiceRole.entities.WalletTransaction.create({

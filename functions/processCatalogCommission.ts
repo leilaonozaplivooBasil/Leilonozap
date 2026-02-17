@@ -306,6 +306,23 @@ Deno.serve(async (req) => {
         commission_balance: +(currentCommBal + amount).toFixed(2),
         total_commissions_generated: +(currentTotalGen + amount).toFixed(2)
       });
+
+      // 🆕 Duplo registro em CommissionWallet
+      const commWallets = await base44.asServiceRole.entities.CommissionWallet.filter({ user_id: userId });
+      if (commWallets && commWallets.length > 0) {
+        const cw = commWallets[0];
+        await base44.asServiceRole.entities.CommissionWallet.update(cw.id, {
+          catalog_commission: +(Number(cw.catalog_commission || 0) + amount).toFixed(2),
+          total: +(Number(cw.app_commission || 0) + Number(cw.catalog_commission || 0) + amount).toFixed(2)
+        });
+      } else {
+        await base44.asServiceRole.entities.CommissionWallet.create({
+          user_id: userId,
+          app_commission: 0,
+          catalog_commission: amount,
+          total: amount
+        });
+      }
     }
 
     // Relatório simples
