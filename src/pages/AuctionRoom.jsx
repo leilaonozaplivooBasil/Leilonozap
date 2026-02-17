@@ -883,8 +883,8 @@ export default function AuctionRoom() {
     }
 
     // 🆕 VERIFICA SALDO ANTES DE DAR LANCE
-    if (userWallet && userWallet.balance < amount) {
-      console.warn(`⚠️ Saldo insuficiente: ${userWallet.balance} < ${amount}`);
+    if (!userWallet || userWallet.balance < amount) {
+      console.warn(`⚠️ Saldo insuficiente/inexistente: ${userWallet ? userWallet.balance : 'NENHUMA'} < ${amount}`);
       setShowLowBalanceModal(true);
       return;
     }
