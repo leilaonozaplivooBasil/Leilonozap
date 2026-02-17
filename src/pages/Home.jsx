@@ -576,7 +576,7 @@ export default function Home() {
         <div className="mb-8">
           <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
             <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl"></div>
+            <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-green-500/10 rounded-full blur-3xl"></div>
 
             <div className="relative lg:pr-80">
               <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
