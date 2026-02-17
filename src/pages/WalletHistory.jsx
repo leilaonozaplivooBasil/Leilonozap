@@ -257,7 +257,7 @@ export default function WalletHistory() {
                 onClick={() => handleTabChange("deposits")}
                 className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
                   activeTab === "deposits"
-                    ? "text-green-300 border-green-400 shadow-lg shadow-green-400/50"
+                    ? "text-green-300 border-green-400"
                     : "text-cyan-200/50 hover:text-cyan-300 border-transparent"
                 }`}
               >
