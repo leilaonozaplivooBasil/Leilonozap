@@ -830,7 +830,7 @@ export default function Home() {
           }
 
             {isLoading ?
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {Array(9).fill(0).map((_, i) =>
             <div key={i} className="bg-gray-800/70 backdrop-blur rounded-2xl p-4 sm:p-6 animate-pulse">
                     <div className="w-full aspect-square bg-gray-700/80 rounded-xl mb-4"></div>
@@ -857,7 +857,7 @@ export default function Home() {
             }
               </div> :
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {filteredAuctions.map((auction) => {
               // 🛡️ PROTEÇÃO: Valida se auction tem dados mínimos necessários
               if (!auction || !auction.id) {
