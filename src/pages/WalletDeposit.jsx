@@ -165,49 +165,9 @@ export default function WalletDepositPage() {
                     </Card>
                 </div>
 
-                {/* Pacotes de Depósito */}
-                {depositPackages.length > 0 && (
-                    <div className="mb-8">
-                        <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                            <Zap className="w-5 h-5 text-yellow-400" />
-                            Pacotes Populares
-                        </h2>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {depositPackages.map((pkg) => (
-                                <Card
-                                    key={pkg.id}
-                                    onClick={() => handlePackageSelect(pkg)}
-                                    className={`cursor-pointer transition-all duration-300 ${
-                                        selectedPackage?.id === pkg.id
-                                            ? 'bg-gradient-to-br from-green-600 to-green-700 border-green-500 shadow-lg shadow-green-500/25 scale-105'
-                                            : 'bg-gradient-to-br from-gray-800/50 to-gray-900/50 border-gray-700/50 hover:border-green-500/50 hover:scale-102'
-                                    }`}
-                                >
-                                    <CardContent className="p-4 text-center">
-                                        {pkg.bonus_percentage > 0 && (
-                                            <Badge className="mb-2 bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
-                                                <Sparkles className="w-3 h-3 mr-1" />
-                                                +{pkg.bonus_percentage}%
-                                            </Badge>
-                                        )}
-                                        <p className="text-2xl font-black text-white">
-                                            R$ {pkg.amount.toFixed(0)}
-                                        </p>
-                                        {pkg.bonus_percentage > 0 && (
-                                            <p className="text-xs text-green-400 mt-1">
-                                                Receba R$ {(pkg.amount + (pkg.amount * pkg.bonus_percentage / 100)).toFixed(0)}
-                                            </p>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
                 {/* Valor Personalizado */}
                 <div className="mb-8">
-                    <h2 className="text-xl font-bold text-white mb-4">Ou insira um valor personalizado</h2>
+                    <h2 className="text-xl font-bold text-white mb-4">Insira o valor do depósito</h2>
                     <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 border-gray-700/50">
                         <CardContent className="p-5">
                             <div className="flex items-center gap-3">
@@ -226,7 +186,7 @@ export default function WalletDepositPage() {
                 </div>
 
                 {/* Resumo */}
-                {(selectedPackage || customAmount) && (
+                {customAmount && (
                     <Card className="bg-gradient-to-br from-green-600/10 to-green-700/5 border-green-500/20 mb-6">
                         <CardContent className="p-5 space-y-3">
                             <div className="flex items-center justify-between text-gray-300">
