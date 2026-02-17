@@ -145,24 +145,35 @@ export default function WalletHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-cyan-950 to-slate-950 py-12 px-4 relative overflow-hidden">
+      {/* Efeito de fundo futurístico */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
         <Button
           variant="ghost"
           onClick={() => navigate(createPageUrl("Profile"))}
-          className="text-gray-400 hover:text-white mb-6"
+          className="text-cyan-300 hover:text-cyan-200 hover:bg-cyan-900/20 mb-8 transition-all"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar
         </Button>
 
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <WalletIcon className="w-8 h-8 text-green-500" />
-            <h1 className="text-4xl font-bold text-white">Minha Carteira Virtual</h1>
+        {/* Header Futurístico */}
+        <div className="mb-10">
+          <div className="flex items-center gap-4 mb-3">
+            <div className="p-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl shadow-lg shadow-cyan-500/50">
+              <WalletIcon className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-5xl font-black bg-gradient-to-r from-cyan-300 via-blue-300 to-cyan-300 bg-clip-text text-transparent">Carteira Virtual</h1>
+              <p className="text-cyan-200/70 text-sm font-light mt-1">Plataforma Tecnológica de Gestão Financeira</p>
+            </div>
           </div>
-          <p className="text-gray-400">Gerencie seu saldo, depósitos e transações</p>
         </div>
 
         {/* Saldo Principal - Destaque */}
