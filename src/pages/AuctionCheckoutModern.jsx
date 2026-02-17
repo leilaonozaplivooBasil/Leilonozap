@@ -95,6 +95,27 @@ export default function AuctionCheckoutModern() {
     if (v.replace(/\D/g, '').length === 8) searchCep(v);
   };
 
+  // Validar CPF com check-sum (algoritmo simples)
+  const validateCpf = (cpfStr) => {
+    const cpf = cpfStr.replace(/\D/g, '');
+    if (cpf.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false; // Rejeita CPF com todos os dígitos iguais
+
+    // Valida primeiro dígito verificador
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+    let digit1 = (sum * 10) % 11;
+    if (digit1 === 10) digit1 = 0;
+
+    // Valida segundo dígito verificador
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+    let digit2 = (sum * 10) % 11;
+    if (digit2 === 10) digit2 = 0;
+
+    return parseInt(cpf[9]) === digit1 && parseInt(cpf[10]) === digit2;
+  };
+
   const validateForm = () => {
     const fields = [
       { value: firstName, name: 'Nome' },
@@ -115,10 +136,9 @@ export default function AuctionCheckoutModern() {
       }
     }
 
-    // Valida CPF deve ter 11 dígitos após limpeza
-    const cleanCpf = cpf.replace(/\D/g, '');
-    if (cleanCpf.length !== 11) {
-      toast.error('CPF deve ter 11 dígitos');
+    // Valida CPF com algoritmo de check-digit
+    if (!validateCpf(cpf)) {
+      toast.error('CPF inválido (verifique os dígitos)');
       return false;
     }
 
