@@ -303,29 +303,29 @@ Deno.serve(async (req) => {
                 });
                 console.log('✅ Auction atualizada para PAID');
             } else if (isWalletDeposit && walletDepositUserId) {
-                // 🆕 CREDITAR CARTEIRA INSTANTANEAMENTE PARA CARTÃO
-                console.log('💳 Creditando carteira instantaneamente (cartão aprovado)...');
+                // 🆕 CREDITAR DEPOSITWALLET INSTANTANEAMENTE PARA CARTÃO
+                console.log('💳 Creditando DepositWallet instantaneamente (cartão aprovado)...');
                 try {
-                    const wallets = await base44.asServiceRole.entities.Wallet.filter(
+                    const depositWallets = await base44.asServiceRole.entities.DepositWallet.filter(
                         { user_id: walletDepositUserId },
                         null,
                         1
                     );
 
-                    let wallet;
-                    if (wallets && wallets.length > 0) {
-                        wallet = wallets[0];
-                        const newBalance = (wallet.balance || 0) + amount;
-                        await base44.asServiceRole.entities.Wallet.update(wallet.id, {
+                    let depositWallet;
+                    if (depositWallets && depositWallets.length > 0) {
+                        depositWallet = depositWallets[0];
+                        const newBalance = (depositWallet.balance || 0) + amount;
+                        await base44.asServiceRole.entities.DepositWallet.update(depositWallet.id, {
                             balance: newBalance
                         });
-                        console.log('✅ Carteira creditada instantaneamente:', newBalance);
+                        console.log('✅ DepositWallet creditada instantaneamente:', newBalance);
                     } else {
-                        await base44.asServiceRole.entities.Wallet.create({
+                        await base44.asServiceRole.entities.DepositWallet.create({
                             user_id: walletDepositUserId,
                             balance: amount
                         });
-                        console.log('✅ Carteira criada com saldo:', amount);
+                        console.log('✅ DepositWallet criada com saldo:', amount);
                     }
 
                     // Registrar transação
