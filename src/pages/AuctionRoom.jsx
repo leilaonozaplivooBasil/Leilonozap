@@ -1845,17 +1845,19 @@ export default function AuctionRoom() {
         /* Scrollbar moderno minimalista */
         .auction-messages::-webkit-scrollbar {
           width: 6px;
-          background: transparent;
         }
         
         .auction-messages::-webkit-scrollbar-track {
           background: transparent !important;
+          -webkit-appearance: none;
         }
         
         .auction-messages::-webkit-scrollbar-thumb {
           background: linear-gradient(to bottom, #10b981, #059669) !important;
           border-radius: 3px;
           opacity: 0.3;
+          border: none;
+          -webkit-appearance: none;
         }
         
         .auction-messages::-webkit-scrollbar-thumb:hover {
