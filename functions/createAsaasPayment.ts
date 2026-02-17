@@ -231,44 +231,61 @@ Deno.serve(async (req) => {
         let pixPayload = null;
 
         if (billing_type === 'PIX') {
-            const qrRes = await fetch(
-                `https://api.asaas.com/v3/payments/${payData.id}/pixQrCode`,
-                {
-                    headers: {
-                        'access_token': apiKey,
-                        'Content-Type': 'application/json'
-                    }
+            try {
+                const qrRes = await Promise.race([
+                    fetch(`https://api.asaas.com/v3/payments/${payData.id}/pixQrCode`, {
+                        headers: {
+                            'access_token': apiKey,
+                            'Content-Type': 'application/json'
+                        }
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('QR code timeout')), 8000))
+                ]);
+                const qrData = await qrRes.json();
+                if (qrData?.encodedImage && qrData?.payload) {
+                    pixQrCode = `data:image/png;base64,${qrData.encodedImage}`;
+                    pixPayload = qrData.payload;
+                    console.log('✅ QR Code PIX gerado');
                 }
-            );
-            const qrData = await qrRes.json();
-            if (qrData.encodedImage && qrData.payload) {
-                pixQrCode = `data:image/png;base64,${qrData.encodedImage}`;
-                pixPayload = qrData.payload;
-                console.log('✅ QR Code PIX gerado');
+            } catch (qrError) {
+                console.warn('⚠️ Erro ao gerar QR Code PIX:', qrError.message);
             }
         }
 
         // 4️⃣ REGISTRAR NO BANCO
-        await base44.asServiceRole.entities.AsaasPayment.create({
-            payment_id: payData.id,
-            customer_id: customerId,
-            billing_type: billing_type,
-            value: Number(amount),
-            status: payData.status === 'CONFIRMED' ? 'confirmed' : 'pending',
-            external_reference: paymentPayload.externalReference,
-            catalog_sale_id: catalog_sale_id || null,
-            auction_id: auction_id || null,
-            buyer_name: buyer_name,
-            buyer_email: buyer_email,
-            buyer_cpf: cleanCpf,
-            pix_qr_code: pixQrCode,
-            pix_payload: pixPayload,
-            boleto_url: payData.bankSlipUrl || null,
-            due_date: dueDateStr,
-            payment_date: payData.status === 'CONFIRMED' ? new Date().toISOString() : null
-        });
-
-        console.log('✅ Pagamento registrado no DB');
+        try {
+            await base44.asServiceRole.entities.AsaasPayment.create({
+                payment_id: payData.id,
+                customer_id: customerId,
+                billing_type: billing_type,
+                value: Number(amount),
+                status: payData.status === 'CONFIRMED' ? 'confirmed' : 'pending',
+                external_reference: paymentPayload.externalReference,
+                catalog_sale_id: catalog_sale_id || null,
+                auction_id: auction_id || null,
+                buyer_name: buyer_name,
+                buyer_email: buyer_email,
+                buyer_cpf: cleanCpf,
+                pix_qr_code: pixQrCode,
+                pix_payload: pixPayload,
+                boleto_url: payData.bankSlipUrl || null,
+                due_date: dueDateStr,
+                payment_date: payData.status === 'CONFIRMED' ? new Date().toISOString() : null
+            });
+            console.log('✅ Pagamento registrado no DB');
+        } catch (dbError) {
+            console.error('❌ Erro ao registrar pagamento no DB:', dbError.message);
+            return Response.json({
+                success: true,
+                payment_id: payData.id,
+                billing_type: billing_type,
+                status: payData.status,
+                pix_qr_code: pixQrCode,
+                pix_payload: pixPayload,
+                boleto_url: payData.bankSlipUrl || null,
+                warning: 'Pagamento criado no Asaas mas falhou ao registrar no banco'
+            });
+        }
 
         return Response.json({
             success: true,
