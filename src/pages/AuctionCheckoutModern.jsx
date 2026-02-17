@@ -17,7 +17,8 @@ import {
   Zap,
   AlertCircle,
   Image as ImageIcon,
-  Wallet
+  Wallet,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'sonner';
 
