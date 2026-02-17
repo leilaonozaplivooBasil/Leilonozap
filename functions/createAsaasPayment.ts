@@ -193,26 +193,43 @@ Deno.serve(async (req) => {
         }
 
         // 🔒 PASSO 4: Registrar no banco de dados
-        await base44.asServiceRole.entities.AsaasPayment.create({
-            payment_id: paymentData.id,
-            customer_id: customerId,
-            billing_type: billing_type,
-            value: amount,
-            status: paymentStatus,
-            external_reference: externalReference || paymentData.id, // Usa ID de pagamento se não houver referência
-            catalog_sale_id: catalog_sale_id || null,
-            auction_id: auction_id || null,
-            buyer_id: catalog_sale_id ? (await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }))[0]?.buyer_id : null,
-            buyer_name: buyer_name,
-            buyer_email: buyer_email,
-            buyer_cpf: cleanCpf,
-            pix_qr_code: pixQrCode,
-            pix_payload: pixPayload,
-            boleto_url: paymentData.bankSlipUrl || null,
-            invoice_url: paymentData.invoiceUrl || null,
-            due_date: paymentData.dueDate,
-            payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
-        });
+         const isWalletDeposit = !catalog_sale_id && !auction_id;
+
+         // Para depósito de carteira, obter user_id do buyer_email
+         let walletDepositUserId = null;
+         if (isWalletDeposit) {
+             try {
+                 const users = await base44.asServiceRole.entities.AppUser.filter({ email: buyer_email });
+                 if (users && users.length > 0) {
+                     walletDepositUserId = users[0].id;
+                 }
+             } catch (e) {
+                 console.warn('⚠️ Erro ao buscar user para wallet deposit:', e.message);
+             }
+         }
+
+         await base44.asServiceRole.entities.AsaasPayment.create({
+             payment_id: paymentData.id,
+             customer_id: customerId,
+             billing_type: billing_type,
+             value: amount,
+             status: paymentStatus,
+             external_reference: externalReference || paymentData.id,
+             catalog_sale_id: catalog_sale_id || null,
+             auction_id: auction_id || null,
+             wallet_deposit_user_id: walletDepositUserId,
+             is_wallet_deposit: isWalletDeposit,
+             buyer_id: catalog_sale_id ? (await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }))[0]?.buyer_id : null,
+             buyer_name: buyer_name,
+             buyer_email: buyer_email,
+             buyer_cpf: cleanCpf,
+             pix_qr_code: pixQrCode,
+             pix_payload: pixPayload,
+             boleto_url: paymentData.bankSlipUrl || null,
+             invoice_url: paymentData.invoiceUrl || null,
+             due_date: paymentData.dueDate,
+             payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
+         });
 
         console.log('✅ AsaasPayment registrado no banco');
 
