@@ -284,6 +284,6 @@ Deno.serve(async (req) => {
             console.debug('Logging falhou');
         }
 
-        return Response.json({ error: 'Webhook processing failed' }, { status: 500 });
+        return Response.json({ received: true }, { status: 200 });
     }
 });
