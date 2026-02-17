@@ -353,25 +353,30 @@ export default function WalletHistory() {
                 {/* Depósitos */}
                 {activeTab === "deposits" && (
                   <div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {deposits.length === 0 ? (
-                        <div className="text-center py-12">
-                          <Plus className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                          <p className="text-gray-400">Nenhum depósito realizado</p>
-                          <Button onClick={() => navigate(createPageUrl("AddFunds"))} className="mt-4 bg-green-600 hover:bg-green-700">
+                        <div className="text-center py-16">
+                          <Plus className="w-16 h-16 text-green-400/20 mx-auto mb-4" />
+                          <p className="text-cyan-300/50 font-light mb-6">Nenhum depósito registrado</p>
+                          <Button onClick={() => navigate(createPageUrl("AddFunds"))} className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold shadow-lg shadow-green-500/50">
                             Fazer Primeiro Depósito
                           </Button>
                         </div>
                       ) : (
                         getPaginatedData(deposits).map((transaction) => (
-                          <div key={transaction.id} className="p-4 bg-gray-900/50 border border-green-500/20 rounded-lg hover:border-green-500/50 transition-all">
+                          <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-green-400/20 rounded-xl hover:border-green-400/50 hover:shadow-lg hover:shadow-green-400/20 transition-all duration-300">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                <TrendingUp className="w-5 h-5 text-green-500" />
+                                <div className="p-3 rounded-lg bg-green-500/20 border border-green-400/30">
+                                  <TrendingUp className="w-5 h-5 text-green-400" />
+                                </div>
                                 <div>
-                                  <p className="text-white font-semibold">Depósito</p>
-                                  <p className="text-gray-400 text-sm">{transaction.description || "R$ 0.00"}</p>
-                                  <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                                  <p className="text-white font-semibold">Depósito Recebido</p>
+                                  <p className="text-cyan-300/60 text-sm font-light">{transaction.description || "Crédito em conta"}</p>
+                                  <div className="flex items-center gap-2 text-cyan-300/40 text-xs mt-1">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(transaction.created_date).toLocaleString('pt-BR')}
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-right">
@@ -384,28 +389,28 @@ export default function WalletHistory() {
                       )}
                     </div>
                     {deposits.length > ITEMS_PER_PAGE && (
-                      <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-700">
-                        <Button
-                          onClick={handlePreviousPage}
-                          disabled={currentPage.deposits === 0}
-                          variant="outline"
-                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          ← Anterior
-                        </Button>
-                        <span className="text-gray-400 text-sm">
-                          Página {currentPage.deposits + 1} de {getTotalPages(deposits)}
-                        </span>
-                        <Button
-                          onClick={handleNextPage}
-                          disabled={currentPage.deposits >= getTotalPages(deposits) - 1}
-                          variant="outline"
-                          className="border-gray-600 text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          Próxima →
-                        </Button>
-                      </div>
-                    )}
+                       <div className="flex items-center justify-between mt-8 pt-6 border-t border-cyan-400/20">
+                         <Button
+                           onClick={handlePreviousPage}
+                           disabled={currentPage.deposits === 0}
+                           variant="outline"
+                           className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                         >
+                           ← Anterior
+                         </Button>
+                         <span className="text-cyan-300/60 text-sm font-light">
+                           Página {currentPage.deposits + 1} de {getTotalPages(deposits)}
+                         </span>
+                         <Button
+                           onClick={handleNextPage}
+                           disabled={currentPage.deposits >= getTotalPages(deposits) - 1}
+                           variant="outline"
+                           className="border-cyan-400/30 text-cyan-300 hover:bg-cyan-400/10 hover:border-cyan-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                         >
+                           Próxima →
+                         </Button>
+                       </div>
+                     )}
                   </div>
                 )}
 
