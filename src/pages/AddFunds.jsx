@@ -275,14 +275,19 @@ export default function AddFunds() {
             </div>
 
             {/* Valor Customizado */}
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <CreditCard className="w-5 h-5" />
-                  Outro Valor
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="relative group mt-8">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+              <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent"></div>
+                <CardHeader className="relative">
+                  <CardTitle className="text-white flex items-center gap-3 text-xl">
+                    <div className="p-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-xl border border-blue-400/20">
+                      <CreditCard className="w-5 h-5 text-blue-400" />
+                    </div>
+                    Outro Valor
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 relative">
                 <div className="space-y-3">
                   <div className="flex gap-3">
                     <div className="flex-1">
