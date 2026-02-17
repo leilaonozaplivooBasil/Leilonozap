@@ -323,7 +323,7 @@ export default function AddFunds() {
                           <div className="p-1.5 bg-green-500/20 rounded-lg border border-green-400/30">
                             <Wallet className="w-4 h-4 text-green-400" />
                           </div>
-                          <span className="text-white font-bold text-sm">Será Creditado</span>
+                          <span className="text-white font-bold text-sm">Seu Crédito</span>
                         </div>
 
                         <div className="space-y-2">
