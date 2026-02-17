@@ -950,7 +950,7 @@ export default function Profile() {
                               {new Date(order.created_date).toLocaleDateString('pt-BR')}
                             </p>
                             <p className={`font-bold text-lg ${isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}`}>
-                              R$ {order.total_amount.toFixed(2)}
+                              R$ {(order.total_amount || 0).toFixed(2)}
                             </p>
                           </div>
                         </div>
