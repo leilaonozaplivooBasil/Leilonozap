@@ -532,8 +532,8 @@ export default function LojistaDashboard() {
 
             {/* Produtos Vendidos */}
             <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
-              <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 hover:border-purple-400/30 transition-all shadow-2xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/10 rounded-3xl blur-xl group-hover:blur-2xl transition-all animate-liquid-glow" style={{ animationDelay: '1s' }}></div>
+              <Card className="relative backdrop-blur-2xl bg-gradient-to-br from-white/10 to-white/5 border border-purple-400/30 hover:border-purple-400/50 transition-all shadow-2xl overflow-hidden liquid-glass-card" style={{ animationDelay: '0.6s' }}>
                 <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent"></div>
                 <CardContent className="relative pt-8 pb-6">
                   <div className="flex items-center justify-between">
