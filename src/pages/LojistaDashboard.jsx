@@ -888,6 +888,7 @@ export default function LojistaDashboard() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </div>
   );
