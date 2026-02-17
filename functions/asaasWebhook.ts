@@ -96,168 +96,177 @@ Deno.serve(async (req) => {
 
                 // 🎯 ATIVAR PLANO DE PARCEIRO (se aplicável)
                 if (asaasPayment.partner_licensee_id && asaasPayment.partner_plan_code) {
-            console.log('💼 Ativando plano de parceiro...');
-            
-            const users = await base44.asServiceRole.entities.AppUser.filter({ id: asaasPayment.partner_licensee_id });
-            const user = users && users.length > 0 ? users[0] : null;
+                    console.log('💼 Ativando plano de parceiro...');
+                    
+                    const users = await base44.asServiceRole.entities.AppUser.filter({ id: asaasPayment.partner_licensee_id });
+                    const user = users && users.length > 0 ? users[0] : null;
 
-            if (user) {
-                // Criar cronograma de 12 parcelas mensais
-                const schedule = [];
-                const startDate = new Date();
-                for (let i = 1; i <= 12; i++) {
-                    const paymentDate = new Date(startDate);
-                    paymentDate.setDate(paymentDate.getDate() + (i * 30));
-                    schedule.push({
-                        period: i,
-                        date: paymentDate.toISOString(),
-                        status: 'scheduled'
-                    });
+                    if (user) {
+                        const schedule = [];
+                        const startDate = new Date();
+                        for (let i = 1; i <= 12; i++) {
+                            const paymentDate = new Date(startDate);
+                            paymentDate.setDate(paymentDate.getDate() + (i * 30));
+                            schedule.push({
+                                period: i,
+                                date: paymentDate.toISOString(),
+                                status: 'scheduled'
+                            });
+                        }
+
+                        await base44.asServiceRole.entities.PartnerPlanPurchase.create({
+                            user_id: user.id,
+                            user_name: user.full_name,
+                            user_email: user.email,
+                            plan_name: asaasPayment.partner_plan_code,
+                            plan_amount: asaasPayment.value,
+                            activated_at: new Date().toISOString(),
+                            status: 'active',
+                            is_investment: true,
+                            investment_rate: 3,
+                            purchase_periods: schedule,
+                            activation_source: 'webhook_auto',
+                            payment_id: paymentId
+                        });
+
+                        console.log('✅ PartnerPlanPurchase criado automaticamente');
+                    }
                 }
 
-                await base44.asServiceRole.entities.PartnerPlanPurchase.create({
-                    user_id: user.id,
-                    user_name: user.full_name,
-                    user_email: user.email,
-                    plan_name: asaasPayment.partner_plan_code,
-                    plan_amount: asaasPayment.value,
-                    activated_at: new Date().toISOString(),
-                    status: 'active',
-                    is_investment: true,
-                    investment_rate: 3,
-                    purchase_periods: schedule,
-                    activation_source: 'webhook_auto',
-                    payment_id: paymentId
+                // ✅ PASSO 2: Atualizar CatalogSale (se aplicável)
+                if (asaasPayment.catalog_sale_id) {
+                    const catalogSales = await base44.asServiceRole.entities.CatalogSale.filter(
+                        { id: asaasPayment.catalog_sale_id },
+                        null,
+                        1
+                    );
+
+                    if (catalogSales && catalogSales.length > 0) {
+                        const sale = catalogSales[0];
+                        
+                        await base44.asServiceRole.entities.CatalogSale.update(sale.id, {
+                            status: 'paid',
+                            payment_confirmed_date: new Date().toISOString(),
+                            asaas_payment_id: paymentId
+                        });
+
+                        console.log('✅ CatalogSale atualizada:', sale.id);
+
+                        try {
+                            await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                                catalog_sale_id: sale.id
+                            });
+                            console.log('✅ Comissões disparadas para CatalogSale:', sale.id);
+                        } catch (commErr) {
+                            console.warn('⚠️ Erro ao processar comissões:', commErr.message);
+                        }
+
+                        try {
+                            await base44.asServiceRole.functions.invoke('notifyCatalogPaymentConfirmed', {
+                                catalog_sale_id: sale.id,
+                                buyer_id: sale.buyer_id,
+                                buyer_email: sale.buyer_email,
+                                product_title: sale.product_title,
+                                amount: sale.total_amount
+                            });
+                        } catch (notifyErr) {
+                            console.warn('⚠️ Erro ao notificar:', notifyErr.message);
+                        }
+                    }
+                }
+
+                // ✅ PASSO 3: Atualizar Auction (se aplicável)
+                if (asaasPayment.auction_id) {
+                    const auctions = await base44.asServiceRole.entities.Auction.filter(
+                        { id: asaasPayment.auction_id },
+                        null,
+                        1
+                    );
+
+                    if (auctions && auctions.length > 0) {
+                        const auction = auctions[0];
+
+                        await base44.asServiceRole.entities.Auction.update(auction.id, {
+                            order_status: 'paid',
+                            payment_confirmed_date: new Date().toISOString()
+                        });
+
+                        console.log('✅ Leilão atualizado:', auction.id);
+                    }
+                }
+
+                // ✅ PASSO 4: Creditar Carteira (se for depósito de carteira)
+                if (asaasPayment.is_wallet_deposit && asaasPayment.wallet_deposit_user_id) {
+                    try {
+                        const wallets = await base44.asServiceRole.entities.Wallet.filter(
+                            { user_id: asaasPayment.wallet_deposit_user_id },
+                            null,
+                            1
+                        );
+
+                        let wallet;
+                        if (wallets && wallets.length > 0) {
+                            wallet = wallets[0];
+                            const newBalance = (wallet.balance || 0) + asaasPayment.value;
+                            await base44.asServiceRole.entities.Wallet.update(wallet.id, {
+                                balance: newBalance
+                            });
+                            console.log('✅ Carteira creditada:', asaasPayment.wallet_deposit_user_id, 'Novo saldo:', newBalance);
+                        } else {
+                            await base44.asServiceRole.entities.Wallet.create({
+                                user_id: asaasPayment.wallet_deposit_user_id,
+                                balance: asaasPayment.value
+                            });
+                            console.log('✅ Carteira criada e creditada:', asaasPayment.wallet_deposit_user_id, 'Saldo:', asaasPayment.value);
+                        }
+
+                        await base44.asServiceRole.entities.WalletTransaction.create({
+                            user_id: asaasPayment.wallet_deposit_user_id,
+                            type: 'deposit',
+                            direction: 'credit',
+                            amount: asaasPayment.value,
+                            status: 'confirmed',
+                            description: `Depósito via ${asaasPayment.billing_type} - ${paymentId}`
+                        });
+                        console.log('✅ Transação de depósito registrada');
+                    } catch (walletErr) {
+                        console.error('❌ Erro ao creditar carteira:', walletErr.message);
+                    }
+                }
+
+                // 🎉 Log de sucesso
+                await base44.asServiceRole.entities.SystemLog.create({
+                    step: 'ASAAS_PAYMENT_CONFIRMED',
+                    status: 'success',
+                    message: `Pagamento ASAAS confirmado: ${paymentId}`,
+                    component_name: 'asaasWebhook',
+                    entity_id: asaasPayment.catalog_sale_id || asaasPayment.auction_id,
+                    payload: {
+                        payment_id: paymentId,
+                        catalog_sale_id: asaasPayment.catalog_sale_id,
+                        auction_id: asaasPayment.auction_id,
+                        amount: asaasPayment.value
+                    }
                 });
 
-                console.log('✅ PartnerPlanPurchase criado automaticamente');
-            }
-        }
-
-        // ✅ PASSO 2: Atualizar CatalogSale (se aplicável)
-        if (asaasPayment.catalog_sale_id) {
-            const catalogSales = await base44.asServiceRole.entities.CatalogSale.filter(
-                { id: asaasPayment.catalog_sale_id },
-                null,
-                1
-            );
-
-            if (catalogSales && catalogSales.length > 0) {
-                const sale = catalogSales[0];
-                
-                await base44.asServiceRole.entities.CatalogSale.update(sale.id, {
-                    status: 'paid',
-                    payment_confirmed_date: new Date().toISOString(),
-                    asaas_payment_id: paymentId
-                });
-
-                console.log('✅ CatalogSale atualizada:', sale.id);
-
-                // 🔔 Disparar processamento de comissões
+                console.log('🎉 WEBHOOK ASAAS PROCESSADO COM SUCESSO ✅');
+            } catch (backgroundErr) {
+                console.error('❌ Erro no processamento background:', backgroundErr.message);
                 try {
-                    await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-                        catalog_sale_id: sale.id
+                    await base44.asServiceRole.entities.SystemLog.create({
+                        step: 'ASAAS_WEBHOOK_BACKGROUND_ERROR',
+                        status: 'error',
+                        message: `Background error: ${backgroundErr.message}`,
+                        component_name: 'asaasWebhook',
+                        error_details: { message: backgroundErr.message, stack: backgroundErr.stack }
                     });
-                    console.log('✅ Comissões disparadas para CatalogSale:', sale.id);
-                } catch (commErr) {
-                    console.warn('⚠️ Erro ao processar comissões:', commErr.message);
-                }
-
-                // 📢 Notificação
-                try {
-                    await base44.asServiceRole.functions.invoke('notifyCatalogPaymentConfirmed', {
-                        catalog_sale_id: sale.id,
-                        buyer_id: sale.buyer_id,
-                        buyer_email: sale.buyer_email,
-                        product_title: sale.product_title,
-                        amount: sale.total_amount
-                    });
-                } catch (notifyErr) {
-                    console.warn('⚠️ Erro ao notificar:', notifyErr.message);
+                } catch (e) {
+                    console.debug('Logging falhou');
                 }
             }
-        }
+        })();
 
-        // ✅ PASSO 3: Atualizar Auction (se aplicável)
-        if (asaasPayment.auction_id) {
-            const auctions = await base44.asServiceRole.entities.Auction.filter(
-                { id: asaasPayment.auction_id },
-                null,
-                1
-            );
-
-            if (auctions && auctions.length > 0) {
-                const auction = auctions[0];
-
-                await base44.asServiceRole.entities.Auction.update(auction.id, {
-                    order_status: 'paid',
-                    payment_confirmed_date: new Date().toISOString()
-                });
-
-                console.log('✅ Leilão atualizado:', auction.id);
-            }
-        }
-
-        // ✅ PASSO 4: Creditar Carteira (se for depósito de carteira)
-        if (asaasPayment.is_wallet_deposit && asaasPayment.wallet_deposit_user_id) {
-            try {
-                const wallets = await base44.asServiceRole.entities.Wallet.filter(
-                    { user_id: asaasPayment.wallet_deposit_user_id },
-                    null,
-                    1
-                );
-
-                let wallet;
-                if (wallets && wallets.length > 0) {
-                    wallet = wallets[0];
-                    // Atualizar saldo existente
-                    const newBalance = (wallet.balance || 0) + asaasPayment.value;
-                    await base44.asServiceRole.entities.Wallet.update(wallet.id, {
-                        balance: newBalance
-                    });
-                    console.log('✅ Carteira creditada:', asaasPayment.wallet_deposit_user_id, 'Novo saldo:', newBalance);
-                } else {
-                    // Criar nova carteira
-                    await base44.asServiceRole.entities.Wallet.create({
-                        user_id: asaasPayment.wallet_deposit_user_id,
-                        balance: asaasPayment.value
-                    });
-                    console.log('✅ Carteira criada e creditada:', asaasPayment.wallet_deposit_user_id, 'Saldo:', asaasPayment.value);
-                }
-
-                // Registrar transação de depósito
-                await base44.asServiceRole.entities.WalletTransaction.create({
-                    user_id: asaasPayment.wallet_deposit_user_id,
-                    type: 'deposit',
-                    direction: 'credit',
-                    amount: asaasPayment.value,
-                    status: 'confirmed',
-                    description: `Depósito via ${asaasPayment.billing_type} - ${paymentId}`
-                });
-                console.log('✅ Transação de depósito registrada');
-            } catch (walletErr) {
-                console.error('❌ Erro ao creditar carteira:', walletErr.message);
-                // Não falha o webhook inteiro, apenas registra o erro
-            }
-        }
-
-        // 🎉 Log de sucesso
-        await base44.asServiceRole.entities.SystemLog.create({
-            step: 'ASAAS_PAYMENT_CONFIRMED',
-            status: 'success',
-            message: `Pagamento ASAAS confirmado: ${paymentId}`,
-            component_name: 'asaasWebhook',
-            entity_id: asaasPayment.catalog_sale_id || asaasPayment.auction_id,
-            payload: {
-                payment_id: paymentId,
-                catalog_sale_id: asaasPayment.catalog_sale_id,
-                auction_id: asaasPayment.auction_id,
-                amount: asaasPayment.value
-            }
-        });
-
-        console.log('🎉 WEBHOOK ASAAS PROCESSADO COM SUCESSO ✅');
-        return Response.json({ success: true });
+        return responsePromise;
 
     } catch (error) {
         console.error('❌ Erro no webhook ASAAS:', error.message);
