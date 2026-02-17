@@ -49,6 +49,7 @@
  */
 import ActivePartners from './pages/ActivePartners';
 import AddCatalogProduct from './pages/AddCatalogProduct';
+import AddFunds from './pages/AddFunds';
 import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
@@ -97,6 +98,7 @@ import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
 import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyCatalogOrders from './pages/MyCatalogOrders';
+import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
 import OrderTracking from './pages/OrderTracking';
 import PDV from './pages/PDV';
@@ -124,14 +126,13 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import MyWinnings from './pages/MyWinnings';
-import AddFunds from './pages/AddFunds';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
     "ActivePartners": ActivePartners,
     "AddCatalogProduct": AddCatalogProduct,
+    "AddFunds": AddFunds,
     "AdminCatalogSales": AdminCatalogSales,
     "AdminUsers": AdminUsers,
     "AdminWithdrawals": AdminWithdrawals,
@@ -180,6 +181,7 @@ export const PAGES = {
     "LuxuryCollection": LuxuryCollection,
     "MemoryBackup": MemoryBackup,
     "MyCatalogOrders": MyCatalogOrders,
+    "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
     "PDV": PDV,
@@ -207,8 +209,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "MyWinnings": MyWinnings,
-    "AddFunds": AddFunds,
 }
 
 export const pagesConfig = {
