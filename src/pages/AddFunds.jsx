@@ -276,9 +276,9 @@ export default function AddFunds() {
 
             {/* Valor Customizado */}
             <div className="relative group mt-8">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl blur-md group-hover:blur-lg transition-all"></div>
               <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 to-transparent"></div>
                 <CardHeader className="relative">
                   <CardTitle className="text-white flex items-center gap-3 text-xl">
                     <div className="p-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-xl border border-blue-400/20">
@@ -321,8 +321,8 @@ export default function AddFunds() {
                   {/* Resumo do que será creditado */}
                   {selectedAmount && selectedAmount >= 30 && (
                     <div className="relative group/summary overflow-hidden mt-6">
-                      <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-2xl blur-md group-hover/summary:blur-lg transition-all"></div>
-                      <div className="relative p-6 backdrop-blur-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-400/30 rounded-2xl">
+                      <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-2xl blur-sm group-hover/summary:blur-md transition-all"></div>
+                      <div className="relative p-6 backdrop-blur-xl bg-gradient-to-br from-green-500/5 to-emerald-500/5 border border-green-400/20 rounded-2xl">
                         <div className="flex items-center gap-3 mb-4">
                           <div className="p-2 bg-green-500/20 rounded-xl border border-green-400/30">
                             <Wallet className="w-5 h-5 text-green-400" />
@@ -386,9 +386,9 @@ export default function AddFunds() {
             
             {/* Benefícios */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-3xl blur-md group-hover:blur-lg transition-all"></div>
               <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/3 to-transparent"></div>
                 <CardHeader className="relative">
                   <CardTitle className="text-white flex items-center gap-3">
                     <div className="p-2 bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-sm rounded-xl border border-blue-400/20">
@@ -400,8 +400,8 @@ export default function AddFunds() {
                 <CardContent className="space-y-4 relative">
                   <div className="flex items-start gap-4 p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10 hover:border-green-400/30 transition-all group/item">
                     <div className="relative">
-                      <div className="absolute inset-0 bg-green-500/30 rounded-xl blur-md group-hover/item:blur-lg transition-all"></div>
-                      <div className="relative p-3 bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-xl border border-green-400/20">
+                      <div className="absolute inset-0 bg-green-500/15 rounded-xl blur-sm group-hover/item:blur-md transition-all"></div>
+                      <div className="relative p-3 bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-sm rounded-xl border border-green-400/20">
                         <Zap className="w-5 h-5 text-green-400" />
                       </div>
                     </div>
@@ -413,8 +413,8 @@ export default function AddFunds() {
 
                   <div className="flex items-start gap-4 p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10 hover:border-blue-400/30 transition-all group/item">
                     <div className="relative">
-                      <div className="absolute inset-0 bg-blue-500/30 rounded-xl blur-md group-hover/item:blur-lg transition-all"></div>
-                      <div className="relative p-3 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm rounded-xl border border-blue-400/20">
+                      <div className="absolute inset-0 bg-blue-500/15 rounded-xl blur-sm group-hover/item:blur-md transition-all"></div>
+                      <div className="relative p-3 bg-gradient-to-br from-blue-500/10 to-cyan-500/10 backdrop-blur-sm rounded-xl border border-blue-400/20">
                         <Shield className="w-5 h-5 text-blue-400" />
                       </div>
                     </div>
@@ -426,8 +426,8 @@ export default function AddFunds() {
 
                   <div className="flex items-start gap-4 p-4 backdrop-blur-sm bg-white/5 rounded-2xl border border-white/10 hover:border-purple-400/30 transition-all group/item">
                     <div className="relative">
-                      <div className="absolute inset-0 bg-purple-500/30 rounded-xl blur-md group-hover/item:blur-lg transition-all"></div>
-                      <div className="relative p-3 bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm rounded-xl border border-purple-400/20">
+                      <div className="absolute inset-0 bg-purple-500/15 rounded-xl blur-sm group-hover/item:blur-md transition-all"></div>
+                      <div className="relative p-3 bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm rounded-xl border border-purple-400/20">
                         <Clock className="w-5 h-5 text-purple-400" />
                       </div>
                     </div>
@@ -443,9 +443,9 @@ export default function AddFunds() {
             {/* Transações Recentes */}
             {recentTransactions.length > 0 && (
               <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-3xl blur-md group-hover:blur-lg transition-all"></div>
                 <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/3 to-transparent"></div>
                   <CardHeader className="relative">
                     <CardTitle className="text-white text-base font-bold">Últimos Depósitos</CardTitle>
                   </CardHeader>
@@ -475,9 +475,9 @@ export default function AddFunds() {
 
             {/* Informações de Pagamento */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-3xl blur-md group-hover:blur-lg transition-all"></div>
               <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-transparent"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/3 to-transparent"></div>
                 <CardHeader className="relative">
                   <CardTitle className="text-white text-base font-bold">Como Funciona?</CardTitle>
                 </CardHeader>
