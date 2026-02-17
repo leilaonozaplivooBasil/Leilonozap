@@ -196,12 +196,14 @@ export default function AddFunds() {
             </div>
 
             {/* Pacotes de Depósito */}
-            <div>
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-yellow-400" />
-                Pacotes Rápidos
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            <div className="mt-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-sm rounded-xl border border-yellow-400/20">
+                  <Sparkles className="w-5 h-5 text-yellow-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">Pacotes Rápidos</h2>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-5">
                 {packages.map((pkg) => {
                   const isSelected = selectedAmount === pkg.amount;
                   const hasBonus = pkg.bonus_percentage > 0;
