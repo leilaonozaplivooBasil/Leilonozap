@@ -114,37 +114,114 @@ const filtered = useMemo(() => {
 
   if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-gray-900 relative overflow-hidden">
+      <div className="min-h-screen bg-gray-900 relative overflow-hidden flex items-center justify-center">
+        <style>{`
+          @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+          @keyframes shimmer { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } }
+          @keyframes glow-pulse { 0%, 100% { box-shadow: 0 0 30px rgba(217, 119, 6, 0.3), 0 0 60px rgba(217, 119, 6, 0.15); } 50% { box-shadow: 0 0 50px rgba(217, 119, 6, 0.5), 0 0 90px rgba(217, 119, 6, 0.25); } }
+          .modal-card { animation: glow-pulse 3s ease-in-out infinite; }
+          .shimmer-bg { animation: shimmer 2s ease-in-out infinite; }
+          .float-crown { animation: float 3s ease-in-out infinite; }
+        `}</style>
+        
+        {/* Background gradient premium */}
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-[#0b1220] to-gray-900" />
-          <div className="pointer-events-none absolute -top-24 -right-16 w-80 h-80 rounded-full bg-amber-400/15 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-32 -left-24 w-96 h-96 rounded-full bg-yellow-300/10 blur-3xl" />
+          <div className="absolute inset-0 bg-gradient-to-b from-gray-900 via-[#0a0e1a] to-gray-900" />
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/5 via-transparent to-amber-500/5" />
+          
+          {/* Orbes de luz premium */}
+          <div className="pointer-events-none absolute -top-40 -right-20 w-96 h-96 rounded-full bg-gradient-to-br from-amber-400/20 to-yellow-300/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-40 -left-20 w-96 h-96 rounded-full bg-gradient-to-tr from-amber-500/15 to-transparent blur-3xl" />
+          <div className="pointer-events-none absolute top-1/4 left-1/4 w-64 h-64 rounded-full bg-amber-400/10 blur-3xl animate-pulse" />
         </div>
+
+        {/* Chuva de diamantes */}
         <GoldDiamondRain count={48} />
-        <div className="absolute inset-0 flex items-center justify-center px-4">
-          <div className="w-full max-w-md bg-gray-800/80 backdrop-blur border border-amber-500/40 rounded-2xl p-6 shadow-[0_0_40px_rgba(217,119,6,0.25)]">
-            <div className="flex items-center gap-2 text-amber-300 mb-1">
-              <Crown className="w-5 h-5" />
-              <span className="uppercase text-xs tracking-widest">Acesso exclusivo</span>
-            </div>
-            <h2 className="text-white text-2xl font-bold mb-1">Coleção Privada</h2>
-            <p className="text-amber-100/80 text-sm mb-4">Informe seu código para entrar.</p>
-            <div className="relative mb-3">
-              <Key className="w-4 h-4 text-amber-300 absolute left-3 top-1/2 -translate-y-1/2" />
-              <Input
-                placeholder="Código de acesso"
-                value={accessCode}
-                onChange={(e)=>setAccessCode(e.target.value)}
-                onKeyDown={(e)=>{ if(e.key==='Enter'){ validateCode(accessCode); }}}
-                className="pl-9 bg-gray-900 border-amber-700/60 text-gray-100 placeholder-gray-400"
-              />
-            </div>
-            {errorMsg ? <div className="text-red-400 text-xs mb-3">{errorMsg}</div> : null}
-            <Button onClick={()=>validateCode(accessCode)} disabled={validating} className="w-full bg-amber-600 hover:bg-amber-700">
-              {validating ? "Verificando..." : "Entrar"}
-            </Button>
-            <div className="mt-4 text-xs text-gray-400 flex items-center gap-2">
-              <Lock className="w-3.5 h-3.5" /> Convite para membros de alto padrão.
+
+        {/* Modal elegante */}
+        <div className="relative w-full max-w-md px-4 z-10">
+          {/* Brilho externo decorativo */}
+          <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-yellow-400/10 to-amber-500/20 rounded-3xl blur-2xl opacity-75" />
+          <div className="absolute -inset-0.5 bg-gradient-to-b from-amber-400/10 to-transparent rounded-3xl" />
+
+          {/* Card principal */}
+          <div className="modal-card relative bg-gradient-to-br from-gray-800/90 via-gray-800/80 to-gray-900/90 backdrop-blur-xl border border-amber-500/40 rounded-3xl p-8 shadow-2xl">
+            {/* Padrão diagonal sutil */}
+            <div className="absolute inset-0 opacity-5 rounded-3xl" style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(217, 119, 6, 0.1) 35px, rgba(217, 119, 6, 0.1) 70px)' }} />
+            
+            {/* Conteúdo */}
+            <div className="relative space-y-6">
+              {/* Header com coroa */}
+              <div className="text-center space-y-3">
+                <div className="flex justify-center">
+                  <Crown className="w-8 h-8 text-amber-400 float-crown" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-amber-300 uppercase text-xs tracking-[0.2em] font-semibold">Acesso Exclusivo</p>
+                  <h2 className="text-3xl font-black bg-gradient-to-r from-amber-100 via-amber-50 to-yellow-100 bg-clip-text text-transparent drop-shadow-sm">
+                    Coleção Privada
+                  </h2>
+                  <div className="h-1 w-16 mx-auto bg-gradient-to-r from-amber-500/0 via-amber-400 to-amber-500/0 rounded-full" />
+                </div>
+                <p className="text-amber-100/70 text-sm font-light">
+                  Informe seu código de acesso para entrar no mundo do luxo
+                </p>
+              </div>
+
+              {/* Input premium */}
+              <div className="space-y-3">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500/20 to-amber-400/20 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300" />
+                  <div className="relative flex items-center gap-3 px-4 py-3.5 bg-gray-900/50 border border-amber-600/30 rounded-xl backdrop-blur transition duration-300 group-hover:border-amber-500/50">
+                    <Key className="w-5 h-5 text-amber-400 shimmer-bg" />
+                    <Input
+                      placeholder="Código de acesso"
+                      value={accessCode}
+                      onChange={(e)=>setAccessCode(e.target.value)}
+                      onKeyDown={(e)=>{ if(e.key==='Enter'){ validateCode(accessCode); }}}
+                      className="flex-1 bg-transparent border-0 text-white placeholder-gray-400 text-center tracking-widest uppercase focus:outline-none focus:ring-0"
+                    />
+                  </div>
+                </div>
+
+                {/* Erro com estilo */}
+                {errorMsg && (
+                  <div className="px-4 py-3 bg-red-900/30 border border-red-500/50 rounded-lg backdrop-blur">
+                    <p className="text-red-200 text-xs font-semibold">{errorMsg}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Botão premium */}
+              <Button 
+                onClick={()=>validateCode(accessCode)} 
+                disabled={validating}
+                className="w-full relative group overflow-hidden py-3.5 font-bold tracking-wider uppercase"
+                style={{
+                  background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 50%, #d97706 100%)',
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-400/0 via-white/20 to-amber-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
+                <span className="relative flex items-center justify-center gap-2">
+                  {validating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Verificando...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Entrar
+                    </>
+                  )}
+                </span>
+              </Button>
+
+              {/* Rodapé premium */}
+              <div className="flex items-center justify-center gap-2 pt-4 border-t border-amber-500/20">
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-xs text-amber-200/70 font-light">Convite restrito para membros de alto padrão</span>
+              </div>
             </div>
           </div>
         </div>
