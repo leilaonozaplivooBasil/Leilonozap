@@ -277,33 +277,40 @@ export default function WalletHistory() {
               </button>
             </div>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-8 relative z-10">
             {isLoading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-3"></div>
-                <p className="text-gray-400">Carregando transações...</p>
+              <div className="text-center py-16">
+                <div className="inline-block">
+                  <div className="animate-spin rounded-full h-12 w-12 border-4 border-cyan-500/30 border-t-cyan-400 mx-auto mb-4"></div>
+                  <p className="text-cyan-300/70 font-light">Carregando transações...</p>
+                </div>
               </div>
             ) : (
               <>
                 {/* Overview - Todas as Transações */}
                 {activeTab === "overview" && (
                   <div>
-                    <div className="space-y-3">
+                    <div className="space-y-4">
                       {transactions.length === 0 ? (
-                        <div className="text-center py-12">
-                          <DollarSign className="w-12 h-12 text-gray-600 mx-auto mb-3" />
-                          <p className="text-gray-400">Nenhuma transação ainda</p>
+                        <div className="text-center py-16">
+                          <DollarSign className="w-16 h-16 text-cyan-400/20 mx-auto mb-4" />
+                          <p className="text-cyan-300/50 font-light">Nenhuma transação registrada</p>
                         </div>
                       ) : (
                         getPaginatedData(transactions).map((transaction) => (
-                          <div key={transaction.id} className="p-4 bg-gray-900/50 border border-gray-700 rounded-lg hover:border-gray-600 transition-all">
+                          <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-cyan-400/20 rounded-xl hover:border-cyan-400/50 hover:shadow-lg hover:shadow-cyan-400/20 transition-all duration-300">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-4">
-                                {getTransactionIcon(transaction.type, transaction.direction)}
+                                <div className={`p-3 rounded-lg ${transaction.direction === 'credit' ? 'bg-green-500/20 border border-green-400/30' : 'bg-red-500/20 border border-red-400/30'}`}>
+                                  {getTransactionIcon(transaction.type, transaction.direction)}
+                                </div>
                                 <div>
                                   <p className="text-white font-semibold">{getTypeLabel(transaction.type)}</p>
-                                  <p className="text-gray-400 text-sm">{transaction.description || "Sem descrição"}</p>
-                                  <p className="text-gray-500 text-xs mt-1">{new Date(transaction.created_date).toLocaleString('pt-BR')}</p>
+                                  <p className="text-cyan-300/60 text-sm font-light">{transaction.description || "Sem descrição"}</p>
+                                  <div className="flex items-center gap-2 text-cyan-300/40 text-xs mt-1">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(transaction.created_date).toLocaleString('pt-BR')}
+                                  </div>
                                 </div>
                               </div>
                               <div className="text-right">
