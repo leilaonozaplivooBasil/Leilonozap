@@ -169,21 +169,31 @@ export default function AddFunds() {
           <div className="lg:col-span-2 space-y-6">
             
             {/* Saldo Atual */}
-            <Card className="bg-gradient-to-br from-gray-800 to-gray-900 border-gray-700">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-gray-400 text-sm mb-1">Saldo Disponível</p>
-                    <p className="text-4xl font-bold text-white">
-                      R$ {(wallet?.balance || 0).toFixed(2)}
-                    </p>
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all"></div>
+              <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent"></div>
+                <CardContent className="p-8 relative">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <p className="text-gray-400 text-sm font-medium uppercase tracking-wider">Saldo Disponível</p>
+                      </div>
+                      <p className="text-5xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+                        R$ {(wallet?.balance || 0).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl"></div>
+                      <div className="relative p-5 bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-2xl border border-green-400/20">
+                        <TrendingUp className="w-12 h-12 text-green-400" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="p-4 bg-green-500/10 rounded-2xl">
-                    <TrendingUp className="w-10 h-10 text-green-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
 
             {/* Pacotes de Depósito */}
             <div>
