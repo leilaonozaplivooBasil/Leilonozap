@@ -41,6 +41,7 @@ export default function AuctionRoom() {
   
   const auctionId = searchParams.get("id") || new URLSearchParams(location.search).get("id");
   const showFloatingBalance = searchParams.get("useBalance") === "true";
+  const spectatorModeParam = searchParams.get("spectator") === "true";
 
   const [auction, setAuction] = useState(null);
   const [messages, setMessages] = useState([]);
