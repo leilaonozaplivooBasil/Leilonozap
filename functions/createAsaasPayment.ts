@@ -258,6 +258,45 @@ Deno.serve(async (req) => {
                     asaas_payment_id: paymentData.id
                 });
                 console.log('✅ Auction atualizada para PAID');
+            } else if (isWalletDeposit && walletDepositUserId) {
+                // 🆕 CREDITAR CARTEIRA INSTANTANEAMENTE PARA CARTÃO
+                console.log('💳 Creditando carteira instantaneamente (cartão aprovado)...');
+                try {
+                    const wallets = await base44.asServiceRole.entities.Wallet.filter(
+                        { user_id: walletDepositUserId },
+                        null,
+                        1
+                    );
+
+                    let wallet;
+                    if (wallets && wallets.length > 0) {
+                        wallet = wallets[0];
+                        const newBalance = (wallet.balance || 0) + amount;
+                        await base44.asServiceRole.entities.Wallet.update(wallet.id, {
+                            balance: newBalance
+                        });
+                        console.log('✅ Carteira creditada instantaneamente:', newBalance);
+                    } else {
+                        await base44.asServiceRole.entities.Wallet.create({
+                            user_id: walletDepositUserId,
+                            balance: amount
+                        });
+                        console.log('✅ Carteira criada com saldo:', amount);
+                    }
+
+                    // Registrar transação
+                    await base44.asServiceRole.entities.WalletTransaction.create({
+                        user_id: walletDepositUserId,
+                        type: 'deposit',
+                        direction: 'credit',
+                        amount: amount,
+                        status: 'confirmed',
+                        description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
+                    });
+                    console.log('✅ Transação de wallet registrada');
+                } catch (walletErr) {
+                    console.error('❌ Erro ao creditar carteira:', walletErr.message);
+                }
             }
         }
 
