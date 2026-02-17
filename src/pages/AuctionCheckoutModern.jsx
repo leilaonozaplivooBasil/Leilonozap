@@ -534,17 +534,19 @@ export default function AuctionCheckoutModern() {
                 {/* Resumo */}
                 <div className="space-y-3 py-4 border-y border-white/10">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Subtotal</span>
-                    <span className="text-white">R$ {auction.current_price.toFixed(2)}</span>
+                    <span className="text-gray-400">Valor</span>
+                    <span className="text-white">R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Frete</span>
-                    <span className="text-green-400">A combinar</span>
-                  </div>
+                  {!isWalletDeposit && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-400">Frete</span>
+                      <span className="text-green-400">A combinar</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-base font-bold pt-2">
                     <span>Total</span>
                     <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text">
-                      R$ {auction.current_price.toFixed(2)}
+                      R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}
                     </span>
                   </div>
                 </div>
