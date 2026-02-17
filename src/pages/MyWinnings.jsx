@@ -37,9 +37,9 @@ const WonAuctionCard = ({ auction, onTrackClick, onPayClick, isSaiDeBaixo }) => 
     const mainImage = auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/bb512aa01_image.png";
 
     return (
-        <Card className="group bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 overflow-hidden hover:border-green-500/50 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(34,197,94,0.12)] hover:-translate-y-1">
+        <Card className="group bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700/50 overflow-hidden hover:border-green-500/50 transition-all duration-300 hover:shadow-[0_8px_30px_rgb(34,197,94,0.12)]">
             {/* Imagem em destaque - MAIOR */}
-            <div className="relative h-64 overflow-hidden">
+            <div className="relative h-64 overflow-hidden bg-gray-900">
                 <img 
                     src={mainImage} 
                     alt={auction.title} 
