@@ -13,7 +13,18 @@ O sistema de auditoria foi migrado para o backend (Edge Functions) para garantir
 
 ---
 
-## 2. Função: `commissionPilot` (Auditoria de Venda)
+## 2. Acesso (URLs no Frontend)
+
+Para acessar as ferramentas visuais de auditoria no navegador:
+
+| Ferramenta | Slug / URL | Descrição |
+| :--- | :--- | :--- |
+| **Painel de Auditoria** | `/CommissionPilot` | Interface principal para carregar snapshots, simular vendas e ver gráficos de divergência. |
+| **Gerador de Snapshot** | `/AuditSnapshot` | Ferramenta para baixar o backup atual do banco de dados (JSON) para análise offline. |
+
+---
+
+## 3. Função: `commissionPilot` (Auditoria de Venda)
 
 Esta função é o motor de cálculo. Ela reconstrói a árvore de distribuição para uma venda e diz quem deveria ter recebido o quê.
 
