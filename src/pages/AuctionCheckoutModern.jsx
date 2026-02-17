@@ -55,6 +55,13 @@ export default function AuctionCheckoutModern() {
   const [cardMonth, setCardMonth] = useState('');
   const [cardYear, setCardYear] = useState('');
   const [cardCvv, setCardCvv] = useState('');
+  
+  // Accordion states
+  const [expandedSection, setExpandedSection] = useState('personal');
+
+  // Validar seções
+  const isPersonalComplete = firstName?.trim() && email?.trim() && phone?.trim() && cpf?.trim();
+  const isAddressComplete = addressStreet?.trim() && addressNumber?.trim() && addressCity?.trim() && addressState?.trim() && addressZip?.trim();
 
   const searchCep = async (cep) => {
     const cleanCep = cep.replace(/\D/g, '');
