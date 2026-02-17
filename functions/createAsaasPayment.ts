@@ -1,11 +1,18 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
-    try {
-        const base44 = createClientFromRequest(req);
-        const rawData = await req.json();
-        
-        console.log('📥 Payload recebido:', JSON.stringify(rawData, null, 2));
+          try {
+              const base44 = createClientFromRequest(req);
+              const rawData = await req.json();
+
+              console.log('📥 Payload recebido (completo):', JSON.stringify(rawData, null, 2));
+              console.log('📥 Tipos:', {
+                amount_type: typeof rawData.amount,
+                amount_value: rawData.amount,
+                billing_type: rawData.billing_type,
+                card_data: rawData.card_data ? 'sim' : 'não',
+                buyer_name: rawData.buyer_name
+              });
         
         const {
             auction_id,
