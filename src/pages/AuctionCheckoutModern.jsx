@@ -114,6 +114,14 @@ export default function AuctionCheckoutModern() {
         return false;
       }
     }
+
+    // Valida CPF deve ter 11 dígitos após limpeza
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) {
+      toast.error('CPF deve ter 11 dígitos');
+      return false;
+    }
+
     return true;
   };
 
