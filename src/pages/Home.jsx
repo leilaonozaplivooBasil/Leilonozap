@@ -452,10 +452,10 @@ export default function Home() {
         }
       }).catch(() => {});
 
-      // EXECUTA EM PARALELO - NÃO BLOQUEIA
+      // EXECUTA COM DELAY PARA EVITAR RATE LIMIT
       loadAuctions();
-      loadCurrentUser();
-      loadProductStock();
+      setTimeout(() => loadCurrentUser(), 500);
+      setTimeout(() => loadProductStock(), 1000);
 
       // Banners do cache imediatamente
       const cachedBanners = sessionStorage.getItem('home_banners_cache');
