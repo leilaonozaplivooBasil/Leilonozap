@@ -5,7 +5,7 @@ import { createPageUrl } from "@/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { History, ArrowLeft, TrendingUp, TrendingDown, RefreshCw, DollarSign, Plus, CreditCard, Wallet as WalletIcon } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, Plus, CreditCard, Wallet as WalletIcon, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react";
 import { toast } from "sonner";
 import WalletBalance from "../components/wallet/WalletBalance";
 
