@@ -548,7 +548,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
 
-        <Style>{`
+        <style>{`
           /* Scrollbar Global Minimalista */
           ::-webkit-scrollbar {
             width: 6px;
