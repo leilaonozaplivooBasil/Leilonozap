@@ -170,27 +170,60 @@ Deno.serve(async (req) => {
             creditCardHolderInfo: paymentPayload.creditCardHolderInfo ? 'sim' : 'não'
         });
 
-        const payRes = await fetch('https://api.asaas.com/v3/payments', {
-            method: 'POST',
-            headers: {
-                'access_token': apiKey,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(paymentPayload)
-        });
+        let payData;
+        try {
+            const payRes = await Promise.race([
+                fetch('https://api.asaas.com/v3/payments', {
+                    method: 'POST',
+                    headers: {
+                        'access_token': apiKey,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(paymentPayload)
+                }),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Payment timeout')), 15000))
+            ]);
 
-        const payData = await payRes.json();
-        console.log('📥 Resposta ASAAS Status:', payRes.status);
-        console.log('📥 Resposta ASAAS Completa:', JSON.stringify(payData, null, 2));
+            if (!payRes.ok) {
+                const errorText = await payRes.text();
+                console.error('❌ Erro HTTP Asaas:', { status: payRes.status, body: errorText });
+                try {
+                    payData = JSON.parse(errorText);
+                } catch (e) {
+                    payData = { message: errorText };
+                }
+                return Response.json({ 
+                    success: false,
+                    error: payData.message || `HTTP ${payRes.status}`, 
+                    details: payData.errors,
+                    asaas_status: payRes.status
+                }, { status: 400 });
+            }
 
-        if (!payRes.ok || payData.errors) {
-            console.error('❌ Erro ASAAS (HTTP):', { status: payRes.status, errors: payData.errors, message: payData.message });
-            return Response.json({ 
-                success: false,
-                error: payData.message || payData.errors?.[0]?.description || 'Erro ao processar pagamento', 
-                details: payData.errors,
-                asaas_status: payRes.status
-            }, { status: 400 });
+            payData = await payRes.json();
+            console.log('📥 Resposta ASAAS Status: 200');
+            console.log('📥 Resposta ASAAS Completa:', JSON.stringify(payData, null, 2));
+
+            if (!payData?.id) {
+                console.error('❌ Resposta inválida Asaas (sem ID):', payData);
+                return Response.json({ 
+                    success: false,
+                    error: 'Resposta inválida da API Asaas (sem payment ID)',
+                    asaas_response: payData
+                }, { status: 500 });
+            }
+
+            if (payData.errors) {
+                console.error('❌ Erro Asaas:', { errors: payData.errors, message: payData.message });
+                return Response.json({ 
+                    success: false,
+                    error: payData.message || payData.errors?.[0]?.description || 'Erro ao processar pagamento', 
+                    details: payData.errors
+                }, { status: 400 });
+            }
+        } catch (paymentError) {
+            console.error('❌ Erro ao criar pagamento:', paymentError.message);
+            return Response.json({ error: `Erro ao processar pagamento: ${paymentError.message}` }, { status: 500 });
         }
 
         // 3️⃣ OBTER QR CODE PIX
