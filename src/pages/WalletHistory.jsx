@@ -43,15 +43,24 @@ export default function WalletHistory() {
   const loadTransactions = async (userId) => {
     try {
       setIsLoading(true);
+      console.log("🔍 [WalletHistory] Buscando dados para user_id:", userId);
+      
       const data = await base44.entities.WalletTransaction.filter(
         { user_id: userId },
         "-created_date",
         100
       );
       const depositWallets = await base44.entities.DepositWallet.filter({ user_id: userId });
+      
+      console.log("📊 [WalletHistory] Transações encontradas:", data.length);
+      console.log("💰 [WalletHistory] DepositWallets encontradas:", depositWallets.length, depositWallets);
+      
       setTransactions(data);
       if (depositWallets.length > 0) {
+        console.log("✅ [WalletHistory] Saldo encontrado:", depositWallets[0].balance);
         setWallet(depositWallets[0]);
+      } else {
+        console.warn("⚠️ [WalletHistory] Nenhuma DepositWallet encontrada para user_id:", userId);
       }
     } catch (error) {
       console.error("Erro ao carregar transações:", error);
