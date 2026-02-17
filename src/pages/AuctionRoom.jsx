@@ -1854,11 +1854,11 @@ export default function AuctionRoom() {
         .auction-messages::-webkit-scrollbar-thumb {
           background: linear-gradient(to bottom, #10b981, #059669);
           border-radius: 3px;
-          opacity: 0.6;
+          opacity: 0.3;
         }
         
         .auction-messages::-webkit-scrollbar-thumb:hover {
-          opacity: 1;
+          opacity: 0.6;
           background: linear-gradient(to bottom, #059669, #047857);
         }
         
