@@ -126,7 +126,24 @@ Deno.serve(async (req) => {
             };
         }
 
-        console.log('📤 Enviando ao ASAAS:', JSON.stringify(paymentPayload, null, 2));
+        // 🛡️ VALIDAÇÃO RIGOROSA PRÉ-ENVIO
+        console.log('📋 PAYLOAD PRÉ-ENVIO (Validação):', {
+            customer: typeof paymentPayload.customer,
+            billingType: paymentPayload.billingType,
+            value: { tipo: typeof paymentPayload.value, valor: paymentPayload.value },
+            dueDate: paymentPayload.dueDate,
+            description: paymentPayload.description?.length,
+            externalReference: paymentPayload.externalReference?.length,
+            postalService: paymentPayload.postalService,
+            creditCard: paymentPayload.creditCard ? {
+                holderName: typeof paymentPayload.creditCard.holderName,
+                number: `****${paymentPayload.creditCard.number?.slice(-4)}`,
+                expiryMonth: paymentPayload.creditCard.expiryMonth,
+                expiryYear: paymentPayload.creditCard.expiryYear,
+                ccv: paymentPayload.creditCard.ccv?.length
+            } : null,
+            creditCardHolderInfo: paymentPayload.creditCardHolderInfo ? 'sim' : 'não'
+        });
 
         const payRes = await fetch('https://api.asaas.com/v3/payments', {
             method: 'POST',
