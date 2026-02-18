@@ -55,23 +55,26 @@ export default function DigitalWalletBalance({ userId, showActions = true }) {
 
   return (
     <CardWrapper {...cardProps}>
-      <Card className={`bg-gray-800/60 border-gray-700/50 shadow-lg ${showActions ? 'hover:border-gray-600/70 cursor-pointer transition-all' : ''}`}>
+      <Card className={`backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl ${showActions ? 'hover:border-green-400/30 cursor-pointer transition-all' : ''}`}>
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                <p className="text-gray-400 text-xs font-medium uppercase tracking-widest">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                <p className="text-gray-400 text-sm font-medium uppercase tracking-wider">
                   Carteira Digital
                 </p>
               </div>
-              <p className="text-5xl font-bold text-green-400 mb-2">
+              <p className="text-4xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
                 R$ {balance.toFixed(2)}
               </p>
-              <p className="text-sm text-gray-500">Saldo disponível para leilões</p>
+              <p className="text-xs text-gray-500 mt-1">Saldo disponível para leilões</p>
             </div>
-            <div className="p-4 bg-green-500/20 rounded-2xl border border-green-500/30">
-              <Wallet className="w-8 h-8 text-green-400" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl"></div>
+              <div className="relative p-4 bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-2xl border border-green-400/20">
+                <Wallet className="w-8 h-8 text-green-400" />
+              </div>
             </div>
           </div>
         </CardContent>
