@@ -64,6 +64,15 @@ Deno.serve(async (req) => {
       result.allSales = await base44.asServiceRole.entities.Sale.list('-sale_datetime', 5000);
     }
 
+    if (requestAction === 'full' || requestAction === 'walletDeposits') {
+      const deposits = await base44.asServiceRole.entities.DigitalWalletTransaction.filter(
+        { type: 'deposit', status: 'confirmed' },
+        '-created_date',
+        500
+      );
+      result.walletDeposits = deposits;
+    }
+
     if (requestAction === 'full' || requestAction === 'cashSessions') {
       const allSessions = await base44.asServiceRole.entities.CashRegister.list('-closing_time', 500);
       result.cashSessions = allSessions.filter(s => s.status === 'closed');
