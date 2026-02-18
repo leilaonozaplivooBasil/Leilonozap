@@ -729,8 +729,8 @@ export default function AuctionCheckoutModern() {
           </div>
 
           {/* Coluna Lateral - Resumo do Pedido */}
-          <div className="lg:col-span-1">
-            <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl sticky top-8 h-fit">
+          <div className="lg:col-span-1 order-1 lg:order-2">
+            <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl lg:sticky lg:top-8 lg:h-fit">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <ShoppingCart className="w-5 h-5" />
