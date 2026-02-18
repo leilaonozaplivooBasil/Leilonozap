@@ -762,7 +762,7 @@ export default function AuctionCheckoutModern() {
                 {step === 'info' && (
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-gray-300">Forma de Pagamento</p>
-                    <div className="grid grid-cols-1 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                       <button
                         onClick={() => setPaymentType('PIX')}
                         className={`p-3 rounded-lg border-2 transition-all text-left ${
