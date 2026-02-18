@@ -51,7 +51,7 @@ export default function DigitalWalletBalance({ userId, showActions = true }) {
   }
 
   const CardWrapper = showActions ? Link : 'div';
-  const cardProps = showActions ? { to: createPageUrl('DigitalWalletHistory') } : {};
+  const cardProps = showActions ? { to: createPageUrl('WalletHistory') } : {};
 
   return (
     <CardWrapper {...cardProps}>
