@@ -2869,16 +2869,25 @@ ${boletoInfo}================================
 
                   <div className="border-t border-gray-200 pt-2 mt-2">
                     <div className="flex justify-between font-bold text-base">
-                      <span className="text-gray-900">Total Vendido:</span>
+                      <span className="text-gray-900">Total em Caixa:</span>
                       <span className="text-green-600">
-                        R$ {allSales
-                          .filter(s => {
-                            const saleTime = new Date(s.sale_datetime).getTime();
-                            const openTime = new Date(currentCashRegister.opening_time).getTime();
-                            return saleTime >= openTime;
-                          })
-                          .reduce((sum, s) => sum + s.total_amount, 0)
-                          .toFixed(2)}
+                        R$ {(
+                          allSales
+                            .filter(s => {
+                              const saleTime = new Date(s.sale_datetime).getTime();
+                              const openTime = new Date(currentCashRegister.opening_time).getTime();
+                              return saleTime >= openTime;
+                            })
+                            .reduce((sum, s) => sum + s.total_amount, 0)
+                          +
+                          walletDeposits
+                            .filter(d => {
+                              const depositTime = new Date(d.created_date).getTime();
+                              const openTime = new Date(currentCashRegister.opening_time).getTime();
+                              return depositTime >= openTime;
+                            })
+                            .reduce((sum, d) => sum + d.amount, 0)
+                        ).toFixed(2)}
                       </span>
                     </div>
                   </div>
