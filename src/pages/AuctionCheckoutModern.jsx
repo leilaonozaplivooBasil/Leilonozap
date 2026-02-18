@@ -18,7 +18,9 @@ import {
   AlertCircle,
   Image as ImageIcon,
   Wallet,
-  ChevronDown
+  ChevronDown,
+  User,
+  MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -359,7 +361,7 @@ export default function AuctionCheckoutModern() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white font-bold">
-                            {isPersonalComplete ? <Check className="w-5 h-5" /> : '1'}
+                            {isPersonalComplete ? <Check className="w-5 h-5" /> : <User className="w-5 h-5" />}
                           </div>
                           <div className="text-left">
                             <CardTitle className="text-xl text-white">Dados Pessoais</CardTitle>
@@ -443,7 +445,7 @@ export default function AuctionCheckoutModern() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-white font-bold">
-                            {isAddressComplete ? <Check className="w-5 h-5" /> : '2'}
+                            {isAddressComplete ? <Check className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
                           </div>
                           <div className="text-left">
                             <CardTitle className="text-xl text-white">Endereço de Entrega</CardTitle>
