@@ -708,9 +708,9 @@ export default function AuctionCheckoutModern() {
                         </Button>
 
                         <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                          <p className="text-xs text-gray-400 mb-2">Ou copie e cole este código:</p>
-                          <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
-                        </div>
+                           <p className="text-xs text-gray-300 mb-2">Ou copie e cole este código:</p>
+                           <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                         </div>
                       </div>
                     ) : (
                       <div className="text-center space-y-4">
