@@ -182,15 +182,20 @@ Deno.serve(async (req) => {
         let paymentStatus = 'pending';
 
         if (billing_type === 'PIX') {
+            const qrController = new AbortController();
+            const qrTimeout = setTimeout(() => qrController.abort(), 10000); // 10s timeout
+            
             const qrCodeResponse = await fetch(
                 `https://api.asaas.com/v3/payments/${paymentData.id}/pixQrCode`,
                 {
                     headers: {
                         'access_token': apiKey,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: qrController.signal
                 }
             );
+            clearTimeout(qrTimeout);
 
             const qrCodeData = await qrCodeResponse.json();
             
