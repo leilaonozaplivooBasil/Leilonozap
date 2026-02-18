@@ -378,7 +378,7 @@ export default function AuctionCheckoutModern() {
                   {expandedSection === 'personal' && (
                     <CardContent className="space-y-4 pt-0">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-white mb-2">
                           Nome Completo
                         </label>
                         <Input
@@ -392,7 +392,7 @@ export default function AuctionCheckoutModern() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             CPF
                           </label>
                           <Input
@@ -404,7 +404,7 @@ export default function AuctionCheckoutModern() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             Telefone
                           </label>
                           <Input
@@ -418,7 +418,7 @@ export default function AuctionCheckoutModern() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-white mb-2">
                           Email
                         </label>
                         <Input
@@ -463,7 +463,7 @@ export default function AuctionCheckoutModern() {
                     <CardContent className="space-y-4 pt-0">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             CEP
                           </label>
                           <Input
@@ -476,7 +476,7 @@ export default function AuctionCheckoutModern() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             Número
                           </label>
                           <Input
@@ -490,7 +490,7 @@ export default function AuctionCheckoutModern() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-white mb-2">
                           Endereço
                         </label>
                         <Input
@@ -504,7 +504,7 @@ export default function AuctionCheckoutModern() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             Bairro
                           </label>
                           <Input
@@ -516,7 +516,7 @@ export default function AuctionCheckoutModern() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             Complemento
                           </label>
                           <Input
@@ -531,7 +531,7 @@ export default function AuctionCheckoutModern() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             Cidade
                           </label>
                           <Input
@@ -543,7 +543,7 @@ export default function AuctionCheckoutModern() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             UF
                           </label>
                           <Input
@@ -580,7 +580,7 @@ export default function AuctionCheckoutModern() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-white mb-2">
                           Nome do Titular
                         </label>
                         <Input
@@ -593,7 +593,7 @@ export default function AuctionCheckoutModern() {
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-2">
+                        <label className="block text-sm font-medium text-white mb-2">
                           Número do Cartão
                         </label>
                         <Input
@@ -612,7 +612,7 @@ export default function AuctionCheckoutModern() {
 
                       <div className="grid grid-cols-3 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             Mês
                           </label>
                           <Input
@@ -629,7 +629,7 @@ export default function AuctionCheckoutModern() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             Ano
                           </label>
                           <Input
@@ -645,7 +645,7 @@ export default function AuctionCheckoutModern() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-2">
+                          <label className="block text-sm font-medium text-white mb-2">
                             CVV
                           </label>
                           <Input
