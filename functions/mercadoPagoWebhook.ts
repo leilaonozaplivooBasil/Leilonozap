@@ -39,6 +39,35 @@ Deno.serve(async (req) => {
 
         console.log('✅ Payment ID extraído:', paymentId);
 
+        // 🛡️ IDEMPOTÊNCIA: Verificar se evento já foi processado (similar ao Asaas WebhookLog)
+        try {
+            const existingLogs = await base44.asServiceRole.entities.WebhookLog.filter(
+                { resource_id: paymentId.toString(), event_type: data.action || 'payment' },
+                null,
+                1
+            );
+
+            if (existingLogs && existingLogs.length > 0) {
+                console.log('⏭️ [MP] Evento já processado (idempotência):', paymentId);
+                return Response.json({ received: true, reason: 'already_processed' });
+            }
+        } catch (idempErr) {
+            console.warn('⚠️ [MP] Erro ao verificar idempotência:', idempErr.message);
+        }
+
+        // 🛡️ Registrar evento no WebhookLog para idempotência futura
+        try {
+            await base44.asServiceRole.entities.WebhookLog.create({
+                provider: 'MERCADOPAGO',
+                event_type: data.action || 'payment',
+                resource_id: paymentId.toString(),
+                body: data,
+                processed: false
+            });
+        } catch (logErr) {
+            console.warn('⚠️ [MP] Erro ao registrar WebhookLog:', logErr.message);
+        }
+
         // Buscar payment no MP para obter external_reference
         const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN')?.trim();
         if (!mpAccessToken) {
@@ -172,6 +201,32 @@ Deno.serve(async (req) => {
 
                 console.log('✅ Leilão atualizado:', auction.id);
             }
+        }
+
+        // 🔗 [EVENT ADAPTER] Exportar evento de performance (assíncrono, não-bloqueante)
+        try {
+            const eventPayload = {
+                type: 'performance',
+                subtype: mpPayment.catalog_sale_id ? 'catalog_sale' : mpPayment.auction_id ? 'auction_sale' : 'other',
+                gateway: 'mercadopago',
+                payment_id: paymentId.toString(),
+                amount: mpPayment.amount || mpPayment.value || 0,
+                currency: 'BRL',
+                catalog_sale_id: mpPayment.catalog_sale_id || null,
+                auction_id: mpPayment.auction_id || null,
+                buyer_id: mpPayment.buyer_id || null,
+                confirmed_at: new Date().toISOString()
+            };
+
+            base44.asServiceRole.functions.invoke('queuePerformanceEvent', {
+                source_gateway: 'mercadopago',
+                source_payment_id: paymentId.toString(),
+                source_entity_type: mpPayment.catalog_sale_id ? 'CatalogSale' : mpPayment.auction_id ? 'Auction' : 'Other',
+                source_entity_id: mpPayment.catalog_sale_id || mpPayment.auction_id || null,
+                payload: eventPayload
+            }).catch(evtErr => console.warn('⚠️ [EventAdapter] Falha ao enfileirar (MP):', evtErr.message));
+        } catch (adapterErr) {
+            console.warn('⚠️ [EventAdapter] Erro não-bloqueante (MP):', adapterErr.message);
         }
 
         console.log('🎉 WEBHOOK PROCESSADO COM SUCESSO ✅', {
