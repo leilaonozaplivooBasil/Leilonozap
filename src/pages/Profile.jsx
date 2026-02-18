@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
-import WalletBalance from '../components/wallet/WalletBalance';
+import DigitalWalletBalance from '../components/wallet/DigitalWalletBalance';
 
 export default function Profile() {
   const navigate = useNavigate();
@@ -808,8 +808,8 @@ export default function Profile() {
           </div>
           {/* Stats & Actions */}
           <div className="space-y-6">
-            {/* Wallet Balance */}
-            <WalletBalance userId={currentUser.id} showActions={true} />
+            {/* Digital Wallet Balance */}
+            <DigitalWalletBalance userId={currentUser.id} showActions={true} />
             
             {/* Statistics */}
             <Card className={isSaiDeBaixo ? 'bg-white border border-gray-200 shadow-sm' : 'bg-gray-800/30 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/20'}>

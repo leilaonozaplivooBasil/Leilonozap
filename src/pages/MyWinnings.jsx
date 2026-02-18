@@ -119,10 +119,10 @@ export default function MyWinningsPage() {
                 const user = JSON.parse(savedUser);
                 setCurrentUser(user);
                 
-                // Busca saldo da carteira
-                const wallets = await base44.entities.Wallet.filter({ user_id: user.id });
-                if (wallets && wallets.length > 0) {
-                    setWalletBalance(wallets[0].balance || 0);
+                // Busca saldo da carteira digital
+                const digitalWallets = await base44.entities.DigitalWallet.filter({ user_id: user.id });
+                if (digitalWallets && digitalWallets.length > 0) {
+                    setWalletBalance(digitalWallets[0].balance || 0);
                 }
                 
                 const allAuctions = await Auction.list("-updated_date", 500);
