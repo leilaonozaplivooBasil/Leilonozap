@@ -147,14 +147,19 @@ Deno.serve(async (req) => {
 
         console.log('📤 Enviando payload para ASAAS:', JSON.stringify(paymentPayload, null, 2));
         
+        const paymentController = new AbortController();
+        const paymentTimeout = setTimeout(() => paymentController.abort(), 15000); // 15s timeout
+        
         const paymentResponse = await fetch('https://api.asaas.com/v3/payments', {
             method: 'POST',
             headers: {
                 'access_token': apiKey,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(paymentPayload)
+            body: JSON.stringify(paymentPayload),
+            signal: paymentController.signal
         });
+        clearTimeout(paymentTimeout);
 
         const paymentData = await paymentResponse.json();
         
