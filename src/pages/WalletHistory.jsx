@@ -24,73 +24,16 @@ export default function WalletHistory() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const savedUserJSON = localStorage.getItem('currentUser');
-        const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-        
-        if (savedUserJSON && isLoggedIn) {
-          let user = JSON.parse(savedUserJSON);
-          
-          console.log("🔍 [WalletHistory] Usuário do cache:", { id: user.id, email: user.email });
-          
-          // Valida se o email é realmente um email válido
-          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-          const isInvalidEmail = !user.email || !emailRegex.test(user.email);
-          const isInvalidId = !user.id || user.id.length < 8 || user.id.includes('index-') || user.id.includes('js-c');
-          
-          if (isInvalidEmail || isInvalidId) {
-            console.warn("⚠️ [WalletHistory] Dados corrompidos detectados - Email inválido:", user.email, "ID:", user.id);
-            console.warn("⚠️ Tentando recuperar usuário da plataforma...");
-            
-            // Limpa o cache corrompido
-            localStorage.removeItem('currentUser');
-            sessionStorage.removeItem('isLoggedIn');
-            
-            // Tenta buscar o usuário da plataforma Base44
-            try {
-              const platformUser = await base44.auth.me();
-              console.log("🔍 [WalletHistory] Dados da plataforma:", platformUser);
-              
-              if (platformUser && platformUser.email && emailRegex.test(platformUser.email)) {
-                console.log("✅ [WalletHistory] Email válido da plataforma:", platformUser.email);
-                
-                // Busca usuário no AppUser pelo email da plataforma
-                const appUsers = await base44.entities.AppUser.filter({ email: platformUser.email });
-                console.log("🔍 [WalletHistory] AppUsers encontrados:", appUsers.length);
-                
-                if (appUsers.length > 0) {
-                  user = appUsers[0];
-                  console.log("✅ [WalletHistory] Usuário recuperado do AppUser:", { id: user.id, email: user.email });
-                } else {
-                  console.warn("⚠️ [WalletHistory] Nenhum AppUser encontrado, usando dados da plataforma");
-                  user = platformUser;
-                }
-                
-                localStorage.setItem('currentUser', JSON.stringify(user));
-                sessionStorage.setItem('isLoggedIn', 'true');
-              } else {
-                console.error("❌ [WalletHistory] Email inválido da plataforma:", platformUser?.email);
-                throw new Error("Plataforma não retornou email válido");
-              }
-            } catch (platformError) {
-              console.error("❌ Erro ao recuperar da plataforma:", platformError.message);
-              toast.error("Sessão expirada. Faça login novamente.");
-              navigate(createPageUrl("Home"));
-              return;
-            }
-          }
-          
-          setCurrentUser(user);
-          loadTransactions(user.id);
-        } else {
-          toast.error("Faça login para continuar");
-          navigate(createPageUrl("Home"));
-        }
-      } catch (error) {
-        console.error("❌ Erro ao carregar usuário:", error.message);
-        localStorage.removeItem('currentUser');
-        sessionStorage.removeItem('isLoggedIn');
+    const loadUser = () => {
+      const savedUserJSON = localStorage.getItem('currentUser');
+      const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+      
+      if (savedUserJSON && isLoggedIn) {
+        const user = JSON.parse(savedUserJSON);
+        setCurrentUser(user);
+        loadTransactions(user.id);
+      } else {
+        toast.error("Faça login para continuar");
         navigate(createPageUrl("Home"));
       }
     };
@@ -100,24 +43,15 @@ export default function WalletHistory() {
   const loadTransactions = async (userId) => {
     try {
       setIsLoading(true);
-      console.log("🔍 [WalletHistory] Buscando dados para user_id:", userId);
-      
       const data = await base44.entities.WalletTransaction.filter(
         { user_id: userId },
         "-created_date",
         100
       );
-      const depositWallets = await base44.entities.DepositWallet.filter({ user_id: userId });
-      
-      console.log("📊 [WalletHistory] Transações encontradas:", data.length);
-      console.log("💰 [WalletHistory] DepositWallets encontradas:", depositWallets.length, depositWallets);
-      
+      const wallets = await base44.entities.Wallet.filter({ user_id: userId });
       setTransactions(data);
-      if (depositWallets.length > 0) {
-        console.log("✅ [WalletHistory] Saldo encontrado:", depositWallets[0].balance);
-        setWallet(depositWallets[0]);
-      } else {
-        console.warn("⚠️ [WalletHistory] Nenhuma DepositWallet encontrada para user_id:", userId);
+      if (wallets.length > 0) {
+        setWallet(wallets[0]);
       }
     } catch (error) {
       console.error("Erro ao carregar transações:", error);

@@ -169,94 +169,68 @@ export default function AuctionCheckoutModern() {
   };
 
   const handleCreatePayment = async () => {
-    // Validação básica
-    if (!firstName.trim() || !email.trim() || !phone.trim() || !cpf.trim()) {
-      toast.error('Preencha todos os dados pessoais');
-      return;
+  if (!validateForm()) return;
+  if (!validateCardData()) return;
+  if (!auction) {
+  toast.error('Pedido não encontrado');
+  return;
+  }
+
+  setIsProcessing(true);
+  toast.loading('Processando pagamento...', { id: 'checkout-loading' });
+
+  try {
+  const amount = isWalletDeposit ? depositAmount : auction.current_price;
+  const cardData = paymentType === 'CREDIT_CARD' ? {
+    holderName: cardHolder.trim(),
+    number: cardNumber.replace(/\D/g, ''),
+    expiryMonth: parseInt(cardMonth),
+    expiryYear: parseInt(cardYear),
+    ccv: cardCvv.replace(/\D/g, ''),
+    address: {
+      zip_code: addressZip.replace(/\D/g, ''),
+      number: addressNumber,
+      complement: addressComplement
     }
+  } : null;
 
-    if (!addressStreet.trim() || !addressNumber.trim() || !addressCity.trim() || !addressState.trim() || !addressZip.trim()) {
-      toast.error('Preencha o endereço completo');
-      return;
-    }
+  console.log('📤 Enviando para backend:', { auction_id: isWalletDeposit ? null : auction.id, amount, billing_type: paymentType });
 
-    if (paymentType === 'CREDIT_CARD') {
-      const cardClean = cardNumber.replace(/\D/g, '');
-      if (cardClean.length !== 16) {
-        toast.error('Cartão deve ter 16 dígitos');
-        return;
-      }
-      if (!cardMonth || !cardYear || !cardCvv.trim() || !cardHolder.trim()) {
-        toast.error('Preencha todos os dados do cartão');
-        return;
-      }
-    }
+  const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
+    auction_id: isWalletDeposit ? null : auction.id,
+    buyer_name: firstName.trim(),
+    buyer_email: email.trim(),
+    buyer_cpf: cpf.trim(),
+    buyer_phone: phone.trim(),
+    amount: amount,
+    billing_type: paymentType,
+    description: isWalletDeposit ? `Depósito de R$ ${amount.toFixed(2)} na carteira` : `Arremate - ${auction.title}`,
+    card_data: cardData
+  });
 
-    if (!auction) {
-      toast.error('Pedido não encontrado');
-      return;
-    }
+  console.log('📥 Resposta do backend:', paymentResponse);
 
-    setIsProcessing(true);
+  setIsProcessing(false);
+  toast.dismiss('checkout-loading');
 
-    try {
-      const amount = isWalletDeposit ? depositAmount : auction.current_price;
+  // ✅ CORREÇÃO: Verificar a estrutura correta da resposta
+  const responseData = paymentResponse?.data || paymentResponse;
 
-      const payload = {
-        auction_id: !isWalletDeposit ? auction.id : null,
-        buyer_name: firstName.trim(),
-        buyer_email: email.trim(),
-        buyer_cpf: cpf.replace(/\D/g, ''),
-        buyer_phone: phone.replace(/\D/g, ''),
-        amount: Number(amount),
-        billing_type: paymentType,
-        description: isWalletDeposit ? 'Depósito na carteira' : `Arremate - ${auction.title}`
-      };
-
-      if (paymentType === 'CREDIT_CARD') {
-        // Garante que expiryYear tem 4 dígitos
-        let yearFinal = parseInt(cardYear);
-        if (yearFinal < 100) {
-          yearFinal = yearFinal + 2000; // 25 vira 2025
-        }
-
-        payload.card_data = {
-          holderName: cardHolder.trim(),
-          number: cardNumber.replace(/\D/g, ''),
-          expiryMonth: parseInt(cardMonth),
-          expiryYear: yearFinal,
-          ccv: cardCvv.replace(/\D/g, ''),
-          address: {
-            zip_code: addressZip.replace(/\D/g, ''),
-            number: addressNumber,
-            complement: addressComplement,
-            street: addressStreet,
-            city: addressCity,
-            state: addressState
-          }
-        };
-      }
-
-      console.log('📤 Enviando ao Asaas:', payload);
-
-      const response = await base44.functions.invoke('createAsaasPayment', payload);
-      const data = response?.data || response;
-
-      console.log('📥 Resposta Asaas:', data);
-
-      if (data?.success) {
-        setPixData(data);
-        setStep('payment');
-        toast.success('✅ Pagamento criado com sucesso!');
-      } else {
-        toast.error(data?.error || 'Erro ao criar pagamento');
-      }
-    } catch (error) {
-      console.error('❌ Erro Asaas:', error);
-      toast.error(`Erro: ${error.message}`);
-    } finally {
-      setIsProcessing(false);
-    }
+  if (responseData?.success === true) {
+    setPixData(responseData);
+    setStep('payment');
+    toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
+  } else {
+    const errorMsg = responseData?.error || 'Erro desconhecido ao processar pagamento';
+    console.error('❌ Erro na resposta:', errorMsg);
+    toast.error(errorMsg);
+  }
+  } catch (error) {
+  console.error('❌ Erro de rede/sistema:', error.message);
+  setIsProcessing(false);
+  toast.dismiss('checkout-loading');
+  toast.error(`Erro: ${error.message}`);
+  }
   };
 
   useEffect(() => {
