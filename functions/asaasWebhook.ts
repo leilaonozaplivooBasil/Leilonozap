@@ -300,6 +300,33 @@ Deno.serve(async (req) => {
                     }
                 }
 
+                // 🔗 [EVENT ADAPTER] Exportar evento de performance (assíncrono, não-bloqueante)
+                try {
+                    const eventPayload = {
+                        type: 'performance',
+                        subtype: asaasPayment.catalog_sale_id ? 'catalog_sale' : asaasPayment.auction_id ? 'auction_sale' : asaasPayment.is_wallet_deposit ? 'wallet_deposit' : 'other',
+                        gateway: 'asaas',
+                        payment_id: paymentId,
+                        amount: asaasPayment.value || 0,
+                        currency: 'BRL',
+                        catalog_sale_id: asaasPayment.catalog_sale_id || null,
+                        auction_id: asaasPayment.auction_id || null,
+                        buyer_id: asaasPayment.wallet_deposit_user_id || null,
+                        partner_plan_code: asaasPayment.partner_plan_code || null,
+                        confirmed_at: new Date().toISOString()
+                    };
+
+                    base44.asServiceRole.functions.invoke('queuePerformanceEvent', {
+                        source_gateway: 'asaas',
+                        source_payment_id: paymentId,
+                        source_entity_type: asaasPayment.catalog_sale_id ? 'CatalogSale' : asaasPayment.auction_id ? 'Auction' : 'WalletDeposit',
+                        source_entity_id: asaasPayment.catalog_sale_id || asaasPayment.auction_id || asaasPayment.wallet_deposit_user_id || null,
+                        payload: eventPayload
+                    }).catch(evtErr => console.warn('⚠️ [EventAdapter] Falha ao enfileirar (Asaas):', evtErr.message));
+                } catch (adapterErr) {
+                    console.warn('⚠️ [EventAdapter] Erro não-bloqueante (Asaas):', adapterErr.message);
+                }
+
                 // 🎉 Log de sucesso
                 await base44.asServiceRole.entities.SystemLog.create({
                     step: 'ASAAS_PAYMENT_CONFIRMED',
