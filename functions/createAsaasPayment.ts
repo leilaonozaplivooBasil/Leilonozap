@@ -426,8 +426,18 @@ Deno.serve(async (req) => {
         });
 
     } catch (error) {
-        console.error('❌ Erro em createAsaasPayment:', error);
+        const executionTime = Date.now() - startTime;
+        console.error(`⏱️ ERRO após ${executionTime}ms em createAsaasPayment:`, error);
         console.error('❌ Stack completo:', error.stack);
+        
+        // Tratamento específico para timeout
+        if (error.name === 'AbortError') {
+            console.error('⏱️ TIMEOUT detectado - operação cancelada');
+            return Response.json({ 
+                error: 'Timeout ao comunicar com ASAAS',
+                execution_time_ms: executionTime
+            }, { status: 504 });
+        }
         
         // Log detalhado no SystemLog
         try {
