@@ -775,7 +775,9 @@ export default function AuctionCheckoutModern() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <QrCode className={`w-4 h-4 ${paymentType === 'PIX' ? 'text-green-400' : 'text-gray-400'}`} />
+                          <div className={`flex-shrink-0 p-2 rounded-lg ${paymentType === 'PIX' ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600'}`}>
+                            <QrCode className={`w-4 h-4 ${paymentType === 'PIX' ? 'text-green-400' : 'text-gray-400'}`} />
+                          </div>
                           <div>
                             <p className="font-semibold text-white">PIX</p>
                             <p className="text-xs text-gray-400">Aprovação imediata</p>
@@ -791,7 +793,9 @@ export default function AuctionCheckoutModern() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <CreditCard className={`w-4 h-4 ${paymentType === 'CREDIT_CARD' ? 'text-green-400' : 'text-gray-400'}`} />
+                          <div className={`flex-shrink-0 p-2 rounded-lg ${paymentType === 'CREDIT_CARD' ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600'}`}>
+                            <CreditCard className={`w-4 h-4 ${paymentType === 'CREDIT_CARD' ? 'text-green-400' : 'text-gray-400'}`} />
+                          </div>
                           <div>
                             <p className="font-semibold text-white">Cartão de Crédito</p>
                             <p className="text-xs text-gray-400">Em até 12x</p>
