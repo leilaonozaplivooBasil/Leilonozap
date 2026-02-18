@@ -235,6 +235,32 @@ Deno.serve(async (req) => {
                                 description: `Depósito via ${asaasPayment.billing_type} - ${paymentId}`
                             });
                             console.log('✅ Transação de Digital Wallet registrada');
+
+                            // 🆕 ATUALIZAR CAIXA DO PDV
+                            const openCashes = await base44.asServiceRole.entities.CashRegister.filter(
+                                { status: 'open' },
+                                '-opening_time',
+                                1
+                            );
+                            if (openCashes && openCashes.length > 0) {
+                                const register = openCashes[0];
+                                const methodField = asaasPayment.billing_type === 'PIX' 
+                                    ? 'total_pix' 
+                                    : asaasPayment.billing_type === 'CREDIT_CARD'
+                                    ? 'total_credit'
+                                    : 'total_cash';
+
+                                const newValue = (register[methodField] || 0) + asaasPayment.value;
+                                const newTotalSales = (register.total_sales || 0) + asaasPayment.value;
+
+                                await base44.asServiceRole.entities.CashRegister.update(register.id, {
+                                    [methodField]: newValue,
+                                    total_sales: newTotalSales,
+                                    transactions_count: (register.transactions_count || 0) + 1
+                                });
+
+                                console.log('✅ CashRegister atualizado:', methodField, newValue);
+                            }
                         } else {
                             // CREDITAR WALLET DE COMISSÕES (sistema antigo)
                             const wallets = await base44.asServiceRole.entities.Wallet.filter(
