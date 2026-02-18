@@ -197,7 +197,7 @@ export default function AddFunds() {
                           )}
 
                           <div className={`transition-all ${isSelected ? "scale-110" : ""}`}>
-                            <p className={`text-4xl font-bold mb-2 transition-all ${
+                            <p className={`text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 transition-all ${
                               isSelected 
                                 ? "text-transparent bg-gradient-to-br from-white to-green-200 bg-clip-text" 
                                 : "text-green-400"
