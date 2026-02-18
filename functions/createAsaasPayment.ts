@@ -408,6 +408,9 @@ Deno.serve(async (req) => {
         }
 
         // Retornar dados para o frontend
+        const executionTime = Date.now() - startTime;
+        console.log(`⏱️ END createAsaasPayment - Tempo total: ${executionTime}ms`);
+        
         return Response.json({
             success: true,
             payment_id: paymentData.id,
@@ -418,7 +421,8 @@ Deno.serve(async (req) => {
             boleto_url: paymentData.bankSlipUrl,
             invoice_url: paymentData.invoiceUrl,
             due_date: paymentData.dueDate,
-            asaas_status: paymentData.status
+            asaas_status: paymentData.status,
+            execution_time_ms: executionTime
         });
 
     } catch (error) {
