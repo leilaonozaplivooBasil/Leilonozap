@@ -68,6 +68,9 @@ Deno.serve(async (req) => {
             console.log('✅ Cliente existente encontrado:', customerId);
         } else {
             // Criar novo cliente
+            const createController = new AbortController();
+            const createTimeout = setTimeout(() => createController.abort(), 10000); // 10s timeout
+            
             const customerResponse = await fetch('https://api.asaas.com/v3/customers', {
                 method: 'POST',
                 headers: {
@@ -80,8 +83,10 @@ Deno.serve(async (req) => {
                     cpfCnpj: cleanCpf,
                     mobilePhone: cleanPhone,
                     notificationDisabled: false
-                })
+                }),
+                signal: createController.signal
             });
+            clearTimeout(createTimeout);
 
             const customerData = await customerResponse.json();
             
