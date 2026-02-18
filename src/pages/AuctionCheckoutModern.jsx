@@ -809,7 +809,7 @@ export default function AuctionCheckoutModern() {
                         handleCreatePayment();
                       }}
                       disabled={isProcessing}
-                      className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-base"
+                      className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-base mt-4"
                     >
                       {isProcessing ? (
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
