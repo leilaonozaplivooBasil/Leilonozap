@@ -1,6 +1,9 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 Deno.serve(async (req) => {
+    const startTime = Date.now();
+    console.log('⏱️ START createAsaasPayment');
+    
     try {
         const base44 = createClientFromRequest(req);
         
@@ -17,7 +20,8 @@ Deno.serve(async (req) => {
             amount,
             billing_type = 'PIX', // PIX ou CREDIT_CARD
             description,
-            card_data // Dados do cartão (se CREDIT_CARD)
+            card_data, // Dados do cartão (se CREDIT_CARD)
+            deposit_type // 'digital_wallet' ou null (para identificar tipo de depósito)
         } = await req.json();
 
         // Validações
@@ -42,15 +46,20 @@ Deno.serve(async (req) => {
         let customerId = null;
         
         // Buscar cliente existente por CPF
+        const searchController = new AbortController();
+        const searchTimeout = setTimeout(() => searchController.abort(), 10000); // 10s timeout
+        
         const searchResponse = await fetch(
             `https://api.asaas.com/v3/customers?cpfCnpj=${cleanCpf}`,
             {
                 headers: {
                     'access_token': apiKey,
                     'Content-Type': 'application/json'
-                }
+                },
+                signal: searchController.signal
             }
         );
+        clearTimeout(searchTimeout);
         
         const searchData = await searchResponse.json();
         
@@ -59,6 +68,9 @@ Deno.serve(async (req) => {
             console.log('✅ Cliente existente encontrado:', customerId);
         } else {
             // Criar novo cliente
+            const createController = new AbortController();
+            const createTimeout = setTimeout(() => createController.abort(), 10000); // 10s timeout
+            
             const customerResponse = await fetch('https://api.asaas.com/v3/customers', {
                 method: 'POST',
                 headers: {
@@ -71,8 +83,10 @@ Deno.serve(async (req) => {
                     cpfCnpj: cleanCpf,
                     mobilePhone: cleanPhone,
                     notificationDisabled: false
-                })
+                }),
+                signal: createController.signal
             });
+            clearTimeout(createTimeout);
 
             const customerData = await customerResponse.json();
             
@@ -133,14 +147,19 @@ Deno.serve(async (req) => {
 
         console.log('📤 Enviando payload para ASAAS:', JSON.stringify(paymentPayload, null, 2));
         
+        const paymentController = new AbortController();
+        const paymentTimeout = setTimeout(() => paymentController.abort(), 15000); // 15s timeout
+        
         const paymentResponse = await fetch('https://api.asaas.com/v3/payments', {
             method: 'POST',
             headers: {
                 'access_token': apiKey,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(paymentPayload)
+            body: JSON.stringify(paymentPayload),
+            signal: paymentController.signal
         });
+        clearTimeout(paymentTimeout);
 
         const paymentData = await paymentResponse.json();
         
@@ -163,15 +182,20 @@ Deno.serve(async (req) => {
         let paymentStatus = 'pending';
 
         if (billing_type === 'PIX') {
+            const qrController = new AbortController();
+            const qrTimeout = setTimeout(() => qrController.abort(), 10000); // 10s timeout
+            
             const qrCodeResponse = await fetch(
                 `https://api.asaas.com/v3/payments/${paymentData.id}/pixQrCode`,
                 {
                     headers: {
                         'access_token': apiKey,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    signal: qrController.signal
                 }
             );
+            clearTimeout(qrTimeout);
 
             const qrCodeData = await qrCodeResponse.json();
             
@@ -194,6 +218,7 @@ Deno.serve(async (req) => {
 
         // 🔒 PASSO 4: Registrar no banco de dados
          const isWalletDeposit = !catalog_sale_id && !auction_id;
+         const isDigitalWallet = deposit_type === 'digital_wallet';
 
          // Para depósito de carteira, obter user_id do buyer_email (com fallback para CPF e telefone)
          let walletDepositUserId = null;
@@ -258,7 +283,7 @@ Deno.serve(async (req) => {
               billing_type: billing_type,
               value: amount,
               status: paymentStatus,
-              external_reference: externalReference || paymentData.id,
+              external_reference: isDigitalWallet ? 'digital-wallet-deposit' : (externalReference || paymentData.id),
               catalog_sale_id: catalog_sale_id || null,
               auction_id: auction_id || null,
               wallet_deposit_user_id: walletDepositUserId,
@@ -303,41 +328,79 @@ Deno.serve(async (req) => {
                 });
                 console.log('✅ Auction atualizada para PAID');
             } else if (isWalletDeposit && walletDepositUserId) {
-                // 🆕 CREDITAR DEPOSITWALLET INSTANTANEAMENTE PARA CARTÃO
-                console.log('💳 Creditando DepositWallet instantaneamente (cartão aprovado)...');
+                // 🆕 CREDITAR CARTEIRA INSTANTANEAMENTE PARA CARTÃO (DIGITAL OU COMISSÕES)
+                console.log('💳 Creditando carteira instantaneamente (cartão aprovado)...');
                 try {
-                    const depositWallets = await base44.asServiceRole.entities.DepositWallet.filter(
-                        { user_id: walletDepositUserId },
-                        null,
-                        1
-                    );
+                    if (isDigitalWallet) {
+                        // CREDITAR DIGITAL WALLET
+                        const digitalWallets = await base44.asServiceRole.entities.DigitalWallet.filter(
+                            { user_id: walletDepositUserId },
+                            null,
+                            1
+                        );
 
-                    let depositWallet;
-                    if (depositWallets && depositWallets.length > 0) {
-                        depositWallet = depositWallets[0];
-                        const newBalance = (depositWallet.balance || 0) + amount;
-                        await base44.asServiceRole.entities.DepositWallet.update(depositWallet.id, {
-                            balance: newBalance
-                        });
-                        console.log('✅ DepositWallet creditada instantaneamente:', newBalance);
-                    } else {
-                        await base44.asServiceRole.entities.DepositWallet.create({
+                        let digitalWallet;
+                        if (digitalWallets && digitalWallets.length > 0) {
+                            digitalWallet = digitalWallets[0];
+                            const newBalance = (digitalWallet.balance || 0) + amount;
+                            await base44.asServiceRole.entities.DigitalWallet.update(digitalWallet.id, {
+                                balance: newBalance
+                            });
+                            console.log('✅ Digital Wallet creditada instantaneamente:', newBalance);
+                        } else {
+                            await base44.asServiceRole.entities.DigitalWallet.create({
+                                user_id: walletDepositUserId,
+                                balance: amount
+                            });
+                            console.log('✅ Digital Wallet criada com saldo:', amount);
+                        }
+
+                        // Registrar transação digital
+                        await base44.asServiceRole.entities.DigitalWalletTransaction.create({
                             user_id: walletDepositUserId,
-                            balance: amount
+                            type: 'deposit',
+                            direction: 'credit',
+                            amount: amount,
+                            status: 'confirmed',
+                            related_payment_id: paymentData.id,
+                            description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
                         });
-                        console.log('✅ DepositWallet criada com saldo:', amount);
-                    }
+                        console.log('✅ Transação de Digital Wallet registrada');
+                    } else {
+                        // CREDITAR WALLET DE COMISSÕES
+                        const wallets = await base44.asServiceRole.entities.Wallet.filter(
+                            { user_id: walletDepositUserId },
+                            null,
+                            1
+                        );
 
-                    // Registrar transação
-                    await base44.asServiceRole.entities.WalletTransaction.create({
-                        user_id: walletDepositUserId,
-                        type: 'deposit',
-                        direction: 'credit',
-                        amount: amount,
-                        status: 'confirmed',
-                        description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
-                    });
-                    console.log('✅ Transação de wallet registrada');
+                        let wallet;
+                        if (wallets && wallets.length > 0) {
+                            wallet = wallets[0];
+                            const newBalance = (wallet.balance || 0) + amount;
+                            await base44.asServiceRole.entities.Wallet.update(wallet.id, {
+                                balance: newBalance
+                            });
+                            console.log('✅ Wallet de Comissões creditada instantaneamente:', newBalance);
+                        } else {
+                            await base44.asServiceRole.entities.Wallet.create({
+                                user_id: walletDepositUserId,
+                                balance: amount
+                            });
+                            console.log('✅ Wallet de Comissões criada com saldo:', amount);
+                        }
+
+                        // Registrar transação de comissões
+                        await base44.asServiceRole.entities.WalletTransaction.create({
+                            user_id: walletDepositUserId,
+                            type: 'deposit',
+                            direction: 'credit',
+                            amount: amount,
+                            status: 'confirmed',
+                            description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
+                        });
+                        console.log('✅ Transação de Wallet registrada');
+                    }
                 } catch (walletErr) {
                     console.error('❌ Erro ao creditar carteira:', walletErr.message);
                 }
@@ -345,6 +408,9 @@ Deno.serve(async (req) => {
         }
 
         // Retornar dados para o frontend
+        const executionTime = Date.now() - startTime;
+        console.log(`⏱️ END createAsaasPayment - Tempo total: ${executionTime}ms`);
+        
         return Response.json({
             success: true,
             payment_id: paymentData.id,
@@ -355,12 +421,23 @@ Deno.serve(async (req) => {
             boleto_url: paymentData.bankSlipUrl,
             invoice_url: paymentData.invoiceUrl,
             due_date: paymentData.dueDate,
-            asaas_status: paymentData.status
+            asaas_status: paymentData.status,
+            execution_time_ms: executionTime
         });
 
     } catch (error) {
-        console.error('❌ Erro em createAsaasPayment:', error);
+        const executionTime = Date.now() - startTime;
+        console.error(`⏱️ ERRO após ${executionTime}ms em createAsaasPayment:`, error);
         console.error('❌ Stack completo:', error.stack);
+        
+        // Tratamento específico para timeout
+        if (error.name === 'AbortError') {
+            console.error('⏱️ TIMEOUT detectado - operação cancelada');
+            return Response.json({ 
+                error: 'Timeout ao comunicar com ASAAS',
+                execution_time_ms: executionTime
+            }, { status: 504 });
+        }
         
         // Log detalhado no SystemLog
         try {

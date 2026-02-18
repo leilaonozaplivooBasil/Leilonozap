@@ -159,14 +159,12 @@ export default function AuctionRoom() {
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
         
-        // 🆕 Carrega saldo da carteira de depósitos
+        // 🆕 Carrega saldo da carteira
         try {
-          const depositWallets = await base44.entities.DepositWallet.filter({ user_id: user.id });
-          if (depositWallets && depositWallets.length > 0) {
-            setUserWallet(depositWallets[0]);
-            console.log(`💰 Saldo de depósito do usuário: R$ ${depositWallets[0].balance.toFixed(2)}`);
-          } else {
-            console.log(`⚠️ Nenhuma DepositWallet encontrada para ${user.id}`);
+          const wallets = await base44.entities.Wallet.filter({ user_id: user.id });
+          if (wallets && wallets.length > 0) {
+            setUserWallet(wallets[0]);
+            console.log(`💰 Saldo do usuário: R$ ${wallets[0].balance.toFixed(2)}`);
           }
         } catch (error) {
           console.warn("Erro ao carregar saldo da carteira:", error.message);

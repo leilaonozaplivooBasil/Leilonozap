@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import DigitalWalletBalance from "../components/wallet/DigitalWalletBalance";
 import { 
   Wallet, 
   TrendingUp, 
@@ -23,7 +24,6 @@ import { createPageUrl } from "@/utils";
 export default function AddFunds() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [wallet, setWallet] = useState(null);
   const [packages, setPackages] = useState([]);
   const [selectedAmount, setSelectedAmount] = useState(null);
   const [customAmount, setCustomAmount] = useState("");
@@ -47,19 +47,13 @@ export default function AddFunds() {
       const currentUser = JSON.parse(savedUser);
       setUser(currentUser);
 
-      // Carregar carteira
-      const wallets = await base44.entities.Wallet.filter({ user_id: currentUser.id });
-      if (wallets.length > 0) {
-        setWallet(wallets[0]);
-      }
-
       // Carregar pacotes de depósito
       const depositPackages = await base44.entities.DepositPackage.filter({ is_active: true });
       const sortedPackages = depositPackages.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
       setPackages(sortedPackages);
 
-      // Carregar transações recentes
-      const transactions = await base44.entities.WalletTransaction.filter({ 
+      // Carregar transações recentes da carteira digital
+      const transactions = await base44.entities.DigitalWalletTransaction.filter({ 
         user_id: currentUser.id,
         type: "deposit",
         status: "confirmed"
@@ -95,8 +89,13 @@ export default function AddFunds() {
     }
 
     setProcessing(true);
-    // Redireciona para AuctionCheckoutModern sem necessidade de auction_id
-    navigate(createPageUrl("AuctionCheckoutModern"), { state: { amount: selectedAmount } });
+    // Redireciona para AuctionCheckoutModern com flag de carteira digital
+    navigate(createPageUrl("AuctionCheckoutModern"), { 
+      state: { 
+        amount: selectedAmount,
+        depositType: 'digital_wallet' // FLAG PARA IDENTIFICAR DEPÓSITO DE CARTEIRA DIGITAL
+      } 
+    });
   };
 
   if (loading) {
@@ -143,31 +142,8 @@ export default function AddFunds() {
           {/* Coluna Principal - Pacotes */}
           <div className="lg:col-span-2 space-y-6">
             
-            {/* Saldo Atual */}
-            <div className="relative group">
-              <Card className="relative backdrop-blur-xl bg-white/5 border border-white/10 shadow-2xl overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent"></div>
-                <CardContent className="p-8 relative">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                        <p className="text-gray-400 text-sm font-medium uppercase tracking-wider">Saldo Disponível</p>
-                      </div>
-                      <p className="text-5xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                        R$ {(wallet?.balance || 0).toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl"></div>
-                      <div className="relative p-5 bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm rounded-2xl border border-green-400/20">
-                        <TrendingUp className="w-12 h-12 text-green-400" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Saldo Atual - Carteira Digital */}
+            <DigitalWalletBalance userId={user?.id} showActions={false} />
 
             {/* Pacotes de Depósito */}
             <div className="mt-8">

@@ -43,15 +43,15 @@ export default function WalletHistory() {
   const loadTransactions = async (userId) => {
     try {
       setIsLoading(true);
-      const data = await base44.entities.WalletTransaction.filter(
+      const data = await base44.entities.DigitalWalletTransaction.filter(
         { user_id: userId },
         "-created_date",
         100
       );
-      const wallets = await base44.entities.Wallet.filter({ user_id: userId });
+      const digitalWallets = await base44.entities.DigitalWallet.filter({ user_id: userId });
       setTransactions(data);
-      if (wallets.length > 0) {
-        setWallet(wallets[0]);
+      if (digitalWallets.length > 0) {
+        setWallet(digitalWallets[0]);
       }
     } catch (error) {
       console.error("Erro ao carregar transações:", error);
@@ -164,8 +164,8 @@ export default function WalletHistory() {
               <WalletIcon className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-5xl font-black bg-gradient-to-r from-green-300 via-emerald-300 to-green-300 bg-clip-text text-transparent">Carteira Virtual</h1>
-              <p className="text-green-200/70 text-sm font-light mt-1">Plataforma Tecnológica de Gestão Financeira</p>
+              <h1 className="text-5xl font-black bg-gradient-to-r from-green-300 via-emerald-300 to-green-300 bg-clip-text text-transparent leading-tight">Carteira Digital</h1>
+              <p className="text-green-200/70 text-sm font-light mt-1 leading-relaxed">Plataforma Tecnológica de Gestão Financeira</p>
             </div>
           </div>
         </div>
