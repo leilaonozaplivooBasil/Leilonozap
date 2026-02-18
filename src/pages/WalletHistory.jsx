@@ -164,7 +164,7 @@ export default function WalletHistory() {
               <WalletIcon className="w-8 h-8 text-white" />
             </div>
             <div>
-              <h1 className="text-5xl font-black bg-gradient-to-r from-green-300 via-emerald-300 to-green-300 bg-clip-text text-transparent">Carteira Virtual</h1>
+              <h1 className="text-5xl font-black bg-gradient-to-r from-green-300 via-emerald-300 to-green-300 bg-clip-text text-transparent">Carteira Digital</h1>
               <p className="text-green-200/70 text-sm font-light mt-1">Plataforma Tecnológica de Gestão Financeira</p>
             </div>
           </div>

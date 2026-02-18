@@ -97,7 +97,6 @@ import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
 import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyCatalogOrders from './pages/MyCatalogOrders';
-import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
 import OrderTracking from './pages/OrderTracking';
 import PDV from './pages/PDV';
@@ -107,7 +106,6 @@ import PaymentFailure from './pages/PaymentFailure';
 import PaymentSettings from './pages/PaymentSettings';
 import ProductManagement from './pages/ProductManagement';
 import ProductOperationHistory from './pages/ProductOperationHistory';
-import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
 import ProtectionDashboard from './pages/ProtectionDashboard';
 import Register from './pages/Register';
@@ -125,8 +123,10 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
-import WalletHistory from './pages/WalletHistory';
 import AuctionRoom from './pages/AuctionRoom';
+import MyWinnings from './pages/MyWinnings';
+import Profile from './pages/Profile';
+import WalletHistory from './pages/WalletHistory';
 import __Layout from './Layout.jsx';
 
 
@@ -181,7 +181,6 @@ export const PAGES = {
     "LuxuryCollection": LuxuryCollection,
     "MemoryBackup": MemoryBackup,
     "MyCatalogOrders": MyCatalogOrders,
-    "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
     "PDV": PDV,
@@ -191,7 +190,6 @@ export const PAGES = {
     "PaymentSettings": PaymentSettings,
     "ProductManagement": ProductManagement,
     "ProductOperationHistory": ProductOperationHistory,
-    "Profile": Profile,
     "ProtecaoCriacao": ProtecaoCriacao,
     "ProtectionDashboard": ProtectionDashboard,
     "Register": Register,
@@ -209,8 +207,10 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "AuctionCheckoutModern": AuctionCheckoutModern,
-    "WalletHistory": WalletHistory,
     "AuctionRoom": AuctionRoom,
+    "MyWinnings": MyWinnings,
+    "Profile": Profile,
+    "WalletHistory": WalletHistory,
 }
 
 export const pagesConfig = {
