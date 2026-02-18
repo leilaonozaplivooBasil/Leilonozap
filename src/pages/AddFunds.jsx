@@ -238,21 +238,21 @@ export default function AddFunds() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="relative">
-                  <div className="flex gap-4">
-                    <div className="flex-1">
-                      <Input
-                        type="text"
-                        placeholder="Digite o valor (mínimo R$ 1)"
-                        value={customAmount}
-                        onChange={handleCustomAmountChange}
-                        className="backdrop-blur-sm bg-black/30 border-white/20 text-white text-lg h-16 rounded-2xl focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all placeholder:text-gray-500"
-                      />
-                    </div>
-                    <Button
-                      onClick={handleProceedToPayment}
-                      disabled={!selectedAmount || selectedAmount < 1 || processing}
-                      className="relative group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold px-10 h-16 text-lg rounded-2xl shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-0"
-                    >
+                   <div className="flex flex-col md:flex-row gap-4">
+                     <div className="flex-1">
+                       <Input
+                         type="text"
+                         placeholder="Digite o valor (mínimo R$ 1)"
+                         value={customAmount}
+                         onChange={handleCustomAmountChange}
+                         className="backdrop-blur-sm bg-black/30 border-white/20 text-white text-lg h-16 rounded-2xl focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all placeholder:text-gray-500"
+                       />
+                     </div>
+                     <Button
+                       onClick={handleProceedToPayment}
+                       disabled={!selectedAmount || selectedAmount < 1 || processing}
+                       className="relative group bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-bold px-10 h-16 text-lg rounded-2xl shadow-lg shadow-green-500/30 hover:shadow-green-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed border-0 md:flex-shrink-0"
+                     >
                       <div className="absolute inset-0 bg-white/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                       {processing ? (
                         <span className="relative flex items-center">
