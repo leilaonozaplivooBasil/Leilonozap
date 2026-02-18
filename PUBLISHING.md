@@ -1,4 +1,4 @@
-# Guia de Publicação na Google Play Store
++# Guia de Publicação na Google Play Store
 
 Este guia descreve os passos para gerar a versão final do aplicativo (Release) e publicá-lo na loja.
 

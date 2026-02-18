@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
 
     // Verifica admin via plataforma OU via AppUser
     let isAdmin = false;
-    
+
     try {
       const user = await base44.auth.me();
       if (user && user.role === 'admin') isAdmin = true;
@@ -58,6 +58,15 @@ Deno.serve(async (req) => {
     if (requestAction === 'full' || requestAction === 'taxSettings') {
       const settings = await base44.asServiceRole.entities.TaxSettings.list();
       result.taxSettings = settings.length > 0 ? settings[0] : null;
+    }
+
+    // 🆕 INCLUIR DEPÓSITOS DE CARTEIRA (Entradas)
+    if (requestAction === 'full' || requestAction === 'walletDeposits' || requestAction === 'sales') {
+      const deposits = await base44.asServiceRole.entities.DigitalWalletTransaction.filter({
+        type: 'deposit',
+        status: 'confirmed'
+      }, '-created_date', 500); // Últimos 500 depósitos
+      result.walletDeposits = deposits;
     }
 
     if (requestAction === 'full' || requestAction === 'sales') {
