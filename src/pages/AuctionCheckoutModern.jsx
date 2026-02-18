@@ -29,6 +29,7 @@ export default function AuctionCheckoutModern() {
   const location = useLocation();
   const [isWalletDeposit, setIsWalletDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
+  const [depositType, setDepositType] = useState(null); // 'digital_wallet' ou null
   
   const [auction, setAuction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -204,8 +205,13 @@ export default function AuctionCheckoutModern() {
     buyer_phone: phone.trim(),
     amount: amount,
     billing_type: paymentType,
-    description: isWalletDeposit ? `Depósito de R$ ${amount.toFixed(2)} na carteira` : `Arremate - ${auction.title}`,
-    card_data: cardData
+    description: isWalletDeposit 
+      ? (depositType === 'digital_wallet' 
+        ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}` 
+        : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
+      : `Arremate - ${auction.title}`,
+    card_data: cardData,
+    deposit_type: depositType // Passa flag para backend identificar tipo de depósito
   });
 
   console.log('📥 Resposta do backend:', paymentResponse);
@@ -247,12 +253,15 @@ export default function AuctionCheckoutModern() {
 
         // Verifica se veio de AddFunds (depósito de carteira)
         const stateAmount = location.state?.amount;
+        const stateDepositType = location.state?.depositType; // 'digital_wallet' ou null
+
         if (stateAmount) {
           setIsWalletDeposit(true);
           setDepositAmount(stateAmount);
+          setDepositType(stateDepositType); // Armazena tipo de depósito
           setAuction({
-            id: 'wallet-deposit',
-            title: 'Depósito de Saldo',
+            id: stateDepositType === 'digital_wallet' ? 'digital-wallet-deposit' : 'wallet-deposit',
+            title: stateDepositType === 'digital_wallet' ? 'Depósito na Carteira Digital' : 'Depósito de Saldo',
             current_price: stateAmount,
             image_urls: []
           });

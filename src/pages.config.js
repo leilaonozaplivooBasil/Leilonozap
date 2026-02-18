@@ -55,10 +55,8 @@ import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import AmbienteDeTeste from './pages/AmbienteDeTeste';
 import ArquitetoIA from './pages/ArquitetoIA';
-import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
-import AuctionRoom from './pages/AuctionRoom';
 import AuditSnapshot from './pages/AuditSnapshot';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
@@ -126,7 +124,9 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
+import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
 import WalletHistory from './pages/WalletHistory';
+import AuctionRoom from './pages/AuctionRoom';
 import __Layout from './Layout.jsx';
 
 
@@ -139,10 +139,8 @@ export const PAGES = {
     "AdminWithdrawals": AdminWithdrawals,
     "AmbienteDeTeste": AmbienteDeTeste,
     "ArquitetoIA": ArquitetoIA,
-    "AuctionCheckoutModern": AuctionCheckoutModern,
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
-    "AuctionRoom": AuctionRoom,
     "AuditSnapshot": AuditSnapshot,
     "BannerManagement": BannerManagement,
     "CRM": CRM,
@@ -210,7 +208,9 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
+    "AuctionCheckoutModern": AuctionCheckoutModern,
     "WalletHistory": WalletHistory,
+    "AuctionRoom": AuctionRoom,
 }
 
 export const pagesConfig = {

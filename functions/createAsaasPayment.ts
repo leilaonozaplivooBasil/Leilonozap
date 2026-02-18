@@ -17,7 +17,8 @@ Deno.serve(async (req) => {
             amount,
             billing_type = 'PIX', // PIX ou CREDIT_CARD
             description,
-            card_data // Dados do cartão (se CREDIT_CARD)
+            card_data, // Dados do cartão (se CREDIT_CARD)
+            deposit_type // 'digital_wallet' ou null (para identificar tipo de depósito)
         } = await req.json();
 
         // Validações
@@ -194,6 +195,7 @@ Deno.serve(async (req) => {
 
         // 🔒 PASSO 4: Registrar no banco de dados
          const isWalletDeposit = !catalog_sale_id && !auction_id;
+         const isDigitalWallet = deposit_type === 'digital_wallet';
 
          // Para depósito de carteira, obter user_id do buyer_email (com fallback para CPF e telefone)
          let walletDepositUserId = null;
@@ -258,7 +260,7 @@ Deno.serve(async (req) => {
               billing_type: billing_type,
               value: amount,
               status: paymentStatus,
-              external_reference: externalReference || paymentData.id,
+              external_reference: isDigitalWallet ? 'digital-wallet-deposit' : (externalReference || paymentData.id),
               catalog_sale_id: catalog_sale_id || null,
               auction_id: auction_id || null,
               wallet_deposit_user_id: walletDepositUserId,
@@ -303,41 +305,79 @@ Deno.serve(async (req) => {
                 });
                 console.log('✅ Auction atualizada para PAID');
             } else if (isWalletDeposit && walletDepositUserId) {
-                // 🆕 CREDITAR CARTEIRA INSTANTANEAMENTE PARA CARTÃO
+                // 🆕 CREDITAR CARTEIRA INSTANTANEAMENTE PARA CARTÃO (DIGITAL OU COMISSÕES)
                 console.log('💳 Creditando carteira instantaneamente (cartão aprovado)...');
                 try {
-                    const wallets = await base44.asServiceRole.entities.Wallet.filter(
-                        { user_id: walletDepositUserId },
-                        null,
-                        1
-                    );
+                    if (isDigitalWallet) {
+                        // CREDITAR DIGITAL WALLET
+                        const digitalWallets = await base44.asServiceRole.entities.DigitalWallet.filter(
+                            { user_id: walletDepositUserId },
+                            null,
+                            1
+                        );
 
-                    let wallet;
-                    if (wallets && wallets.length > 0) {
-                        wallet = wallets[0];
-                        const newBalance = (wallet.balance || 0) + amount;
-                        await base44.asServiceRole.entities.Wallet.update(wallet.id, {
-                            balance: newBalance
-                        });
-                        console.log('✅ Carteira creditada instantaneamente:', newBalance);
-                    } else {
-                        await base44.asServiceRole.entities.Wallet.create({
+                        let digitalWallet;
+                        if (digitalWallets && digitalWallets.length > 0) {
+                            digitalWallet = digitalWallets[0];
+                            const newBalance = (digitalWallet.balance || 0) + amount;
+                            await base44.asServiceRole.entities.DigitalWallet.update(digitalWallet.id, {
+                                balance: newBalance
+                            });
+                            console.log('✅ Digital Wallet creditada instantaneamente:', newBalance);
+                        } else {
+                            await base44.asServiceRole.entities.DigitalWallet.create({
+                                user_id: walletDepositUserId,
+                                balance: amount
+                            });
+                            console.log('✅ Digital Wallet criada com saldo:', amount);
+                        }
+
+                        // Registrar transação digital
+                        await base44.asServiceRole.entities.DigitalWalletTransaction.create({
                             user_id: walletDepositUserId,
-                            balance: amount
+                            type: 'deposit',
+                            direction: 'credit',
+                            amount: amount,
+                            status: 'confirmed',
+                            related_payment_id: paymentData.id,
+                            description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
                         });
-                        console.log('✅ Carteira criada com saldo:', amount);
-                    }
+                        console.log('✅ Transação de Digital Wallet registrada');
+                    } else {
+                        // CREDITAR WALLET DE COMISSÕES
+                        const wallets = await base44.asServiceRole.entities.Wallet.filter(
+                            { user_id: walletDepositUserId },
+                            null,
+                            1
+                        );
 
-                    // Registrar transação
-                    await base44.asServiceRole.entities.WalletTransaction.create({
-                        user_id: walletDepositUserId,
-                        type: 'deposit',
-                        direction: 'credit',
-                        amount: amount,
-                        status: 'confirmed',
-                        description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
-                    });
-                    console.log('✅ Transação de wallet registrada');
+                        let wallet;
+                        if (wallets && wallets.length > 0) {
+                            wallet = wallets[0];
+                            const newBalance = (wallet.balance || 0) + amount;
+                            await base44.asServiceRole.entities.Wallet.update(wallet.id, {
+                                balance: newBalance
+                            });
+                            console.log('✅ Wallet de Comissões creditada instantaneamente:', newBalance);
+                        } else {
+                            await base44.asServiceRole.entities.Wallet.create({
+                                user_id: walletDepositUserId,
+                                balance: amount
+                            });
+                            console.log('✅ Wallet de Comissões criada com saldo:', amount);
+                        }
+
+                        // Registrar transação de comissões
+                        await base44.asServiceRole.entities.WalletTransaction.create({
+                            user_id: walletDepositUserId,
+                            type: 'deposit',
+                            direction: 'credit',
+                            amount: amount,
+                            status: 'confirmed',
+                            description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
+                        });
+                        console.log('✅ Transação de Wallet registrada');
+                    }
                 } catch (walletErr) {
                     console.error('❌ Erro ao creditar carteira:', walletErr.message);
                 }
