@@ -191,23 +191,35 @@ export default function MyWinningsPage() {
                 {/* Card da Carteira - Design Dark Clean */}
                 <Card className="relative overflow-hidden bg-gray-800/80 backdrop-blur-sm border-gray-700/50 mb-6 sm:mb-8 shadow-lg">
                     <CardContent className="relative p-6 sm:p-8">
-                        <div className="flex items-center justify-between gap-6">
-                            {/* Info da Carteira */}
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                                    <p className="text-gray-400 text-xs uppercase tracking-widest font-medium">Carteira Digital</p>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                            {/* Lado Esquerdo: Ícone + Info */}
+                            <div className="flex items-center gap-4 flex-1">
+                                {/* Ícone da Carteira */}
+                                <div className="bg-green-500/20 backdrop-blur-xl p-4 rounded-2xl border border-green-500/30 shrink-0">
+                                    <Wallet className="w-8 h-8 text-green-400" />
                                 </div>
-                                <p className="text-green-400 text-4xl font-black tracking-tight mb-1">
-                                    R$ {walletBalance.toFixed(2)}
-                                </p>
-                                <p className="text-gray-500 text-sm">Saldo disponível para leilões</p>
+
+                                {/* Info da Carteira */}
+                                <div>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                                        <p className="text-gray-400 text-xs uppercase tracking-widest font-medium">Carteira Digital</p>
+                                    </div>
+                                    <p className="text-green-400 text-4xl font-black tracking-tight mb-1">
+                                        R$ {walletBalance.toFixed(2)}
+                                    </p>
+                                    <p className="text-gray-500 text-sm">Saldo disponível para leilões</p>
+                                </div>
                             </div>
 
-                            {/* Ícone da Carteira */}
-                            <div className="bg-green-500/20 backdrop-blur-xl p-4 rounded-2xl border border-green-500/30">
-                                <Wallet className="w-8 h-8 text-green-400" />
-                            </div>
+                            {/* Botão Adicionar Saldo */}
+                            <Button 
+                                onClick={() => navigate(createPageUrl("AddFunds"))}
+                                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 shadow-lg transition-all duration-300"
+                            >
+                                <CreditCard className="w-5 h-5 mr-2" />
+                                Adicionar Saldo
+                            </Button>
                         </div>
                     </CardContent>
                 </Card>
