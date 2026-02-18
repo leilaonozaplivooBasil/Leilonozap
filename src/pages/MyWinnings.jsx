@@ -215,7 +215,7 @@ export default function MyWinningsPage() {
                             {/* Botão Adicionar Saldo */}
                             <Button 
                                 onClick={() => navigate(createPageUrl("AddFunds"))}
-                                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-3 shadow-lg transition-all duration-300"
+                                className="w-full sm:w-auto bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/30 hover:border-green-500/50 font-semibold px-6 py-3 shadow-lg hover:shadow-green-500/20 transition-all duration-300 backdrop-blur-sm"
                             >
                                 <CreditCard className="w-5 h-5 mr-2" />
                                 Adicionar Saldo
