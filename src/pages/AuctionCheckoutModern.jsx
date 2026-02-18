@@ -20,7 +20,8 @@ import {
   Wallet,
   ChevronDown,
   User,
-  MapPin
+  MapPin,
+  Smartphone
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -774,9 +775,7 @@ export default function AuctionCheckoutModern() {
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <svg className={`w-4 h-4 ${paymentType === 'PIX' ? 'text-green-400' : 'text-gray-400'}`} viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                          </svg>
+                          <QrCode className={`w-4 h-4 ${paymentType === 'PIX' ? 'text-green-400' : 'text-gray-400'}`} />
                           <div>
                             <p className="font-semibold text-white">PIX</p>
                             <p className="text-xs text-gray-400">Aprovação imediata</p>
