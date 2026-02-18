@@ -55,8 +55,10 @@ import AdminUsers from './pages/AdminUsers';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import AmbienteDeTeste from './pages/AmbienteDeTeste';
 import ArquitetoIA from './pages/ArquitetoIA';
+import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
 import AuctionControl from './pages/AuctionControl';
 import AuctionDetails from './pages/AuctionDetails';
+import AuctionRoom from './pages/AuctionRoom';
 import AuditSnapshot from './pages/AuditSnapshot';
 import BannerManagement from './pages/BannerManagement';
 import CRM from './pages/CRM';
@@ -97,6 +99,7 @@ import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
 import LuxuryCollection from './pages/LuxuryCollection';
 import MemoryBackup from './pages/MemoryBackup';
 import MyCatalogOrders from './pages/MyCatalogOrders';
+import MyWinnings from './pages/MyWinnings';
 import NetworkOverview from './pages/NetworkOverview';
 import OrderTracking from './pages/OrderTracking';
 import PDV from './pages/PDV';
@@ -106,6 +109,7 @@ import PaymentFailure from './pages/PaymentFailure';
 import PaymentSettings from './pages/PaymentSettings';
 import ProductManagement from './pages/ProductManagement';
 import ProductOperationHistory from './pages/ProductOperationHistory';
+import Profile from './pages/Profile';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
 import ProtectionDashboard from './pages/ProtectionDashboard';
 import Register from './pages/Register';
@@ -122,10 +126,6 @@ import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
-import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
-import AuctionRoom from './pages/AuctionRoom';
-import MyWinnings from './pages/MyWinnings';
-import Profile from './pages/Profile';
 import WalletHistory from './pages/WalletHistory';
 import __Layout from './Layout.jsx';
 
@@ -139,8 +139,10 @@ export const PAGES = {
     "AdminWithdrawals": AdminWithdrawals,
     "AmbienteDeTeste": AmbienteDeTeste,
     "ArquitetoIA": ArquitetoIA,
+    "AuctionCheckoutModern": AuctionCheckoutModern,
     "AuctionControl": AuctionControl,
     "AuctionDetails": AuctionDetails,
+    "AuctionRoom": AuctionRoom,
     "AuditSnapshot": AuditSnapshot,
     "BannerManagement": BannerManagement,
     "CRM": CRM,
@@ -181,6 +183,7 @@ export const PAGES = {
     "LuxuryCollection": LuxuryCollection,
     "MemoryBackup": MemoryBackup,
     "MyCatalogOrders": MyCatalogOrders,
+    "MyWinnings": MyWinnings,
     "NetworkOverview": NetworkOverview,
     "OrderTracking": OrderTracking,
     "PDV": PDV,
@@ -190,6 +193,7 @@ export const PAGES = {
     "PaymentSettings": PaymentSettings,
     "ProductManagement": ProductManagement,
     "ProductOperationHistory": ProductOperationHistory,
+    "Profile": Profile,
     "ProtecaoCriacao": ProtecaoCriacao,
     "ProtectionDashboard": ProtectionDashboard,
     "Register": Register,
@@ -206,10 +210,6 @@ export const PAGES = {
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
-    "AuctionCheckoutModern": AuctionCheckoutModern,
-    "AuctionRoom": AuctionRoom,
-    "MyWinnings": MyWinnings,
-    "Profile": Profile,
     "WalletHistory": WalletHistory,
 }
 
