@@ -46,15 +46,20 @@ Deno.serve(async (req) => {
         let customerId = null;
         
         // Buscar cliente existente por CPF
+        const searchController = new AbortController();
+        const searchTimeout = setTimeout(() => searchController.abort(), 10000); // 10s timeout
+        
         const searchResponse = await fetch(
             `https://api.asaas.com/v3/customers?cpfCnpj=${cleanCpf}`,
             {
                 headers: {
                     'access_token': apiKey,
                     'Content-Type': 'application/json'
-                }
+                },
+                signal: searchController.signal
             }
         );
+        clearTimeout(searchTimeout);
         
         const searchData = await searchResponse.json();
         
