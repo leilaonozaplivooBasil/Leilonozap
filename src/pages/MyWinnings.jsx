@@ -188,35 +188,26 @@ export default function MyWinningsPage() {
                     </div>
                 </div>
 
-                {/* Card da Carteira - Design Premium */}
-                <Card className="relative overflow-hidden bg-gradient-to-br from-green-600 via-green-700 to-emerald-800 border-none mb-6 sm:mb-8 shadow-2xl shadow-green-500/25">
-                    {/* Efeito de Brilho */}
-                    <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent" />
-                    
+                {/* Card da Carteira - Design Dark Clean */}
+                <Card className="relative overflow-hidden bg-gray-800/80 backdrop-blur-sm border-gray-700/50 mb-6 sm:mb-8 shadow-lg">
                     <CardContent className="relative p-6 sm:p-8">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                        <div className="flex items-center justify-between gap-6">
                             {/* Info da Carteira */}
-                            <div className="flex items-start gap-4">
-                                <div className="bg-white/15 backdrop-blur-xl p-3.5 rounded-2xl">
-                                    <Wallet className="w-7 h-7 text-white" />
+                            <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                                    <p className="text-gray-400 text-xs uppercase tracking-widest font-medium">Carteira Digital</p>
                                 </div>
-                                <div>
-                                    <p className="text-green-100 text-sm font-medium mb-1.5">Saldo Disponível</p>
-                                    <p className="text-white text-4xl font-black tracking-tight">
-                                        R$ {walletBalance.toFixed(2)}
-                                    </p>
-                                    <p className="text-green-200/70 text-xs mt-1">Use para pagar seus arremates</p>
-                                </div>
+                                <p className="text-green-400 text-4xl font-black tracking-tight mb-1">
+                                    R$ {walletBalance.toFixed(2)}
+                                </p>
+                                <p className="text-gray-500 text-sm">Saldo disponível para leilões</p>
                             </div>
 
-                            {/* Botão de Adicionar */}
-                            <Button 
-                                onClick={() => navigate(createPageUrl("AddFunds"))}
-                                className="w-full sm:w-auto bg-white text-green-700 hover:bg-green-50 font-bold px-8 py-6 text-base shadow-xl shadow-black/20 hover:shadow-2xl hover:scale-105 transition-all duration-300"
-                            >
-                                <CreditCard className="w-5 h-5 mr-2.5" />
-                                Adicionar Saldo
-                            </Button>
+                            {/* Ícone da Carteira */}
+                            <div className="bg-green-500/20 backdrop-blur-xl p-4 rounded-2xl border border-green-500/30">
+                                <Wallet className="w-8 h-8 text-green-400" />
+                            </div>
                         </div>
                     </CardContent>
                 </Card>
