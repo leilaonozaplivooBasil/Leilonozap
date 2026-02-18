@@ -362,7 +362,7 @@ export default function AuctionCheckoutModern() {
                             {isPersonalComplete ? <Check className="w-5 h-5" /> : '1'}
                           </div>
                           <div className="text-left">
-                            <CardTitle className="text-xl">Dados Pessoais</CardTitle>
+                            <CardTitle className="text-xl text-white">Dados Pessoais</CardTitle>
                             {isPersonalComplete && <p className="text-xs text-green-400">✓ Completo</p>}
                           </div>
                         </div>
@@ -446,7 +446,7 @@ export default function AuctionCheckoutModern() {
                             {isAddressComplete ? <Check className="w-5 h-5" /> : '2'}
                           </div>
                           <div className="text-left">
-                            <CardTitle className="text-xl">Endereço de Entrega</CardTitle>
+                            <CardTitle className="text-xl text-white">Endereço de Entrega</CardTitle>
                             {isAddressComplete && <p className="text-xs text-green-400">✓ Completo</p>}
                           </div>
                         </div>
@@ -575,7 +575,7 @@ export default function AuctionCheckoutModern() {
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold">
                           💳
                         </div>
-                        <CardTitle className="text-xl">Dados do Cartão</CardTitle>
+                        <CardTitle className="text-xl text-white">Dados do Cartão</CardTitle>
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -741,17 +741,17 @@ export default function AuctionCheckoutModern() {
                 {/* Resumo */}
                 <div className="space-y-3 py-4 border-y border-white/10">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Valor</span>
+                    <span className="text-white">Valor</span>
                     <span className="text-white">R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}</span>
                   </div>
                   {!isWalletDeposit && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-400">Frete</span>
-                      <span className="text-green-400">A combinar</span>
-                    </div>
+                        <span className="text-white">Frete</span>
+                        <span className="text-green-400">A combinar</span>
+                      </div>
                   )}
                   <div className="flex justify-between text-base font-bold pt-2">
-                    <span>Total</span>
+                    <span className="text-white">Total</span>
                     <span className="text-transparent bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text">
                       R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}
                     </span>
@@ -761,7 +761,7 @@ export default function AuctionCheckoutModern() {
                 {/* Métodos de Pagamento */}
                 {step === 'info' && (
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-gray-300">Forma de Pagamento</p>
+                    <p className="text-sm font-medium text-white">Forma de Pagamento</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                       <button
                         onClick={() => setPaymentType('PIX')}
