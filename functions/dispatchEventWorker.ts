@@ -73,8 +73,8 @@ Deno.serve(async (req) => {
                     status: 'sending'
                 });
 
-                // Se não tem CORE_URL, simular envio (Fase 1 placeholder)
-                if (!CORE_URL || CORE_URL === 'placeholder') {
+                // Se não tem CORE_URL ou é placeholder, simular envio (Fase 1)
+                if (!CORE_URL || CORE_URL === 'placeholder' || CORE_URL.includes('placeholder')) {
                     console.log(`🧪 [EventWorker] SIMULAÇÃO (sem CORE_URL): evento ${event.id} seria enviado`);
                     
                     await base44.asServiceRole.entities.EventQueue.update(event.id, {
