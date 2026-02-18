@@ -17,7 +17,11 @@ import {
   Gift,
   Zap,
   Shield,
-  Clock
+  Clock,
+  DollarSign,
+  QrCode,
+  CheckCircle2,
+  Rocket
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 
@@ -436,7 +440,7 @@ export default function AddFunds() {
                     <div className="relative">
                       <div className="absolute inset-0 bg-green-500/15 rounded-full blur-sm group-hover/item:blur-md transition-all"></div>
                       <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-500/20 to-emerald-500/20 backdrop-blur-sm border border-green-400/30 flex items-center justify-center">
-                        <span className="text-green-400 font-bold text-sm">1</span>
+                        <DollarSign className="w-5 h-5 text-green-400" />
                       </div>
                     </div>
                     <p className="text-gray-300 pt-1">Escolha o valor que deseja adicionar</p>
@@ -445,7 +449,7 @@ export default function AddFunds() {
                     <div className="relative">
                       <div className="absolute inset-0 bg-blue-500/15 rounded-full blur-sm group-hover/item:blur-md transition-all"></div>
                       <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/20 to-cyan-500/20 backdrop-blur-sm border border-blue-400/30 flex items-center justify-center">
-                        <span className="text-blue-400 font-bold text-sm">2</span>
+                        <QrCode className="w-5 h-5 text-blue-400" />
                       </div>
                     </div>
                     <p className="text-gray-300 pt-1">Realize o pagamento via PIX ou Boleto</p>
@@ -454,7 +458,7 @@ export default function AddFunds() {
                     <div className="relative">
                       <div className="absolute inset-0 bg-purple-500/15 rounded-full blur-sm group-hover/item:blur-md transition-all"></div>
                       <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-purple-400/30 flex items-center justify-center">
-                        <span className="text-purple-400 font-bold text-sm">3</span>
+                        <CheckCircle2 className="w-5 h-5 text-purple-400" />
                       </div>
                     </div>
                     <p className="text-gray-300 pt-1">Saldo creditado automaticamente após confirmação</p>
@@ -463,7 +467,7 @@ export default function AddFunds() {
                     <div className="relative">
                       <div className="absolute inset-0 bg-yellow-500/15 rounded-full blur-sm group-hover/item:blur-md transition-all"></div>
                       <div className="relative flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-500/20 to-orange-500/20 backdrop-blur-sm border border-yellow-400/30 flex items-center justify-center">
-                        <span className="text-yellow-400 font-bold text-sm">4</span>
+                        <Rocket className="w-5 h-5 text-yellow-400" />
                       </div>
                     </div>
                     <p className="text-gray-300 pt-1">Use em qualquer leilão sem burocracia!</p>
