@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  DollarSign, Search, ShoppingCart, Trash2, Plus, Minus, 
+  DollarSign, Search, ShoppingCart, Trash2, Plus, Minus,
   ArrowLeft, Package, TrendingUp, Clock, Printer, X, Calendar, FileText, BarChart3
 } from 'lucide-react';
 import {
@@ -33,7 +33,7 @@ const getAdminCredentials = () => {
       const user = JSON.parse(savedUser);
       return { app_user_email: user.email, app_user_id: user.id };
     }
-  } catch (e) {}
+  } catch (e) { }
   return {};
 };
 
@@ -80,6 +80,7 @@ export default function PDV() {
   const [searchSale, setSearchSale] = useState('');
   const [isGeneratingCodes, setIsGeneratingCodes] = useState(false);
   const [sellersDataForPDF, setSellersDataForPDF] = useState([]);
+  const [walletDeposits, setWalletDeposits] = useState([]); // 🆕 Estado para depósitos
   const navigate = useNavigate();
 
   const generateOrderCode = () => {
@@ -91,7 +92,7 @@ export default function PDV() {
 
   const generateCodesForOldSales = async () => {
     if (!confirm('Gerar códigos para todas as vendas antigas sem código?')) return;
-    
+
     setIsGeneratingCodes(true);
     try {
       const { data } = await base44.functions.invoke('generateOrderCodes', {});
@@ -162,18 +163,18 @@ export default function PDV() {
 
       const brasiliaTime = getBrasiliaTime();
       const now = brasiliaTime.getTime();
-      
+
       // Calcula o horário de fechamento (20h de hoje)
       const closeTime = new Date(brasiliaTime);
       closeTime.setHours(20, 0, 0, 0);
-      
+
       // Se já passou das 20h, considera amanhã
       if (brasiliaTime.getHours() >= 20) {
         closeTime.setDate(closeTime.getDate() + 1);
       }
 
       const diff = closeTime.getTime() - now;
-      
+
       if (diff <= 0) {
         setTimeUntilClose('Fechando...');
         return;
@@ -195,16 +196,20 @@ export default function PDV() {
     try {
       const response = await getPDVData({ ...getAdminCredentials(), action: 'sales' });
       const sales = response?.data?.allSales || [];
+      const deposits = response?.data?.walletDeposits || [];
+
       setAllSales(sales);
-      
+      // Armazena depósitos no estado global ou processa junto
+      setWalletDeposits(deposits);
+
       // Carrega dados de vendedores para o PDF
-      await loadSellersDataForPDF(sales);
+      await loadSellersDataForPDF(sales, deposits);
     } catch (error) {
       console.error('Erro ao carregar todas as vendas:', error);
     }
   };
 
-  const loadSellersDataForPDF = async (sales) => {
+  const loadSellersDataForPDF = async (sales, deposits = []) => {
     try {
       const saleIds = sales.map(s => s.id);
       if (saleIds.length === 0) {
@@ -215,7 +220,7 @@ export default function PDV() {
       const commResponse = await getPDVData({ ...getAdminCredentials(), action: 'commissions' });
       const allCommissions = commResponse?.data?.commissions || [];
       const commissionsForSales = allCommissions.filter(c => saleIds.includes(c.sale_id));
-      
+
       // Agrupa por venda
       const saleCommissionsMap = {};
       commissionsForSales.forEach(c => {
@@ -228,7 +233,7 @@ export default function PDV() {
       // Agrupa por vendedor
       const sellerMap = {};
       const processedSales = new Set();
-      
+
       commissionsForSales.forEach(commission => {
         if (commission.seller_role === 'licenciante') return;
 
@@ -249,7 +254,7 @@ export default function PDV() {
         }
 
         sellerMap[sellerId].total_commission += commission.commission_amount || 0;
-        
+
         if (!sellerMap[sellerId].sales.find(s => s.id === sale.id)) {
           sellerMap[sellerId].sales.push({
             ...sale,
@@ -284,15 +289,15 @@ export default function PDV() {
       }
 
       console.log('🔄 Recarregando vendas do caixa atual...');
-      
-      const response = await pdvAction({ 
-        ...getAdminCredentials(), 
+
+      const response = await pdvAction({
+        ...getAdminCredentials(),
         action: 'getSessionSales',
         opening_time: currentCashRegister.opening_time,
         closing_time: null
       });
       const salesInSession = response?.data?.sales || [];
-      
+
       console.log(`✅ ${salesInSession.length} vendas no caixa atual`);
       setTodaySales(salesInSession);
     } catch (error) {
@@ -328,11 +333,11 @@ export default function PDV() {
   const loadSalesHistory = async () => {
     try {
       console.log('🔍 Carregando sessões de caixa...');
-      
+
       const response = await getPDVData({ ...getAdminCredentials(), action: 'cashSessions' });
       const closedSessions = response?.data?.cashSessions || [];
       console.log('✅ Total de sessões:', closedSessions.length);
-      
+
       setCashSessions(closedSessions);
     } catch (error) {
       console.error('❌ Erro ao carregar sessões:', error);
@@ -348,7 +353,7 @@ export default function PDV() {
         closing_time: session.closing_time
       });
       const salesInSession = response?.data?.sales || [];
-      
+
       setSessionSales(salesInSession);
       setSelectedSession(session);
       setShowSessionModal(true);
@@ -386,7 +391,7 @@ TOTAL: R$ ${selectedSession.total_sales?.toFixed(2) || '0.00'}
 Transações: ${selectedSession.transactions_count || 0}
 ================================
     `;
-    
+
     const printWindow = window.open('', '', 'width=400,height=600');
     printWindow.document.write(`<pre style="font-family: monospace; font-size: 11px; padding: 20px;">${statement}</pre>`);
     printWindow.document.close();
@@ -397,11 +402,11 @@ Transações: ${selectedSession.transactions_count || 0}
     try {
       const response = await getPDVData({ ...getAdminCredentials(), action: 'cashRegister' });
       const register = response?.data?.currentCashRegister;
-      
+
       if (register) {
         setCurrentCashRegister(register);
         console.log('✅ Caixa aberto:', register);
-        
+
         // Carrega vendas deste caixa específico
         const salesResp = await pdvAction({
           ...getAdminCredentials(),
@@ -410,7 +415,7 @@ Transações: ${selectedSession.transactions_count || 0}
           closing_time: null
         });
         const salesInSession = salesResp?.data?.sales || [];
-        
+
         console.log(`✅ ${salesInSession.length} vendas carregadas do caixa atual`);
         setTodaySales(salesInSession);
       } else {
@@ -434,7 +439,7 @@ Transações: ${selectedSession.transactions_count || 0}
   // 🆕 Função para auto-preencher licenciante quando vendedor é selecionado
   const handleSellerChange = async (sellerId) => {
     setSelectedSeller(sellerId);
-    
+
     if (!sellerId) {
       setSelectedLicenciante(null);
       setComissaoLicenciante(0);
@@ -456,14 +461,14 @@ Transações: ${selectedSession.transactions_count || 0}
       const licenciante = sellers.find(s => s.id === seller.referred_by_id);
       if (licenciante) {
         setSelectedLicenciante(seller.referred_by_id);
-        
+
         // Define comissão padrão do licenciante
         if (seller.default_licenciante_commission_percentage) {
           setComissaoLicenciante(seller.default_licenciante_commission_percentage);
         } else {
           setComissaoLicenciante(0);
         }
-        
+
         setAutoFilledLicenciante(true);
         console.log(`✅ Licenciante auto-preenchido: ${licenciante.name}`);
       }
@@ -478,11 +483,11 @@ Transações: ${selectedSession.transactions_count || 0}
     try {
       const resp = await getPDVData({ ...getAdminCredentials(), action: 'sales' });
       const allSales = resp?.data?.allSales || [];
-      
+
       const sellerMap = {};
       allSales.forEach(sale => {
         if (!sale.seller_id) return;
-        
+
         if (!sellerMap[sale.seller_id]) {
           sellerMap[sale.seller_id] = {
             seller_id: sale.seller_id,
@@ -493,13 +498,13 @@ Transações: ${selectedSession.transactions_count || 0}
             sales: []
           };
         }
-        
+
         sellerMap[sale.seller_id].total_sales += sale.total_amount || 0;
         sellerMap[sale.seller_id].total_commission += sale.commission_amount || 0;
         sellerMap[sale.seller_id].sales_count += 1;
         sellerMap[sale.seller_id].sales.push(sale);
       });
-      
+
       const stats = Object.values(sellerMap).sort((a, b) => b.total_commission - a.total_commission);
       setSellerStats(stats);
     } catch (error) {
@@ -520,15 +525,15 @@ Transações: ${selectedSession.transactions_count || 0}
         operator_name: isAutomatic ? 'Sistema (Automático)' : (currentUser?.full_name || 'Admin'),
         opening_balance: parseFloat(openingBalance) || 0
       });
-      
+
       setCurrentCashRegister(response?.data?.cashRegister);
       setShowOpenCashModal(false);
       setOpeningBalance(0);
-      
+
       if (!isAutomatic) {
         alert('✅ Caixa aberto com sucesso!');
       }
-      
+
       setTimeout(() => loadTodaySales(), 500);
     } catch (error) {
       console.error('Erro ao abrir caixa:', error);
@@ -540,7 +545,7 @@ Transações: ${selectedSession.transactions_count || 0}
 
   const closeCashRegister = async (isAutomatic = false) => {
     if (!currentCashRegister) return;
-    
+
     try {
       // Calcula totais do caixa atual usando vendas já carregadas
       const totals = {
@@ -563,8 +568,8 @@ Transações: ${selectedSession.transactions_count || 0}
 
       const total_sales = totals.total_pix + totals.total_cash + totals.total_debit + totals.total_credit + totals.total_boleto;
 
-      const notes = isAutomatic 
-        ? 'Fechamento automático às 20h' 
+      const notes = isAutomatic
+        ? 'Fechamento automático às 20h'
         : closingNotes;
 
       await pdvAction({
@@ -581,7 +586,7 @@ Transações: ${selectedSession.transactions_count || 0}
       setShowCloseCashModal(false);
       setClosingBalance(0);
       setClosingNotes('');
-      
+
       if (!isAutomatic) {
         alert('✅ Caixa fechado com sucesso!');
       }
@@ -593,8 +598,8 @@ Transações: ${selectedSession.transactions_count || 0}
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    !searchTerm || 
+  const filteredProducts = products.filter(p =>
+    !searchTerm ||
     p.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (p.lot && p.lot.toLowerCase().includes(searchTerm.toLowerCase()))
   );
@@ -638,7 +643,7 @@ Transações: ${selectedSession.transactions_count || 0}
     ));
   };
 
-  const cartTotal = cart.reduce((sum, item) => 
+  const cartTotal = cart.reduce((sum, item) =>
     sum + ((item.customPrice || item.product.selling_price_retail) * item.quantity), 0
   );
 
@@ -719,10 +724,10 @@ Transações: ${selectedSession.transactions_count || 0}
       return;
     }
 
-    const confirmMsg = paymentMethod === 'BOLETO PARCELADO' 
+    const confirmMsg = paymentMethod === 'BOLETO PARCELADO'
       ? `Confirmar venda de R$ ${cartTotal.toFixed(2)} via BOLETO PARCELADO?\n\nCliente: ${boletoData.cliente}\nDoc: ${boletoData.documento}\nParcelas: ${boletoData.parcelas}x de R$ ${(cartTotal / boletoData.parcelas).toFixed(2)}`
       : `Confirmar venda de R$ ${cartTotal.toFixed(2)} via ${paymentMethod}?`;
-    
+
     if (!confirm(confirmMsg)) return;
 
     setIsProcessing(true);
@@ -736,11 +741,11 @@ Transações: ${selectedSession.transactions_count || 0}
         const newQuantity = product.quantity - qtdVendida;
         const precoUnitario = item.customPrice || product.selling_price_retail;
         const valorVenda = precoUnitario * qtdVendida;
-        
+
         // 🔥 CÁLCULO CORRETO DO CUSTO UNITÁRIO
         const quantidadeTotal = product.quantity + (product.quantity_sold || 0);
         const custoUnitario = quantidadeTotal > 0 ? (product.cost_price || 0) / quantidadeTotal : 0;
-        
+
         // Atualiza valores acumulados
         const novoSoldAmount = (product.sold_amount || 0) + valorVenda;
         const novaQuantidadeVendida = (product.quantity_sold || 0) + qtdVendida;
@@ -749,14 +754,14 @@ Transações: ${selectedSession.transactions_count || 0}
         // Calcula comissões do item
         const comissaoLicenciadoItem = selectedSeller && commissionValue > 0
           ? (commissionType === 'percentage'
-              ? (valorVenda * commissionValue) / 100
-              : commissionValue)
+            ? (valorVenda * commissionValue) / 100
+            : commissionValue)
           : 0;
 
         const comissaoLicencianteItem = selectedLicenciante && comissaoLicenciante > 0
           ? (tipoComissaoLicenciante === 'percentage'
-              ? (valorVenda * comissaoLicenciante) / 100
-              : comissaoLicenciante)
+            ? (valorVenda * comissaoLicenciante) / 100
+            : comissaoLicenciante)
           : 0;
 
         const totalItemCommission = comissaoLicenciadoItem + comissaoLicencianteItem;
@@ -767,74 +772,82 @@ Transações: ${selectedSession.transactions_count || 0}
 
         // 🆕 REGISTRA A VENDA NA ENTIDADE SALE
         const orderCode = generateOrderCode();
-        
+
         const sellerData = selectedSeller ? sellers.find(s => s.id === selectedSeller) : null;
-        
-        const saleResp = await pdvAction({ ...getAdminCredentials(), action: 'createSale', sale_data: {
-          order_code: orderCode,
-          product_id: product.id,
-          product_description: product.description,
-          product_lot: product.lot || 'N/A',
-          quantity_sold: qtdVendida,
-          unit_price: precoUnitario,
-          total_amount: valorVenda,
-          total_taxes: itemTaxes.total,
-          net_amount: itemNetAmount,
-          payment_method: paymentMethod,
-          sale_date: saleDate,
-          sale_datetime: saleDatetime,
-          operator_name: currentUser?.full_name || 'Admin',
-          seller_id: selectedSeller || null,
-          seller_name: sellerData?.name || null,
-          commission_type: commissionType,
-          commission_value: commissionValue,
-          commission_amount: totalItemCommission,
-          boleto_cliente: paymentMethod === 'BOLETO PARCELADO' ? boletoData.cliente : null,
-          boleto_documento: paymentMethod === 'BOLETO PARCELADO' ? boletoData.documento : null,
-          boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
-        }});
+
+        const saleResp = await pdvAction({
+          ...getAdminCredentials(), action: 'createSale', sale_data: {
+            order_code: orderCode,
+            product_id: product.id,
+            product_description: product.description,
+            product_lot: product.lot || 'N/A',
+            quantity_sold: qtdVendida,
+            unit_price: precoUnitario,
+            total_amount: valorVenda,
+            total_taxes: itemTaxes.total,
+            net_amount: itemNetAmount,
+            payment_method: paymentMethod,
+            sale_date: saleDate,
+            sale_datetime: saleDatetime,
+            operator_name: currentUser?.full_name || 'Admin',
+            seller_id: selectedSeller || null,
+            seller_name: sellerData?.name || null,
+            commission_type: commissionType,
+            commission_value: commissionValue,
+            commission_amount: totalItemCommission,
+            boleto_cliente: paymentMethod === 'BOLETO PARCELADO' ? boletoData.cliente : null,
+            boleto_documento: paymentMethod === 'BOLETO PARCELADO' ? boletoData.documento : null,
+            boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
+          }
+        });
 
         const saleRecord = saleResp?.data?.sale;
 
         // 🆕 Registra comissão do licenciado
         if (selectedSeller && comissaoLicenciadoItem > 0 && saleRecord) {
-          await pdvAction({ ...getAdminCredentials(), action: 'createSaleCommission', commission_data: {
-            sale_id: saleRecord.id,
-            seller_id: selectedSeller,
-            seller_name: sellerData?.name || 'Vendedor',
-            commission_type: commissionType,
-            commission_value: commissionValue,
-            commission_amount: comissaoLicenciadoItem,
-            seller_role: 'licenciado'
-          }});
-          
+          await pdvAction({
+            ...getAdminCredentials(), action: 'createSaleCommission', commission_data: {
+              sale_id: saleRecord.id,
+              seller_id: selectedSeller,
+              seller_name: sellerData?.name || 'Vendedor',
+              commission_type: commissionType,
+              commission_value: commissionValue,
+              commission_amount: comissaoLicenciadoItem,
+              seller_role: 'licenciado'
+            }
+          });
+
           console.log(`✅ Comissão licenciado: ${sellerData?.name} - R$ ${comissaoLicenciadoItem.toFixed(2)}`);
         }
 
         // 🆕 Registra comissão do licenciante
         if (selectedLicenciante && comissaoLicencianteItem > 0 && saleRecord) {
           const licencianteData = sellers.find(s => s.id === selectedLicenciante);
-          await pdvAction({ ...getAdminCredentials(), action: 'createSaleCommission', commission_data: {
-            sale_id: saleRecord.id,
-            seller_id: selectedLicenciante,
-            seller_name: licencianteData?.name || 'Licenciante',
-            commission_type: tipoComissaoLicenciante,
-            commission_value: comissaoLicenciante,
-            commission_amount: comissaoLicencianteItem,
-            seller_role: 'licenciante'
-          }});
-          
+          await pdvAction({
+            ...getAdminCredentials(), action: 'createSaleCommission', commission_data: {
+              sale_id: saleRecord.id,
+              seller_id: selectedLicenciante,
+              seller_name: licencianteData?.name || 'Licenciante',
+              commission_type: tipoComissaoLicenciante,
+              commission_value: comissaoLicenciante,
+              commission_amount: comissaoLicencianteItem,
+              seller_role: 'licenciante'
+            }
+          });
+
           console.log(`✅ Comissão licenciante: ${licencianteData?.name} - R$ ${comissaoLicencianteItem.toFixed(2)}`);
         }
 
         // Atualiza produto
-        await pdvAction({ ...getAdminCredentials(), action: 'updateProduct', product_id: product.id, product_data: {
-          quantity: newQuantity,
-          quantity_sold: novaQuantidadeVendida,
-          status: newQuantity > 0 ? 'ESTOQUE' : `VENDIDO ${paymentMethod}`,
-          sold_amount: novoSoldAmount,
-          profit: novoLucroTotal
-        }});
+        await pdvAction({
+          ...getAdminCredentials(), action: 'updateProduct', product_id: product.id, product_data: {
+            quantity: newQuantity,
+            quantity_sold: novaQuantidadeVendida,
+            status: newQuantity > 0 ? 'ESTOQUE' : `VENDIDO ${paymentMethod}`,
+            sold_amount: novoSoldAmount,
+            profit: novoLucroTotal
+          }
+        });
 
         await new Promise(resolve => setTimeout(resolve, 300));
       }
@@ -842,9 +855,9 @@ Transações: ${selectedSession.transactions_count || 0}
       const successMsg = paymentMethod === 'BOLETO PARCELADO'
         ? `✅ Venda finalizada!\n\nTotal: R$ ${cartTotal.toFixed(2)}\nCliente: ${boletoData.cliente}\n${boletoData.parcelas}x de R$ ${(cartTotal / boletoData.parcelas).toFixed(2)}`
         : `✅ Venda finalizada! Total: R$ ${cartTotal.toFixed(2)}`;
-      
+
       alert(successMsg);
-      
+
       // Limpa TODOS os caches
       sessionStorage.removeItem('products_cache');
       sessionStorage.removeItem('products_cache_time');
@@ -856,7 +869,7 @@ Transações: ${selectedSession.transactions_count || 0}
       setCommissionValue(0);
       setSelectedLicenciante(null);
       setComissaoLicenciante(0);
-      
+
       // Recarrega tudo com delay para garantir sincronização
       await new Promise(resolve => setTimeout(resolve, 500));
       await loadProducts();
@@ -926,7 +939,7 @@ ${deductionsInfo}VALOR LÍQUIDO: R$ ${netAmount.toFixed(2)}
 Pagamento: ${paymentMethod}
 ${boletoInfo}================================
     `;
-    
+
     const printWindow = window.open('', '', 'width=300,height=600');
     printWindow.document.write(`<pre style="font-family: monospace; font-size: 12px;">${receipt}</pre>`);
     printWindow.document.close();
@@ -1001,13 +1014,15 @@ ${boletoInfo}================================
 
   const saveEditedCommission = async () => {
     if (!editingCommissionSale) return;
-    
+
     try {
-      await pdvAction({ ...getAdminCredentials(), action: 'updateSale', sale_id: editingCommissionSale.id, sale_data: {
-        commission_amount: parseFloat(editCommissionData.commission_amount),
-        commission_type: editCommissionData.commission_type,
-        commission_value: parseFloat(editCommissionData.commission_value)
-      }});
+      await pdvAction({
+        ...getAdminCredentials(), action: 'updateSale', sale_id: editingCommissionSale.id, sale_data: {
+          commission_amount: parseFloat(editCommissionData.commission_amount),
+          commission_type: editCommissionData.commission_type,
+          commission_value: parseFloat(editCommissionData.commission_value)
+        }
+      });
 
       alert('✅ Comissão atualizada com sucesso!');
       setShowEditCommissionModal(false);
@@ -1021,22 +1036,24 @@ ${boletoInfo}================================
 
   const saveEditedSale = async () => {
     if (!editingSale) return;
-    
+
     try {
       const newTotalAmount = editSaleData.quantity_sold * editSaleData.unit_price;
       const itemTaxes = calculateTaxes(newTotalAmount);
-      
-      await pdvAction({ ...getAdminCredentials(), action: 'updateSale', sale_id: editingSale.id, sale_data: {
-        quantity_sold: parseInt(editSaleData.quantity_sold),
-        unit_price: parseFloat(editSaleData.unit_price),
-        total_amount: newTotalAmount,
-        total_taxes: itemTaxes.total,
-        net_amount: newTotalAmount - itemTaxes.total,
-        payment_method: editSaleData.payment_method,
-        boleto_cliente: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_cliente : null,
-        boleto_documento: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_documento : null,
-        boleto_parcelas: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_parcelas : null
-      }});
+
+      await pdvAction({
+        ...getAdminCredentials(), action: 'updateSale', sale_id: editingSale.id, sale_data: {
+          quantity_sold: parseInt(editSaleData.quantity_sold),
+          unit_price: parseFloat(editSaleData.unit_price),
+          total_amount: newTotalAmount,
+          total_taxes: itemTaxes.total,
+          net_amount: newTotalAmount - itemTaxes.total,
+          payment_method: editSaleData.payment_method,
+          boleto_cliente: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_cliente : null,
+          boleto_documento: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_documento : null,
+          boleto_parcelas: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_parcelas : null
+        }
+      });
 
       alert('✅ Venda atualizada com sucesso!');
       setShowEditSaleModal(false);
@@ -1057,7 +1074,7 @@ ${boletoInfo}================================
       const prodResp = await getPDVData({ ...getAdminCredentials(), action: 'products' });
       const allProds = prodResp?.data?.products || [];
       const targetProduct = allProds.find(p => p.id === sale.product_id);
-      
+
       if (!targetProduct) {
         alert('❌ Produto não encontrado');
         return;
@@ -1068,13 +1085,15 @@ ${boletoInfo}================================
       const restoredSoldAmount = Math.max(0, (targetProduct.sold_amount || 0) - (sale.total_amount || 0));
       const restoredProfit = restoredSoldAmount - ((targetProduct.cost_price || 0) * ((targetProduct.quantity_sold || 0) - (sale.quantity_sold || 0)));
 
-      await pdvAction({ ...getAdminCredentials(), action: 'updateProduct', product_id: sale.product_id, product_data: {
-        quantity: restoredQuantity,
-        quantity_sold: Math.max(0, (targetProduct.quantity_sold || 0) - (sale.quantity_sold || 0)),
-        status: 'ESTOQUE',
-        sold_amount: restoredSoldAmount,
-        profit: restoredProfit
-      }});
+      await pdvAction({
+        ...getAdminCredentials(), action: 'updateProduct', product_id: sale.product_id, product_data: {
+          quantity: restoredQuantity,
+          quantity_sold: Math.max(0, (targetProduct.quantity_sold || 0) - (sale.quantity_sold || 0)),
+          status: 'ESTOQUE',
+          sold_amount: restoredSoldAmount,
+          profit: restoredProfit
+        }
+      });
 
       // 4️⃣ Deleta a venda e comissões
       await pdvAction({ ...getAdminCredentials(), action: 'deleteSale', sale_id: sale.id });
@@ -1318,499 +1337,499 @@ ${boletoInfo}================================
             {/* ÁREA PRINCIPAL - LAYOUT HORIZONTAL */}
             <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 ${!currentCashRegister ? 'opacity-50 pointer-events-none' : ''}`}>
 
-            {/* LISTA DE PRODUTOS - FUNDO BRANCO */}
-            <div className="lg:col-span-2">
-              <Card className="bg-white border-gray-200 shadow-lg">
-                <CardHeader className="border-b border-gray-200">
-                  <CardTitle className="text-gray-900 text-lg">Lista de Produtos</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="max-h-[500px] overflow-y-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 sticky top-0">
-                        <tr className="text-sm text-gray-700">
-                          <th className="text-left p-3 font-semibold">Código/SKU</th>
-                          <th className="text-left p-3 font-semibold">Produto</th>
-                          <th className="text-center p-3 font-semibold">Estoque</th>
-                          <th className="text-right p-3 font-semibold">Preço</th>
-                          <th className="text-center p-3 font-semibold">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {filteredProducts.map((product, index) => (
-                          <tr 
-                            key={product.id} 
-                            className={`border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
-                            onClick={() => addToCart(product)}
-                          >
-                            <td className="p-3 text-sm text-gray-900 font-medium">{product.lot || 'N/A'}</td>
-                            <td className="p-3 text-sm text-gray-900">{product.description}</td>
-                            <td className="p-3 text-center">
-                              <Badge className="bg-blue-100 text-blue-800 border-0">
-                                {product.quantity}
-                              </Badge>
-                            </td>
-                            <td className="p-3 text-right text-green-600 font-bold">
-                              R$ {product.selling_price_retail?.toFixed(2)}
-                            </td>
-                            <td className="p-3 text-center">
-                              <Button
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  addToCart(product);
-                                }}
-                                disabled={!currentCashRegister}
-                                className="bg-green-600 hover:bg-green-700 h-8 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                <Plus className="w-4 h-4" />
-                              </Button>
-                            </td>
+              {/* LISTA DE PRODUTOS - FUNDO BRANCO */}
+              <div className="lg:col-span-2">
+                <Card className="bg-white border-gray-200 shadow-lg">
+                  <CardHeader className="border-b border-gray-200">
+                    <CardTitle className="text-gray-900 text-lg">Lista de Produtos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="max-h-[500px] overflow-y-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50 sticky top-0">
+                          <tr className="text-sm text-gray-700">
+                            <th className="text-left p-3 font-semibold">Código/SKU</th>
+                            <th className="text-left p-3 font-semibold">Produto</th>
+                            <th className="text-center p-3 font-semibold">Estoque</th>
+                            <th className="text-right p-3 font-semibold">Preço</th>
+                            <th className="text-center p-3 font-semibold">Ação</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {filteredProducts.length === 0 && (
-                      <div className="text-center py-12 text-gray-400">
-                        <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>Nenhum produto encontrado</p>
+                        </thead>
+                        <tbody>
+                          {filteredProducts.map((product, index) => (
+                            <tr
+                              key={product.id}
+                              className={`border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                              onClick={() => addToCart(product)}
+                            >
+                              <td className="p-3 text-sm text-gray-900 font-medium">{product.lot || 'N/A'}</td>
+                              <td className="p-3 text-sm text-gray-900">{product.description}</td>
+                              <td className="p-3 text-center">
+                                <Badge className="bg-blue-100 text-blue-800 border-0">
+                                  {product.quantity}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-right text-green-600 font-bold">
+                                R$ {product.selling_price_retail?.toFixed(2)}
+                              </td>
+                              <td className="p-3 text-center">
+                                <Button
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    addToCart(product);
+                                  }}
+                                  disabled={!currentCashRegister}
+                                  className="bg-green-600 hover:bg-green-700 h-8 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  <Plus className="w-4 h-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {filteredProducts.length === 0 && (
+                        <div className="text-center py-12 text-gray-400">
+                          <Package className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                          <p>Nenhum produto encontrado</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* CARRINHO - FUNDO BRANCO */}
+              <div>
+                <Card className="bg-white border-gray-200 shadow-lg sticky top-6">
+                  <CardHeader className="bg-gray-50 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-gray-900 flex items-center gap-2 text-lg">
+                        <ShoppingCart className="w-5 h-5" />
+                        Carrinho ({cart.length})
+                      </CardTitle>
+                      {cart.length > 0 && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setCart([])}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          Limpar
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4 p-4">
+
+                    {/* VENDEDORES E COMISSÕES */}
+                    {cart.length > 0 && (
+                      <div className="space-y-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <h3 className="font-bold text-gray-900 mb-2">👥 Vendedores e Comissões</h3>
+
+                        {/* LICENCIADO (Vendedor Principal) */}
+                        <div className="bg-white rounded-lg p-3 border border-blue-200">
+                          <p className="text-xs font-semibold text-gray-700 mb-2">Licenciado (Vendedor)</p>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="text-gray-700 text-xs mb-1 block font-medium">Vendedor</label>
+                              <select
+                                value={selectedSeller || ''}
+                                onChange={(e) => handleSellerChange(e.target.value || null)}
+                                className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                              >
+                                <option value="">Sem vendedor</option>
+                                {sellers.map(seller => (
+                                  <option key={seller.id} value={seller.id}>
+                                    {seller.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {selectedSeller && (
+                              <>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo</label>
+                                    <select
+                                      value={commissionType}
+                                      onChange={(e) => setCommissionType(e.target.value)}
+                                      className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                                    >
+                                      <option value="percentage">%</option>
+                                      <option value="fixed">R$</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-gray-700 text-xs mb-1 block font-medium">Valor</label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={commissionValue}
+                                      onChange={(e) => setCommissionValue(parseFloat(e.target.value) || 0)}
+                                      className="bg-white text-gray-900 border-gray-300 h-9"
+                                      placeholder={commissionType === 'percentage' ? '10' : '50.00'}
+                                    />
+                                  </div>
+                                </div>
+                                {commissionValue > 0 && (
+                                  <div className="bg-green-100 rounded p-2 text-xs font-bold text-green-900">
+                                    💰 Comissão Licenciado: R$ {commissionLicenciado.toFixed(2)}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* LICENCIANTE (Segundo Vendedor) */}
+                        <div className="bg-white rounded-lg p-3 border border-purple-200">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-purple-700">Licenciante (Indicador)</p>
+                            {autoFilledLicenciante && (
+                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                                ✓ Auto
+                              </span>
+                            )}
+                          </div>
+                          <div className="space-y-2">
+                            <div>
+                              <label className="text-gray-700 text-xs mb-1 block font-medium">Licenciante</label>
+                              <select
+                                value={selectedLicenciante || ''}
+                                onChange={(e) => setSelectedLicenciante(e.target.value || null)}
+                                className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                              >
+                                <option value="">Sem licenciante</option>
+                                {sellers.filter(s => s.id !== selectedSeller).map(seller => (
+                                  <option key={seller.id} value={seller.id}>
+                                    {seller.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {selectedLicenciante && (
+                              <>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo</label>
+                                    <select
+                                      value={tipoComissaoLicenciante}
+                                      onChange={(e) => setTipoComissaoLicenciante(e.target.value)}
+                                      className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                                    >
+                                      <option value="percentage">%</option>
+                                      <option value="fixed">R$</option>
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <label className="text-gray-700 text-xs mb-1 block font-medium">Valor</label>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      value={comissaoLicenciante}
+                                      onChange={(e) => setComissaoLicenciante(parseFloat(e.target.value) || 0)}
+                                      className="bg-white text-gray-900 border-gray-300 h-9"
+                                      placeholder={tipoComissaoLicenciante === 'percentage' ? '5' : '25.00'}
+                                    />
+                                  </div>
+                                </div>
+                                {comissaoLicenciante > 0 && (
+                                  <div className="bg-purple-100 rounded p-2 text-xs font-bold text-purple-900">
+                                    💰 Comissão Licenciante: R$ {commissionLicencianteCalc.toFixed(2)}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* TOTAL DE COMISSÕES */}
+                        {totalCommission > 0 && (
+                          <div className="bg-orange-100 rounded p-2 text-sm font-bold text-orange-900">
+                            💰 Total Comissões: R$ {totalCommission.toFixed(2)}
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
 
-          {/* CARRINHO - FUNDO BRANCO */}
-          <div>
-            <Card className="bg-white border-gray-200 shadow-lg sticky top-6">
-              <CardHeader className="bg-gray-50 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-gray-900 flex items-center gap-2 text-lg">
-                    <ShoppingCart className="w-5 h-5" />
-                    Carrinho ({cart.length})
-                  </CardTitle>
-                  {cart.length > 0 && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setCart([])}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    >
-                      Limpar
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4 p-4">
-                
-                {/* VENDEDORES E COMISSÕES */}
-                {cart.length > 0 && (
-                  <div className="space-y-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <h3 className="font-bold text-gray-900 mb-2">👥 Vendedores e Comissões</h3>
-
-                    {/* LICENCIADO (Vendedor Principal) */}
-                    <div className="bg-white rounded-lg p-3 border border-blue-200">
-                      <p className="text-xs font-semibold text-gray-700 mb-2">Licenciado (Vendedor)</p>
-                      <div className="space-y-2">
-                        <div>
-                          <label className="text-gray-700 text-xs mb-1 block font-medium">Vendedor</label>
-                          <select
-                            value={selectedSeller || ''}
-                            onChange={(e) => handleSellerChange(e.target.value || null)}
-                            className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
-                          >
-                            <option value="">Sem vendedor</option>
-                            {sellers.map(seller => (
-                              <option key={seller.id} value={seller.id}>
-                                {seller.name}
-                              </option>
+                    {/* ITENS DO CARRINHO - FUNDO BRANCO */}
+                    <div className="max-h-[250px] overflow-y-auto border border-gray-200 rounded">
+                      {cart.length > 0 ? (
+                        <table className="w-full text-sm">
+                          <thead className="bg-gray-50 sticky top-0">
+                            <tr className="text-xs text-gray-700">
+                              <th className="text-left p-2">Produto</th>
+                              <th className="text-center p-2">Qtd</th>
+                              <th className="text-right p-2">Valor</th>
+                              <th className="text-right p-2">Total</th>
+                              <th className="text-center p-2"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {cart.map(item => (
+                              <tr key={item.product.id} className="border-b border-gray-200 hover:bg-gray-50">
+                                <td className="p-2 text-gray-900 text-xs">{item.product.description}</td>
+                                <td className="p-2">
+                                  <div className="flex items-center justify-center gap-1">
+                                    <button
+                                      onClick={() => updateQuantity(item.product.id, -1)}
+                                      className="text-gray-600 hover:text-gray-900 p-1"
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                    </button>
+                                    <span className="text-gray-900 font-bold w-6 text-center">{item.quantity}</span>
+                                    <button
+                                      onClick={() => updateQuantity(item.product.id, 1)}
+                                      className="text-gray-600 hover:text-gray-900 p-1"
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="p-2">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.customPrice || item.product.selling_price_retail}
+                                    onChange={(e) => updatePrice(item.product.id, parseFloat(e.target.value) || 0)}
+                                    className="h-7 text-xs text-right w-20 bg-white border-gray-300 text-gray-900"
+                                  />
+                                </td>
+                                <td className="p-2 text-right text-green-600 font-bold text-xs">
+                                  R$ {((item.customPrice || item.product.selling_price_retail) * item.quantity).toFixed(2)}
+                                </td>
+                                <td className="p-2 text-center">
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => removeFromCart(item.product.id)}
+                                    className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </td>
+                              </tr>
                             ))}
+                          </tbody>
+                        </table>
+                      ) : (
+                        <div className="text-center py-12 text-gray-400">
+                          <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                          <p className="text-sm">Carrinho vazio</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* FORMA DE PAGAMENTO */}
+                    {cart.length > 0 && (
+                      <>
+                        <div>
+                          <label className="text-gray-700 text-sm mb-2 block font-medium">Forma de Pagamento</label>
+                          <select
+                            value={paymentMethod}
+                            onChange={(e) => {
+                              setPaymentMethod(e.target.value);
+                              if (e.target.value !== 'BOLETO PARCELADO') {
+                                setBoletoData({ cliente: '', documento: '', parcelas: 1 });
+                              }
+                            }}
+                            className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          >
+                            <option>PIX</option>
+                            <option>DINHEIRO</option>
+                            <option>CARTÃO DÉBITO</option>
+                            <option>CARTÃO CRÉDITO</option>
+                            <option>BOLETO PARCELADO</option>
                           </select>
                         </div>
 
-                        {selectedSeller && (
-                          <>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo</label>
-                                <select
-                                  value={commissionType}
-                                  onChange={(e) => setCommissionType(e.target.value)}
-                                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
-                                >
-                                  <option value="percentage">%</option>
-                                  <option value="fixed">R$</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-gray-700 text-xs mb-1 block font-medium">Valor</label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={commissionValue}
-                                  onChange={(e) => setCommissionValue(parseFloat(e.target.value) || 0)}
-                                  className="bg-white text-gray-900 border-gray-300 h-9"
-                                  placeholder={commissionType === 'percentage' ? '10' : '50.00'}
-                                />
-                              </div>
+                        {/* CAMPOS BOLETO */}
+                        {paymentMethod === 'BOLETO PARCELADO' && (
+                          <div className="space-y-2 bg-blue-50 rounded-lg p-3 border border-blue-200">
+                            <div>
+                              <label className="text-gray-700 text-xs mb-1 block">Nome do Cliente</label>
+                              <Input
+                                value={boletoData.cliente}
+                                onChange={(e) => setBoletoData({ ...boletoData, cliente: e.target.value })}
+                                className="h-9"
+                                placeholder="Nome completo"
+                              />
                             </div>
-                            {commissionValue > 0 && (
-                              <div className="bg-green-100 rounded p-2 text-xs font-bold text-green-900">
-                                💰 Comissão Licenciado: R$ {commissionLicenciado.toFixed(2)}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* LICENCIANTE (Segundo Vendedor) */}
-                    <div className="bg-white rounded-lg p-3 border border-purple-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-xs font-semibold text-purple-700">Licenciante (Indicador)</p>
-                        {autoFilledLicenciante && (
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
-                            ✓ Auto
-                          </span>
-                        )}
-                      </div>
-                      <div className="space-y-2">
-                        <div>
-                          <label className="text-gray-700 text-xs mb-1 block font-medium">Licenciante</label>
-                          <select
-                            value={selectedLicenciante || ''}
-                            onChange={(e) => setSelectedLicenciante(e.target.value || null)}
-                            className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
-                          >
-                            <option value="">Sem licenciante</option>
-                            {sellers.filter(s => s.id !== selectedSeller).map(seller => (
-                              <option key={seller.id} value={seller.id}>
-                                {seller.name}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {selectedLicenciante && (
-                          <>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div>
-                                <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo</label>
-                                <select
-                                  value={tipoComissaoLicenciante}
-                                  onChange={(e) => setTipoComissaoLicenciante(e.target.value)}
-                                  className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
-                                >
-                                  <option value="percentage">%</option>
-                                  <option value="fixed">R$</option>
-                                </select>
-                              </div>
-                              <div>
-                                <label className="text-gray-700 text-xs mb-1 block font-medium">Valor</label>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={comissaoLicenciante}
-                                  onChange={(e) => setComissaoLicenciante(parseFloat(e.target.value) || 0)}
-                                  className="bg-white text-gray-900 border-gray-300 h-9"
-                                  placeholder={tipoComissaoLicenciante === 'percentage' ? '5' : '25.00'}
-                                />
-                              </div>
+                            <div>
+                              <label className="text-gray-700 text-xs mb-1 block">Documento (CPF/RG)</label>
+                              <Input
+                                value={boletoData.documento}
+                                onChange={(e) => setBoletoData({ ...boletoData, documento: e.target.value })}
+                                className="h-9"
+                                placeholder="000.000.000-00"
+                              />
                             </div>
-                            {comissaoLicenciante > 0 && (
-                              <div className="bg-purple-100 rounded p-2 text-xs font-bold text-purple-900">
-                                💰 Comissão Licenciante: R$ {commissionLicencianteCalc.toFixed(2)}
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* TOTAL DE COMISSÕES */}
-                    {totalCommission > 0 && (
-                      <div className="bg-orange-100 rounded p-2 text-sm font-bold text-orange-900">
-                        💰 Total Comissões: R$ {totalCommission.toFixed(2)}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* ITENS DO CARRINHO - FUNDO BRANCO */}
-                <div className="max-h-[250px] overflow-y-auto border border-gray-200 rounded">
-                  {cart.length > 0 ? (
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-50 sticky top-0">
-                        <tr className="text-xs text-gray-700">
-                          <th className="text-left p-2">Produto</th>
-                          <th className="text-center p-2">Qtd</th>
-                          <th className="text-right p-2">Valor</th>
-                          <th className="text-right p-2">Total</th>
-                          <th className="text-center p-2"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cart.map(item => (
-                          <tr key={item.product.id} className="border-b border-gray-200 hover:bg-gray-50">
-                            <td className="p-2 text-gray-900 text-xs">{item.product.description}</td>
-                            <td className="p-2">
-                              <div className="flex items-center justify-center gap-1">
-                                <button
-                                  onClick={() => updateQuantity(item.product.id, -1)}
-                                  className="text-gray-600 hover:text-gray-900 p-1"
-                                >
-                                  <Minus className="w-3 h-3" />
-                                </button>
-                                <span className="text-gray-900 font-bold w-6 text-center">{item.quantity}</span>
-                                <button
-                                  onClick={() => updateQuantity(item.product.id, 1)}
-                                  className="text-gray-600 hover:text-gray-900 p-1"
-                                >
-                                  <Plus className="w-3 h-3" />
-                                </button>
-                              </div>
-                            </td>
-                            <td className="p-2">
+                            <div>
+                              <label className="text-gray-700 text-xs mb-1 block">Número de Parcelas</label>
                               <Input
                                 type="number"
-                                step="0.01"
-                                value={item.customPrice || item.product.selling_price_retail}
-                                onChange={(e) => updatePrice(item.product.id, parseFloat(e.target.value) || 0)}
-                                className="h-7 text-xs text-right w-20 bg-white border-gray-300 text-gray-900"
+                                min="1"
+                                value={boletoData.parcelas}
+                                onChange={(e) => setBoletoData({ ...boletoData, parcelas: parseInt(e.target.value) || 1 })}
+                                className="h-9"
+                                placeholder="1"
                               />
-                            </td>
-                            <td className="p-2 text-right text-green-600 font-bold text-xs">
-                              R$ {((item.customPrice || item.product.selling_price_retail) * item.quantity).toFixed(2)}
-                            </td>
-                            <td className="p-2 text-center">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => removeFromCart(item.product.id)}
-                                className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className="text-center py-12 text-gray-400">
-                      <ShoppingCart className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                      <p className="text-sm">Carrinho vazio</p>
-                    </div>
-                  )}
-                </div>
+                            </div>
+                            <div className="bg-blue-100 rounded p-2 text-xs text-blue-900 font-medium">
+                              💰 Valor da parcela: R$ {(cartTotal / boletoData.parcelas).toFixed(2)}
+                            </div>
+                          </div>
+                        )}
 
-                {/* FORMA DE PAGAMENTO */}
-                {cart.length > 0 && (
-                  <>
-                    <div>
-                      <label className="text-gray-700 text-sm mb-2 block font-medium">Forma de Pagamento</label>
-                      <select
-                        value={paymentMethod}
-                        onChange={(e) => {
-                          setPaymentMethod(e.target.value);
-                          if (e.target.value !== 'BOLETO PARCELADO') {
-                            setBoletoData({ cliente: '', documento: '', parcelas: 1 });
-                          }
-                        }}
-                        className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      >
-                        <option>PIX</option>
-                        <option>DINHEIRO</option>
-                        <option>CARTÃO DÉBITO</option>
-                        <option>CARTÃO CRÉDITO</option>
-                        <option>BOLETO PARCELADO</option>
-                      </select>
-                    </div>
-
-                    {/* CAMPOS BOLETO */}
-                    {paymentMethod === 'BOLETO PARCELADO' && (
-                      <div className="space-y-2 bg-blue-50 rounded-lg p-3 border border-blue-200">
-                        <div>
-                          <label className="text-gray-700 text-xs mb-1 block">Nome do Cliente</label>
-                          <Input
-                            value={boletoData.cliente}
-                            onChange={(e) => setBoletoData({...boletoData, cliente: e.target.value})}
-                            className="h-9"
-                            placeholder="Nome completo"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-gray-700 text-xs mb-1 block">Documento (CPF/RG)</label>
-                          <Input
-                            value={boletoData.documento}
-                            onChange={(e) => setBoletoData({...boletoData, documento: e.target.value})}
-                            className="h-9"
-                            placeholder="000.000.000-00"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-gray-700 text-xs mb-1 block">Número de Parcelas</label>
-                          <Input
-                            type="number"
-                            min="1"
-                            value={boletoData.parcelas}
-                            onChange={(e) => setBoletoData({...boletoData, parcelas: parseInt(e.target.value) || 1})}
-                            className="h-9"
-                            placeholder="1"
-                          />
-                        </div>
-                        <div className="bg-blue-100 rounded p-2 text-xs text-blue-900 font-medium">
-                          💰 Valor da parcela: R$ {(cartTotal / boletoData.parcelas).toFixed(2)}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* TOTAL */}
-                    <div className="border-t border-gray-200 pt-3">
-                      {taxSettings && taxSettings.is_active && showTaxDetails && (
-                        <div className="bg-gray-50 rounded p-2 mb-2 space-y-1 text-xs">
-                          <div className="flex justify-between text-gray-600">
-                            <span>ICMS ({taxSettings.icms_rate}%):</span>
-                            <span className="text-red-600">-R$ {taxes.icms.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-gray-600">
-                            <span>PIS ({taxSettings.pis_rate}%):</span>
-                            <span className="text-red-600">-R$ {taxes.pis.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-gray-600">
-                            <span>COFINS ({taxSettings.cofins_rate}%):</span>
-                            <span className="text-red-600">-R$ {taxes.cofins.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-gray-600">
-                            <span>IRPJ ({taxSettings.irpj_rate}%):</span>
-                            <span className="text-red-600">-R$ {taxes.irpj.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between text-gray-600">
-                            <span>CSLL ({taxSettings.csll_rate}%):</span>
-                            <span className="text-red-600">-R$ {taxes.csll.toFixed(2)}</span>
-                          </div>
-                          {taxSettings.iss_rate > 0 && (
-                            <div className="flex justify-between text-gray-600">
-                              <span>ISS ({taxSettings.iss_rate}%):</span>
-                              <span className="text-red-600">-R$ {taxes.iss.toFixed(2)}</span>
+                        {/* TOTAL */}
+                        <div className="border-t border-gray-200 pt-3">
+                          {taxSettings && taxSettings.is_active && showTaxDetails && (
+                            <div className="bg-gray-50 rounded p-2 mb-2 space-y-1 text-xs">
+                              <div className="flex justify-between text-gray-600">
+                                <span>ICMS ({taxSettings.icms_rate}%):</span>
+                                <span className="text-red-600">-R$ {taxes.icms.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-gray-600">
+                                <span>PIS ({taxSettings.pis_rate}%):</span>
+                                <span className="text-red-600">-R$ {taxes.pis.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-gray-600">
+                                <span>COFINS ({taxSettings.cofins_rate}%):</span>
+                                <span className="text-red-600">-R$ {taxes.cofins.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-gray-600">
+                                <span>IRPJ ({taxSettings.irpj_rate}%):</span>
+                                <span className="text-red-600">-R$ {taxes.irpj.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-gray-600">
+                                <span>CSLL ({taxSettings.csll_rate}%):</span>
+                                <span className="text-red-600">-R$ {taxes.csll.toFixed(2)}</span>
+                              </div>
+                              {taxSettings.iss_rate > 0 && (
+                                <div className="flex justify-between text-gray-600">
+                                  <span>ISS ({taxSettings.iss_rate}%):</span>
+                                  <span className="text-red-600">-R$ {taxes.iss.toFixed(2)}</span>
+                                </div>
+                              )}
+                              <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200">
+                                <span>Total Impostos:</span>
+                                <span className="text-red-600">-R$ {taxes.total.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between font-bold text-green-600 pt-1 border-t border-gray-200">
+                                <span>Valor Líquido:</span>
+                                <span>R$ {taxes.netValue.toFixed(2)}</span>
+                              </div>
                             </div>
                           )}
-                          <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200">
-                            <span>Total Impostos:</span>
-                            <span className="text-red-600">-R$ {taxes.total.toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between font-bold text-green-600 pt-1 border-t border-gray-200">
-                            <span>Valor Líquido:</span>
-                            <span>R$ {taxes.netValue.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      )}
 
-                      {taxSettings && taxSettings.is_active && (
-                        <button
-                          onClick={() => setShowTaxDetails(!showTaxDetails)}
-                          className="text-xs text-blue-600 hover:text-blue-700 mb-2 flex items-center gap-1"
-                        >
-                          {showTaxDetails ? '▼' : '▶'} {showTaxDetails ? 'Ocultar' : 'Ver'} impostos
-                        </button>
-                      )}
+                          {taxSettings && taxSettings.is_active && (
+                            <button
+                              onClick={() => setShowTaxDetails(!showTaxDetails)}
+                              className="text-xs text-blue-600 hover:text-blue-700 mb-2 flex items-center gap-1"
+                            >
+                              {showTaxDetails ? '▼' : '▶'} {showTaxDetails ? 'Ocultar' : 'Ver'} impostos
+                            </button>
+                          )}
 
-                      <div className="space-y-2">
-                        <div className="bg-gray-100 rounded-lg p-3 border border-gray-300">
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-700 font-medium text-sm">TOTAL:</span>
-                            <span className="text-gray-900 text-xl font-bold">
-                              R$ {cartTotal.toFixed(2)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {(taxes.total > 0 || totalCommission > 0) && (
-                          <>
-                            <div className="text-xs space-y-1 px-1">
-                              {taxes.total > 0 && (
-                                <div className="flex justify-between text-red-600">
-                                  <span>(-) Impostos:</span>
-                                  <span className="font-semibold">-R$ {taxes.total.toFixed(2)}</span>
-                                </div>
-                              )}
-                              {totalCommission > 0 && (
-                                <div className="flex justify-between text-orange-600">
-                                  <span>(-) Comissão:</span>
-                                  <span className="font-semibold">-R$ {totalCommission.toFixed(2)}</span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="bg-green-50 rounded-lg p-3 border-2 border-green-600">
+                          <div className="space-y-2">
+                            <div className="bg-gray-100 rounded-lg p-3 border border-gray-300">
                               <div className="flex items-center justify-between">
-                                <span className="text-gray-900 font-semibold text-sm">VALOR LÍQUIDO:</span>
-                                <span className="text-green-600 text-2xl font-bold">
-                                  R$ {netAmount.toFixed(2)}
+                                <span className="text-gray-700 font-medium text-sm">TOTAL:</span>
+                                <span className="text-gray-900 text-xl font-bold">
+                                  R$ {cartTotal.toFixed(2)}
                                 </span>
                               </div>
                             </div>
-                          </>
-                        )}
 
-                        {taxes.total === 0 && totalCommission === 0 && (
-                          <div className="bg-green-50 rounded-lg p-4 border-2 border-green-600">
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-900 font-semibold text-lg">TOTAL:</span>
-                              <span className="text-green-600 text-3xl font-bold">
-                                R$ {cartTotal.toFixed(2)}
-                              </span>
-                            </div>
+                            {(taxes.total > 0 || totalCommission > 0) && (
+                              <>
+                                <div className="text-xs space-y-1 px-1">
+                                  {taxes.total > 0 && (
+                                    <div className="flex justify-between text-red-600">
+                                      <span>(-) Impostos:</span>
+                                      <span className="font-semibold">-R$ {taxes.total.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                  {totalCommission > 0 && (
+                                    <div className="flex justify-between text-orange-600">
+                                      <span>(-) Comissão:</span>
+                                      <span className="font-semibold">-R$ {totalCommission.toFixed(2)}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="bg-green-50 rounded-lg p-3 border-2 border-green-600">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-gray-900 font-semibold text-sm">VALOR LÍQUIDO:</span>
+                                    <span className="text-green-600 text-2xl font-bold">
+                                      R$ {netAmount.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+
+                            {taxes.total === 0 && totalCommission === 0 && (
+                              <div className="bg-green-50 rounded-lg p-4 border-2 border-green-600">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-gray-900 font-semibold text-lg">TOTAL:</span>
+                                  <span className="text-green-600 text-3xl font-bold">
+                                    R$ {cartTotal.toFixed(2)}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
+                        </div>
 
-                    {/* BOTÕES */}
-                    <div className="space-y-2">
-                      <Button
-                        onClick={finalizeSale}
-                        disabled={isProcessing}
-                        className="w-full bg-green-600 hover:bg-green-700 h-12 text-base font-bold"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <Clock className="w-5 h-5 mr-2 animate-spin" />
-                            Processando...
-                          </>
-                        ) : (
-                          <>
-                            <DollarSign className="w-5 h-5 mr-2" />
-                            Finalizar Venda
-                          </>
-                        )}
-                      </Button>
+                        {/* BOTÕES */}
+                        <div className="space-y-2">
+                          <Button
+                            onClick={finalizeSale}
+                            disabled={isProcessing}
+                            className="w-full bg-green-600 hover:bg-green-700 h-12 text-base font-bold"
+                          >
+                            {isProcessing ? (
+                              <>
+                                <Clock className="w-5 h-5 mr-2 animate-spin" />
+                                Processando...
+                              </>
+                            ) : (
+                              <>
+                                <DollarSign className="w-5 h-5 mr-2" />
+                                Finalizar Venda
+                              </>
+                            )}
+                          </Button>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          onClick={printReceipt}
-                          variant="outline"
-                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                        >
-                          <Printer className="w-4 h-4 mr-2" />
-                          Imprimir
-                        </Button>
-                        <Button
-                          onClick={() => setCart([])}
-                          variant="outline"
-                          className="border-red-300 text-red-600 hover:bg-red-50"
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              onClick={printReceipt}
+                              variant="outline"
+                              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                              <Printer className="w-4 h-4 mr-2" />
+                              Imprimir
+                            </Button>
+                            <Button
+                              onClick={() => setCart([])}
+                              variant="outline"
+                              className="border-red-300 text-red-600 hover:bg-red-50"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="extrato">
@@ -1993,62 +2012,61 @@ ${boletoInfo}================================
                       </thead>
                       <tbody>
                         {allSales
-                          .filter(sale => 
-                            !searchSale || 
+                          .filter(sale =>
+                            !searchSale ||
                             sale.order_code?.toLowerCase().includes(searchSale.toLowerCase()) ||
                             sale.product_description?.toLowerCase().includes(searchSale.toLowerCase())
                           )
                           .map((sale) => (
-                          <tr key={sale.id} className="border-b border-gray-700 hover:bg-gray-700/50 text-gray-300">
-                            <td className="p-3">
-                              <code className="bg-gray-900 px-2 py-1 rounded text-xs text-blue-400 font-mono">
-                                {sale.order_code || 'N/A'}
-                              </code>
-                            </td>
-                            <td className="p-3 text-xs">
-                              {new Date(sale.sale_datetime).toLocaleString('pt-BR')}
-                            </td>
-                            <td className="p-3">{sale.product_description}</td>
-                            <td className="text-center p-3 text-blue-400 font-semibold">
-                              {sale.quantity_sold}
-                            </td>
-                            <td className="text-right p-3 text-white">
-                              R$ {sale.unit_price.toFixed(2)}
-                            </td>
-                            <td className="text-right p-3 text-green-400 font-bold">
-                              R$ {sale.total_amount.toFixed(2)}
-                            </td>
-                            <td className="text-center p-3">
-                              <Badge className={`text-xs ${
-                                sale.payment_method === 'PIX' ? 'bg-green-600' :
-                                sale.payment_method === 'DINHEIRO' ? 'bg-blue-600' :
-                                sale.payment_method === 'CARTÃO DÉBITO' ? 'bg-purple-600' :
-                                sale.payment_method === 'CARTÃO CRÉDITO' ? 'bg-orange-600' :
-                                'bg-yellow-600'
-                              }`}>
-                                {sale.payment_method}
-                              </Badge>
-                            </td>
-                            <td className="text-center p-3">
-                              <div className="flex gap-1 justify-center">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleEditSale(sale)}
-                                  className="bg-blue-600 hover:bg-blue-700 h-7 px-2"
-                                >
-                                  ✏️
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={() => cancelSale(sale)}
-                                  className="bg-red-600 hover:bg-red-700 h-7 px-2"
-                                >
-                                  ✕
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+                            <tr key={sale.id} className="border-b border-gray-700 hover:bg-gray-700/50 text-gray-300">
+                              <td className="p-3">
+                                <code className="bg-gray-900 px-2 py-1 rounded text-xs text-blue-400 font-mono">
+                                  {sale.order_code || 'N/A'}
+                                </code>
+                              </td>
+                              <td className="p-3 text-xs">
+                                {new Date(sale.sale_datetime).toLocaleString('pt-BR')}
+                              </td>
+                              <td className="p-3">{sale.product_description}</td>
+                              <td className="text-center p-3 text-blue-400 font-semibold">
+                                {sale.quantity_sold}
+                              </td>
+                              <td className="text-right p-3 text-white">
+                                R$ {sale.unit_price.toFixed(2)}
+                              </td>
+                              <td className="text-right p-3 text-green-400 font-bold">
+                                R$ {sale.total_amount.toFixed(2)}
+                              </td>
+                              <td className="text-center p-3">
+                                <Badge className={`text-xs ${sale.payment_method === 'PIX' ? 'bg-green-600' :
+                                  sale.payment_method === 'DINHEIRO' ? 'bg-blue-600' :
+                                    sale.payment_method === 'CARTÃO DÉBITO' ? 'bg-purple-600' :
+                                      sale.payment_method === 'CARTÃO CRÉDITO' ? 'bg-orange-600' :
+                                        'bg-yellow-600'
+                                  }`}>
+                                  {sale.payment_method}
+                                </Badge>
+                              </td>
+                              <td className="text-center p-3">
+                                <div className="flex gap-1 justify-center">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleEditSale(sale)}
+                                    className="bg-blue-600 hover:bg-blue-700 h-7 px-2"
+                                  >
+                                    ✏️
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => cancelSale(sale)}
+                                    className="bg-red-600 hover:bg-red-700 h-7 px-2"
+                                  >
+                                    ✕
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
                       </tbody>
                     </table>
                   </div>
@@ -2110,7 +2128,7 @@ ${boletoInfo}================================
                             productMap[sale.product_id].quantity_sold += sale.quantity_sold || 0;
                             productMap[sale.product_id].total_amount += sale.total_amount || 0;
                             productMap[sale.product_id].net_amount += sale.net_amount || 0;
-                            
+
                             // Conta formas de pagamento
                             const method = sale.payment_method;
                             if (!productMap[sale.product_id].payment_methods[method]) {
@@ -2118,18 +2136,17 @@ ${boletoInfo}================================
                             }
                             productMap[sale.product_id].payment_methods[method] += sale.quantity_sold || 0;
                           });
-                          
+
                           return Object.values(productMap)
                             .sort((a, b) => b.quantity_sold - a.quantity_sold)
                             .map((product, index) => (
                               <tr key={product.id} className="border-b border-gray-700 hover:bg-gray-700/50 text-gray-300">
                                 <td className="p-3 text-center">
-                                  <span className={`font-bold ${
-                                    index === 0 ? 'text-yellow-400 text-lg' : 
-                                    index === 1 ? 'text-gray-300 text-lg' : 
-                                    index === 2 ? 'text-orange-400 text-lg' : 
-                                    'text-gray-500'
-                                  }`}>
+                                  <span className={`font-bold ${index === 0 ? 'text-yellow-400 text-lg' :
+                                    index === 1 ? 'text-gray-300 text-lg' :
+                                      index === 2 ? 'text-orange-400 text-lg' :
+                                        'text-gray-500'
+                                    }`}>
                                     {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                                   </span>
                                 </td>
@@ -2140,13 +2157,12 @@ ${boletoInfo}================================
                                 <td className="p-3">
                                   <div className="flex flex-wrap gap-1">
                                     {Object.entries(product.payment_methods).map(([method, qty]) => (
-                                      <Badge key={method} className={`text-xs ${
-                                        method === 'PIX' ? 'bg-green-600' :
+                                      <Badge key={method} className={`text-xs ${method === 'PIX' ? 'bg-green-600' :
                                         method === 'DINHEIRO' ? 'bg-blue-600' :
-                                        method === 'CARTÃO DÉBITO' ? 'bg-purple-600' :
-                                        method === 'CARTÃO CRÉDITO' ? 'bg-orange-600' :
-                                        'bg-yellow-600'
-                                      }`}>
+                                          method === 'CARTÃO DÉBITO' ? 'bg-purple-600' :
+                                            method === 'CARTÃO CRÉDITO' ? 'bg-orange-600' :
+                                              'bg-yellow-600'
+                                        }`}>
                                         {method} ({qty})
                                       </Badge>
                                     ))}
@@ -2186,13 +2202,13 @@ ${boletoInfo}================================
                     <PieChart>
                       <Pie
                         data={[
-                          { 
-                            name: 'PIX', 
-                            value: products.filter(p => p.status === 'VENDIDO PIX').reduce((sum, p) => sum + (p.sold_amount || 0), 0) 
+                          {
+                            name: 'PIX',
+                            value: products.filter(p => p.status === 'VENDIDO PIX').reduce((sum, p) => sum + (p.sold_amount || 0), 0)
                           },
-                          { 
-                            name: 'DINHEIRO', 
-                            value: products.filter(p => p.status === 'VENDIDO DINHEIRO').reduce((sum, p) => sum + (p.sold_amount || 0), 0) 
+                          {
+                            name: 'DINHEIRO',
+                            value: products.filter(p => p.status === 'VENDIDO DINHEIRO').reduce((sum, p) => sum + (p.sold_amount || 0), 0)
                           }
                         ].filter(item => item.value > 0)}
                         cx="50%"
@@ -2243,93 +2259,93 @@ ${boletoInfo}================================
                   <>
                     <DailyRanking allSales={allSales} />
                     <div className="space-y-6">
-                    {(() => {
-                      // Agrupa vendas por dia
-                      const salesByDay = {};
-                      allSales.forEach(sale => {
-                        const date = new Date(sale.sale_datetime).toLocaleDateString('pt-BR');
-                        if (!salesByDay[date]) {
-                          salesByDay[date] = [];
-                        }
-                        salesByDay[date].push(sale);
-                      });
+                      {(() => {
+                        // Agrupa vendas por dia
+                        const salesByDay = {};
+                        allSales.forEach(sale => {
+                          const date = new Date(sale.sale_datetime).toLocaleDateString('pt-BR');
+                          if (!salesByDay[date]) {
+                            salesByDay[date] = [];
+                          }
+                          salesByDay[date].push(sale);
+                        });
 
-                      // Ordena datas decrescente (mais recentes primeiro)
-                      const sortedDates = Object.keys(salesByDay).sort((a, b) => {
-                        const dateA = new Date(a.split('/').reverse().join('-'));
-                        const dateB = new Date(b.split('/').reverse().join('-'));
-                        return dateB - dateA;
-                      });
+                        // Ordena datas decrescente (mais recentes primeiro)
+                        const sortedDates = Object.keys(salesByDay).sort((a, b) => {
+                          const dateA = new Date(a.split('/').reverse().join('-'));
+                          const dateB = new Date(b.split('/').reverse().join('-'));
+                          return dateB - dateA;
+                        });
 
-                      return sortedDates.map((date) => {
-                        const daySales = salesByDay[date];
-                        const dayTotal = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
-                        const dayCount = daySales.length;
+                        return sortedDates.map((date) => {
+                          const daySales = salesByDay[date];
+                          const dayTotal = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+                          const dayCount = daySales.length;
 
-                        // Filtra dados de vendedores apenas deste dia
-                        const sellersForDay = sellersDataForPDF
-                          .map(seller => {
-                            // Filtra vendas apenas deste dia específico
-                            const salesThisDay = seller.sales.filter(sale => 
-                              new Date(sale.sale_datetime).toLocaleDateString('pt-BR') === date
-                            );
-                            
-                            // Só retorna vendedor se ele tiver vendas neste dia
-                            if (salesThisDay.length === 0) return null;
-                            
-                            // Recalcula comissão total apenas para as vendas deste dia
-                            const totalCommissionThisDay = salesThisDay.reduce((sum, sale) => 
-                              sum + (sale.seller_commission || 0), 0
-                            );
-                            
-                            return {
-                              ...seller,
-                              sales: salesThisDay,
-                              sales_count: salesThisDay.length,
-                              total_commission: totalCommissionThisDay
-                            };
-                          })
-                          .filter(Boolean); // Remove vendedores sem vendas no dia
+                          // Filtra dados de vendedores apenas deste dia
+                          const sellersForDay = sellersDataForPDF
+                            .map(seller => {
+                              // Filtra vendas apenas deste dia específico
+                              const salesThisDay = seller.sales.filter(sale =>
+                                new Date(sale.sale_datetime).toLocaleDateString('pt-BR') === date
+                              );
 
-                        return (
-                          <div key={date} className="bg-gray-900/50 rounded-lg p-5 border border-gray-700">
-                            {/* HEADER DO DIA */}
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
-                              <div className="flex items-center gap-2 sm:gap-3">
-                                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
-                                <div>
-                                  <h3 className="text-white font-bold text-sm sm:text-lg">{date}</h3>
-                                  <p className="text-gray-400 text-xs sm:text-sm">{dayCount} vendas</p>
+                              // Só retorna vendedor se ele tiver vendas neste dia
+                              if (salesThisDay.length === 0) return null;
+
+                              // Recalcula comissão total apenas para as vendas deste dia
+                              const totalCommissionThisDay = salesThisDay.reduce((sum, sale) =>
+                                sum + (sale.seller_commission || 0), 0
+                              );
+
+                              return {
+                                ...seller,
+                                sales: salesThisDay,
+                                sales_count: salesThisDay.length,
+                                total_commission: totalCommissionThisDay
+                              };
+                            })
+                            .filter(Boolean); // Remove vendedores sem vendas no dia
+
+                          return (
+                            <div key={date} className="bg-gray-900/50 rounded-lg p-5 border border-gray-700">
+                              {/* HEADER DO DIA */}
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-4">
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+                                  <div>
+                                    <h3 className="text-white font-bold text-sm sm:text-lg">{date}</h3>
+                                    <p className="text-gray-400 text-xs sm:text-sm">{dayCount} vendas</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 sm:gap-3">
+                                  <DailyReportPDF
+                                    daySales={daySales}
+                                    date={date}
+                                    sellersData={sellersForDay}
+                                  />
+                                  <div className="text-right">
+                                    <p className="text-green-400 font-bold text-lg sm:text-2xl">
+                                      R$ {dayTotal.toFixed(2)}
+                                    </p>
+                                    <p className="text-gray-500 text-xs">Total do dia</p>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 sm:gap-3">
-                                <DailyReportPDF 
-                                  daySales={daySales} 
-                                  date={date}
-                                  sellersData={sellersForDay}
-                                />
-                                <div className="text-right">
-                                  <p className="text-green-400 font-bold text-lg sm:text-2xl">
-                                    R$ {dayTotal.toFixed(2)}
-                                  </p>
-                                  <p className="text-gray-500 text-xs">Total do dia</p>
-                                </div>
-                              </div>
+
+                              {/* VENDEDORES DO DIA - AGORA BUSCA DA ENTIDADE SaleCommission */}
+                              <VendedoresDoDia daySales={daySales} date={date} />
                             </div>
-
-                            {/* VENDEDORES DO DIA - AGORA BUSCA DA ENTIDADE SaleCommission */}
-                            <VendedoresDoDia daySales={daySales} date={date} />
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
+                          );
+                        });
+                      })()}
+                    </div>
                   </>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
-          </Tabs>
+        </Tabs>
 
         {/* MODAL ABRIR CAIXA */}
         {showOpenCashModal && (
@@ -2510,10 +2526,10 @@ ${boletoInfo}================================
                             <td className="text-center p-2">
                               <Badge className={
                                 sale.payment_method === 'PIX' ? 'bg-green-600' :
-                                sale.payment_method === 'DINHEIRO' ? 'bg-blue-600' :
-                                sale.payment_method === 'CARTÃO DÉBITO' ? 'bg-purple-600' :
-                                sale.payment_method === 'CARTÃO CRÉDITO' ? 'bg-orange-600' :
-                                'bg-yellow-600'
+                                  sale.payment_method === 'DINHEIRO' ? 'bg-blue-600' :
+                                    sale.payment_method === 'CARTÃO DÉBITO' ? 'bg-purple-600' :
+                                      sale.payment_method === 'CARTÃO CRÉDITO' ? 'bg-orange-600' :
+                                        'bg-yellow-600'
                               }>
                                 {sale.payment_method}
                               </Badge>
@@ -2577,7 +2593,7 @@ ${boletoInfo}================================
                   <label className="text-gray-700 text-sm mb-2 block font-medium">Tipo de Comissão</label>
                   <select
                     value={editCommissionData.commission_type}
-                    onChange={(e) => setEditCommissionData({...editCommissionData, commission_type: e.target.value})}
+                    onChange={(e) => setEditCommissionData({ ...editCommissionData, commission_type: e.target.value })}
                     className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
                   >
                     <option value="percentage">Porcentagem (%)</option>
@@ -2593,7 +2609,7 @@ ${boletoInfo}================================
                     type="number"
                     step="0.01"
                     value={editCommissionData.commission_value}
-                    onChange={(e) => setEditCommissionData({...editCommissionData, commission_value: parseFloat(e.target.value) || 0})}
+                    onChange={(e) => setEditCommissionData({ ...editCommissionData, commission_value: parseFloat(e.target.value) || 0 })}
                     className="bg-white text-gray-900 border-gray-300"
                     placeholder={editCommissionData.commission_type === 'percentage' ? '10' : '50.00'}
                   />
@@ -2603,7 +2619,7 @@ ${boletoInfo}================================
                   <div className="bg-orange-50 rounded-lg p-3 border border-orange-200">
                     <p className="text-gray-700 font-medium">Valor da Comissão:</p>
                     <p className="text-2xl font-bold text-orange-600">
-                      R$ {editCommissionData.commission_type === 'percentage' 
+                      R$ {editCommissionData.commission_type === 'percentage'
                         ? ((editingCommissionSale.total_amount * editCommissionData.commission_value) / 100).toFixed(2)
                         : editCommissionData.commission_value.toFixed(2)
                       }
@@ -2669,7 +2685,7 @@ ${boletoInfo}================================
                     type="number"
                     min="1"
                     value={editSaleData.quantity_sold}
-                    onChange={(e) => setEditSaleData({...editSaleData, quantity_sold: e.target.value})}
+                    onChange={(e) => setEditSaleData({ ...editSaleData, quantity_sold: e.target.value })}
                     className="bg-white text-gray-900 border-gray-300"
                   />
                 </div>
@@ -2680,7 +2696,7 @@ ${boletoInfo}================================
                     type="number"
                     step="0.01"
                     value={editSaleData.unit_price}
-                    onChange={(e) => setEditSaleData({...editSaleData, unit_price: e.target.value})}
+                    onChange={(e) => setEditSaleData({ ...editSaleData, unit_price: e.target.value })}
                     className="bg-white text-gray-900 border-gray-300"
                   />
                 </div>
@@ -2689,7 +2705,7 @@ ${boletoInfo}================================
                   <label className="text-gray-700 text-sm mb-2 block font-medium">Forma de Pagamento</label>
                   <select
                     value={editSaleData.payment_method}
-                    onChange={(e) => setEditSaleData({...editSaleData, payment_method: e.target.value})}
+                    onChange={(e) => setEditSaleData({ ...editSaleData, payment_method: e.target.value })}
                     className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
                   >
                     <option>PIX</option>
@@ -2706,7 +2722,7 @@ ${boletoInfo}================================
                       <label className="text-gray-700 text-xs mb-1 block">Nome do Cliente</label>
                       <Input
                         value={editSaleData.boleto_cliente}
-                        onChange={(e) => setEditSaleData({...editSaleData, boleto_cliente: e.target.value})}
+                        onChange={(e) => setEditSaleData({ ...editSaleData, boleto_cliente: e.target.value })}
                         className="h-9"
                       />
                     </div>
@@ -2714,7 +2730,7 @@ ${boletoInfo}================================
                       <label className="text-gray-700 text-xs mb-1 block">Documento</label>
                       <Input
                         value={editSaleData.boleto_documento}
-                        onChange={(e) => setEditSaleData({...editSaleData, boleto_documento: e.target.value})}
+                        onChange={(e) => setEditSaleData({ ...editSaleData, boleto_documento: e.target.value })}
                         className="h-9"
                       />
                     </div>
@@ -2724,7 +2740,7 @@ ${boletoInfo}================================
                         type="number"
                         min="1"
                         value={editSaleData.boleto_parcelas}
-                        onChange={(e) => setEditSaleData({...editSaleData, boleto_parcelas: e.target.value})}
+                        onChange={(e) => setEditSaleData({ ...editSaleData, boleto_parcelas: e.target.value })}
                         className="h-9"
                       />
                     </div>
@@ -2774,14 +2790,14 @@ ${boletoInfo}================================
                 {/* RESUMO DO CAIXA */}
                 <div className="bg-gray-50 rounded-lg p-4 space-y-2">
                   <h3 className="font-bold text-gray-900 mb-3">Resumo do Caixa</h3>
-                  
+
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Abertura:</span>
                     <span className="font-medium text-gray-900">
                       {new Date(currentCashRegister.opening_time).toLocaleString('pt-BR')}
                     </span>
                   </div>
-                  
+
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Operador:</span>
                     <span className="font-medium text-gray-900">{currentCashRegister.operator_name}</span>
@@ -2798,7 +2814,7 @@ ${boletoInfo}================================
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">💳 PIX:</span>
                       <span className="font-medium text-green-600">
-                        R$ {salesHistory
+                        R$ {allSales
                           .filter(s => {
                             const saleTime = new Date(s.sale_datetime).getTime();
                             const openTime = new Date(currentCashRegister.opening_time).getTime();
@@ -2811,7 +2827,7 @@ ${boletoInfo}================================
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">💵 Dinheiro:</span>
                       <span className="font-medium text-green-600">
-                        R$ {salesHistory
+                        R$ {allSales
                           .filter(s => {
                             const saleTime = new Date(s.sale_datetime).getTime();
                             const openTime = new Date(currentCashRegister.opening_time).getTime();
@@ -2824,14 +2840,28 @@ ${boletoInfo}================================
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">💳 Cartões:</span>
                       <span className="font-medium text-green-600">
-                        R$ {salesHistory
+                        R$ {allSales
                           .filter(s => {
                             const saleTime = new Date(s.sale_datetime).getTime();
                             const openTime = new Date(currentCashRegister.opening_time).getTime();
-                            return saleTime >= openTime && 
+                            return saleTime >= openTime &&
                               (s.payment_method === 'CARTÃO DÉBITO' || s.payment_method === 'CARTÃO CRÉDITO');
                           })
                           .reduce((sum, s) => sum + s.total_amount, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                    {/* 🆕 DEPÓSITOS DE CARTEIRA (Entradas) */}
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">🏦 Depósitos (Carteira):</span>
+                      <span className="font-medium text-blue-600">
+                        R$ {walletDeposits
+                          .filter(d => {
+                            const depositTime = new Date(d.created_date).getTime();
+                            const openTime = new Date(currentCashRegister.opening_time).getTime();
+                            return depositTime >= openTime;
+                          })
+                          .reduce((sum, d) => sum + d.amount, 0)
                           .toFixed(2)}
                       </span>
                     </div>
@@ -2839,16 +2869,25 @@ ${boletoInfo}================================
 
                   <div className="border-t border-gray-200 pt-2 mt-2">
                     <div className="flex justify-between font-bold text-base">
-                      <span className="text-gray-900">Total Vendido:</span>
+                      <span className="text-gray-900">Total em Caixa:</span>
                       <span className="text-green-600">
-                        R$ {salesHistory
-                          .filter(s => {
-                            const saleTime = new Date(s.sale_datetime).getTime();
-                            const openTime = new Date(currentCashRegister.opening_time).getTime();
-                            return saleTime >= openTime;
-                          })
-                          .reduce((sum, s) => sum + s.total_amount, 0)
-                          .toFixed(2)}
+                        R$ {(
+                          allSales
+                            .filter(s => {
+                              const saleTime = new Date(s.sale_datetime).getTime();
+                              const openTime = new Date(currentCashRegister.opening_time).getTime();
+                              return saleTime >= openTime;
+                            })
+                            .reduce((sum, s) => sum + s.total_amount, 0)
+                          +
+                          walletDeposits
+                            .filter(d => {
+                              const depositTime = new Date(d.created_date).getTime();
+                              const openTime = new Date(currentCashRegister.opening_time).getTime();
+                              return depositTime >= openTime;
+                            })
+                            .reduce((sum, d) => sum + d.amount, 0)
+                        ).toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -2907,7 +2946,7 @@ ${boletoInfo}================================
             </Card>
           </div>
         )}
-          </div>
-          </div>
-          );
-          }
+      </div>
+    </div>
+  );
+}

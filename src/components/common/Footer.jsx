@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Mail, MapPin, Phone, MessageCircle, Facebook, Instagram, Youtube, Linkedin, Twitter } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import LogoTransparent from '@/assets/logo-transparent.png';
 
 export default function Footer() {
   const [footerSettings, setFooterSettings] = useState(null);
@@ -57,13 +58,13 @@ export default function Footer() {
       {/* Seção Expandível */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header do Footer - Sempre Visível */}
-        <div 
+        <div
           className="py-6 flex items-center justify-between cursor-pointer hover:text-white transition-colors"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center gap-4">
-            <img 
-              src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            <img
+              src={LogoTransparent}
               alt="Leilão NoZap"
               className="h-8 w-auto"
             />
@@ -88,10 +89,10 @@ export default function Footer() {
             })}
 
             {/* Botão Expandir */}
-            <button 
+            <button
               className="ml-4 p-2 hover:bg-gray-700 rounded-full transition-colors"
             >
-              <ChevronDown 
+              <ChevronDown
                 className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
               />
             </button>
@@ -101,7 +102,7 @@ export default function Footer() {
         {/* Conteúdo Expandível */}
         {isExpanded && (
           <div className="border-t border-gray-700 py-8 space-y-8 animate-in fade-in duration-300">
-            
+
             {/* Sobre Nós */}
             <div>
               <h3 className="text-white font-bold text-lg mb-4">Sobre Nós</h3>
@@ -121,11 +122,11 @@ export default function Footer() {
                     <p className="text-sm text-gray-400">{footerSettings.address}</p>
                   </div>
                 )}
-                
+
                 {footerSettings.email && (
                   <div className="flex items-center gap-3">
                     <Mail className="w-5 h-5 text-green-400 flex-shrink-0" />
-                    <a 
+                    <a
                       href={`mailto:${footerSettings.email}`}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
@@ -137,7 +138,7 @@ export default function Footer() {
                 {footerSettings.phone && (
                   <div className="flex items-center gap-3">
                     <Phone className="w-5 h-5 text-green-400 flex-shrink-0" />
-                    <a 
+                    <a
                       href={`tel:${footerSettings.phone}`}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
                     >
@@ -149,7 +150,7 @@ export default function Footer() {
                 {footerSettings.whatsapp && (
                   <div className="flex items-center gap-3">
                     <MessageCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
-                    <a 
+                    <a
                       href={`https://wa.me/${footerSettings.whatsapp}`}
                       target="_blank"
                       rel="noopener noreferrer"

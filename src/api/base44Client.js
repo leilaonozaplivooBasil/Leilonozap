@@ -8,7 +8,7 @@ export const base44 = createClient({
   appId,
   token,
   functionsVersion,
-  serverUrl: '',
+  // serverUrl removido para usar default do SDK (https://base44.app)
   requiresAuth: false,
   appBaseUrl
 });

@@ -12,24 +12,41 @@ Deno.serve(async (req) => {
     const { auction_id, amount } = await req.json();
 
     if (!auction_id || !amount) {
-      return Response.json({ 
-        success: false, 
-        message: 'Parâmetros inválidos' 
+      return Response.json({
+        success: false,
+        message: 'Parâmetros inválidos'
       }, { status: 400 });
     }
 
     const bidAmount = parseFloat(amount);
 
+    // 🔒 VALIDAÇÃO DE SALDO (DigitalWallet)
+    // Busca saldo atual antes de qualquer lógica de leilão
+    const wallets = await base44.asServiceRole.entities.DigitalWallet.filter({ user_id: user.id });
+    const userWallet = wallets && wallets.length > 0 ? wallets[0] : null;
+    const currentBalance = userWallet?.balance || 0;
+
+    if (currentBalance < bidAmount) {
+      console.log(`❌ [ATOMIC BID] Saldo insuficiente. Carteira: R$ ${currentBalance} < Lance: R$ ${bidAmount}`);
+      return Response.json({
+        success: false,
+        message: `Saldo insuficiente (R$ ${currentBalance.toFixed(2)}). Por favor, adicione fundos.`,
+        error_code: 'INSUFFICIENT_FUNDS',
+        current_balance: currentBalance,
+        required_amount: bidAmount
+      }, { status: 400 });
+    }
+
     // 🔐 OPERAÇÃO ATÔMICA COM SERVICE ROLE
     console.log(`🔒 [ATOMIC BID] Iniciando lance atômico: R$ ${bidAmount.toFixed(2)}`);
-    
+
     // 1️⃣ LER ESTADO ATUAL DO LEILÃO
     const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id });
-    
+
     if (!auctions || auctions.length === 0) {
-      return Response.json({ 
-        success: false, 
-        message: 'Leilão não encontrado' 
+      return Response.json({
+        success: false,
+        message: 'Leilão não encontrado'
       }, { status: 404 });
     }
 
@@ -42,12 +59,12 @@ Deno.serve(async (req) => {
     console.log(`   Status: ${auction.status}`);
 
     // 2️⃣ VALIDAÇÕES CRÍTICAS
-    
+
     // Validar status
     if (auction.status !== 'active') {
       console.log(`❌ [ATOMIC BID] Leilão não está ativo: ${auction.status}`);
-      return Response.json({ 
-        success: false, 
+      return Response.json({
+        success: false,
         message: 'Leilão não está ativo',
         current_state: {
           current_price: auction.current_price,
@@ -60,11 +77,11 @@ Deno.serve(async (req) => {
     // Validar tempo
     const now = Date.now();
     const endTime = new Date(auction.end_time).getTime();
-    
+
     if (now >= endTime) {
       console.log(`❌ [ATOMIC BID] Leilão expirado`);
-      return Response.json({ 
-        success: false, 
+      return Response.json({
+        success: false,
         message: 'Leilão já encerrou',
         current_state: {
           current_price: auction.current_price,
@@ -80,8 +97,8 @@ Deno.serve(async (req) => {
 
     if (bidAmount <= currentPrice) {
       console.log(`❌ [ATOMIC BID] Lance muito baixo: R$ ${bidAmount} <= R$ ${currentPrice}`);
-      return Response.json({ 
-        success: false, 
+      return Response.json({
+        success: false,
         message: `Lance deve ser maior que R$ ${currentPrice.toFixed(2)}`,
         current_state: {
           current_price: currentPrice,
@@ -93,8 +110,8 @@ Deno.serve(async (req) => {
 
     if (bidAmount < minBid) {
       console.log(`❌ [ATOMIC BID] Lance abaixo do mínimo: R$ ${bidAmount} < R$ ${minBid}`);
-      return Response.json({ 
-        success: false, 
+      return Response.json({
+        success: false,
         message: `Lance mínimo: R$ ${minBid.toFixed(2)}`,
         current_state: {
           current_price: currentPrice,
@@ -120,10 +137,10 @@ Deno.serve(async (req) => {
     // 4️⃣ CALCULAR NOVA END_TIME (extensão em guerra)
     const COUNTDOWN_DURATION = 142; // 2min22s
     const BID_EXTENSION_SECONDS = 22;
-    
+
     const timeUntilEnd = Math.floor((endTime - now) / 1000);
     let newEndTime = auction.end_time;
-    
+
     if (timeUntilEnd <= COUNTDOWN_DURATION) {
       const extendedEndTime = new Date(endTime + (BID_EXTENSION_SECONDS * 1000));
       newEndTime = extendedEndTime.toISOString();
@@ -143,20 +160,20 @@ Deno.serve(async (req) => {
     console.log(`🔄 [ATOMIC BID] Atualizando leilão (versão ${currentVersion} → ${currentVersion + 1})`);
 
     // Tenta atualizar com a versão esperada
-    const updatedAuctions = await base44.asServiceRole.entities.Auction.filter({ 
-      id: auction_id, 
-      version: currentVersion 
+    const updatedAuctions = await base44.asServiceRole.entities.Auction.filter({
+      id: auction_id,
+      version: currentVersion
     });
 
     if (!updatedAuctions || updatedAuctions.length === 0) {
       console.log(`❌ [ATOMIC BID] Conflito de versão! Outro lance foi processado.`);
-      
+
       // Busca estado atual novamente
       const currentAuctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id });
       const currentAuction = currentAuctions[0];
-      
-      return Response.json({ 
-        success: false, 
+
+      return Response.json({
+        success: false,
         message: 'Outro lance foi dado antes. Tente novamente!',
         conflict: true,
         current_state: {
@@ -211,7 +228,7 @@ Deno.serve(async (req) => {
 
     // 9️⃣ CRIAR NARRAÇÃO DA IA (às vezes)
     const shouldComment = Math.random() < 0.4 || bidAmount % 50 === 0;
-    
+
     if (shouldComment) {
       const aiComments = [
         `🔥 UHULLLL! ${bidderName} MANDOU R$ ${bidAmount.toFixed(2)}!`,
@@ -268,7 +285,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error("❌ [ATOMIC BID] Erro fatal:", error);
-    
+
     // Tenta logar o erro
     try {
       const base44 = createClientFromRequest(req);
@@ -286,9 +303,9 @@ Deno.serve(async (req) => {
       console.error("❌ Erro ao logar:", logError);
     }
 
-    return Response.json({ 
-      success: false, 
-      message: 'Erro ao processar lance: ' + error.message 
+    return Response.json({
+      success: false,
+      message: 'Erro ao processar lance: ' + error.message
     }, { status: 500 });
   }
 });

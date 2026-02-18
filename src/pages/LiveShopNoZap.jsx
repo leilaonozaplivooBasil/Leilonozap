@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import LogoTransparent from '@/assets/logo-transparent.png';
 
 const Auction = base44.entities.Auction;
 const Bid = base44.entities.Bid;
@@ -38,7 +39,7 @@ export default function LiveShopNoZap() {
 
     const loadProducts = async () => {
       try {
-        const allProducts = await Auction.filter({ 
+        const allProducts = await Auction.filter({
           partner_store: { $ne: 'sai_de_baixo' },
           status: 'active'
         }, "-created_date", 10);
@@ -53,7 +54,7 @@ export default function LiveShopNoZap() {
         const sessions = await LiveSession.filter({ partner_store: 'nozap' }, "-created_date", 1);
         if (sessions.length > 0) {
           setLiveSession(sessions[0]);
-          
+
           if (sessions[0].current_product_id) {
             const productData = await Auction.filter({ id: sessions[0].current_product_id });
             if (productData.length > 0) {
@@ -85,7 +86,7 @@ export default function LiveShopNoZap() {
 
   useEffect(() => {
     if (products.length === 0) return;
-    
+
     const interval = setInterval(() => {
       setCurrentProductIndex(prev => (prev + 1) % products.length);
     }, 30000);
@@ -98,17 +99,17 @@ export default function LiveShopNoZap() {
       if (!currentProduct) return;
       try {
         const bids = await Bid.filter({ auction_id: currentProduct.id }, "-created_date", 3);
-        
+
         const currentBidsStr = JSON.stringify(bids.map(b => ({ id: b.id, amount: b.amount })));
         const lastBidsStr = JSON.stringify(recentBids.map(b => ({ id: b.id, amount: b.amount })));
-        
+
         if (currentBidsStr !== lastBidsStr) {
           setRecentBids(bids);
-          
+
           if (bids.length > 0) {
             const highestBid = Math.max(...bids.map(b => b.amount));
             const lastKnownPrice = lastPriceRef.current[currentProduct.id] || currentProduct.current_price;
-            
+
             if (highestBid > lastKnownPrice) {
               lastPriceRef.current[currentProduct.id] = highestBid;
               const newProducts = [...products];
@@ -124,7 +125,7 @@ export default function LiveShopNoZap() {
         console.error("Erro ao carregar lances:", error);
       }
     };
-    
+
     loadBids();
     const interval = setInterval(loadBids, 5000);
     return () => clearInterval(interval);
@@ -156,7 +157,7 @@ export default function LiveShopNoZap() {
       });
 
       lastPriceRef.current[currentProduct.id] = finalAmount;
-      
+
       const newProducts = [...products];
       newProducts[currentProductIndex] = {
         ...currentProduct,
@@ -196,8 +197,8 @@ export default function LiveShopNoZap() {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <img 
-                src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+              <img
+                src={LogoTransparent}
                 alt="Leilão NoZap"
                 className="h-10 w-auto cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={() => navigate(createPageUrl("Home"))}
@@ -216,7 +217,7 @@ export default function LiveShopNoZap() {
                 </div>
               </div>
             </div>
-            <Button 
+            <Button
               onClick={() => navigate(createPageUrl("Home"))}
               variant="outline"
               className="border-gray-600 text-gray-300 hover:bg-gray-700"
@@ -229,14 +230,14 @@ export default function LiveShopNoZap() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid lg:grid-cols-[1fr,400px] gap-6">
-          
+
           <div className="space-y-4">
             <Card className="bg-black aspect-video rounded-xl overflow-hidden shadow-xl relative">
               {liveSession?.is_live && liveSession?.is_paused && liveSession?.pause_image_url ? (
                 <div className="w-full h-full relative">
-                  <img 
-                    src={liveSession.pause_image_url} 
-                    alt="Propaganda" 
+                  <img
+                    src={liveSession.pause_image_url}
+                    alt="Propaganda"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-sm px-6 py-3 rounded-full">
@@ -250,8 +251,8 @@ export default function LiveShopNoZap() {
                 </div>
               ) : liveSession?.is_live && liveSession?.stream_url ? (
                 <iframe
-                  src={liveSession.stream_url.includes('youtube.com') 
-                    ? liveSession.stream_url.replace('watch?v=', 'embed/') 
+                  src={liveSession.stream_url.includes('youtube.com')
+                    ? liveSession.stream_url.replace('watch?v=', 'embed/')
                     : liveSession.stream_url}
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -275,14 +276,14 @@ export default function LiveShopNoZap() {
             <div className="bg-gray-800 rounded-xl p-6 shadow-md">
               <h2 className="text-lg font-bold text-white mb-2">Sobre a Live</h2>
               <p className="text-gray-400">
-                Bem-vindo à Live Shop NoZap! Acompanhe em tempo real as melhores ofertas 
+                Bem-vindo à Live Shop NoZap! Acompanhe em tempo real as melhores ofertas
                 em arremates e devoluções. Participe do chat e garanta seus produtos favoritos!
               </p>
             </div>
           </div>
 
           <div className="space-y-4">
-            
+
             {!activeProduct ? (
               <Card className="bg-gray-800 rounded-xl overflow-hidden shadow-lg">
                 <div className="p-8 text-center">
@@ -417,17 +418,17 @@ export default function LiveShopNoZap() {
 
                 <div className="relative">
                   <div className="p-4">
-                    <div 
+                    <div
                       className="w-full h-40 bg-gray-700 rounded-lg overflow-hidden mb-3 cursor-pointer"
                       onClick={() => goToProduct(currentProduct.id)}
                     >
-                      <img 
-                        src={currentProduct.image_urls?.[0] || '/placeholder.jpg'} 
+                      <img
+                        src={currentProduct.image_urls?.[0] || '/placeholder.jpg'}
                         alt={currentProduct.title}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <h3 
+                    <h3
                       className="font-bold text-white text-sm mb-2 line-clamp-2 cursor-pointer hover:text-green-400 transition-colors"
                       onClick={() => goToProduct(currentProduct.id)}
                     >
@@ -440,7 +441,7 @@ export default function LiveShopNoZap() {
                           R$ {currentProduct.current_price?.toFixed(2)}
                         </p>
                       </div>
-                      <Button 
+                      <Button
                         onClick={() => goToProduct(currentProduct.id)}
                         className="bg-green-600 hover:bg-green-700 text-sm"
                       >
@@ -472,11 +473,10 @@ export default function LiveShopNoZap() {
                     <button
                       key={idx}
                       onClick={() => setCurrentProductIndex(idx)}
-                      className={`h-1.5 rounded-full transition-all ${
-                        idx === currentProductIndex 
-                          ? 'w-6 bg-green-500' 
-                          : 'w-1.5 bg-gray-600 hover:bg-gray-500'
-                      }`}
+                      className={`h-1.5 rounded-full transition-all ${idx === currentProductIndex
+                        ? 'w-6 bg-green-500'
+                        : 'w-1.5 bg-gray-600 hover:bg-gray-500'
+                        }`}
                     />
                   ))}
                 </div>
