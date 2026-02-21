@@ -354,8 +354,42 @@ export default function PDV() {
       });
       const salesInSession = response?.data?.sales || [];
 
+      // Recalcula totais reais a partir das vendas encontradas
+      // (corrige sessões que foram salvas com totais zerados)
+      const recalculated = {
+        total_pix: 0,
+        total_cash: 0,
+        total_debit: 0,
+        total_credit: 0,
+        total_boleto: 0,
+        transactions_count: salesInSession.length,
+        total_sales: 0
+      };
+
+      salesInSession.forEach(sale => {
+        const amount = sale.total_amount || 0;
+        recalculated.total_sales += amount;
+        if (sale.payment_method === 'PIX') recalculated.total_pix += amount;
+        else if (sale.payment_method === 'DINHEIRO') recalculated.total_cash += amount;
+        else if (sale.payment_method === 'CARTÃO DÉBITO') recalculated.total_debit += amount;
+        else if (sale.payment_method === 'CARTÃO CRÉDITO') recalculated.total_credit += amount;
+        else if (sale.payment_method === 'BOLETO PARCELADO') recalculated.total_boleto += amount;
+      });
+
+      // Usa totais recalculados se os salvos estiverem zerados
+      const enrichedSession = {
+        ...session,
+        total_sales: (session.total_sales || 0) > 0 ? session.total_sales : recalculated.total_sales,
+        total_pix: (session.total_pix || 0) > 0 ? session.total_pix : recalculated.total_pix,
+        total_cash: (session.total_cash || 0) > 0 ? session.total_cash : recalculated.total_cash,
+        total_debit: (session.total_debit || 0) > 0 ? session.total_debit : recalculated.total_debit,
+        total_credit: (session.total_credit || 0) > 0 ? session.total_credit : recalculated.total_credit,
+        total_boleto: (session.total_boleto || 0) > 0 ? session.total_boleto : recalculated.total_boleto,
+        transactions_count: (session.transactions_count || 0) > 0 ? session.transactions_count : recalculated.transactions_count,
+      };
+
       setSessionSales(salesInSession);
-      setSelectedSession(session);
+      setSelectedSession(enrichedSession);
       setShowSessionModal(true);
     } catch (error) {
       console.error('❌ Erro ao carregar vendas da sessão:', error);
