@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
 
     if (action === 'getSessionSales') {
       const { opening_time, closing_time } = body;
-      const allSales = await base44.asServiceRole.entities.Sale.list('-sale_datetime', 2000);
+      const allSales = await base44.asServiceRole.entities.Sale.list('-sale_datetime', 5000);
       const salesInSession = allSales.filter(sale => {
         const saleTime = new Date(sale.sale_datetime).getTime();
         const openTime = new Date(opening_time).getTime();
@@ -110,6 +110,39 @@ Deno.serve(async (req) => {
         return saleTime >= openTime && saleTime <= closeTime;
       });
       return Response.json({ success: true, sales: salesInSession });
+    }
+
+    // Recalcula e corrige totais de uma sessão a partir das vendas reais
+    if (action === 'fixSessionTotals') {
+      const { register_id, opening_time, closing_time } = body;
+      
+      const allSales = await base44.asServiceRole.entities.Sale.list('-sale_datetime', 5000);
+      const salesInSession = allSales.filter(sale => {
+        const saleTime = new Date(sale.sale_datetime).getTime();
+        const openTime = new Date(opening_time).getTime();
+        const closeTime = closing_time ? new Date(closing_time).getTime() : Date.now();
+        return saleTime >= openTime && saleTime <= closeTime;
+      });
+
+      const totals = {
+        total_pix: 0, total_cash: 0, total_debit: 0,
+        total_credit: 0, total_boleto: 0,
+        transactions_count: salesInSession.length, total_sales: 0
+      };
+
+      salesInSession.forEach(sale => {
+        const amount = sale.total_amount || 0;
+        totals.total_sales += amount;
+        if (sale.payment_method === 'PIX') totals.total_pix += amount;
+        else if (sale.payment_method === 'DINHEIRO') totals.total_cash += amount;
+        else if (sale.payment_method === 'CARTÃO DÉBITO') totals.total_debit += amount;
+        else if (sale.payment_method === 'CARTÃO CRÉDITO') totals.total_credit += amount;
+        else if (sale.payment_method === 'BOLETO PARCELADO') totals.total_boleto += amount;
+      });
+
+      await base44.asServiceRole.entities.CashRegister.update(register_id, totals);
+
+      return Response.json({ success: true, totals, sales_count: salesInSession.length });
     }
 
     return Response.json({ error: 'Unknown action: ' + action }, { status: 400 });
