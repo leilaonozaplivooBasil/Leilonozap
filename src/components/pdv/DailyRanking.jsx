@@ -57,12 +57,19 @@ export default function DailyRanking({ allSales }) {
       const sellerMap = {};
       const processedSales = new Set();
       
+      // Agrupa comissões por venda para fácil acesso
+      const commissionsBySale = {};
+      commissionsForDay.forEach(c => {
+        if (!commissionsBySale[c.sale_id]) commissionsBySale[c.sale_id] = [];
+        commissionsBySale[c.sale_id].push(c);
+      });
+
       // Processa vendas com comissões
       commissionsForDay.forEach(commission => {
         const sale = daySales.find(s => s.id === commission.sale_id);
         if (!sale) return;
 
-        // ⚠️ IMPORTANTE: Licenciante não aparece no ranking, só recebe comissão
+        // Licenciante não aparece como vendedor no ranking
         if (commission.seller_role === 'licenciante') {
           return;
         }
@@ -87,6 +94,12 @@ export default function DailyRanking({ allSales }) {
           sellerMap[sellerId].count += 1;
           if (!sellerMap[sellerId].sales) sellerMap[sellerId].sales = [];
           sellerMap[sellerId].sales.push(sale.id);
+
+          // Contabiliza comissão do licenciante vinculado a esta venda
+          const licencianteComm = (commissionsBySale[sale.id] || []).find(c => c.seller_role === 'licenciante');
+          if (licencianteComm) {
+            sellerMap[sellerId].comissaoLicenciante += licencianteComm.commission_amount || 0;
+          }
         }
 
         // Contabiliza a comissão do licenciado
