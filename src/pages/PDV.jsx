@@ -76,7 +76,6 @@ export default function PDV() {
   const [showEditCommissionModal, setShowEditCommissionModal] = useState(false);
   const [editingCommissionSale, setEditingCommissionSale] = useState(null);
   const [editCommissionData, setEditCommissionData] = useState({ commission_amount: 0, commission_type: 'fixed', commission_value: 0 });
-  const [timeUntilClose, setTimeUntilClose] = useState('');
   const [searchSale, setSearchSale] = useState('');
   const [isGeneratingCodes, setIsGeneratingCodes] = useState(false);
   const [sellersDataForPDF, setSellersDataForPDF] = useState([]);
@@ -129,68 +128,17 @@ export default function PDV() {
     loadAllSales();
   }, []);
 
-  // Timer automático para abrir/fechar caixa
+  // Sync em tempo real do caixa entre dispositivos
   useEffect(() => {
-    const checkAutoSchedule = async () => {
-      const brasiliaTime = getBrasiliaTime();
-      const hour = brasiliaTime.getHours();
-      const minute = brasiliaTime.getMinutes();
+    const unsubscribe = base44.entities.CashRegister.subscribe((event) => {
+      console.log('🔄 CashRegister atualizado em outro dispositivo:', event.type);
+      // Recarrega o estado do caixa quando qualquer mudança acontecer
+      loadCurrentCashRegister();
+      loadSalesHistory();
+    });
 
-      // Fechar às 20h
-      if (hour === 20 && minute === 0 && currentCashRegister) {
-        console.log('⏰ Fechando caixa automaticamente às 20h');
-        await closeCashRegister(true);
-      }
-
-      // Abrir às 6h
-      if (hour === 6 && minute === 0 && !currentCashRegister) {
-        console.log('⏰ Abrindo caixa automaticamente às 6h');
-        await openCashRegister(true);
-      }
-    };
-
-    const interval = setInterval(checkAutoSchedule, 60000); // Verifica a cada minuto
-    return () => clearInterval(interval);
-  }, [currentCashRegister]);
-
-  // Contador regressivo
-  useEffect(() => {
-    const updateCountdown = () => {
-      if (!currentCashRegister) {
-        setTimeUntilClose('');
-        return;
-      }
-
-      const brasiliaTime = getBrasiliaTime();
-      const now = brasiliaTime.getTime();
-
-      // Calcula o horário de fechamento (20h de hoje)
-      const closeTime = new Date(brasiliaTime);
-      closeTime.setHours(20, 0, 0, 0);
-
-      // Se já passou das 20h, considera amanhã
-      if (brasiliaTime.getHours() >= 20) {
-        closeTime.setDate(closeTime.getDate() + 1);
-      }
-
-      const diff = closeTime.getTime() - now;
-
-      if (diff <= 0) {
-        setTimeUntilClose('Fechando...');
-        return;
-      }
-
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setTimeUntilClose(`${hours}h ${minutes}m ${seconds}s`);
-    };
-
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
-    return () => clearInterval(interval);
-  }, [currentCashRegister]);
+    return () => unsubscribe();
+  }, []);
 
   const loadAllSales = async () => {
     try {
@@ -551,38 +499,31 @@ Transações: ${selectedSession.transactions_count || 0}
     return new Date(now.toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
   };
 
-  const openCashRegister = async (isAutomatic = false) => {
+  const openCashRegister = async () => {
     try {
       const response = await pdvAction({
         ...getAdminCredentials(),
         action: 'openCashRegister',
-        operator_name: isAutomatic ? 'Sistema (Automático)' : (currentUser?.full_name || 'Admin'),
+        operator_name: currentUser?.full_name || 'Admin',
         opening_balance: parseFloat(openingBalance) || 0
       });
 
       setCurrentCashRegister(response?.data?.cashRegister);
       setShowOpenCashModal(false);
       setOpeningBalance(0);
-
-      if (!isAutomatic) {
-        alert('✅ Caixa aberto com sucesso!');
-      }
-
+      alert('✅ Caixa aberto com sucesso!');
       setTimeout(() => loadTodaySales(), 500);
     } catch (error) {
       console.error('Erro ao abrir caixa:', error);
-      if (!isAutomatic) {
-        alert('❌ Erro ao abrir caixa');
-      }
+      alert('❌ Erro ao abrir caixa');
     }
   };
 
-  const closeCashRegister = async (isAutomatic = false) => {
+  const closeCashRegister = async () => {
     if (!currentCashRegister) return;
 
     try {
       // Busca vendas da sessão do BACKEND para garantir dados corretos
-      // (não depende do estado local todaySales que pode estar desatualizado)
       let salesForClose = todaySales;
       try {
         const freshSalesResp = await pdvAction({
@@ -620,16 +561,12 @@ Transações: ${selectedSession.transactions_count || 0}
 
       const total_sales = totals.total_pix + totals.total_cash + totals.total_debit + totals.total_credit + totals.total_boleto;
 
-      const notes = isAutomatic
-        ? 'Fechamento automático às 20h'
-        : closingNotes;
-
       await pdvAction({
         ...getAdminCredentials(),
         action: 'closeCashRegister',
         register_id: currentCashRegister.id,
         closing_balance: parseFloat(closingBalance) || 0,
-        notes,
+        notes: closingNotes,
         totals: { total_sales, ...totals }
       });
 
@@ -638,15 +575,10 @@ Transações: ${selectedSession.transactions_count || 0}
       setShowCloseCashModal(false);
       setClosingBalance(0);
       setClosingNotes('');
-
-      if (!isAutomatic) {
-        alert('✅ Caixa fechado com sucesso!');
-      }
+      alert('✅ Caixa fechado com sucesso!');
     } catch (error) {
       console.error('Erro ao fechar caixa:', error);
-      if (!isAutomatic) {
-        alert('❌ Erro ao fechar caixa');
-      }
+      alert('❌ Erro ao fechar caixa');
     }
   };
 
@@ -1194,20 +1126,13 @@ ${boletoInfo}================================
                     {currentCashRegister ? '🟢 Caixa Aberto' : '🔴 Caixa Fechado'}
                   </p>
                   {currentCashRegister && (
-                    <div className="space-y-1">
-                      <p className="text-sm text-gray-600">
-                        Aberto às {new Date(currentCashRegister.opening_time).toLocaleTimeString('pt-BR')} por {currentCashRegister.operator_name}
-                      </p>
-                      {timeUntilClose && (
-                        <p className="text-xs text-orange-600 font-semibold">
-                          ⏰ Fecha automaticamente em: {timeUntilClose}
-                        </p>
-                      )}
-                    </div>
+                    <p className="text-sm text-gray-600">
+                      Aberto às {new Date(currentCashRegister.opening_time).toLocaleTimeString('pt-BR')} por {currentCashRegister.operator_name}
+                    </p>
                   )}
                   {!currentCashRegister && (
                     <p className="text-xs text-gray-600 mt-1">
-                      Abre automaticamente às 06:00 • Fecha às 20:00
+                      Abra o caixa manualmente para iniciar as vendas
                     </p>
                   )}
                 </div>
