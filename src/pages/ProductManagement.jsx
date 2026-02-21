@@ -302,7 +302,7 @@ export default function ProductManagement() {
 
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      alert("❌ Erro ao salvar produto");
+      alert("❌ Erro ao salvar produto: " + (error?.message || JSON.stringify(error)));
     }
   };
 
