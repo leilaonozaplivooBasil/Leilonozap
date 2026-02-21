@@ -547,17 +547,35 @@ Transações: ${selectedSession.transactions_count || 0}
     if (!currentCashRegister) return;
 
     try {
-      // Calcula totais do caixa atual usando vendas já carregadas
+      // Busca vendas da sessão do BACKEND para garantir dados corretos
+      // (não depende do estado local todaySales que pode estar desatualizado)
+      let salesForClose = todaySales;
+      try {
+        const freshSalesResp = await pdvAction({
+          ...getAdminCredentials(),
+          action: 'getSessionSales',
+          opening_time: currentCashRegister.opening_time,
+          closing_time: null
+        });
+        const freshSales = freshSalesResp?.data?.sales || [];
+        if (freshSales.length > 0 || todaySales.length === 0) {
+          salesForClose = freshSales;
+        }
+      } catch (e) {
+        console.warn('⚠️ Fallback: usando todaySales local para fechar caixa');
+      }
+
+      // Calcula totais a partir dos dados do backend
       const totals = {
         total_pix: 0,
         total_cash: 0,
         total_debit: 0,
         total_credit: 0,
         total_boleto: 0,
-        transactions_count: todaySales.length
+        transactions_count: salesForClose.length
       };
 
-      todaySales.forEach(sale => {
+      salesForClose.forEach(sale => {
         const amount = sale.total_amount || 0;
         if (sale.payment_method === 'PIX') totals.total_pix += amount;
         else if (sale.payment_method === 'DINHEIRO') totals.total_cash += amount;
