@@ -60,20 +60,12 @@ Deno.serve(async (req) => {
       result.taxSettings = settings.length > 0 ? settings[0] : null;
     }
 
-    // 🆕 INCLUIR DEPÓSITOS DE CARTEIRA (Entradas)
-    if (requestAction === 'full' || requestAction === 'walletDeposits' || requestAction === 'sales') {
-      const deposits = await base44.asServiceRole.entities.DigitalWalletTransaction.filter({
-        type: 'deposit',
-        status: 'confirmed'
-      }, '-created_date', 500); // Últimos 500 depósitos
-      result.walletDeposits = deposits;
-    }
-
     if (requestAction === 'full' || requestAction === 'sales') {
       result.allSales = await base44.asServiceRole.entities.Sale.list('-sale_datetime', 5000);
     }
 
-    if (requestAction === 'full' || requestAction === 'walletDeposits') {
+    // DEPÓSITOS DE CARTEIRA (Entradas) - busca única
+    if (requestAction === 'full' || requestAction === 'walletDeposits' || requestAction === 'sales') {
       const deposits = await base44.asServiceRole.entities.DigitalWalletTransaction.filter(
         { type: 'deposit', status: 'confirmed' },
         '-created_date',
