@@ -1887,10 +1887,39 @@ ${boletoInfo}================================
           <TabsContent value="extrato">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader className="p-3 sm:p-6">
-                <CardTitle className="text-white flex items-center gap-2 text-sm sm:text-base">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-                  Extrato por Sessões de Caixa
-                </CardTitle>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <CardTitle className="text-white flex items-center gap-2 text-sm sm:text-base">
+                    <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+                    Extrato por Sessões de Caixa
+                  </CardTitle>
+                  <Button
+                    onClick={async () => {
+                      if (!confirm('Recalcular totais de todas as sessões com valores zerados?')) return;
+                      let fixed = 0;
+                      for (const session of cashSessions) {
+                        if ((session.total_sales || 0) === 0 && session.closing_time) {
+                          try {
+                            await pdvAction({
+                              ...getAdminCredentials(),
+                              action: 'fixSessionTotals',
+                              register_id: session.id,
+                              opening_time: session.opening_time,
+                              closing_time: session.closing_time
+                            });
+                            fixed++;
+                          } catch (e) {
+                            console.error('Erro ao corrigir sessão:', session.id, e);
+                          }
+                        }
+                      }
+                      alert(`✅ ${fixed} sessões corrigidas!`);
+                      await loadSalesHistory();
+                    }}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-xs"
+                  >
+                    🔧 Corrigir Totais Zerados
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {cashSessions.length === 0 ? (
