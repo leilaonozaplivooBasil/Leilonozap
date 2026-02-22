@@ -131,7 +131,7 @@ export function useRealtimeSync({
   return { 
     refresh: fetchData,
     isActive: enabled && !isBlockedRef.current,
-    mode: syncMode
+    mode: syncModeRef.current
   };
 }
 
