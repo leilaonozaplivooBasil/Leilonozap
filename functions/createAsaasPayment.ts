@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
               auction_id: auction_id || null,
               wallet_deposit_user_id: walletDepositUserId,
               is_wallet_deposit: isWalletDeposit,
-              buyer_id: buyerId,
+              buyer_id: buyerId || explicitBuyerId || null,
               buyer_name: buyer_name,
               buyer_email: buyer_email,
               buyer_cpf: cleanCpf,
