@@ -1966,16 +1966,16 @@ ${boletoInfo}================================
 
                 {/* CARDS POR BANCO */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
-                  <Card className="bg-gradient-to-br from-red-900/80 to-red-800/60 border-red-700">
+                  <Card className="bg-gray-800 border-2 border-red-600">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-red-300 text-xs mb-1">🔴 Santander</p>
-                          <p className="text-xs text-red-400/80 mb-2">Produtos Físicos</p>
+                          <p className="text-red-400 text-xs mb-1">🔴 Santander</p>
+                          <p className="text-xs text-gray-400 mb-2">Produtos Físicos</p>
                           <p className="text-2xl font-bold text-white">
                             R$ {allSales.filter(s => s.receiving_bank === 'santander').reduce((sum, s) => sum + (s.total_amount || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
-                          <p className="text-xs text-red-400 mt-1">
+                          <p className="text-xs text-gray-400 mt-1">
                             {allSales.filter(s => s.receiving_bank === 'santander').length} vendas
                           </p>
                         </div>
@@ -1984,16 +1984,16 @@ ${boletoInfo}================================
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-orange-900/80 to-orange-800/60 border-orange-700">
+                  <Card className="bg-gray-800 border-2 border-orange-500">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-orange-300 text-xs mb-1">🟠 Itaú</p>
-                          <p className="text-xs text-orange-400/80 mb-2">Licenciados</p>
+                          <p className="text-orange-400 text-xs mb-1">🟠 Itaú</p>
+                          <p className="text-xs text-gray-400 mb-2">Licenciados</p>
                           <p className="text-2xl font-bold text-white">
                             R$ {allSales.filter(s => s.receiving_bank === 'itau').reduce((sum, s) => sum + (s.total_amount || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
-                          <p className="text-xs text-orange-400 mt-1">
+                          <p className="text-xs text-gray-400 mt-1">
                             {allSales.filter(s => s.receiving_bank === 'itau').length} vendas
                           </p>
                         </div>
@@ -2002,16 +2002,16 @@ ${boletoInfo}================================
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-purple-900/80 to-purple-800/60 border-purple-700">
+                  <Card className="bg-gray-800 border-2 border-purple-500">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-purple-300 text-xs mb-1">🟣 Nubank</p>
-                          <p className="text-xs text-purple-400/80 mb-2">Parceiros</p>
+                          <p className="text-purple-400 text-xs mb-1">🟣 Nubank</p>
+                          <p className="text-xs text-gray-400 mb-2">Parceiros</p>
                           <p className="text-2xl font-bold text-white">
                             R$ {allSales.filter(s => s.receiving_bank === 'nubank').reduce((sum, s) => sum + (s.total_amount || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </p>
-                          <p className="text-xs text-purple-400 mt-1">
+                          <p className="text-xs text-gray-400 mt-1">
                             {allSales.filter(s => s.receiving_bank === 'nubank').length} vendas
                           </p>
                         </div>
