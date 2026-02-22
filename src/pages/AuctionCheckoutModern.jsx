@@ -342,6 +342,13 @@ export default function AuctionCheckoutModern() {
         if (data?.found && data?.status === 'confirmed') {
           setPaymentConfirmed(true);
           toast.success('✅ Pagamento confirmado! Saldo adicionado.');
+        } else if (data?.found && data?.status === 'failed') {
+          setPaymentError({
+            show: true,
+            title: 'Pagamento Recusado',
+            description: 'Seu pagamento foi recusado pelo gateway ASAAS. Verifique os dados e tente novamente.',
+            details: null
+          });
         }
       } catch (e) {
         // silencioso
