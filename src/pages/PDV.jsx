@@ -2114,6 +2114,33 @@ ${boletoInfo}================================
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                               <div>
+                                <p className="text-gray-400 text-xs mb-1">Custo Total</p>
+                                <p className="text-2xl font-bold text-yellow-400">
+                                  R$ {(() => {
+                                    // Calcula custo total cruzando vendas com produtos
+                                    let totalCost = 0;
+                                    dashSales.forEach(sale => {
+                                      const product = products.find(p => p.id === sale.product_id);
+                                      if (product && product.cost_price) {
+                                        // cost_price é custo total do lote, divide pela quantidade total para obter unitário
+                                        const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
+                                        const unitCost = totalQty > 0 ? product.cost_price / totalQty : 0;
+                                        totalCost += unitCost * (sale.quantity_sold || 0);
+                                      }
+                                    });
+                                    return totalCost.toFixed(2);
+                                  })()}
+                                </p>
+                              </div>
+                              <Package className="w-8 h-8 text-yellow-400" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gray-800 border-gray-700">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
                                 <p className="text-gray-400 text-xs mb-1">Lucro Líquido</p>
                                 <p className="text-2xl font-bold text-purple-400">
                                   R$ {dashSales.reduce((sum, s) => sum + (s.net_amount || 0), 0).toFixed(2)}
