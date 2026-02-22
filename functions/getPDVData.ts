@@ -47,7 +47,12 @@ Deno.serve(async (req) => {
     }
 
     if (requestAction === 'full' || requestAction === 'cashRegister') {
-      const openRegisters = await base44.asServiceRole.entities.CashRegister.filter({ status: 'open' });
+      // Busca caixas abertos ordenados pelo mais recente
+      const openRegisters = await base44.asServiceRole.entities.CashRegister.filter(
+        { status: 'open' },
+        '-opening_time',
+        1
+      );
       result.currentCashRegister = openRegisters.length > 0 ? openRegisters[0] : null;
     }
 
