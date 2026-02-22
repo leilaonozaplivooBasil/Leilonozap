@@ -2110,10 +2110,10 @@ ${boletoInfo}================================
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <CardTitle className="text-white flex items-center gap-2 text-sm sm:text-base">
                       <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                      {['santander', 'itau', 'nubank'].includes(selectedBank)
-                        ? `Vendas - ${selectedBank === 'santander' ? '🔴 Santander' : selectedBank === 'itau' ? '🟠 Itaú' : '🟣 Nubank'}`
+                      {['santander', 'itau', 'nubank'].includes(dashBankFilter)
+                        ? `Vendas - ${dashBankFilter === 'santander' ? '🔴 Santander' : dashBankFilter === 'itau' ? '🟠 Itaú' : '🟣 Nubank'}`
                         : `Todas as Vendas`
-                      } ({(['santander', 'itau', 'nubank'].includes(selectedBank) ? allSales.filter(s => s.receiving_bank === selectedBank) : allSales).length})
+                      } ({(['santander', 'itau', 'nubank'].includes(dashBankFilter) ? allSales.filter(s => s.receiving_bank === dashBankFilter) : allSales).length})
                     </CardTitle>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                       <div className="relative w-full sm:w-64">
