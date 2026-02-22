@@ -56,6 +56,20 @@ Deno.serve(async (req) => {
         notes: notes || '',
         ...totals
       });
+
+      // 🛡️ PROTEÇÃO: Fecha TODOS os caixas abertos antigos (exceto o que acabou de fechar)
+      const remainingOpen = await base44.asServiceRole.entities.CashRegister.filter({ status: 'open' });
+      for (const orphan of remainingOpen) {
+        if (orphan.id !== register_id) {
+          console.log(`🧹 Fechando caixa órfão: ${orphan.id} (aberto em ${orphan.opening_time})`);
+          await base44.asServiceRole.entities.CashRegister.update(orphan.id, {
+            status: 'closed',
+            closing_time: new Date().toISOString(),
+            notes: 'Fechado automaticamente - caixa duplicado/órfão'
+          });
+        }
+      }
+
       return Response.json({ success: true });
     }
 
