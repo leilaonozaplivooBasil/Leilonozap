@@ -236,13 +236,17 @@ export default function AuctionCheckoutModern() {
     setStep('payment');
     toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
   } else {
-    const errorMsg = responseData?.error || 'Erro desconhecido ao processar pagamento';
     const errorDetails = responseData?.details || null;
-    console.error('❌ Erro na resposta:', errorMsg, errorDetails);
+    // Extrai description do array de errors do ASAAS (se existir)
+    let errorDescription = responseData?.error || 'Erro desconhecido ao processar pagamento';
+    if (Array.isArray(errorDetails) && errorDetails.length > 0 && errorDetails[0].description) {
+      errorDescription = errorDetails[0].description;
+    }
+    console.error('❌ Erro na resposta:', errorDescription, errorDetails);
     setPaymentError({
       show: true,
       title: 'Erro ao Processar Pagamento',
-      description: errorMsg,
+      description: errorDescription,
       details: errorDetails
     });
   }
