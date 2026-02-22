@@ -87,8 +87,8 @@ export default function AddFunds() {
   };
 
   const handleProceedToPayment = async () => {
-    if (!selectedAmount || selectedAmount < 1) {
-      alert("O valor mínimo para depósito é R$ 1,00");
+    if (!selectedAmount || selectedAmount < 5) {
+      alert("O valor mínimo para depósito é R$ 5,00");
       return;
     }
 
@@ -246,7 +246,7 @@ export default function AddFunds() {
                      <div className="flex-1">
                        <Input
                          type="text"
-                         placeholder="Digite o valor (mínimo R$ 1)"
+                         placeholder="Digite o valor (mínimo R$ 5)"
                          value={customAmount}
                          onChange={handleCustomAmountChange}
                          className="backdrop-blur-sm bg-black/30 border-white/20 text-white text-lg h-16 rounded-2xl focus:border-green-400/50 focus:ring-2 focus:ring-green-400/20 transition-all placeholder:text-gray-500"
@@ -327,7 +327,7 @@ export default function AddFunds() {
 
                   <div className="flex items-center gap-1.5 text-gray-400 text-xs backdrop-blur-sm bg-black/20 p-2 rounded-lg border border-white/5 mt-3">
                     <Shield className="w-3 h-3 flex-shrink-0" />
-                    <span>Mín: R$ 1 | Máx: R$ 10.000</span>
+                    <span>Mín: R$ 5 | Máx: R$ 10.000</span>
                   </div>
                 </CardContent>
               </Card>
