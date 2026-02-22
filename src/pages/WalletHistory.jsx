@@ -43,15 +43,12 @@ export default function WalletHistory() {
   const loadTransactions = async (userId) => {
     try {
       setIsLoading(true);
-      const data = await base44.entities.DigitalWalletTransaction.filter(
-        { user_id: userId },
-        "-created_date",
-        100
-      );
-      const digitalWallets = await base44.entities.DigitalWallet.filter({ user_id: userId });
-      setTransactions(data);
-      if (digitalWallets.length > 0) {
-        setWallet(digitalWallets[0]);
+      // Usa backend function para contornar RLS
+      const result = await base44.functions.invoke('getDigitalWalletHistory', { user_id: userId });
+      const data = result?.data || result;
+      setTransactions(data?.transactions || []);
+      if (data?.wallet) {
+        setWallet(data.wallet);
       }
     } catch (error) {
       console.error("Erro ao carregar transações:", error);
