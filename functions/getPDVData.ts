@@ -86,14 +86,48 @@ Deno.serve(async (req) => {
       // Recalcula totais de cada sessão baseado nas vendas reais dentro do período
       const allSalesForSessions = await base44.asServiceRole.entities.Sale.list('-sale_datetime', 5000);
 
-      result.cashSessions = closedSessions.map(session => {
-        const openTime = new Date(session.opening_time).getTime();
-        const closeTime = session.closing_time ? new Date(session.closing_time).getTime() : Date.now();
+      // 🛡️ DEDUPLICAÇÃO: Ordena sessões por opening_time ASC para atribuir cada venda à sessão correta
+      // (sessão mais específica = período mais curto que contém a venda)
+      const sortedSessions = [...closedSessions].sort((a, b) => 
+        new Date(a.opening_time).getTime() - new Date(b.opening_time).getTime()
+      );
 
-        const salesInSession = allSalesForSessions.filter(sale => {
-          const saleTime = new Date(sale.sale_datetime).getTime();
-          return saleTime >= openTime && saleTime <= closeTime;
+      // Atribui cada venda a UMA ÚNICA sessão (a com período mais curto que a contém)
+      const saleToSessionMap = {};
+      allSalesForSessions.forEach(sale => {
+        const saleTime = new Date(sale.sale_datetime).getTime();
+        let bestSession = null;
+        let bestDuration = Infinity;
+
+        sortedSessions.forEach(session => {
+          const openTime = new Date(session.opening_time).getTime();
+          const closeTime = session.closing_time ? new Date(session.closing_time).getTime() : Date.now();
+
+          if (saleTime >= openTime && saleTime <= closeTime) {
+            const duration = closeTime - openTime;
+            if (duration < bestDuration) {
+              bestDuration = duration;
+              bestSession = session.id;
+            }
+          }
         });
+
+        if (bestSession) {
+          saleToSessionMap[sale.id] = bestSession;
+        }
+      });
+
+      // Agrupa vendas por sessão (sem duplicatas)
+      const sessionSalesMap = {};
+      allSalesForSessions.forEach(sale => {
+        const sessionId = saleToSessionMap[sale.id];
+        if (!sessionId) return;
+        if (!sessionSalesMap[sessionId]) sessionSalesMap[sessionId] = [];
+        sessionSalesMap[sessionId].push(sale);
+      });
+
+      result.cashSessions = closedSessions.map(session => {
+        const salesInSession = sessionSalesMap[session.id] || [];
 
         const recalc = { total_pix: 0, total_cash: 0, total_debit: 0, total_credit: 0, total_boleto: 0, total_sales: 0 };
         salesInSession.forEach(sale => {
