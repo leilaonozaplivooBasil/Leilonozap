@@ -500,10 +500,19 @@ export default function AuctionCheckoutModern() {
                           <Input
                             type="text"
                             value={cpf}
-                            onChange={(e) => setCpf(e.target.value)}
+                            onChange={(e) => {
+                              setCpf(e.target.value);
+                              if (formErrors.cpf) setFormErrors(prev => ({ ...prev, cpf: undefined }));
+                            }}
                             placeholder="000.000.000-00"
-                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                            className={`bg-gray-800/50 text-white h-12 ${formErrors.cpf ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-700'}`}
                           />
+                          {formErrors.cpf && (
+                            <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {formErrors.cpf}
+                            </p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-white mb-2">
@@ -512,10 +521,19 @@ export default function AuctionCheckoutModern() {
                           <Input
                             type="tel"
                             value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            onChange={(e) => {
+                              setPhone(e.target.value);
+                              if (formErrors.phone) setFormErrors(prev => ({ ...prev, phone: undefined }));
+                            }}
                             placeholder="(00) 00000-0000"
-                            className="bg-gray-800/50 border-gray-700 text-white h-12"
+                            className={`bg-gray-800/50 text-white h-12 ${formErrors.phone ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-700'}`}
                           />
+                          {formErrors.phone && (
+                            <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {formErrors.phone}
+                            </p>
+                          )}
                         </div>
                       </div>
 
