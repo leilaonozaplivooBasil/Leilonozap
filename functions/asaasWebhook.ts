@@ -236,6 +236,7 @@ Deno.serve(async (req) => {
                                 console.log('✅ Digital Wallet criada e creditada:', asaasPayment.wallet_deposit_user_id, 'Saldo:', asaasPayment.value);
                             }
 
+                            const billingLabel = asaasPayment.billing_type === 'CREDIT_CARD' ? 'Cartão de Crédito' : asaasPayment.billing_type || 'PIX';
                             await base44.asServiceRole.entities.DigitalWalletTransaction.create({
                                 user_id: asaasPayment.wallet_deposit_user_id,
                                 type: 'deposit',
@@ -243,7 +244,7 @@ Deno.serve(async (req) => {
                                 amount: asaasPayment.value,
                                 status: 'confirmed',
                                 related_payment_id: paymentId,
-                                description: `Depósito via ${asaasPayment.billing_type} - ${paymentId}`
+                                description: `Depósito via ${billingLabel}`
                             });
                             console.log('✅ Transação de Digital Wallet registrada');
 
