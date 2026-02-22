@@ -81,6 +81,7 @@ export default function PDV() {
   const [isGeneratingCodes, setIsGeneratingCodes] = useState(false);
   const [sellersDataForPDF, setSellersDataForPDF] = useState([]);
   const [walletDeposits, setWalletDeposits] = useState([]); // 🆕 Estado para depósitos
+  const [dashBankFilter, setDashBankFilter] = useState('todos'); // 🆕 Filtro banco no Dashboard
   const navigate = useNavigate();
 
   const generateOrderCode = () => {
