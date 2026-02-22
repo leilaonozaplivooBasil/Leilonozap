@@ -311,14 +311,17 @@ export default function AuctionCheckoutModern() {
     loadData();
   }, [location.state]);
 
-  // Polling para verificar confirmação do pagamento PIX
+  // Polling para verificar confirmação do pagamento PIX (via backend para contornar RLS)
   useEffect(() => {
     if (step !== 'payment' || !pixData?.payment_id || paymentConfirmed) return;
 
     const checkPaymentStatus = async () => {
       try {
-        const payments = await base44.entities.AsaasPayment.filter({ payment_id: pixData.payment_id });
-        if (payments && payments.length > 0 && payments[0].status === 'confirmed') {
+        const result = await base44.functions.invoke('checkPaymentStatus', {
+          payment_id: pixData.payment_id
+        });
+        const data = result?.data || result;
+        if (data?.found && data?.status === 'confirmed') {
           setPaymentConfirmed(true);
           toast.success('✅ Pagamento confirmado! Saldo adicionado.');
         }
@@ -327,8 +330,13 @@ export default function AuctionCheckoutModern() {
       }
     };
 
-    const interval = setInterval(checkPaymentStatus, 5000); // verifica a cada 5s
-    return () => clearInterval(interval);
+    // Primeira checagem imediata após 3s
+    const initialTimeout = setTimeout(checkPaymentStatus, 3000);
+    const interval = setInterval(checkPaymentStatus, 5000);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
   }, [step, pixData, paymentConfirmed]);
 
   if (isLoading) {
