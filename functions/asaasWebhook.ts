@@ -58,9 +58,8 @@ Deno.serve(async (req) => {
 
         console.log('✅ Payment ID:', paymentId);
 
-        // 🔄 PROCESSAR EM BACKGROUND (após responder)
-        (async () => {
-            try {
+        // 🔄 PROCESSAR ANTES DE RESPONDER (garantir que tudo seja creditado)
+        try {
                 // Registrar evento
                 await base44.asServiceRole.entities.WebhookLog.create({
                     provider: 'ASAAS',
@@ -343,23 +342,22 @@ Deno.serve(async (req) => {
                 });
 
                 console.log('🎉 WEBHOOK ASAAS PROCESSADO COM SUCESSO ✅');
-            } catch (backgroundErr) {
-                console.error('❌ Erro no processamento background:', backgroundErr.message);
+        } catch (processErr) {
+                console.error('❌ Erro no processamento:', processErr.message);
                 try {
                     await base44.asServiceRole.entities.SystemLog.create({
-                        step: 'ASAAS_WEBHOOK_BACKGROUND_ERROR',
+                        step: 'ASAAS_WEBHOOK_PROCESS_ERROR',
                         status: 'error',
-                        message: `Background error: ${backgroundErr.message}`,
+                        message: `Process error: ${processErr.message}`,
                         component_name: 'asaasWebhook',
-                        error_details: { message: backgroundErr.message, stack: backgroundErr.stack }
+                        error_details: { message: processErr.message, stack: processErr.stack }
                     });
                 } catch (e) {
                     console.debug('Logging falhou');
                 }
-            }
-        })();
+        }
 
-        return responsePromise;
+        return Response.json({ received: true });
 
     } catch (error) {
         console.error('❌ Erro no webhook ASAAS:', error.message);
