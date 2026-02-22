@@ -2024,8 +2024,8 @@ ${boletoInfo}================================
                 {/* CARDS DE RESUMO GERAL */}
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
                   {(() => {
-                    const dashSales = ['santander', 'itau', 'nubank'].includes(selectedBank)
-                      ? allSales.filter(s => s.receiving_bank === selectedBank)
+                    const dashSales = ['santander', 'itau', 'nubank'].includes(dashBankFilter)
+                      ? allSales.filter(s => s.receiving_bank === dashBankFilter)
                       : allSales;
                     return (
                       <>
