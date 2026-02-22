@@ -187,11 +187,20 @@ export default function AuctionCheckoutModern() {
   };
 
   const handleCreatePayment = async () => {
-  if (!validateForm()) return;
-  if (!validateCardData()) return;
+  console.log('🔘 handleCreatePayment chamado', { auction: !!auction, auctionId: auction?.id, isProcessing });
+  
+  if (!validateForm()) {
+    console.log('❌ validateForm falhou', formErrors);
+    return;
+  }
+  if (!validateCardData()) {
+    console.log('❌ validateCardData falhou');
+    return;
+  }
   if (!auction) {
-  toast.error('Pedido não encontrado');
-  return;
+    console.error('❌ auction é null!');
+    toast.error('Pedido não encontrado. Volte e tente novamente.');
+    return;
   }
 
   setIsProcessing(true);
