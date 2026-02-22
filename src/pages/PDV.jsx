@@ -1931,77 +1931,186 @@ ${boletoInfo}================================
 
           <TabsContent value="dashboard">
             <div className="space-y-6">
+              {/* FILTRO POR BANCO DESTINO */}
+              {(() => {
+                const dashBankFilter = window.__pdvDashBankFilter || 'todos';
+                const setDashBankFilter = (v) => { window.__pdvDashBankFilter = v; setSearchSale(prev => prev === prev ? prev + '' : prev); };
+                // Não podemos usar useState aqui, então usamos um workaround com forceUpdate
+                return null;
+              })()}
+
               {/* RESUMO GERAL */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
+              <div className="space-y-4">
+                {/* FILTRO BANCO DESTINO */}
                 <Card className="bg-gray-800 border-gray-700">
                   <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-400 text-xs mb-1">Total de Produtos</p>
-                        <p className="text-2xl font-bold text-white">
-                          {products.reduce((sum, p) => sum + (p.quantity || 0) + (p.quantity_sold || 0), 0)}
-                        </p>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                      <p className="text-gray-300 text-sm font-medium whitespace-nowrap">🏦 Filtrar por Banco:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          { value: 'todos', label: 'Todos', color: 'bg-gray-600 hover:bg-gray-500' },
+                          { value: 'santander', label: '🔴 Santander', color: 'bg-red-700 hover:bg-red-600' },
+                          { value: 'itau', label: '🟠 Itaú', color: 'bg-orange-700 hover:bg-orange-600' },
+                          { value: 'nubank', label: '🟣 Nubank', color: 'bg-purple-700 hover:bg-purple-600' },
+                        ].map(bank => (
+                          <Button
+                            key={bank.value}
+                            size="sm"
+                            onClick={() => setSelectedBank(bank.value === 'todos' ? bank.value : bank.value)}
+                            className={`text-xs text-white ${
+                              (bank.value === 'todos' && !['santander', 'itau', 'nubank'].includes(selectedBank))
+                                ? 'ring-2 ring-white ' + bank.color
+                                : selectedBank === bank.value
+                                  ? 'ring-2 ring-white ' + bank.color
+                                  : bank.color + ' opacity-60'
+                            }`}
+                          >
+                            {bank.label}
+                          </Button>
+                        ))}
                       </div>
-                      <Package className="w-8 h-8 text-blue-400" />
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-400 text-xs mb-1">Produtos Vendidos</p>
-                        <p className="text-2xl font-bold text-white">
-                          {allSales.reduce((sum, s) => sum + (s.quantity_sold || 0), 0)}
-                        </p>
+                {/* CARDS POR BANCO */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
+                  <Card className="bg-gradient-to-br from-red-900/80 to-red-800/60 border-red-700">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-red-300 text-xs mb-1">🔴 Santander</p>
+                          <p className="text-xs text-red-400/80 mb-2">Produtos Físicos</p>
+                          <p className="text-2xl font-bold text-white">
+                            R$ {allSales.filter(s => s.receiving_bank === 'santander').reduce((sum, s) => sum + (s.total_amount || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-red-400 mt-1">
+                            {allSales.filter(s => s.receiving_bank === 'santander').length} vendas
+                          </p>
+                        </div>
+                        <DollarSign className="w-8 h-8 text-red-400" />
                       </div>
-                      <ShoppingCart className="w-8 h-8 text-green-400" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-400 text-xs mb-1">Faturamento Total</p>
-                        <p className="text-2xl font-bold text-green-400">
-                          R$ {allSales.reduce((sum, s) => sum + (s.total_amount || 0), 0).toFixed(2)}
-                        </p>
+                  <Card className="bg-gradient-to-br from-orange-900/80 to-orange-800/60 border-orange-700">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-orange-300 text-xs mb-1">🟠 Itaú</p>
+                          <p className="text-xs text-orange-400/80 mb-2">Licenciados</p>
+                          <p className="text-2xl font-bold text-white">
+                            R$ {allSales.filter(s => s.receiving_bank === 'itau').reduce((sum, s) => sum + (s.total_amount || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-orange-400 mt-1">
+                            {allSales.filter(s => s.receiving_bank === 'itau').length} vendas
+                          </p>
+                        </div>
+                        <DollarSign className="w-8 h-8 text-orange-400" />
                       </div>
-                      <DollarSign className="w-8 h-8 text-green-400" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
 
-                <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-400 text-xs mb-1">Impostos + Comissões</p>
-                        <p className="text-2xl font-bold text-red-400">
-                          R$ {(allSales.reduce((sum, s) => sum + (s.total_taxes || 0) + (s.commission_amount || 0), 0)).toFixed(2)}
-                        </p>
+                  <Card className="bg-gradient-to-br from-purple-900/80 to-purple-800/60 border-purple-700">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-purple-300 text-xs mb-1">🟣 Nubank</p>
+                          <p className="text-xs text-purple-400/80 mb-2">Parceiros</p>
+                          <p className="text-2xl font-bold text-white">
+                            R$ {allSales.filter(s => s.receiving_bank === 'nubank').reduce((sum, s) => sum + (s.total_amount || 0), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </p>
+                          <p className="text-xs text-purple-400 mt-1">
+                            {allSales.filter(s => s.receiving_bank === 'nubank').length} vendas
+                          </p>
+                        </div>
+                        <DollarSign className="w-8 h-8 text-purple-400" />
                       </div>
-                      <TrendingUp className="w-8 h-8 text-red-400" />
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
 
-                <Card className="bg-gray-800 border-gray-700">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-gray-400 text-xs mb-1">Lucro Líquido</p>
-                        <p className="text-2xl font-bold text-purple-400">
-                          R$ {allSales.reduce((sum, s) => sum + (s.net_amount || 0), 0).toFixed(2)}
-                        </p>
-                      </div>
-                      <TrendingUp className="w-8 h-8 text-purple-400" />
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* CARDS DE RESUMO GERAL */}
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4">
+                  {(() => {
+                    const dashSales = ['santander', 'itau', 'nubank'].includes(selectedBank)
+                      ? allSales.filter(s => s.receiving_bank === selectedBank)
+                      : allSales;
+                    return (
+                      <>
+                        <Card className="bg-gray-800 border-gray-700">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Total de Produtos</p>
+                                <p className="text-2xl font-bold text-white">
+                                  {products.reduce((sum, p) => sum + (p.quantity || 0) + (p.quantity_sold || 0), 0)}
+                                </p>
+                              </div>
+                              <Package className="w-8 h-8 text-blue-400" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gray-800 border-gray-700">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Produtos Vendidos</p>
+                                <p className="text-2xl font-bold text-white">
+                                  {dashSales.reduce((sum, s) => sum + (s.quantity_sold || 0), 0)}
+                                </p>
+                              </div>
+                              <ShoppingCart className="w-8 h-8 text-green-400" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gray-800 border-gray-700">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Faturamento Total</p>
+                                <p className="text-2xl font-bold text-green-400">
+                                  R$ {dashSales.reduce((sum, s) => sum + (s.total_amount || 0), 0).toFixed(2)}
+                                </p>
+                              </div>
+                              <DollarSign className="w-8 h-8 text-green-400" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gray-800 border-gray-700">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Impostos + Comissões</p>
+                                <p className="text-2xl font-bold text-red-400">
+                                  R$ {dashSales.reduce((sum, s) => sum + (s.total_taxes || 0) + (s.commission_amount || 0), 0).toFixed(2)}
+                                </p>
+                              </div>
+                              <TrendingUp className="w-8 h-8 text-red-400" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gray-800 border-gray-700">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-gray-400 text-xs mb-1">Lucro Líquido</p>
+                                <p className="text-2xl font-bold text-purple-400">
+                                  R$ {dashSales.reduce((sum, s) => sum + (s.net_amount || 0), 0).toFixed(2)}
+                                </p>
+                              </div>
+                              <TrendingUp className="w-8 h-8 text-purple-400" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* TODAS AS VENDAS INDIVIDUAIS */}
@@ -2010,7 +2119,10 @@ ${boletoInfo}================================
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <CardTitle className="text-white flex items-center gap-2 text-sm sm:text-base">
                       <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                      Todas as Vendas ({allSales.length})
+                      {['santander', 'itau', 'nubank'].includes(selectedBank)
+                        ? `Vendas - ${selectedBank === 'santander' ? '🔴 Santander' : selectedBank === 'itau' ? '🟠 Itaú' : '🟣 Nubank'}`
+                        : `Todas as Vendas`
+                      } ({(['santander', 'itau', 'nubank'].includes(selectedBank) ? allSales.filter(s => s.receiving_bank === selectedBank) : allSales).length})
                     </CardTitle>
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
                       <div className="relative w-full sm:w-64">
@@ -2044,11 +2156,15 @@ ${boletoInfo}================================
                           <th className="text-right p-3">Preço Unit.</th>
                           <th className="text-right p-3">Total</th>
                           <th className="text-center p-3">Pagamento</th>
+                          <th className="text-center p-3">Banco</th>
                           <th className="text-center p-3">Ações</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {allSales
+                        {((['santander', 'itau', 'nubank'].includes(selectedBank)
+                          ? allSales.filter(s => s.receiving_bank === selectedBank)
+                          : allSales
+                        ))
                           .filter(sale =>
                             !searchSale ||
                             sale.order_code?.toLowerCase().includes(searchSale.toLowerCase()) ||
@@ -2082,6 +2198,19 @@ ${boletoInfo}================================
                                         'bg-yellow-600'
                                   }`}>
                                   {sale.payment_method}
+                                </Badge>
+                              </td>
+                              <td className="text-center p-3">
+                                <Badge className={`text-xs ${
+                                  sale.receiving_bank === 'santander' ? 'bg-red-700' :
+                                  sale.receiving_bank === 'itau' ? 'bg-orange-700' :
+                                  sale.receiving_bank === 'nubank' ? 'bg-purple-700' :
+                                  'bg-gray-600'
+                                }`}>
+                                  {sale.receiving_bank === 'santander' ? '🔴 Sant.' :
+                                   sale.receiving_bank === 'itau' ? '🟠 Itaú' :
+                                   sale.receiving_bank === 'nubank' ? '🟣 Nubank' :
+                                   sale.receiving_bank || 'N/A'}
                                 </Badge>
                               </td>
                               <td className="text-center p-3">
