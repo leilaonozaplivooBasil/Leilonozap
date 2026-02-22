@@ -553,10 +553,19 @@ export default function AuctionCheckoutModern() {
                         <Input
                           type="email"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (formErrors.email) setFormErrors(prev => ({ ...prev, email: undefined }));
+                          }}
                           placeholder="seu@email.com"
-                          className="bg-gray-800/50 border-gray-700 text-white h-12"
+                          className={`bg-gray-800/50 text-white h-12 ${formErrors.email ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-700'}`}
                         />
+                        {formErrors.email && (
+                          <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" />
+                            {formErrors.email}
+                          </p>
+                        )}
                       </div>
                     </CardContent>
                   )}
