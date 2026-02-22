@@ -81,7 +81,42 @@ Deno.serve(async (req) => {
 
     if (requestAction === 'full' || requestAction === 'cashSessions') {
       const allSessions = await base44.asServiceRole.entities.CashRegister.list('-closing_time', 500);
-      result.cashSessions = allSessions.filter(s => s.status === 'closed');
+      const closedSessions = allSessions.filter(s => s.status === 'closed');
+
+      // Recalcula totais de cada sessão baseado nas vendas reais dentro do período
+      const allSalesForSessions = await base44.asServiceRole.entities.Sale.list('-sale_datetime', 5000);
+
+      result.cashSessions = closedSessions.map(session => {
+        const openTime = new Date(session.opening_time).getTime();
+        const closeTime = session.closing_time ? new Date(session.closing_time).getTime() : Date.now();
+
+        const salesInSession = allSalesForSessions.filter(sale => {
+          const saleTime = new Date(sale.sale_datetime).getTime();
+          return saleTime >= openTime && saleTime <= closeTime;
+        });
+
+        const recalc = { total_pix: 0, total_cash: 0, total_debit: 0, total_credit: 0, total_boleto: 0, total_sales: 0 };
+        salesInSession.forEach(sale => {
+          const amount = sale.total_amount || 0;
+          recalc.total_sales += amount;
+          if (sale.payment_method === 'PIX') recalc.total_pix += amount;
+          else if (sale.payment_method === 'DINHEIRO') recalc.total_cash += amount;
+          else if (sale.payment_method === 'CARTÃO DÉBITO') recalc.total_debit += amount;
+          else if (sale.payment_method === 'CARTÃO CRÉDITO') recalc.total_credit += amount;
+          else if (sale.payment_method === 'BOLETO PARCELADO') recalc.total_boleto += amount;
+        });
+
+        return {
+          ...session,
+          total_sales: recalc.total_sales,
+          total_pix: recalc.total_pix,
+          total_cash: recalc.total_cash,
+          total_debit: recalc.total_debit,
+          total_credit: recalc.total_credit,
+          total_boleto: recalc.total_boleto,
+          transactions_count: salesInSession.length
+        };
+      }).sort((a, b) => new Date(b.closing_time) - new Date(a.closing_time));
     }
 
     if (requestAction === 'full' || requestAction === 'commissions') {
