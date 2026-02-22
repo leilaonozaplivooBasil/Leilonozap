@@ -1065,6 +1065,7 @@ ${boletoInfo}================================
           total_taxes: itemTaxes.total,
           net_amount: newTotalAmount - itemTaxes.total,
           payment_method: editSaleData.payment_method,
+          receiving_bank: editSaleData.receiving_bank,
           boleto_cliente: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_cliente : null,
           boleto_documento: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_documento : null,
           boleto_parcelas: editSaleData.payment_method === 'BOLETO PARCELADO' ? editSaleData.boleto_parcelas : null
