@@ -1903,10 +1903,13 @@ ${boletoInfo}================================
                       const sessionTotalSales = session.total_sales || 0;
                       const sessionTransactions = session.transactions_count || 0;
 
-                      // Formata datas de abertura e fechamento
+                      // Usa _sale_date para exibição limpa (sessão virtual por dia)
+                      const displayDate = session._sale_date
+                        ? new Date(session._sale_date + 'T12:00:00').toLocaleDateString('pt-BR')
+                        : new Date(session.opening_time).toLocaleDateString('pt-BR');
+
                       const openDate = new Date(session.opening_time);
                       const closeDate = session.closing_time ? new Date(session.closing_time) : null;
-                      const isSameDay = closeDate && openDate.toLocaleDateString('pt-BR') === closeDate.toLocaleDateString('pt-BR');
 
                       return (
                         <div
@@ -1917,13 +1920,10 @@ ${boletoInfo}================================
                           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
+                                <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                                 <div>
                                   <p className="text-white font-semibold text-sm sm:text-base">
-                                    {openDate.toLocaleDateString('pt-BR')}
-                                    {!isSameDay && closeDate && (
-                                      <span className="text-gray-400 font-normal"> → {closeDate.toLocaleDateString('pt-BR')}</span>
-                                    )}
+                                    {displayDate}
                                   </p>
                                   <p className="text-gray-400 text-xs">
                                     {openDate.toLocaleTimeString('pt-BR')} - {' '}
@@ -1932,9 +1932,6 @@ ${boletoInfo}================================
                                 </div>
                               </div>
                               <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm">
-                                <span className="text-gray-400">
-                                  👤 {session.operator_name}
-                                </span>
                                 <span className="text-gray-400">
                                   📦 {sessionTransactions} vendas
                                 </span>
