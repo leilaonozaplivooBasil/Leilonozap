@@ -261,6 +261,28 @@ export default function AuctionCheckoutModern() {
     setPixData(responseData);
     setStep('payment');
     toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
+
+    // Salva dados atualizados no AppUser (CPF, telefone, endereço)
+    if (currentUser?.id) {
+      const updateData = {
+        cpf: cpf.trim(),
+        phone: phone.trim(),
+        address_street: addressStreet.trim(),
+        address_number: addressNumber.trim(),
+        address_complement: addressComplement.trim(),
+        address_neighborhood: addressNeighborhood.trim(),
+        address_city: addressCity.trim(),
+        address_state: addressState.trim(),
+        address_zip_code: addressZip.trim()
+      };
+      base44.entities.AppUser.update(currentUser.id, updateData).then(() => {
+        // Atualiza localStorage também
+        const saved = localStorage.getItem('currentUser');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          localStorage.setItem('currentUser', JSON.stringify({ ...parsed, ...updateData }));
+        }
+      }).catch(() => {});
   } else {
     const errorDetails = responseData?.details || null;
     // Extrai description do array de errors do ASAAS (se existir)
