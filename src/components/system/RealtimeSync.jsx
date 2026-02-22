@@ -22,7 +22,7 @@ export function useRealtimeSync({
   const blockUntilRef = useRef(0);
   const lastSuccessRef = useRef(Date.now());
 
-  const [syncMode, setSyncMode] = useState(priority === 'high' ? 'fast' : 'normal');
+  const syncModeRef = useRef(priority === 'high' ? 'fast' : 'normal');
 
   // Cria canal de broadcast
   useEffect(() => {
@@ -33,13 +33,12 @@ export function useRealtimeSync({
       
       channelRef.current.onmessage = (event) => {
         if (event.data.type === 'update' && mountedRef.current) {
-          console.log(`📡 [${entityName}] Atualização de outra aba:`, event.data.payload);
           onUpdate(event.data.payload);
           lastSuccessRef.current = Date.now();
         }
       };
     } catch (error) {
-      console.log('BroadcastChannel não disponível');
+      // BroadcastChannel não disponível
     }
 
     return () => {
@@ -47,26 +46,22 @@ export function useRealtimeSync({
         channelRef.current.close();
       }
     };
-  }, [entityName, enabled, onUpdate]);
+  }, [entityName, enabled]);
 
   // FETCH DATA COM PRIORIDADE
   const fetchData = useCallback(async () => {
     if (!enabled || !mountedRef.current) return;
 
-    // PROTEÇÃO 1: Verifica se está bloqueado
     const now = Date.now();
+    
+    // PROTEÇÃO 1: Verifica se está bloqueado
     if (isBlockedRef.current && now < blockUntilRef.current) {
-      const secondsLeft = Math.ceil((blockUntilRef.current - now) / 1000);
-      console.log(`⏸️ [${entityName}] Bloqueado por ${secondsLeft}s`);
       return;
     }
 
-    // PROTEÇÃO 2: Verifica última requisição bem-sucedida
-    const minInterval = priority === 'high' ? 5000 : 30000; // Alta: 5s, Normal: 30s
-    const timeSinceSuccess = now - lastSuccessRef.current;
-    
-    if (timeSinceSuccess < minInterval) {
-      console.log(`⏸️ [${entityName}] Aguardando intervalo (${Math.floor(timeSinceSuccess/1000)}s)`);
+    // PROTEÇÃO 2: Intervalo mínimo entre chamadas
+    const minInterval = priority === 'high' ? 8000 : 45000;
+    if (now - lastSuccessRef.current < minInterval) {
       return;
     }
 
@@ -74,100 +69,57 @@ export function useRealtimeSync({
       const { base44 } = await import('@/api/base44Client');
       const Entity = base44.entities[entityName];
       
-      if (!Entity) {
-        throw new Error(`Entity ${entityName} not found`);
-      }
+      if (!Entity) return;
       
-      // TIMEOUT DE 15 SEGUNDOS
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout')), 15000)
-      );
+      const data = await Promise.race([
+        Entity.list('-updated_date', 100),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+      ]);
       
-      const dataPromise = Entity.list('-updated_date', 100);
-      
-      const data = await Promise.race([dataPromise, timeoutPromise]);
-      
-      // Reset retry count em sucesso
       retryCountRef.current = 0;
       isBlockedRef.current = false;
       lastSuccessRef.current = Date.now();
-      setSyncMode('fast');
+      syncModeRef.current = 'fast';
       
       const dataStr = JSON.stringify(data);
       if (lastDataRef.current !== dataStr) {
-        console.log(`✅ [${entityName}] Atualizado (${data.length} registros)`);
         lastDataRef.current = dataStr;
+        if (mountedRef.current) onUpdate(data);
         
-        if (mountedRef.current) {
-          onUpdate(data);
-        }
-        
-        // Notifica outras abas
         if (channelRef.current) {
-          try {
-            channelRef.current.postMessage({ 
-              type: 'update', 
-              payload: data 
-            });
-          } catch (e) {
-            // Ignora
-          }
+          try { channelRef.current.postMessage({ type: 'update', payload: data }); } catch (e) {}
         }
       }
     } catch (error) {
-      console.debug(`[${entityName}] Sync error:`, error.message);
-      
-      // DETECTA RATE LIMIT (429), Network Error ou TIMEOUT
       const errorMsg = error.message || '';
       if (errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('Network Error') || errorMsg.includes('Timeout')) {
         retryCountRef.current++;
         isBlockedRef.current = true;
-        setSyncMode('slow');
+        syncModeRef.current = 'slow';
         
-        // Backoff exponencial: 30s, 60s, 120s ou 1min para Timeout
-        const blockTime = errorMsg.includes('Timeout') ? 60000 : // 1 MINUTO para timeout
-                         retryCountRef.current === 1 ? 30000 : 
-                         retryCountRef.current === 2 ? 60000 : 120000;
-        
+        const blockTime = Math.min(30000 * Math.pow(2, retryCountRef.current - 1), 300000);
         blockUntilRef.current = Date.now() + blockTime;
-        
-        console.log(`🔴 [${entityName}] ${errorMsg.includes('Timeout') ? 'TIMEOUT' : 'RATE LIMIT/NETWORK ERROR'}! Bloqueado por ${blockTime/1000}s`);
-        
-        // Remove todos os toasts de erro
       }
     }
-  }, [entityName, filters, enabled, onUpdate, priority]);
+  }, [entityName, enabled, priority]);
 
-  // POLLING COM PRIORIDADE DINÂMICA
+  // POLLING ESTÁVEL - NÃO DEPENDE DE syncMode (evita loop de re-render)
   useEffect(() => {
     if (!enabled) return;
 
-    // 🚀 INTERVALOS BASEADOS EM PRIORIDADE E MODO (otimizado para evitar rate limit)
-    const intervals = {
-      high_fast: 10000,   // 10s - Sala de leilão ativa
-      high_slow: 60000,   // 60s - Sala de leilão com rate limit
-      normal_fast: 90000,  // 90s - Outras páginas
-      normal_slow: 180000  // 180s - Outras páginas com rate limit
-    };
+    const activeInterval = priority === 'high' ? 10000 : 90000;
 
-    const key = `${priority}_${syncMode}`;
-    const activeInterval = intervals[key] || interval;
+    // Primeira busca com delay escalonado para evitar burst
+    const initialDelay = priority === 'high' ? 3000 : (5000 + Math.random() * 5000);
+    const initialTimeout = setTimeout(fetchData, initialDelay);
 
-    console.log(`🔄 [${entityName}] Sync ${key.toUpperCase()}: ${activeInterval/1000}s`);
-
-    // Primeira busca após 5s (dá tempo para outras chamadas críticas)
-    const initialTimeout = setTimeout(fetchData, 5000);
-
-    // Polling contínuo
     pollingRef.current = setInterval(fetchData, activeInterval);
 
     return () => {
       clearTimeout(initialTimeout);
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current);
-      }
+      if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [fetchData, interval, enabled, priority, syncMode, entityName]);
+  }, [fetchData, enabled, priority, entityName]);
 
   // Cleanup
   useEffect(() => {
