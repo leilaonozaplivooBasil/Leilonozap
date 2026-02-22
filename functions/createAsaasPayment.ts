@@ -363,7 +363,7 @@ Deno.serve(async (req) => {
                             amount: amount,
                             status: 'confirmed',
                             related_payment_id: paymentData.id,
-                            description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
+                            description: `Depósito via Cartão de Crédito`
                         });
                         console.log('✅ Transação de Digital Wallet registrada');
                     } else {
