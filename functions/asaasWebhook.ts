@@ -202,20 +202,32 @@ Deno.serve(async (req) => {
                         
                         if (isDigitalWallet) {
                             // CREDITAR DIGITAL WALLET
-                            const digitalWallets = await base44.asServiceRole.entities.DigitalWallet.filter(
-                                { user_id: asaasPayment.wallet_deposit_user_id },
-                                null,
-                                1
+                            // Busca TODAS as wallets (pode haver duplicadas criadas pelo frontend)
+                            const allDigitalWallets = await base44.asServiceRole.entities.DigitalWallet.filter(
+                                { user_id: asaasPayment.wallet_deposit_user_id }
                             );
 
-                            let digitalWallet;
-                            if (digitalWallets && digitalWallets.length > 0) {
-                                digitalWallet = digitalWallets[0];
-                                const newBalance = (digitalWallet.balance || 0) + asaasPayment.value;
-                                await base44.asServiceRole.entities.DigitalWallet.update(digitalWallet.id, {
+                            if (allDigitalWallets && allDigitalWallets.length > 0) {
+                                // Consolida: soma saldo de todas + novo depósito na primeira, deleta as demais
+                                const primary = allDigitalWallets[0];
+                                let currentTotal = allDigitalWallets.reduce((sum, w) => sum + (w.balance || 0), 0);
+                                const newBalance = currentTotal + asaasPayment.value;
+
+                                await base44.asServiceRole.entities.DigitalWallet.update(primary.id, {
                                     balance: newBalance
                                 });
-                                console.log('✅ Digital Wallet creditada:', asaasPayment.wallet_deposit_user_id, 'Novo saldo:', newBalance);
+
+                                // Remove duplicadas
+                                for (let i = 1; i < allDigitalWallets.length; i++) {
+                                    try {
+                                        await base44.asServiceRole.entities.DigitalWallet.delete(allDigitalWallets[i].id);
+                                        console.log('🗑️ Wallet duplicada removida:', allDigitalWallets[i].id);
+                                    } catch (e) {
+                                        console.warn('⚠️ Erro ao remover wallet duplicada:', e.message);
+                                    }
+                                }
+
+                                console.log('✅ Digital Wallet creditada:', asaasPayment.wallet_deposit_user_id, 'Novo saldo:', newBalance, `(${allDigitalWallets.length} wallets consolidadas)`);
                             } else {
                                 await base44.asServiceRole.entities.DigitalWallet.create({
                                     user_id: asaasPayment.wallet_deposit_user_id,
