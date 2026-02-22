@@ -134,6 +134,146 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
       yPos += 38;
 
+      // ========== DISTRIBUIÇÃO POR BANCO DESTINO ==========
+      if (yPos > pageHeight - 70) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DISTRIBUIÇÃO POR BANCO DESTINO', margin, yPos);
+      yPos += 3;
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 5;
+
+      const bankConfig = [
+        { key: 'santander', label: 'Santander', desc: 'Produtos Físicos', color: [220, 38, 38] },
+        { key: 'itau', label: 'Itaú', desc: 'Licenciados', color: [234, 138, 0] },
+        { key: 'nubank', label: 'Nubank', desc: 'Parceiros', color: [147, 51, 234] },
+      ];
+
+      // Cabeçalho tabela bancos
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, yPos, pageWidth - margin * 2, 7);
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('BANCO', margin + 3, yPos + 5);
+      doc.text('DESTINO', margin + 40, yPos + 5);
+      doc.text('QTD VENDAS', margin + 80, yPos + 5);
+      doc.text('VALOR RECEBIDO', margin + 110, yPos + 5);
+      doc.text('COMISSÕES A SAIR', margin + 150, yPos + 5);
+      yPos += 9;
+
+      // Calcula comissões por banco
+      const commissionsByBank = {};
+      bankConfig.forEach(b => { commissionsByBank[b.key] = 0; });
+
+      if (sellersData && sellersData.length > 0) {
+        sellersData.forEach(seller => {
+          seller.sales?.forEach(sale => {
+            const bank = sale.receiving_bank || 'santander';
+            const saleComm = (sale.seller_commission || 0);
+            const licencianteComm = sale.all_commissions?.find(c => c.seller_role === 'licenciante');
+            const totalSaleComm = saleComm + (licencianteComm?.commission_amount || 0);
+            commissionsByBank[bank] = (commissionsByBank[bank] || 0) + totalSaleComm;
+          });
+        });
+      }
+      // Fallback: se não tem sellersData, usa commission_amount da Sale
+      if (!sellersData || sellersData.length === 0) {
+        daySales.forEach(sale => {
+          const bank = sale.receiving_bank || 'santander';
+          commissionsByBank[bank] = (commissionsByBank[bank] || 0) + (sale.commission_amount || 0);
+        });
+      }
+
+      bankConfig.forEach((bank, index) => {
+        const bankSales = daySales.filter(s => (s.receiving_bank || 'santander') === bank.key);
+        const bankTotal = bankSales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+        const bankComm = commissionsByBank[bank.key] || 0;
+
+        if (index > 0) {
+          doc.setDrawColor(230, 230, 230);
+          doc.setLineWidth(0.2);
+          doc.line(margin, yPos, pageWidth - margin, yPos);
+        }
+
+        // Cor do banco no nome
+        doc.setTextColor(...bank.color);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text(bank.label, margin + 3, yPos + 5);
+
+        doc.setTextColor(100, 100, 100);
+        doc.setFont('helvetica', 'normal');
+        doc.text(bank.desc, margin + 40, yPos + 5);
+
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${bankSales.length}`, margin + 88, yPos + 5);
+
+        doc.setFont('helvetica', 'bold');
+        doc.text(`R$ ${fmt(bankTotal)}`, margin + 110, yPos + 5);
+
+        doc.setTextColor(200, 50, 50);
+        doc.text(`- R$ ${fmt(bankComm)}`, margin + 150, yPos + 5);
+
+        yPos += 8;
+      });
+
+      // Linha total bancos
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+      yPos += 4;
+
+      const totalAllBanks = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+      const totalAllBankComm = Object.values(commissionsByBank).reduce((s, v) => s + v, 0);
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.text('TOTAL:', margin + 3, yPos + 4);
+      doc.text(`R$ ${fmt(totalAllBanks)}`, margin + 110, yPos + 4);
+      doc.setTextColor(200, 50, 50);
+      doc.text(`- R$ ${fmt(totalAllBankComm)}`, margin + 150, yPos + 4);
+
+      // Saldo líquido por banco
+      yPos += 12;
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SALDO LÍQUIDO POR BANCO (Recebido - Comissões):', margin, yPos);
+      yPos += 7;
+
+      bankConfig.forEach((bank) => {
+        const bankSales = daySales.filter(s => (s.receiving_bank || 'santander') === bank.key);
+        const bankTotal = bankSales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+        const bankComm = commissionsByBank[bank.key] || 0;
+        const bankNet = bankTotal - bankComm;
+
+        doc.setTextColor(...bank.color);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text(`${bank.label}:`, margin + 5, yPos + 4);
+
+        doc.setTextColor(0, 0, 0);
+        doc.text(`R$ ${fmt(bankTotal)} - R$ ${fmt(bankComm)} = `, margin + 35, yPos + 4);
+
+        doc.setTextColor(0, 128, 0);
+        doc.setFontSize(10);
+        doc.text(`R$ ${fmt(bankNet)}`, margin + 110, yPos + 4);
+
+        yPos += 7;
+      });
+
+      yPos += 10;
+
       // ========== SEÇÃO 1: COMISSÕES DOS LICENCIADOS (VENDEDORES) ==========
       doc.setTextColor(0, 0, 0);
       doc.setFontSize(14);
