@@ -286,9 +286,21 @@ export default function PDV() {
 
       const response = await getPDVData({ ...getAdminCredentials(), action: 'cashSessions' });
       const closedSessions = response?.data?.cashSessions || [];
-      console.log('✅ Total de sessões:', closedSessions.length);
+      
+      // 🛡️ DEDUPLICAÇÃO NO FRONTEND: Remove sessões duplicadas pelo ID
+      const uniqueMap = {};
+      closedSessions.forEach(session => {
+        if (!uniqueMap[session.id]) {
+          uniqueMap[session.id] = session;
+        }
+      });
+      const uniqueSessions = Object.values(uniqueMap);
 
-      setCashSessions(closedSessions);
+      // Ordena por closing_time decrescente (mais recente primeiro)
+      uniqueSessions.sort((a, b) => new Date(b.closing_time) - new Date(a.closing_time));
+
+      console.log('✅ Total de sessões (sem duplicatas):', uniqueSessions.length);
+      setCashSessions(uniqueSessions);
     } catch (error) {
       console.error('❌ Erro ao carregar sessões:', error);
     }
