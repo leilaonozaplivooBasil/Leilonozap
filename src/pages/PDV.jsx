@@ -2992,54 +2992,36 @@ ${boletoInfo}================================
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">💳 PIX:</span>
                       <span className="font-medium text-green-600">
-                        R$ {allSales
-                          .filter(s => {
-                            const saleTime = new Date(s.sale_datetime).getTime();
-                            const openTime = new Date(currentCashRegister.opening_time).getTime();
-                            return saleTime >= openTime && s.payment_method === 'PIX';
-                          })
-                          .reduce((sum, s) => sum + s.total_amount, 0)
+                        R$ {todaySales
+                          .filter(s => s.payment_method === 'PIX')
+                          .reduce((sum, s) => sum + (s.total_amount || 0), 0)
                           .toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">💵 Dinheiro:</span>
                       <span className="font-medium text-green-600">
-                        R$ {allSales
-                          .filter(s => {
-                            const saleTime = new Date(s.sale_datetime).getTime();
-                            const openTime = new Date(currentCashRegister.opening_time).getTime();
-                            return saleTime >= openTime && s.payment_method === 'DINHEIRO';
-                          })
-                          .reduce((sum, s) => sum + s.total_amount, 0)
+                        R$ {todaySales
+                          .filter(s => s.payment_method === 'DINHEIRO')
+                          .reduce((sum, s) => sum + (s.total_amount || 0), 0)
                           .toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">💳 Cartões:</span>
                       <span className="font-medium text-green-600">
-                        R$ {allSales
-                          .filter(s => {
-                            const saleTime = new Date(s.sale_datetime).getTime();
-                            const openTime = new Date(currentCashRegister.opening_time).getTime();
-                            return saleTime >= openTime &&
-                              (s.payment_method === 'CARTÃO DÉBITO' || s.payment_method === 'CARTÃO CRÉDITO');
-                          })
-                          .reduce((sum, s) => sum + s.total_amount, 0)
+                        R$ {todaySales
+                          .filter(s => s.payment_method === 'CARTÃO DÉBITO' || s.payment_method === 'CARTÃO CRÉDITO')
+                          .reduce((sum, s) => sum + (s.total_amount || 0), 0)
                           .toFixed(2)}
                       </span>
                     </div>
-                    {/* 🆕 DEPÓSITOS DE CARTEIRA (Entradas) */}
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">🏦 Depósitos (Carteira):</span>
-                      <span className="font-medium text-blue-600">
-                        R$ {walletDeposits
-                          .filter(d => {
-                            const depositTime = new Date(d.created_date).getTime();
-                            const openTime = new Date(currentCashRegister.opening_time).getTime();
-                            return depositTime >= openTime;
-                          })
-                          .reduce((sum, d) => sum + d.amount, 0)
+                      <span className="text-gray-600">📄 Boleto:</span>
+                      <span className="font-medium text-green-600">
+                        R$ {todaySales
+                          .filter(s => s.payment_method === 'BOLETO PARCELADO')
+                          .reduce((sum, s) => sum + (s.total_amount || 0), 0)
                           .toFixed(2)}
                       </span>
                     </div>
@@ -3047,27 +3029,16 @@ ${boletoInfo}================================
 
                   <div className="border-t border-gray-200 pt-2 mt-2">
                     <div className="flex justify-between font-bold text-base">
-                      <span className="text-gray-900">Total em Caixa:</span>
+                      <span className="text-gray-900">Total Vendas no Caixa:</span>
                       <span className="text-green-600">
-                        R$ {(
-                          allSales
-                            .filter(s => {
-                              const saleTime = new Date(s.sale_datetime).getTime();
-                              const openTime = new Date(currentCashRegister.opening_time).getTime();
-                              return saleTime >= openTime;
-                            })
-                            .reduce((sum, s) => sum + s.total_amount, 0)
-                          +
-                          walletDeposits
-                            .filter(d => {
-                              const depositTime = new Date(d.created_date).getTime();
-                              const openTime = new Date(currentCashRegister.opening_time).getTime();
-                              return depositTime >= openTime;
-                            })
-                            .reduce((sum, d) => sum + d.amount, 0)
-                        ).toFixed(2)}
+                        R$ {todaySales
+                          .reduce((sum, s) => sum + (s.total_amount || 0), 0)
+                          .toFixed(2)}
                       </span>
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {todaySales.length} vendas desde abertura ({new Date(currentCashRegister.opening_time).toLocaleString('pt-BR')})
+                    </p>
                   </div>
                 </div>
 
