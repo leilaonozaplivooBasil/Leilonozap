@@ -2152,8 +2152,8 @@ ${boletoInfo}================================
                         </tr>
                       </thead>
                       <tbody>
-                        {((['santander', 'itau', 'nubank'].includes(selectedBank)
-                          ? allSales.filter(s => s.receiving_bank === selectedBank)
+                        {((['santander', 'itau', 'nubank'].includes(dashBankFilter)
+                          ? allSales.filter(s => s.receiving_bank === dashBankFilter)
                           : allSales
                         ))
                           .filter(sale =>
