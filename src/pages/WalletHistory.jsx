@@ -300,7 +300,7 @@ export default function WalletHistory() {
                                   <p className="text-green-300/60 text-sm font-light">{transaction.description || "Sem descrição"}</p>
                                   <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
-                                    {new Date(transaction.created_date).toLocaleString('pt-BR')}
+                                    {new Date(transaction.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                                   </div>
                                 </div>
                               </div>
@@ -366,7 +366,7 @@ export default function WalletHistory() {
                                   <p className="text-green-300/60 text-sm font-light">{transaction.description || "Crédito em conta"}</p>
                                   <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
-                                    {new Date(transaction.created_date).toLocaleString('pt-BR')}
+                                    {new Date(transaction.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                                   </div>
                                 </div>
                               </div>
@@ -427,7 +427,7 @@ export default function WalletHistory() {
                                   <p className="text-green-300/60 text-sm font-light">{transaction.description || "Utilização em transação"}</p>
                                   <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
-                                    {new Date(transaction.created_date).toLocaleString('pt-BR')}
+                                    {new Date(transaction.created_date).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
                                   </div>
                                 </div>
                               </div>
