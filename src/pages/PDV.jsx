@@ -572,11 +572,32 @@ Transações: ${selectedSession.transactions_count || 0}
         totals: { total_sales, ...totals }
       });
 
+      // 🛡️ PROTEÇÃO: Fecha caixas órfãos antigos que ficaram abertos por erro
+      try {
+        const checkResp = await getPDVData({ ...getAdminCredentials(), action: 'cashRegister' });
+        const orphanRegister = checkResp?.data?.currentCashRegister;
+        if (orphanRegister && orphanRegister.id !== currentCashRegister.id) {
+          console.warn('⚠️ Caixa órfão encontrado:', orphanRegister.id, 'de', orphanRegister.opening_time);
+          await pdvAction({
+            ...getAdminCredentials(),
+            action: 'closeCashRegister',
+            register_id: orphanRegister.id,
+            closing_balance: 0,
+            notes: 'Fechado automaticamente (caixa órfão)',
+            totals: { total_sales: 0, total_pix: 0, total_cash: 0, total_debit: 0, total_credit: 0, total_boleto: 0, transactions_count: 0 }
+          });
+          console.log('✅ Caixa órfão fechado:', orphanRegister.id);
+        }
+      } catch (orphanErr) {
+        console.warn('⚠️ Erro ao verificar caixas órfãos:', orphanErr.message);
+      }
+
       setCurrentCashRegister(null);
       setTodaySales([]);
       setShowCloseCashModal(false);
       setClosingBalance(0);
       setClosingNotes('');
+      await loadSalesHistory();
       alert('✅ Caixa fechado com sucesso!');
     } catch (error) {
       console.error('Erro ao fechar caixa:', error);
