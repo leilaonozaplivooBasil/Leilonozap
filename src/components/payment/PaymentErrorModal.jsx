@@ -41,17 +41,7 @@ export default function PaymentErrorModal({ isOpen, onClose, errorTitle, errorDe
             {errorDescription || 'Ocorreu um erro ao processar seu pagamento. Verifique os dados e tente novamente.'}
           </p>
 
-          {/* Código do erro (letras miúdas) */}
-          {errorDetails && (
-            <p className="text-[10px] text-red-400/70 font-mono text-center break-all">
-              {typeof errorDetails === 'string' 
-                ? errorDetails 
-                : Array.isArray(errorDetails) 
-                  ? errorDetails.map(d => d.code || '').filter(Boolean).join(', ')
-                  : errorDetails.code || JSON.stringify(errorDetails)
-              }
-            </p>
-          )}
+
 
           {/* Aviso de atenção */}
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-2">
