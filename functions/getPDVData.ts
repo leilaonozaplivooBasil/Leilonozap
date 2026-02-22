@@ -80,57 +80,32 @@ Deno.serve(async (req) => {
     }
 
     if (requestAction === 'full' || requestAction === 'cashSessions') {
-      const allSessions = await base44.asServiceRole.entities.CashRegister.list('-closing_time', 500);
-      const closedSessions = allSessions.filter(s => s.status === 'closed');
-
-      // Recalcula totais de cada sessão baseado nas vendas reais dentro do período
+      // Busca todas as vendas — esta é a FONTE DE VERDADE
       const allSalesForSessions = await base44.asServiceRole.entities.Sale.list('-sale_datetime', 5000);
 
-      // 🛡️ DEDUPLICAÇÃO: Ordena sessões por opening_time ASC para atribuir cada venda à sessão correta
-      // (sessão mais específica = período mais curto que contém a venda)
-      const sortedSessions = [...closedSessions].sort((a, b) => 
-        new Date(a.opening_time).getTime() - new Date(b.opening_time).getTime()
-      );
-
-      // Atribui cada venda a UMA ÚNICA sessão (a com período mais curto que a contém)
-      const saleToSessionMap = {};
+      // Agrupa vendas por sale_date (data real da venda, sem ambiguidade)
+      const salesByDate = {};
       allSalesForSessions.forEach(sale => {
-        const saleTime = new Date(sale.sale_datetime).getTime();
-        let bestSession = null;
-        let bestDuration = Infinity;
-
-        sortedSessions.forEach(session => {
-          const openTime = new Date(session.opening_time).getTime();
-          const closeTime = session.closing_time ? new Date(session.closing_time).getTime() : Date.now();
-
-          if (saleTime >= openTime && saleTime <= closeTime) {
-            const duration = closeTime - openTime;
-            if (duration < bestDuration) {
-              bestDuration = duration;
-              bestSession = session.id;
-            }
-          }
-        });
-
-        if (bestSession) {
-          saleToSessionMap[sale.id] = bestSession;
-        }
+        // Usa sale_date (YYYY-MM-DD) como chave canônica
+        const dateKey = sale.sale_date || new Date(sale.sale_datetime).toISOString().split('T')[0];
+        if (!salesByDate[dateKey]) salesByDate[dateKey] = [];
+        salesByDate[dateKey].push(sale);
       });
 
-      // Agrupa vendas por sessão (sem duplicatas)
-      const sessionSalesMap = {};
-      allSalesForSessions.forEach(sale => {
-        const sessionId = saleToSessionMap[sale.id];
-        if (!sessionId) return;
-        if (!sessionSalesMap[sessionId]) sessionSalesMap[sessionId] = [];
-        sessionSalesMap[sessionId].push(sale);
-      });
+      // Gera uma "sessão virtual" por dia, ordenada por data decrescente
+      const sortedDates = Object.keys(salesByDate).sort((a, b) => b.localeCompare(a));
 
-      result.cashSessions = closedSessions.map(session => {
-        const salesInSession = sessionSalesMap[session.id] || [];
+      result.cashSessions = sortedDates.map(dateKey => {
+        const daySales = salesByDate[dateKey];
+
+        // Ordena vendas do dia por horário
+        daySales.sort((a, b) => new Date(a.sale_datetime) - new Date(b.sale_datetime));
+
+        const firstSale = daySales[0];
+        const lastSale = daySales[daySales.length - 1];
 
         const recalc = { total_pix: 0, total_cash: 0, total_debit: 0, total_credit: 0, total_boleto: 0, total_sales: 0 };
-        salesInSession.forEach(sale => {
+        daySales.forEach(sale => {
           const amount = sale.total_amount || 0;
           recalc.total_sales += amount;
           if (sale.payment_method === 'PIX') recalc.total_pix += amount;
@@ -141,16 +116,24 @@ Deno.serve(async (req) => {
         });
 
         return {
-          ...session,
+          id: `day_${dateKey}`,
+          status: 'closed',
+          operator_name: 'Vendas do dia',
+          opening_time: firstSale.sale_datetime,
+          closing_time: lastSale.sale_datetime,
+          opening_balance: 0,
+          closing_balance: 0,
+          notes: '',
           total_sales: recalc.total_sales,
           total_pix: recalc.total_pix,
           total_cash: recalc.total_cash,
           total_debit: recalc.total_debit,
           total_credit: recalc.total_credit,
           total_boleto: recalc.total_boleto,
-          transactions_count: salesInSession.length
+          transactions_count: daySales.length,
+          _sale_date: dateKey
         };
-      }).sort((a, b) => new Date(b.closing_time) - new Date(a.closing_time));
+      });
     }
 
     if (requestAction === 'full' || requestAction === 'commissions') {
