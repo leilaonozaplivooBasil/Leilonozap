@@ -526,9 +526,10 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       doc.setFont('helvetica', 'bold');
       
       doc.text('HORA', margin + 3, yPos + 5);
-      doc.text('VENDEDOR', margin + 25, yPos + 5);
-      doc.text('PRODUTO', margin + 70, yPos + 5);
-      doc.text('VALOR', margin + 140, yPos + 5);
+      doc.text('VENDEDOR', margin + 20, yPos + 5);
+      doc.text('PRODUTO', margin + 58, yPos + 5);
+      doc.text('VALOR', margin + 115, yPos + 5);
+      doc.text('BANCO', margin + 140, yPos + 5);
       doc.text('COMISSÃO', margin + 165, yPos + 5);
       
       yPos += 10;
@@ -537,6 +538,9 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       const sortedSales = [...daySales].sort((a, b) => {
         return new Date(a.sale_datetime) - new Date(b.sale_datetime);
       });
+
+      const bankLabels = { santander: 'Santander', itau: 'Itaú', nubank: 'Nubank' };
+      const bankColors = { santander: [220, 38, 38], itau: [234, 138, 0], nubank: [147, 51, 234] };
 
       sortedSales.forEach((sale, index) => {
         // Verifica se precisa de nova página
@@ -552,9 +556,10 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
           doc.setFontSize(8);
           doc.setFont('helvetica', 'bold');
           doc.text('HORA', margin + 3, yPos + 5);
-          doc.text('VENDEDOR', margin + 25, yPos + 5);
-          doc.text('PRODUTO', margin + 70, yPos + 5);
-          doc.text('VALOR', margin + 140, yPos + 5);
+          doc.text('VENDEDOR', margin + 20, yPos + 5);
+          doc.text('PRODUTO', margin + 58, yPos + 5);
+          doc.text('VALOR', margin + 115, yPos + 5);
+          doc.text('BANCO', margin + 140, yPos + 5);
           doc.text('COMISSÃO', margin + 165, yPos + 5);
           yPos += 10;
         }
@@ -576,18 +581,25 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
         // Vendedor
         doc.setTextColor(0, 0, 0);
-        const vendedor = (sale.seller_name || 'N/A').substring(0, 20);
-        doc.text(vendedor, margin + 25, yPos + 4);
+        const vendedor = (sale.seller_name || 'N/A').substring(0, 18);
+        doc.text(vendedor, margin + 20, yPos + 4);
 
         // Produto
         doc.setTextColor(40, 40, 40);
-        const produto = (sale.product_description || 'Produto').substring(0, 32);
-        doc.text(produto, margin + 70, yPos + 4);
+        const produto = (sale.product_description || 'Produto').substring(0, 26);
+        doc.text(produto, margin + 58, yPos + 4);
 
         // Valor
         doc.setTextColor(0, 0, 0);
         doc.setFont('helvetica', 'bold');
-        doc.text(`R$ ${fmt(sale.total_amount)}`, margin + 140, yPos + 4);
+        doc.text(`R$ ${fmt(sale.total_amount)}`, margin + 115, yPos + 4);
+
+        // Banco destino
+        const saleBank = sale.receiving_bank || 'santander';
+        const bColor = bankColors[saleBank] || [100, 100, 100];
+        doc.setTextColor(...bColor);
+        doc.setFont('helvetica', 'bold');
+        doc.text(bankLabels[saleBank] || saleBank, margin + 140, yPos + 4);
 
         // Comissão Licenciado
         doc.setFont('helvetica', 'normal');
