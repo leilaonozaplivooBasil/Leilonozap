@@ -1932,14 +1932,6 @@ ${boletoInfo}================================
 
           <TabsContent value="dashboard">
             <div className="space-y-6">
-              {/* FILTRO POR BANCO DESTINO */}
-              {(() => {
-                const dashBankFilter = window.__pdvDashBankFilter || 'todos';
-                const setDashBankFilter = (v) => { window.__pdvDashBankFilter = v; setSearchSale(prev => prev === prev ? prev + '' : prev); };
-                // Não podemos usar useState aqui, então usamos um workaround com forceUpdate
-                return null;
-              })()}
-
               {/* RESUMO GERAL */}
               <div className="space-y-4">
                 {/* FILTRO BANCO DESTINO */}
@@ -1957,13 +1949,11 @@ ${boletoInfo}================================
                           <Button
                             key={bank.value}
                             size="sm"
-                            onClick={() => setSelectedBank(bank.value === 'todos' ? bank.value : bank.value)}
+                            onClick={() => setDashBankFilter(bank.value)}
                             className={`text-xs text-white ${
-                              (bank.value === 'todos' && !['santander', 'itau', 'nubank'].includes(selectedBank))
+                              dashBankFilter === bank.value
                                 ? 'ring-2 ring-white ' + bank.color
-                                : selectedBank === bank.value
-                                  ? 'ring-2 ring-white ' + bank.color
-                                  : bank.color + ' opacity-60'
+                                : bank.color + ' opacity-60'
                             }`}
                           >
                             {bank.label}
