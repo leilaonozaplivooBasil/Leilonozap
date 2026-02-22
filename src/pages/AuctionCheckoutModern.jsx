@@ -53,6 +53,7 @@ export default function AuctionCheckoutModern() {
   const [pixData, setPixData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState('info'); // 'info', 'payment', 'success'
+  const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   
   // Cartão de crédito
   const [cardHolder, setCardHolder] = useState('');
@@ -309,6 +310,26 @@ export default function AuctionCheckoutModern() {
 
     loadData();
   }, [location.state]);
+
+  // Polling para verificar confirmação do pagamento PIX
+  useEffect(() => {
+    if (step !== 'payment' || !pixData?.payment_id || paymentConfirmed) return;
+
+    const checkPaymentStatus = async () => {
+      try {
+        const payments = await base44.entities.AsaasPayment.filter({ payment_id: pixData.payment_id });
+        if (payments && payments.length > 0 && payments[0].status === 'confirmed') {
+          setPaymentConfirmed(true);
+          toast.success('✅ Pagamento confirmado! Saldo adicionado.');
+        }
+      } catch (e) {
+        // silencioso
+      }
+    };
+
+    const interval = setInterval(checkPaymentStatus, 5000); // verifica a cada 5s
+    return () => clearInterval(interval);
+  }, [step, pixData, paymentConfirmed]);
 
   if (isLoading) {
     return (
@@ -680,15 +701,38 @@ export default function AuctionCheckoutModern() {
               <div className="space-y-6">
                 <Card className="backdrop-blur-xl bg-white/5 border-white/10 shadow-2xl">
                   <CardHeader>
-                    <CardTitle className="text-xl">Pagamento Processado</CardTitle>
+                    <CardTitle className="text-xl text-white">
+                      {paymentConfirmed ? '✅ Pagamento Confirmado' : 'Pagamento Processado'}
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    {pixData && pixData.billing_type === 'PIX' ? (
+                    {paymentConfirmed ? (
+                      <div className="text-center space-y-6">
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500/50">
+                          <Check className="w-10 h-10 text-green-400" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-white">Pagamento Recebido!</h3>
+                        <p className="text-gray-300">
+                          O valor de <span className="text-green-400 font-bold">R$ {(isWalletDeposit ? depositAmount : auction.current_price).toFixed(2)}</span> foi adicionado à sua conta no Leilão NoZap.
+                        </p>
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 space-y-2">
+                          <p className="text-green-300 font-semibold">🎉 Saldo creditado com sucesso!</p>
+                          <p className="text-gray-400 text-sm">Seu saldo já está disponível para uso.</p>
+                        </div>
+                        <Button
+                          onClick={() => navigate(createPageUrl(isWalletDeposit ? 'AddFunds' : 'MyWinnings'))}
+                          className="w-full h-12 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold"
+                        >
+                          <Wallet className="w-5 h-5 mr-2" />
+                          {isWalletDeposit ? 'Ver Minha Carteira' : 'Ver Meus Arremates'}
+                        </Button>
+                      </div>
+                    ) : pixData && pixData.billing_type === 'PIX' ? (
                       <div className="text-center space-y-6">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 border border-green-500/50">
                           <QrCode className="w-8 h-8 text-green-400" />
                         </div>
-                        <h3 className="text-2xl font-bold">Pague com PIX</h3>
+                        <h3 className="text-2xl font-bold text-white">Pague com PIX</h3>
                         <p className="text-gray-400">Escaneie o QR Code abaixo para pagar</p>
                         
                         <div className="bg-white rounded-lg p-6 inline-block">
@@ -714,13 +758,18 @@ export default function AuctionCheckoutModern() {
                            <p className="text-xs text-gray-300 mb-2">Ou copie e cole este código:</p>
                            <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
                          </div>
+
+                        <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Aguardando confirmação do pagamento...
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center space-y-4">
                         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-500/20 border border-green-500/50">
                           <Check className="w-8 h-8 text-green-400" />
                         </div>
-                        <h3 className="text-2xl font-bold">Pagamento em Processamento</h3>
+                        <h3 className="text-2xl font-bold text-white">Pagamento em Processamento</h3>
                         <p className="text-gray-400">Seu cartão está sendo processado</p>
                         <p className="text-sm text-gray-500">Você receberá uma confirmação em breve</p>
                       </div>
