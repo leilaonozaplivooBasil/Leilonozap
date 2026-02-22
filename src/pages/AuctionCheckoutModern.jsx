@@ -237,14 +237,27 @@ export default function AuctionCheckoutModern() {
     toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
   } else {
     const errorMsg = responseData?.error || 'Erro desconhecido ao processar pagamento';
-    console.error('❌ Erro na resposta:', errorMsg);
-    toast.error(errorMsg);
+    const errorDetails = responseData?.details || null;
+    console.error('❌ Erro na resposta:', errorMsg, errorDetails);
+    setPaymentError({
+      show: true,
+      title: 'Erro ao Processar Pagamento',
+      description: errorMsg,
+      details: errorDetails
+    });
   }
   } catch (error) {
   console.error('❌ Erro de rede/sistema:', error.message);
   setIsProcessing(false);
   toast.dismiss('checkout-loading');
-  toast.error(`Erro: ${error.message}`);
+  setPaymentError({
+    show: true,
+    title: 'Erro de Comunicação',
+    description: error.message?.includes('timeout') 
+      ? 'O servidor demorou para responder. Tente novamente em instantes.' 
+      : `Não foi possível conectar ao servidor de pagamento: ${error.message}`,
+    details: null
+  });
   }
   };
 
