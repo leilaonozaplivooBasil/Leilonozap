@@ -276,14 +276,14 @@ export default function AuctionCheckoutModern() {
         address_zip_code: addressZip.trim()
       };
       base44.entities.AppUser.update(currentUser.id, updateData).then(() => {
-        // Atualiza localStorage também
         const saved = localStorage.getItem('currentUser');
         if (saved) {
           const parsed = JSON.parse(saved);
           localStorage.setItem('currentUser', JSON.stringify({ ...parsed, ...updateData }));
         }
       }).catch(() => {});
-  } else {
+    }
+    } else {
     const errorDetails = responseData?.details || null;
     // Extrai description do array de errors do ASAAS (se existir)
     let errorDescription = responseData?.error || 'Erro desconhecido ao processar pagamento';
