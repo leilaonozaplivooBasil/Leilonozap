@@ -13,6 +13,7 @@ Deno.serve(async (req) => {
         const {
             catalog_sale_id,
             auction_id,
+            buyer_id: explicitBuyerId, // ID do usuário logado (passado pelo frontend)
             buyer_name,
             buyer_email,
             buyer_cpf,
