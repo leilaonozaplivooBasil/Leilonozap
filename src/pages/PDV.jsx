@@ -308,6 +308,25 @@ export default function PDV() {
 
   const loadSessionSales = async (session) => {
     try {
+      // Se a sessão tem _sale_date (sessão virtual por dia), filtra por sale_date
+      if (session._sale_date) {
+        // Busca todas as vendas e filtra localmente pela data
+        const response = await getPDVData({ ...getAdminCredentials(), action: 'sales' });
+        const allSalesData = response?.data?.allSales || [];
+        const salesInSession = allSalesData
+          .filter(sale => {
+            const saleDate = sale.sale_date || new Date(sale.sale_datetime).toISOString().split('T')[0];
+            return saleDate === session._sale_date;
+          })
+          .sort((a, b) => new Date(a.sale_datetime) - new Date(b.sale_datetime));
+
+        setSessionSales(salesInSession);
+        setSelectedSession({ ...session });
+        setShowSessionModal(true);
+        return;
+      }
+
+      // Fallback para sessões antigas (range de horários)
       const response = await pdvAction({
         ...getAdminCredentials(),
         action: 'getSessionSales',
@@ -316,7 +335,6 @@ export default function PDV() {
       });
       const rawSales = response?.data?.sales || [];
 
-      // 🛡️ DEDUPLICAÇÃO: Remove vendas com mesmo ID
       const uniqueSalesMap = {};
       rawSales.forEach(sale => {
         if (!uniqueSalesMap[sale.id]) {
@@ -324,45 +342,10 @@ export default function PDV() {
         }
       });
       const salesInSession = Object.values(uniqueSalesMap);
-
-      // Ordena por horário
       salesInSession.sort((a, b) => new Date(a.sale_datetime) - new Date(b.sale_datetime));
 
-      // Recalcula totais reais a partir das vendas únicas
-      const recalculated = {
-        total_pix: 0,
-        total_cash: 0,
-        total_debit: 0,
-        total_credit: 0,
-        total_boleto: 0,
-        transactions_count: salesInSession.length,
-        total_sales: 0
-      };
-
-      salesInSession.forEach(sale => {
-        const amount = sale.total_amount || 0;
-        recalculated.total_sales += amount;
-        if (sale.payment_method === 'PIX') recalculated.total_pix += amount;
-        else if (sale.payment_method === 'DINHEIRO') recalculated.total_cash += amount;
-        else if (sale.payment_method === 'CARTÃO DÉBITO') recalculated.total_debit += amount;
-        else if (sale.payment_method === 'CARTÃO CRÉDITO') recalculated.total_credit += amount;
-        else if (sale.payment_method === 'BOLETO PARCELADO') recalculated.total_boleto += amount;
-      });
-
-      // Sempre usa totais recalculados (fonte de verdade = vendas reais)
-      const enrichedSession = {
-        ...session,
-        total_sales: recalculated.total_sales,
-        total_pix: recalculated.total_pix,
-        total_cash: recalculated.total_cash,
-        total_debit: recalculated.total_debit,
-        total_credit: recalculated.total_credit,
-        total_boleto: recalculated.total_boleto,
-        transactions_count: recalculated.transactions_count,
-      };
-
       setSessionSales(salesInSession);
-      setSelectedSession(enrichedSession);
+      setSelectedSession({ ...session });
       setShowSessionModal(true);
     } catch (error) {
       console.error('❌ Erro ao carregar vendas da sessão:', error);
