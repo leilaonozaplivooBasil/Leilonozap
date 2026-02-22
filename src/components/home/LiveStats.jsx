@@ -9,10 +9,17 @@ export default function LiveStats() {
   });
 
   useEffect(() => {
-    loadStats();
+    // Verifica cache antes de fazer API call
+    const cached = sessionStorage.getItem('live_stats_cache');
+    const cacheTime = sessionStorage.getItem('live_stats_cache_time');
+    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 25000) {
+      setStats(JSON.parse(cached));
+    } else {
+      loadStats();
+    }
     
-    // Atualiza a cada 1 segundo
-    const interval = setInterval(loadStats, 1000);
+    // Atualiza a cada 30 segundos (evita rate limit)
+    const interval = setInterval(loadStats, 30000);
     return () => clearInterval(interval);
   }, []);
 
