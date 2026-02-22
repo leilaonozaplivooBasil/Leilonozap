@@ -924,13 +924,19 @@ export default function AuctionCheckoutModern() {
 
                     <Button
                       onClick={() => {
-                        if (!isFormValid) {
-                          toast.error('Preencha todos os campos obrigatórios');
-                          // Expande a seção incompleta
-                          if (!isPersonalComplete) setExpandedSection('personal');
-                          else if (!isAddressComplete) setExpandedSection('address');
-                          return;
-                        }
+                        console.log('🔘 Botão clicado - validando formulário...', {
+                          firstName: !!firstName?.trim(),
+                          email: !!email?.trim(),
+                          phone: !!phone?.trim(),
+                          cpf: cpf?.trim(),
+                          addressStreet: !!addressStreet?.trim(),
+                          addressNumber: !!addressNumber?.trim(),
+                          addressCity: !!addressCity?.trim(),
+                          addressState: !!addressState?.trim(),
+                          addressZip: !!addressZip?.trim(),
+                          isFormValid,
+                          isProcessing
+                        });
                         handleCreatePayment();
                       }}
                       disabled={isProcessing}
