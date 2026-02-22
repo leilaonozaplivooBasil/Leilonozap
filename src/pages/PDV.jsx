@@ -42,6 +42,7 @@ export default function PDV() {
   const [cart, setCart] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('PIX');
+  const [selectedBank, setSelectedBank] = useState('santander');
   const [boletoData, setBoletoData] = useState({ cliente: '', documento: '', parcelas: 1 });
   const [isProcessing, setIsProcessing] = useState(false);
   const [sellers, setSellers] = useState([]);
@@ -781,7 +782,8 @@ Transações: ${selectedSession.transactions_count || 0}
             commission_amount: totalItemCommission,
             boleto_cliente: paymentMethod === 'BOLETO PARCELADO' ? boletoData.cliente : null,
             boleto_documento: paymentMethod === 'BOLETO PARCELADO' ? boletoData.documento : null,
-            boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null
+            boleto_parcelas: paymentMethod === 'BOLETO PARCELADO' ? boletoData.parcelas : null,
+            receiving_bank: selectedBank
           }
         });
 
@@ -849,6 +851,7 @@ Transações: ${selectedSession.transactions_count || 0}
 
       setCart([]);
       setBoletoData({ cliente: '', documento: '', parcelas: 1 });
+      setSelectedBank('santander');
       setSelectedSeller(null);
       setCommissionValue(0);
       setSelectedLicenciante(null);
@@ -1621,6 +1624,20 @@ ${boletoInfo}================================
                             <option>CARTÃO DÉBITO</option>
                             <option>CARTÃO CRÉDITO</option>
                             <option>BOLETO PARCELADO</option>
+                          </select>
+                        </div>
+
+                        {/* BANCO DESTINO */}
+                        <div>
+                          <label className="text-gray-700 text-sm mb-2 block font-medium">🏦 Banco Destino</label>
+                          <select
+                            value={selectedBank}
+                            onChange={(e) => setSelectedBank(e.target.value)}
+                            className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                          >
+                            <option value="santander">🔴 Santander (Venda de Produtos Físicos)</option>
+                            <option value="itau">🟠 Itaú (Venda de Licenciados)</option>
+                            <option value="nubank">🟣 Nubank (Parceiros de Compras)</option>
                           </select>
                         </div>
 
