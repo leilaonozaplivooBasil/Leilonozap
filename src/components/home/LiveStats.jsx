@@ -44,12 +44,17 @@ export default function LiveStats() {
       });
       const totalBidsValue = todayBids.reduce((sum, bid) => sum + (bid.amount || 0), 0);
 
-      setStats({
+      const newStats = {
         onlineUsers: uniqueOnlineUsers,
         totalBidsToday: totalBidsValue
-      });
+      };
+      setStats(newStats);
+      sessionStorage.setItem('live_stats_cache', JSON.stringify(newStats));
+      sessionStorage.setItem('live_stats_cache_time', Date.now().toString());
     } catch (error) {
-      console.error('Erro ao carregar stats:', error);
+      // Usa cache mesmo expirado em caso de erro
+      const cached = sessionStorage.getItem('live_stats_cache');
+      if (cached) setStats(JSON.parse(cached));
     }
   };
 
