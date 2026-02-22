@@ -282,8 +282,9 @@ export default function AuctionCheckoutModern() {
           localStorage.setItem('currentUser', JSON.stringify({ ...parsed, ...updateData }));
         }
       }).catch(() => {});
-    }
-    } else {
+      }
+      }
+      } else {
     const errorDetails = responseData?.details || null;
     // Extrai description do array de errors do ASAAS (se existir)
     let errorDescription = responseData?.error || 'Erro desconhecido ao processar pagamento';
