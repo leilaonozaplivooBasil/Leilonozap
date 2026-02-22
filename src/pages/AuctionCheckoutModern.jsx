@@ -130,15 +130,15 @@ export default function AuctionCheckoutModern() {
   const validateForm = () => {
     const errors = {};
     const fields = [
-      { value: firstName, key: 'firstName', name: 'Nome' },
-      { value: cpf, key: 'cpf', name: 'CPF' },
-      { value: email, key: 'email', name: 'Email' },
-      { value: phone, key: 'phone', name: 'Telefone' },
-      { value: addressStreet, key: 'addressStreet', name: 'Rua' },
-      { value: addressNumber, key: 'addressNumber', name: 'Número' },
-      { value: addressCity, key: 'addressCity', name: 'Cidade' },
-      { value: addressState, key: 'addressState', name: 'Estado' },
-      { value: addressZip, key: 'addressZip', name: 'CEP' }
+      { value: firstName, key: 'firstName', name: 'Nome', section: 'personal' },
+      { value: cpf, key: 'cpf', name: 'CPF', section: 'personal' },
+      { value: email, key: 'email', name: 'Email', section: 'personal' },
+      { value: phone, key: 'phone', name: 'Telefone', section: 'personal' },
+      { value: addressStreet, key: 'addressStreet', name: 'Rua', section: 'address' },
+      { value: addressNumber, key: 'addressNumber', name: 'Número', section: 'address' },
+      { value: addressCity, key: 'addressCity', name: 'Cidade', section: 'address' },
+      { value: addressState, key: 'addressState', name: 'Estado', section: 'address' },
+      { value: addressZip, key: 'addressZip', name: 'CEP', section: 'address' }
     ];
 
     for (let field of fields) {
@@ -149,14 +149,22 @@ export default function AuctionCheckoutModern() {
 
     // Valida CPF com algoritmo de check-digit
     if (cpf?.trim() && !validateCpf(cpf)) {
-      errors.cpf = 'CPF inválido (verifique os dígitos)';
+      errors.cpf = 'CPF inválido. Verifique os dígitos e corrija.';
     }
 
     setFormErrors(errors);
 
     if (Object.keys(errors).length > 0) {
+      // Abre a seção que contém o primeiro erro
+      const firstErrorKey = Object.keys(errors)[0];
+      const firstField = fields.find(f => f.key === firstErrorKey);
+      if (firstField) {
+        setExpandedSection(firstField.section);
+      }
+
+      const errorCount = Object.keys(errors).length;
       const firstError = Object.values(errors)[0];
-      toast.error(firstError);
+      toast.error(errorCount > 1 ? `${errorCount} campos com erro. Corrija para continuar.` : firstError);
       return false;
     }
 
