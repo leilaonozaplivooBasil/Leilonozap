@@ -76,6 +76,7 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       // ========== RESUMO GERAL ==========
       const totalVendas = daySales.length;
       const totalValor = daySales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
+      const totalCustos = daySales.reduce((sum, s) => sum + (s.total_taxes || 0), 0);
       
       console.log('💰 Total de vendas para PDF:', totalVendas);
       console.log('💰 Valor total:', totalValor);
