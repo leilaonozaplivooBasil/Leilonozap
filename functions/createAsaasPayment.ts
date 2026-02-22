@@ -221,49 +221,37 @@ Deno.serve(async (req) => {
          const isWalletDeposit = !catalog_sale_id && !auction_id;
          const isDigitalWallet = deposit_type === 'digital_wallet';
 
-         // Para depósito de carteira, obter user_id do buyer_email (com fallback para CPF e telefone)
+         // Para depósito de carteira, obter user_id
+         // PRIORIDADE: usar o ID explícito passado pelo frontend (mais confiável)
          let walletDepositUserId = null;
          if (isWalletDeposit) {
-             try {
-                 // Estratégia 1: Buscar por email
-                 let users = await base44.asServiceRole.entities.AppUser.filter({ email: buyer_email });
-                 if (users && users.length > 0) {
-                     walletDepositUserId = users[0].id;
-                     console.log('✅ User encontrado por email:', walletDepositUserId);
-                 }
-
-                 // Estratégia 2: Se não achou, tentar por CPF
-                 if (!walletDepositUserId && cleanCpf) {
-                     users = await base44.asServiceRole.entities.AppUser.filter({ cpf: cleanCpf });
+             // 🛡️ PRIORIDADE 1: ID explícito do frontend (garante isolamento entre contas)
+             if (explicitBuyerId) {
+                 walletDepositUserId = explicitBuyerId;
+                 console.log('✅ User ID recebido do frontend (confiável):', walletDepositUserId);
+             } else {
+                 // FALLBACK: Buscar por email (menos confiável, pode haver duplicatas)
+                 try {
+                     let users = await base44.asServiceRole.entities.AppUser.filter({ email: buyer_email });
                      if (users && users.length > 0) {
                          walletDepositUserId = users[0].id;
-                         console.log('✅ User encontrado por CPF:', walletDepositUserId);
+                         console.log('✅ User encontrado por email (fallback):', walletDepositUserId);
                      }
-                 }
 
-                 // Estratégia 3: Se não achou, tentar por telefone
-                 if (!walletDepositUserId && cleanPhone) {
-                     users = await base44.asServiceRole.entities.AppUser.filter({ phone: cleanPhone });
-                     if (users && users.length > 0) {
-                         walletDepositUserId = users[0].id;
-                         console.log('✅ User encontrado por telefone:', walletDepositUserId);
+                     if (!walletDepositUserId && cleanCpf) {
+                         users = await base44.asServiceRole.entities.AppUser.filter({ cpf: cleanCpf });
+                         if (users && users.length > 0) {
+                             walletDepositUserId = users[0].id;
+                             console.log('✅ User encontrado por CPF (fallback):', walletDepositUserId);
+                         }
                      }
-                 }
 
-                 // Estratégia 4: Se não achou, tentar por nome
-                 if (!walletDepositUserId && buyer_name) {
-                     users = await base44.asServiceRole.entities.AppUser.filter({ full_name: buyer_name });
-                     if (users && users.length > 0) {
-                         walletDepositUserId = users[0].id;
-                         console.log('✅ User encontrado por nome:', walletDepositUserId);
+                     if (!walletDepositUserId) {
+                         console.warn('⚠️ Não conseguiu encontrar user. Webhook tentará resolver depois.');
                      }
+                 } catch (e) {
+                     console.warn('⚠️ Erro ao buscar user para wallet deposit:', e.message);
                  }
-
-                 if (!walletDepositUserId) {
-                     console.warn('⚠️ Não conseguiu encontrar user por email, CPF, telefone ou nome. Webhook tentará resolver depois.');
-                 }
-             } catch (e) {
-                 console.warn('⚠️ Erro ao buscar user para wallet deposit:', e.message);
              }
          }
 
