@@ -142,12 +142,12 @@ export function useRealtimeSync({
   useEffect(() => {
     if (!enabled) return;
 
-    // 🚀 INTERVALOS BASEADOS EM PRIORIDADE E MODO
+    // 🚀 INTERVALOS BASEADOS EM PRIORIDADE E MODO (otimizado para evitar rate limit)
     const intervals = {
       high_fast: 10000,   // 10s - Sala de leilão ativa
-      high_slow: 30000,   // 30s - Sala de leilão com rate limit
-      normal_fast: 60000,  // 60s - Outras páginas
-      normal_slow: 120000  // 120s - Outras páginas com rate limit
+      high_slow: 60000,   // 60s - Sala de leilão com rate limit
+      normal_fast: 90000,  // 90s - Outras páginas
+      normal_slow: 180000  // 180s - Outras páginas com rate limit
     };
 
     const key = `${priority}_${syncMode}`;
@@ -155,8 +155,8 @@ export function useRealtimeSync({
 
     console.log(`🔄 [${entityName}] Sync ${key.toUpperCase()}: ${activeInterval/1000}s`);
 
-    // Primeira busca após 3s
-    const initialTimeout = setTimeout(fetchData, 3000);
+    // Primeira busca após 5s (dá tempo para outras chamadas críticas)
+    const initialTimeout = setTimeout(fetchData, 5000);
 
     // Polling contínuo
     pollingRef.current = setInterval(fetchData, activeInterval);

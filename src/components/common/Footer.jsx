@@ -8,34 +8,35 @@ export default function Footer() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const defaultFooter = {
+    address: 'Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102',
+    email: 'relacionamento@leilaonozap.com',
+    phone: '',
+    whatsapp: '',
+    is_active: true
+  };
+
   useEffect(() => {
+    // Cache de 10 minutos para footer (raramente muda)
+    const cached = sessionStorage.getItem('footer_settings_cache');
+    const cacheTime = sessionStorage.getItem('footer_settings_cache_time');
+    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 600000) {
+      setFooterSettings(JSON.parse(cached));
+      setIsLoading(false);
+      return;
+    }
     loadFooterSettings();
   }, []);
 
   const loadFooterSettings = async () => {
     try {
       const settings = await base44.entities.FooterSettings.list("-created_date", 1);
-      if (settings && settings.length > 0) {
-        setFooterSettings(settings[0]);
-      } else {
-        // Valores padrão se não encontrar
-        setFooterSettings({
-          address: 'Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102',
-          email: 'relacionamento@leilaonozap.com',
-          phone: '',
-          whatsapp: '',
-          is_active: true
-        });
-      }
+      const data = settings && settings.length > 0 ? settings[0] : defaultFooter;
+      setFooterSettings(data);
+      sessionStorage.setItem('footer_settings_cache', JSON.stringify(data));
+      sessionStorage.setItem('footer_settings_cache_time', Date.now().toString());
     } catch (error) {
-      console.error('Erro ao carregar footer:', error);
-      setFooterSettings({
-        address: 'Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102',
-        email: 'relacionamento@leilaonozap.com',
-        phone: '',
-        whatsapp: '',
-        is_active: true
-      });
+      setFooterSettings(defaultFooter);
     } finally {
       setIsLoading(false);
     }
