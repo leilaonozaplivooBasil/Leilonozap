@@ -2898,6 +2898,19 @@ ${boletoInfo}================================
                   </select>
                 </div>
 
+                <div>
+                  <label className="text-gray-700 text-sm mb-2 block font-medium">🏦 Banco Destino</label>
+                  <select
+                    value={editSaleData.receiving_bank || 'santander'}
+                    onChange={(e) => setEditSaleData({ ...editSaleData, receiving_bank: e.target.value })}
+                    className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5"
+                  >
+                    <option value="santander">🔴 Santander (Produtos Físicos)</option>
+                    <option value="itau">🟠 Itaú (Licenciados)</option>
+                    <option value="nubank">🟣 Nubank (Parceiros)</option>
+                  </select>
+                </div>
+
                 {editSaleData.payment_method === 'BOLETO PARCELADO' && (
                   <div className="space-y-3 bg-blue-50 rounded-lg p-3 border border-blue-200">
                     <div>
