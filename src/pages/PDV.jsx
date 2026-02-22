@@ -1010,6 +1010,7 @@ ${boletoInfo}================================
       quantity_sold: sale.quantity_sold,
       unit_price: sale.unit_price,
       payment_method: sale.payment_method,
+      receiving_bank: sale.receiving_bank || 'santander',
       boleto_cliente: sale.boleto_cliente || '',
       boleto_documento: sale.boleto_documento || '',
       boleto_parcelas: sale.boleto_parcelas || 1
