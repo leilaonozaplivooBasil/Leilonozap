@@ -1894,9 +1894,13 @@ ${boletoInfo}================================
                 ) : (
                   <div className="space-y-3">
                     {cashSessions.map((session) => {
-                      // Calcula totais a partir das vendas reais se os salvos estiverem zerados
                       const sessionTotalSales = session.total_sales || 0;
                       const sessionTransactions = session.transactions_count || 0;
+
+                      // Formata datas de abertura e fechamento
+                      const openDate = new Date(session.opening_time);
+                      const closeDate = session.closing_time ? new Date(session.closing_time) : null;
+                      const isSameDay = closeDate && openDate.toLocaleDateString('pt-BR') === closeDate.toLocaleDateString('pt-BR');
 
                       return (
                         <div
@@ -1910,11 +1914,14 @@ ${boletoInfo}================================
                                 <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400" />
                                 <div>
                                   <p className="text-white font-semibold text-sm sm:text-base">
-                                    {new Date(session.opening_time).toLocaleDateString('pt-BR')}
+                                    {openDate.toLocaleDateString('pt-BR')}
+                                    {!isSameDay && closeDate && (
+                                      <span className="text-gray-400 font-normal"> → {closeDate.toLocaleDateString('pt-BR')}</span>
+                                    )}
                                   </p>
                                   <p className="text-gray-400 text-xs">
-                                    {new Date(session.opening_time).toLocaleTimeString('pt-BR')} - {' '}
-                                    {session.closing_time ? new Date(session.closing_time).toLocaleTimeString('pt-BR') : 'Aberto'}
+                                    {openDate.toLocaleTimeString('pt-BR')} - {' '}
+                                    {closeDate ? closeDate.toLocaleTimeString('pt-BR') : 'Aberto'}
                                   </p>
                                 </div>
                               </div>
@@ -1925,19 +1932,11 @@ ${boletoInfo}================================
                                 <span className="text-gray-400">
                                   📦 {sessionTransactions} vendas
                                 </span>
-                                {sessionTotalSales === 0 && (
-                                  <span className="text-yellow-400 text-xs">
-                                    ⚠️ Clique para ver totais reais
-                                  </span>
-                                )}
                               </div>
                             </div>
                             <div className="text-left sm:text-right">
                               <p className="text-green-400 font-bold text-lg sm:text-2xl">
-                                {sessionTotalSales > 0 
-                                  ? `R$ ${sessionTotalSales.toFixed(2)}`
-                                  : 'Clique para ver'
-                                }
+                                R$ {sessionTotalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                               </p>
                               <p className="text-xs text-gray-500">Receita total</p>
                             </div>
