@@ -314,10 +314,21 @@ export default function PDV() {
         opening_time: session.opening_time,
         closing_time: session.closing_time
       });
-      const salesInSession = response?.data?.sales || [];
+      const rawSales = response?.data?.sales || [];
 
-      // Recalcula totais reais a partir das vendas encontradas
-      // (corrige sessões que foram salvas com totais zerados)
+      // 🛡️ DEDUPLICAÇÃO: Remove vendas com mesmo ID
+      const uniqueSalesMap = {};
+      rawSales.forEach(sale => {
+        if (!uniqueSalesMap[sale.id]) {
+          uniqueSalesMap[sale.id] = sale;
+        }
+      });
+      const salesInSession = Object.values(uniqueSalesMap);
+
+      // Ordena por horário
+      salesInSession.sort((a, b) => new Date(a.sale_datetime) - new Date(b.sale_datetime));
+
+      // Recalcula totais reais a partir das vendas únicas
       const recalculated = {
         total_pix: 0,
         total_cash: 0,
@@ -338,16 +349,16 @@ export default function PDV() {
         else if (sale.payment_method === 'BOLETO PARCELADO') recalculated.total_boleto += amount;
       });
 
-      // Usa totais recalculados se os salvos estiverem zerados
+      // Sempre usa totais recalculados (fonte de verdade = vendas reais)
       const enrichedSession = {
         ...session,
-        total_sales: (session.total_sales || 0) > 0 ? session.total_sales : recalculated.total_sales,
-        total_pix: (session.total_pix || 0) > 0 ? session.total_pix : recalculated.total_pix,
-        total_cash: (session.total_cash || 0) > 0 ? session.total_cash : recalculated.total_cash,
-        total_debit: (session.total_debit || 0) > 0 ? session.total_debit : recalculated.total_debit,
-        total_credit: (session.total_credit || 0) > 0 ? session.total_credit : recalculated.total_credit,
-        total_boleto: (session.total_boleto || 0) > 0 ? session.total_boleto : recalculated.total_boleto,
-        transactions_count: (session.transactions_count || 0) > 0 ? session.transactions_count : recalculated.transactions_count,
+        total_sales: recalculated.total_sales,
+        total_pix: recalculated.total_pix,
+        total_cash: recalculated.total_cash,
+        total_debit: recalculated.total_debit,
+        total_credit: recalculated.total_credit,
+        total_boleto: recalculated.total_boleto,
+        transactions_count: recalculated.transactions_count,
       };
 
       setSessionSales(salesInSession);
