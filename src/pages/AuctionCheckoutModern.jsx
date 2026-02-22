@@ -923,6 +923,14 @@ export default function AuctionCheckoutModern() {
           </div>
         </div>
       </div>
+      {/* Modal de Erro de Pagamento */}
+      <PaymentErrorModal
+        isOpen={paymentError.show}
+        onClose={() => setPaymentError({ show: false, title: '', description: '', details: null })}
+        errorTitle={paymentError.title}
+        errorDescription={paymentError.description}
+        errorDetails={paymentError.details}
+      />
     </div>
   );
 }
