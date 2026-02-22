@@ -397,7 +397,7 @@ Deno.serve(async (req) => {
                             direction: 'credit',
                             amount: amount,
                             status: 'confirmed',
-                            description: `Depósito via Cartão (aprovado instantaneamente) - ${paymentData.id}`
+                            description: `Depósito via Cartão de Crédito`
                         });
                         console.log('✅ Transação de Wallet registrada');
                     }
