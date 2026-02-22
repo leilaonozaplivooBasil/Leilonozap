@@ -507,7 +507,155 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
 
         yPos += 25;
 
-      // ========== DETALHAMENTO DAS VENDAS (SEMPRE NA SEGUNDA PÁGINA) ==========
+      // ========== ANÁLISE DE CUSTOS E LUCRO (PÁGINA ESPECÍFICA) ==========
+      doc.addPage();
+      yPos = 20;
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('ANÁLISE DE CUSTOS E LUCRO LÍQUIDO', margin, yPos);
+      yPos += 8;
+
+      // Box com resumo de custos
+      doc.setFillColor(245, 245, 245);
+      doc.rect(margin, yPos, pageWidth - margin * 2, 35, 'F');
+      doc.setDrawColor(100, 100, 100);
+      doc.rect(margin, yPos, pageWidth - margin * 2, 35);
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RESUMO FINANCEIRO:', margin + 5, yPos + 6);
+
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      
+      const valorBruto = totalValor;
+      const custos = totalCustos;
+      const comissoes = totalGeralComissoes;
+      const lucroLiquido = valorBruto - custos - comissoes;
+
+      doc.text(`Valor Total de Vendas (Bruto):`, margin + 5, yPos + 15);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`R$ ${fmt(valorBruto)}`, pageWidth - margin - 30, yPos + 15);
+
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Custos/Impostos:`, margin + 5, yPos + 22);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(220, 38, 38);
+      doc.text(`- R$ ${fmt(custos)}`, pageWidth - margin - 30, yPos + 22);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Comissões a Pagar:`, margin + 5, yPos + 29);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(220, 38, 38);
+      doc.text(`- R$ ${fmt(comissoes)}`, pageWidth - margin - 30, yPos + 29);
+
+      yPos += 42;
+
+      // Box destacado com lucro líquido
+      doc.setFillColor(34, 197, 94);
+      doc.rect(margin, yPos, pageWidth - margin * 2, 18, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LUCRO LÍQUIDO (Empresa):', margin + 5, yPos + 8);
+      doc.setFontSize(14);
+      doc.text(`R$ ${fmt(lucroLiquido)}`, pageWidth - margin - 40, yPos + 8);
+
+      yPos += 28;
+
+      // Tabela detalhada de custos por venda
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('DETALHAMENTO DE CUSTOS E MARGENS POR VENDA', margin, yPos);
+      yPos += 7;
+
+      // Cabeçalho tabela
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, yPos, pageWidth - margin * 2, 8);
+
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      
+      doc.text('PRODUTO', margin + 3, yPos + 5);
+      doc.text('VALOR BRUTO', margin + 65, yPos + 5);
+      doc.text('CUSTO', margin + 105, yPos + 5);
+      doc.text('COMISSÃO', margin + 135, yPos + 5);
+      doc.text('LUCRO', margin + 165, yPos + 5);
+
+      yPos += 10;
+
+      // Ordena vendas por horário
+      const sortedSalesDetailed = [...daySales].sort((a, b) => {
+        return new Date(a.sale_datetime) - new Date(b.sale_datetime);
+      });
+
+      sortedSalesDetailed.forEach((sale, index) => {
+        if (yPos > pageHeight - 20) {
+          doc.addPage();
+          yPos = 20;
+
+          // Repete cabeçalho
+          doc.setDrawColor(180, 180, 180);
+          doc.setLineWidth(0.5);
+          doc.rect(margin, yPos, pageWidth - margin * 2, 8);
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          
+          doc.text('PRODUTO', margin + 3, yPos + 5);
+          doc.text('VALOR BRUTO', margin + 65, yPos + 5);
+          doc.text('CUSTO', margin + 105, yPos + 5);
+          doc.text('COMISSÃO', margin + 135, yPos + 5);
+          doc.text('LUCRO', margin + 165, yPos + 5);
+
+          yPos += 10;
+        }
+
+        if (index > 0) {
+          doc.setDrawColor(240, 240, 240);
+          doc.setLineWidth(0.2);
+          doc.line(margin, yPos, pageWidth - margin, yPos);
+        }
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(40, 40, 40);
+
+        const produto = (sale.product_description || 'Produto').substring(0, 20);
+        doc.text(produto, margin + 3, yPos + 4);
+
+        const valorBr = sale.total_amount || 0;
+        const custoDia = sale.total_taxes || 0;
+        const comissaoDia = sale.commission_amount || 0;
+        const lucroDia = valorBr - custoDia - comissaoDia;
+
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`R$ ${fmt(valorBr)}`, margin + 65, yPos + 4);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(220, 38, 38);
+        doc.text(`R$ ${fmt(custoDia)}`, margin + 105, yPos + 4);
+
+        doc.setTextColor(220, 38, 38);
+        doc.text(`R$ ${fmt(comissaoDia)}`, margin + 135, yPos + 4);
+
+        doc.setTextColor(34, 197, 94);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`R$ ${fmt(lucroDia)}`, margin + 165, yPos + 4);
+
+        yPos += 7;
+      });
+
+      // ========== DETALHAMENTO DAS VENDAS (SEMPRE NA PRÓXIMA PÁGINA) ==========
       doc.addPage();
       yPos = 20;
 
