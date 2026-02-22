@@ -125,29 +125,38 @@ export default function AuctionCheckoutModern() {
     return parseInt(cpf[9]) === digit1 && parseInt(cpf[10]) === digit2;
   };
 
+  const [formErrors, setFormErrors] = useState({});
+
   const validateForm = () => {
+    const errors = {};
     const fields = [
-      { value: firstName, name: 'Nome' },
-      { value: cpf, name: 'CPF' },
-      { value: email, name: 'Email' },
-      { value: phone, name: 'Telefone' },
-      { value: addressStreet, name: 'Rua' },
-      { value: addressNumber, name: 'Número' },
-      { value: addressCity, name: 'Cidade' },
-      { value: addressState, name: 'Estado' },
-      { value: addressZip, name: 'CEP' }
+      { value: firstName, key: 'firstName', name: 'Nome' },
+      { value: cpf, key: 'cpf', name: 'CPF' },
+      { value: email, key: 'email', name: 'Email' },
+      { value: phone, key: 'phone', name: 'Telefone' },
+      { value: addressStreet, key: 'addressStreet', name: 'Rua' },
+      { value: addressNumber, key: 'addressNumber', name: 'Número' },
+      { value: addressCity, key: 'addressCity', name: 'Cidade' },
+      { value: addressState, key: 'addressState', name: 'Estado' },
+      { value: addressZip, key: 'addressZip', name: 'CEP' }
     ];
 
     for (let field of fields) {
       if (!field.value?.trim()) {
-        toast.error(`${field.name} é obrigatório`);
-        return false;
+        errors[field.key] = `${field.name} é obrigatório`;
       }
     }
 
     // Valida CPF com algoritmo de check-digit
-    if (!validateCpf(cpf)) {
-      toast.error('CPF inválido (verifique os dígitos)');
+    if (cpf?.trim() && !validateCpf(cpf)) {
+      errors.cpf = 'CPF inválido (verifique os dígitos)';
+    }
+
+    setFormErrors(errors);
+
+    if (Object.keys(errors).length > 0) {
+      const firstError = Object.values(errors)[0];
+      toast.error(firstError);
       return false;
     }
 
