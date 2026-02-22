@@ -16,34 +16,10 @@ export default function DigitalWalletBalance({ userId, showActions = true }) {
 
   const loadBalance = async () => {
     try {
-      const wallets = await base44.entities.DigitalWallet.filter({ user_id: userId });
-      
-      if (wallets && wallets.length > 0) {
-        // Pega o saldo total somando todas as wallets
-        const totalBalance = wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
-        setBalance(totalBalance);
-
-        // Se há múltiplas wallets, consolidar em uma só (limpeza)
-        if (wallets.length > 1) {
-          console.log(`⚠️ Consolidando ${wallets.length} wallets duplicadas para user ${userId}`);
-          // Mantém a primeira, deleta as demais após mover saldo
-          const primary = wallets[0];
-          for (let i = 1; i < wallets.length; i++) {
-            try {
-              await base44.entities.DigitalWallet.delete(wallets[i].id);
-            } catch (e) {
-              console.debug('Erro ao remover wallet duplicada:', e.message);
-            }
-          }
-          // Atualiza a primária com o saldo consolidado
-          if (totalBalance !== (primary.balance || 0)) {
-            await base44.entities.DigitalWallet.update(primary.id, { balance: totalBalance });
-          }
-        }
-      } else {
-        // NÃO cria wallet automaticamente - será criada apenas pelo webhook ao receber pagamento
-        setBalance(0);
-      }
+      // Usa backend function para contornar RLS
+      const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: userId });
+      const data = result?.data || result;
+      setBalance(data?.balance || 0);
     } catch (error) {
       console.error('Erro ao carregar saldo digital:', error);
       setBalance(0);
