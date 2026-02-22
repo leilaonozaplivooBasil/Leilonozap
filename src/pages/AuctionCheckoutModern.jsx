@@ -203,6 +203,7 @@ export default function AuctionCheckoutModern() {
 
   const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
     auction_id: isWalletDeposit ? null : auction.id,
+    buyer_id: currentUser?.id || null,
     buyer_name: firstName.trim(),
     buyer_email: email.trim(),
     buyer_cpf: cpf.trim(),
@@ -215,7 +216,7 @@ export default function AuctionCheckoutModern() {
         : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
       : `Arremate - ${auction.title}`,
     card_data: cardData,
-    deposit_type: depositType // Passa flag para backend identificar tipo de depósito
+    deposit_type: depositType
   });
 
   console.log('📥 Resposta do backend:', paymentResponse);
