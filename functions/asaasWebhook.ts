@@ -257,6 +257,7 @@ Deno.serve(async (req) => {
                                 description: `Depósito via ${billingLabel}`
                             });
                             console.log('✅ Transação de Digital Wallet registrada');
+                            } // fim do else (não duplicado)
 
                             // 🆕 ATUALIZAR CAIXA DO PDV
                             const openCashes = await base44.asServiceRole.entities.CashRegister.filter(
