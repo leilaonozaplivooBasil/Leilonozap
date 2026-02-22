@@ -195,146 +195,142 @@ export default function AuctionCheckoutModern() {
   };
 
   const handleCreatePayment = async () => {
-  console.log('🔘 handleCreatePayment chamado', { auction: !!auction, auctionId: auction?.id, isProcessing });
-  
-  if (!validateForm()) {
-    console.log('❌ validateForm falhou', formErrors);
-    return;
-  }
-  if (!validateCardData()) {
-    console.log('❌ validateCardData falhou');
-    return;
-  }
-  if (!auction) {
-    console.error('❌ auction é null!');
-    toast.error('Pedido não encontrado. Volte e tente novamente.');
-    return;
-  }
-
-  setIsProcessing(true);
-  toast.loading('Processando pagamento...', { id: 'checkout-loading' });
-
-  try {
-  const amount = isWalletDeposit ? depositAmount : auction.current_price;
-  const cardData = paymentType === 'CREDIT_CARD' ? {
-    holderName: cardHolder.trim(),
-    number: cardNumber.replace(/\D/g, ''),
-    expiryMonth: parseInt(cardMonth),
-    expiryYear: parseInt(cardYear),
-    ccv: cardCvv.replace(/\D/g, ''),
-    address: {
-      zip_code: addressZip.replace(/\D/g, ''),
-      number: addressNumber,
-      complement: addressComplement
+    console.log('🔘 handleCreatePayment chamado', { auction: !!auction, auctionId: auction?.id, isProcessing });
+    
+    if (!validateForm()) {
+      console.log('❌ validateForm falhou', formErrors);
+      return;
     }
-  } : null;
+    if (!validateCardData()) {
+      console.log('❌ validateCardData falhou');
+      return;
+    }
+    if (!auction) {
+      console.error('❌ auction é null!');
+      toast.error('Pedido não encontrado. Volte e tente novamente.');
+      return;
+    }
 
-  console.log('📤 Enviando para backend:', { auction_id: isWalletDeposit ? null : auction.id, amount, billing_type: paymentType });
+    setIsProcessing(true);
+    toast.loading('Processando pagamento...', { id: 'checkout-loading' });
 
-  const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
-    auction_id: isWalletDeposit ? null : auction.id,
-    buyer_id: currentUser?.id || null,
-    buyer_name: firstName.trim(),
-    buyer_email: email.trim(),
-    buyer_cpf: cpf.trim(),
-    buyer_phone: phone.trim(),
-    amount: amount,
-    billing_type: paymentType,
-    description: isWalletDeposit 
-      ? (depositType === 'digital_wallet' 
-        ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}` 
-        : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
-      : `Arremate - ${auction.title}`,
-    card_data: cardData,
-    deposit_type: depositType
-  });
-
-  console.log('📥 Resposta do backend:', paymentResponse);
-
-  setIsProcessing(false);
-  toast.dismiss('checkout-loading');
-
-  // ✅ CORREÇÃO: Verificar a estrutura correta da resposta
-  const responseData = paymentResponse?.data || paymentResponse;
-
-  if (responseData?.success === true) {
-    setPixData(responseData);
-    setStep('payment');
-    toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
-
-    // Salva dados atualizados no AppUser (CPF, telefone, endereço)
-    if (currentUser?.id) {
-      const updateData = {
-        cpf: cpf.trim(),
-        phone: phone.trim(),
-        address_street: addressStreet.trim(),
-        address_number: addressNumber.trim(),
-        address_complement: addressComplement.trim(),
-        address_neighborhood: addressNeighborhood.trim(),
-        address_city: addressCity.trim(),
-        address_state: addressState.trim(),
-        address_zip_code: addressZip.trim()
-      };
-      base44.entities.AppUser.update(currentUser.id, updateData).then(() => {
-        const saved = localStorage.getItem('currentUser');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          localStorage.setItem('currentUser', JSON.stringify({ ...parsed, ...updateData }));
+    try {
+      const amount = isWalletDeposit ? depositAmount : auction.current_price;
+      const cardData = paymentType === 'CREDIT_CARD' ? {
+        holderName: cardHolder.trim(),
+        number: cardNumber.replace(/\D/g, ''),
+        expiryMonth: parseInt(cardMonth),
+        expiryYear: parseInt(cardYear),
+        ccv: cardCvv.replace(/\D/g, ''),
+        address: {
+          zip_code: addressZip.replace(/\D/g, ''),
+          number: addressNumber,
+          complement: addressComplement
         }
-      }).catch(() => {});
-      }
-      }
+      } : null;
+
+      console.log('📤 Enviando para backend:', { auction_id: isWalletDeposit ? null : auction.id, amount, billing_type: paymentType });
+
+      const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
+        auction_id: isWalletDeposit ? null : auction.id,
+        buyer_id: currentUser?.id || null,
+        buyer_name: firstName.trim(),
+        buyer_email: email.trim(),
+        buyer_cpf: cpf.trim(),
+        buyer_phone: phone.trim(),
+        amount: amount,
+        billing_type: paymentType,
+        description: isWalletDeposit 
+          ? (depositType === 'digital_wallet' 
+            ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}` 
+            : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
+          : `Arremate - ${auction.title}`,
+        card_data: cardData,
+        deposit_type: depositType
+      });
+
+      console.log('📥 Resposta do backend:', paymentResponse);
+
+      setIsProcessing(false);
+      toast.dismiss('checkout-loading');
+
+      const responseData = paymentResponse?.data || paymentResponse;
+
+      if (responseData?.success === true) {
+        setPixData(responseData);
+        setStep('payment');
+        toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Cartão processado!');
+
+        // Salva dados atualizados no AppUser (CPF, telefone, endereço)
+        if (currentUser?.id) {
+          const updateData = {
+            cpf: cpf.trim(),
+            phone: phone.trim(),
+            address_street: addressStreet.trim(),
+            address_number: addressNumber.trim(),
+            address_complement: addressComplement.trim(),
+            address_neighborhood: addressNeighborhood.trim(),
+            address_city: addressCity.trim(),
+            address_state: addressState.trim(),
+            address_zip_code: addressZip.trim()
+          };
+          base44.entities.AppUser.update(currentUser.id, updateData).then(() => {
+            const saved = localStorage.getItem('currentUser');
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              localStorage.setItem('currentUser', JSON.stringify({ ...parsed, ...updateData }));
+            }
+          }).catch(() => {});
+        }
       } else {
-    const errorDetails = responseData?.details || null;
-    // Extrai description do array de errors do ASAAS (se existir)
-    let errorDescription = responseData?.error || 'Erro desconhecido ao processar pagamento';
-    if (Array.isArray(errorDetails) && errorDetails.length > 0 && errorDetails[0].description) {
-      errorDescription = errorDetails[0].description;
-    }
-    console.error('❌ Erro na resposta:', errorDescription, errorDetails);
-    setPaymentError({
-      show: true,
-      title: 'Erro ao Processar Pagamento',
-      description: errorDescription,
-      details: errorDetails
-    });
-  }
-  } catch (error) {
-  console.error('❌ Erro de rede/sistema:', error);
-  setIsProcessing(false);
-  toast.dismiss('checkout-loading');
-
-  // Tenta extrair dados de erro do response (quando backend retorna 400 com JSON)
-  let errorTitle = 'Erro de Comunicação';
-  let errorDesc = `Não foi possível conectar ao servidor de pagamento: ${error.message}`;
-  let errorDets = null;
-
-  try {
-    const errData = error?.response?.data || error?.data;
-    if (errData) {
-      const details = errData.details;
-      if (Array.isArray(details) && details.length > 0 && details[0].description) {
-        errorTitle = 'Pagamento Recusado';
-        errorDesc = details[0].description;
-        errorDets = details;
-      } else if (errData.error) {
-        errorDesc = errData.error;
-        errorDets = details || null;
+        const errorDetails = responseData?.details || null;
+        let errorDescription = responseData?.error || 'Erro desconhecido ao processar pagamento';
+        if (Array.isArray(errorDetails) && errorDetails.length > 0 && errorDetails[0].description) {
+          errorDescription = errorDetails[0].description;
+        }
+        console.error('❌ Erro na resposta:', errorDescription, errorDetails);
+        setPaymentError({
+          show: true,
+          title: 'Erro ao Processar Pagamento',
+          description: errorDescription,
+          details: errorDetails
+        });
       }
+    } catch (error) {
+      console.error('❌ Erro de rede/sistema:', error);
+      setIsProcessing(false);
+      toast.dismiss('checkout-loading');
+
+      let errorTitle = 'Erro de Comunicação';
+      let errorDesc = `Não foi possível conectar ao servidor de pagamento: ${error.message}`;
+      let errorDets = null;
+
+      try {
+        const errData = error?.response?.data || error?.data;
+        if (errData) {
+          const details = errData.details;
+          if (Array.isArray(details) && details.length > 0 && details[0].description) {
+            errorTitle = 'Pagamento Recusado';
+            errorDesc = details[0].description;
+            errorDets = details;
+          } else if (errData.error) {
+            errorDesc = errData.error;
+            errorDets = details || null;
+          }
+        }
+      } catch (_) {}
+
+      if (error.message?.includes('timeout')) {
+        errorDesc = 'O servidor demorou para responder. Tente novamente em instantes.';
+      }
+
+      setPaymentError({
+        show: true,
+        title: errorTitle,
+        description: errorDesc,
+        details: errorDets
+      });
     }
-  } catch (_) {}
-
-  if (error.message?.includes('timeout')) {
-    errorDesc = 'O servidor demorou para responder. Tente novamente em instantes.';
-  }
-
-  setPaymentError({
-    show: true,
-    title: errorTitle,
-    description: errorDesc,
-    details: errorDets
-  });
-  }
   };
 
   useEffect(() => {
