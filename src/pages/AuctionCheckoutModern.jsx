@@ -251,16 +251,39 @@ export default function AuctionCheckoutModern() {
     });
   }
   } catch (error) {
-  console.error('❌ Erro de rede/sistema:', error.message);
+  console.error('❌ Erro de rede/sistema:', error);
   setIsProcessing(false);
   toast.dismiss('checkout-loading');
+
+  // Tenta extrair dados de erro do response (quando backend retorna 400 com JSON)
+  let errorTitle = 'Erro de Comunicação';
+  let errorDesc = `Não foi possível conectar ao servidor de pagamento: ${error.message}`;
+  let errorDets = null;
+
+  try {
+    const errData = error?.response?.data || error?.data;
+    if (errData) {
+      const details = errData.details;
+      if (Array.isArray(details) && details.length > 0 && details[0].description) {
+        errorTitle = 'Pagamento Recusado';
+        errorDesc = details[0].description;
+        errorDets = details;
+      } else if (errData.error) {
+        errorDesc = errData.error;
+        errorDets = details || null;
+      }
+    }
+  } catch (_) {}
+
+  if (error.message?.includes('timeout')) {
+    errorDesc = 'O servidor demorou para responder. Tente novamente em instantes.';
+  }
+
   setPaymentError({
     show: true,
-    title: 'Erro de Comunicação',
-    description: error.message?.includes('timeout') 
-      ? 'O servidor demorou para responder. Tente novamente em instantes.' 
-      : `Não foi possível conectar ao servidor de pagamento: ${error.message}`,
-    details: null
+    title: errorTitle,
+    description: errorDesc,
+    details: errorDets
   });
   }
   };
