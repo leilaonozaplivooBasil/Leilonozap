@@ -202,13 +202,17 @@ Deno.serve(async (req) => {
                         
                         if (isDigitalWallet) {
                             // 🛡️ VERIFICAR SE JÁ FOI CREDITADO PELO createAsaasPayment (cartão aprovado instantaneamente)
+                            // Busca por related_payment_id OU por payment_id no AsaasPayment já confirmed + CREDIT_CARD
                             const existingTxs = await base44.asServiceRole.entities.DigitalWalletTransaction.filter(
-                                { related_payment_id: paymentId, status: 'confirmed' },
+                                { related_payment_id: paymentId },
                                 null,
-                                1
+                                5
                             );
-                            if (existingTxs && existingTxs.length > 0) {
-                                console.log('⏭️ Digital Wallet já creditada para este pagamento (cartão instantâneo):', paymentId);
+                            const alreadyCredited = existingTxs && existingTxs.some(tx => 
+                                tx.status === 'confirmed' && tx.type === 'deposit' && tx.direction === 'credit'
+                            );
+                            if (alreadyCredited) {
+                                console.log('⏭️ Digital Wallet já creditada para este pagamento (cartão instantâneo):', paymentId, 'Transações encontradas:', existingTxs.length);
                                 // Pula crédito mas continua fluxo
                             } else {
                             // CREDITAR DIGITAL WALLET
