@@ -297,7 +297,7 @@ export default function WalletHistory() {
                                 </div>
                                 <div>
                                   <p className="text-white font-semibold">{getTypeLabel(transaction.type)}</p>
-                                  <p className="text-green-300/60 text-sm font-light">{transaction.description || "Sem descrição"}</p>
+                                  <p className="text-green-300/60 text-sm font-light">{(transaction.description || "Sem descrição").replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '').replace('CREDIT_CARD', 'Cartão de Crédito').replace('PIX', 'PIX')}</p>
                                   <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
                                     <Clock className="w-3 h-3" />
                                     {new Date(transaction.created_date + (transaction.created_date.endsWith('Z') ? '' : 'Z')).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
