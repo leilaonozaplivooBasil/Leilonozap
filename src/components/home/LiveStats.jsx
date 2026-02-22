@@ -1,60 +1,80 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Eye, TrendingUp } from 'lucide-react';
 
+// Flag global para evitar múltiplas instâncias fazendo chamadas simultâneas
+let globalStatsLoading = false;
+
 export default function LiveStats() {
-  const [stats, setStats] = useState({
-    onlineUsers: 0,
-    totalBidsToday: 0
+  const [stats, setStats] = useState(() => {
+    const cached = sessionStorage.getItem('live_stats_cache');
+    if (cached) return JSON.parse(cached);
+    return { onlineUsers: 0, totalBidsToday: 0 };
   });
+  const errorCountRef = useRef(0);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
-    // Verifica cache antes de fazer API call
-    const cached = sessionStorage.getItem('live_stats_cache');
+    mountedRef.current = true;
+    errorCountRef.current = 0;
+
+    // Só carrega se cache tem mais de 60 segundos
     const cacheTime = sessionStorage.getItem('live_stats_cache_time');
-    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 25000) {
-      setStats(JSON.parse(cached));
-    } else {
-      loadStats();
+    const isCacheFresh = cacheTime && Date.now() - parseInt(cacheTime) < 60000;
+
+    if (!isCacheFresh) {
+      // Delay inicial aleatório para evitar colisão com outras chamadas
+      const delay = 3000 + Math.random() * 5000;
+      const timeout = setTimeout(loadStats, delay);
+      var clearInitial = () => clearTimeout(timeout);
     }
-    
-    // Atualiza a cada 30 segundos (evita rate limit)
-    const interval = setInterval(loadStats, 30000);
-    return () => clearInterval(interval);
+
+    // Atualiza a cada 60 segundos
+    const interval = setInterval(() => {
+      if (errorCountRef.current < 3) {
+        loadStats();
+      }
+    }, 60000);
+
+    return () => {
+      mountedRef.current = false;
+      if (clearInitial) clearInitial();
+      clearInterval(interval);
+    };
   }, []);
 
   const loadStats = async () => {
-    try {
-      // 1. Usuários online (sessões ativas nos últimos 60 segundos)
-      const sixtySecondsAgo = new Date(Date.now() - 60 * 1000).toISOString();
-      const sessions = await base44.entities.LiveSession.list('-last_heartbeat', 300);
-      const activeSessions = sessions.filter(session => {
-        const lastHeartbeat = new Date(session.last_heartbeat);
-        return lastHeartbeat >= new Date(sixtySecondsAgo);
-      });
-      const uniqueOnlineUsers = activeSessions.length;
+    // Evita chamadas simultâneas de múltiplas instâncias
+    if (globalStatsLoading) return;
+    globalStatsLoading = true;
 
-      // 2. Total de lances do dia (soma dos valores)
+    try {
+      const sessions = await base44.entities.LiveSession.list('-last_heartbeat', 100);
+      const sixtySecondsAgo = new Date(Date.now() - 60 * 1000);
+      const uniqueOnlineUsers = sessions.filter(s => new Date(s.last_heartbeat) >= sixtySecondsAgo).length;
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const bids = await base44.entities.Bid.list('-timestamp', 500);
-      const todayBids = bids.filter(bid => {
-        const bidDate = new Date(bid.timestamp);
-        return bidDate >= today;
-      });
-      const totalBidsValue = todayBids.reduce((sum, bid) => sum + (bid.amount || 0), 0);
+      const bids = await base44.entities.Bid.list('-timestamp', 200);
+      const totalBidsValue = bids
+        .filter(bid => new Date(bid.timestamp) >= today)
+        .reduce((sum, bid) => sum + (bid.amount || 0), 0);
 
-      const newStats = {
-        onlineUsers: uniqueOnlineUsers,
-        totalBidsToday: totalBidsValue
-      };
-      setStats(newStats);
+      const newStats = { onlineUsers: uniqueOnlineUsers, totalBidsToday: totalBidsValue };
+      if (mountedRef.current) {
+        setStats(newStats);
+        errorCountRef.current = 0;
+      }
       sessionStorage.setItem('live_stats_cache', JSON.stringify(newStats));
       sessionStorage.setItem('live_stats_cache_time', Date.now().toString());
     } catch (error) {
-      // Usa cache mesmo expirado em caso de erro
-      const cached = sessionStorage.getItem('live_stats_cache');
-      if (cached) setStats(JSON.parse(cached));
+      errorCountRef.current += 1;
+      // Não loga em loop - só loga primeira vez
+      if (errorCountRef.current === 1) {
+        console.debug('LiveStats: usando cache (API indisponível)');
+      }
+    } finally {
+      globalStatsLoading = false;
     }
   };
 
