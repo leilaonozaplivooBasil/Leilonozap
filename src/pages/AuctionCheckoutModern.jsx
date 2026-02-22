@@ -24,6 +24,7 @@ import {
   Smartphone
 } from 'lucide-react';
 import { toast } from 'sonner';
+import PaymentErrorModal from '@/components/payment/PaymentErrorModal';
 
 const Auction = base44.entities.Auction;
 
@@ -37,6 +38,9 @@ export default function AuctionCheckoutModern() {
   const [auction, setAuction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
+
+  // Estado do popup de erro
+  const [paymentError, setPaymentError] = useState({ show: false, title: '', description: '', details: null });
   const [phone, setPhone] = useState('');
   const [cpf, setCpf] = useState('');
   const [email, setEmail] = useState('');
