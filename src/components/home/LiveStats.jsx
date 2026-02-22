@@ -18,23 +18,23 @@ export default function LiveStats() {
     mountedRef.current = true;
     errorCountRef.current = 0;
 
-    // Só carrega se cache tem mais de 60 segundos
+    // Cache de 5 minutos para stats (não é crítico)
     const cacheTime = sessionStorage.getItem('live_stats_cache_time');
-    const isCacheFresh = cacheTime && Date.now() - parseInt(cacheTime) < 60000;
+    const isCacheFresh = cacheTime && Date.now() - parseInt(cacheTime) < 300000;
 
     if (!isCacheFresh) {
-      // Delay inicial aleatório para evitar colisão com outras chamadas
-      const delay = 3000 + Math.random() * 5000;
+      // Delay inicial grande para não competir com carregamento principal
+      const delay = 10000 + Math.random() * 5000;
       const timeout = setTimeout(loadStats, delay);
       var clearInitial = () => clearTimeout(timeout);
     }
 
-    // Atualiza a cada 60 segundos
+    // Atualiza a cada 5 minutos (stats não precisa ser em tempo real)
     const interval = setInterval(() => {
       if (errorCountRef.current < 3) {
         loadStats();
       }
-    }, 60000);
+    }, 300000);
 
     return () => {
       mountedRef.current = false;

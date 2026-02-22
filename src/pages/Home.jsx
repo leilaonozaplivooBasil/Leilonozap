@@ -95,10 +95,12 @@ export default function Home() {
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
         localStorage.setItem('auctions_cache_persistent', serialized);
         setAuctions(freshAuctions);
+        setIsLoading(false);
       }
     },
-    interval: 10000,
-    enabled: true
+    interval: 90000,
+    enabled: true,
+    priority: 'normal'
   });
 
   useEffect(() => {
@@ -258,7 +260,7 @@ export default function Home() {
     }
   }, []);
 
-  const loadCurrentUser = React.useCallback(async (retryCount = 0) => {
+  const loadCurrentUser = React.useCallback(async () => {
     try {
       const savedUserJSON = localStorage.getItem('currentUser');
       const isLoggedIn = sessionStorage.getItem('isLoggedIn');
@@ -266,70 +268,28 @@ export default function Home() {
       if (savedUserJSON && isLoggedIn) {
         const userFromStorage = JSON.parse(savedUserJSON);
 
-        const lastValidation = sessionStorage.getItem('lastUserValidation');
-        const now = Date.now();
-
-        // Cache mais agressivo: 10 minutos ao invés de 5
-        if (lastValidation && now - parseInt(lastValidation) < 600000) {
-          setCurrentUser(userFromStorage);
-          // Carrega favoritos com delay para evitar concorrência
-          setTimeout(() => loadUserFavorites(userFromStorage.id), 500);
-          console.log("✅ Usuário carregado do cache (menos de 10min).");
-          return;
+        // SEMPRE usa cache local primeiro (Layout já validou no banco)
+        if (userFromStorage.email === MASTER_ADMIN_EMAIL) {
+          userFromStorage.role = 'admin';
         }
+        setCurrentUser(userFromStorage);
 
-        console.log("🔍 Validando usuário no banco de dados...");
-        try {
-          const usersInDB = await AppUser.filter({ id: userFromStorage.id });
-          if (usersInDB.length > 0) {
-            const freshUser = usersInDB[0];
-
-            if (freshUser.email === MASTER_ADMIN_EMAIL) {
-              freshUser.role = 'admin';
-              console.log(`👑 PROTEÇÃO MASTER ATIVADA: '${MASTER_ADMIN_EMAIL}' tem role 'admin' garantida.`);
-            }
-
-            localStorage.setItem('currentUser', JSON.stringify(freshUser));
-            sessionStorage.setItem('lastUserValidation', now.toString());
-            setCurrentUser(freshUser);
-
-            // Carrega favoritos com delay
-            setTimeout(() => loadUserFavorites(freshUser.id), 500);
-
-            console.log("✅ Usuário validado na Home:", freshUser.full_name, "Role:", freshUser.role);
-            return;
-          }
-        } catch (dbError) {
-          console.error("⚠️ Erro ao validar usuário no DB, usando cache:", dbError);
-          setCurrentUser(userFromStorage);
-
-          // Carrega favoritos com delay mesmo em erro
-          setTimeout(() => loadUserFavorites(userFromStorage.id), 1000);
-
-          if (dbError.message?.includes('Rate limit') && retryCount < 1) {
-            const delay = 3000;
-            setTimeout(() => loadCurrentUser(retryCount + 1), delay);
-          }
-          return;
-        }
+        // Favoritos com delay grande - não é crítico
+        setTimeout(() => loadUserFavorites(userFromStorage.id), 4000);
+        return;
       }
 
       const platformUser = await User.me();
       if (platformUser) {
         if (platformUser.email === MASTER_ADMIN_EMAIL) {
           platformUser.role = 'admin';
-          console.log(`👑 PROTEÇÃO MASTER ATIVADA (PLATAFORMA): '${MASTER_ADMIN_EMAIL}' tem role 'admin' garantida.`);
         }
         setCurrentUser(platformUser);
-        sessionStorage.setItem('lastUserValidation', Date.now().toString());
-        console.log("✅ Usuário da plataforma carregado:", platformUser.full_name, "Role:", platformUser.role);
       } else {
         setCurrentUser(null);
-        console.log("ℹ️ Nenhum usuário logado. Modo visitante.");
       }
 
     } catch (error) {
-      console.log("Usuário não logado, entrando em modo visitante.");
       setCurrentUser(null);
     }
   }, [loadUserFavorites]);
@@ -445,35 +405,38 @@ export default function Home() {
         setShowFavoritesOnly(true);
       }
 
-      // Localização em background
+      // Localização em background (não consome rate limit do Base44)
       checkLocation().then((locationData) => {
         if (locationData?.location?.region) {
           setUserRegion(locationData.location.region);
         }
       }).catch(() => {});
 
-      // EXECUTA COM DELAY PARA EVITAR RATE LIMIT
+      // ESTRATÉGIA: Apenas 1 chamada por vez, escalonada com delays longos
+      // O RealtimeSync já faz a atualização contínua dos leilões
       loadAuctions();
-      setTimeout(() => loadCurrentUser(), 500);
-      setTimeout(() => loadProductStock(), 1000);
+      setTimeout(() => loadCurrentUser(), 2000);
+      setTimeout(() => loadProductStock(), 5000);
 
-      // Banners do cache imediatamente
+      // Banners: cache de 10 minutos (raramente mudam)
       const cachedBanners = sessionStorage.getItem('home_banners_cache');
       const bannerCacheTime = sessionStorage.getItem('home_banners_cache_time');
 
-      if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 120000) {
+      if (cachedBanners && bannerCacheTime && Date.now() - parseInt(bannerCacheTime) < 600000) {
         setBanners(JSON.parse(cachedBanners));
       } else {
-        // Carrega em background
-        base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
-          const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
-          setBanners(sortedBanners);
-          sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
-          sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
-        }).catch(() => {
-          const oldBanners = sessionStorage.getItem('home_banners_cache');
-          if (oldBanners) setBanners(JSON.parse(oldBanners));
-        });
+        // Carrega com delay grande para não competir
+        setTimeout(() => {
+          base44.entities.BannerImage.filter({ is_active: true, context: 'home' }).then((bannerData) => {
+            const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
+            setBanners(sortedBanners);
+            sessionStorage.setItem('home_banners_cache', JSON.stringify(sortedBanners));
+            sessionStorage.setItem('home_banners_cache_time', Date.now().toString());
+          }).catch(() => {
+            const oldBanners = sessionStorage.getItem('home_banners_cache');
+            if (oldBanners) setBanners(JSON.parse(oldBanners));
+          });
+        }, 8000);
       }
     };
 

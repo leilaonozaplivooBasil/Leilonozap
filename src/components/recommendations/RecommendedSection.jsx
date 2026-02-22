@@ -75,8 +75,8 @@ export default function RecommendedSection({ currentUser, isAdmin, partnerStore 
 
   useEffect(() => {
     if (currentUser && !hasLoaded) {
-      // Delay para não competir com o carregamento principal
-      const timer = setTimeout(loadRecommendations, 3000);
+      // Delay grande para não competir com carregamento principal
+      const timer = setTimeout(loadRecommendations, 12000);
       return () => clearTimeout(timer);
     }
   }, [currentUser, hasLoaded]);
