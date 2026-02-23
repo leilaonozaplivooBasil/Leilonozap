@@ -164,18 +164,24 @@ export default function LojistaDashboardTabs({
       {/* Tab content */}
       <div className="space-y-2">
         {activeTab === "active" && (
-          activeAuctions.filter(filterBySearch).length > 0 ? (
-            activeAuctions.filter(filterBySearch).map(auction => (
+          <PaginatedList
+            items={activeAuctions.filter(filterBySearch)}
+            page={page}
+            setPage={setPage}
+            emptyMessage="Nenhum leilão ativo no momento"
+            renderItem={(auction) => (
               <AuctionRow key={auction.id} item={auction} onView={onViewAuction} isSold={false} />
-            ))
-          ) : (
-            <EmptyState message="Nenhum leilão ativo no momento" />
-          )
+            )}
+          />
         )}
 
         {activeTab === "sold" && (
-          soldAuctions.filter(filterBySearch).length > 0 ? (
-            soldAuctions.filter(filterBySearch).map(auction => (
+          <PaginatedList
+            items={soldAuctions.filter(filterBySearch)}
+            page={page}
+            setPage={setPage}
+            emptyMessage="Nenhuma venda realizada ainda"
+            renderItem={(auction) => (
               <AuctionRow
                 key={auction.id}
                 item={auction}
@@ -184,15 +190,17 @@ export default function LojistaDashboardTabs({
                 onUpdateStatus={onUpdateStatus}
                 onPrint={onPrintReceipt}
               />
-            ))
-          ) : (
-            <EmptyState message="Nenhuma venda realizada ainda" />
-          )
+            )}
+          />
         )}
 
         {activeTab === "catalog" && (
-          activeCatalogSales.filter(filterBySearch).length > 0 ? (
-            activeCatalogSales.filter(filterBySearch).map(sale => (
+          <PaginatedList
+            items={activeCatalogSales.filter(filterBySearch)}
+            page={page}
+            setPage={setPage}
+            emptyMessage="Nenhuma venda do catálogo encontrada"
+            renderItem={(sale) => (
               <AuctionRow
                 key={sale.id}
                 item={{
@@ -204,13 +212,11 @@ export default function LojistaDashboardTabs({
                   order_status: sale.status,
                 }}
                 isSold={true}
-                onDetails={(item) => onViewCatalogDetails(sale)}
-                onUpdateStatus={(item) => onUpdateCatalogStatus(sale)}
+                onDetails={() => onViewCatalogDetails(sale)}
+                onUpdateStatus={() => onUpdateCatalogStatus(sale)}
               />
-            ))
-          ) : (
-            <EmptyState message="Nenhuma venda do catálogo encontrada" />
-          )
+            )}
+          />
         )}
       </div>
     </div>
