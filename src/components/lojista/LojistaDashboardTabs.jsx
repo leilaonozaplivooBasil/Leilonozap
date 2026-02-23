@@ -129,6 +129,19 @@ export default function LojistaDashboardTabs({
            (item.winner_name || item.buyer_name || '').toLowerCase().includes(s);
   };
 
+  const filterByStatus = (item) => {
+    if (statusFilter === "all") return true;
+    const orderStatus = item.order_status || item.status;
+    return orderStatus === statusFilter;
+  };
+
+  const statusFilters = [
+    { id: "all", label: "Todos", icon: Package },
+    { id: "paid", label: "Aguardando Envio", icon: Clock },
+    { id: "shipped", label: "Em Trânsito", icon: Truck },
+    { id: "delivered", label: "Entregues", icon: CheckCircle2 },
+  ];
+
   return (
     <div>
       {/* Tab navigation */}
