@@ -47,7 +47,7 @@ export function OpenCashModal({ isOpen, onClose, openingBalance, setOpeningBalan
   );
 }
 
-export function CloseCashModal({ isOpen, onClose, currentCashRegister, todaySales, closingBalance, setClosingBalance, closingNotes, setClosingNotes, onConfirm }) {
+export function CloseCashModal({ isOpen, onClose, currentCashRegister, todaySales, closingBalance, setClosingBalance, closingNotes, setClosingNotes, onConfirm: closeCashRegister }) {
   if (!isOpen || !currentCashRegister) return null;
 
   return (
