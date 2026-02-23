@@ -1069,6 +1069,16 @@ export default function AuctionRoom() {
         end_time: newEndTimeISO
       });
 
+      // DEBITA SALDO DA CARTEIRA DIGITAL
+      try {
+        const dr = await base44.functions.invoke('debitWalletBalance', {
+          user_id: currentUser.id, amount: bidAmount, auction_id: auctionId,
+          description: `Lance - R$ ${bidAmount.toFixed(2)}`
+        });
+        const dd = dr?.data || dr;
+        if (dd?.success) { setUserWallet({ balance: dd.new_balance }); }
+      } catch (de) { console.warn("⚠️ Débito lance:", de.message); }
+
       setAuction(prev => ({
         ...prev,
         current_price: bidAmount,
