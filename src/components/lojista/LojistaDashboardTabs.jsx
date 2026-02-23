@@ -223,6 +223,37 @@ export default function LojistaDashboardTabs({
   );
 }
 
+function PaginatedList({ items, page, setPage, emptyMessage, renderItem }) {
+  const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+  const paginatedItems = items.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+
+  if (items.length === 0) return <EmptyState message={emptyMessage} />;
+
+  return (
+    <>
+      {paginatedItems.map(renderItem)}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-1.5 pt-4">
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+            <button
+              key={p}
+              onClick={() => setPage(p)}
+              className={`w-9 h-9 rounded-lg text-sm font-medium transition-all ${
+                p === page
+                  ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                  : 'bg-white/5 text-gray-500 border border-white/5 hover:bg-white/10 hover:text-gray-300'
+              }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 function EmptyState({ message }) {
   return (
     <div className="liquid-glass-card rounded-xl py-16 text-center">
