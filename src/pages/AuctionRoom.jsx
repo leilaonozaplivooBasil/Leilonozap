@@ -24,7 +24,6 @@ import LowBalanceModal from "../components/auction/LowBalanceModal";
 import { Wallet } from "lucide-react";
 
 import { getServerTime } from "@/functions/getServerTime";
-import { getDigitalWalletBalance } from "@/functions/getDigitalWalletBalance";
 
 const COUNTDOWN_DURATION = 142;
 const BID_EXTENSION_SECONDS = 22;
