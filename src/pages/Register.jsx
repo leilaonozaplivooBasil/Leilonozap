@@ -151,21 +151,17 @@ export default function Register() {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : '';
 
-      const [byEmail, byPhone, byCpf, byNameExact, byNameDL] = await Promise.all([
+      const [byEmail, byPhone, byCpf] = await Promise.all([
         AppUser.filter({ email: normalizedEmail }),
         phoneDigits ? AppUser.filter({ phone: phoneDigits }) : Promise.resolve([]),
         cpfDigits ? AppUser.filter({ cpf: cpfDigits }) : Promise.resolve([]),
-        nameTrimmed ? AppUser.filter({ full_name: nameTrimmed }) : Promise.resolve([]),
-        (firstName && lastName) ? AppUser.filter({ display_first_name: firstName, display_last_name: lastName }) : Promise.resolve([]),
       ]);
 
-      if ((byEmail?.length || 0) > 0 || (byPhone?.length || 0) > 0 || (byCpf?.length || 0) > 0 || (byNameExact?.length || 0) > 0 || (byNameDL?.length || 0) > 0) {
+      if ((byEmail?.length || 0) > 0 || (byPhone?.length || 0) > 0 || (byCpf?.length || 0) > 0) {
         setDup({
           email: (byEmail?.length || 0) > 0,
           phone: phoneDigits && (byPhone?.length || 0) > 0,
           cpf: cpfDigits && (byCpf?.length || 0) > 0,
-          name: nameTrimmed && (byNameExact?.length || 0) > 0,
-          nameDL: (firstName && lastName) && (byNameDL?.length || 0) > 0
         });
         setErrorMessage("USUÁRIO JÁ CADASTRADO.");
         setIsRegistering(false);
