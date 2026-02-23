@@ -884,11 +884,21 @@ export default function AuctionRoom() {
       return;
     }
 
-    // 🆕 VERIFICA SALDO ANTES DE DAR LANCE
-    if (!userWallet || userWallet.balance < amount) {
-      console.warn(`⚠️ Saldo insuficiente/inexistente: ${userWallet ? userWallet.balance : 'NENHUMA'} < ${amount}`);
-      setShowLowBalanceModal(true);
-      return;
+    // 🆕 VERIFICA SALDO ANTES DE DAR LANCE (busca saldo atualizado)
+    try {
+      const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
+      const freshData = freshResult?.data || freshResult;
+      const freshBalance = freshData?.balance || 0;
+      setUserWallet({ balance: freshBalance });
+      
+      if (freshBalance < amount) {
+        console.warn(`⚠️ Saldo insuficiente: R$ ${freshBalance.toFixed(2)} < R$ ${amount.toFixed(2)}`);
+        setShowLowBalanceModal(true);
+        return;
+      }
+    } catch (walletError) {
+      console.warn("⚠️ Não foi possível verificar saldo, permitindo lance:", walletError.message);
+      // Se não conseguir verificar, permite o lance (melhor experiência do usuário)
     }
 
     if (isSubmittingRef.current || isSubmittingBid) {
