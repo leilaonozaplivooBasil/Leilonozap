@@ -26,8 +26,8 @@ export default function Register() {
   const [addressZipCode, setAddressZipCode] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [dup, setDup] = useState({ email: false, phone: false, cpf: false, name: false, nameDL: false });
-  const [dupMsg, setDupMsg] = useState({ email: '', phone: '', cpf: '', name: '' });
+  const [dup, setDup] = useState({ email: false, phone: false, cpf: false });
+  const [dupMsg, setDupMsg] = useState({ email: '', phone: '', cpf: '' });
   const [passwordTouched, setPasswordTouched] = useState(false);
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState('');
