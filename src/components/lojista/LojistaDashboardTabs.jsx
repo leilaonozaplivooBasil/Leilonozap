@@ -105,9 +105,12 @@ export default function LojistaDashboardTabs({
   const [activeTab, setActiveTab] = useState("active");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  // Reset page when tab or search changes
-  React.useEffect(() => { setPage(1); }, [activeTab, search]);
+  // Reset page when tab, search or filter changes
+  React.useEffect(() => { setPage(1); }, [activeTab, search, statusFilter]);
+  // Reset status filter when changing tabs
+  React.useEffect(() => { setStatusFilter("all"); }, [activeTab]);
 
   const activeAuctions = auctions.filter(a => a.status === 'active');
   const soldAuctions = auctions.filter(a => a.status === 'sold' || (a.status === 'ended' && a.winner_id));
