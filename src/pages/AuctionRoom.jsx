@@ -1841,7 +1841,7 @@ export default function AuctionRoom() {
       <LowBalanceModal
         isOpen={showLowBalanceModal}
         currentBalance={userWallet?.balance || 0}
-        requiredAmount={currentPrice + auction?.increment || 0}
+        requiredAmount={currentPrice + (auction?.increment || 0)}
         onWatchAsSpectator={() => {
           setShowLowBalanceModal(false);
           setIsSpectatorMode(true);
