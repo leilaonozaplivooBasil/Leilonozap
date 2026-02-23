@@ -278,14 +278,10 @@ export default function Register() {
                     type="text" 
                     value={fullName} 
                     onChange={(e) => setFullName(e.target.value)} 
-                    onBlur={() => checkDuplicateOnBlur('full_name')}
                     placeholder="Seu nome completo" 
-                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.name || dup.nameDL ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
+                    className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isRegistering}
                   />
-                  {(dup.name || dup.nameDL) && (
-                    <p className="mt-1 text-xs text-red-400">{dupMsg.name || 'Nome já cadastrado'}</p>
-                  )}
                 </div>
 
                 <div>
