@@ -177,6 +177,29 @@ export default function LojistaDashboardTabs({
         </div>
       </div>
 
+      {/* Status filter for sold/catalog tabs */}
+      {(activeTab === "sold" || activeTab === "catalog") && (
+        <div className="flex items-center gap-1.5 mb-4 overflow-x-auto pb-1">
+          {statusFilters.map(sf => {
+            const Icon = sf.icon;
+            return (
+              <button
+                key={sf.id}
+                onClick={() => setStatusFilter(sf.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap border ${
+                  statusFilter === sf.id
+                    ? 'bg-green-500/15 text-green-400 border-green-500/30'
+                    : 'bg-white/5 text-gray-500 border-white/5 hover:bg-white/10 hover:text-gray-300'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {sf.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Tab content */}
       <div className="space-y-2">
         {activeTab === "active" && (
@@ -193,10 +216,10 @@ export default function LojistaDashboardTabs({
 
         {activeTab === "sold" && (
           <PaginatedList
-            items={soldAuctions.filter(filterBySearch)}
+            items={soldAuctions.filter(filterBySearch).filter(filterByStatus)}
             page={page}
             setPage={setPage}
-            emptyMessage="Nenhuma venda realizada ainda"
+            emptyMessage="Nenhuma venda encontrada com este filtro"
             renderItem={(auction) => (
               <AuctionRow
                 key={auction.id}
@@ -212,10 +235,10 @@ export default function LojistaDashboardTabs({
 
         {activeTab === "catalog" && (
           <PaginatedList
-            items={activeCatalogSales.filter(filterBySearch)}
+            items={activeCatalogSales.filter(filterBySearch).filter(filterByStatus)}
             page={page}
             setPage={setPage}
-            emptyMessage="Nenhuma venda do catálogo encontrada"
+            emptyMessage="Nenhuma venda encontrada com este filtro"
             renderItem={(sale) => (
               <AuctionRow
                 key={sale.id}
