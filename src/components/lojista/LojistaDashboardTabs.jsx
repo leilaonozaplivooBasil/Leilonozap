@@ -95,6 +95,8 @@ function AuctionRow({ item, onView, onDetails, onUpdateStatus, onPrint, isSold }
   );
 }
 
+const ITEMS_PER_PAGE = 6;
+
 export default function LojistaDashboardTabs({
   auctions, catalogSales,
   onViewAuction, onViewDetails, onUpdateStatus, onPrintReceipt,
@@ -102,6 +104,10 @@ export default function LojistaDashboardTabs({
 }) {
   const [activeTab, setActiveTab] = useState("active");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  // Reset page when tab or search changes
+  React.useEffect(() => { setPage(1); }, [activeTab, search]);
 
   const activeAuctions = auctions.filter(a => a.status === 'active');
   const soldAuctions = auctions.filter(a => a.status === 'sold' || (a.status === 'ended' && a.winner_id));
