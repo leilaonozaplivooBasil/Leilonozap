@@ -1156,6 +1156,23 @@ export default function AuctionRoom() {
       return;
     }
 
+    // Verifica saldo antes de abrir o modal de arremate
+    const buyNowAmount = (auction.current_price || auction.starting_price) * 1.45;
+    try {
+      const freshResult = await base44.functions.invoke('getDigitalWalletBalance', { user_id: currentUser.id });
+      const freshData = freshResult?.data || freshResult;
+      const freshBalance = freshData?.balance || 0;
+      setUserWallet({ balance: freshBalance });
+
+      if (freshBalance < buyNowAmount) {
+        console.warn(`⚠️ Saldo insuficiente para arremate: R$ ${freshBalance.toFixed(2)} < R$ ${buyNowAmount.toFixed(2)}`);
+        setShowLowBalanceModal(true);
+        return;
+      }
+    } catch (walletError) {
+      console.warn("⚠️ Não foi possível verificar saldo para arremate:", walletError.message);
+    }
+
     setShowBuyNowModal(true);
   }, [auction, currentUser]);
 
