@@ -127,6 +127,12 @@ export default function Register() {
       setErrorMessage("❌ Por favor, insira um E-mail válido.");
       return;
     }
+    if (!validateCPF(cpf)) {
+      setErrorMessage("❌ CPF inválido. Verifique e tente novamente.");
+      setDup((d) => ({ ...d, cpf: true }));
+      setDupMsg((m) => ({ ...m, cpf: 'CPF inválido' }));
+      return;
+    }
     if (!validatePassword(password)) {
       setErrorMessage("❌ A senha deve ter no mínimo 8 caracteres, incluindo letra, número e caractere especial.");
       return;
