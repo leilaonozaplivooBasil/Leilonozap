@@ -1097,33 +1097,12 @@ export default function AuctionRoom() {
       const serverTimeStamp = getServerSyncedTime();
       if (serverTimeStamp !== null) {
         const timeSinceLastAI = serverTimeStamp - lastAICommentTime.current;
-        const isImportantBid = bidAmount % 50 === 0;
-        const shouldComment = timeSinceLastAI > 20000 || isImportantBid;
-
-        if (shouldComment) {
+        if (timeSinceLastAI > 20000 || bidAmount % 50 === 0) {
           lastAICommentTime.current = serverTimeStamp;
-
-          const aiComments = [
-            `🔥 UHULLLL! ${currentUser.nickname || currentUser.full_name} MANDOU R$ ${bidAmount.toFixed(2)}!`,
-            `💰 BOOMM! Lance de R$ ${bidAmount.toFixed(2)}!`,
-            `⚡ ${currentUser.nickname || currentUser.full_name} ON FIRE!`,
-            `🚀 VOOOOU! R$ ${bidAmount.toFixed(2)}!`,
-            `💥 POW! ${currentUser.nickname || currentUser.full_name} não brinca!`,
-            `🎯 NA MOOOSCA! R$ ${bidAmount.toFixed(2)}!`,
-            `⭐ SHOWWW! ${currentUser.nickname || currentUser.full_name}!`,
-            `🔊 ATENÇÃO! R$ ${bidAmount.toFixed(2)}!`
-          ];
-
-          const randomComment = aiComments[Math.floor(Math.random() * aiComments.length)];
-
+          const name = currentUser.nickname || currentUser.full_name;
+          const comments = [`🔥 UHULLLL! ${name} MANDOU R$ ${bidAmount.toFixed(2)}!`,`💰 BOOMM! Lance de R$ ${bidAmount.toFixed(2)}!`,`⚡ ${name} ON FIRE!`,`🚀 VOOOOU! R$ ${bidAmount.toFixed(2)}!`,`💥 POW! ${name} não brinca!`,`🎯 NA MOOOSCA! R$ ${bidAmount.toFixed(2)}!`,`⭐ SHOWWW! ${name}!`,`🔊 ATENÇÃO! R$ ${bidAmount.toFixed(2)}!`];
           setTimeout(async () => {
-            await AuctionMessage.create({
-              auction_id: auctionId,
-              message_type: "ai_narration",
-              content: randomComment,
-              sender_name: "LanceIA",
-              is_system_message: true
-            });
+            await AuctionMessage.create({ auction_id: auctionId, message_type: "ai_narration", content: comments[Math.floor(Math.random() * comments.length)], sender_name: "LanceIA", is_system_message: true });
           }, 1500);
         }
       }
