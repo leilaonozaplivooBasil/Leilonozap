@@ -21,21 +21,11 @@ import { Textarea } from '@/components/ui/textarea';
 import DailyRanking from '@/components/pdv/DailyRanking';
 import VendedoresDoDia from '@/components/pdv/VendedoresDoDia';
 import DailyReportPDF from '@/components/pdv/DailyReportPDF';
+import { OpenCashModal, CloseCashModal, SessionDetailsModal, EditSaleModal, EditCommissionModal } from '@/components/pdv/CashRegisterModals';
 import { Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-
-// Helper para obter credenciais do admin AppUser para bypassa RLS
-const getAdminCredentials = () => {
-  try {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      return { app_user_email: user.email, app_user_id: user.id };
-    }
-  } catch (e) { }
-  return {};
-};
+const getAdminCredentials = () => { try { const s = localStorage.getItem('currentUser'); if (s) { const u = JSON.parse(s); return { app_user_email: u.email, app_user_id: u.id }; } } catch (e) { } return {}; };
 
 export default function PDV() {
   const [products, setProducts] = useState([]);
