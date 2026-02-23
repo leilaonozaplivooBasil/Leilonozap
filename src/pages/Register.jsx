@@ -36,6 +36,22 @@ export default function Register() {
 
   const validatePassword = (pwd) => /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(pwd);
 
+  const validateCPF = (raw) => {
+    const digits = (raw || '').replace(/\D/g, '');
+    if (digits.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(digits)) return false; // todos iguais
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += parseInt(digits[i]) * (10 - i);
+    let rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    if (rest !== parseInt(digits[9])) return false;
+    sum = 0;
+    for (let i = 0; i < 10; i++) sum += parseInt(digits[i]) * (11 - i);
+    rest = (sum * 10) % 11;
+    if (rest === 10) rest = 0;
+    return rest === parseInt(digits[10]);
+  };
+
   const checkDuplicateOnBlur = async (field) => {
     try {
       if (field === 'email') {
@@ -61,29 +77,18 @@ export default function Register() {
       if (field === 'cpf') {
         const digits = (cpf || '').replace(/\D/g, '');
         if (!digits) return;
+        // Valida CPF primeiro
+        if (!validateCPF(digits)) {
+          setDup((d) => ({ ...d, cpf: true }));
+          setDupMsg((m) => ({ ...m, cpf: 'CPF inválido' }));
+          return;
+        }
         const byCpf = await AppUser.filter({ cpf: digits });
         const has = (byCpf?.length || 0) > 0;
         setDup((d) => ({ ...d, cpf: has }));
         setDupMsg((m) => ({ ...m, cpf: has ? 'CPF já cadastrado' : '' }));
         if (has) setErrorMessage('USUÁRIO JÁ CADASTRADO.');
         return;
-      }
-      if (field === 'full_name') {
-        const trimmed = (fullName || '').trim();
-        if (!trimmed) return;
-        const parts = trimmed.split(/\s+/).filter(Boolean);
-        const fn = parts[0] || '';
-        const ln = parts.length > 1 ? parts[parts.length - 1] : '';
-        const [byNameExact, byNameDL] = await Promise.all([
-          AppUser.filter({ full_name: trimmed }),
-          (fn && ln) ? AppUser.filter({ display_first_name: fn, display_last_name: ln }) : Promise.resolve([]),
-        ]);
-        const hasExact = (byNameExact?.length || 0) > 0;
-        const hasDL = (byNameDL?.length || 0) > 0;
-        const has = hasExact || hasDL;
-        setDup((d) => ({ ...d, name: hasExact, nameDL: hasDL }));
-        setDupMsg((m) => ({ ...m, name: has ? 'Nome já cadastrado' : '' }));
-        if (has) setErrorMessage('USUÁRIO JÁ CADASTRADO.');
       }
     } catch (_) { /* silencioso */ }
   };
