@@ -964,7 +964,26 @@ export default function AuctionRoom() {
         return;
       }
       sessionStorage.setItem(debounceKey, Date.now().toString());
-      
+
+      // 🔒 DEBITA SALDO DA CARTEIRA ANTES DE REGISTRAR O LANCE
+      try {
+        const debitResult = await base44.functions.invoke('debitWalletBalance', {
+          user_id: currentUser.id, amount: bidAmount, auction_id: auctionId,
+          description: `Lance - R$ ${bidAmount.toFixed(2)}`
+        });
+        const debitData = debitResult?.data || debitResult;
+        if (!debitData?.success) {
+          setUserWallet({ balance: debitData?.balance || 0 });
+          setShowLowBalanceModal(true);
+          return;
+        }
+        setUserWallet({ balance: debitData.new_balance });
+      } catch (debitError) {
+        console.warn("⚠️ Erro ao debitar saldo:", debitError.message);
+        setShowLowBalanceModal(true);
+        return;
+      }
+
       const optimisticMessage = {
         id: 'temp-' + Date.now(),
         auction_id: auctionId,
