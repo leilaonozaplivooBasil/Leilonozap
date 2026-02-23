@@ -1327,9 +1327,6 @@ ${boletoInfo}================================
             <TabsTrigger value="vendedores" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
               👥 Vendedores
             </TabsTrigger>
-            <TabsTrigger value="conciliacao" className="data-[state=active]:bg-teal-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
-              💰 Conciliação
-            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pdv" className="mt-6">
@@ -2558,13 +2555,6 @@ ${boletoInfo}================================
             </Card>
           </TabsContent>
 
-          <TabsContent value="conciliacao">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardContent className="p-6">
-                <FinancialReconciliation selectedDate={selectedDate} />
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
 
         <OpenCashModal
