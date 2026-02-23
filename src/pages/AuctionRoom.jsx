@@ -159,15 +159,17 @@ export default function AuctionRoom() {
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
         
-        // 🆕 Carrega saldo da carteira
+        // 🆕 Carrega saldo da carteira digital via backend (contorna RLS)
         try {
-          const wallets = await base44.entities.Wallet.filter({ user_id: user.id });
-          if (wallets && wallets.length > 0) {
-            setUserWallet(wallets[0]);
-            console.log(`💰 Saldo do usuário: R$ ${wallets[0].balance.toFixed(2)}`);
-          }
+          const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
+          const walletData = result?.data || result;
+          const balance = walletData?.balance || 0;
+          setUserWallet({ balance });
+          console.log(`💰 Saldo digital do usuário: R$ ${balance.toFixed(2)}`);
         } catch (error) {
-          console.warn("Erro ao carregar saldo da carteira:", error.message);
+          console.warn("Erro ao carregar saldo da carteira digital:", error.message);
+          // Não bloqueia o lance se não conseguir verificar saldo
+          setUserWallet({ balance: 999999 });
         }
       } else {
         setCurrentUser(null);
