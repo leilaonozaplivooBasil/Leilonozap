@@ -1186,6 +1186,22 @@ export default function AuctionRoom() {
       const currentPrice = auction.current_price || auction.starting_price;
       const buyNowPrice = currentPrice * 1.45;
 
+      // VERIFICA E DEBITA SALDO
+      const debitResult = await base44.functions.invoke('debitWalletBalance', {
+        user_id: currentUser.id, amount: buyNowPrice, auction_id: auction.id,
+        description: `Arremate - ${auction.title} - R$ ${buyNowPrice.toFixed(2)}`
+      });
+      const debitData = debitResult?.data || debitResult;
+      if (!debitData?.success) {
+        alert(`❌ Saldo insuficiente! Seu saldo: R$ ${(debitData?.balance || 0).toFixed(2)}`);
+        setUserWallet({ balance: debitData?.balance || 0 });
+        setIsBuyingNow(false);
+        setShowBuyNowModal(false);
+        setShowLowBalanceModal(true);
+        return;
+      }
+      setUserWallet({ balance: debitData.new_balance });
+
       // Cria mensagem de arremate
       await AuctionMessage.create({
         auction_id: auction.id,
