@@ -153,7 +153,7 @@ export default function Footer() {
 
                 {footerSettings.whatsapp && (
                   <div className="flex items-center gap-3">
-                    <MessageCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <MessageCircle className="w-5 h-5 text-emerald-400/70 flex-shrink-0" />
                     <a
                       href={`https://wa.me/${footerSettings.whatsapp}`}
                       target="_blank"
