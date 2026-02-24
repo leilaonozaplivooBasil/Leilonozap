@@ -626,7 +626,7 @@ export default function Layout({ children, currentPageName }) {
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
                       className={`text-sm font-semibold transition-all duration-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${currentPageName === item.pageName
                           ? "text-emerald-300"
-                          : "text-gray-400 hover:text-white"
+                          : "text-gray-300 hover:text-white"
                         }`}
                       style={currentPageName === item.pageName ? {
                         background: 'rgba(16, 185, 129, 0.1)',
