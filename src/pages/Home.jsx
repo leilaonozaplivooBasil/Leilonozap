@@ -563,7 +563,7 @@ export default function Home() {
                   </Link>
 
                   <Link to={createPageUrl("LuxuryCollection")}>
-                    <div className="glass-btn rounded-xl px-6 py-3.5" style={{ borderColor: 'rgba(168, 85, 247, 0.3)', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(217, 70, 239, 0.08) 100%)' }}>
+                    <div className="glass-btn rounded-xl px-6 py-3.5" style={{ borderColor: 'rgba(168, 85, 247, 0.55)', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.35) 0%, rgba(217, 70, 239, 0.18) 100%)', boxShadow: '0 4px 20px rgba(168, 85, 247, 0.2)' }}>
                       <div className="flex items-center justify-start gap-3">
                         <span className="text-white font-semibold text-sm">👑 Leilões collection</span>
                       </div>
