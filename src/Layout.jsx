@@ -740,7 +740,7 @@ export default function Layout({ children, currentPageName }) {
                   {isLoggedIn && (
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-2 text-sm font-semibold transition-colors ml-2 text-red-400 hover:text-red-300"
+                      className="flex items-center gap-2 text-sm font-semibold transition-all duration-300 ml-2 text-red-400/70 hover:text-red-300 px-3 py-1.5 rounded-lg hover:bg-red-500/10"
                     >
                       <LogOut className="h-4 w-4" />
                       Sair
