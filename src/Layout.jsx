@@ -863,10 +863,14 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       to={createPageUrl("Profile") + "?from=catalog"}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${currentPageName === "Profile"
-                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${currentPageName === "Profile"
+                          ? "text-emerald-300"
+                          : "text-gray-400 hover:text-white hover:translate-x-1"
                         }`}
+                      style={currentPageName === "Profile" ? {
+                        background: 'rgba(16,185,129,0.1)',
+                        borderLeft: '3px solid rgba(16,185,129,0.5)',
+                      } : {}}
                     >
                       <UserIcon className="w-5 h-5" />
                       Perfil
