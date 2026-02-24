@@ -392,7 +392,20 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
   // 🎨 ESTILOS CONDICIONAIS BASEADOS NO VARIANT
   const cardStyles = variant === "sai_de_baixo"
     ? "group relative overflow-hidden bg-white border-2 border-gray-200 hover:border-red-600 transition-all duration-300 hover:shadow-xl cursor-pointer"
-    : "group relative overflow-hidden bg-gray-800/50 backdrop-blur-sm border border-gray-700 hover:border-green-500/50 transition-all duration-300 hover:shadow-xl hover:shadow-green-500/10 cursor-pointer";
+    : "group relative overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 border-0 shadow-none";
+
+  const glassStyle = variant !== "sai_de_baixo" ? {
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 50%, rgba(16,185,129,0.04) 100%)',
+    backdropFilter: 'blur(20px) saturate(1.3)',
+    WebkitBackdropFilter: 'blur(20px) saturate(1.3)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+  } : {};
+
+  const glassStyleHover = variant !== "sai_de_baixo" ? {
+    '--hover-border': 'rgba(16,185,129,0.25)',
+    '--hover-shadow': '0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(16,185,129,0.08), inset 0 1px 0 rgba(255,255,255,0.08)',
+  } : {};
 
   const textColor = variant === "sai_de_baixo" ? "text-gray-900" : "text-gray-100";
   const secondaryTextColor = variant === "sai_de_baixo" ? "text-gray-600" : "text-gray-400";
