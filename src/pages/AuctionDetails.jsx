@@ -167,7 +167,7 @@ export default function AuctionDetails() {
                   )}
                 </>
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
+                <div className="flex items-center justify-center h-full text-gray-500">
                   <div className="text-center">
                     <Package className="w-16 h-16 mx-auto mb-4" />
                     <p>Sem imagem disponível</p>
