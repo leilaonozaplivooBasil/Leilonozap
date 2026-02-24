@@ -217,12 +217,12 @@ export default function AuctionDetails() {
             {/* Título e Categoria */}
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Badge className="bg-gray-100 text-gray-800">
+                <Badge className="bg-gray-700 text-gray-300 border-gray-600">
                   {categoryEmojis[auction.category] || '🎯'} {auction.category?.replace('_', ' ')}
                 </Badge>
-                {isActive && <Badge className="bg-green-100 text-green-800">ATIVO</Badge>}
+                {isActive && <Badge className="bg-green-500/20 text-green-400 border-green-500/30">ATIVO</Badge>}
               </div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 break-words">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2 break-words">
                 {auction.title}
               </h1>
             </div>
