@@ -542,7 +542,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
 
         </div>
 
-        <CardContent className="p-3 sm:p-4 md:p-5">
+        <CardContent className="p-3 sm:p-4 md:p-5" style={variant !== "sai_de_baixo" ? { background: 'transparent' } : {}}>
           <h3 className={`font-bold text-sm sm:text-base md:text-lg ${textColor} mb-2 line-clamp-2 break-words overflow-wrap-anywhere`}>
             {displayTitle}
           </h3>
