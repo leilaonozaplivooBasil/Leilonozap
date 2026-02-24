@@ -943,7 +943,8 @@ export default function Layout({ children, currentPageName }) {
                         setMobileMenuOpen(false);
                         setShowLoginModal(true);
                       }}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-4 text-green-400 hover:bg-green-600/20 hover:text-green-300 border-t border-gray-700"
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 mt-4 text-emerald-400 hover:text-emerald-300"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
                     >
                       <UserIcon className="h-5 w-5" />
                       Entrar na Conta
