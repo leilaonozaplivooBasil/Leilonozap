@@ -122,16 +122,11 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
 
             {/* Botões de Compartilhamento */}
             <div className="space-y-2.5">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Compartilhar via</p>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Compartilhar via</p>
               
               <Button
                 onClick={shareWhatsApp}
-                className="w-full flex items-center justify-center gap-2.5 rounded-xl py-2.5 h-11 font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/20 border-0"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))',
-                  border: '1px solid rgba(16,185,129,0.3)',
-                  color: 'white'
-                }}
+                className="w-full flex items-center justify-center gap-2.5 rounded-xl py-2.5 h-11 font-semibold transition-all duration-300 hover:scale-[1.02] hover:shadow-lg border-0 bg-emerald-500 hover:bg-emerald-600 text-white"
               >
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp
@@ -139,12 +134,7 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
 
               <Button
                 onClick={shareEmail}
-                className="w-full flex items-center justify-center gap-2.5 rounded-xl py-2.5 h-11 font-medium transition-all duration-300 hover:scale-[1.02] border-0"
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'white'
-                }}
+                className="w-full flex items-center justify-center gap-2.5 rounded-xl py-2.5 h-11 font-medium transition-all duration-300 hover:scale-[1.02] bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700"
               >
                 <Mail className="w-4 h-4" />
                 E-mail
@@ -160,12 +150,7 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
                     key={idx}
                     onClick={action}
                     size="sm"
-                    className="rounded-xl h-10 transition-all duration-300 hover:scale-105 border-0"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      border: '1px solid rgba(255,255,255,0.07)',
-                      color: 'white'
-                    }}
+                    className="rounded-xl h-10 transition-all duration-300 hover:scale-105 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-600"
                   >
                     <Icon className="w-4 h-4" />
                   </Button>
@@ -176,12 +161,7 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
               {navigator.share && (
                 <Button
                   onClick={shareNative}
-                  className="w-full flex items-center justify-center gap-2.5 rounded-xl py-2.5 h-11 font-medium transition-all duration-300 hover:scale-[1.02] border-0 mt-1"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    color: 'white'
-                  }}
+                  className="w-full flex items-center justify-center gap-2.5 rounded-xl py-2.5 h-11 font-medium transition-all duration-300 hover:scale-[1.02] mt-1 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700"
                 >
                   <Share2 className="w-4 h-4" />
                   Mais opções
