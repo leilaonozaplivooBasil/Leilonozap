@@ -675,7 +675,7 @@ export default function Home() {
                   🔥 Arremate & Devoluções
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs glass-card text-left p-4 border-orange-500/20">
+              <TooltipContent side="bottom" className="max-w-xs text-left p-4 rounded-xl" style={{ background: 'rgba(5, 10, 20, 0.95)', border: '1px solid rgba(249, 115, 22, 0.2)', backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
                 <div className="space-y-2">
                   <p className="font-bold text-orange-400 text-base">🔥 PRODUTOS PRATICAMENTE NOVOS!</p>
                   <ul className="space-y-1 text-sm text-gray-200">
