@@ -813,10 +813,14 @@ export default function Layout({ children, currentPageName }) {
                       key={item.title}
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all ${currentPageName === item.pageName
-                          ? "bg-green-600/20 text-green-400 border-l-4 border-green-500"
-                          : "text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1"
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${currentPageName === item.pageName
+                          ? "text-emerald-300"
+                          : "text-gray-400 hover:text-white hover:translate-x-1"
                         }`}
+                      style={currentPageName === item.pageName ? {
+                        background: 'rgba(16,185,129,0.1)',
+                        borderLeft: '3px solid rgba(16,185,129,0.5)',
+                      } : {}}
                     >
                       {item.icon === 'cart' && <CartIcon className="w-5 h-5" />}
                       {item.title}
