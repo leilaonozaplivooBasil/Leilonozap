@@ -606,7 +606,7 @@ export default function Home() {
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <Link to={createPageUrl("LiveShopNoZap")} className="w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px]">
-                  <button className="w-full rounded-xl px-5 py-3.5 text-sm font-bold flex items-center justify-center gap-2.5 text-red-300 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/20 hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.08) 100%)', border: '2px solid rgba(239, 68, 68, 0.4)', boxShadow: '0 4px 20px rgba(239, 68, 68, 0.1)' }}>
+                  <button className="w-full rounded-xl px-5 py-3.5 text-sm font-bold flex items-center justify-center gap-2.5 text-red-200 transition-all duration-300 hover:shadow-lg hover:shadow-red-500/30 hover:scale-[1.02]" style={{ background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(239, 68, 68, 0.15) 100%)', border: '2px solid rgba(239, 68, 68, 0.6)', boxShadow: '0 4px 24px rgba(239, 68, 68, 0.2)' }}>
                     <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span></span>
                     Live Shop
                   </button>
