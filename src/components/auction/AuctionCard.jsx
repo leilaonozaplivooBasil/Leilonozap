@@ -590,7 +590,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           </div>
 
           {!isActive && (
-            <div className="bg-green-900/20 border border-green-800/40 rounded-xl p-3 mb-4 text-center">
+            <div className="rounded-xl p-3 mb-4 text-center" style={{
+              background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
+              border: '1px solid rgba(16,185,129,0.15)',
+              backdropFilter: 'blur(8px)',
+            }}>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <img
                   src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
