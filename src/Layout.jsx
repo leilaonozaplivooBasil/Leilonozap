@@ -679,7 +679,7 @@ export default function Layout({ children, currentPageName }) {
                   {isAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-purple-400/80 hover:text-purple-300 px-3 py-1.5 rounded-lg transition-all duration-300 hover:bg-purple-500/10">
+                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-purple-300 hover:text-purple-200 px-3 py-1.5 rounded-lg transition-all duration-300 hover:bg-purple-500/10">
                           <Settings className="h-4 w-4" />
                           Painel de Controle
                         </Button>
