@@ -720,7 +720,7 @@ export default function Home() {
             <div className="glow-line mb-8 mx-4 opacity-50" />
 
             {loadError && retryCount >= 3 &&
-          <div className="mb-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-xl p-6">
+          <div className="mb-8 glass-card rounded-2xl p-6" style={{ borderColor: 'rgba(234, 179, 8, 0.2)' }}>
                 <div className="flex items-start gap-4">
                   <div className="text-5xl">⚠️</div>
                   <div className="flex-1">
