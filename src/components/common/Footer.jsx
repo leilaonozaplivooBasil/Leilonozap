@@ -94,7 +94,7 @@ export default function Footer() {
 
             {/* Botão Expandir */}
             <button
-              className="ml-4 p-2 hover:bg-gray-700 rounded-full transition-colors"
+              className="ml-4 p-2 rounded-full transition-all duration-300 hover:bg-white/5"
             >
               <ChevronDown
                 className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
