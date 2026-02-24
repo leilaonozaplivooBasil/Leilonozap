@@ -630,18 +630,17 @@ export default function Home() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => {setActiveSourceFilter("factory");setShowFavoritesOnly(false);}}
-                  className={`w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 px-4 py-3 rounded-lg font-bold transition-all duration-300 text-sm ${
-                  activeSourceFilter === "factory" && !showFavoritesOnly ?
-                  "bg-green-600 text-white shadow-lg shadow-green-500/30 scale-105" :
-                  "bg-gray-800 text-gray-300 hover:bg-green-700 hover:text-white hover:scale-105 border border-gray-700 shadow-lg"}`
-                  }
+                  className={`w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 ${
+                  activeSourceFilter === "factory" && !showFavoritesOnly
+                    ? "glass-pill-active text-emerald-300 scale-[1.02]"
+                    : "glass-pill text-gray-300 hover:text-white"
+                  }`}
                   aria-label="Direto de Fábrica">
-
                   <CheckCircle className="w-4 h-4" />
                   ✨ Direto de Fábrica
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs bg-gray-800 border-green-500/50 text-left p-4">
+              <TooltipContent side="bottom" className="max-w-xs glass-card text-left p-4 border-green-500/20">
                 <div className="space-y-2">
                   <p className="font-bold text-green-400 text-base">✨ PRODUTOS ZEROS DE FÁBRICA!</p>
                   <ul className="space-y-1 text-sm text-gray-200">
