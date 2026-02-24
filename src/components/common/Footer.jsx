@@ -55,12 +55,12 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-gray-800 border-t border-gray-700 text-gray-300">
+    <footer className="text-gray-300" style={{ background: 'rgba(10, 15, 28, 0.65)', backdropFilter: 'blur(24px) saturate(1.5)', WebkitBackdropFilter: 'blur(24px) saturate(1.5)', borderTop: '1px solid rgba(16, 185, 129, 0.08)' }}>
       {/* Seção Expandível */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header do Footer - Sempre Visível */}
         <div
-          className="py-6 flex items-center justify-between cursor-pointer hover:text-white transition-colors"
+          className="py-6 flex items-center justify-between cursor-pointer hover:text-white transition-colors duration-300"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div className="flex items-center gap-4">
