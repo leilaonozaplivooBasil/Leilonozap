@@ -104,15 +104,15 @@ export default function AuctionDetails() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       {/* Header Mobile */}
-      <div className="lg:hidden bg-white border-b px-4 py-3 flex items-center justify-between">
+      <div className="lg:hidden bg-gray-800 border-b border-gray-700 px-4 py-3 flex items-center justify-between">
         <Link to={createPageUrl("Home")}>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="text-white hover:bg-gray-700">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
-        <h1 className="font-semibold text-gray-800 truncate mx-4">Detalhes do Produto</h1>
+        <h1 className="font-semibold text-white truncate mx-4">Detalhes do Produto</h1>
         <div className="w-10"></div>
       </div>
 
