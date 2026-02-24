@@ -482,73 +482,38 @@ export default function Home() {
     }
   }, [currentUser]);
 
+  const activeCount = auctions.filter(a => a.status === 'active').length;
+
   return (
-    <div className="bg-gray-900 text-white min-h-screen">
-      <style>{`
-        .category-scroller {
-          overflow-x: scroll;
-          cursor: grab;
-          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-          scrollbar-width: none;
-        }
-        .category-scroller::-webkit-scrollbar {
-          display: none;
-        }
-        .category-scroller.grabbing {
-            cursor: grabbing;
-        }
-        .category-scroller__inner {
-          display: flex;
-          gap: 12px;
-          width: fit-content;
-          animation: scroll 45s linear infinite;
-        }
-        .category-scroller:hover .category-scroller__inner,
-        .category-scroller.grabbing .category-scroller__inner {
-          animation-play-state: paused;
-        }
-        @keyframes scroll {
-          0% { transform: translateX(0); }
-          100% { transform: translateX(-50%); }
-        }
-        @keyframes fire {
-          0% { transform: scale(1) rotate(0deg); opacity: 1; }
-          25% { transform: scale(1.05) rotate(2deg); opacity: 0.95; }
-          50% { transform: scale(1) rotate(-1deg); opacity: 1; }
-          75% { transform: scale(1.03) rotate(1deg); opacity: 0.98; }
-          100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-        .animate-fire {
-          animation: fire 1.8s ease-in-out infinite;
-        }
-        @keyframes glow-pulse {
-          0%, 100% { 
-            box-shadow: 0 0 10px rgba(220, 38, 38, 0.3), 0 0 20px rgba(220, 38, 38, 0.2);
-          }
-          50% { 
-            box-shadow: 0 0 20px rgba(220, 38, 38, 0.6), 0 0 40px rgba(220, 38, 38, 0.4), 0 0 60px rgba(220, 38, 38, 0.2);
-          }
-        }
-        .sai-de-baixo-button {
-          animation: glow-pulse 2s ease-in-out infinite;
-        }
-      `}</style>
+    <div className="bg-gray-950 text-white min-h-screen relative overflow-hidden">
+      <LiquidGlassStyles />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Hero Section - Centralizado */}
+      {/* Background Orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] orb-1" />
+        <div className="absolute top-1/3 -left-40 w-[400px] h-[400px] bg-green-400/8 rounded-full blur-[100px] orb-2" />
+        <div className="absolute bottom-20 right-1/4 w-[300px] h-[300px] bg-emerald-600/6 rounded-full blur-[80px] orb-3" />
+        <div className="grid-overlay absolute inset-0 opacity-40" />
+      </div>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
+        {/* Hero Section - Glass */}
         <div className="mb-8">
-          <div className="relative overflow-hidden bg-gray-900 rounded-2xl p-6 text-white">
-            <div className="absolute -top-10 -right-10 w-72 h-72 bg-green-500/20 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute -bottom-10 -left-10 w-72 h-72 bg-green-500/10 rounded-full blur-3xl"></div>
+          <div className="relative glass-hero rounded-3xl p-6 sm:p-8 text-white glass-shimmer overflow-hidden">
+            <div className="absolute -top-16 -right-16 w-48 h-48 bg-emerald-400/15 rounded-full blur-[60px] orb-1" />
+            <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-green-300/10 rounded-full blur-[50px] orb-2" />
 
             <div className="relative lg:pr-80">
-              <h1 className="text-3xl lg:text-4xl font-bold mb-3 tracking-tight flex items-center gap-3">
-                <Flame className="w-9 h-9 text-orange-400 animate-fire" />
-                <span>Leilões <span className="text-green-400">Ativos</span> Agora!</span>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-lg shadow-emerald-400/50" />
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400/80">Ao vivo agora</span>
+              </div>
+              <h1 className="text-3xl lg:text-5xl font-black mb-3 tracking-tight flex items-center gap-3">
+                <Flame className="w-9 h-9 lg:w-11 lg:h-11 text-orange-400 animate-fire flex-shrink-0" />
+                <span>Leilões <span className="text-gradient-green">Ativos</span></span>
               </h1>
-              <p className="text-gray-300 mb-4 text-base lg:text-lg">
-                {auctions.filter(a => a.status === 'active').length} leilões rolando. Entre na sala e dê seu lance!
+              <p className="text-gray-400 mb-5 text-base lg:text-lg font-light">
+                <span className="text-white font-semibold">{activeCount}</span> leilões rolando. Entre na sala e dê seu lance!
               </p>
 
               {/* BOTÕES - MOBILE ABAIXO DO TEXTO, DESKTOP NO LADO */}
