@@ -750,25 +750,25 @@ export default function Home() {
             {isLoading ?
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {Array(9).fill(0).map((_, i) =>
-            <div key={i} className="bg-gray-800/70 backdrop-blur rounded-2xl p-4 sm:p-6 animate-pulse">
-                    <div className="w-full aspect-square bg-gray-700/80 rounded-xl mb-4"></div>
-                    <div className="h-6 bg-gray-700/80 rounded mb-2"></div>
-                    <div className="h-4 bg-gray-700/70 rounded w-2/3"></div>
+            <div key={i} className="skeleton-glass rounded-2xl p-4 sm:p-6">
+                    <div className="w-full aspect-square skeleton-inner rounded-xl mb-4"></div>
+                    <div className="h-6 skeleton-inner rounded-lg mb-3"></div>
+                    <div className="h-4 skeleton-inner rounded-lg w-2/3"></div>
                   </div>
             )}
               </div> :
           filteredAuctions.length === 0 && !loadError ?
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-16 glass-card-elevated rounded-3xl mx-auto max-w-md">
                 <div className="text-6xl mb-4">📦</div>
                 <h3 className="text-xl font-semibold mb-2 text-white">
                   Nenhum leilão ativo nesta categoria
                 </h3>
-                <p className="text-gray-500 mb-6">
+                <p className="text-gray-500 mb-6 px-6">
                   Tente outra categoria ou volte mais tarde para novos leilões!
                 </p>
                 {currentUser?.role === 'admin' &&
             <Link to={createPageUrl("CreateAuction")}>
-                    <Button className="bg-green-600 hover:bg-green-700 text-white">
+                    <Button className="glass-btn-green text-white font-bold rounded-xl border-0 px-6 py-3">
                       Criar Primeiro Leilão
                     </Button>
                   </Link>
