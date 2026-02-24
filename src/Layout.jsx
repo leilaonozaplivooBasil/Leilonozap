@@ -852,7 +852,7 @@ export default function Layout({ children, currentPageName }) {
                       setMobileMenuOpen(false);
                       setShowShareModal(true);
                     }}
-                    className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
                   >
                     <Share2 className="h-5 w-5" />
                     Compartilhar
