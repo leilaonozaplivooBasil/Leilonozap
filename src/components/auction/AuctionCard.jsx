@@ -688,18 +688,35 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 onClick={(e) => e.stopPropagation()}
                 className="block"
               >
-                <Button variant="outline" className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base">
+                <Button
+                  variant="outline"
+                  className={variant === "sai_de_baixo"
+                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                  style={variant !== "sai_de_baixo" ? {
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  } : {}}
+                >
                   <Info className="w-4 h-4 mr-2" />
                   Ver Detalhes do Lote
                 </Button>
               </Link>
-              {/* O link "Ver Leilões Ativos" vai para uma página diferente do clique no card */}
               <Link
                 to={createPageUrl("Home") + "?filter=ativos"}
                 onClick={(e) => e.stopPropagation()}
                 className="block"
               >
-                <Button variant="outline" className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base">
+                <Button
+                  variant="outline"
+                  className={variant === "sai_de_baixo"
+                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                  style={variant !== "sai_de_baixo" ? {
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  } : {}}
+                >
                   <Search className="w-4 h-4 mr-2" />
                   Ver Leilões Ativos
                 </Button>
