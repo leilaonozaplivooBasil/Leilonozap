@@ -597,18 +597,22 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Botões abaixo da caixa - Todos os tamanhos */}
+        {/* Glow Separator */}
+        <div className="glow-line mb-8 mx-8" />
+
+        {/* Action Buttons - Glass */}
         <TooltipProvider>
-          <div className="mb-8 flex flex-col sm:flex-row flex-wrap items-stretch justify-center gap-5 px-4">
+          <div className="mb-8 flex flex-col sm:flex-row flex-wrap items-stretch justify-center gap-4 px-2">
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
-                <Link to={createPageUrl("LiveShopNoZap")} className="w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px]">
-                  <button className="bg-gradient-to-r text-white mx-1 px-4 py-3 text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all duration-300 from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 hover:scale-105 w-full shadow-lg shadow-green-600/30">
-                    🔴 Live Shop
+                <Link to={createPageUrl("LiveShopNoZap")} className="w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px]">
+                  <button className="glass-btn w-full rounded-xl px-5 py-3.5 text-sm font-bold flex items-center justify-center gap-2.5 text-white" style={{ borderColor: 'rgba(239, 68, 68, 0.25)', background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%)', boxShadow: '0 4px 20px rgba(239, 68, 68, 0.12), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
+                    <span className="relative flex h-2.5 w-2.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span></span>
+                    Live Shop
                   </button>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs bg-gray-800 border-green-500/50 text-left p-4">
+              <TooltipContent side="bottom" className="max-w-xs glass-card text-left p-4 border-green-500/20">
                 <div className="space-y-2">
                   <p className="font-bold text-green-400 text-base">🔴 LIVE AO VIVO EM TEMPO REAL!</p>
                   <ul className="space-y-1 text-sm text-gray-200">
