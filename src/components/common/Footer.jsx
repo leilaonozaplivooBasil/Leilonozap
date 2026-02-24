@@ -171,9 +171,9 @@ export default function Footer() {
       </div>
 
       {/* Copyright */}
-      <div className="border-t border-gray-700 bg-gray-900 py-4">
+      <div className="py-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: 'rgba(0,0,0,0.2)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-gray-500/70">
             © 2026 Leilão NoZap. Todos os direitos reservados.
           </p>
         </div>
