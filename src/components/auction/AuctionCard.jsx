@@ -430,7 +430,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
         }}
       >
         <div
-          className="relative overflow-hidden w-full aspect-square bg-white"
+          className={`relative overflow-hidden w-full aspect-square ${variant === "sai_de_baixo" ? "bg-white" : "bg-gray-900/40"}`}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleImageClick}
