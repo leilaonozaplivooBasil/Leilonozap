@@ -636,13 +636,13 @@ export default function Home() {
                     : "text-emerald-300"
                   }`}
                   style={activeSourceFilter === "factory" && !showFavoritesOnly ? {
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.12) 100%)',
-                    border: '2px solid rgba(16, 185, 129, 0.6)',
-                    boxShadow: '0 4px 20px rgba(16, 185, 129, 0.2)'
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0.2) 100%)',
+                    border: '2px solid rgba(16, 185, 129, 0.8)',
+                    boxShadow: '0 4px 24px rgba(16, 185, 129, 0.3)'
                   } : {
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.08) 100%)',
-                    border: '2px solid rgba(16, 185, 129, 0.4)',
-                    boxShadow: '0 4px 20px rgba(16, 185, 129, 0.1)'
+                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.15) 100%)',
+                    border: '2px solid rgba(16, 185, 129, 0.6)',
+                    boxShadow: '0 4px 24px rgba(16, 185, 129, 0.2)'
                   }}
                   aria-label="Direto de Fábrica">
                   <CheckCircle className="w-4 h-4" />
