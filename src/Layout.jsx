@@ -958,7 +958,8 @@ export default function Layout({ children, currentPageName }) {
                         setMobileMenuOpen(false);
                         handleLogout();
                       }}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold transition-all hover:translate-x-1 mt-4 text-red-400 hover:bg-red-600/20 hover:text-red-300 border-t border-gray-700"
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 hover:translate-x-1 mt-4 text-red-400/70 hover:text-red-300"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
                     >
                       <LogOut className="h-5 w-5" />
                       Sair da Conta
