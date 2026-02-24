@@ -383,33 +383,6 @@ export default function AuctionDetails() {
               </div>
             </div>
 
-            {/* Especificações */}
-            <div className="glass-card rounded-2xl overflow-hidden" style={{
-              borderColor: 'rgba(255,255,255,0.06)',
-            }}>
-              <div className="px-6 pt-5 pb-3">
-                <h3 className="flex items-center gap-2 text-white font-semibold text-base">
-                  <Shield className="w-5 h-5 text-emerald-400/60" />
-                  Informações Importantes
-                </h3>
-              </div>
-              <div className="px-6 pb-5 space-y-0">
-                {[
-                  { label: 'Origem', value: 'Devolução/Arremate' },
-                  { label: 'Condição', value: 'Testado e Funcional' },
-                  { label: 'Garantia', value: 'Sem Garantia*' },
-                  { label: 'Categoria', value: auction.category?.replace('_', ' '), capitalize: true },
-                ].map((item, i, arr) => (
-                  <div key={item.label} className={`flex justify-between py-3 ${i < arr.length - 1 ? '' : ''}`} style={i < arr.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,0.04)' } : {}}>
-                    <span className="text-gray-500 text-sm">{item.label}:</span>
-                    <span className={`font-medium text-gray-300 text-sm ${item.capitalize ? 'capitalize' : ''}`}>{item.value}</span>
-                  </div>
-                ))}
-                <p className="text-xs text-gray-600 mt-4 pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-                  * Produtos sem garantia de fábrica, por isso o preço especial.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
