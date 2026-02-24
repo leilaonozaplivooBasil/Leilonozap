@@ -679,12 +679,12 @@ export default function Layout({ children, currentPageName }) {
                   {isAdmin && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-purple-400 hover:text-purple-300">
+                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-purple-400/80 hover:text-purple-300 px-3 py-1.5 rounded-lg transition-all duration-300 hover:bg-purple-500/10">
                           <Settings className="h-4 w-4" />
                           Painel de Controle
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white max-h-[500px] overflow-y-auto">
+                      <DropdownMenuContent className="text-white max-h-[500px] overflow-y-auto border-0" style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(24px) saturate(1.5)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
                         <DropdownMenuLabel className="text-purple-400">Administração</DropdownMenuLabel>
                         <DropdownMenuSeparator className="bg-gray-700" />
                         {adminMenuItems.map((item) => (
