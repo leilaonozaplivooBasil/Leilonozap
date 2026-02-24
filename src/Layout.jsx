@@ -888,7 +888,7 @@ export default function Layout({ children, currentPageName }) {
                           <div key={item.title}>
                             <button
                               onClick={() => setExpandedCategory(expandedCategory === item.title ? null : item.title)}
-                              className="w-full flex items-center justify-between px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
+                              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
                             >
                               <span>{item.title}</span>
                               <svg
