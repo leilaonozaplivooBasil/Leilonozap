@@ -659,18 +659,14 @@ export default function Home() {
             <Tooltip delayDuration={200}>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => {setActiveSourceFilter("todos");setShowFavoritesOnly(false);}} className="bg-orange-600 text-white py-3 text-sm font-bold rounded-lg w-full sm:flex-1 sm:min-w-[140px] sm:max-w-[250px] flex items-center justify-center gap-2 transition-all duration-300 shadow-lg shadow-orange-500/30 scale-105">
-
-
-
-
-
-
+                  onClick={() => {setActiveSourceFilter("todos");setShowFavoritesOnly(false);}}
+                  className="w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl font-bold text-sm glass-btn text-white"
+                  style={{ borderColor: 'rgba(249, 115, 22, 0.3)', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.06) 100%)', boxShadow: '0 4px 20px rgba(249, 115, 22, 0.12), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
                   <Percent className="w-4 h-4" />
-                  % 🔥 Arremate & Devoluções
+                  🔥 Arremate & Devoluções
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs bg-gray-800 border-orange-500/50 text-left p-4">
+              <TooltipContent side="bottom" className="max-w-xs glass-card text-left p-4 border-orange-500/20">
                 <div className="space-y-2">
                   <p className="font-bold text-orange-400 text-base">🔥 PRODUTOS PRATICAMENTE NOVOS!</p>
                   <ul className="space-y-1 text-sm text-gray-200">
