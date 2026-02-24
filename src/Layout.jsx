@@ -724,7 +724,12 @@ export default function Layout({ children, currentPageName }) {
                   {!isLoggedIn && (
                     <Button
                       onClick={() => setShowLoginModal(true)}
-                      className="flex items-center gap-2 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white"
+                      className="flex items-center gap-2 text-sm font-semibold text-white rounded-xl border-0 transition-all duration-300 hover:scale-105"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))',
+                        border: '1px solid rgba(16,185,129,0.3)',
+                        boxShadow: '0 4px 16px rgba(16,185,129,0.15), inset 0 1px 0 rgba(255,255,255,0.1)',
+                      }}
                     >
                       <UserIcon className="h-4 w-4" />
                       Entrar
