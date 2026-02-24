@@ -881,8 +881,8 @@ export default function Layout({ children, currentPageName }) {
 
                   {/* PAINEL MOBILE - SÓ ADMIN */}
                   {isAdmin && (
-                    <div className="pt-3 mt-2 border-t border-gray-700">
-                      <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-purple-400">Painel de Controle</p>
+                    <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-purple-400/70">Painel de Controle</p>
                       {adminMenuItems.map((item) => (
                         item.isCategory ? (
                           <div key={item.title}>
