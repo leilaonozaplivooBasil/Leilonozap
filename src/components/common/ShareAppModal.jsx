@@ -80,18 +80,12 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md border-0 bg-transparent p-0 shadow-none text-white [&>button]:text-gray-400 [&>button]:hover:text-white">
+      <DialogContent className="sm:max-w-md border-0 bg-transparent p-0 shadow-none text-gray-900 [&>button]:text-gray-500 [&>button]:hover:text-gray-800">
         <div className="relative overflow-hidden rounded-2xl" style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 50%, rgba(16,185,129,0.04) 100%)',
-          backdropFilter: 'blur(24px) saturate(1.4)',
-          WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06), 0 0 40px rgba(16,185,129,0.06)'
+          background: '#ffffff',
+          border: '1px solid #e5e7eb',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.05)'
         }}>
-          {/* Shimmer accent */}
-          <div className="absolute inset-0 pointer-events-none opacity-30" style={{
-            background: 'linear-gradient(105deg, transparent 40%, rgba(16,185,129,0.08) 50%, transparent 60%)',
-          }} />
 
           <div className="relative p-6 space-y-5">
             <DialogHeader>
