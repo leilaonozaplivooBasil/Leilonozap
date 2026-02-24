@@ -920,10 +920,14 @@ export default function Layout({ children, currentPageName }) {
                             key={item.pageName}
                             to={createPageUrl(item.pageName)}
                             onClick={() => setMobileMenuOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 ${item.highlight
-                                ? "bg-gradient-to-r from-purple-600/30 to-blue-600/30 text-purple-300 hover:from-purple-600/40 hover:to-blue-600/40"
-                                : "text-gray-300 hover:bg-gray-800 hover:text-white"
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 ${item.highlight
+                                ? "text-purple-300"
+                                : "text-gray-400 hover:text-white"
                               }`}
+                            style={item.highlight ? {
+                              background: 'linear-gradient(135deg, rgba(147,51,234,0.12), rgba(59,130,246,0.12))',
+                              borderLeft: '3px solid rgba(147,51,234,0.4)',
+                            } : {}}
                           >
                             {item.title}
                           </Link>
