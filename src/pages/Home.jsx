@@ -550,21 +550,20 @@ export default function Home() {
 
               <LiveStats />
 
-              {/* BOTÕES DESKTOP - POSIÇÃO ABSOLUTA DIREITA */}
+              {/* BOTÕES DESKTOP */}
               <div className="hidden lg:flex gap-3 absolute top-0 right-0">
-                {/* Coluna Esquerda: Licenciado (topo) + Leilões collection (abaixo) */}
                 <div className="flex flex-col gap-3">
                   <Link to={createPageUrl("Licensing")}>
-                    <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                    <div className="glass-btn-green rounded-xl px-6 py-3.5">
                       <div className="flex items-center justify-start gap-3">
-                        <Zap className="w-5 h-5 text-white" />
+                        <Zap className="w-5 h-5 text-emerald-300" />
                         <span className="text-white font-semibold text-sm">Seja um Licenciado</span>
                       </div>
                     </div>
                   </Link>
 
                   <Link to={createPageUrl("LuxuryCollection")}>
-                    <div className="bg-gradient-to-r from-purple-600 to-fuchsia-700 hover:from-purple-700 hover:to-fuchsia-800 hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                    <div className="glass-btn rounded-xl px-6 py-3.5" style={{ borderColor: 'rgba(168, 85, 247, 0.3)', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(217, 70, 239, 0.08) 100%)' }}>
                       <div className="flex items-center justify-start gap-3">
                         <span className="text-white font-semibold text-sm">👑 Leilões collection</span>
                       </div>
@@ -572,26 +571,21 @@ export default function Home() {
                   </Link>
                 </div>
 
-                {/* Coluna Direita: Lucre Conosco (topo) + Grupo VIP (abaixo) */}
                 <div className="flex flex-col gap-3">
                   <Link to={createPageUrl("Partners")}>
-                    <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                    <div className="glass-btn-green rounded-xl px-6 py-3.5">
                       <div className="flex items-center justify-start gap-3">
-                        <DollarSign className="w-5 h-5 text-white" />
+                        <DollarSign className="w-5 h-5 text-emerald-300" />
                         <span className="text-white font-semibold text-sm">Lucre Conosco</span>
                       </div>
                     </div>
                   </Link>
 
                   {currentUser && (currentUser.role === 'licensee' || currentUser.role === 'admin') &&
-                  <a
-                    href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl"
-                    target="_blank"
-                    rel="noopener noreferrer">
-
-                    <div className="bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                  <a href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl" target="_blank" rel="noopener noreferrer">
+                    <div className="glass-btn-green rounded-xl px-6 py-3.5">
                       <div className="flex items-center justify-start gap-3">
-                        <MessageCircle className="w-5 h-5 text-white" />
+                        <MessageCircle className="w-5 h-5 text-emerald-300" />
                         <span className="text-white font-semibold text-sm">Grupo VIP</span>
                       </div>
                     </div>
