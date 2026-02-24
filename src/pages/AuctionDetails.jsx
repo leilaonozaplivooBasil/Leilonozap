@@ -132,7 +132,7 @@ export default function AuctionDetails() {
           {/* Coluna da Esquerda - Imagens */}
           <div className="space-y-4">
             {/* Imagem Principal */}
-            <div className="relative bg-white rounded-xl overflow-hidden shadow-sm border aspect-square">
+            <div className="relative bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-gray-700 aspect-square">
               {images.length > 0 ? (
                 <>
                   {images.map((img, index) => (
