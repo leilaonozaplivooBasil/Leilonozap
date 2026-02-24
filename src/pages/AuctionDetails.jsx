@@ -119,12 +119,12 @@ export default function AuctionDetails() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Breadcrumb Desktop */}
         <div className="hidden lg:block mb-6">
-          <nav className="flex items-center gap-2 text-sm text-gray-600">
-            <Link to={createPageUrl("Home")} className="hover:text-green-600">
+          <nav className="flex items-center gap-2 text-sm text-gray-400">
+            <Link to={createPageUrl("Home")} className="hover:text-green-400">
               Leilões
             </Link>
             <span>/</span>
-            <span className="text-gray-900">{auction.title}</span>
+            <span className="text-white">{auction.title}</span>
           </nav>
         </div>
 
