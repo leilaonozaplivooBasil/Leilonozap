@@ -686,7 +686,7 @@ export default function Home() {
 
         {/* BANNER ROTATIVO */}
         {banners.length > 0 &&
-        <div className="mb-8">
+        <div className="mb-8 glass-card rounded-2xl p-1 overflow-hidden">
             <RotatingBanner banners={banners} />
           </div>
         }
