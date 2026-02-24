@@ -122,7 +122,7 @@ export default function Footer() {
               <div className="space-y-3">
                 {footerSettings.address && (
                   <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                    <MapPin className="w-5 h-5 text-emerald-400/70 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-gray-400">{footerSettings.address}</p>
                   </div>
                 )}
