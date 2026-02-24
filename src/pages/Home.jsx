@@ -612,7 +612,7 @@ export default function Home() {
                   </button>
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs glass-card text-left p-4 border-green-500/20">
+              <TooltipContent side="bottom" className="max-w-xs text-left p-4 rounded-xl" style={{ background: 'rgba(5, 10, 20, 0.95)', border: '1px solid rgba(16, 185, 129, 0.2)', backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
                 <div className="space-y-2">
                   <p className="font-bold text-green-400 text-base">🔴 LIVE AO VIVO EM TEMPO REAL!</p>
                   <ul className="space-y-1 text-sm text-gray-200">
