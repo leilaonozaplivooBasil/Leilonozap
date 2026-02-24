@@ -907,7 +907,7 @@ export default function Layout({ children, currentPageName }) {
                                     key={subItem.pageName}
                                     to={createPageUrl(subItem.pageName)}
                                     onClick={() => setMobileMenuOpen(false)}
-                                    className="flex items-center gap-3 px-6 py-2 rounded-lg text-sm font-semibold transition-all hover:translate-x-1 text-gray-300 hover:bg-gray-800 hover:text-white"
+                                    className="flex items-center gap-3 px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
                                   >
                                     {subItem.title}
                                   </Link>
