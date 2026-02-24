@@ -630,19 +630,15 @@ export default function Home() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => {setActiveSourceFilter("factory");setShowFavoritesOnly(false);}}
-                  className={`w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl font-bold text-sm transition-all duration-300 hover:shadow-lg hover:scale-[1.02] ${
-                  activeSourceFilter === "factory" && !showFavoritesOnly
-                    ? "text-emerald-300 scale-[1.02]"
-                    : "text-emerald-300"
-                  }`}
+                  className={`w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl font-bold text-sm transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/40 hover:scale-[1.02] text-white`}
                   style={activeSourceFilter === "factory" && !showFavoritesOnly ? {
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0.2) 100%)',
-                    border: '2px solid rgba(16, 185, 129, 0.8)',
-                    boxShadow: '0 4px 24px rgba(16, 185, 129, 0.3)'
+                    background: 'linear-gradient(135deg, #059669, #065f46)',
+                    border: '2px solid #10b981',
+                    boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)'
                   } : {
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3) 0%, rgba(16, 185, 129, 0.15) 100%)',
-                    border: '2px solid rgba(16, 185, 129, 0.6)',
-                    boxShadow: '0 4px 24px rgba(16, 185, 129, 0.2)'
+                    background: 'linear-gradient(135deg, #059669, #065f46)',
+                    border: '2px solid #10b981',
+                    boxShadow: '0 4px 20px rgba(16, 185, 129, 0.3)'
                   }}
                   aria-label="Direto de Fábrica">
                   <CheckCircle className="w-4 h-4" />
