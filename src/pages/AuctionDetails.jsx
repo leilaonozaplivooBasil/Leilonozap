@@ -228,19 +228,19 @@ export default function AuctionDetails() {
             </div>
 
             {/* Preço e Timer */}
-            <Card className="bg-white border border-gray-200">
+            <Card className="bg-gray-800 border border-gray-700">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-400">
                       {isActive ? 'Lance atual' : 'Valor final'}
                     </p>
-                    <p className="text-3xl font-bold text-green-600">
+                    <p className="text-3xl font-bold text-green-400">
                       R$ {currentPrice.toFixed(2)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <div className="flex items-center gap-1 text-gray-600 mb-1">
+                    <div className="flex items-center gap-1 text-gray-400 mb-1">
                       <TrendingUp className="w-4 h-4" />
                       <span className="text-sm">{Math.floor(Math.random() * 25) + 5} lances</span>
                     </div>
@@ -251,14 +251,14 @@ export default function AuctionDetails() {
                 </div>
 
                 {isActive && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="bg-green-900/30 border border-green-700/50 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                        <span className="font-medium text-green-700">LEILÃO ATIVO</span>
+                        <span className="font-medium text-green-400">LEILÃO ATIVO</span>
                       </div>
                       <div className="text-right">
-                        <div className="flex items-center gap-1 text-green-600 font-bold">
+                        <div className="flex items-center gap-1 text-green-400 font-bold">
                           <Clock className="w-4 h-4" />
                           <CountdownTimer endTime={auction.end_time} />
                         </div>
@@ -268,9 +268,9 @@ export default function AuctionDetails() {
                 )}
 
                 {!isActive && auction.winner_name && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-center">
-                    <div className="text-amber-700 font-semibold mb-1">🏆 ARREMATADO!</div>
-                    <div className="text-amber-600">Vencedor: {auction.winner_name}</div>
+                  <div className="bg-amber-900/30 border border-amber-700/50 rounded-lg p-4 text-center">
+                    <div className="text-amber-400 font-semibold mb-1">🏆 ARREMATADO!</div>
+                    <div className="text-amber-300">Vencedor: {auction.winner_name}</div>
                   </div>
                 )}
               </CardContent>
