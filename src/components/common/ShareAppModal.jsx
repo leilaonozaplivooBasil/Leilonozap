@@ -89,16 +89,13 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
 
           <div className="relative p-6 space-y-5">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2.5 text-emerald-400 text-lg">
-                <div className="p-2 rounded-xl" style={{
-                  background: 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05))',
-                  border: '1px solid rgba(16,185,129,0.2)'
-                }}>
-                  <Share2 className="w-5 h-5" />
+              <DialogTitle className="flex items-center gap-2.5 text-gray-900 text-lg">
+                <div className="p-2 rounded-xl bg-emerald-100">
+                  <Share2 className="w-5 h-5 text-emerald-600" />
                 </div>
                 Compartilhar Leilão NoZap
               </DialogTitle>
-              <DialogDescription className="text-gray-400 text-sm">
+              <DialogDescription className="text-gray-500 text-sm">
                 Convide seus amigos para participar dos leilões!
               </DialogDescription>
             </DialogHeader>
