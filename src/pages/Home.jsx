@@ -516,37 +516,32 @@ export default function Home() {
                 <span className="text-white font-semibold">{activeCount}</span> leilões rolando. Entre na sala e dê seu lance!
               </p>
 
-              {/* BOTÕES - MOBILE ABAIXO DO TEXTO, DESKTOP NO LADO */}
-              <div className="flex flex-col lg:hidden gap-3 mb-4">
+              {/* BOTÕES - MOBILE */}
+              <div className="flex flex-col lg:hidden gap-3 mb-5">
                 <Link to={createPageUrl("Licensing")}>
-                  <div className="w-full bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                  <div className="w-full glass-btn-green rounded-xl px-6 py-3.5">
                     <div className="flex items-center justify-start gap-3">
-                      <Zap className="w-5 h-5 text-white" />
+                      <Zap className="w-5 h-5 text-emerald-300" />
                       <span className="text-white font-semibold text-base">Seja um Licenciado</span>
                     </div>
                   </div>
                 </Link>
 
                 {currentUser && (currentUser.role === 'licensee' || currentUser.role === 'admin') &&
-                <a
-                  href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block">
-
-                    <div className="w-full bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
-                      <div className="flex items-center justify-start gap-3">
-                        <MessageCircle className="w-5 h-5 text-white" />
-                        <span className="text-white font-semibold text-base">Grupo VIP</span>
-                      </div>
+                <a href="https://chat.whatsapp.com/Ge6Ik4qAKVdCartC5zCjtl" target="_blank" rel="noopener noreferrer" className="block">
+                  <div className="w-full glass-btn-green rounded-xl px-6 py-3.5">
+                    <div className="flex items-center justify-start gap-3">
+                      <MessageCircle className="w-5 h-5 text-emerald-300" />
+                      <span className="text-white font-semibold text-base">Grupo VIP</span>
                     </div>
-                  </a>
+                  </div>
+                </a>
                 }
 
                 <Link to={createPageUrl("Partners")}>
-                  <div className="w-full bg-[#6eb594] hover:bg-[#7ec5a4] hover:scale-105 rounded-xl px-6 py-3.5 transition-all duration-300 shadow-md hover:shadow-lg">
+                  <div className="w-full glass-btn-green rounded-xl px-6 py-3.5">
                     <div className="flex items-center justify-start gap-3">
-                      <DollarSign className="w-5 h-5 text-white" />
+                      <DollarSign className="w-5 h-5 text-emerald-300" />
                       <span className="text-white font-semibold text-base">Lucre Conosco</span>
                     </div>
                   </div>
