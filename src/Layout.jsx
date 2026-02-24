@@ -624,10 +624,14 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       key={item.title}
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
-                      className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === item.pageName
-                          ? "text-green-400"
-                          : "text-gray-300 hover:text-white"
+                      className={`text-sm font-semibold transition-all duration-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${currentPageName === item.pageName
+                          ? "text-emerald-300"
+                          : "text-gray-400 hover:text-white"
                         }`}
+                      style={currentPageName === item.pageName ? {
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        boxShadow: '0 0 12px rgba(16, 185, 129, 0.08)',
+                      } : {}}
                     >
                       {item.icon === 'cart' && <CartIcon className="w-4 h-4" />}
                       {item.title}
