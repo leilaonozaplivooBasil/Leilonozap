@@ -46,14 +46,6 @@ const WonAuctionCard = ({ auction, onTrackClick, isSaiDeBaixo }) => {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-gray-900/20 to-transparent" />
-                
-                {/* Badge de Status Flutuante */}
-                <div className="absolute top-3 right-3">
-                    <Badge className={`flex items-center gap-1.5 text-xs backdrop-blur-md ${config.color} shadow-lg`}>
-                        <config.icon className="w-3.5 h-3.5" />
-                        {config.text}
-                    </Badge>
-                </div>
             </div>
 
             <CardContent className="p-4 space-y-3">
