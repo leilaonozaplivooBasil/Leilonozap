@@ -177,15 +177,15 @@ export default function AuctionDetails() {
             </div>
 
             {/* Status de Teste */}
-            <Card className="bg-green-50 border-green-200">
+            <Card className="bg-green-900/30 border-green-700/50">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  <div className="w-10 h-10 bg-green-800/50 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-5 h-5 text-green-400" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-green-800">Produto Testado</h3>
-                    <p className="text-sm text-green-600">
+                    <h3 className="font-semibold text-green-300">Produto Testado</h3>
+                    <p className="text-sm text-green-400/80">
                       100% funcional, verificado pela nossa equipe técnica
                     </p>
                   </div>
