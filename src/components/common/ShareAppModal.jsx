@@ -118,9 +118,7 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
             </div>
 
             {/* Separator */}
-            <div className="h-px w-full" style={{
-              background: 'linear-gradient(90deg, transparent, rgba(16,185,129,0.2), transparent)'
-            }} />
+            <div className="h-px w-full bg-gray-200" />
 
             {/* Botões de Compartilhamento */}
             <div className="space-y-2.5">
