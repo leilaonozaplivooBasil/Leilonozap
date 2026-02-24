@@ -69,10 +69,10 @@ export default function AuctionDetails() {
 
   if (!auction) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Produto não encontrado</h2>
-          <p className="text-gray-600 mb-4">Este leilão pode não existir ou ter sido removido.</p>
+          <h2 className="text-xl font-semibold text-white mb-2">Produto não encontrado</h2>
+          <p className="text-gray-400 mb-4">Este leilão pode não existir ou ter sido removido.</p>
           <Link to={createPageUrl("Home")}>
             <Button className="bg-green-600 hover:bg-green-700">
               Voltar para Home
