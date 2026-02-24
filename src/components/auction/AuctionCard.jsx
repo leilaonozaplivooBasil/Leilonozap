@@ -619,7 +619,13 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               >
                 <Button
                   variant="outline"
-                  className="w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                  className={variant === "sai_de_baixo"
+                    ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
+                    : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
+                  style={variant !== "sai_de_baixo" ? {
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  } : {}}
                 >
                   <Info className="w-4 h-4 mr-2" />
                   Mais Informações
@@ -629,10 +635,17 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               {/* 🆕 BOTÃO COMPARAI NO CARD - Abre modal, não navega */}
               <Button
                 onClick={(e) => {
-                  e.stopPropagation(); // Impede que o clique no botão ative o clique do card
+                  e.stopPropagation();
                   setShowComparai(true);
                 }}
-                className="w-full min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm sm:text-base"
+                className={variant === "sai_de_baixo"
+                  ? "w-full min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm sm:text-base"
+                  : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02]"}
+                style={variant !== "sai_de_baixo" ? {
+                  background: 'linear-gradient(135deg, rgba(59,130,246,0.4), rgba(37,99,235,0.5))',
+                  border: '1px solid rgba(59,130,246,0.25)',
+                  boxShadow: '0 2px 12px rgba(59,130,246,0.15)',
+                } : {}}
               >
                 <img
                   src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
@@ -647,7 +660,12 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 onClick={handleEnterAuction}
                 className={variant === "sai_de_baixo"
                   ? "w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300 text-sm sm:text-base"
-                  : "w-full min-h-[48px] bg-gradient-to-r from-amber-500 via-orange-600 to-red-600 text-white font-bold shadow-lg shadow-orange-500/20 transition-all duration-300 transform hover:scale-105 hover:shadow-orange-500/40 text-sm sm:text-base"}
+                  : "w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105"}
+                style={variant !== "sai_de_baixo" ? {
+                  background: 'linear-gradient(135deg, rgba(245,158,11,0.6), rgba(234,88,12,0.7), rgba(220,38,38,0.6))',
+                  border: '1px solid rgba(245,158,11,0.3)',
+                  boxShadow: '0 4px 16px rgba(234,88,12,0.2)',
+                } : {}}
               >
                 <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-fire" />
                 Entrar e Dar Lance
