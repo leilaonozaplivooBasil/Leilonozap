@@ -641,7 +641,7 @@ export default function Layout({ children, currentPageName }) {
                   {/* COMPARTILHAR - SEMPRE VISÍVEL */}
                   <button
                     onClick={() => setShowShareModal(true)}
-                    className="flex items-center gap-2 text-sm font-semibold transition-colors text-gray-300 hover:text-white"
+                    className="flex items-center gap-2 text-sm font-semibold transition-all duration-300 text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-white/5"
                   >
                     <Share2 className="h-4 w-4" />
                     Compartilhar
