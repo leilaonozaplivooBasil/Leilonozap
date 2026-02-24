@@ -104,27 +104,27 @@ export default function LiquidGlassStyles() {
       .glass-btn-green {
         background: linear-gradient(
           135deg,
-          rgba(16, 185, 129, 0.2) 0%,
-          rgba(16, 185, 129, 0.08) 100%
+          rgba(16, 185, 129, 0.35) 0%,
+          rgba(16, 185, 129, 0.18) 100%
         );
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        border: 1px solid rgba(16, 185, 129, 0.25);
+        border: 1px solid rgba(16, 185, 129, 0.5);
         box-shadow:
-          0 4px 20px rgba(16, 185, 129, 0.15),
-          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          0 4px 20px rgba(16, 185, 129, 0.25),
+          inset 0 1px 0 rgba(255, 255, 255, 0.12);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .glass-btn-green:hover {
         background: linear-gradient(
           135deg,
-          rgba(16, 185, 129, 0.3) 0%,
-          rgba(16, 185, 129, 0.12) 100%
+          rgba(16, 185, 129, 0.45) 0%,
+          rgba(16, 185, 129, 0.25) 100%
         );
-        border-color: rgba(16, 185, 129, 0.4);
+        border-color: rgba(16, 185, 129, 0.65);
         box-shadow:
-          0 8px 32px rgba(16, 185, 129, 0.25),
+          0 8px 32px rgba(16, 185, 129, 0.35),
           inset 0 1px 0 rgba(255, 255, 255, 0.15);
         transform: translateY(-1px);
       }
