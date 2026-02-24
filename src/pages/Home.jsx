@@ -738,7 +738,7 @@ export default function Home() {
                     setLoadError(null);
                     loadAuctions(true);
                   }}
-                  className="bg-yellow-600 hover:bg-yellow-700 font-bold">
+                  className="glass-btn-green font-bold rounded-xl text-white border-0">
 
                       🔄 Tentar Novamente
                     </Button>
