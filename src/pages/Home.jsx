@@ -699,24 +699,25 @@ export default function Home() {
               <div className="category-scroller__inner">
                 {[...categories, ...categories].map((category, index) => {
                 const Icon = category.icon;
-                const isActive = activeCategory === category.value;
+                const isActiveCat = activeCategory === category.value;
                 return (
                   <button
                     key={`${category.value}-${index}`}
                     onClick={() => setActiveCategory(category.value)}
-                    className={`flex items-center gap-2.5 whitespace-nowrap text-sm font-medium py-2.5 px-4 rounded-full transition-all duration-300 border ${
-                    isActive ?
-                    'bg-green-500/10 border-green-500 text-green-400' :
-                    'bg-gray-800/60 border-gray-700 text-gray-400 hover:bg-gray-700/80 hover:text-gray-200'}`
-                    }>
-
-                      <Icon className={`w-4 h-4 ${isActive ? 'text-green-500' : ''}`} />
+                    className={`flex items-center gap-2.5 whitespace-nowrap text-sm font-medium py-2.5 px-5 rounded-full transition-all duration-300 ${
+                    isActiveCat
+                      ? 'glass-pill-active text-emerald-300'
+                      : 'glass-pill text-gray-400 hover:text-gray-200'
+                    }`}>
+                      <Icon className={`w-4 h-4 ${isActiveCat ? 'text-emerald-400' : ''}`} />
                       <span>{category.label}</span>
                     </button>);
-
               })}
               </div>
             </div>
+
+            {/* Glow separator */}
+            <div className="glow-line mb-8 mx-4 opacity-50" />
 
             {loadError && retryCount >= 3 &&
           <div className="mb-8 bg-gradient-to-r from-yellow-900/30 to-orange-900/30 border-2 border-yellow-500/50 rounded-xl p-6">
