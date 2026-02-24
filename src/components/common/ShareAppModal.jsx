@@ -106,23 +106,12 @@ export default function ShareAppModal({ isOpen, onClose, context = "default" }) 
                 type="text"
                 value={appUrl}
                 readOnly
-                className="flex-1 px-4 py-2.5 rounded-xl text-white text-sm font-mono outline-none transition-all duration-300 focus:ring-1 focus:ring-emerald-500/30"
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  backdropFilter: 'blur(8px)',
-                }}
+                className="flex-1 px-4 py-2.5 rounded-xl text-gray-800 text-sm font-mono outline-none bg-gray-100 border border-gray-200 focus:ring-1 focus:ring-emerald-500/40"
               />
               <Button
                 onClick={copyToClipboard}
                 size="icon"
-                className="rounded-xl h-10 w-10 transition-all duration-300 hover:scale-105"
-                style={{
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  backdropFilter: 'blur(8px)',
-                  color: 'white'
-                }}
+                className="rounded-xl h-10 w-10 transition-all duration-300 hover:scale-105 bg-gray-100 hover:bg-gray-200 border border-gray-200 text-gray-700"
               >
                 <Copy className="w-4 h-4" />
               </Button>
