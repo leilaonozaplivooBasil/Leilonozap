@@ -789,7 +789,7 @@ export default function Layout({ children, currentPageName }) {
             />
 
             {/* Menu Lateral */}
-            <div className="fixed inset-y-0 right-0 w-[85%] max-w-sm z-[101] shadow-2xl animate-in slide-in-from-right duration-300 bg-gray-900">
+            <div className="fixed inset-y-0 right-0 w-[85%] max-w-sm z-[101] animate-in slide-in-from-right duration-300" style={{ background: 'rgba(10, 15, 28, 0.75)', backdropFilter: 'blur(32px) saturate(1.6)', WebkitBackdropFilter: 'blur(32px) saturate(1.6)', boxShadow: '-8px 0 48px rgba(0,0,0,0.4)', borderLeft: '1px solid rgba(16,185,129,0.06)' }}>
               <div className="flex flex-col h-full">
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-700">
