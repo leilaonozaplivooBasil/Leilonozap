@@ -414,7 +414,20 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     <>
       <Card
         className={cardStyles}
+        style={glassStyle}
         onClick={handleCardClick}
+        onMouseEnter={(e) => {
+          if (variant !== "sai_de_baixo") {
+            e.currentTarget.style.border = '1px solid rgba(16,185,129,0.25)';
+            e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(16,185,129,0.08), inset 0 1px 0 rgba(255,255,255,0.08)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (variant !== "sai_de_baixo") {
+            e.currentTarget.style.border = '1px solid rgba(255,255,255,0.08)';
+            e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)';
+          }
+        }}
       >
         <div
           className="relative overflow-hidden w-full aspect-square bg-white"
