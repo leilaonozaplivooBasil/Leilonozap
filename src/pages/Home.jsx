@@ -485,7 +485,7 @@ export default function Home() {
   const activeCount = auctions.filter(a => a.status === 'active').length;
 
   return (
-    <div className="bg-gray-950 text-white min-h-screen relative overflow-hidden">
+    <div className="bg-gray-900 text-white min-h-screen relative overflow-hidden">
       <LiquidGlassStyles />
       
       {/* Background Orbs */}
