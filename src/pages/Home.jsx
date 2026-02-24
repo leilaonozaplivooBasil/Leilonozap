@@ -669,8 +669,8 @@ export default function Home() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => {setActiveSourceFilter("todos");setShowFavoritesOnly(false);}}
-                  className="w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl font-bold text-sm glass-btn text-white"
-                  style={{ borderColor: 'rgba(249, 115, 22, 0.3)', background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.2) 0%, rgba(249, 115, 22, 0.06) 100%)', boxShadow: '0 4px 20px rgba(249, 115, 22, 0.12), inset 0 1px 0 rgba(255,255,255,0.08)' }}>
+                  className="w-full sm:flex-1 sm:min-w-[160px] sm:max-w-[260px] flex items-center justify-center gap-2.5 px-5 py-3.5 rounded-xl font-bold text-sm text-orange-300 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/20 hover:scale-[1.02]"
+                  style={{ background: 'linear-gradient(135deg, rgba(249, 115, 22, 0.15) 0%, rgba(249, 115, 22, 0.08) 100%)', border: '2px solid rgba(249, 115, 22, 0.4)', boxShadow: '0 4px 20px rgba(249, 115, 22, 0.1)' }}>
                   <Percent className="w-4 h-4" />
                   🔥 Arremate & Devoluções
                 </button>
