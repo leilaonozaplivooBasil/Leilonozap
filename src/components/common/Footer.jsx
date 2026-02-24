@@ -141,7 +141,7 @@ export default function Footer() {
 
                 {footerSettings.phone && (
                   <div className="flex items-center gap-3">
-                    <Phone className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    <Phone className="w-5 h-5 text-emerald-400/70 flex-shrink-0" />
                     <a
                       href={`tel:${footerSettings.phone}`}
                       className="text-sm text-gray-400 hover:text-white transition-colors"
