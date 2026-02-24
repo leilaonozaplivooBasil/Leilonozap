@@ -29,6 +29,7 @@ import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButto
 import RecommendedSection from '../components/recommendations/RecommendedSection';
 import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
+import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
