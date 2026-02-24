@@ -277,44 +277,44 @@ export default function AuctionDetails() {
             </Card>
 
             {/* Descrição */}
-            <Card>
+            <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Info className="w-5 h-5" />
                   Descrição do Produto
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line break-words overflow-wrap-anywhere">
+                <p className="text-gray-300 leading-relaxed whitespace-pre-line break-words overflow-wrap-anywhere">
                   {auction.description}
                 </p>
               </CardContent>
             </Card>
 
             {/* Especificações */}
-            <Card>
+            <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-white">
                   <Shield className="w-5 h-5" />
                   Informações Importantes
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Origem:</span>
-                  <span className="font-medium">Devolução/Arremate</span>
+                <div className="flex justify-between py-2 border-b border-gray-700">
+                  <span className="text-gray-400">Origem:</span>
+                  <span className="font-medium text-gray-200">Devolução/Arremate</span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Condição:</span>
-                  <span className="font-medium">Testado e Funcional</span>
+                <div className="flex justify-between py-2 border-b border-gray-700">
+                  <span className="text-gray-400">Condição:</span>
+                  <span className="font-medium text-gray-200">Testado e Funcional</span>
                 </div>
-                <div className="flex justify-between py-2 border-b border-gray-100">
-                  <span className="text-gray-600">Garantia:</span>
-                  <span className="font-medium">Sem Garantia*</span>
+                <div className="flex justify-between py-2 border-b border-gray-700">
+                  <span className="text-gray-400">Garantia:</span>
+                  <span className="font-medium text-gray-200">Sem Garantia*</span>
                 </div>
                 <div className="flex justify-between py-2">
-                  <span className="text-gray-600">Categoria:</span>
-                  <span className="font-medium capitalize">{auction.category?.replace('_', ' ')}</span>
+                  <span className="text-gray-400">Categoria:</span>
+                  <span className="font-medium text-gray-200 capitalize">{auction.category?.replace('_', ' ')}</span>
                 </div>
                 <p className="text-xs text-gray-500 mt-4">
                   * Produtos sem garantia de fábrica, por isso o preço especial.
