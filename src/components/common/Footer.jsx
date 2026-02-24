@@ -105,7 +105,7 @@ export default function Footer() {
 
         {/* Conteúdo Expandível */}
         {isExpanded && (
-          <div className="border-t border-gray-700 py-8 space-y-8 animate-in fade-in duration-300">
+          <div className="py-8 space-y-8 animate-in fade-in duration-300" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
 
             {/* Sobre Nós */}
             <div>
