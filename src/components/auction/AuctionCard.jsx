@@ -632,8 +632,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                     ? "w-full min-h-[44px] bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900 text-sm sm:text-base"
                     : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white hover:text-white transition-all duration-300 hover:scale-[1.02]"}
                   style={variant !== "sai_de_baixo" ? {
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    background: 'rgba(255,255,255,0.12)',
+                    border: '1px solid rgba(255,255,255,0.2)',
                   } : {}}
                 >
                   <Info className="w-4 h-4 mr-2" />
@@ -649,11 +649,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 }}
                 className={variant === "sai_de_baixo"
                   ? "w-full min-h-[44px] bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm sm:text-base"
-                  : "w-full min-h-[44px] rounded-xl font-semibold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02]"}
+                  : "w-full min-h-[44px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"}
                 style={variant !== "sai_de_baixo" ? {
-                  background: 'linear-gradient(135deg, rgba(59,130,246,0.4), rgba(37,99,235,0.5))',
-                  border: '1px solid rgba(59,130,246,0.25)',
-                  boxShadow: '0 2px 12px rgba(59,130,246,0.15)',
+                  background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+                  boxShadow: '0 4px 16px rgba(59,130,246,0.35)',
                 } : {}}
               >
                 <img
@@ -669,11 +668,10 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
                 onClick={handleEnterAuction}
                 className={variant === "sai_de_baixo"
                   ? "w-full min-h-[48px] bg-red-600 hover:bg-red-700 text-white font-bold transition-all duration-300 text-sm sm:text-base"
-                  : "w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105"}
+                  : "w-full min-h-[48px] rounded-xl font-bold text-sm sm:text-base border-0 text-white transition-all duration-300 transform hover:scale-105 hover:shadow-lg"}
                 style={variant !== "sai_de_baixo" ? {
-                  background: 'linear-gradient(135deg, rgba(245,158,11,0.6), rgba(234,88,12,0.7), rgba(220,38,38,0.6))',
-                  border: '1px solid rgba(245,158,11,0.3)',
-                  boxShadow: '0 4px 16px rgba(234,88,12,0.2)',
+                  background: 'linear-gradient(135deg, #f59e0b, #ea580c, #dc2626)',
+                  boxShadow: '0 4px 16px rgba(234,88,12,0.4)',
                 } : {}}
               >
                 <Flame className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-fire" />
