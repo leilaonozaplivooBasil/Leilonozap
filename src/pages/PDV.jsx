@@ -2106,15 +2106,15 @@ ${boletoInfo}================================
                                 <p className="text-gray-400 text-xs mb-1">Custo Total</p>
                                 <p className="text-2xl font-bold text-yellow-400">
                                   R$ {(() => {
-                                    // Calcula custo total cruzando vendas com produtos
                                     let totalCost = 0;
                                     dashSales.forEach(sale => {
-                                      const product = products.find(p => p.id === sale.product_id);
-                                      if (product && product.cost_price) {
-                                        // cost_price é custo total do lote, divide pela quantidade total para obter unitário
-                                        const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
-                                        const unitCost = totalQty > 0 ? product.cost_price / totalQty : 0;
-                                        totalCost += unitCost * (sale.quantity_sold || 0);
+                                      // Usa product_cost salvo na venda (custo unitário real do estoque)
+                                      if (sale.product_cost) {
+                                        totalCost += sale.product_cost * (sale.quantity_sold || 1);
+                                      } else {
+                                        // Fallback para vendas antigas sem product_cost
+                                        const product = products.find(p => p.id === sale.product_id);
+                                        if (product) totalCost += (product.cost_price || 0) * (sale.quantity_sold || 1);
                                       }
                                     });
                                     return totalCost.toFixed(2);
