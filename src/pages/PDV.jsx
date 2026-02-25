@@ -745,9 +745,8 @@ Transações: ${selectedSession.transactions_count || 0}
         const precoUnitario = item.customPrice || product.selling_price_retail;
         const valorVenda = precoUnitario * qtdVendida;
 
-        // 🔥 CÁLCULO CORRETO DO CUSTO UNITÁRIO
-        const quantidadeTotal = product.quantity + (product.quantity_sold || 0);
-        const custoUnitario = quantidadeTotal > 0 ? (product.cost_price || 0) / quantidadeTotal : 0;
+        // 🔥 CUSTO UNITÁRIO = cost_price direto do produto (já é unitário, conforme cadastrado no estoque)
+        const custoUnitario = product.cost_price || 0;
 
         // Atualiza valores acumulados
         const novoSoldAmount = (product.sold_amount || 0) + valorVenda;
