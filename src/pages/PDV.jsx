@@ -787,7 +787,7 @@ Transações: ${selectedSession.transactions_count || 0}
             unit_price: precoUnitario,
             total_amount: valorVenda,
             total_taxes: itemTaxes.total,
-            net_amount: itemNetAmount,
+            net_amount: itemNetAmount, product_cost: custoUnitario,
             payment_method: paymentMethod,
             sale_date: saleDate,
             sale_datetime: saleDatetime,
