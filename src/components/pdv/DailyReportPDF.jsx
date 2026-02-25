@@ -633,7 +633,9 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
         doc.text(produto, margin + 3, yPos + 4);
 
         const valorBr = sale.total_amount || 0;
-        const custoDia = sale.total_taxes || 0;
+        // Usa product_cost da Sale (custo unitário gravado no momento da venda)
+        // Multiplica pela quantidade vendida para obter custo total da transação
+        const custoDia = (sale.product_cost || 0) * (sale.quantity_sold || 1);
         const comissaoDia = sale.commission_amount || 0;
         const lucroDia = valorBr - custoDia - comissaoDia;
 
