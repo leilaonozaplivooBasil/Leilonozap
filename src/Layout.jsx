@@ -686,22 +686,33 @@ export default function Layout({ children, currentPageName }) {
                         <DropdownMenuSeparator className="bg-gray-700" />
                         {adminMenuItems.map((item) => (
                           item.isCategory ? (
-                            <DropdownMenuSub key={item.title}>
-                              <DropdownMenuSubTrigger className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
-                                {item.title}
-                              </DropdownMenuSubTrigger>
-                              <DropdownMenuSubContent className="bg-gray-800 border-gray-700 text-white">
-                                {item.items.map((subItem) => (
-                                  <DropdownMenuItem
-                                    key={subItem.pageName}
-                                    onClick={() => navigate(createPageUrl(subItem.pageName))}
-                                    className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700"
-                                  >
-                                    {subItem.title}
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuSubContent>
-                            </DropdownMenuSub>
+                            <div key={item.title}>
+                              <DropdownMenuItem
+                                className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 flex items-center justify-between"
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  setExpandedCategory(expandedCategory === item.title ? null : item.title);
+                                }}
+                              >
+                                <span>{item.title}</span>
+                                <svg className={`w-4 h-4 transition-transform ${expandedCategory === item.title ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </DropdownMenuItem>
+                              {expandedCategory === item.title && (
+                                <div className="ml-3 border-l border-gray-600 pl-2">
+                                  {item.items.map((subItem) => (
+                                    <DropdownMenuItem
+                                      key={subItem.pageName}
+                                      onClick={() => navigate(createPageUrl(subItem.pageName))}
+                                      className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 text-sm"
+                                    >
+                                      {subItem.title}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <DropdownMenuItem
                               key={item.pageName}
