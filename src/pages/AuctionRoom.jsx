@@ -660,36 +660,25 @@ export default function AuctionRoom() {
 
   const syncMessagesOnly = useCallback(async () => {
     if (!auctionId || !auction) return;
-    
     try {
       const msgs = await AuctionMessage.filter({ auction_id: auctionId }, '-created_date', 50);
-      
-      if (Array.isArray(msgs) && msgs.length > lastMessageCountRef.current) {
-        console.log(`✅ [MESSAGE SYNC] ${msgs.length - lastMessageCountRef.current} novas mensagens!`);
-        
-        const newBidMessages = msgs.filter(m => 
-          m.message_type === 'bid' && 
-          !messages.some(existingMsg => existingMsg.id === m.id)
-        );
-        
-        setMessages(msgs);
-        lastMessageCountRef.current = msgs.length;
-        
-        if (newBidMessages.length > 0) {
-          console.log(`💰 [MESSAGE SYNC] ${newBidMessages.length} lance(s) novo(s)!`);
-          setTimeout(syncAuctionDataOnly, 100);
-        }
-        
-        if (chatRef.current) {
-          chatRef.current.scrollTo({
-            top: chatRef.current.scrollHeight,
-            behavior: 'smooth'
-          });
-        }
+      if (!Array.isArray(msgs)) return;
+      // Anti-conflito: deduplica por ID real
+      const seen = new Set();
+      const deduped = msgs.filter(m => { if (seen.has(m.id)) return false; seen.add(m.id); return true; });
+      // Remove temporárias que já têm correspondente real no banco
+      setMessages(prev => {
+        const temps = prev.filter(m => String(m.id).startsWith('temp-'));
+        const orphanTemps = temps.filter(t => !deduped.some(r => r.sender_id === t.sender_id && r.bid_amount === t.bid_amount && r.message_type === t.message_type));
+        return [...deduped, ...orphanTemps];
+      });
+      if (deduped.length > lastMessageCountRef.current) {
+        const newBids = deduped.filter(m => m.message_type === 'bid' && !messages.some(e => e.id === m.id));
+        if (newBids.length > 0) setTimeout(syncAuctionDataOnly, 100);
       }
-    } catch (error) {
-      console.debug("[MESSAGE SYNC] Erro:", error.message);
-    }
+      lastMessageCountRef.current = deduped.length;
+      if (chatRef.current) chatRef.current.scrollTo({ top: chatRef.current.scrollHeight, behavior: 'smooth' });
+    } catch (error) { console.debug("[MESSAGE SYNC] Erro:", error.message); }
   }, [auctionId, auction, messages, syncAuctionDataOnly]);
 
   useEffect(() => {
