@@ -19,6 +19,28 @@ export default function DailyReportPDF({ daySales, date, sellersData }) {
       console.log('📊 Total de vendas recebidas:', daySales.length);
       console.log('📊 Dados de vendedores:', sellersData);
       
+      // Carrega produtos para fallback de custo em vendas antigas (sem product_cost)
+      let productsMap = {};
+      try {
+        const allProducts = await base44.entities.Product.list('-created_date', 500);
+        allProducts.forEach(p => { productsMap[p.id] = p; });
+      } catch (e) {
+        console.warn('Não foi possível carregar produtos para custos');
+      }
+
+      // Helper: calcula custo total de uma venda
+      const getSaleCost = (sale) => {
+        if (sale.product_cost && sale.product_cost > 0) {
+          return sale.product_cost * (sale.quantity_sold || 1);
+        }
+        // Fallback: busca cost_price do produto
+        const prod = productsMap[sale.product_id];
+        if (prod && prod.cost_price) {
+          return prod.cost_price * (sale.quantity_sold || 1);
+        }
+        return 0;
+      };
+
       const doc = new jsPDF('p', 'mm', 'a4');
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
