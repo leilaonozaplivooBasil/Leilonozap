@@ -12,6 +12,7 @@ import ExpenseTable from "@/components/financial/ExpenseTable";
 import ExpenseFormModal from "@/components/financial/ExpenseFormModal";
 import FinancialPDFGenerator from "@/components/financial/FinancialPDFGenerator";
 import FinancialDashboard from "@/components/financial/FinancialDashboard";
+import PaymentModal from "@/components/financial/PaymentModal";
 
 const FinancialExpense = base44.entities.FinancialExpense;
 

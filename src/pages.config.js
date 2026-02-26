@@ -82,6 +82,7 @@ import DiretoDeFabrica from './pages/DiretoDeFabrica';
 import EditAuction from './pages/EditAuction';
 import EditCatalogProduct from './pages/EditCatalogProduct';
 import ErrorReport from './pages/ErrorReport';
+import Financial from './pages/Financial';
 import ForgotPassword from './pages/ForgotPassword';
 import Home from './pages/Home';
 import Influencers from './pages/Influencers';
@@ -129,7 +130,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import Financial from './pages/Financial';
 import __Layout from './Layout.jsx';
 
 
@@ -169,6 +169,7 @@ export const PAGES = {
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
     "ErrorReport": ErrorReport,
+    "Financial": Financial,
     "ForgotPassword": ForgotPassword,
     "Home": Home,
     "Influencers": Influencers,
@@ -216,7 +217,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "Financial": Financial,
 }
 
 export const pagesConfig = {
