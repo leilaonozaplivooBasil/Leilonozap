@@ -945,8 +945,7 @@ ${boletoInfo}================================
     printWindow.print();
   };
 
-  const todayTotal = todaySales.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
-  const todayCount = todaySales.reduce((sum, sale) => sum + (sale.quantity_sold || 0), 0);
+  // NOTA: todayTotal/todayCount agora calculados dentro do TodaySummaryCards com filtro por sale_date
 
   const exportSalesReport = () => {
     if (salesHistory.length === 0) {
