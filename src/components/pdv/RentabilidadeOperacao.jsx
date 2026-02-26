@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
-  DollarSign, Package, TrendingUp, TrendingDown, BarChart3, ArrowLeft, Percent, Target, Wallet
+  DollarSign, Package, TrendingUp, TrendingDown, BarChart3, ArrowLeft, Percent, Target, Wallet, Pencil, Check, X
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 
@@ -10,17 +11,22 @@ const fmtBRL = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 
 const fmtPct = (v) => (v || 0).toFixed(2);
 
 export default function RentabilidadeOperacao({ sales, products, onBack }) {
+  const [editingInvestido, setEditingInvestido] = useState(false);
+  const [customInvestido, setCustomInvestido] = useState(null);
+  const [inputInvestido, setInputInvestido] = useState('');
+
   const stats = React.useMemo(() => {
     // Total de produtos (estoque + vendidos)
     const totalProducts = products.reduce((sum, p) => sum + (p.quantity || 0) + (p.quantity_sold || 0), 0);
     const totalProductsInStock = products.reduce((sum, p) => sum + (p.quantity || 0), 0);
     const totalProductsSold = sales.reduce((sum, s) => sum + (s.quantity_sold || 0), 0);
 
-    // Valor investido = soma dos custos de todos os produtos (estoque + vendidos)
-    const valorInvestido = products.reduce((sum, p) => {
+    // Valor investido = customizado ou calculado
+    const valorInvestidoCalculado = products.reduce((sum, p) => {
       const totalQty = (p.quantity || 0) + (p.quantity_sold || 0);
       return sum + (p.cost_price || 0) * totalQty;
     }, 0);
+    const valorInvestido = customInvestido !== null ? customInvestido : valorInvestidoCalculado;
 
     // Faturamento = soma dos total_amount das vendas
     const faturamentoTotal = sales.reduce((sum, s) => sum + (s.total_amount || 0), 0);
@@ -85,7 +91,7 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
       roiProjetado,
       percentualVendido,
     };
-  }, [sales, products]);
+  }, [sales, products, customInvestido]);
 
   const chartData = [
     { name: 'Investido', value: stats.valorInvestido, color: '#f59e0b' },
@@ -113,11 +119,58 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
 
       {/* CARDS PRINCIPAIS - Linha 1 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-gray-800 border-amber-600/30">
+        <Card className="bg-gray-800 border-amber-600/30 cursor-pointer hover:border-amber-500/50 transition-colors" onClick={() => {
+          if (!editingInvestido) {
+            setInputInvestido(String(stats.valorInvestido.toFixed(2)).replace('.', ','));
+            setEditingInvestido(true);
+          }
+        }}>
           <CardContent className="p-4">
-            <p className="text-amber-400 text-xs mb-1 flex items-center gap-1"><Wallet className="w-3 h-3" /> Valor Investido</p>
-            <p className="text-2xl font-bold text-white">R$ {fmtBRL(stats.valorInvestido)}</p>
-            <p className="text-xs text-gray-500 mt-1">{stats.totalProducts.toLocaleString('pt-BR')} produtos</p>
+            <p className="text-amber-400 text-xs mb-1 flex items-center gap-1">
+              <Wallet className="w-3 h-3" /> Valor Investido
+              {!editingInvestido && <Pencil className="w-3 h-3 ml-1 text-gray-500" />}
+            </p>
+            {editingInvestido ? (
+              <div className="flex items-center gap-1 mt-1" onClick={e => e.stopPropagation()}>
+                <span className="text-white text-sm font-bold">R$</span>
+                <Input
+                  autoFocus
+                  value={inputInvestido}
+                  onChange={e => setInputInvestido(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      const val = parseFloat(inputInvestido.replace(/\./g, '').replace(',', '.'));
+                      if (!isNaN(val) && val >= 0) setCustomInvestido(val);
+                      setEditingInvestido(false);
+                    }
+                    if (e.key === 'Escape') {
+                      setEditingInvestido(false);
+                    }
+                  }}
+                  className="bg-gray-900 border-amber-600/50 text-white h-8 text-lg font-bold w-full"
+                  placeholder="0,00"
+                />
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-400 hover:text-emerald-300" onClick={() => {
+                  const val = parseFloat(inputInvestido.replace(/\./g, '').replace(',', '.'));
+                  if (!isNaN(val) && val >= 0) setCustomInvestido(val);
+                  setEditingInvestido(false);
+                }}>
+                  <Check className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => {
+                  setCustomInvestido(null);
+                  setEditingInvestido(false);
+                }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold text-white">R$ {fmtBRL(stats.valorInvestido)}</p>
+            )}
+            <p className="text-xs text-gray-500 mt-1">
+              {stats.totalProducts.toLocaleString('pt-BR')} produtos
+              {customInvestido !== null && <span className="text-amber-400 ml-1">(editado)</span>}
+            </p>
           </CardContent>
         </Card>
 
