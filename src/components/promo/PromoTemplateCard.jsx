@@ -228,12 +228,30 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
     );
   };
 
-  const renderBadge = () => (
-    <div style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(12px)", border: `1px solid ${accent}40`, borderRadius: 12, padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>
-      <div style={{ width: 8, height: 8, borderRadius: "50%", background: accent, boxShadow: `0 0 8px ${accent}, 0 0 16px ${accent}80`, animation: "pulse 2s infinite" }} />
-      <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayBadge}</span>
-    </div>
-  );
+  const renderBadge = () => {
+    if (design === "brutalist") {
+      return (
+        <div style={{ background: accent, padding: "6px 14px", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ color: "#000", fontSize: 12, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase" }}>{displayBadge}</span>
+        </div>
+      );
+    }
+    if (design === "magazine") {
+      return (
+        <div style={{ borderBottom: `2px solid ${accent}`, padding: "4px 0", display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ color: accent, fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase" }}>{displayBadge}</span>
+        </div>
+      );
+    }
+    const badgeBg = design === "neon" ? `${accent}20` : "rgba(0,0,0,0.6)";
+    const badgeBorder = design === "neon" ? `${accent}60` : `${accent}40`;
+    return (
+      <div style={{ background: badgeBg, backdropFilter: "blur(12px)", border: `1px solid ${badgeBorder}`, borderRadius: 12, padding: "8px 14px", display: "flex", alignItems: "center", gap: 6, ...(design === "neon" ? { boxShadow: `0 0 12px ${accent}30` } : {}) }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: accent, boxShadow: `0 0 8px ${accent}, 0 0 16px ${accent}80`, animation: "pulse 2s infinite" }} />
+        <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayBadge}</span>
+      </div>
+    );
+  };
 
   const renderDiscountSeal = (size = 68) => discount > 0 ? (
     <div style={{ width: size, height: size, borderRadius: "50%", background: template.sealGradient, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 4px 20px ${template.accentGlow}, 0 0 40px ${template.accentGlow}40`, transform: "rotate(12deg)", border: "3px solid rgba(255,255,255,0.2)" }}>
