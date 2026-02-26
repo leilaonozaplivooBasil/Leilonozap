@@ -66,8 +66,6 @@ const TEMPLATES = {
 const LAYOUT_CONFIGS = {
   square: { ratio: "1/1", maxW: 480 },
   story: { ratio: "9/16", maxW: 360 },
-  whatsapp: { ratio: "16/9", maxW: 520 },
-  youtube: { ratio: "16/9", maxW: 520 },
   vertical: { ratio: "3/4", maxW: 420 },
 };
 
