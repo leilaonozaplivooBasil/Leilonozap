@@ -492,6 +492,7 @@ export default function Layout({ children, currentPageName }) {
     { title: "🪪 Registrar Licenciado", pageName: "RegisterLicensee" },
     { title: "👥 Influenciadores", pageName: "InfluencersDashboard" },
     { title: "💼 Parceiros Ativos", pageName: "ActivePartners" },
+    { title: "💲 Financeiro", pageName: "Financial" },
     { title: "Painel de Controle", pageName: "NetworkOverview" },
     { title: "Gerenciar Senhas", pageName: "AdminUsers" },
   ];
