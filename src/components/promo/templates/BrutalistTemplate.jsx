@@ -2,7 +2,7 @@ import React from "react";
 
 const LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
 
-export default function BrutalistTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template }) {
+export default function BrutalistTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template, logoUrl }) {
   // Brutalist: Preto com bordas grossas coloridas, tipografia pesada, blocos rígidos, anti-design
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
@@ -58,7 +58,7 @@ export default function BrutalistTemplate({ displayTitle, displayImage, displayB
 
       {/* Footer no bloco colorido */}
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "15%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", zIndex: 10 }}>
-        <img src={LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 28, width: "auto", objectFit: "contain", filter: "brightness(0)" }} />
+        <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 28, width: "auto", objectFit: "contain", filter: "brightness(0)" }} />
         <div style={{ background: "#000", padding: "8px 20px" }}>
           <span style={{ color: accent, fontSize: 12, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase" }}>{displayCta}</span>
         </div>

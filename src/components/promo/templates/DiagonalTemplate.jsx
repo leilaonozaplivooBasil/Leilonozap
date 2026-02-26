@@ -2,7 +2,7 @@ import React from "react";
 
 const LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
 
-export default function DiagonalTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template, renderProductImage }) {
+export default function DiagonalTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template, renderProductImage, logoUrl }) {
   // Diagonal Bold: Faixa diagonal colorida gigante dividindo o card, produto na metade superior, info na inferior
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
@@ -59,7 +59,7 @@ export default function DiagonalTemplate({ displayTitle, displayImage, displayBa
           {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 4 }}>ou 12x de R$ {(price / 12).toFixed(2)} sem juros</p>}
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <img src={LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 30, width: "auto", objectFit: "contain" }} />
+          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 30, width: "auto", objectFit: "contain" }} />
           <div style={{ background: template.sealGradient, padding: "9px 22px", borderRadius: 8 }}>
             <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>

@@ -2,7 +2,7 @@ import React from "react";
 
 const LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
 
-export default function ClassicTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template, renderProductImage }) {
+export default function ClassicTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template, renderProductImage, logoUrl }) {
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       {/* Fundo com mesh gradient premium */}
@@ -58,7 +58,7 @@ export default function ClassicTemplate({ displayTitle, displayImage, displayBad
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 12 }}>ou 12x de R$ {(price / 12).toFixed(2)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <img src={LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 32, width: "auto", objectFit: "contain" }} />
+          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 32, width: "auto", objectFit: "contain" }} />
           <div style={{ background: template.sealGradient, borderRadius: 10, padding: "8px 18px", boxShadow: `0 4px 16px ${template.accentGlow}40` }}>
             <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>
