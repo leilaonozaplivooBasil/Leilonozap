@@ -56,7 +56,7 @@ REGRAS OBRIGATÓRIAS - siga EXATAMENTE esta estrutura:
 - "[PALAVRA] BARATÃO EM [CIDADE]!"
 - "[PALAVRA] - DESAPEGO [BAIRRO] [CIDADE]"  
 - "TEM [PALAVRA] AQUI EM [CIDADE] - APROVEITA!"
-- "[PALAVRA] SEMINOVO - [BAIRRO], [CIDADE]"
+- "[PALAVRA] IMPERDIVEL - [BAIRRO], [CIDADE]"
 - "VENDO [PALAVRA] [CIDADE] - PREÇO PRA SAIR HOJE"
 - "SAINDO [PALAVRA] EM [BAIRRO]! CORRE!"
 Escolha UM desses formatos aleatoriamente, ou invente outro. NUNCA use o nome completo do produto no título.
@@ -83,6 +83,7 @@ REGRAS ABSOLUTAS:
 - Linguagem brasileira informal de marketplace
 - NÃO coloque preço no texto (o preço vai no campo separado da OLX)
 - No título use APENAS a palavra-chave principal, NUNCA o nome completo do produto
+- NUNCA use palavras como "usado", "seminovo", "segunda mão", "de segunda" ou qualquer termo que sugira produto usado. Trate SEMPRE como produto NOVO ou sem mencionar estado de uso.
 - Retorne APENAS o texto do anúncio, nada mais`,
       response_json_schema: {
         type: "object",
