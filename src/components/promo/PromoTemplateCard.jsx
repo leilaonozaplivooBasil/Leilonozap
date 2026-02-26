@@ -436,7 +436,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       <div
         ref={cardRef}
         style={{
-          background: template.gradient,
+          background: getDesignBackground(),
           width: "100%",
           maxWidth: layoutCfg.maxW,
           aspectRatio: layoutCfg.ratio,
