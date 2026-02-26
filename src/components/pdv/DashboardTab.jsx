@@ -22,9 +22,23 @@ export default function DashboardTab({
   handleEditSale,
   cancelSale
 }) {
+  const [periodFilter, setPeriodFilter] = React.useState('all');
+
+  const periodSales = React.useMemo(() => {
+    if (periodFilter === 'all') return allSales;
+    const days = { '30': 30, '60': 60, '90': 90, '180': 180, '365': 365 }[periodFilter];
+    if (!days) return allSales;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    return allSales.filter(s => {
+      const d = s.sale_date || s.sale_datetime;
+      return d && new Date(d) >= cutoff;
+    });
+  }, [allSales, periodFilter]);
+
   const dashSales = ['santander', 'itau', 'nubank'].includes(dashBankFilter)
-    ? allSales.filter(s => s.receiving_bank === dashBankFilter)
-    : allSales;
+    ? periodSales.filter(s => s.receiving_bank === dashBankFilter)
+    : periodSales;
 
   return (
     <div className="space-y-6">
