@@ -309,7 +309,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
         </div>
 
         <div className="flex gap-3 mt-6">
-          <Button onClick={onClose} variant="outline" className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-800">
+          <Button onClick={onClose} variant="outline" className="flex-1 bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700">
             Cancelar
           </Button>
           <Button onClick={handleSave} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white"
