@@ -121,7 +121,7 @@ export default function Financial() {
             <p className="text-gray-400 text-sm mt-1">Controle completo de contas e gastos</p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setShowPDF(true)} variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800 gap-2">
+            <Button onClick={() => setShowPDF(true)} variant="outline" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-2">
               <FileText className="w-4 h-4" /> Gerar PDF
             </Button>
             <Button onClick={() => { setEditingExpense(null); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2">
