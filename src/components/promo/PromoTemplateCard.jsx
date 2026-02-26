@@ -149,6 +149,16 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         return `linear-gradient(180deg, #f8f8f8 0%, #eeeeee 40%, #e0e0e0 100%)`;
       case "brutalist":
         return `#000000`;
+      case "flash":
+        return `linear-gradient(135deg, #f97316 0%, #ea580c 30%, #7c3aed 70%, #6d28d9 100%)`;
+      case "relampago":
+        return `linear-gradient(180deg, #111111 0%, #0a0a0a 40%, #000000 100%)`;
+      case "wave":
+        return `linear-gradient(160deg, #0f172a 0%, #1e293b 50%, #0f172a 100%)`;
+      case "grid":
+        return `#1a1a1a`;
+      case "tag":
+        return `linear-gradient(145deg, #fefce8 0%, #fef9c3 30%, #fef08a 60%, #fde047 100%)`;
       default: // classic
         return template.gradient;
     }
