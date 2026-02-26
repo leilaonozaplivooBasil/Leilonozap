@@ -64,7 +64,7 @@ const LAYOUT_CONFIGS = {
   split:     { ratio: "1/1",    maxW: 520 },
 };
 
-export default function PromoTemplateCard({ product, templateKey, overrides = {}, layout = "square" }) {
+export default function PromoTemplateCard({ product, templateKey, overrides = {}, layout = "square", design = "classic" }) {
   const cardRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
