@@ -285,20 +285,48 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
     );
   };
 
-  const renderFooter = () => (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${accent}30, ${accent}10)`, border: `1px solid ${accent}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🏷️</div>
-        <div>
-          <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
-          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+  const renderFooter = () => {
+    if (design === "brutalist") {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ color: "white", fontSize: 12, fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.1em" }}>{displayBrand}</p>
+            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 9, fontWeight: 600, marginTop: 2 }}>{displayBrandSub}</p>
+          </div>
+          <div style={{ background: accent, padding: "8px 18px" }}>
+            <span style={{ color: "#000", fontSize: 11, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase" }}>{displayCta}</span>
+          </div>
+        </div>
+      );
+    }
+    if (design === "magazine") {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ color: "#111", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
+            <p style={{ color: "rgba(0,0,0,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+          </div>
+          <div style={{ background: template.sealGradient, borderRadius: 6, padding: "7px 16px" }}>
+            <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${accent}30, ${accent}10)`, border: `1px solid ${accent}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🏷️</div>
+          <div>
+            <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
+            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+          </div>
+        </div>
+        <div style={{ background: template.sealGradient, borderRadius: 10, padding: "7px 16px", boxShadow: `0 4px 16px ${template.accentGlow}40` }}>
+          <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
         </div>
       </div>
-      <div style={{ background: template.sealGradient, borderRadius: 10, padding: "7px 16px", boxShadow: `0 4px 16px ${template.accentGlow}40` }}>
-        <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderCardContent = () => {
     if (layout === "split") {
