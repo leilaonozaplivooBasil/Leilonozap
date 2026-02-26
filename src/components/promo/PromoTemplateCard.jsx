@@ -411,6 +411,9 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
     }
 
     // Default: square
+    const bottomGrad = isMagazine
+      ? "linear-gradient(to top, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.5) 80%, transparent 100%)"
+      : "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 80%, transparent 100%)";
     return (
       <>
         {renderBgEffects()}
@@ -422,7 +425,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
           {renderProductImage("80%", "100%")}
         </div>
         <div style={{ position: "absolute", left: 0, right: 0, bottom: "38%", height: 1, background: `linear-gradient(90deg, transparent, ${accent}50, transparent)` }} />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 80%, transparent 100%)", padding: "48px 24px 20px" }}>
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: bottomGrad, padding: "48px 24px 20px" }}>
           {renderPriceBlock(16, 36)}
           <div style={{ height: 1, marginBottom: 12, background: `linear-gradient(90deg, ${accent}40, ${accent}15, transparent)` }} />
           {renderFooter()}
