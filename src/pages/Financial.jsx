@@ -137,81 +137,118 @@ export default function Financial() {
           </div>
         </div>
 
-        {/* Summary */}
-        <FinancialSummaryCards expenses={filtered} />
-
-        {/* Filters */}
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <Input value={search} onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por descrição, empresa ou categoria..."
-                className="bg-gray-900 border-gray-700 text-white pl-10" />
-            </div>
-            <Select value={filterMonth} onValueChange={setFilterMonth}>
-              <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-40">
-                <SelectValue placeholder="Mês" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                <SelectItem value="all">Todos os Meses</SelectItem>
-                {Array.from({ length: 12 }, (_, i) => {
-                  const m = moment().subtract(i, "months");
-                  return <SelectItem key={m.format("YYYY-MM")} value={m.format("YYYY-MM")}>{m.format("MMM/YYYY")}</SelectItem>;
-                })}
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-36">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                <SelectItem value="all">Todos Status</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="pago_integral">Pago</SelectItem>
-                <SelectItem value="pago_parcial">Parcial</SelectItem>
-                <SelectItem value="vencido">Vencido</SelectItem>
-                <SelectItem value="cancelado">Cancelado</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-36">
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
-              <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                <SelectItem value="all">Todos Tipos</SelectItem>
-                <SelectItem value="fixo">Fixo</SelectItem>
-                <SelectItem value="unico">Único</SelectItem>
-                <SelectItem value="parcelado">Parcelado</SelectItem>
-              </SelectContent>
-            </Select>
-            {usedCategories.length > 0 && (
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-44">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                  <SelectItem value="all">Todas Categorias</SelectItem>
-                  {usedCategories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveTab("expenses")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === "expenses"
+                ? "bg-emerald-600/20 text-emerald-400 border border-emerald-500/30"
+                : "bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:text-white hover:border-gray-600"
+            }`}
+          >
+            <List className="w-4 h-4" /> Gastos
+          </button>
+          <button
+            onClick={() => setActiveTab("dashboard")}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === "dashboard"
+                ? "bg-blue-600/20 text-blue-400 border border-blue-500/30"
+                : "bg-gray-800/50 text-gray-400 border border-gray-700/50 hover:text-white hover:border-gray-600"
+            }`}
+          >
+            <LayoutDashboard className="w-4 h-4" /> Dashboard
+          </button>
         </div>
 
-        {/* Table */}
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4">
-          {isLoading ? (
+        {activeTab === "dashboard" ? (
+          isLoading ? (
             <div className="text-center py-12">
               <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-3" />
               <p className="text-gray-500">Carregando...</p>
             </div>
           ) : (
-            <ExpenseTable expenses={filtered} onEdit={handleEdit} onDelete={handleDelete} />
-          )}
-        </div>
+            <FinancialDashboard expenses={expenses} />
+          )
+        ) : (
+          <>
+            {/* Summary */}
+            <FinancialSummaryCards expenses={filtered} />
+
+            {/* Filters */}
+            <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-4">
+              <div className="flex flex-col md:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Input value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="Buscar por descrição, empresa ou categoria..."
+                    className="bg-gray-900 border-gray-700 text-white pl-10" />
+                </div>
+                <Select value={filterMonth} onValueChange={setFilterMonth}>
+                  <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-40">
+                    <SelectValue placeholder="Mês" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                    <SelectItem value="all">Todos os Meses</SelectItem>
+                    {Array.from({ length: 12 }, (_, i) => {
+                      const m = moment().subtract(i, "months");
+                      return <SelectItem key={m.format("YYYY-MM")} value={m.format("YYYY-MM")}>{m.format("MMM/YYYY")}</SelectItem>;
+                    })}
+                  </SelectContent>
+                </Select>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-36">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                    <SelectItem value="all">Todos Status</SelectItem>
+                    <SelectItem value="pendente">Pendente</SelectItem>
+                    <SelectItem value="pago_integral">Pago</SelectItem>
+                    <SelectItem value="pago_parcial">Parcial</SelectItem>
+                    <SelectItem value="vencido">Vencido</SelectItem>
+                    <SelectItem value="cancelado">Cancelado</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-36">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                    <SelectItem value="all">Todos Tipos</SelectItem>
+                    <SelectItem value="fixo">Fixo</SelectItem>
+                    <SelectItem value="unico">Único</SelectItem>
+                    <SelectItem value="parcelado">Parcelado</SelectItem>
+                  </SelectContent>
+                </Select>
+                {usedCategories.length > 0 && (
+                  <Select value={filterCategory} onValueChange={setFilterCategory}>
+                    <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-44">
+                      <SelectValue placeholder="Categoria" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                      <SelectItem value="all">Todas Categorias</SelectItem>
+                      {usedCategories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4">
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <RefreshCw className="w-8 h-8 text-gray-500 animate-spin mx-auto mb-3" />
+                  <p className="text-gray-500">Carregando...</p>
+                </div>
+              ) : (
+                <ExpenseTable expenses={filtered} onEdit={handleEdit} onDelete={handleDelete} />
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <ExpenseFormModal open={showForm} onClose={() => { setShowForm(false); setEditingExpense(null); }}
