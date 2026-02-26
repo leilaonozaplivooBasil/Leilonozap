@@ -605,7 +605,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
             {renderProductImage("75%", "100%")}
           </div>
           <div style={{ position: "absolute", left: 0, right: 0, bottom: "28%", height: 1, background: `linear-gradient(90deg, transparent, ${accent}50, transparent)` }} />
-          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0.4) 75%, transparent 100%)", padding: "56px 24px 28px" }}>
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: isLightBg ? "linear-gradient(to top, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.9) 40%, rgba(255,255,255,0.5) 75%, transparent 100%)" : "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0.4) 75%, transparent 100%)", padding: "56px 24px 28px" }}>
             {renderPriceBlock(17, 38)}
             <div style={{ height: 1, margin: "10px 0", background: `linear-gradient(90deg, ${accent}40, ${accent}15, transparent)` }} />
             {renderFooter()}
