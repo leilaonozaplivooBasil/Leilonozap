@@ -123,11 +123,26 @@ IMPORTANT: Leave the bottom 12% of the image clean/empty - it will be used for a
           <ImageIcon className="w-5 h-5 text-purple-400" />
           <h3 className="text-white font-semibold">Imagem Promocional com IA</h3>
         </div>
-        <p className="text-sm text-gray-400 mb-4">
+        <p className="text-sm text-gray-400 mb-3">
           Gere uma imagem promocional única usando IA baseada no produto selecionado.
         </p>
 
-        {!generatedImage ? (
+        {/* Campo WhatsApp */}
+        <div className="mb-4">
+          <label className="text-sm text-gray-300 font-medium mb-1.5 flex items-center gap-2">
+            <Phone className="w-4 h-4 text-green-400" />
+            Número do WhatsApp
+          </label>
+          <Input
+            value={whatsappNumber}
+            onChange={(e) => setWhatsappNumber(e.target.value)}
+            placeholder="Ex: 21996629605"
+            className="bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
+          />
+          <p className="text-xs text-gray-500 mt-1">Será exibido no rodapé da imagem junto com a logo Leilão NoZap</p>
+        </div>
+
+        {!compositeImage ? (
           <Button
             onClick={generatePromoImage}
             disabled={loading}
@@ -149,7 +164,7 @@ IMPORTANT: Leave the bottom 12% of the image clean/empty - it will be used for a
           <div className="space-y-3">
             <div className="rounded-xl overflow-hidden border border-gray-700">
               <img
-                src={generatedImage}
+                src={compositeImage}
                 alt="Promo gerada por IA"
                 className="w-full object-contain"
               />
@@ -165,6 +180,7 @@ IMPORTANT: Leave the bottom 12% of the image clean/empty - it will be used for a
               </Button>
               <Button
                 onClick={() => {
+                  setCompositeImage(null);
                   setGeneratedImage(null);
                   generatePromoImage();
                 }}
