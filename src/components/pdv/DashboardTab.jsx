@@ -418,7 +418,7 @@ export default function DashboardTab({
             <Package className="w-5 h-5" />
             Todos os Produtos Vendidos ({(() => {
               const pm = {};
-              periodSales.forEach(s => { if (!pm[s.product_id]) pm[s.product_id] = true; });
+              dashSales.forEach(s => { if (!pm[s.product_id]) pm[s.product_id] = true; });
               return Object.keys(pm).length;
             })()})
           </CardTitle>
