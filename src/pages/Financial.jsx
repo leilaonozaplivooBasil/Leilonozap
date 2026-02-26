@@ -4,13 +4,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Search, Filter, RefreshCw } from "lucide-react";
+import { Plus, FileText, Search, Filter, RefreshCw, LayoutDashboard, List } from "lucide-react";
 import moment from "moment";
 
 import FinancialSummaryCards from "@/components/financial/FinancialSummaryCards";
 import ExpenseTable from "@/components/financial/ExpenseTable";
 import ExpenseFormModal from "@/components/financial/ExpenseFormModal";
 import FinancialPDFGenerator from "@/components/financial/FinancialPDFGenerator";
+import FinancialDashboard from "@/components/financial/FinancialDashboard";
 
 const FinancialExpense = base44.entities.FinancialExpense;
 
