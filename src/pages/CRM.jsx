@@ -66,20 +66,60 @@ export default function CRM() {
   const [loadingProducts, setLoadingProducts] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      const user = JSON.parse(savedUser);
-      setCurrentUser(user);
-      if (user.role !== 'admin') {
+    const initCRM = async () => {
+      let user = null;
+
+      // Tenta localStorage primeiro (fluxo interno)
+      const savedUser = localStorage.getItem('currentUser');
+      if (savedUser) {
+        try {
+          user = JSON.parse(savedUser);
+        } catch (e) {
+          // JSON inválido, ignora
+        }
+      }
+
+      // Fallback: busca via plataforma Base44 (domínio próprio)
+      if (!user || !user.role) {
+        try {
+          const platformUser = await base44.auth.me();
+          if (platformUser) {
+            // Tenta enriquecer com dados do AppUser
+            try {
+              const appUsers = await base44.entities.AppUser.filter({ email: platformUser.email });
+              if (appUsers && appUsers.length > 0) {
+                user = appUsers[0];
+              } else {
+                user = platformUser;
+              }
+            } catch (e) {
+              user = platformUser;
+            }
+
+            // Hardcode admin para o email principal
+            if (user.email === 'luizsantanna@tttcorporate.com') {
+              user.role = 'admin';
+            }
+          }
+        } catch (e) {
+          // Não autenticado
+        }
+      }
+
+      if (!user || user.role !== 'admin') {
         alert("❌ Acesso negado! Apenas administradores.");
         navigate(createPageUrl('Home'));
         return;
       }
-    }
-    loadCustomers();
-    loadSellers();
-    loadNegotiations();
-    loadProducts();
+
+      setCurrentUser(user);
+      loadCustomers();
+      loadSellers();
+      loadNegotiations();
+      loadProducts();
+    };
+
+    initCRM();
   }, [navigate]);
 
   // Carregar produtos automaticamente ao abrir modal
