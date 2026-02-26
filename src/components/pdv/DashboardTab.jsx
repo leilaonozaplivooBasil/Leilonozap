@@ -168,62 +168,41 @@ export default function DashboardTab({
           </CardContent>
         </Card>
 
-        {/* CARDS POR BANCO */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
-          <Card className="bg-gray-800 border-2 border-red-600">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-red-400 text-xs mb-1">🔴 Santander</p>
-                  <p className="text-xs text-gray-400 mb-2">Produtos Físicos</p>
-                  <p className="text-2xl font-bold text-white">
-                    R$ {fmtBRL(periodSales.filter(s => s.receiving_bank === 'santander').reduce((sum, s) => sum + (s.total_amount || 0), 0))}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {periodSales.filter(s => s.receiving_bank === 'santander').length} vendas
-                  </p>
-                </div>
-                <DollarSign className="w-8 h-8 text-red-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-2 border-orange-500">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-orange-400 text-xs mb-1">🟠 Itaú</p>
-                  <p className="text-xs text-gray-400 mb-2">Licenciados</p>
-                  <p className="text-2xl font-bold text-white">
-                    R$ {fmtBRL(periodSales.filter(s => s.receiving_bank === 'itau').reduce((sum, s) => sum + (s.total_amount || 0), 0))}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {periodSales.filter(s => s.receiving_bank === 'itau').length} vendas
-                  </p>
-                </div>
-                <DollarSign className="w-8 h-8 text-orange-400" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-2 border-purple-500">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-400 text-xs mb-1">🟣 Nubank</p>
-                  <p className="text-xs text-gray-400 mb-2">Parceiros</p>
-                  <p className="text-2xl font-bold text-white">
-                    R$ {fmtBRL(periodSales.filter(s => s.receiving_bank === 'nubank').reduce((sum, s) => sum + (s.total_amount || 0), 0))}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {periodSales.filter(s => s.receiving_bank === 'nubank').length} vendas
-                  </p>
-                </div>
-                <DollarSign className="w-8 h-8 text-purple-400" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* CARDS POR BANCO - mostra só o banco selecionado ou todos */}
+        {(() => {
+          const bankCards = [
+            { value: 'santander', label: '🔴 Santander', sub: 'Produtos Físicos', border: 'border-red-600', text: 'text-red-400' },
+            { value: 'itau', label: '🟠 Itaú', sub: 'Licenciados', border: 'border-orange-500', text: 'text-orange-400' },
+            { value: 'nubank', label: '🟣 Nubank', sub: 'Parceiros', border: 'border-purple-500', text: 'text-purple-400' },
+          ];
+          const visibleBanks = dashBankFilter !== 'todos' 
+            ? bankCards.filter(b => b.value === dashBankFilter)
+            : bankCards;
+          return (
+            <div className={`grid gap-2 sm:gap-4 ${visibleBanks.length === 1 ? 'grid-cols-1 max-w-md' : 'grid-cols-1 md:grid-cols-3'}`}>
+              {visibleBanks.map(bank => {
+                const bankSales = periodSales.filter(s => s.receiving_bank === bank.value);
+                return (
+                  <Card key={bank.value} className={`bg-gray-800 border-2 ${bank.border}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className={`${bank.text} text-xs mb-1`}>{bank.label}</p>
+                          <p className="text-xs text-gray-400 mb-2">{bank.sub}</p>
+                          <p className="text-2xl font-bold text-white">
+                            R$ {fmtBRL(bankSales.reduce((sum, s) => sum + (s.total_amount || 0), 0))}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">{bankSales.length} vendas</p>
+                        </div>
+                        <DollarSign className={`w-8 h-8 ${bank.text}`} />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         {/* CARDS DE RESUMO GERAL */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-2 sm:gap-4">
