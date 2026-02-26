@@ -70,14 +70,18 @@ export default function Financial() {
     );
   }
 
+  // Categorias dinâmicas: apenas as que existem nos gastos lançados
+  const usedCategories = [...new Set(expenses.map(e => e.category).filter(Boolean))].sort();
+
   const filtered = expenses.filter(exp => {
     const monthMatch = filterMonth === "all" || moment(exp.due_date).format("YYYY-MM") === filterMonth;
     const statusMatch = filterStatus === "all" || exp.payment_status === filterStatus;
     const typeMatch = filterType === "all" || exp.expense_type === filterType;
+    const categoryMatch = filterCategory === "all" || exp.category === filterCategory;
     const searchMatch = !search || (exp.description || "").toLowerCase().includes(search.toLowerCase()) ||
       (exp.company || "").toLowerCase().includes(search.toLowerCase()) ||
       (exp.category || "").toLowerCase().includes(search.toLowerCase());
-    return monthMatch && statusMatch && typeMatch && searchMatch;
+    return monthMatch && statusMatch && typeMatch && categoryMatch && searchMatch;
   });
 
   const handleSave = (data) => {
