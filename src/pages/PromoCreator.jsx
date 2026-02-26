@@ -8,10 +8,19 @@ import ProductSelector from "@/components/promo/ProductSelector";
 import PromoTemplateCard, { TEMPLATES } from "@/components/promo/PromoTemplateCard";
 import PromoTextGenerator from "@/components/promo/PromoTextGenerator";
 import PromoVideoGenerator from "@/components/promo/PromoVideoGenerator";
+import PromoCustomizer from "@/components/promo/PromoCustomizer";
 
 export default function PromoCreator() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState("oferta");
+  const [overrides, setOverrides] = useState({
+    imageUrl: "",
+    title: "",
+    badgeText: "",
+    ctaText: "",
+    brandName: "",
+    brandSub: "",
+  });
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -38,7 +47,17 @@ export default function PromoCreator() {
             <div className="w-7 h-7 rounded-full bg-emerald-600 flex items-center justify-center text-sm font-bold">1</div>
             <h2 className="text-lg font-semibold">Selecione o Produto</h2>
           </div>
-          <ProductSelector onSelect={setSelectedProduct} selectedProduct={selectedProduct} />
+          <ProductSelector onSelect={(p) => {
+            setSelectedProduct(p);
+            setOverrides({
+              imageUrl: p?.image_urls?.[0] || "",
+              title: p?.description || "",
+              badgeText: "",
+              ctaText: "",
+              brandName: "",
+              brandSub: "",
+            });
+          }} selectedProduct={selectedProduct} />
         </div>
 
         {selectedProduct && (
@@ -71,38 +90,51 @@ export default function PromoCreator() {
 
                 {/* Templates Tab */}
                 <TabsContent value="templates">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Template Selector */}
-                    <div>
-                      <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                        Escolha o Template
-                      </h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                        {Object.entries(TEMPLATES).map(([key, tpl]) => (
-                          <button
-                            key={key}
-                            onClick={() => setSelectedTemplate(key)}
-                            className={`p-3 rounded-xl border text-sm font-medium transition-all ${
-                              selectedTemplate === key
-                                ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
-                                : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600 hover:text-white"
-                            }`}
-                          >
-                            <div className="h-2 w-full rounded-full mb-2" style={{ background: tpl.sealGradient || tpl.gradient }} />
-                            {tpl.name}
-                          </button>
-                        ))}
+                  <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    {/* Coluna 1: Template + Customização */}
+                    <div className="xl:col-span-1 space-y-6">
+                      {/* Template Selector */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+                          Escolha o Template
+                        </h3>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-2 gap-2">
+                          {Object.entries(TEMPLATES).map(([key, tpl]) => (
+                            <button
+                              key={key}
+                              onClick={() => setSelectedTemplate(key)}
+                              className={`p-3 rounded-xl border text-sm font-medium transition-all ${
+                                selectedTemplate === key
+                                  ? "border-emerald-500 bg-emerald-500/10 text-emerald-300"
+                                  : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600 hover:text-white"
+                              }`}
+                            >
+                              <div className="h-2 w-full rounded-full mb-2" style={{ background: tpl.sealGradient || tpl.gradient }} />
+                              {tpl.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Customizer */}
+                      <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4">
+                        <PromoCustomizer
+                          product={selectedProduct}
+                          overrides={overrides}
+                          onChange={setOverrides}
+                        />
                       </div>
                     </div>
 
-                    {/* Preview */}
-                    <div>
+                    {/* Coluna 2: Preview */}
+                    <div className="xl:col-span-2">
                       <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
                         Preview
                       </h3>
                       <PromoTemplateCard
                         product={selectedProduct}
                         templateKey={selectedTemplate}
+                        overrides={overrides}
                       />
                     </div>
                   </div>
