@@ -1,12 +1,12 @@
 import React from "react";
-import { Square, RectangleVertical, RectangleHorizontal, Minimize2, LayoutGrid } from "lucide-react";
+import { Square, RectangleVertical, RectangleHorizontal, Smartphone, Monitor } from "lucide-react";
 
 const LAYOUTS = [
-  { key: "square", name: "Quadrado", icon: Square, ratio: "1/1.15", desc: "Feed / Catálogo" },
-  { key: "story", name: "Story", icon: RectangleVertical, ratio: "9/16", desc: "Stories / Reels" },
-  { key: "landscape", name: "Paisagem", icon: RectangleHorizontal, ratio: "16/9", desc: "WhatsApp / Banner" },
-  { key: "minimal", name: "Minimalista", icon: Minimize2, ratio: "1/1", desc: "Limpo / Elegante" },
-  { key: "split", name: "Dividido", icon: LayoutGrid, ratio: "1/1", desc: "Foto + Info" },
+  { key: "square", name: "Instagram", icon: Square, ratio: "1/1", desc: "Feed 1080×1080", maxW: 480 },
+  { key: "story", name: "Stories", icon: Smartphone, ratio: "9/16", desc: "Stories / Reels 1080×1920", maxW: 360 },
+  { key: "whatsapp", name: "WhatsApp", icon: RectangleHorizontal, ratio: "16/9", desc: "Status / Grupos 1280×720", maxW: 520 },
+  { key: "youtube", name: "YouTube", icon: Monitor, ratio: "16/9", desc: "Thumbnail 1280×720", maxW: 520 },
+  { key: "vertical", name: "Vertical", icon: RectangleVertical, ratio: "3/4", desc: "Pinterest / Catálogo 1080×1440", maxW: 420 },
 ];
 
 export default function PromoLayoutSelector({ selectedLayout, onSelect }) {

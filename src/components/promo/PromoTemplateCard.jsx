@@ -64,7 +64,11 @@ const TEMPLATES = {
 };
 
 const LAYOUT_CONFIGS = {
-  square: { ratio: "1/1.15", maxW: 480 },
+  square: { ratio: "1/1", maxW: 480 },
+  story: { ratio: "9/16", maxW: 360 },
+  whatsapp: { ratio: "16/9", maxW: 520 },
+  youtube: { ratio: "16/9", maxW: 520 },
+  vertical: { ratio: "3/4", maxW: 420 },
 };
 
 export default function PromoTemplateCard({ product, templateKey, overrides = {}, layout = "square", design = "classic" }) {
@@ -86,7 +90,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
   const displayBrandSub = overrides.brandSub || "Catálogo Oficial";
 
   const accent = template.accentColor;
-  const layoutCfg = LAYOUT_CONFIGS.square;
+  const layoutCfg = LAYOUT_CONFIGS[layout] || LAYOUT_CONFIGS.square;
 
   const captureCard = async () => {
     if (!cardRef.current) return null;

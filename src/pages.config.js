@@ -111,6 +111,7 @@ import PaymentSettings from './pages/PaymentSettings';
 import ProductManagement from './pages/ProductManagement';
 import ProductOperationHistory from './pages/ProductOperationHistory';
 import Profile from './pages/Profile';
+import PromoCreator from './pages/PromoCreator';
 import ProtecaoCriacao from './pages/ProtecaoCriacao';
 import ProtectionDashboard from './pages/ProtectionDashboard';
 import Register from './pages/Register';
@@ -128,7 +129,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import PromoCreator from './pages/PromoCreator';
 import __Layout from './Layout.jsx';
 
 
@@ -197,6 +197,7 @@ export const PAGES = {
     "ProductManagement": ProductManagement,
     "ProductOperationHistory": ProductOperationHistory,
     "Profile": Profile,
+    "PromoCreator": PromoCreator,
     "ProtecaoCriacao": ProtecaoCriacao,
     "ProtectionDashboard": ProtectionDashboard,
     "Register": Register,
@@ -214,7 +215,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "PromoCreator": PromoCreator,
 }
 
 export const pagesConfig = {
