@@ -149,208 +149,241 @@ export default function DailyRanking({ allSales }) {
 
   const [generating, setGenerating] = React.useState(false);
 
+  const loadImageAsBase64 = async (url) => {
+    const img = await fetch(url);
+    const blob = await img.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
   const handleGeneratePDF = async () => {
     setGenerating(true);
     try {
       const firstPlace = ranking[0];
       const doc = new jsPDF();
-      
-      // Cores Leilão NoZap
-      const green = [34, 197, 94];
-      const darkGray = [31, 41, 55];
-      const yellow = [251, 191, 36];
-      const lightGray = [249, 250, 251];
-      const black = [0, 0, 0];
+      const pw = doc.internal.pageSize.getWidth();
+      const ph = doc.internal.pageSize.getHeight();
+
+      // Cores
+      const green = [16, 185, 129];
+      const darkCard = [24, 24, 27];
+      const yellow = [234, 179, 8];
+      const orange = [249, 115, 22];
+      const purple = [168, 85, 247];
       const white = [255, 255, 255];
+      const gray400 = [156, 163, 175];
+      const gray500 = [107, 114, 128];
+      const greenLight = [34, 197, 94];
 
-      let y = 15;
+      // Fundo preto em toda a página
+      doc.setFillColor(0, 0, 0);
+      doc.rect(0, 0, pw, ph, 'F');
 
-      // LOGO NO TOPO (centralizada)
-      const logoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      let y = 12;
+
+      // ===== HEADER: X-EOS (esquerda) | Título (centro) | NoZap (direita) =====
+      const noZapLogoUrl = 'https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png';
+      const xeosLogoUrl = XEosLogo;
+
+      let xeosBase64 = null;
+      let nozapBase64 = null;
       try {
-        const img = await fetch(logoUrl);
-        const blob = await img.blob();
-        const reader = new FileReader();
-        await new Promise((resolve) => {
-          reader.onloadend = () => {
-            const base64data = reader.result;
-            doc.addImage(base64data, 'PNG', 80, y, 50, 15);
-            resolve();
-          };
-          reader.readAsDataURL(blob);
-        });
-        y += 20;
-      } catch (e) {
-        console.log('Logo não carregada, continuando sem ela');
+        [xeosBase64, nozapBase64] = await Promise.all([
+          loadImageAsBase64(xeosLogoUrl).catch(() => null),
+          loadImageAsBase64(noZapLogoUrl).catch(() => null)
+        ]);
+      } catch (e) { /* logos opcionais */ }
+
+      // Logo X-EOS à esquerda
+      if (xeosBase64) {
+        doc.addImage(xeosBase64, 'PNG', 12, y, 30, 12);
       }
 
-      // TÍTULO PRINCIPAL COM BORDA VERDE
-      doc.setDrawColor(...green);
-      doc.setLineWidth(1.5);
-      doc.setFillColor(...darkGray);
-      doc.roundedRect(10, y, 190, 18, 3, 3, 'FD');
-      doc.setTextColor(...white);
-      doc.setFontSize(20);
-      doc.setFont('helvetica', 'bold');
-      doc.text('RANKING DE VENDAS DO DIA', 105, y + 12, { align: 'center' });
-      
-      y += 25;
+      // Logo NoZap à direita (mantém medida original)
+      if (nozapBase64) {
+        doc.addImage(nozapBase64, 'PNG', pw - 42, y, 30, 12);
+      }
 
-      // BOX DE INFORMAÇÕES (Data e Total)
-      doc.setFillColor(245, 245, 245);
-      doc.setDrawColor(200, 200, 200);
+      // Título central
+      doc.setTextColor(...yellow);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ranking do Dia', pw / 2, y + 6, { align: 'center' });
+
+      // Subtítulo: data e total
+      doc.setFontSize(10);
+      doc.setTextColor(...gray400);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${targetDate}  •  Total R$ ${fmt(dayTotal)}`, pw / 2, y + 13, { align: 'center' });
+
+      y += 22;
+
+      // Linha separadora verde sutil
+      doc.setDrawColor(...green);
       doc.setLineWidth(0.5);
-      doc.roundedRect(10, y, 90, 18, 2, 2, 'FD');
-      doc.roundedRect(110, y, 90, 18, 2, 2, 'FD');
-      
-      doc.setFontSize(10);
-      doc.setTextColor(...black);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Data:', 15, y + 7);
-      doc.setFont('helvetica', 'normal');
-      doc.text(targetDate, 15, y + 13);
-      
-      doc.setFont('helvetica', 'bold');
-      doc.text('Total do Dia:', 115, y + 7);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(...green);
-      doc.text(`R$ ${fmt(dayTotal)}`, 115, y + 13);
-      
-      y += 25;
+      doc.line(12, y, pw - 12, y);
+      y += 8;
 
-      // DESTAQUE DO DIA (com borda arredondada)
-      doc.setFillColor(...yellow);
-      doc.setDrawColor(...yellow);
-      doc.setLineWidth(1);
-      doc.roundedRect(10, y, 190, 12, 3, 3, 'FD');
-      doc.setTextColor(...darkGray);
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('DESTAQUE DO DIA', 105, y + 8, { align: 'center' });
-      
-      y += 15;
+      // ===== DESTAQUE DO DIA =====
+      if (firstPlace && firstPlace.name !== 'Sem dados') {
+        // Card escuro com borda amarela
+        doc.setFillColor(30, 30, 34);
+        doc.setDrawColor(...yellow);
+        doc.setLineWidth(1);
+        doc.roundedRect(12, y, pw - 24, 30, 4, 4, 'FD');
 
-      // Box do destaque com gradiente simulado
-      doc.setFillColor(255, 252, 240);
-      doc.setDrawColor(...yellow);
-      doc.setLineWidth(1);
-      doc.roundedRect(10, y, 190, 28, 3, 3, 'FD');
-      
-      doc.setFontSize(13);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...black);
-      doc.text((firstPlace?.name || 'Sem dados').toUpperCase(), 15, y + 10);
-      
-      doc.setFontSize(11);
-      doc.setTextColor(...green);
-      doc.text(`Total vendido: R$ ${firstPlace ? fmt(firstPlace.total) : '0,00'}`, 15, y + 18);
-      
-      doc.setTextColor(100, 100, 100);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Comissao: R$ ${firstPlace ? fmt(firstPlace.comissaoLicenciado) : '0,00'}`, 15, y + 24);
-      
-      y += 35;
+        // Badge "DESTAQUE DO DIA"
+        doc.setFillColor(...yellow);
+        doc.roundedRect(16, y + 3, 42, 7, 2, 2, 'F');
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DESTAQUE DO DIA', 37, y + 8, { align: 'center' });
 
-      // TOP 10 VENDEDORES (com borda verde)
-      doc.setFillColor(...green);
-      doc.setDrawColor(...green);
-      doc.setLineWidth(1);
-      doc.roundedRect(10, y, 190, 12, 3, 3, 'FD');
+        // Nome
+        doc.setTextColor(...white);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text(firstPlace.name.toUpperCase(), 16, y + 18);
+
+        // Valor à direita
+        doc.setTextColor(...greenLight);
+        doc.setFontSize(16);
+        doc.text(`R$ ${fmt(firstPlace.total)}`, pw - 16, y + 18, { align: 'right' });
+
+        // Info abaixo
+        doc.setFontSize(9);
+        doc.setTextColor(...orange);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${firstPlace.count} vendas  •  Comissao Licenciado: R$ ${fmt(firstPlace.comissaoLicenciado)}`, 16, y + 26);
+
+        if (firstPlace.comissaoLicenciante > 0) {
+          doc.setTextColor(...purple);
+          doc.text(`Comissao Licenciante: R$ ${fmt(firstPlace.comissaoLicenciante)}`, 120, y + 26);
+        }
+
+        y += 38;
+      }
+
+      // ===== TOP 10 VENDEDORES =====
       doc.setTextColor(...white);
-      doc.setFontSize(14);
+      doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('TOP 10 VENDEDORES', 105, y + 8, { align: 'center' });
-      
-      y += 15;
-
-      // Cabeçalho da tabela
-      doc.setFillColor(...darkGray);
-      doc.setDrawColor(...darkGray);
-      doc.rect(10, y, 190, 10, 'FD');
-      doc.setTextColor(...white);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Pos', 18, y + 7);
-      doc.text('Nome', 40, y + 7);
-      doc.text('Qtd', 118, y + 7);
-      doc.text('Valor Total', 145, y + 7);
-      doc.text('Comissao', 183, y + 7);
-      
+      doc.text('TOP 10 VENDEDORES', pw / 2, y + 5, { align: 'center' });
       y += 10;
 
-      // Linhas do ranking com design melhorado
+      // Cabeçalho da tabela
+      doc.setFillColor(38, 38, 42);
+      doc.roundedRect(12, y, pw - 24, 9, 2, 2, 'F');
+      doc.setTextColor(...gray400);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Pos', 20, y + 6);
+      doc.text('Nome', 34, y + 6);
+      doc.text('Qtd', 110, y + 6);
+      doc.text('Valor Total', 140, y + 6);
+      doc.text('Comissao', 178, y + 6);
+      y += 10;
+
+      // Linhas do ranking
       ranking.forEach((r, i) => {
-        const isFirst = i === 0;
-        const isSecond = i === 1;
-        const isThird = i === 2;
-        
-        // Cor de fundo do pódio
-        if (isFirst) {
-          doc.setFillColor(255, 250, 220); // Ouro claro
-          doc.setDrawColor(...yellow);
-          doc.setLineWidth(1);
-        } else if (isSecond) {
-          doc.setFillColor(240, 240, 245); // Prata
-          doc.setDrawColor(192, 192, 192);
-          doc.setLineWidth(0.8);
-        } else if (isThird) {
-          doc.setFillColor(255, 245, 235); // Bronze
-          doc.setDrawColor(205, 127, 50);
-          doc.setLineWidth(0.8);
-        } else {
-          doc.setFillColor(...(i % 2 === 0 ? [255, 255, 255] : [248, 248, 248]));
-          doc.setDrawColor(230, 230, 230);
-          doc.setLineWidth(0.3);
-        }
-        
-        doc.rect(10, y, 190, 9, 'FD');
-        
-        doc.setTextColor(...black);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', isFirst || isSecond || isThird ? 'bold' : 'normal');
-        
-        // Badge de posição
-        if (isFirst || isSecond || isThird) {
-          const badgeColor = isFirst ? yellow : isSecond ? [192, 192, 192] : [205, 127, 50];
-          doc.setFillColor(...badgeColor);
-          doc.circle(18, y + 4.5, 3, 'F');
-          doc.setTextColor(...white);
-          doc.setFontSize(8);
-          doc.text(String(i + 1), 18, y + 6, { align: 'center' });
-          doc.setTextColor(...black);
-          doc.setFontSize(9);
-        } else {
-          doc.text(String(i + 1), 18, y + 6, { align: 'center' });
-        }
-        
-        doc.text(r.name.substring(0, 32), 27, y + 6);
-        doc.text(String(r.count), 118, y + 6, { align: 'center' });
-        doc.setTextColor(...green);
-        doc.text(`R$ ${fmt(r.total)}`, 165, y + 6, { align: 'right' });
-        doc.setTextColor(100, 100, 100);
-        doc.text(`R$ ${fmt(r.comissaoLicenciado)}`, 195, y + 6, { align: 'right' });
-        doc.setTextColor(...black);
-        
-        y += 9;
-        
-        if (y > 265 && i < ranking.length - 1) {
+        if (y > 265) {
           doc.addPage();
-          y = 20;
+          doc.setFillColor(0, 0, 0);
+          doc.rect(0, 0, pw, ph, 'F');
+          y = 15;
         }
+
+        const rowH = 18;
+        const hasLicenciante = r.comissaoLicenciante > 0;
+
+        // Card de cada vendedor
+        doc.setFillColor(...darkCard);
+        doc.setDrawColor(50, 50, 55);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(12, y, pw - 24, rowH, 3, 3, 'FD');
+
+        // Badge de posição
+        const badgeX = 20;
+        const badgeY = y + (rowH / 2);
+        if (i < 3) {
+          const badgeColors = [[234, 179, 8], [156, 163, 175], [249, 115, 22]];
+          doc.setFillColor(...badgeColors[i]);
+          doc.circle(badgeX, badgeY, 4, 'F');
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.text(String(i + 1), badgeX, badgeY + 2.5, { align: 'center' });
+        } else {
+          doc.setTextColor(...gray500);
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'normal');
+          doc.text(String(i + 1), badgeX, badgeY + 2.5, { align: 'center' });
+        }
+
+        // Nome
+        doc.setTextColor(...white);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(r.name.substring(0, 28).toUpperCase(), 30, y + 7);
+
+        // Info linha 2
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...gray400);
+        doc.text(`${r.count} vendas`, 30, y + 12);
+
+        // Comissão licenciado
+        if (r.comissaoLicenciado > 0) {
+          doc.setTextColor(...orange);
+          doc.setFont('helvetica', 'bold');
+          doc.text(`Lic: R$ ${fmt(r.comissaoLicenciado)}`, 55, y + 12);
+        }
+
+        // Comissão licenciante
+        if (hasLicenciante) {
+          doc.setTextColor(...purple);
+          doc.text(`Lte: R$ ${fmt(r.comissaoLicenciante)}`, 90, y + 12);
+        }
+
+        // Qtd
+        doc.setTextColor(...white);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(r.count), 114, y + 10, { align: 'center' });
+
+        // Valor Total
+        doc.setTextColor(...greenLight);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`R$ ${fmt(r.total)}`, 160, y + 10, { align: 'right' });
+
+        // Comissão total
+        doc.setTextColor(...orange);
+        doc.setFontSize(9);
+        doc.text(`R$ ${fmt(r.comissaoLicenciado)}`, pw - 16, y + 10, { align: 'right' });
+
+        y += rowH + 2;
       });
 
-      // MENSAGEM FINAL
-      y += 8;
-      if (y > 260) {
+      // ===== MENSAGEM FINAL =====
+      y += 6;
+      if (y > 270) {
         doc.addPage();
-        y = 20;
+        doc.setFillColor(0, 0, 0);
+        doc.rect(0, 0, pw, ph, 'F');
+        y = 15;
       }
-      doc.setFillColor(240, 255, 240);
-      doc.roundedRect(10, y, 190, 12, 2, 2, 'F');
-      doc.setFontSize(11);
+
+      doc.setFillColor(16, 40, 30);
+      doc.roundedRect(12, y, pw - 24, 14, 3, 3, 'F');
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...green);
-      doc.text('Parabens a todos os vendedores! Continuem com esse ritmo incrivel!', 105, y + 8, { align: 'center' });
+      doc.setTextColor(...greenLight);
+      doc.text('Parabens a todos os vendedores! Continuem com esse ritmo incrivel!', pw / 2, y + 9, { align: 'center' });
 
       // Salva PDF
       const fileName = `ranking-leilao-nozap-${targetDate.replace(/\//g, '-')}.pdf`;
