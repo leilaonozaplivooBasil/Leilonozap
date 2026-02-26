@@ -159,7 +159,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
                     ))}
                   </SelectContent>
                 </Select>
-                <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-700 text-xs whitespace-nowrap"
+                <Button variant="outline" size="sm" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 text-xs whitespace-nowrap"
                   onClick={() => setUseCustomCategory(true)}>+ Nova</Button>
               </div>
             ) : (
