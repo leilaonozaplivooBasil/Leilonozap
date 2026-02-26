@@ -25,6 +25,7 @@ export default function Financial() {
   const [filterType, setFilterType] = useState("all");
   const [filterMonth, setFilterMonth] = useState(moment().format("YYYY-MM"));
   const [filterCategory, setFilterCategory] = useState("all");
+  const [activeTab, setActiveTab] = useState("expenses");
   const queryClient = useQueryClient();
 
   useEffect(() => {
