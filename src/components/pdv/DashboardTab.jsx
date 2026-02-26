@@ -36,22 +36,22 @@ export default function DashboardTab({
   const periodSales = React.useMemo(() => {
     let filtered = allSales;
 
-    // Filtro por data específica
-    if (dateFilter) {
+    // Filtro por data específica (intervalo)
+    if (dateFilter || dateFilterEnd) {
       filtered = filtered.filter(s => {
-        // Normaliza para YYYY-MM-DD no fuso de Brasília
+        let saleDate;
         if (s.sale_date) {
-          // sale_date pode ser YYYY-MM-DD ou ISO string
-          const saleDate = s.sale_date.length > 10 
+          saleDate = s.sale_date.length > 10 
             ? new Date(s.sale_date).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
             : s.sale_date;
-          return saleDate === dateFilter;
+        } else if (s.sale_datetime) {
+          saleDate = new Date(s.sale_datetime).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+        } else {
+          return false;
         }
-        if (s.sale_datetime) {
-          const saleDate = new Date(s.sale_datetime).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
-          return saleDate === dateFilter;
-        }
-        return false;
+        if (dateFilter && saleDate < dateFilter) return false;
+        if (dateFilterEnd && saleDate > dateFilterEnd) return false;
+        return true;
       });
       return filtered;
     }
