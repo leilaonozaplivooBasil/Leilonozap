@@ -164,10 +164,11 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
     }
   };
 
+  const isLightBg = design === "magazine" || design === "tag";
   const isMagazine = design === "magazine";
-  const textColor = isMagazine ? "#111" : "white";
-  const textMuted = isMagazine ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.4)";
-  const textSemi = isMagazine ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.6)";
+  const textColor = isLightBg ? "#111" : "white";
+  const textMuted = isLightBg ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.4)";
+  const textSemi = isLightBg ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.6)";
 
   // === RENDER POR LAYOUT ===
   const renderBgEffects = () => {
