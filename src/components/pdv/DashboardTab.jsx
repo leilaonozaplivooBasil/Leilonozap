@@ -28,18 +28,33 @@ export default function DashboardTab({
   cancelSale
 }) {
   const [periodFilter, setPeriodFilter] = React.useState('all');
+  const [dateFilter, setDateFilter] = React.useState('');
+  const [bankPopoverOpen, setBankPopoverOpen] = React.useState(false);
+  const [periodPopoverOpen, setPeriodPopoverOpen] = React.useState(false);
 
   const periodSales = React.useMemo(() => {
-    if (periodFilter === 'all') return allSales;
+    let filtered = allSales;
+
+    // Filtro por data específica
+    if (dateFilter) {
+      filtered = filtered.filter(s => {
+        const d = s.sale_date || (s.sale_datetime ? s.sale_datetime.substring(0, 10) : '');
+        return d === dateFilter;
+      });
+      return filtered;
+    }
+
+    // Filtro por período
+    if (periodFilter === 'all') return filtered;
     const days = { '30': 30, '60': 60, '90': 90, '180': 180, '365': 365 }[periodFilter];
-    if (!days) return allSales;
+    if (!days) return filtered;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - days);
-    return allSales.filter(s => {
+    return filtered.filter(s => {
       const d = s.sale_date || s.sale_datetime;
       return d && new Date(d) >= cutoff;
     });
-  }, [allSales, periodFilter]);
+  }, [allSales, periodFilter, dateFilter]);
 
   const dashSales = ['santander', 'itau', 'nubank'].includes(dashBankFilter)
     ? periodSales.filter(s => s.receiving_bank === dashBankFilter)
