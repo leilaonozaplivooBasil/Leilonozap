@@ -92,7 +92,14 @@ export default function Financial() {
     });
   }, [expenses]);
 
-  const isAdmin = currentUser?.role === "admin";
+  if (!authChecked) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <RefreshCw className="w-8 h-8 text-gray-500 animate-spin" />
+      </div>
+    );
+  }
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
