@@ -137,27 +137,28 @@ export default function PromoVideoGenerator({ product }) {
     });
   };
 
+  const [error, setError] = useState(null);
+
   const generatePromoImage = async () => {
     setLoading(true);
-    const prompt = `Create a professional promotional banner image for an e-commerce product sale.
-The product is: "${product.description}".
-Price: R$ ${price.toFixed(2)}${discount > 0 ? ` (${discount}% OFF from R$ ${marketPrice.toFixed(2)})` : ''}.
-Style: Modern, vibrant, eye-catching promotional banner.
-Include visual elements like: sale badges, price tags, sparkles, dynamic background.
-Brand colors: green (#25d366) and dark theme.
-The image should be suitable for social media and WhatsApp stories.
-Do NOT include any text or logos in the image, only visual design elements and product representation.
-Make it look premium and professional.
-IMPORTANT: Leave the bottom 12% of the image clean/empty - it will be used for a branded footer overlay.`;
+    setError(null);
 
-    const result = await base44.integrations.Core.GenerateImage({
-      prompt,
-      existing_image_urls: product.image_urls?.[0] ? [product.image_urls[0]] : undefined,
-    });
+    const productName = product.description || "produto";
+    const prompt = `A stunning high-quality product photography of "${productName}" on a premium dark background with dramatic lighting. Professional studio shot with green (#25d366) accent lighting and subtle bokeh effects. Clean, elegant composition suitable for social media. No text, no logos, no watermarks. Leave the bottom 12% of the image as clean dark space.`;
 
-    setGeneratedImage(result.url);
-    const final = await addOverlay(result.url);
-    setCompositeImage(final);
+    try {
+      const result = await base44.integrations.Core.GenerateImage({
+        prompt,
+        existing_image_urls: product.image_urls?.[0] ? [product.image_urls[0]] : undefined,
+      });
+
+      setGeneratedImage(result.url);
+      const final = await addOverlay(result.url);
+      setCompositeImage(final);
+    } catch (err) {
+      console.error("Erro ao gerar imagem:", err);
+      setError("Não foi possível gerar a imagem. Tente novamente ou selecione um produto diferente.");
+    }
     setLoading(false);
   };
 
