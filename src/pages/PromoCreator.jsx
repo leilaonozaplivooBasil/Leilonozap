@@ -88,7 +88,7 @@ export default function PromoCreator() {
                                 : "border-gray-700 bg-gray-800/50 text-gray-400 hover:border-gray-600 hover:text-white"
                             }`}
                           >
-                            <div className={`h-2 w-full rounded-full bg-gradient-to-r ${tpl.bg} mb-2`} />
+                            <div className="h-2 w-full rounded-full mb-2" style={{ background: tpl.sealGradient || tpl.gradient }} />
                             {tpl.name}
                           </button>
                         ))}
