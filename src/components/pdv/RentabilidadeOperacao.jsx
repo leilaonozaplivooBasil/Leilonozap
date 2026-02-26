@@ -12,8 +12,20 @@ const fmtPct = (v) => (v || 0).toFixed(2);
 
 export default function RentabilidadeOperacao({ sales, products, onBack }) {
   const [editingInvestido, setEditingInvestido] = useState(false);
-  const [customInvestido, setCustomInvestido] = useState(null);
+  const [customInvestido, setCustomInvestido] = useState(() => {
+    const saved = localStorage.getItem('rentabilidade_custom_investido');
+    return saved !== null ? parseFloat(saved) : null;
+  });
   const [inputInvestido, setInputInvestido] = useState('');
+
+  const saveCustomInvestido = (val) => {
+    setCustomInvestido(val);
+    if (val !== null) {
+      localStorage.setItem('rentabilidade_custom_investido', String(val));
+    } else {
+      localStorage.removeItem('rentabilidade_custom_investido');
+    }
+  };
 
   const stats = React.useMemo(() => {
     // Total de produtos (estoque + vendidos)
