@@ -152,7 +152,7 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       const val = parseFloat(inputInvestido.replace(/\./g, '').replace(',', '.'));
-                      if (!isNaN(val) && val >= 0) setCustomInvestido(val);
+                      if (!isNaN(val) && val >= 0) saveCustomInvestido(val);
                       setEditingInvestido(false);
                     }
                     if (e.key === 'Escape') {
@@ -164,13 +164,13 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
                 />
                 <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-400 hover:text-emerald-300" onClick={() => {
                   const val = parseFloat(inputInvestido.replace(/\./g, '').replace(',', '.'));
-                  if (!isNaN(val) && val >= 0) setCustomInvestido(val);
+                  if (!isNaN(val) && val >= 0) saveCustomInvestido(val);
                   setEditingInvestido(false);
                 }}>
                   <Check className="w-4 h-4" />
                 </Button>
                 <Button size="icon" variant="ghost" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => {
-                  setCustomInvestido(null);
+                  saveCustomInvestido(null);
                   setEditingInvestido(false);
                 }}>
                   <X className="w-4 h-4" />
