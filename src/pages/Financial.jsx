@@ -87,6 +87,25 @@ export default function Financial() {
     }
   };
 
+  const handleBulkSave = async (expenses) => {
+    const formatted = expenses.map(exp => ({
+      description: exp.description || "Gasto importado",
+      company: exp.company || "",
+      category: exp.category || "",
+      expense_type: "unico",
+      amount: parseFloat(exp.amount) || 0,
+      interest_amount: 0,
+      total_amount: parseFloat(exp.amount) || 0,
+      due_date: exp.due_date || moment().format("YYYY-MM-DD"),
+      payment_method: "pix",
+      payment_status: "pendente",
+      amount_paid: 0,
+    }));
+    await FinancialExpense.bulkCreate(formatted);
+    queryClient.invalidateQueries({ queryKey: ["financial-expenses"] });
+    setShowForm(false);
+  };
+
   const handleEdit = (exp) => { setEditingExpense(exp); setShowForm(true); };
   const handleDelete = (exp) => {
     if (window.confirm(`Excluir "${exp.description}"?`)) deleteMutation.mutate(exp.id);
