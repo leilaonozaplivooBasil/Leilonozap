@@ -343,6 +343,30 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         </div>
       );
     }
+    if (design === "flash") {
+      return (
+        <div style={{ background: "#7c3aed", padding: "8px 20px", display: "inline-flex", alignItems: "center", gap: 6, clipPath: "polygon(0 0, 100% 0, 95% 100%, 5% 100%)", zIndex: 10 }}>
+          <span style={{ color: "white", fontSize: 13, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayBadge}</span>
+        </div>
+      );
+    }
+    if (design === "relampago") {
+      return (
+        <div style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", padding: "6px 16px", borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 16 }}>⚡</span>
+          <span style={{ color: "#000", fontSize: 12, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase" }}>{displayBadge}</span>
+        </div>
+      );
+    }
+    if (design === "tag" || design === "grid") {
+      const tagColor = design === "tag" ? "#1f2937" : "#84cc16";
+      const tagTextColor = design === "tag" ? "white" : "#000";
+      return (
+        <div style={{ background: tagColor, padding: "7px 16px", borderRadius: 4, display: "inline-flex", alignItems: "center", gap: 6 }}>
+          <span style={{ color: tagTextColor, fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayBadge}</span>
+        </div>
+      );
+    }
     const badgeBg = design === "neon" ? `${accent}20` : "rgba(0,0,0,0.6)";
     const badgeBorder = design === "neon" ? `${accent}60` : `${accent}40`;
     return (
