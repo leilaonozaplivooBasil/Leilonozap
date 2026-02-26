@@ -7,7 +7,6 @@ const DESIGNS = [
   { key: "spotlight", name: "Vitrine Premium", desc: "Holofote no produto, estilo loja", preview: "radial-gradient(circle at 50% 35%, #1a1a1a, #000)" },
   { key: "magazine", name: "Editorial", desc: "Fundo branco, tipografia de revista", preview: "linear-gradient(180deg, #fafafa, #e8e8e8)" },
   { key: "brutalist", name: "Brutalist", desc: "Preto total, bordas grossas, impacto", preview: "#000" },
-  { key: "flash", name: "Flash Sale", desc: "Diagonal branca + gradiente laranja-roxo", preview: "linear-gradient(135deg, #fff 40%, #f97316, #7c3aed)" },
   { key: "relampago", name: "Relâmpago", desc: "Preço estilo LED neon ciano, raio ⚡", preview: "linear-gradient(180deg, #0f0f0f, #000)" },
   { key: "wave", name: "Wave Color", desc: "Ondas SVG suaves, círculos flutuantes", preview: "linear-gradient(160deg, #0f172a, #1e293b)" },
   { key: "grid", name: "Grid Block", desc: "Blocos geométricos verde-limão assimétricos", preview: "linear-gradient(135deg, #84cc16 35%, #111 35%)" },

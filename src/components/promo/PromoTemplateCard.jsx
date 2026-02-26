@@ -441,7 +441,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
   // Decide qual template renderizar
   const renderContent = () => {
     switch (design) {
-      case "flash": return renderFlashTemplate();
+
       case "relampago": return renderRelampagoTemplate();
       case "wave": return renderWaveTemplate();
       case "grid": return renderGridTemplate();
