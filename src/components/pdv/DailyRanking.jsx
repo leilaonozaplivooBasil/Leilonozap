@@ -306,8 +306,8 @@ export default function DailyRanking({ allSales }) {
           y = 15;
         }
 
-        const rowH = 18;
-        const hasLicenciante = r.comissaoLicenciante > 0;
+        const rowH = 20;
+        const midY = y + rowH / 2; // centro vertical do card
 
         // Card de cada vendedor
         doc.setFillColor(...darkCard);
@@ -315,64 +315,66 @@ export default function DailyRanking({ allSales }) {
         doc.setLineWidth(0.3);
         doc.roundedRect(12, y, pw - 24, rowH, 3, 3, 'FD');
 
-        // Badge de posição
-        const badgeX = 20;
-        const badgeY = y + (rowH / 2);
+        // Badge de posição (centralizado verticalmente)
+        const badgeX = 22;
         if (i < 3) {
           const badgeColors = [[234, 179, 8], [156, 163, 175], [249, 115, 22]];
           doc.setFillColor(...badgeColors[i]);
-          doc.circle(badgeX, badgeY, 4, 'F');
+          doc.circle(badgeX, midY, 4, 'F');
           doc.setTextColor(0, 0, 0);
-          doc.setFontSize(8);
+          doc.setFontSize(9);
           doc.setFont('helvetica', 'bold');
-          doc.text(String(i + 1), badgeX, badgeY + 2.5, { align: 'center' });
+          doc.text(String(i + 1), badgeX, midY + 3, { align: 'center' });
         } else {
           doc.setTextColor(...gray500);
           doc.setFontSize(9);
           doc.setFont('helvetica', 'normal');
-          doc.text(String(i + 1), badgeX, badgeY + 2.5, { align: 'center' });
+          doc.text(String(i + 1), badgeX, midY + 3, { align: 'center' });
         }
 
-        // Nome
+        // Nome (linha 1 - acima do centro)
+        const textX = 32;
         doc.setTextColor(...white);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text(r.name.substring(0, 28).toUpperCase(), 30, y + 7);
+        doc.text(r.name.substring(0, 28).toUpperCase(), textX, midY - 1);
 
-        // Info linha 2
+        // Info linha 2 (abaixo do centro)
         doc.setFontSize(7.5);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...gray400);
-        doc.text(`${r.count} vendas`, 30, y + 12);
+        let infoLine = `${r.count} vendas`;
+        doc.text(infoLine, textX, midY + 5);
 
-        // Comissão licenciado
+        // Comissão licenciado (na mesma linha 2)
         if (r.comissaoLicenciado > 0) {
+          const vendasW = doc.getTextWidth(infoLine);
           doc.setTextColor(...orange);
           doc.setFont('helvetica', 'bold');
-          doc.text(`Lic: R$ ${fmt(r.comissaoLicenciado)}`, 55, y + 12);
+          doc.text(`Lic: R$ ${fmt(r.comissaoLicenciado)}`, textX + vendasW + 6, midY + 5);
         }
 
-        // Comissão licenciante
-        if (hasLicenciante) {
+        // Comissão licenciante (continuação)
+        if (r.comissaoLicenciante > 0) {
           doc.setTextColor(...purple);
-          doc.text(`Lte: R$ ${fmt(r.comissaoLicenciante)}`, 90, y + 12);
+          doc.text(`Lte: R$ ${fmt(r.comissaoLicenciante)}`, 95, midY + 5);
         }
 
-        // Qtd
+        // Qtd (centralizado vertical e horizontal na coluna)
         doc.setTextColor(...white);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.text(String(r.count), 114, y + 10, { align: 'center' });
+        doc.text(String(r.count), 114, midY + 3, { align: 'center' });
 
-        // Valor Total
+        // Valor Total (centralizado verticalmente)
         doc.setTextColor(...greenLight);
         doc.setFont('helvetica', 'bold');
-        doc.text(`R$ ${fmt(r.total)}`, 160, y + 10, { align: 'right' });
+        doc.text(`R$ ${fmt(r.total)}`, 160, midY + 3, { align: 'right' });
 
-        // Comissão total
+        // Comissão (centralizado verticalmente)
         doc.setTextColor(...orange);
         doc.setFontSize(9);
-        doc.text(`R$ ${fmt(r.comissaoLicenciado)}`, pw - 16, y + 10, { align: 'right' });
+        doc.text(`R$ ${fmt(r.comissaoLicenciado)}`, pw - 16, midY + 3, { align: 'right' });
 
         y += rowH + 2;
       });
