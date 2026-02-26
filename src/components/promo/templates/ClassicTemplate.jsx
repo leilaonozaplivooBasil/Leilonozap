@@ -1,5 +1,7 @@
 import React from "react";
 
+const LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+
 export default function ClassicTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template, renderProductImage }) {
   return (
     <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
@@ -56,13 +58,7 @@ export default function ClassicTemplate({ displayTitle, displayImage, displayBad
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 12 }}>ou 12x de R$ {(price / 12).toFixed(2)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 8, background: `${accent}20`, border: `1px solid ${accent}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🏷️</div>
-            <div>
-              <p style={{ color: "white", fontSize: 11, fontWeight: 700 }}>{displayBrand}</p>
-              <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 9 }}>{displayBrandSub}</p>
-            </div>
-          </div>
+          <img src={LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 32, width: "auto", objectFit: "contain" }} />
           <div style={{ background: template.sealGradient, borderRadius: 10, padding: "8px 18px", boxShadow: `0 4px 16px ${template.accentGlow}40` }}>
             <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>

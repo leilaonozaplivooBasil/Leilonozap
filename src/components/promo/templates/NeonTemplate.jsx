@@ -1,5 +1,7 @@
 import React from "react";
 
+const LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+
 export default function NeonTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template, renderProductImage }) {
   // Neon Cyberpunk: Fundo escuro azulado, bordas brilhantes, tipografia com glow, estilo futurista
   return (
@@ -62,10 +64,7 @@ export default function NeonTemplate({ displayTitle, displayImage, displayBadge,
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, marginBottom: 10 }}>ou 12x de R$ {(price / 12).toFixed(2)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div>
-            <p style={{ color: "white", fontSize: 11, fontWeight: 700 }}>{displayBrand}</p>
-            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 9 }}>{displayBrandSub}</p>
-          </div>
+          <img src={LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 28, width: "auto", objectFit: "contain", filter: `drop-shadow(0 0 8px ${accent}30)` }} />
           <div style={{ background: `${accent}20`, border: `1px solid ${accent}60`, borderRadius: 6, padding: "8px 18px", boxShadow: `0 0 12px ${accent}30` }}>
             <span style={{ color: accent, fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", textShadow: `0 0 8px ${accent}` }}>{displayCta}</span>
           </div>

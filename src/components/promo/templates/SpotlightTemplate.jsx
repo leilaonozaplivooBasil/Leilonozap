@@ -1,5 +1,7 @@
 import React from "react";
 
+const LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
+
 export default function SpotlightTemplate({ displayTitle, displayImage, displayBadge, displayCta, displayBrand, displayBrandSub, price, marketPrice, discount, accent, template, renderProductImage }) {
   // Spotlight: Fundo escuro com holofote radial no produto, estilo vitrine premium, produto como estrela
   return (
@@ -56,10 +58,7 @@ export default function SpotlightTemplate({ displayTitle, displayImage, displayB
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, textAlign: "center", marginBottom: 10 }}>12x de R$ {(price / 12).toFixed(2)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-          <div>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: 600, letterSpacing: "0.05em" }}>{displayBrand}</p>
-            <p style={{ color: "rgba(255,255,255,0.25)", fontSize: 8 }}>{displayBrandSub}</p>
-          </div>
+          <img src={LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 28, width: "auto", objectFit: "contain", opacity: 0.7 }} />
           <div style={{ background: template.sealGradient, borderRadius: 20, padding: "8px 20px" }}>
             <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>
