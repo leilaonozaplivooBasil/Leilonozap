@@ -76,19 +76,19 @@ export default function StockPosition() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-900">Carregando...</div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white">Carregando...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-[1800px] mx-auto">
 
         {/* HEADER */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Posição de estoque</h1>
+          <h1 className="text-3xl font-bold text-white">Posição de estoque</h1>
           <Button
             onClick={() => navigate(createPageUrl("ProductManagement"))}
             className="bg-blue-600 hover:bg-blue-700"
@@ -102,7 +102,7 @@ export default function StockPosition() {
           <select
             value={depositNameFilter}
             onChange={(e) => setDepositNameFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Nome do depósito</option>
             <option value="Principal">Principal</option>
@@ -113,7 +113,7 @@ export default function StockPosition() {
           <select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Categoria</option>
             <option value="eletronicos">Eletrônicos</option>
@@ -124,7 +124,7 @@ export default function StockPosition() {
           <select
             value={depositCompanyFilter}
             onChange={(e) => setDepositCompanyFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Depósito Empresa</option>
             <option value="Empresa 1">Empresa 1</option>
@@ -135,7 +135,7 @@ export default function StockPosition() {
           <select
             value={classFilter}
             onChange={(e) => setClassFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Classe</option>
             <option value="A">A</option>
@@ -146,7 +146,7 @@ export default function StockPosition() {
           <select
             value={ignoreDepositFilter}
             onChange={(e) => setIgnoreDepositFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Dep. Desconsiderar</option>
             <option value="true">Sim</option>
@@ -158,7 +158,7 @@ export default function StockPosition() {
               placeholder="SKU"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white text-gray-900 border-gray-300"
+              className="bg-gray-800 text-white border-gray-700"
             />
             <Button 
               onClick={() => setSearchTerm('')} 
@@ -169,9 +169,9 @@ export default function StockPosition() {
           </div>
 
           <div className="lg:col-span-2 flex items-center justify-end gap-4">
-            <span className="text-gray-900 text-sm whitespace-nowrap">Selecione a Visualização:</span>
+            <span className="text-white text-sm whitespace-nowrap">Selecione a Visualização:</span>
             <label className="flex items-center gap-2 cursor-pointer">
-              <span className="text-gray-600 text-sm whitespace-nowrap">Previsão de estoque</span>
+              <span className="text-gray-400 text-sm whitespace-nowrap">Previsão de estoque</span>
               <input
                 type="checkbox"
                 checked={viewMode === 'currentStock'}
@@ -180,35 +180,35 @@ export default function StockPosition() {
                 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all
                 checked:after:translate-x-full"
               />
-              <span className="text-gray-600 text-sm whitespace-nowrap">Posição de estoque</span>
+              <span className="text-gray-400 text-sm whitespace-nowrap">Posição de estoque</span>
             </label>
           </div>
         </div>
 
         {/* CARDS DE ESTATÍSTICAS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-white border-gray-200">
+          <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-6">
-              <p className="text-gray-600 text-sm mb-1">Produtos em Estoque</p>
-              <p className="text-4xl font-bold text-gray-900">
+              <p className="text-gray-400 text-sm mb-1">Produtos em Estoque</p>
+              <p className="text-4xl font-bold text-white">
                 {stats.inStock.toLocaleString()}
               </p>
             </CardContent>
           </Card>
           
-          <Card className="bg-white border-gray-200">
+          <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-6">
-              <p className="text-gray-600 text-sm mb-1">Valor de mercadoria em estoque</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-gray-400 text-sm mb-1">Valor de mercadoria em estoque</p>
+              <p className="text-2xl font-bold text-white">
                 R$ {stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </CardContent>
           </Card>
           
-          <Card className="bg-white border-gray-200">
+          <Card className="bg-gray-800 border-gray-700">
             <CardContent className="p-6">
-              <p className="text-gray-600 text-sm mb-1">Receita potencial em estoque</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-gray-400 text-sm mb-1">Receita potencial em estoque</p>
+              <p className="text-2xl font-bold text-white">
                 R$ {stats.potentialRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </CardContent>
@@ -216,17 +216,17 @@ export default function StockPosition() {
         </div>
 
         {/* TABELA SIMPLIFICADA */}
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-gray-900">Posição de estoque</CardTitle>
+              <CardTitle className="text-white">Posição de estoque</CardTitle>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   placeholder="Buscar valor"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white text-gray-900 border-gray-300 w-64"
+                  className="pl-10 bg-gray-900 text-white border-gray-700 w-64"
                 />
               </div>
             </div>
@@ -235,7 +235,7 @@ export default function StockPosition() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200 bg-blue-600">
+                  <tr className="border-b border-gray-700 bg-blue-600">
                     <th className="text-left p-3 font-semibold text-white">Código</th>
                     <th className="text-left p-3 font-semibold text-white">SKU</th>
                     <th className="text-left p-3 font-semibold text-white">Produto</th>
@@ -259,42 +259,42 @@ export default function StockPosition() {
                   {filteredProducts.slice(0, 34).map((product, index) => (
                     <tr 
                       key={product.id} 
-                      className={`border-b border-gray-100 hover:bg-blue-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                      className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'}`}
                     >
-                      <td className="p-3 text-gray-900 font-medium">{product.product_code || product.codigo || product.code || '-'}</td>
-                      <td className="p-3 text-blue-600 font-medium">{product.lot || 'N/A'}</td>
-                      <td className="p-3 text-gray-900">{product.description}</td>
-                      <td className="p-3 text-gray-900">{product.purchase_order || 'Empresa 3'}</td>
-                      <td className="p-3 text-gray-900">{product.deposit_name || 'Bangu'}</td>
-                      <td className="p-3 text-center text-gray-900">{product.qty_perfeito || 0}</td>
-                      <td className="p-3 text-center text-gray-900">{product.qty_bom || 0}</td>
-                      <td className="p-3 text-center text-gray-900">{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
+                      <td className="p-3 text-gray-300 font-medium">{product.product_code || product.codigo || product.code || '-'}</td>
+                      <td className="p-3 text-blue-400 font-medium">{product.lot || 'N/A'}</td>
+                      <td className="p-3 text-gray-300">{product.description}</td>
+                      <td className="p-3 text-gray-300">{product.purchase_order || 'Empresa 3'}</td>
+                      <td className="p-3 text-gray-300">{product.deposit_name || 'Bangu'}</td>
+                      <td className="p-3 text-center text-gray-300">{product.qty_perfeito || 0}</td>
+                      <td className="p-3 text-center text-gray-300">{product.qty_bom || 0}</td>
+                      <td className="p-3 text-center text-gray-300">{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
                       <td 
-                        className="p-3 text-gray-900 text-sm cursor-pointer hover:bg-gray-100 transition-colors max-w-xs"
+                        className="p-3 text-gray-300 text-sm cursor-pointer hover:bg-gray-700 transition-colors max-w-xs"
                         onClick={() => setExpandedNotes(prev => ({...prev, [product.id]: !prev[product.id]}))}
                       >
                         <div className={expandedNotes[product.id] ? '' : 'truncate'}>
                           {product.notes || '-'}
                         </div>
                         {product.notes && product.notes.length > 50 && (
-                          <span className="text-blue-600 text-xs">
+                          <span className="text-blue-400 text-xs">
                             {expandedNotes[product.id] ? '▲ minimizar' : '▼ ver mais'}
                           </span>
                         )}
                       </td>
-                      <td className="p-3 text-right text-gray-900">R$ {(product.cost_price || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-gray-900">
+                      <td className="p-3 text-right text-gray-300">R$ {(product.cost_price || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-300">
                         R$ {(() => {
                           const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
                           const unitCost = totalQty > 0 ? (product.cost_price || 0) / totalQty : (product.cost_price || 0);
                           return unitCost.toFixed(2);
                         })()}
                       </td>
-                      <td className="p-3 text-right text-gray-900">R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-gray-900 font-semibold">{(product.quantity || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-gray-900 font-semibold">{(product.quantity_sold || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-blue-600 font-bold">R$ {(product.sold_amount || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-green-600 font-bold">R$ {(product.profit || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-300">R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-white font-semibold">{(product.quantity || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-white font-semibold">{(product.quantity_sold || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-blue-400 font-bold">R$ {(product.sold_amount || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-green-400 font-bold">R$ {(product.profit || 0).toFixed(2)}</td>
                       <td className="p-3 text-center">
                         <Button
                           size="sm"
@@ -323,15 +323,15 @@ export default function StockPosition() {
             </div>
 
             {/* PAGINAÇÃO */}
-            <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-white">
-              <span className="text-sm text-gray-600">
+            <div className="flex items-center justify-between p-4 border-t border-gray-700 bg-gray-800">
+              <span className="text-sm text-gray-400">
                 1 - {Math.min(34, filteredProducts.length)} / {filteredProducts.length}
               </span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="text-gray-600 border-gray-300 hover:bg-gray-100">
+                <Button variant="outline" size="sm" className="text-gray-400 border-gray-600 hover:bg-gray-700">
                   &lt;
                 </Button>
-                <Button variant="outline" size="sm" className="text-gray-600 border-gray-300 hover:bg-gray-100">
+                <Button variant="outline" size="sm" className="text-gray-400 border-gray-600 hover:bg-gray-700">
                   &gt;
                 </Button>
               </div>
