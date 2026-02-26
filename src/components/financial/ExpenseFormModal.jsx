@@ -166,7 +166,7 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
               <div className="flex gap-2 mt-1">
                 <Input value={customCategory} onChange={e => setCustomCategory(e.target.value)}
                   placeholder="Digite a categoria" className="bg-gray-800 border-gray-700 text-white flex-1" />
-                <Button variant="outline" size="sm" className="border-gray-600 text-gray-300 hover:bg-gray-700 text-xs"
+                <Button variant="outline" size="sm" className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 text-xs"
                   onClick={() => { setUseCustomCategory(false); setCustomCategory(""); }}>
                   <X className="w-3 h-3" />
                 </Button>
