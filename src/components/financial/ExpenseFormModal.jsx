@@ -31,7 +31,7 @@ const EXPENSE_TYPES = [
   { value: "parcelado", label: "Parcelado" },
 ];
 
-export default function ExpenseFormModal({ open, onClose, onSave, editingExpense }) {
+export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, editingExpense }) {
   const [form, setForm] = useState({
     description: "", company: "", category: "", expense_type: "unico",
     amount: "", due_date: "", payment_method: "pix", pix_or_card_info: "",
