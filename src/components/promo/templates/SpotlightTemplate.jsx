@@ -63,9 +63,11 @@ export default function SpotlightTemplate({ displayTitle, displayImage, displayB
           <span style={{ color: accent, fontSize: 22, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, textAlign: "center", marginBottom: 10 }}>12x de R$ {(price / 12).toFixed(2)}</p>}
-        <WhatsAppBadge />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 56, width: "auto", objectFit: "contain" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 56, width: "auto", objectFit: "contain" }} />
+            <WhatsAppBadge />
+          </div>
           <div style={{ background: template.sealGradient, borderRadius: 20, padding: "8px 20px" }}>
             <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>

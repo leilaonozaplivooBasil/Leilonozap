@@ -65,9 +65,11 @@ export default function ClassicTemplate({ displayTitle, displayImage, displayBad
           <span style={{ color: accent, fontSize: 20, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 12 }}>ou 12x de R$ {(price / 12).toFixed(2)}</p>}
-        <WhatsAppBadge />
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 56, width: "auto", objectFit: "contain" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 56, width: "auto", objectFit: "contain" }} />
+            <WhatsAppBadge />
+          </div>
           <div style={{ background: template.sealGradient, borderRadius: 10, padding: "8px 18px", boxShadow: `0 4px 16px ${template.accentGlow}40` }}>
             <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>

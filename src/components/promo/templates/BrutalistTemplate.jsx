@@ -63,13 +63,13 @@ export default function BrutalistTemplate({ displayTitle, displayImage, displayB
       </div>
 
       {/* Footer no bloco colorido */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "18%", padding: "0 24px", zIndex: 10, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <WhatsAppBadge />
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "15%", padding: "0 24px", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 56, width: "auto", objectFit: "contain" }} />
-          <div style={{ background: "#000", padding: "8px 20px" }}>
-            <span style={{ color: accent, fontSize: 12, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase" }}>{displayCta}</span>
-          </div>
+          <WhatsAppBadge />
+        </div>
+        <div style={{ background: "#000", padding: "8px 20px" }}>
+          <span style={{ color: accent, fontSize: 12, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase" }}>{displayCta}</span>
         </div>
       </div>
     </div>
