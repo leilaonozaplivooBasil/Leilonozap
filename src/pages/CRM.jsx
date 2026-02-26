@@ -40,6 +40,8 @@ export default function CRM() {
     phone: '',
     email: '',
     license_type: '',
+    default_commission_percentage: 0,
+    default_licenciante_commission_percentage: 0,
     is_active: true
   });
   const navigate = useNavigate();
@@ -331,6 +333,8 @@ export default function CRM() {
       phone: seller.phone,
       email: seller.email || '',
       license_type: seller.license_type || '',
+      default_commission_percentage: seller.default_commission_percentage || 0,
+      default_licenciante_commission_percentage: seller.default_licenciante_commission_percentage || 0,
       is_active: seller.is_active
     });
     setShowSellerModal(true);
@@ -364,6 +368,8 @@ export default function CRM() {
         phone: '',
         email: '',
         license_type: '',
+        default_commission_percentage: 0,
+        default_licenciante_commission_percentage: 0,
         is_active: true
       });
       setShowSellerModal(false);
@@ -1110,6 +1116,37 @@ _Enviado via CRM Leilão NoZap_`;
                     </select>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-gray-300">Comissão do Vendedor (%)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={sellerFormData.default_commission_percentage}
+                        onChange={(e) => setSellerFormData({ ...sellerFormData, default_commission_percentage: parseFloat(e.target.value) || 0 })}
+                        className="bg-gray-700 text-white"
+                        placeholder="Ex: 10"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">% aplicada automaticamente no PDV</p>
+                    </div>
+                    <div>
+                      <Label className="text-gray-300">Comissão do Licenciante (%)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={sellerFormData.default_licenciante_commission_percentage}
+                        onChange={(e) => setSellerFormData({ ...sellerFormData, default_licenciante_commission_percentage: parseFloat(e.target.value) || 0 })}
+                        className="bg-gray-700 text-white"
+                        placeholder="Ex: 5"
+                      />
+                      <p className="text-xs text-gray-400 mt-1">% do indicador (se houver)</p>
+                    </div>
+                  </div>
+
                   <div className="flex gap-2">
                     <Button type="submit" className="flex-1 bg-green-600 hover:bg-green-700">
                       <Save className="w-4 h-4 mr-2" />
@@ -1125,15 +1162,18 @@ _Enviado via CRM Leilão NoZap_`;
                           name: '',
                           phone: '',
                           email: '',
+                          license_type: '',
+                          default_commission_percentage: 0,
+                          default_licenciante_commission_percentage: 0,
                           is_active: true
-                        });
-                      }}
-                      className="border-gray-600 text-gray-300"
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </form>
+                          });
+                          }}
+                          className="border-gray-600 text-gray-300"
+                          >
+                          Cancelar
+                          </Button>
+                          </div>
+                          </form>
               </CardContent>
             </Card>
           </div>
