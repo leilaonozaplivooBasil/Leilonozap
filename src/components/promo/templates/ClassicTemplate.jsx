@@ -58,8 +58,7 @@ export default function ClassicTemplate({ displayTitle, displayImage, displayBad
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 11, marginBottom: 12 }}>ou 12x de R$ {(price / 12).toFixed(2)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" referrerPolicy="no-referrer" style={{ height: 32, width: "auto", objectFit: "contain" }} onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "block"; }} />
-          <span style={{ display: "none", color: "white", fontSize: 13, fontWeight: 800, letterSpacing: "0.05em" }}>LEILÃO NOZAP</span>
+          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 32, width: "auto", objectFit: "contain" }} />
           <div style={{ background: template.sealGradient, borderRadius: 10, padding: "8px 18px", boxShadow: `0 4px 16px ${template.accentGlow}40` }}>
             <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>

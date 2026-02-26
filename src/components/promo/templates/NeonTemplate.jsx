@@ -64,7 +64,7 @@ export default function NeonTemplate({ displayTitle, displayImage, displayBadge,
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, marginBottom: 10 }}>ou 12x de R$ {(price / 12).toFixed(2)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" crossOrigin="anonymous" style={{ height: 28, width: "auto", objectFit: "contain", filter: `drop-shadow(0 0 8px ${accent}30)` }} />
+          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 28, width: "auto", objectFit: "contain", filter: `drop-shadow(0 0 8px ${accent}30)` }} />
           <div style={{ background: `${accent}20`, border: `1px solid ${accent}60`, borderRadius: 6, padding: "8px 18px", boxShadow: `0 0 12px ${accent}30` }}>
             <span style={{ color: accent, fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", textShadow: `0 0 8px ${accent}` }}>{displayCta}</span>
           </div>
