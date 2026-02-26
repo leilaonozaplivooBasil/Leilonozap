@@ -154,6 +154,7 @@ export default function DashboardTab({
               {/* DATA ESPECÍFICA */}
               <div className="flex items-center gap-1.5">
                 <CalendarDays className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs text-gray-400">De:</span>
                 <input
                   type="date"
                   value={dateFilter}
@@ -163,8 +164,18 @@ export default function DashboardTab({
                   }}
                   className="h-8 px-2 text-xs rounded bg-gray-700 border border-gray-600 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none [color-scheme:dark]"
                 />
-                {dateFilter && (
-                  <Button size="sm" variant="ghost" onClick={() => setDateFilter('')} className="h-7 px-2 text-xs text-gray-400 hover:text-white">
+                <span className="text-xs text-gray-400">Até:</span>
+                <input
+                  type="date"
+                  value={dateFilterEnd}
+                  onChange={(e) => {
+                    setDateFilterEnd(e.target.value);
+                    if (e.target.value) setPeriodFilter('all');
+                  }}
+                  className="h-8 px-2 text-xs rounded bg-gray-700 border border-gray-600 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none [color-scheme:dark]"
+                />
+                {(dateFilter || dateFilterEnd) && (
+                  <Button size="sm" variant="ghost" onClick={() => { setDateFilter(''); setDateFilterEnd(''); }} className="h-7 px-2 text-xs text-gray-400 hover:text-white">
                     ✕
                   </Button>
                 )}
