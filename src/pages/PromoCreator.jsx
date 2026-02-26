@@ -10,11 +10,13 @@ import PromoTextGenerator from "@/components/promo/PromoTextGenerator";
 import PromoVideoGenerator from "@/components/promo/PromoVideoGenerator";
 import PromoCustomizer from "@/components/promo/PromoCustomizer";
 import PromoLayoutSelector from "@/components/promo/PromoLayoutSelector";
+import PromoDesignSelector from "@/components/promo/PromoDesignSelector";
 
 export default function PromoCreator() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState("oferta");
   const [selectedLayout, setSelectedLayout] = useState("square");
+  const [selectedDesign, setSelectedDesign] = useState("classic");
   const [overrides, setOverrides] = useState({
     imageUrl: "",
     title: "",
@@ -118,6 +120,12 @@ export default function PromoCreator() {
                         </div>
                       </div>
 
+                      {/* Design Selector */}
+                      <PromoDesignSelector
+                        selectedDesign={selectedDesign}
+                        onSelect={setSelectedDesign}
+                      />
+
                       {/* Layout Selector */}
                       <PromoLayoutSelector
                         selectedLayout={selectedLayout}
@@ -144,6 +152,7 @@ export default function PromoCreator() {
                         templateKey={selectedTemplate}
                         overrides={overrides}
                         layout={selectedLayout}
+                        design={selectedDesign}
                       />
                     </div>
                   </div>
