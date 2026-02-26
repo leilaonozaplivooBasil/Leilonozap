@@ -23,6 +23,7 @@ export default function Financial() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
   const [filterMonth, setFilterMonth] = useState(moment().format("YYYY-MM"));
+  const [filterCategory, setFilterCategory] = useState("all");
   const queryClient = useQueryClient();
 
   useEffect(() => {
