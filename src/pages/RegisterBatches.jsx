@@ -576,10 +576,10 @@ export default function RegisterBatches() {
             <Button
               variant="outline"
               onClick={() => navigate(createPageUrl("ProductManagement"))}
-              className="bg-white border-gray-300 text-black hover:bg-blue-900 hover:text-white hover:border-blue-900"
+              className="bg-gray-800 border-gray-700 text-white hover:bg-blue-900 hover:border-blue-900"
             >
-              <ArrowLeft className="w-4 h-4 mr-2 text-black hover:text-white" />
-              <span className="font-semibold text-black hover:text-white">Voltar</span>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              <span className="font-semibold">Voltar</span>
             </Button>
             <h1 className="text-3xl font-bold text-white">📦 Registrar Leilões</h1>
           </div>

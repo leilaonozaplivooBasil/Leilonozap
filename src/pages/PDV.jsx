@@ -1184,7 +1184,7 @@ ${boletoInfo}================================
                   placeholder="Pesquisar produto, código de barras, lote..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 text-lg bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
+                  className="pl-10 h-12 text-lg bg-gray-900 border-gray-700 text-white placeholder:text-gray-500"
                 />
               </div>
             </div>
@@ -1257,11 +1257,11 @@ ${boletoInfo}================================
                              <td className="p-3 text-sm text-gray-300 font-medium">{product.lot || 'N/A'}</td>
                              <td className="p-3 text-sm text-gray-300">{product.description}</td>
                               <td className="p-3 text-center">
-                                <Badge className="bg-blue-100 text-blue-800 border-0">
+                                <Badge className="bg-blue-900/50 text-blue-300 border-0">
                                   {product.quantity}
                                 </Badge>
                               </td>
-                              <td className="p-3 text-right text-green-600 font-bold">
+                              <td className="p-3 text-right text-green-400 font-bold">
                                 R$ {product.selling_price_retail?.toFixed(2)}
                               </td>
                               <td className="p-3 text-center">
@@ -1491,7 +1491,7 @@ ${boletoInfo}================================
                                     className="h-7 text-xs text-right w-20 bg-gray-800 border-gray-600 text-white"
                                   />
                                 </td>
-                                <td className="p-2 text-right text-green-600 font-bold text-xs">
+                                <td className="p-2 text-right text-green-400 font-bold text-xs">
                                   R$ {((item.customPrice || item.product.selling_price_retail) * item.quantity).toFixed(2)}
                                 </td>
                                 <td className="p-2 text-center">
