@@ -266,20 +266,24 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
     <div style={{ width: 140, height: 140, borderRadius: 20, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📦</div>
   );
 
-  const renderPriceBlock = (titleSize = 16, priceSize = 36) => (
-    <>
-      <p style={{ color: "white", fontSize: titleSize, fontWeight: 700, lineHeight: 1.3, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{displayTitle}</p>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-        {discount > 0 && <span style={{ color: "rgba(255,255,255,0.4)", fontSize: priceSize * 0.4, fontWeight: 500, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
-        <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
-          <span style={{ color: "rgba(255,255,255,0.6)", fontSize: priceSize * 0.4, fontWeight: 600 }}>R$</span>
-          <span style={{ color: "white", fontSize: priceSize, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1, textShadow: `0 0 20px ${template.accentGlow}60` }}>{price.toFixed(2).split('.')[0]}</span>
-          <span style={{ color: accent, fontSize: priceSize * 0.5, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
+  const renderPriceBlock = (titleSize = 16, priceSize = 36) => {
+    const neonShadow = design === "neon" ? `0 0 30px ${accent}50, 0 0 60px ${accent}20` : `0 0 20px ${template.accentGlow}60`;
+    const brutalistStyle = design === "brutalist";
+    return (
+      <>
+        <p style={{ color: textColor, fontSize: titleSize, fontWeight: brutalistStyle ? 900 : 700, lineHeight: 1.3, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", textShadow: isMagazine ? "none" : "0 2px 8px rgba(0,0,0,0.5)", ...(brutalistStyle ? { textTransform: "uppercase", letterSpacing: "0.05em" } : {}) }}>{displayTitle}</p>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+          {discount > 0 && <span style={{ color: textMuted, fontSize: priceSize * 0.4, fontWeight: 500, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
+          <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+            <span style={{ color: textSemi, fontSize: priceSize * 0.4, fontWeight: 600 }}>R$</span>
+            <span style={{ color: textColor, fontSize: priceSize, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1, textShadow: isMagazine ? "none" : neonShadow }}>{price.toFixed(2).split('.')[0]}</span>
+            <span style={{ color: accent, fontSize: priceSize * 0.5, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
+          </div>
         </div>
-      </div>
-      {price > 50 && <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 500, marginBottom: 10 }}>ou até <span style={{ color: accent, fontWeight: 700 }}>12x</span> de R$ {(price / 12).toFixed(2)} sem juros</p>}
-    </>
-  );
+        {price > 50 && <p style={{ color: isMagazine ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 500, marginBottom: 10 }}>ou até <span style={{ color: accent, fontWeight: 700 }}>12x</span> de R$ {(price / 12).toFixed(2)} sem juros</p>}
+      </>
+    );
+  };
 
   const renderFooter = () => (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
