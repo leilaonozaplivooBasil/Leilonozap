@@ -183,6 +183,19 @@ export default function Financial() {
                 <SelectItem value="parcelado">Parcelado</SelectItem>
               </SelectContent>
             </Select>
+            {usedCategories.length > 0 && (
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-44">
+                  <SelectValue placeholder="Categoria" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                  <SelectItem value="all">Todas Categorias</SelectItem>
+                  {usedCategories.map(cat => (
+                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         </div>
 
