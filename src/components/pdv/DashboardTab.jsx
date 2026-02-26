@@ -115,10 +115,10 @@ export default function DashboardTab({
                   <p className="text-red-400 text-xs mb-1">🔴 Santander</p>
                   <p className="text-xs text-gray-400 mb-2">Produtos Físicos</p>
                   <p className="text-2xl font-bold text-white">
-                    R$ {fmtBRL(allSales.filter(s => s.receiving_bank === 'santander').reduce((sum, s) => sum + (s.total_amount || 0), 0))}
+                    R$ {fmtBRL(periodSales.filter(s => s.receiving_bank === 'santander').reduce((sum, s) => sum + (s.total_amount || 0), 0))}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {allSales.filter(s => s.receiving_bank === 'santander').length} vendas
+                    {periodSales.filter(s => s.receiving_bank === 'santander').length} vendas
                   </p>
                 </div>
                 <DollarSign className="w-8 h-8 text-red-400" />
