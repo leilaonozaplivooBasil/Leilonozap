@@ -436,6 +436,71 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         </div>
       );
     }
+    if (design === "flash") {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+          </div>
+          <div style={{ background: "#7c3aed", borderRadius: 8, padding: "8px 18px" }}>
+            <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
+          </div>
+        </div>
+      );
+    }
+    if (design === "relampago") {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
+            <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+          </div>
+          <div style={{ background: "linear-gradient(135deg, #25d366, #128c7e)", borderRadius: "50%", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ fontSize: 18 }}>📱</span>
+          </div>
+        </div>
+      );
+    }
+    if (design === "tag") {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ color: "#111", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
+            <p style={{ color: "rgba(0,0,0,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+          </div>
+          <div style={{ background: "#1f2937", borderRadius: "50%", width: 44, height: 44, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.2)" }}>
+            <span style={{ color: "white", fontSize: 7, fontWeight: 800, textTransform: "uppercase", textAlign: "center", lineHeight: 1.2 }}>COMPRE<br/>AGORA</span>
+          </div>
+        </div>
+      );
+    }
+    if (design === "grid") {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ color: "white", fontSize: 12, fontWeight: 800, lineHeight: 1 }}>{displayBrand}</p>
+            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+          </div>
+          <div style={{ background: "#84cc16", padding: "7px 16px", borderRadius: 2 }}>
+            <span style={{ color: "#000", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
+          </div>
+        </div>
+      );
+    }
+    if (design === "wave") {
+      return (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div>
+            <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
+            <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+          </div>
+          <div style={{ background: template.sealGradient, borderRadius: 20, padding: "7px 18px" }}>
+            <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{displayCta}</span>
+          </div>
+        </div>
+      );
+    }
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
