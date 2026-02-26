@@ -308,45 +308,45 @@ export default function ProductManagement() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-900">Carregando...</div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white">Carregando...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-[1800px] mx-auto">
 
         {/* HEADER */}
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Posição de estoque</h1>
+          <h1 className="text-3xl font-bold text-white">Posição de estoque</h1>
           <div className="flex gap-3">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="bg-white border-gray-300 text-gray-900 hover:bg-gray-100">
+                <Button variant="outline" className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
                   <Filter className="w-4 h-4 mr-2" />
                   Mais Ações
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-white border-gray-200">
+              <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white">
                 <DropdownMenuItem
                   onClick={() => navigate(createPageUrl("RegisterBatches"))}
-                  className="cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-gray-700 text-white"
                 >
                   <PackagePlus className="w-4 h-4 mr-2" />
                   Registrar Lotes
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => navigate(createPageUrl("PDV"))}
-                  className="cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-gray-700 text-white"
                 >
                   <DollarSign className="w-4 h-4 mr-2" />
                   PDV
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => navigate(createPageUrl("ProductOperationHistory"))}
-                  className="cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-gray-700 text-white"
                 >
                   <BookOpen className="w-4 h-4 mr-2" />
                   Histórico de Operação
@@ -393,7 +393,7 @@ export default function ProductManagement() {
 
                     alert(`✅ ${filteredProducts.length} produtos exportados!`);
                   }}
-                  className="cursor-pointer hover:bg-gray-100"
+                  className="cursor-pointer hover:bg-gray-700 text-white"
                 >
                   <Download className="w-4 h-4 mr-2" />
                   Exportar Dados
@@ -443,7 +443,7 @@ export default function ProductManagement() {
           <select
             value={depositNameFilter}
             onChange={(e) => setDepositNameFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Nome do depósito</option>
             <option value="Bangu">Bangu</option>
@@ -454,7 +454,7 @@ export default function ProductManagement() {
           <select
             value={classFilter}
             onChange={(e) => setClassFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Total</option>
             <option value="perfeito">
@@ -473,7 +473,7 @@ export default function ProductManagement() {
               placeholder="SKU"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-white text-gray-900 border-gray-300"
+              className="bg-gray-800 text-white border-gray-700"
             />
             <Button onClick={() => setSearchTerm('')} className="bg-red-600 hover:bg-red-700 text-white whitespace-nowrap">
               Apagar
@@ -574,10 +574,10 @@ export default function ProductManagement() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Card className="bg-white border-gray-200 cursor-help">
+                <Card className="bg-gray-800 border-gray-700 cursor-help">
                   <CardContent className="p-6">
-                    <p className="text-gray-600 text-sm mb-1">Ticket Médio (Funcionais)</p>
-                    <p className="text-2xl font-bold text-orange-600">
+                    <p className="text-gray-400 text-sm mb-1">Ticket Médio (Funcionais)</p>
+                    <p className="text-2xl font-bold text-orange-400">
                       R$ {stats.averageTicketFunctional.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </CardContent>
@@ -592,10 +592,10 @@ export default function ProductManagement() {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Card className="bg-white border-gray-200 cursor-help">
+                <Card className="bg-gray-800 border-gray-700 cursor-help">
                   <CardContent className="p-6">
-                    <p className="text-gray-600 text-sm mb-1">Valor de mercadoria em estoque</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-gray-400 text-sm mb-1">Valor de mercadoria em estoque</p>
+                    <p className="text-2xl font-bold text-white">
                       R$ {stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </CardContent>
@@ -610,10 +610,10 @@ export default function ProductManagement() {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Card className="bg-white border-gray-200 cursor-help">
+                <Card className="bg-gray-800 border-gray-700 cursor-help">
                   <CardContent className="p-6">
-                    <p className="text-gray-600 text-sm mb-1">Receita potencial em estoque</p>
-                    <p className="text-2xl font-bold text-gray-900">
+                    <p className="text-gray-400 text-sm mb-1">Receita potencial em estoque</p>
+                    <p className="text-2xl font-bold text-white">
                       R$ {stats.potentialRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </CardContent>
@@ -628,10 +628,10 @@ export default function ProductManagement() {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Card className="bg-white border-gray-200 cursor-help">
+                <Card className="bg-gray-800 border-gray-700 cursor-help">
                   <CardContent className="p-6">
-                    <p className="text-gray-600 text-sm mb-1">Faturado</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-gray-400 text-sm mb-1">Faturado</p>
+                    <p className="text-2xl font-bold text-green-400">
                       R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </CardContent>
@@ -646,10 +646,10 @@ export default function ProductManagement() {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <Card className="bg-white border-gray-200 cursor-help">
+                <Card className="bg-gray-800 border-gray-700 cursor-help">
                   <CardContent className="p-6">
-                    <p className="text-gray-600 text-sm mb-1">Lucro</p>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-gray-400 text-sm mb-1">Lucro</p>
+                    <p className="text-2xl font-bold text-green-400">
                       R$ {stats.totalProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                   </CardContent>
@@ -665,17 +665,17 @@ export default function ProductManagement() {
         </TooltipProvider>
 
         {/* TABELA SIMPLIFICADA */}
-        <Card className="bg-white border-gray-200">
+        <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="text-gray-900">Posição de estoque</CardTitle>
+              <CardTitle className="text-white">Posição de estoque</CardTitle>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   placeholder="Buscar valor"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-white text-gray-900 border-gray-300 w-64"
+                  className="pl-10 bg-gray-900 text-white border-gray-700 w-64"
                 />
               </div>
             </div>
@@ -707,17 +707,17 @@ export default function ProductManagement() {
                   {currentProducts.map((product, index) => (
                     <tr
                       key={product.id}
-                      className={`border-b border-gray-100 hover:bg-gray-100 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
+                      className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'}`}
                     >
-                      <td className="p-3 text-gray-900 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.product_code || product.codigo || product.code || '-'}</td>
-                      <td className="p-3 text-gray-900 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.lot || 'N/A'}</td>
-                      <td className="p-3 text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.description}</td>
-                      <td className="p-3 text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.deposit_name || 'Bangu'}</td>
-                      <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_perfeito || 0}</td>
-                      <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_bom || 0}</td>
-                      <td className="p-3 text-center text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
+                      <td className="p-3 text-gray-300 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.product_code || product.codigo || product.code || '-'}</td>
+                      <td className="p-3 text-gray-300 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.lot || 'N/A'}</td>
+                      <td className="p-3 text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.description}</td>
+                      <td className="p-3 text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.deposit_name || 'Bangu'}</td>
+                      <td className="p-3 text-center text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_perfeito || 0}</td>
+                      <td className="p-3 text-center text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_bom || 0}</td>
+                      <td className="p-3 text-center text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
                       <td
-                        className="p-3 text-gray-900 text-sm cursor-pointer hover:bg-gray-200 transition-colors max-w-xs"
+                        className="p-3 text-gray-300 text-sm cursor-pointer hover:bg-gray-700 transition-colors max-w-xs"
                         onClick={(e) => {
                           e.stopPropagation();
                           setExpandedNotes(prev => ({ ...prev, [product.id]: !prev[product.id] }));
@@ -727,24 +727,24 @@ export default function ProductManagement() {
                           {product.notes || '-'}
                         </div>
                         {product.notes && product.notes.length > 50 && (
-                          <span className="text-blue-600 text-xs">
+                          <span className="text-blue-400 text-xs">
                             {expandedNotes[product.id] ? '▲ minimizar' : '▼ ver mais'}
                           </span>
                         )}
                       </td>
-                      <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>
+                      <td className="p-3 text-right text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>
                         R$ {(() => {
                           const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
                           const unitCost = totalQty > 0 ? (product.cost_price || 0) / totalQty : (product.cost_price || 0);
                           return unitCost.toFixed(2);
                         })()}
                       </td>
-                      <td className="p-3 text-right text-gray-900 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-gray-900 font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-gray-900 font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-blue-600 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-green-600 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.profit || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-white font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-white font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right text-blue-400 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
+                      <td className="p-3 text-right text-green-400 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.profit || 0).toFixed(2)}</td>
                       <td className="p-3 text-center">
                         <div className="flex items-center justify-center gap-1">
                           <Button
@@ -800,18 +800,18 @@ export default function ProductManagement() {
             </div>
 
             {/* PAGINAÇÃO */}
-            <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-white">
-              <span className="text-sm text-gray-600">
+            <div className="flex items-center justify-between p-4 border-t border-gray-700 bg-gray-800">
+              <span className="text-sm text-gray-400">
                 {startIndex + 1} - {Math.min(endIndex, filteredProducts.length)} / {filteredProducts.length}
               </span>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600 mr-2">
+                <span className="text-sm text-gray-400 mr-2">
                   Página {currentPage} de {totalPages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-gray-600 border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-gray-400 border-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handlePreviousPage}
                   disabled={currentPage === 1}
                 >
@@ -820,7 +820,7 @@ export default function ProductManagement() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-gray-600 border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-gray-400 border-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages}
                 >
