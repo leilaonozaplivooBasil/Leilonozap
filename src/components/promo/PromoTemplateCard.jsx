@@ -56,7 +56,7 @@ const TEMPLATES = {
   },
 };
 
-export default function PromoTemplateCard({ product, templateKey }) {
+export default function PromoTemplateCard({ product, templateKey, overrides = {} }) {
   const cardRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -66,6 +66,14 @@ export default function PromoTemplateCard({ product, templateKey }) {
   const price = product.price_catalog || product.selling_price_retail || 0;
   const marketPrice = product.market_value || product.selling_price_retail || 0;
   const discount = marketPrice > price ? Math.round((1 - price / marketPrice) * 100) : 0;
+
+  // Overrides customizáveis
+  const displayTitle = overrides.title || product.description;
+  const displayImage = overrides.imageUrl || product.image_urls?.[0];
+  const displayBadge = overrides.badgeText || template.sealText;
+  const displayCta = overrides.ctaText || "COMPRE AGORA";
+  const displayBrand = overrides.brandName || "Leilão NoZap";
+  const displayBrandSub = overrides.brandSub || "Catálogo Oficial";
 
   const captureCard = async () => {
     if (!cardRef.current) return null;
@@ -180,7 +188,7 @@ export default function PromoTemplateCard({ product, templateKey }) {
               animation: "pulse 2s infinite",
             }} />
             <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              {template.sealText}
+              {displayBadge}
             </span>
           </div>
 
@@ -206,10 +214,10 @@ export default function PromoTemplateCard({ product, templateKey }) {
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "0 32px",
         }}>
-          {product.image_urls?.[0] ? (
+          {displayImage ? (
             <img
-              src={product.image_urls[0]}
-              alt={product.description}
+              src={displayImage}
+              alt={displayTitle}
               crossOrigin="anonymous"
               style={{
                 maxWidth: "80%",
@@ -248,7 +256,7 @@ export default function PromoTemplateCard({ product, templateKey }) {
             display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
             textShadow: "0 2px 8px rgba(0,0,0,0.5)",
           }}>
-            {product.description}
+            {displayTitle}
           </p>
 
           {/* Preços */}
@@ -300,8 +308,8 @@ export default function PromoTemplateCard({ product, templateKey }) {
                 fontSize: 14,
               }}>🏷️</div>
               <div>
-                <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>Leilão NoZap</p>
-                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>Catálogo Oficial</p>
+                <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
+                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
               </div>
             </div>
 
@@ -313,7 +321,7 @@ export default function PromoTemplateCard({ product, templateKey }) {
               boxShadow: `0 4px 16px ${template.accentGlow}40`,
             }}>
               <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                COMPRE AGORA
+                {displayCta}
               </span>
             </div>
           </div>
