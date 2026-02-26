@@ -66,7 +66,7 @@ export default function DashboardTab({
       const d = s.sale_date || s.sale_datetime;
       return d && new Date(d) >= cutoff;
     });
-  }, [allSales, periodFilter, dateFilter]);
+  }, [allSales, periodFilter, dateFilter, dateFilterEnd]);
 
   const dashSales = ['santander', 'itau', 'nubank'].includes(dashBankFilter)
     ? periodSales.filter(s => s.receiving_bank === dashBankFilter)
