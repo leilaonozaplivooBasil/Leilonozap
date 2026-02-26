@@ -9,13 +9,13 @@ import PromoTemplateCard, { TEMPLATES } from "@/components/promo/PromoTemplateCa
 import PromoTextGenerator from "@/components/promo/PromoTextGenerator";
 import PromoVideoGenerator from "@/components/promo/PromoVideoGenerator";
 import PromoCustomizer from "@/components/promo/PromoCustomizer";
-import PromoLayoutSelector from "@/components/promo/PromoLayoutSelector";
+// Layout is now fixed per design - no selector needed
 import PromoDesignSelector from "@/components/promo/PromoDesignSelector";
 
 export default function PromoCreator() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState("oferta");
-  const [selectedLayout, setSelectedLayout] = useState("square");
+  const selectedLayout = "square";
   const [selectedDesign, setSelectedDesign] = useState("classic");
   const [overrides, setOverrides] = useState({
     imageUrl: "",
@@ -124,12 +124,6 @@ export default function PromoCreator() {
                       <PromoDesignSelector
                         selectedDesign={selectedDesign}
                         onSelect={setSelectedDesign}
-                      />
-
-                      {/* Layout Selector */}
-                      <PromoLayoutSelector
-                        selectedLayout={selectedLayout}
-                        onSelect={setSelectedLayout}
                       />
 
                       {/* Customizer */}
