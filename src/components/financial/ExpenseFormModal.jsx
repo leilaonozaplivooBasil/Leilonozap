@@ -109,18 +109,26 @@ export default function ExpenseFormModal({ open, onClose, onSave, onBulkSave, ed
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          {/* Upload de Boleto */}
-          <BoletoUploader onExtracted={(data) => {
-            setForm(prev => ({
-              ...prev,
-              description: data.description || prev.description,
-              company: data.company || prev.company,
-              amount: data.amount || prev.amount,
-              due_date: data.due_date || prev.due_date,
-              interest_amount: data.interest_amount || prev.interest_amount,
-              payment_method: data.payment_method || prev.payment_method,
-            }));
-          }} />
+          {/* Upload de Documento */}
+          <BoletoUploader
+            onExtracted={(data) => {
+              setForm(prev => ({
+                ...prev,
+                description: data.description || prev.description,
+                company: data.company || prev.company,
+                amount: data.amount || prev.amount,
+                due_date: data.due_date || prev.due_date,
+                interest_amount: data.interest_amount || prev.interest_amount,
+                payment_method: data.payment_method || prev.payment_method,
+                category: data.category || prev.category,
+              }));
+            }}
+            onBulkExtracted={(expenses) => {
+              if (onBulkSave && expenses.length > 0) {
+                onBulkSave(expenses);
+              }
+            }}
+          />
 
           {/* Descrição */}
           <div className="md:col-span-2">
