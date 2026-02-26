@@ -251,7 +251,7 @@ export default function Financial() {
                   <p className="text-gray-500">Carregando...</p>
                 </div>
               ) : (
-                <ExpenseTable expenses={filtered} onEdit={handleEdit} onDelete={handleDelete} />
+                <ExpenseTable expenses={filtered} onEdit={handleEdit} onDelete={handleDelete} onRowClick={setPaymentExpense} />
               )}
             </div>
           </>
