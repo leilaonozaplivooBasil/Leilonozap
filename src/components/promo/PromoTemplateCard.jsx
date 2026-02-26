@@ -160,8 +160,9 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       {/* Selo */}
       {discount > 0 && (
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 78, height: 78, borderRadius: "50%", background: "linear-gradient(135deg, #f97316, #ea580c)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 6px 24px rgba(249,115,22,0.5)", border: "4px solid rgba(255,255,255,0.3)" }}>
-          <span style={{ color: "white", fontSize: 24, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
-          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 9, fontWeight: 700 }}>OFF</span>
+          <span style={{ color: "white", fontSize: 10, fontWeight: 800, lineHeight: 1 }}>ATÉ</span>
+          <span style={{ color: "white", fontSize: 22, fontWeight: 900, lineHeight: 1 }}>60%</span>
+          <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 7, fontWeight: 700 }}>DE DESCONTO</span>
         </div>
       )}
       {/* Preço esquerda */}
@@ -216,9 +217,10 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       </div>
       {/* Selo */}
       {discount > 0 && (
-        <div style={{ position: "absolute", top: 18, right: 18, zIndex: 10, width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, #ef4444, #b91c1c)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 24px rgba(239,68,68,0.5)", border: "3px solid rgba(255,255,255,0.12)" }}>
-          <span style={{ color: "white", fontSize: 22, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 8, fontWeight: 700 }}>OFF</span>
+        <div style={{ position: "absolute", top: 18, right: 18, zIndex: 10, width: 76, height: 76, borderRadius: "50%", background: "linear-gradient(135deg, #ef4444, #b91c1c)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 24px rgba(239,68,68,0.5)", border: "3px solid rgba(255,255,255,0.12)" }}>
+          <span style={{ color: "white", fontSize: 10, fontWeight: 800, lineHeight: 1 }}>ATÉ</span>
+          <span style={{ color: "white", fontSize: 22, fontWeight: 900, lineHeight: 1 }}>60%</span>
+          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 7, fontWeight: 700 }}>DE DESCONTO</span>
         </div>
       )}
       {/* Produto com moldura LED/digital */}
@@ -283,9 +285,10 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       </div>
       {/* Selo */}
       {discount > 0 && (
-        <div style={{ position: "absolute", top: 80, right: 22, zIndex: 10, width: 66, height: 66, borderRadius: "50%", background: template.sealGradient, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 4px 24px ${template.accentGlow}`, border: "3px solid rgba(255,255,255,0.2)", transform: "rotate(12deg)" }}>
-          <span style={{ color: "white", fontSize: 19, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
-          <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 7, fontWeight: 700 }}>OFF</span>
+        <div style={{ position: "absolute", top: 80, right: 22, zIndex: 10, width: 72, height: 72, borderRadius: "50%", background: template.sealGradient, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 4px 24px ${template.accentGlow}`, border: "3px solid rgba(255,255,255,0.2)", transform: "rotate(12deg)" }}>
+          <span style={{ color: "white", fontSize: 9, fontWeight: 800, lineHeight: 1 }}>ATÉ</span>
+          <span style={{ color: "white", fontSize: 19, fontWeight: 900, lineHeight: 1 }}>60%</span>
+          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 6, fontWeight: 700 }}>DE DESCONTO</span>
         </div>
       )}
       {/* Produto com moldura ondulada */}
@@ -341,9 +344,10 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         </div>
         {/* Selo quadrado */}
         {discount > 0 && (
-          <div style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 72, height: 72, background: g, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(132,204,22,0.4)" }}>
-            <span style={{ color: "#000", fontSize: 24, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
-            <span style={{ color: "rgba(0,0,0,0.5)", fontSize: 9, fontWeight: 700 }}>OFF</span>
+          <div style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 76, height: 76, background: g, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(132,204,22,0.4)" }}>
+            <span style={{ color: "#000", fontSize: 9, fontWeight: 800, lineHeight: 1 }}>ATÉ</span>
+            <span style={{ color: "#000", fontSize: 24, fontWeight: 900, lineHeight: 1 }}>60%</span>
+            <span style={{ color: "rgba(0,0,0,0.6)", fontSize: 7, fontWeight: 700 }}>DE DESCONTO</span>
           </div>
         )}
         {/* Produto com moldura geométrica */}
@@ -390,8 +394,8 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         <div style={{ width: 66, height: 84, background: "#1f2937", borderRadius: 4, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(0,0,0,0.35)", position: "relative" }}>
           <div style={{ position: "absolute", top: 8, left: "50%", transform: "translateX(-50%)", width: 12, height: 12, borderRadius: "50%", border: "2px solid #666" }} />
           <span style={{ color: "#ef4444", fontSize: 9, fontWeight: 800, marginTop: 14 }}>ATÉ</span>
-          <span style={{ color: "white", fontSize: 26, fontWeight: 900, lineHeight: 1 }}>{discount > 0 ? discount : 49}<span style={{ fontSize: 13, verticalAlign: "super" }}>%</span></span>
-          <span style={{ color: "#ef4444", fontSize: 9, fontWeight: 800 }}>OFF</span>
+          <span style={{ color: "white", fontSize: 26, fontWeight: 900, lineHeight: 1 }}>60<span style={{ fontSize: 13, verticalAlign: "super" }}>%</span></span>
+          <span style={{ color: "#ef4444", fontSize: 8, fontWeight: 800 }}>DE DESCONTO</span>
         </div>
       </div>
       {/* Badge */}
