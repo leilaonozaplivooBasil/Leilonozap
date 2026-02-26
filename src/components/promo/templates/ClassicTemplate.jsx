@@ -30,9 +30,16 @@ export default function ClassicTemplate({ displayTitle, displayImage, displayBad
         </div>
       )}
 
-      {/* Produto */}
-      <div style={{ position: "absolute", top: "12%", left: 0, right: 0, bottom: "42%", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 32px", zIndex: 5 }}>
-        {renderProductImage("75%", "100%")}
+      {/* Produto com moldura elegante */}
+      <div style={{ position: "absolute", top: "12%", left: "12%", right: "12%", bottom: "42%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
+        {/* Moldura com borda fina + glow */}
+        <div style={{ position: "absolute", inset: 8, borderRadius: 16, border: `1px solid ${accent}20`, boxShadow: `inset 0 0 30px ${accent}06, 0 0 20px ${accent}08`, pointerEvents: "none" }} />
+        {/* Cantos decorativos */}
+        <div style={{ position: "absolute", top: 0, left: 0, width: 20, height: 20, borderTop: `2px solid ${accent}50`, borderLeft: `2px solid ${accent}50`, borderRadius: "4px 0 0 0" }} />
+        <div style={{ position: "absolute", top: 0, right: 0, width: 20, height: 20, borderTop: `2px solid ${accent}50`, borderRight: `2px solid ${accent}50`, borderRadius: "0 4px 0 0" }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, width: 20, height: 20, borderBottom: `2px solid ${accent}50`, borderLeft: `2px solid ${accent}50`, borderRadius: "0 0 0 4px" }} />
+        <div style={{ position: "absolute", bottom: 0, right: 0, width: 20, height: 20, borderBottom: `2px solid ${accent}50`, borderRight: `2px solid ${accent}50`, borderRadius: "0 0 4px 0" }} />
+        {renderProductImage("72%", "90%")}
       </div>
 
       {/* Divider */}

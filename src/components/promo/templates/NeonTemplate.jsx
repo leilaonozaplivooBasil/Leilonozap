@@ -33,12 +33,18 @@ export default function NeonTemplate({ displayTitle, displayImage, displayBadge,
         </div>
       )}
 
-      {/* Produto com glow */}
-      <div style={{ position: "absolute", top: "12%", left: 0, right: 0, height: "42%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, padding: "0 40px" }}>
+      {/* Produto com moldura neon */}
+      <div style={{ position: "absolute", top: "12%", left: "10%", right: "10%", height: "42%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
+        {/* Moldura neon com glow duplo */}
+        <div style={{ position: "absolute", inset: 4, borderRadius: 12, border: `1.5px solid ${accent}60`, boxShadow: `0 0 15px ${accent}25, inset 0 0 15px ${accent}08`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", inset: 0, borderRadius: 14, border: `1px solid ${accent}20`, pointerEvents: "none" }} />
+        {/* Linhas de scan horizontais dentro da moldura */}
+        <div style={{ position: "absolute", top: "20%", left: 8, right: 8, height: 1, background: `${accent}12` }} />
+        <div style={{ position: "absolute", bottom: "20%", left: 8, right: 8, height: 1, background: `${accent}12` }} />
         {displayImage ? (
-          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "68%", maxHeight: "100%", objectFit: "contain", filter: `drop-shadow(0 0 30px ${accent}40) drop-shadow(0 0 60px ${accent}20)` }} />
+          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "65%", maxHeight: "90%", objectFit: "contain", filter: `drop-shadow(0 0 30px ${accent}40) drop-shadow(0 0 60px ${accent}20)`, position: "relative", zIndex: 2 }} />
         ) : (
-          <div style={{ width: 120, height: 120, borderRadius: 16, background: `${accent}10`, border: `1px solid ${accent}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📦</div>
+          <div style={{ width: 120, height: 120, borderRadius: 16, background: `${accent}10`, border: `1px solid ${accent}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, zIndex: 2 }}>📦</div>
         )}
       </div>
 

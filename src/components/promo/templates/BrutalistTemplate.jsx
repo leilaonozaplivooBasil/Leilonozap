@@ -25,12 +25,21 @@ export default function BrutalistTemplate({ displayTitle, displayImage, displayB
         )}
       </div>
 
-      {/* Produto */}
-      <div style={{ position: "absolute", top: "14%", left: 0, right: 0, height: "40%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, padding: "0 32px" }}>
+      {/* Produto com moldura bruta */}
+      <div style={{ position: "absolute", top: "14%", left: "8%", right: "8%", height: "40%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
+        {/* Moldura bruta - bordas grossas assimétricas */}
+        <div style={{ position: "absolute", inset: 0, border: `3px solid ${accent}`, pointerEvents: "none" }} />
+        {/* Cruz interna decorativa */}
+        <div style={{ position: "absolute", top: 0, left: "50%", width: 1, height: "100%", background: `${accent}15`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: "50%", left: 0, width: "100%", height: 1, background: `${accent}15`, pointerEvents: "none" }} />
+        {/* Rótulo de moldura */}
+        <div style={{ position: "absolute", top: -1, left: 12, background: "#000", padding: "0 6px", zIndex: 3 }}>
+          <span style={{ color: accent, fontSize: 7, fontWeight: 900, letterSpacing: "0.15em", textTransform: "uppercase" }}>PRODUTO</span>
+        </div>
         {displayImage ? (
-          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "70%", maxHeight: "100%", objectFit: "contain", filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.9)) grayscale(0.1) contrast(1.1)" }} />
+          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "65%", maxHeight: "90%", objectFit: "contain", filter: "drop-shadow(0 8px 24px rgba(0,0,0,0.9)) grayscale(0.1) contrast(1.1)", position: "relative", zIndex: 2 }} />
         ) : (
-          <div style={{ width: 130, height: 130, background: "#111", border: `2px solid ${accent}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📦</div>
+          <div style={{ width: 130, height: 130, background: "#111", border: `2px solid ${accent}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, zIndex: 2 }}>📦</div>
         )}
       </div>
 

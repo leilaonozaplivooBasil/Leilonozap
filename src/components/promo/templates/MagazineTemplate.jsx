@@ -26,12 +26,19 @@ export default function MagazineTemplate({ displayTitle, displayImage, displayBa
         )}
       </div>
 
-      {/* Produto com moldura editorial */}
-      <div style={{ position: "absolute", top: "14%", left: "10%", right: "10%", height: "44%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, background: "#f0f0f0", borderRadius: 4 }}>
+      {/* Produto com moldura editorial tipo revista */}
+      <div style={{ position: "absolute", top: "14%", left: "10%", right: "10%", height: "44%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, background: "#f0f0f0", borderRadius: 2 }}>
+        {/* Moldura fina editorial com sombra interna */}
+        <div style={{ position: "absolute", inset: 6, border: "1px solid rgba(0,0,0,0.08)", borderRadius: 1, pointerEvents: "none" }} />
+        {/* Cantoneiras de foto */}
+        <div style={{ position: "absolute", top: 2, left: 2, width: 16, height: 16, borderTop: `2px solid ${accent}`, borderLeft: `2px solid ${accent}` }} />
+        <div style={{ position: "absolute", top: 2, right: 2, width: 16, height: 16, borderTop: `2px solid ${accent}`, borderRight: `2px solid ${accent}` }} />
+        <div style={{ position: "absolute", bottom: 2, left: 2, width: 16, height: 16, borderBottom: `2px solid ${accent}`, borderLeft: `2px solid ${accent}` }} />
+        <div style={{ position: "absolute", bottom: 2, right: 2, width: 16, height: 16, borderBottom: `2px solid ${accent}`, borderRight: `2px solid ${accent}` }} />
         {displayImage ? (
-          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "75%", maxHeight: "90%", objectFit: "contain", filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.12))" }} />
+          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "72%", maxHeight: "85%", objectFit: "contain", filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.12))", position: "relative", zIndex: 2 }} />
         ) : (
-          <div style={{ width: 120, height: 120, background: "#e5e5e5", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📦</div>
+          <div style={{ width: 120, height: 120, background: "#e5e5e5", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, zIndex: 2 }}>📦</div>
         )}
       </div>
 

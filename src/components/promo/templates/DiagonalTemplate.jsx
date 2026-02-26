@@ -32,12 +32,15 @@ export default function DiagonalTemplate({ displayTitle, displayImage, displayBa
         </div>
       )}
 
-      {/* Produto centralizado na faixa colorida */}
-      <div style={{ position: "absolute", top: "5%", left: 0, right: 0, height: "48%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, padding: "0 32px" }}>
+      {/* Produto com moldura losango/diamante */}
+      <div style={{ position: "absolute", top: "5%", left: "8%", right: "8%", height: "48%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
+        {/* Moldura em forma de losango rotacionado */}
+        <div style={{ position: "absolute", top: "50%", left: "50%", width: "70%", height: "70%", transform: "translate(-50%,-50%) rotate(45deg)", border: `2px solid rgba(255,255,255,0.15)`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: "50%", left: "50%", width: "78%", height: "78%", transform: "translate(-50%,-50%) rotate(45deg)", border: `1px solid rgba(255,255,255,0.06)`, pointerEvents: "none" }} />
         {displayImage ? (
-          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "65%", maxHeight: "95%", objectFit: "contain", filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.6))" }} />
+          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "62%", maxHeight: "90%", objectFit: "contain", filter: "drop-shadow(0 12px 40px rgba(0,0,0,0.6))", position: "relative", zIndex: 2 }} />
         ) : (
-          <div style={{ width: 130, height: 130, borderRadius: 16, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📦</div>
+          <div style={{ width: 130, height: 130, borderRadius: 16, background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, zIndex: 2 }}>📦</div>
         )}
       </div>
 

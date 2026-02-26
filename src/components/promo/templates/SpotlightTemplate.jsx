@@ -31,12 +31,17 @@ export default function SpotlightTemplate({ displayTitle, displayImage, displayB
         </div>
       )}
 
-      {/* Produto grande centralizado - estrela do show */}
+      {/* Produto com moldura circular spotlight */}
       <div style={{ position: "absolute", top: "8%", left: 0, right: 0, height: "50%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, padding: "0 40px" }}>
+        {/* Anel circular concêntrico - estilo vitrine */}
+        <div style={{ position: "absolute", top: "50%", left: "50%", width: 220, height: 220, transform: "translate(-50%,-50%)", borderRadius: "50%", border: `1px solid ${accent}12`, pointerEvents: "none" }} />
+        <div style={{ position: "absolute", top: "50%", left: "50%", width: 260, height: 260, transform: "translate(-50%,-50%)", borderRadius: "50%", border: `1px solid ${accent}06`, pointerEvents: "none" }} />
+        {/* Base/pedestal do produto */}
+        <div style={{ position: "absolute", bottom: 4, left: "25%", right: "25%", height: 2, background: `linear-gradient(90deg, transparent, ${accent}20, transparent)` }} />
         {displayImage ? (
-          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "72%", maxHeight: "100%", objectFit: "contain", filter: `drop-shadow(0 20px 50px rgba(0,0,0,0.9)) drop-shadow(0 0 40px ${accent}15)` }} />
+          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "68%", maxHeight: "95%", objectFit: "contain", filter: `drop-shadow(0 20px 50px rgba(0,0,0,0.9)) drop-shadow(0 0 40px ${accent}15)`, position: "relative", zIndex: 2 }} />
         ) : (
-          <div style={{ width: 140, height: 140, borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📦</div>
+          <div style={{ width: 140, height: 140, borderRadius: 20, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, zIndex: 2 }}>📦</div>
         )}
       </div>
 
