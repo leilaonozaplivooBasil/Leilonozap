@@ -185,7 +185,10 @@ export default function DashboardTab({
               {/* COUNTER */}
               <span className="text-xs text-gray-500 ml-auto">
                 {periodSales.length} vendas
-                {dateFilter && <span className="text-emerald-400 ml-1">({new Date(dateFilter + 'T12:00:00').toLocaleDateString('pt-BR')})</span>}
+                {dateFilter && <span className="text-emerald-400 ml-1">
+                  ({new Date(dateFilter + 'T12:00:00').toLocaleDateString('pt-BR')}
+                  {dateFilterEnd && ` até ${new Date(dateFilterEnd + 'T12:00:00').toLocaleDateString('pt-BR')}`})
+                </span>}
               </span>
             </div>
           </CardContent>
