@@ -136,16 +136,180 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
 
   const accent = template.accentColor;
 
+  // === RENDER POR LAYOUT ===
+  const renderBgEffects = () => (
+    <>
+      <div style={{ position: "absolute", top: -60, right: -60, width: 220, height: 220, background: `radial-gradient(circle, ${template.accentGlow} 0%, transparent 70%)`, borderRadius: "50%", filter: "blur(40px)", opacity: 0.4 }} />
+      <div style={{ position: "absolute", bottom: 40, left: -40, width: 180, height: 180, background: `radial-gradient(circle, ${template.accentGlow} 0%, transparent 70%)`, borderRadius: "50%", filter: "blur(50px)", opacity: 0.25 }} />
+      <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: `linear-gradient(${accent}33 1px, transparent 1px), linear-gradient(90deg, ${accent}33 1px, transparent 1px)`, backgroundSize: "40px 40px" }} />
+      <div style={{ position: "absolute", top: 0, right: 0, width: "50%", height: "100%", borderLeft: `1px solid ${accent}15`, transform: "skewX(-15deg)", transformOrigin: "top right" }} />
+      <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: `1px solid ${accent}12`, pointerEvents: "none" }} />
+      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+    </>
+  );
+
+  const renderBadge = () => (
+    <div style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(12px)", border: `1px solid ${accent}40`, borderRadius: 12, padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+      <div style={{ width: 8, height: 8, borderRadius: "50%", background: accent, boxShadow: `0 0 8px ${accent}, 0 0 16px ${accent}80`, animation: "pulse 2s infinite" }} />
+      <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayBadge}</span>
+    </div>
+  );
+
+  const renderDiscountSeal = (size = 68) => discount > 0 ? (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: template.sealGradient, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 4px 20px ${template.accentGlow}, 0 0 40px ${template.accentGlow}40`, transform: "rotate(12deg)", border: "3px solid rgba(255,255,255,0.2)" }}>
+      <span style={{ color: "white", fontSize: size * 0.29, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
+      <span style={{ color: "rgba(255,255,255,0.8)", fontSize: size * 0.1, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>OFF</span>
+    </div>
+  ) : null;
+
+  const renderProductImage = (maxW = "80%", maxH = "100%") => displayImage ? (
+    <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: maxW, maxHeight: maxH, objectFit: "contain", filter: `drop-shadow(0 8px 32px rgba(0,0,0,0.8)) drop-shadow(0 0 20px ${template.accentGlow}30)` }} />
+  ) : (
+    <div style={{ width: 140, height: 140, borderRadius: 20, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📦</div>
+  );
+
+  const renderPriceBlock = (titleSize = 16, priceSize = 36) => (
+    <>
+      <p style={{ color: "white", fontSize: titleSize, fontWeight: 700, lineHeight: 1.3, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{displayTitle}</p>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
+        {discount > 0 && <span style={{ color: "rgba(255,255,255,0.4)", fontSize: priceSize * 0.4, fontWeight: 500, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
+          <span style={{ color: "rgba(255,255,255,0.6)", fontSize: priceSize * 0.4, fontWeight: 600 }}>R$</span>
+          <span style={{ color: "white", fontSize: priceSize, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1, textShadow: `0 0 20px ${template.accentGlow}60` }}>{price.toFixed(2).split('.')[0]}</span>
+          <span style={{ color: accent, fontSize: priceSize * 0.5, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
+        </div>
+      </div>
+      {price > 50 && <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 500, marginBottom: 10 }}>ou até <span style={{ color: accent, fontWeight: 700 }}>12x</span> de R$ {(price / 12).toFixed(2)} sem juros</p>}
+    </>
+  );
+
+  const renderFooter = () => (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${accent}30, ${accent}10)`, border: `1px solid ${accent}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>🏷️</div>
+        <div>
+          <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
+        </div>
+      </div>
+      <div style={{ background: template.sealGradient, borderRadius: 10, padding: "7px 16px", boxShadow: `0 4px 16px ${template.accentGlow}40` }}>
+        <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
+      </div>
+    </div>
+  );
+
+  const renderCardContent = () => {
+    if (layout === "split") {
+      return (
+        <>
+          {renderBgEffects()}
+          {/* Left half: image */}
+          <div style={{ position: "absolute", top: 0, left: 0, width: "48%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            {renderProductImage("90%", "80%")}
+          </div>
+          {/* Right half: info */}
+          <div style={{ position: "absolute", top: 0, right: 0, width: "52%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "24px 20px 24px 12px" }}>
+            <div style={{ marginBottom: 12 }}>{renderBadge()}</div>
+            {renderDiscountSeal(56)}
+            <div style={{ marginTop: 16 }}>{renderPriceBlock(15, 32)}</div>
+            <div style={{ height: 1, margin: "10px 0", background: `linear-gradient(90deg, ${accent}40, transparent)` }} />
+            {renderFooter()}
+          </div>
+        </>
+      );
+    }
+
+    if (layout === "minimal") {
+      return (
+        <>
+          {renderBgEffects()}
+          <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 32, textAlign: "center" }}>
+            <div style={{ marginBottom: 16 }}>{renderBadge()}</div>
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}>
+              {renderProductImage("65%", "60%")}
+            </div>
+            <div style={{ width: "100%", textAlign: "left", marginTop: 16 }}>
+              {renderPriceBlock(15, 30)}
+              <div style={{ height: 1, margin: "8px 0", background: `linear-gradient(90deg, ${accent}40, transparent)` }} />
+              {renderFooter()}
+            </div>
+          </div>
+          {discount > 0 && <div style={{ position: "absolute", top: 16, right: 16 }}>{renderDiscountSeal(60)}</div>}
+        </>
+      );
+    }
+
+    if (layout === "landscape") {
+      return (
+        <>
+          {renderBgEffects()}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "12px 16px", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            {renderBadge()}
+            {renderDiscountSeal(54)}
+          </div>
+          <div style={{ position: "absolute", top: 0, left: 0, width: "45%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 16px 16px" }}>
+            {renderProductImage("85%", "80%")}
+          </div>
+          <div style={{ position: "absolute", top: 0, right: 0, width: "55%", height: "100%", display: "flex", flexDirection: "column", justifyContent: "center", padding: "16px 20px 16px 8px" }}>
+            {renderPriceBlock(14, 28)}
+            <div style={{ height: 1, margin: "8px 0", background: `linear-gradient(90deg, ${accent}40, transparent)` }} />
+            {renderFooter()}
+          </div>
+        </>
+      );
+    }
+
+    if (layout === "story") {
+      return (
+        <>
+          {renderBgEffects()}
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "20px 20px", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            {renderBadge()}
+            {renderDiscountSeal(60)}
+          </div>
+          <div style={{ position: "absolute", top: "10%", left: 0, right: 0, height: "50%", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
+            {renderProductImage("75%", "100%")}
+          </div>
+          <div style={{ position: "absolute", left: 0, right: 0, bottom: "28%", height: 1, background: `linear-gradient(90deg, transparent, ${accent}50, transparent)` }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 40%, rgba(0,0,0,0.4) 75%, transparent 100%)", padding: "56px 24px 28px" }}>
+            {renderPriceBlock(17, 38)}
+            <div style={{ height: 1, margin: "10px 0", background: `linear-gradient(90deg, ${accent}40, ${accent}15, transparent)` }} />
+            {renderFooter()}
+          </div>
+        </>
+      );
+    }
+
+    // Default: square
+    return (
+      <>
+        {renderBgEffects()}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "16px 20px", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          {renderBadge()}
+          {renderDiscountSeal(68)}
+        </div>
+        <div style={{ position: "absolute", top: "12%", left: 0, right: 0, bottom: "42%", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 32px" }}>
+          {renderProductImage("80%", "100%")}
+        </div>
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: "38%", height: 1, background: `linear-gradient(90deg, transparent, ${accent}50, transparent)` }} />
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 80%, transparent 100%)", padding: "48px 24px 20px" }}>
+          {renderPriceBlock(16, 36)}
+          <div style={{ height: 1, marginBottom: 12, background: `linear-gradient(90deg, ${accent}40, ${accent}15, transparent)` }} />
+          {renderFooter()}
+        </div>
+      </>
+    );
+  };
+
   return (
     <div className="space-y-4">
-      {/* === CARD PROMOCIONAL === */}
       <div
         ref={cardRef}
         style={{
           background: template.gradient,
           width: "100%",
-          maxWidth: 480,
-          aspectRatio: "1/1.15",
+          maxWidth: layoutCfg.maxW,
+          aspectRatio: layoutCfg.ratio,
           position: "relative",
           overflow: "hidden",
           borderRadius: 20,
@@ -153,218 +317,15 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         }}
         className="mx-auto"
       >
-        {/* === EFEITOS DE FUNDO === */}
-        {/* Orbs luminosos */}
-        <div style={{
-          position: "absolute", top: -60, right: -60, width: 220, height: 220,
-          background: `radial-gradient(circle, ${template.accentGlow} 0%, transparent 70%)`,
-          borderRadius: "50%", filter: "blur(40px)", opacity: 0.4,
-        }} />
-        <div style={{
-          position: "absolute", bottom: 40, left: -40, width: 180, height: 180,
-          background: `radial-gradient(circle, ${template.accentGlow} 0%, transparent 70%)`,
-          borderRadius: "50%", filter: "blur(50px)", opacity: 0.25,
-        }} />
-
-        {/* Grid pattern sutil */}
-        <div style={{
-          position: "absolute", inset: 0, opacity: 0.04,
-          backgroundImage: `linear-gradient(${accent}33 1px, transparent 1px), linear-gradient(90deg, ${accent}33 1px, transparent 1px)`,
-          backgroundSize: "40px 40px",
-        }} />
-
-        {/* Linha decorativa diagonal */}
-        <div style={{
-          position: "absolute", top: 0, right: 0, width: "50%", height: "100%",
-          borderLeft: `1px solid ${accent}15`,
-          transform: "skewX(-15deg)", transformOrigin: "top right",
-        }} />
-
-        {/* === TOPO: SELO + BADGE === */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, padding: "16px 20px", zIndex: 10, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-          {/* Badge esquerda */}
-          <div style={{
-            background: "rgba(0,0,0,0.6)",
-            backdropFilter: "blur(12px)",
-            border: `1px solid ${accent}40`,
-            borderRadius: 12,
-            padding: "8px 14px",
-            display: "flex", alignItems: "center", gap: 6,
-          }}>
-            <div style={{
-              width: 8, height: 8, borderRadius: "50%",
-              background: accent,
-              boxShadow: `0 0 8px ${accent}, 0 0 16px ${accent}80`,
-              animation: "pulse 2s infinite",
-            }} />
-            <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-              {displayBadge}
-            </span>
-          </div>
-
-          {/* Desconto selo rotacionado */}
-          {discount > 0 && (
-            <div style={{
-              width: 68, height: 68, borderRadius: "50%",
-              background: template.sealGradient,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              boxShadow: `0 4px 20px ${template.accentGlow}, 0 0 40px ${template.accentGlow}40`,
-              transform: "rotate(12deg)",
-              border: "3px solid rgba(255,255,255,0.2)",
-            }}>
-              <span style={{ color: "white", fontSize: 20, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
-              <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 7, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase" }}>OFF</span>
-            </div>
-          )}
-        </div>
-
-        {/* === PRODUTO: IMAGEM CENTRAL === */}
-        <div style={{
-          position: "absolute", top: "12%", left: 0, right: 0, bottom: "42%",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          padding: "0 32px",
-        }}>
-          {displayImage ? (
-            <img
-              src={displayImage}
-              alt={displayTitle}
-              crossOrigin="anonymous"
-              style={{
-                maxWidth: "80%",
-                maxHeight: "100%",
-                objectFit: "contain",
-                filter: `drop-shadow(0 8px 32px rgba(0,0,0,0.8)) drop-shadow(0 0 20px ${template.accentGlow}30)`,
-              }}
-            />
-          ) : (
-            <div style={{
-              width: 140, height: 140, borderRadius: 20,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 48,
-            }}>📦</div>
-          )}
-        </div>
-
-        {/* === FAIXA DECORATIVA === */}
-        <div style={{
-          position: "absolute", left: 0, right: 0, bottom: "38%", height: 1,
-          background: `linear-gradient(90deg, transparent, ${accent}50, transparent)`,
-        }} />
-
-        {/* === INFO INFERIOR === */}
-        <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0,
-          background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 80%, transparent 100%)",
-          padding: "48px 24px 20px",
-        }}>
-          {/* Nome do produto */}
-          <p style={{
-            color: "white", fontSize: 16, fontWeight: 700,
-            lineHeight: 1.3, marginBottom: 12,
-            display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-            textShadow: "0 2px 8px rgba(0,0,0,0.5)",
-          }}>
-            {displayTitle}
-          </p>
-
-          {/* Preços */}
-          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
-            {discount > 0 && (
-              <span style={{
-                color: "rgba(255,255,255,0.4)", fontSize: 14, fontWeight: 500,
-                textDecoration: "line-through",
-              }}>
-                R$ {marketPrice.toFixed(2)}
-              </span>
-            )}
-            <div style={{ display: "flex", alignItems: "baseline", gap: 4 }}>
-              <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 600 }}>R$</span>
-              <span style={{
-                color: "white", fontSize: 36, fontWeight: 900,
-                letterSpacing: "-0.02em", lineHeight: 1,
-                textShadow: `0 0 20px ${template.accentGlow}60`,
-              }}>
-                {price.toFixed(2).split('.')[0]}
-              </span>
-              <span style={{ color: accent, fontSize: 18, fontWeight: 800 }}>
-                ,{price.toFixed(2).split('.')[1]}
-              </span>
-            </div>
-          </div>
-
-          {/* Parcelamento */}
-          {price > 50 && (
-            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 500, marginBottom: 12 }}>
-              ou até <span style={{ color: accent, fontWeight: 700 }}>12x</span> de R$ {(price / 12).toFixed(2)} sem juros
-            </p>
-          )}
-
-          {/* Barra divisória */}
-          <div style={{
-            height: 1, marginBottom: 12,
-            background: `linear-gradient(90deg, ${accent}40, ${accent}15, transparent)`,
-          }} />
-
-          {/* Rodapé */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: 8,
-                background: `linear-gradient(135deg, ${accent}30, ${accent}10)`,
-                border: `1px solid ${accent}30`,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 14,
-              }}>🏷️</div>
-              <div>
-                <p style={{ color: "white", fontSize: 11, fontWeight: 700, lineHeight: 1 }}>{displayBrand}</p>
-                <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 9, fontWeight: 500, marginTop: 2 }}>{displayBrandSub}</p>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div style={{
-              background: template.sealGradient,
-              borderRadius: 10,
-              padding: "7px 16px",
-              boxShadow: `0 4px 16px ${template.accentGlow}40`,
-            }}>
-              <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>
-                {displayCta}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Borda interna sutil */}
-        <div style={{
-          position: "absolute", inset: 0, borderRadius: 20,
-          border: `1px solid ${accent}12`,
-          pointerEvents: "none",
-        }} />
-
-        {/* Pulse animation */}
-        <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        {renderCardContent()}
       </div>
 
-      {/* === BOTÕES === */}
-      <div className="flex gap-3 max-w-[480px] mx-auto">
-        <Button
-          onClick={handleDownload}
-          disabled={downloading}
-          variant="outline"
-          className="flex-1 gap-2 bg-gray-800/80 border-gray-600 text-white hover:bg-gray-700 py-5 rounded-xl font-semibold"
-        >
+      <div className="flex gap-3 mx-auto" style={{ maxWidth: layoutCfg.maxW }}>
+        <Button onClick={handleDownload} disabled={downloading} variant="outline" className="flex-1 gap-2 bg-gray-800/80 border-gray-600 text-white hover:bg-gray-700 py-5 rounded-xl font-semibold">
           {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
           Baixar HD
         </Button>
-        <Button
-          onClick={handleShare}
-          disabled={sharing}
-          className="flex-1 gap-2 py-5 rounded-xl font-semibold text-white"
-          style={{ background: template.sealGradient, border: "none" }}
-        >
+        <Button onClick={handleShare} disabled={sharing} className="flex-1 gap-2 py-5 rounded-xl font-semibold text-white" style={{ background: template.sealGradient, border: "none" }}>
           {sharing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
           Compartilhar
         </Button>
