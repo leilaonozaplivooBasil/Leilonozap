@@ -4,7 +4,12 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  DollarSign, Search, ShoppingCart, Package, TrendingUp, BarChart3
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  DollarSign, Search, ShoppingCart, Package, TrendingUp, BarChart3, ChevronDown, Building2, CalendarDays, Clock
 } from 'lucide-react';
 import { Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
