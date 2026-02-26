@@ -42,13 +42,14 @@ Localização: ${bairro ? bairro + ", " : ""}${cidade}
 Telefone formatado: ${formattedPhone}
 
 PASSO ZERO - ANTES DE TUDO:
-Extraia do nome do produto "${product.description}" apenas a PALAVRA-CHAVE PRINCIPAL (1 ou 2 palavras no máximo). Exemplos:
-- "Processador Intel Core i7 10700" -> "PROCESSADOR"
-- "Geladeira Brastemp Frost Free 375L" -> "GELADEIRA"
-- "Smart TV Samsung 55 polegadas 4K" -> "SMART TV"
-- "Notebook Dell Inspiron 15" -> "NOTEBOOK"
-- "Air Fryer Mondial 5L" -> "AIR FRYER"
-Use APENAS essa palavra-chave no título.
+Extraia do nome do produto "${product.description}" as 4 PRIMEIRAS PALAVRAS. Se a 4a palavra for preposição (de, do, da, dos, das, por, para, com, em, no, na, nos, nas, ao, aos), descarte-a e use apenas as 3 primeiras. Exemplos:
+- "Processador Intel Core i7 10700" -> "PROCESSADOR INTEL CORE I7"
+- "Geladeira Brastemp Frost Free 375L" -> "GELADEIRA BRASTEMP FROST FREE"
+- "Smart TV Samsung 55 polegadas 4K" -> "SMART TV SAMSUNG 55"
+- "Notebook Dell Inspiron 15 3000" -> "NOTEBOOK DELL INSPIRON 15"
+- "Jogo de Panelas Tramontina" -> "JOGO DE PANELAS" (4a é preposição? não, "Panelas" fica. Mas "Jogo de Panelas Tramontina" -> 4 primeiras = "JOGO DE PANELAS TRAMONTINA")
+- "Kit de Ferramentas para Casa" -> "KIT DE FERRAMENTAS" (4a = "para" é preposição, descarta)
+Use APENAS essas palavras extraídas no título.
 
 REGRAS OBRIGATÓRIAS - siga EXATAMENTE esta estrutura:
 
