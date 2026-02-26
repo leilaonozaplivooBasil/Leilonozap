@@ -1108,7 +1108,7 @@ ${boletoInfo}================================
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-900">
       {/* HEADER VERDE NOZAP */}
       <div className="bg-gradient-to-r from-green-600 to-green-700 text-white p-3 sm:p-4 shadow-lg">
         <div className="max-w-[1800px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
