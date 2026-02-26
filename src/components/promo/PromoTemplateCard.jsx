@@ -393,18 +393,33 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
   const renderPriceBlock = (titleSize = 16, priceSize = 36) => {
     const neonShadow = design === "neon" ? `0 0 30px ${accent}50, 0 0 60px ${accent}20` : `0 0 20px ${template.accentGlow}60`;
     const brutalistStyle = design === "brutalist";
+    const isRelampagoDesign = design === "relampago";
+
+    if (isRelampagoDesign) {
+      return (
+        <>
+          <p style={{ color: "white", fontSize: titleSize, fontWeight: 700, lineHeight: 1.3, marginBottom: 12, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", textShadow: "0 2px 8px rgba(0,0,0,0.5)" }}>{displayTitle}</p>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 6, padding: "8px 12px", background: "rgba(0,0,0,0.6)", borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)" }}>
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: priceSize * 0.35, fontWeight: 600 }}>R$</span>
+            <span style={{ color: "#22d3ee", fontSize: priceSize * 1.1, fontWeight: 900, letterSpacing: "0.05em", lineHeight: 1, fontFamily: "'Courier New', monospace", textShadow: "0 0 20px rgba(34,211,238,0.6), 0 0 40px rgba(34,211,238,0.3)" }}>{price.toFixed(2).replace(".",",")}</span>
+          </div>
+          {discount > 0 && <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 12, fontWeight: 500, textDecoration: "line-through" }}>De R$ {marketPrice.toFixed(2)}</span>}
+        </>
+      );
+    }
+
     return (
       <>
-        <p style={{ color: textColor, fontSize: titleSize, fontWeight: brutalistStyle ? 900 : 700, lineHeight: 1.3, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", textShadow: isMagazine ? "none" : "0 2px 8px rgba(0,0,0,0.5)", ...(brutalistStyle ? { textTransform: "uppercase", letterSpacing: "0.05em" } : {}) }}>{displayTitle}</p>
+        <p style={{ color: textColor, fontSize: titleSize, fontWeight: brutalistStyle ? 900 : 700, lineHeight: 1.3, marginBottom: 10, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", textShadow: isLightBg ? "none" : "0 2px 8px rgba(0,0,0,0.5)", ...(brutalistStyle ? { textTransform: "uppercase", letterSpacing: "0.05em" } : {}) }}>{displayTitle}</p>
         <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
           {discount > 0 && <span style={{ color: textMuted, fontSize: priceSize * 0.4, fontWeight: 500, textDecoration: "line-through" }}>R$ {marketPrice.toFixed(2)}</span>}
           <div style={{ display: "flex", alignItems: "baseline", gap: 3 }}>
             <span style={{ color: textSemi, fontSize: priceSize * 0.4, fontWeight: 600 }}>R$</span>
-            <span style={{ color: textColor, fontSize: priceSize, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1, textShadow: isMagazine ? "none" : neonShadow }}>{price.toFixed(2).split('.')[0]}</span>
+            <span style={{ color: textColor, fontSize: priceSize, fontWeight: 900, letterSpacing: "-0.02em", lineHeight: 1, textShadow: isLightBg ? "none" : neonShadow }}>{price.toFixed(2).split('.')[0]}</span>
             <span style={{ color: accent, fontSize: priceSize * 0.5, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
           </div>
         </div>
-        {price > 50 && <p style={{ color: isMagazine ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 500, marginBottom: 10 }}>ou até <span style={{ color: accent, fontWeight: 700 }}>12x</span> de R$ {(price / 12).toFixed(2)} sem juros</p>}
+        {price > 50 && <p style={{ color: isLightBg ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 500, marginBottom: 10 }}>ou até <span style={{ color: accent, fontWeight: 700 }}>12x</span> de R$ {(price / 12).toFixed(2)} sem juros</p>}
       </>
     );
   };
