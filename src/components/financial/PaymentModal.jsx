@@ -24,14 +24,14 @@ const STATUS_CONFIG = {
 export default function PaymentModal({ open, onClose, expense, onConfirm }) {
   const [paymentType, setPaymentType] = useState("pago_integral");
   const [amountPaying, setAmountPaying] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState(expense?.payment_method || "pix");
+  const [paymentMethod, setPaymentMethod] = useState("pix");
   const [paymentDate, setPaymentDate] = useState(moment().format("YYYY-MM-DD"));
-  const [pixOrCardInfo, setPixOrCardInfo] = useState(expense?.pix_or_card_info || "");
+  const [pixOrCardInfo, setPixOrCardInfo] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (expense) {
+    if (expense && open) {
       const remaining = (expense.amount || 0) + (expense.interest_amount || 0) - (expense.amount_paid || 0);
       setAmountPaying(remaining.toFixed(2));
       setPaymentMethod(expense.payment_method || "pix");
@@ -40,9 +40,9 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
       setPaymentType("pago_integral");
       setNotes("");
     }
-  }, [expense]);
+  }, [expense, open]);
 
-  if (!expense) return null;
+  if (!open || !expense) return null;
 
   const totalAmount = (expense.amount || 0) + (expense.interest_amount || 0);
   const alreadyPaid = expense.amount_paid || 0;
