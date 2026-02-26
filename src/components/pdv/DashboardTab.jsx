@@ -151,10 +151,10 @@ export default function DashboardTab({
                   <p className="text-purple-400 text-xs mb-1">🟣 Nubank</p>
                   <p className="text-xs text-gray-400 mb-2">Parceiros</p>
                   <p className="text-2xl font-bold text-white">
-                    R$ {fmtBRL(allSales.filter(s => s.receiving_bank === 'nubank').reduce((sum, s) => sum + (s.total_amount || 0), 0))}
+                    R$ {fmtBRL(periodSales.filter(s => s.receiving_bank === 'nubank').reduce((sum, s) => sum + (s.total_amount || 0), 0))}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {allSales.filter(s => s.receiving_bank === 'nubank').length} vendas
+                    {periodSales.filter(s => s.receiving_bank === 'nubank').length} vendas
                   </p>
                 </div>
                 <DollarSign className="w-8 h-8 text-purple-400" />
