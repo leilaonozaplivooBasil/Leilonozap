@@ -108,11 +108,10 @@ IMPORTANT: Leave the bottom 12% of the image clean/empty - it will be used for a
   };
 
   const handleDownload = () => {
-    if (!generatedImage) return;
+    if (!compositeImage) return;
     const link = document.createElement("a");
-    link.href = generatedImage;
+    link.href = compositeImage;
     link.download = `promo-ai-${product.lot || product.id}.png`;
-    link.target = "_blank";
     link.click();
   };
 
