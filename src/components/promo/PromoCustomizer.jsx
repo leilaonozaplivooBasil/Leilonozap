@@ -27,8 +27,7 @@ export default function PromoCustomizer({ product, overrides, onChange }) {
       title: product?.description || "",
       badgeText: "",
       ctaText: "",
-      brandName: "",
-      brandSub: "",
+      whatsappNumber: overrides.whatsappNumber || "",
     });
   };
 
@@ -118,26 +117,15 @@ export default function PromoCustomizer({ product, overrides, onChange }) {
         />
       </div>
 
-      {/* Marca */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <Label className="text-gray-300 text-xs mb-1.5 block">Nome da Marca</Label>
-          <Input
-            value={overrides.brandName}
-            onChange={(e) => onChange({ ...overrides, brandName: e.target.value })}
-            placeholder="Leilão NoZap"
-            className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-600"
-          />
-        </div>
-        <div>
-          <Label className="text-gray-300 text-xs mb-1.5 block">Subtítulo</Label>
-          <Input
-            value={overrides.brandSub}
-            onChange={(e) => onChange({ ...overrides, brandSub: e.target.value })}
-            placeholder="Catálogo Oficial"
-            className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-600"
-          />
-        </div>
+      {/* WhatsApp */}
+      <div>
+        <Label className="text-gray-300 text-xs mb-1.5 block">Número do WhatsApp (aparece no banner)</Label>
+        <Input
+          value={overrides.whatsappNumber || ""}
+          onChange={(e) => onChange({ ...overrides, whatsappNumber: e.target.value })}
+          placeholder="Ex: (21) 99999-9999"
+          className="bg-gray-800/50 border-gray-700 text-white placeholder:text-gray-600"
+        />
       </div>
     </div>
   );
