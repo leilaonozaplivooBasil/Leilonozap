@@ -56,7 +56,15 @@ const TEMPLATES = {
   },
 };
 
-export default function PromoTemplateCard({ product, templateKey, overrides = {} }) {
+const LAYOUT_CONFIGS = {
+  square:    { ratio: "1/1.15", maxW: 480 },
+  story:     { ratio: "9/16",   maxW: 400 },
+  landscape: { ratio: "16/9",   maxW: 600 },
+  minimal:   { ratio: "1/1",    maxW: 480 },
+  split:     { ratio: "1/1",    maxW: 520 },
+};
+
+export default function PromoTemplateCard({ product, templateKey, overrides = {}, layout = "square" }) {
   const cardRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -74,6 +82,8 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
   const displayCta = overrides.ctaText || "COMPRE AGORA";
   const displayBrand = overrides.brandName || "Leilão NoZap";
   const displayBrandSub = overrides.brandSub || "Catálogo Oficial";
+
+  const layoutCfg = LAYOUT_CONFIGS[layout] || LAYOUT_CONFIGS.square;
 
   const captureCard = async () => {
     if (!cardRef.current) return null;
