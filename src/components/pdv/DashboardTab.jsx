@@ -38,8 +38,19 @@ export default function DashboardTab({
     // Filtro por data específica
     if (dateFilter) {
       filtered = filtered.filter(s => {
-        const d = s.sale_date || (s.sale_datetime ? s.sale_datetime.substring(0, 10) : '');
-        return d === dateFilter;
+        // Normaliza para YYYY-MM-DD no fuso de Brasília
+        if (s.sale_date) {
+          // sale_date pode ser YYYY-MM-DD ou ISO string
+          const saleDate = s.sale_date.length > 10 
+            ? new Date(s.sale_date).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' })
+            : s.sale_date;
+          return saleDate === dateFilter;
+        }
+        if (s.sale_datetime) {
+          const saleDate = new Date(s.sale_datetime).toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+          return saleDate === dateFilter;
+        }
+        return false;
       });
       return filtered;
     }
