@@ -233,7 +233,7 @@ export default function Financial() {
                     type="date"
                     value={filterDateFrom}
                     onChange={e => setFilterDateFrom(e.target.value)}
-                    className="bg-gray-900 border-gray-700 text-white w-full md:w-40"
+                    className="bg-gray-900 border-gray-700 text-white w-full md:w-40 [&::-webkit-calendar-picker-indicator]:invert"
                   />
                 </div>
                 <div className="flex items-center gap-2">
@@ -242,7 +242,7 @@ export default function Financial() {
                     type="date"
                     value={filterDateTo}
                     onChange={e => setFilterDateTo(e.target.value)}
-                    className="bg-gray-900 border-gray-700 text-white w-full md:w-40"
+                    className="bg-gray-900 border-gray-700 text-white w-full md:w-40 [&::-webkit-calendar-picker-indicator]:invert"
                   />
                 </div>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
