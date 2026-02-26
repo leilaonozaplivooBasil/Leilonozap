@@ -7,6 +7,11 @@ const DESIGNS = [
   { key: "spotlight", name: "Spotlight", desc: "Foco no produto", preview: "radial-gradient(circle, #1a1a1a, #000)" },
   { key: "magazine", name: "Magazine", desc: "Estilo editorial", preview: "linear-gradient(180deg, #f5f5f5, #e0e0e0)" },
   { key: "brutalist", name: "Brutalist", desc: "Impacto máximo", preview: "linear-gradient(135deg, #000, #111)" },
+  { key: "flash", name: "Flash Sale", desc: "Laranja + roxo diagonal", preview: "linear-gradient(135deg, #f97316, #7c3aed)" },
+  { key: "relampago", name: "Relâmpago", desc: "Preço digital escuro", preview: "linear-gradient(180deg, #1a1a1a, #000)" },
+  { key: "wave", name: "Wave Color", desc: "Ondas curvas coloridas", preview: "linear-gradient(160deg, #3b82f6, #ec4899)" },
+  { key: "grid", name: "Grid Block", desc: "Blocos geométricos", preview: "linear-gradient(135deg, #84cc16, #333)" },
+  { key: "tag", name: "Tag Sale", desc: "Etiqueta de preço", preview: "linear-gradient(135deg, #f59e0b, #ef4444)" },
 ];
 
 export default function PromoDesignSelector({ selectedDesign, onSelect }) {
