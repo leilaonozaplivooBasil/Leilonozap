@@ -62,7 +62,7 @@ export default function ExpenseTable({ expenses, onEdit, onDelete, onRowClick })
             const totalAmount = (exp.amount || 0) + (exp.interest_amount || 0);
 
             return (
-              <tr key={exp.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+              <tr key={exp.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors cursor-pointer" onClick={() => onRowClick && onRowClick(exp)}>
                 <td className="py-3 px-3">
                   <div className="text-white font-medium">{exp.description}</div>
                   {exp.pix_or_card_info && (
