@@ -261,6 +261,7 @@ export default function Financial() {
       <ExpenseFormModal open={showForm} onClose={() => { setShowForm(false); setEditingExpense(null); }}
         onSave={handleSave} onBulkSave={handleBulkSave} editingExpense={editingExpense} />
       <FinancialPDFGenerator open={showPDF} onClose={() => setShowPDF(false)} expenses={expenses} />
+      <PaymentModal open={!!paymentExpense} onClose={() => setPaymentExpense(null)} expense={paymentExpense} onConfirm={handlePaymentConfirm} />
     </div>
   );
 }
