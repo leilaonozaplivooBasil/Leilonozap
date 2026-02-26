@@ -180,18 +180,12 @@ export default function DashboardTab({
                 <div>
                   <p className="text-gray-400 text-xs mb-1">Custo Total</p>
                   <p className="text-2xl font-bold text-yellow-400">
-                    R$ {fmtBRL((() => {
-                      let totalCost = 0;
-                      dashSales.forEach(sale => {
-                        if (sale.product_cost) {
-                          totalCost += sale.product_cost * (sale.quantity_sold || 1);
-                        } else {
-                          const product = products.find(p => p.id === sale.product_id);
-                          if (product) totalCost += (product.cost_price || 0) * (sale.quantity_sold || 1);
-                        }
-                      });
-                      return totalCost;
-                    })())}
+                    R$ {fmtBRL(dashSales.reduce((sum, sale) => {
+                      if (sale.product_cost) {
+                        return sum + sale.product_cost * (sale.quantity_sold || 1);
+                      }
+                      return sum;
+                    }, 0))}
                   </p>
                 </div>
                 <Package className="w-8 h-8 text-yellow-400" />
