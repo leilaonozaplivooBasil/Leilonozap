@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Image, Type, Sparkles, ArrowLeft } from "lucide-react";
+import { Image, Type, Sparkles, ArrowLeft, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -8,6 +8,7 @@ import ProductSelector from "@/components/promo/ProductSelector";
 import PromoTemplateCard, { TEMPLATES } from "@/components/promo/PromoTemplateCard";
 import PromoTextGenerator from "@/components/promo/PromoTextGenerator";
 import PromoVideoGenerator from "@/components/promo/PromoVideoGenerator";
+import OlxAdGenerator from "@/components/promo/OlxAdGenerator";
 import PromoCustomizer from "@/components/promo/PromoCustomizer";
 import PromoLayoutSelector from "@/components/promo/PromoLayoutSelector";
 import PromoDesignSelector from "@/components/promo/PromoDesignSelector";
