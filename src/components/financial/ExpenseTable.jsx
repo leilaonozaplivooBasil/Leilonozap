@@ -28,7 +28,7 @@ function getDueAlert(dueDate, status) {
   return null;
 }
 
-export default function ExpenseTable({ expenses, onEdit, onDelete }) {
+export default function ExpenseTable({ expenses, onEdit, onDelete, onRowClick }) {
   if (!expenses || expenses.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
