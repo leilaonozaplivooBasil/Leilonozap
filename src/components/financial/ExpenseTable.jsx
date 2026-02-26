@@ -100,7 +100,7 @@ export default function ExpenseTable({ expenses, onEdit, onDelete, onRowClick })
                     {statusCfg.label}
                   </Badge>
                 </td>
-                <td className="py-3 px-3 text-right">
+                <td className="py-3 px-3 text-right" onClick={e => e.stopPropagation()}>
                   <div className="flex gap-1 justify-end">
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-400 hover:text-white" onClick={() => onEdit(exp)}>
                       <Pencil className="w-3.5 h-3.5" />
