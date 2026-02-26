@@ -615,7 +615,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
     }
 
     // Default: square
-    const bottomGrad = isMagazine
+    const bottomGrad = isLightBg
       ? "linear-gradient(to top, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.5) 80%, transparent 100%)"
       : "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.4) 80%, transparent 100%)";
     return (
