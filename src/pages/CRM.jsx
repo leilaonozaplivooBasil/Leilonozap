@@ -508,19 +508,19 @@ _Enviado via CRM Leilão NoZap_`;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-gray-900">Carregando...</div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-white">Carregando...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-3 sm:p-6">
+    <div className="min-h-screen bg-gray-900 p-3 sm:p-6">
       <div className="max-w-[1800px] mx-auto">
 
         {/* HEADER */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-3xl font-bold text-gray-900">CRM - Gestão de Clientes</h1>
+          <h1 className="text-xl sm:text-3xl font-bold text-white">CRM - Gestão de Clientes</h1>
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               onClick={() => setShowSellerModal(true)}
@@ -635,15 +635,15 @@ _Enviado via CRM Leilão NoZap_`;
             className={`cursor-pointer transition-all ${
               purchaseStatusFilter === 'sem_compra' 
                 ? 'bg-gray-800 border-gray-600 ring-2 ring-gray-500' 
-                : 'bg-white border-gray-200 hover:bg-gray-50'
+                : 'bg-gray-800 border-gray-700 hover:bg-gray-700'
             }`}
             onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'sem_compra' ? 'all' : 'sem_compra')}
           >
             <CardContent className="p-3">
               <div className="text-center">
                 <ShoppingCart className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-400'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-600'}`}>Sem Compra</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'sem_compra' ? 'text-white' : 'text-gray-900'}`}>{stats.semCompra}</p>
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'sem_compra' ? 'text-gray-300' : 'text-gray-400'}`}>Sem Compra</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'sem_compra' ? 'text-white' : 'text-white'}`}>{stats.semCompra}</p>
               </div>
             </CardContent>
           </Card>
@@ -652,15 +652,15 @@ _Enviado via CRM Leilão NoZap_`;
             className={`cursor-pointer transition-all ${
               purchaseStatusFilter === 'em_negociacao' 
                 ? 'bg-blue-600 border-blue-500 ring-2 ring-blue-400' 
-                : 'bg-white border-gray-200 hover:bg-blue-50'
+                : 'bg-gray-800 border-gray-700 hover:bg-blue-900/30'
             }`}
             onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'em_negociacao' ? 'all' : 'em_negociacao')}
           >
             <CardContent className="p-3">
               <div className="text-center">
-                <MessageSquare className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-blue-500'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-gray-600'}`}>Em Negociação</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'em_negociacao' ? 'text-white' : 'text-blue-600'}`}>{stats.emNegociacao}</p>
+                <MessageSquare className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-blue-400'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'em_negociacao' ? 'text-blue-100' : 'text-gray-400'}`}>Em Negociação</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'em_negociacao' ? 'text-white' : 'text-blue-400'}`}>{stats.emNegociacao}</p>
               </div>
             </CardContent>
           </Card>
@@ -669,15 +669,15 @@ _Enviado via CRM Leilão NoZap_`;
             className={`cursor-pointer transition-all ${
               purchaseStatusFilter === 'aguardando_pagamento' 
                 ? 'bg-yellow-600 border-yellow-500 ring-2 ring-yellow-400' 
-                : 'bg-white border-gray-200 hover:bg-yellow-50'
+                : 'bg-gray-800 border-gray-700 hover:bg-yellow-900/30'
             }`}
             onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'aguardando_pagamento' ? 'all' : 'aguardando_pagamento')}
           >
             <CardContent className="p-3">
               <div className="text-center">
-                <Clock className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-yellow-500'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-gray-600'}`}>Aguardando Pag.</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-white' : 'text-yellow-600'}`}>{stats.aguardandoPagamento}</p>
+                <Clock className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-yellow-400'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-yellow-100' : 'text-gray-400'}`}>Aguardando Pag.</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'aguardando_pagamento' ? 'text-white' : 'text-yellow-400'}`}>{stats.aguardandoPagamento}</p>
               </div>
             </CardContent>
           </Card>
@@ -686,15 +686,15 @@ _Enviado via CRM Leilão NoZap_`;
             className={`cursor-pointer transition-all ${
               purchaseStatusFilter === 'pago' 
                 ? 'bg-green-600 border-green-500 ring-2 ring-green-400' 
-                : 'bg-white border-gray-200 hover:bg-green-50'
+                : 'bg-gray-800 border-gray-700 hover:bg-green-900/30'
             }`}
             onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'pago' ? 'all' : 'pago')}
           >
             <CardContent className="p-3">
               <div className="text-center">
-                <CheckCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-green-500'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-gray-600'}`}>Pago</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'pago' ? 'text-white' : 'text-green-600'}`}>{stats.pago}</p>
+                <CheckCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-green-400'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'pago' ? 'text-green-100' : 'text-gray-400'}`}>Pago</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'pago' ? 'text-white' : 'text-green-400'}`}>{stats.pago}</p>
               </div>
             </CardContent>
           </Card>
@@ -703,15 +703,15 @@ _Enviado via CRM Leilão NoZap_`;
             className={`cursor-pointer transition-all ${
               purchaseStatusFilter === 'enviado' 
                 ? 'bg-purple-600 border-purple-500 ring-2 ring-purple-400' 
-                : 'bg-white border-gray-200 hover:bg-purple-50'
+                : 'bg-gray-800 border-gray-700 hover:bg-purple-900/30'
             }`}
             onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'enviado' ? 'all' : 'enviado')}
           >
             <CardContent className="p-3">
               <div className="text-center">
-                <Package className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-purple-500'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-gray-600'}`}>Enviado</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'enviado' ? 'text-white' : 'text-purple-600'}`}>{stats.enviado}</p>
+                <Package className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-purple-400'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'enviado' ? 'text-purple-100' : 'text-gray-400'}`}>Enviado</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'enviado' ? 'text-white' : 'text-purple-400'}`}>{stats.enviado}</p>
               </div>
             </CardContent>
           </Card>
@@ -720,15 +720,15 @@ _Enviado via CRM Leilão NoZap_`;
             className={`cursor-pointer transition-all ${
               purchaseStatusFilter === 'entregue' 
                 ? 'bg-emerald-600 border-emerald-500 ring-2 ring-emerald-400' 
-                : 'bg-white border-gray-200 hover:bg-emerald-50'
+                : 'bg-gray-800 border-gray-700 hover:bg-emerald-900/30'
             }`}
             onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'entregue' ? 'all' : 'entregue')}
           >
             <CardContent className="p-3">
               <div className="text-center">
-                <Truck className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-emerald-500'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-gray-600'}`}>Entregue</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'entregue' ? 'text-white' : 'text-emerald-600'}`}>{stats.entregue}</p>
+                <Truck className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-emerald-400'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'entregue' ? 'text-emerald-100' : 'text-gray-400'}`}>Entregue</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'entregue' ? 'text-white' : 'text-emerald-400'}`}>{stats.entregue}</p>
               </div>
             </CardContent>
           </Card>
@@ -737,15 +737,15 @@ _Enviado via CRM Leilão NoZap_`;
             className={`cursor-pointer transition-all ${
               purchaseStatusFilter === 'cancelado' 
                 ? 'bg-red-600 border-red-500 ring-2 ring-red-400' 
-                : 'bg-white border-gray-200 hover:bg-red-50'
+                : 'bg-gray-800 border-gray-700 hover:bg-red-900/30'
             }`}
             onClick={() => setPurchaseStatusFilter(purchaseStatusFilter === 'cancelado' ? 'all' : 'cancelado')}
           >
             <CardContent className="p-3">
               <div className="text-center">
-                <XCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-red-500'}`} />
-                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-gray-600'}`}>Cancelado</p>
-                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'cancelado' ? 'text-white' : 'text-red-600'}`}>{stats.cancelado}</p>
+                <XCircle className={`w-6 h-6 mx-auto mb-2 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-red-400'}`} />
+                <p className={`text-xs mb-1 ${purchaseStatusFilter === 'cancelado' ? 'text-red-100' : 'text-gray-400'}`}>Cancelado</p>
+                <p className={`text-2xl font-bold ${purchaseStatusFilter === 'cancelado' ? 'text-white' : 'text-red-400'}`}>{stats.cancelado}</p>
               </div>
             </CardContent>
           </Card>
@@ -753,11 +753,11 @@ _Enviado via CRM Leilão NoZap_`;
 
         {/* TABS */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
-          <TabsList className="bg-white border border-gray-200 w-full sm:w-auto">
-            <TabsTrigger value="customers" className="data-[state=active]:bg-gray-800 data-[state=active]:text-white flex-1 sm:flex-none">
+          <TabsList className="bg-gray-800 border border-gray-700 w-full sm:w-auto">
+            <TabsTrigger value="customers" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-400 flex-1 sm:flex-none">
               Clientes
             </TabsTrigger>
-            <TabsTrigger value="sellers" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white flex-1 sm:flex-none">
+            <TabsTrigger value="sellers" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-400 flex-1 sm:flex-none">
               Vendedores
             </TabsTrigger>
           </TabsList>
@@ -771,14 +771,14 @@ _Enviado via CRM Leilão NoZap_`;
               placeholder="Buscar por nome, email ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-white text-gray-900 border-gray-300"
+              className="pl-10 bg-gray-800 text-white border-gray-700"
             />
           </div>
 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Todos os Status</option>
             <option value="lead">Leads</option>
@@ -789,7 +789,7 @@ _Enviado via CRM Leilão NoZap_`;
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value)}
-            className="bg-white text-gray-900 rounded-md px-4 py-2 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">Todas as Origens</option>
             <option value="site">Site</option>
@@ -807,7 +807,7 @@ _Enviado via CRM Leilão NoZap_`;
               setPurchaseStatusFilter('all');
             }}
             variant="outline"
-            className="bg-white border-gray-300 text-gray-900 hover:bg-gray-100"
+            className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
           >
             <Filter className="w-4 h-4 mr-2" />
             Limpar Filtros
@@ -815,9 +815,9 @@ _Enviado via CRM Leilão NoZap_`;
           </div>
 
           {/* LISTA DE CLIENTES */}
-          <Card className="bg-white border-gray-200">
+          <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
-            <CardTitle className="text-gray-900">
+            <CardTitle className="text-white">
               Clientes ({filteredCustomers.length})
             </CardTitle>
           </CardHeader>
@@ -843,18 +843,18 @@ _Enviado via CRM Leilão NoZap_`;
                     <tr
                       key={customer.id}
                       onClick={() => navigate(createPageUrl('CustomerDetails') + `?id=${customer.id}`)}
-                      className={`border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                      className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors cursor-pointer ${
+                        index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
                       }`}
                     >
-                      <td className="p-3 text-gray-900 font-medium">{customer.full_name}</td>
-                      <td className="p-3 text-gray-600">
+                      <td className="p-3 text-gray-300 font-medium">{customer.full_name}</td>
+                      <td className="p-3 text-gray-400">
                         <div className="flex items-center gap-1">
                           <Mail className="w-3 h-3" />
                           {customer.email || '-'}
                         </div>
                       </td>
-                      <td className="p-3 text-gray-600">
+                      <td className="p-3 text-gray-400">
                         <div className="flex items-center gap-1">
                           <Phone className="w-3 h-3" />
                           {customer.phone || '-'}
@@ -875,13 +875,13 @@ _Enviado via CRM Leilão NoZap_`;
                           {customer.source || '-'}
                         </Badge>
                       </td>
-                      <td className="p-3 text-center text-gray-600">
+                      <td className="p-3 text-center text-gray-400">
                         {customer.assigned_seller || '-'}
                       </td>
-                      <td className="p-3 text-center text-gray-600">
+                      <td className="p-3 text-center text-gray-400">
                         {customer.last_contact ? new Date(customer.last_contact).toLocaleDateString('pt-BR') : '-'}
                       </td>
-                      <td className="p-3 text-right text-green-600 font-bold">
+                      <td className="p-3 text-right text-green-400 font-bold">
                         R$ {(customer.total_spent || 0).toFixed(2)}
                       </td>
                       <td className="p-3">
@@ -893,7 +893,7 @@ _Enviado via CRM Leilão NoZap_`;
                               e.stopPropagation();
                               handleForward(customer);
                             }}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            className="text-green-400 hover:text-green-300 hover:bg-green-900/30"
                             title="Encaminhar para Vendedor"
                           >
                             <Send className="w-4 h-4" />
@@ -905,7 +905,7 @@ _Enviado via CRM Leilão NoZap_`;
                               e.stopPropagation();
                               handleDelete(customer.id);
                             }}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
@@ -929,9 +929,9 @@ _Enviado via CRM Leilão NoZap_`;
 
           <TabsContent value="sellers">
             {/* LISTA DE VENDEDORES */}
-            <Card className="bg-white border-gray-200">
+            <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-gray-900">
+                <CardTitle className="text-white">
                   Vendedores Cadastrados ({allSellers.length})
                 </CardTitle>
               </CardHeader>
@@ -952,18 +952,18 @@ _Enviado via CRM Leilão NoZap_`;
                       {allSellers.map((seller, index) => (
                         <tr
                           key={seller.id}
-                          className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                            index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
+                          className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors ${
+                            index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'
                           }`}
                         >
-                          <td className="p-3 text-gray-900 font-medium">{seller.name}</td>
-                          <td className="p-3 text-gray-600">
+                          <td className="p-3 text-gray-300 font-medium">{seller.name}</td>
+                          <td className="p-3 text-gray-400">
                             <div className="flex items-center gap-1">
                               <Phone className="w-3 h-3" />
                               {seller.phone}
                             </div>
                           </td>
-                          <td className="p-3 text-gray-600">
+                          <td className="p-3 text-gray-400">
                             <div className="flex items-center gap-1">
                               <Mail className="w-3 h-3" />
                               {seller.email || '-'}
@@ -997,7 +997,7 @@ _Enviado via CRM Leilão NoZap_`;
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleEditSeller(seller)}
-                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                className="text-blue-400 hover:text-blue-300 hover:bg-blue-900/30"
                                 title="Editar"
                               >
                                 <Edit className="w-4 h-4" />
@@ -1006,7 +1006,7 @@ _Enviado via CRM Leilão NoZap_`;
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleToggleSellerStatus(seller)}
-                                className={seller.is_active ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : 'text-green-600 hover:text-green-700 hover:bg-green-50'}
+                                className={seller.is_active ? 'text-red-400 hover:text-red-300 hover:bg-red-900/30' : 'text-green-400 hover:text-green-300 hover:bg-green-900/30'}
                                 title={seller.is_active ? 'Desativar' : 'Ativar'}
                               >
                                 {seller.is_active ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
