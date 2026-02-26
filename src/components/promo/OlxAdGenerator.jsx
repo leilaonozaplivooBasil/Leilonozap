@@ -63,7 +63,7 @@ Escolha UM desses formatos aleatoriamente, ou invente outro. NUNCA use o nome co
 
 2. Uma linha em branco
 
-3. Frase convidando para chamar no WhatsApp ou entrar em contato, incluindo o número EXATAMENTE assim: ${formattedPhone}
+3. Frase convidando para entrar em contato ou ligar, incluindo o número EXATAMENTE assim: ${formattedPhone}
 
 4. Uma linha em branco
 
@@ -75,7 +75,7 @@ Escolha UM desses formatos aleatoriamente, ou invente outro. NUNCA use o nome co
 
 8. Uma linha em branco
 
-9. Frase final de contato com o número EXATAMENTE assim: ${formattedPhone} (ex: "Chame agora no WhatsApp: ${formattedPhone}")
+9. Frase final de contato com o número EXATAMENTE assim: ${formattedPhone} (ex: "Entre em contato: ${formattedPhone}")
 
 REGRAS ABSOLUTAS:
 - O número de telefone DEVE aparecer EXATAMENTE como ${formattedPhone} (com espaços entre TODOS os dígitos)
