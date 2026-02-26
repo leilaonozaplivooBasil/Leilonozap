@@ -43,7 +43,7 @@ Telefone formatado: ${formattedPhone}
 
 REGRAS OBRIGATÓRIAS - siga EXATAMENTE esta estrutura:
 
-1. TÍTULO CHAMATIVO em CAPS incluindo o NOME DO PRODUTO e a localização (${bairro ? bairro + ", " : ""}${cidade}). Algo como "${product.description.toUpperCase()} - OPORTUNIDADE EM ${cidade.toUpperCase()}!" ou "${product.description.toUpperCase()} IMPERDÍVEL NO ${bairro ? bairro.toUpperCase() : cidade.toUpperCase()}!"
+1. TÍTULO CHAMATIVO em CAPS com MUITA VARIAÇÃO e CRIATIVIDADE. Use apenas a palavra-chave principal do produto (ex: se o produto é "Processador Intel Core i7 10700", use apenas "PROCESSADOR"). Combine essa palavra-chave com a localização (${bairro ? bairro + ", " : ""}${cidade}) de formas variadas e criativas. Exemplos de variações: "PROCESSADOR BARATÃO EM ${cidade.toUpperCase()}!", "PROCESSADOR COM PREÇO DE DESAPEGO - ${bairro ? bairro.toUpperCase() : cidade.toUpperCase()}", "OPORTUNIDADE ÚNICA DE PROCESSADOR AQUI EM ${cidade.toUpperCase()}", "PROCESSADOR SEMINOVO ${bairro ? bairro.toUpperCase() + " - " : ""}${cidade.toUpperCase()} - APROVEITE!". Seja criativo, NUNCA repita o mesmo formato de título.
 
 2. Uma linha em branco
 
@@ -63,7 +63,7 @@ REGRAS OBRIGATÓRIAS - siga EXATAMENTE esta estrutura:
 
 IMPORTANTE:
 - O número de telefone DEVE aparecer EXATAMENTE como ${formattedPhone} (com espaços entre TODOS os dígitos)
-- Use emojis moderadamente
+- NÃO USE EMOJIS em nenhuma parte do texto, ZERO emojis
 - Linguagem brasileira informal de marketplace
 - NÃO coloque preço no texto (o preço vai no campo separado da OLX)
 - Retorne APENAS o texto do anúncio, nada mais`,
