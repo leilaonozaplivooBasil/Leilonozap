@@ -34,29 +34,50 @@ export default function Financial() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      // 1. Verifica usuário customizado (AppUser) no localStorage
-      const saved = localStorage.getItem("currentUser");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setCurrentUser(parsed);
-        if (parsed.role === "admin") {
-          setIsAdmin(true);
-          setAuthChecked(true);
-          return;
-        }
-      }
-      // 2. Verifica usuário da plataforma Base44
+      let adminConfirmed = false;
+
+      // 1. Verifica usuário da plataforma Base44 (necessário para RLS funcionar)
       try {
         const platformUser = await base44.auth.me();
         if (platformUser) {
           setCurrentUser(platformUser);
           if (platformUser.role === "admin") {
+            adminConfirmed = true;
             setIsAdmin(true);
           }
         }
       } catch (e) {
         // Não logado na plataforma
       }
+
+      // 2. Se não confirmou via plataforma, verifica AppUser no localStorage
+      if (!adminConfirmed) {
+        const saved = localStorage.getItem("currentUser");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setCurrentUser(parsed);
+          if (parsed.role === "admin") {
+            // Admin via localStorage — tenta autenticar na plataforma Base44
+            // para que as queries com RLS funcionem
+            try {
+              const isAuthenticated = await base44.auth.isAuthenticated();
+              if (isAuthenticated) {
+                setIsAdmin(true);
+                adminConfirmed = true;
+              } else {
+                // Redireciona para login da plataforma para obter token válido
+                base44.auth.redirectToLogin(window.location.href);
+                return;
+              }
+            } catch (e) {
+              // Sem autenticação da plataforma, redireciona para login
+              base44.auth.redirectToLogin(window.location.href);
+              return;
+            }
+          }
+        }
+      }
+
       setAuthChecked(true);
     };
     checkAuth();
