@@ -41,9 +41,25 @@ ${discount > 0 ? `Preço de mercado: R$ ${marketPrice.toFixed(2)} (${discount}% 
 Localização: ${bairro ? bairro + ", " : ""}${cidade}
 Telefone formatado: ${formattedPhone}
 
+PASSO ZERO - ANTES DE TUDO:
+Extraia do nome do produto "${product.description}" apenas a PALAVRA-CHAVE PRINCIPAL (1 ou 2 palavras no máximo). Exemplos:
+- "Processador Intel Core i7 10700" -> "PROCESSADOR"
+- "Geladeira Brastemp Frost Free 375L" -> "GELADEIRA"
+- "Smart TV Samsung 55 polegadas 4K" -> "SMART TV"
+- "Notebook Dell Inspiron 15" -> "NOTEBOOK"
+- "Air Fryer Mondial 5L" -> "AIR FRYER"
+Use APENAS essa palavra-chave no título.
+
 REGRAS OBRIGATÓRIAS - siga EXATAMENTE esta estrutura:
 
-1. TÍTULO CHAMATIVO em CAPS com MUITA VARIAÇÃO e CRIATIVIDADE. Use apenas a palavra-chave principal do produto (ex: se o produto é "Processador Intel Core i7 10700", use apenas "PROCESSADOR"). Combine essa palavra-chave com a localização (${bairro ? bairro + ", " : ""}${cidade}) de formas variadas e criativas. Exemplos de variações: "PROCESSADOR BARATÃO EM ${cidade.toUpperCase()}!", "PROCESSADOR COM PREÇO DE DESAPEGO - ${bairro ? bairro.toUpperCase() : cidade.toUpperCase()}", "OPORTUNIDADE ÚNICA DE PROCESSADOR AQUI EM ${cidade.toUpperCase()}", "PROCESSADOR SEMINOVO ${bairro ? bairro.toUpperCase() + " - " : ""}${cidade.toUpperCase()} - APROVEITE!". Seja criativo, NUNCA repita o mesmo formato de título.
+1. TÍTULO em CAPS usando SOMENTE a palavra-chave extraída + localização. Varie o formato a cada geração usando padrões DIFERENTES como:
+- "[PALAVRA] BARATÃO EM [CIDADE]!"
+- "[PALAVRA] - DESAPEGO [BAIRRO] [CIDADE]"  
+- "TEM [PALAVRA] AQUI EM [CIDADE] - APROVEITA!"
+- "[PALAVRA] SEMINOVO - [BAIRRO], [CIDADE]"
+- "VENDO [PALAVRA] [CIDADE] - PREÇO PRA SAIR HOJE"
+- "SAINDO [PALAVRA] EM [BAIRRO]! CORRE!"
+Escolha UM desses formatos aleatoriamente, ou invente outro. NUNCA use o nome completo do produto no título.
 
 2. Uma linha em branco
 
@@ -61,11 +77,12 @@ REGRAS OBRIGATÓRIAS - siga EXATAMENTE esta estrutura:
 
 9. Frase final de contato com o número EXATAMENTE assim: ${formattedPhone} (ex: "Chame agora no WhatsApp: ${formattedPhone}")
 
-IMPORTANTE:
+REGRAS ABSOLUTAS:
 - O número de telefone DEVE aparecer EXATAMENTE como ${formattedPhone} (com espaços entre TODOS os dígitos)
-- NÃO USE EMOJIS em nenhuma parte do texto, ZERO emojis
+- PROIBIDO usar emojis. ZERO emojis. Nenhum caractere especial tipo unicode/emoji em NENHUMA parte do texto. Se colocar emoji, o texto será REJEITADO.
 - Linguagem brasileira informal de marketplace
 - NÃO coloque preço no texto (o preço vai no campo separado da OLX)
+- No título use APENAS a palavra-chave principal, NUNCA o nome completo do produto
 - Retorne APENAS o texto do anúncio, nada mais`,
       response_json_schema: {
         type: "object",
