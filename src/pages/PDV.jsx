@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   DollarSign, Search, ShoppingCart, Trash2, Plus, Minus,
-  ArrowLeft, Package, TrendingUp, Clock, Printer, X, Calendar, BarChart3, FileText
+  ArrowLeft, Package, TrendingUp, Clock, Printer, X, Calendar, FileText
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
