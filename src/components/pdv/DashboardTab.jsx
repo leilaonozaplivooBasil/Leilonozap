@@ -184,6 +184,16 @@ export default function DashboardTab({
                 )}
               </div>
 
+              {/* RENTABILIDADE */}
+              <Button
+                size="sm"
+                onClick={() => setShowRentabilidade(true)}
+                className="text-xs text-white gap-1.5 bg-amber-600 hover:bg-amber-500"
+              >
+                <Target className="w-3.5 h-3.5" />
+                Rentabilidade da Operação
+              </Button>
+
               {/* COUNTER */}
               <span className="text-xs text-gray-500 ml-auto">
                 {periodSales.length} vendas
