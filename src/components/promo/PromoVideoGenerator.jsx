@@ -196,6 +196,12 @@ export default function PromoVideoGenerator({ product }) {
           <p className="text-xs text-gray-500 mt-1">Será exibido no rodapé da imagem junto com a logo Leilão NoZap</p>
         </div>
 
+        {error && (
+          <div className="bg-red-900/30 border border-red-700/50 rounded-xl p-3 mb-3">
+            <p className="text-sm text-red-300">{error}</p>
+          </div>
+        )}
+
         {!compositeImage ? (
           <Button
             onClick={generatePromoImage}
