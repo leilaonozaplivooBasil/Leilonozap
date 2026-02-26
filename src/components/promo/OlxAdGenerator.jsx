@@ -43,7 +43,7 @@ Telefone formatado: ${formattedPhone}
 
 REGRAS OBRIGATÓRIAS - siga EXATAMENTE esta estrutura:
 
-1. TÍTULO CHAMATIVO em CAPS referenciando a localização (${bairro ? bairro + ", " : ""}${cidade}). Algo como "OPORTUNIDADE EM ${cidade.toUpperCase()}!" ou "IMPERDÍVEL NO ${bairro ? bairro.toUpperCase() : cidade.toUpperCase()}!"
+1. TÍTULO CHAMATIVO em CAPS incluindo o NOME DO PRODUTO e a localização (${bairro ? bairro + ", " : ""}${cidade}). Algo como "${product.description.toUpperCase()} - OPORTUNIDADE EM ${cidade.toUpperCase()}!" ou "${product.description.toUpperCase()} IMPERDÍVEL NO ${bairro ? bairro.toUpperCase() : cidade.toUpperCase()}!"
 
 2. Uma linha em branco
 
