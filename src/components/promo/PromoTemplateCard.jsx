@@ -226,6 +226,95 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         </>
       );
     }
+    if (design === "flash") {
+      return (
+        <>
+          {/* White diagonal slice */}
+          <div style={{ position: "absolute", top: 0, left: 0, width: "55%", height: "100%", background: "linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.85) 60%, transparent 61%)", zIndex: 1 }} />
+          {/* Border frame */}
+          <div style={{ position: "absolute", inset: 12, border: `3px solid ${accent}`, borderRadius: 12, pointerEvents: "none", zIndex: 2 }} />
+          {/* Decorative dots */}
+          <div style={{ position: "absolute", top: 40, left: 30, display: "grid", gridTemplateColumns: "repeat(5,8px)", gap: 6, zIndex: 3 }}>
+            {Array.from({length: 15}).map((_,i) => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: "#7c3aed" }} />)}
+          </div>
+          <div style={{ position: "absolute", bottom: 30, left: 20, display: "grid", gridTemplateColumns: "repeat(4,8px)", gap: 6, zIndex: 3 }}>
+            {Array.from({length: 8}).map((_,i) => <div key={i} style={{ width: 5, height: 5, borderRadius: "50%", background: `${accent}60` }} />)}
+          </div>
+          {/* Arrow shapes */}
+          <div style={{ position: "absolute", top: "15%", right: "5%", width: 0, height: 0, borderLeft: "12px solid transparent", borderRight: "12px solid transparent", borderBottom: `20px solid ${accent}`, transform: "rotate(45deg)", opacity: 0.6, zIndex: 3 }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
+    if (design === "relampago") {
+      return (
+        <>
+          {/* Lightning bolt glow */}
+          <div style={{ position: "absolute", top: "8%", left: "50%", transform: "translateX(-50%)", fontSize: 80, lineHeight: 1, zIndex: 2, filter: "drop-shadow(0 0 30px rgba(245,158,11,0.8)) drop-shadow(0 0 60px rgba(245,158,11,0.4))", opacity: 0.15 }}>⚡</div>
+          {/* LED-style scanlines */}
+          <div style={{ position: "absolute", inset: 0, backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px)", zIndex: 1 }} />
+          {/* Top accent line */}
+          <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 3, background: `linear-gradient(90deg, transparent, ${accent}, transparent)`, zIndex: 3 }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
+    if (design === "wave") {
+      return (
+        <>
+          {/* Wave shapes */}
+          <svg style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 1 }} viewBox="0 0 500 200" preserveAspectRatio="none" width="100%" height="40%">
+            <path d="M0,120 C100,60 200,180 300,100 C400,20 450,140 500,80 L500,200 L0,200Z" fill={`${accent}25`} />
+            <path d="M0,150 C80,100 180,200 280,130 C380,60 430,160 500,110 L500,200 L0,200Z" fill={`${accent}15`} />
+          </svg>
+          {/* Accent circles */}
+          <div style={{ position: "absolute", top: 20, right: 20, width: 60, height: 60, borderRadius: "50%", border: `2px solid ${accent}30`, zIndex: 2 }} />
+          <div style={{ position: "absolute", top: 35, right: 35, width: 30, height: 30, borderRadius: "50%", background: `${accent}20`, zIndex: 2 }} />
+          <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: `1px solid rgba(255,255,255,0.06)`, pointerEvents: "none" }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
+    if (design === "grid") {
+      const gridAccent = "#84cc16";
+      return (
+        <>
+          {/* Large colored block top-left */}
+          <div style={{ position: "absolute", top: 0, left: 0, width: "35%", height: "40%", background: gridAccent, zIndex: 1 }} />
+          {/* Small colored block bottom-left */}
+          <div style={{ position: "absolute", bottom: "20%", left: 0, width: "15%", height: "15%", background: gridAccent, zIndex: 1 }} />
+          {/* Dark block overlay */}
+          <div style={{ position: "absolute", top: 0, left: "35%", width: "30%", height: "55%", background: "#333", zIndex: 1 }} />
+          {/* Inner frame */}
+          <div style={{ position: "absolute", top: "12%", left: "12%", right: "12%", bottom: "12%", border: `2px solid ${gridAccent}50`, zIndex: 2, pointerEvents: "none" }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
+    if (design === "tag") {
+      return (
+        <>
+          {/* Hanging tag */}
+          <div style={{ position: "absolute", top: -5, right: 60, zIndex: 10, display: "flex", flexDirection: "column", alignItems: "center" }}>
+            <div style={{ width: 2, height: 20, background: "#555" }} />
+            <div style={{ width: 56, height: 70, background: "#1f2937", borderRadius: "4px 4px 4px 4px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 12px rgba(0,0,0,0.3)", position: "relative" }}>
+              <div style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", width: 10, height: 10, borderRadius: "50%", border: "2px solid #555", background: "transparent" }} />
+              <span style={{ color: "#ef4444", fontSize: 9, fontWeight: 800, marginTop: 10 }}>PRODUTO</span>
+              <span style={{ color: "white", fontSize: 16, fontWeight: 900, lineHeight: 1 }}>49<span style={{ fontSize: 10, verticalAlign: "super" }}>%</span></span>
+              <span style={{ color: "#ef4444", fontSize: 8, fontWeight: 700 }}>OFF</span>
+            </div>
+          </div>
+          {/* Diagonal accent */}
+          <div style={{ position: "absolute", bottom: 0, left: 0, width: "60%", height: "50%", background: `linear-gradient(135deg, ${accent}20, transparent)` }} />
+          {/* CTA circle */}
+          <div style={{ position: "absolute", bottom: 20, left: 20, width: 56, height: 56, borderRadius: "50%", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.3)", zIndex: 5 }}>
+            <span style={{ color: "white", fontSize: 8, fontWeight: 800, textTransform: "uppercase", textAlign: "center", lineHeight: 1.2 }}>COMPRE<br/>AGORA</span>
+          </div>
+          <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: "1px solid rgba(0,0,0,0.08)", pointerEvents: "none" }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
     // classic
     return (
       <>
