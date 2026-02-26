@@ -265,7 +265,7 @@ export default function DashboardTab({
               {['santander', 'itau', 'nubank'].includes(dashBankFilter)
                 ? `Vendas - ${dashBankFilter === 'santander' ? '🔴 Santander' : dashBankFilter === 'itau' ? '🟠 Itaú' : '🟣 Nubank'}`
                 : `Todas as Vendas`
-              } ({(['santander', 'itau', 'nubank'].includes(dashBankFilter) ? allSales.filter(s => s.receiving_bank === dashBankFilter) : allSales).length})
+              } ({(['santander', 'itau', 'nubank'].includes(dashBankFilter) ? periodSales.filter(s => s.receiving_bank === dashBankFilter) : periodSales).length})
             </CardTitle>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               <div className="relative w-full sm:w-64">
@@ -305,8 +305,8 @@ export default function DashboardTab({
               </thead>
               <tbody>
                 {((['santander', 'itau', 'nubank'].includes(dashBankFilter)
-                  ? allSales.filter(s => s.receiving_bank === dashBankFilter)
-                  : allSales
+                  ? periodSales.filter(s => s.receiving_bank === dashBankFilter)
+                  : periodSales
                 ))
                   .filter(sale =>
                     !searchSale ||
@@ -377,7 +377,7 @@ export default function DashboardTab({
             <Package className="w-5 h-5" />
             Todos os Produtos Vendidos ({(() => {
               const pm = {};
-              allSales.forEach(s => { if (!pm[s.product_id]) pm[s.product_id] = true; });
+              periodSales.forEach(s => { if (!pm[s.product_id]) pm[s.product_id] = true; });
               return Object.keys(pm).length;
             })()})
           </CardTitle>
@@ -398,7 +398,7 @@ export default function DashboardTab({
               <tbody>
                 {(() => {
                   const productMap = {};
-                  allSales.forEach(sale => {
+                  periodSales.forEach(sale => {
                     if (!productMap[sale.product_id]) {
                       productMap[sale.product_id] = { id: sale.product_id, description: sale.product_description, quantity_sold: 0, total_amount: 0, net_amount: 0, payment_methods: {} };
                     }
@@ -434,7 +434,7 @@ export default function DashboardTab({
                 })()}
               </tbody>
             </table>
-            {allSales.length === 0 && (
+            {periodSales.length === 0 && (
               <div className="text-center py-12 text-gray-400">
                 <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>Nenhuma venda registrada ainda</p>
