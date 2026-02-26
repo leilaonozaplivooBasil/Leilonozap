@@ -162,9 +162,14 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
           <span style={{ color: "#7c3aed", fontSize: 24, fontWeight: 800 }}>,{price.toFixed(2).split('.')[1]}</span>
         </div>
       </div>
-      {/* Produto direita */}
+      {/* Produto direita com moldura vibrante */}
       <div style={{ position: "absolute", top: "12%", right: "1%", width: "50%", height: "62%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
-        {renderProductImage("95%", "95%")}
+        {/* Moldura com borda roxa + sombra interna */}
+        <div style={{ position: "absolute", inset: 6, borderRadius: 16, border: "2px solid rgba(124,58,237,0.35)", boxShadow: "inset 0 0 20px rgba(124,58,237,0.08)", pointerEvents: "none" }} />
+        {/* Pontinhos nos cantos */}
+        <div style={{ position: "absolute", top: 2, left: 2, width: 8, height: 8, borderRadius: "50%", background: "#7c3aed", opacity: 0.4 }} />
+        <div style={{ position: "absolute", bottom: 2, right: 2, width: 8, height: 8, borderRadius: "50%", background: "#f97316", opacity: 0.4 }} />
+        {renderProductImage("88%", "88%")}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -199,9 +204,14 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
           <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 8, fontWeight: 700 }}>OFF</span>
         </div>
       )}
-      {/* Produto */}
-      <div style={{ position: "absolute", top: "10%", left: 0, right: 0, height: "42%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, padding: "0 36px" }}>
-        {renderProductImage("65%", "100%")}
+      {/* Produto com moldura LED/digital */}
+      <div style={{ position: "absolute", top: "10%", left: "12%", right: "12%", height: "42%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
+        {/* Moldura com borda tipo LED scan */}
+        <div style={{ position: "absolute", inset: 4, borderRadius: 8, border: "1px solid rgba(245,158,11,0.2)", boxShadow: "0 0 20px rgba(245,158,11,0.06), inset 0 0 20px rgba(0,0,0,0.3)", pointerEvents: "none" }} />
+        {/* Linha de scan animada */}
+        <div style={{ position: "absolute", top: 4, left: 4, right: 4, height: 1, background: "linear-gradient(90deg, transparent, rgba(34,211,238,0.3), transparent)" }} />
+        <div style={{ position: "absolute", bottom: 4, left: 4, right: 4, height: 1, background: "linear-gradient(90deg, transparent, rgba(245,158,11,0.3), transparent)" }} />
+        {renderProductImage("60%", "90%")}
       </div>
       {/* Separador */}
       <div style={{ position: "absolute", left: "15%", right: "15%", bottom: "40%", height: 2, background: "linear-gradient(90deg, transparent, #f59e0b50, transparent)", zIndex: 10 }} />
@@ -261,9 +271,14 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
           <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 7, fontWeight: 700 }}>OFF</span>
         </div>
       )}
-      {/* Produto */}
-      <div style={{ position: "absolute", top: "10%", left: 0, right: 0, height: "44%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, padding: "0 36px" }}>
-        {renderProductImage("68%", "100%")}
+      {/* Produto com moldura ondulada */}
+      <div style={{ position: "absolute", top: "10%", left: "10%", right: "10%", height: "44%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
+        {/* Moldura arredondada suave */}
+        <div style={{ position: "absolute", inset: 4, borderRadius: 24, border: `1.5px solid ${accent}20`, boxShadow: `inset 0 0 20px ${accent}05`, pointerEvents: "none" }} />
+        {/* Mini-ondas nas laterais */}
+        <svg style={{ position: "absolute", left: -2, top: "20%", height: "60%", width: 8, zIndex: 1 }} viewBox="0 0 8 60" preserveAspectRatio="none"><path d={`M4,0 Q0,10 4,20 Q8,30 4,40 Q0,50 4,60`} fill="none" stroke={`${accent}30`} strokeWidth="1.5" /></svg>
+        <svg style={{ position: "absolute", right: -2, top: "20%", height: "60%", width: 8, zIndex: 1 }} viewBox="0 0 8 60" preserveAspectRatio="none"><path d={`M4,0 Q8,10 4,20 Q0,30 4,40 Q8,50 4,60`} fill="none" stroke={`${accent}30`} strokeWidth="1.5" /></svg>
+        {renderProductImage("64%", "90%")}
       </div>
       {/* Preço */}
       <div style={{ position: "absolute", bottom: "15%", left: 0, right: 0, zIndex: 10, padding: "0 24px" }}>
@@ -314,9 +329,15 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
             <span style={{ color: "rgba(0,0,0,0.5)", fontSize: 9, fontWeight: 700 }}>OFF</span>
           </div>
         )}
-        {/* Produto */}
+        {/* Produto com moldura geométrica */}
         <div style={{ position: "absolute", top: "8%", right: "3%", width: "52%", height: "55%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
-          {renderProductImage("92%", "92%")}
+          {/* Moldura quadrada sem arredondamento */}
+          <div style={{ position: "absolute", inset: 6, border: `2px solid ${g}40`, pointerEvents: "none" }} />
+          {/* Triângulo canto inferior direito */}
+          <div style={{ position: "absolute", bottom: 6, right: 6, width: 0, height: 0, borderBottom: `18px solid ${g}30`, borderLeft: "18px solid transparent", pointerEvents: "none" }} />
+          {/* Triângulo canto superior esquerdo */}
+          <div style={{ position: "absolute", top: 6, left: 6, width: 0, height: 0, borderTop: `18px solid ${g}30`, borderRight: "18px solid transparent", pointerEvents: "none" }} />
+          {renderProductImage("85%", "85%")}
         </div>
         {/* Preço */}
         <div style={{ position: "absolute", bottom: "14%", left: 0, right: 0, zIndex: 10, padding: "0 24px" }}>
@@ -362,12 +383,18 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
           <span style={{ color: "white", fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>🏷️ {displayBadge}</span>
         </div>
       </div>
-      {/* Produto */}
-      <div style={{ position: "absolute", top: "10%", left: 0, right: 0, height: "45%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5, padding: "0 32px" }}>
+      {/* Produto com moldura de etiqueta */}
+      <div style={{ position: "absolute", top: "10%", left: "8%", right: "8%", height: "45%", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 5 }}>
+        {/* Moldura com tracejado */}
+        <div style={{ position: "absolute", inset: 8, borderRadius: 12, border: "2px dashed rgba(31,41,55,0.2)", pointerEvents: "none" }} />
+        {/* Label "PRODUTO" no topo da moldura */}
+        <div style={{ position: "absolute", top: 2, left: "50%", transform: "translateX(-50%)", background: "#fef9c3", padding: "0 8px", zIndex: 3 }}>
+          <span style={{ color: "#92400e", fontSize: 7, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase" }}>PRODUTO</span>
+        </div>
         {displayImage ? (
-          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "68%", maxHeight: "100%", objectFit: "contain", filter: "drop-shadow(0 10px 28px rgba(0,0,0,0.2))" }} />
+          <img src={displayImage} alt={displayTitle} crossOrigin="anonymous" style={{ maxWidth: "64%", maxHeight: "90%", objectFit: "contain", filter: "drop-shadow(0 10px 28px rgba(0,0,0,0.2))", position: "relative", zIndex: 2 }} />
         ) : (
-          <div style={{ width: 130, height: 130, borderRadius: 16, background: "rgba(0,0,0,0.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48 }}>📦</div>
+          <div style={{ width: 130, height: 130, borderRadius: 16, background: "rgba(0,0,0,0.05)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 48, zIndex: 2 }}>📦</div>
         )}
       </div>
       {/* Preço */}
