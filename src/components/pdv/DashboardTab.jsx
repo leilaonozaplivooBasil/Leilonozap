@@ -140,7 +140,7 @@ export default function DashboardTab({
                     ].map(p => (
                       <button
                         key={p.value}
-                        onClick={() => { setPeriodFilter(p.value); setDateFilter(''); setPeriodPopoverOpen(false); }}
+                        onClick={() => { setPeriodFilter(p.value); setDateFilter(''); setDateFilterEnd(''); setPeriodPopoverOpen(false); }}
                         className={`text-left px-3 py-2 rounded text-sm transition-colors hover:bg-gray-700 ${
                           periodFilter === p.value && !dateFilter ? 'text-white font-semibold bg-gray-700' : 'text-gray-300'
                         }`}
