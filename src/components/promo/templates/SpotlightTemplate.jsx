@@ -32,9 +32,10 @@ export default function SpotlightTemplate({ displayTitle, displayImage, displayB
       {/* Selo de desconto flutuante */}
       {discount > 0 && (
         <div style={{ position: "absolute", top: "15%", right: 20, zIndex: 10 }}>
-          <div style={{ width: 64, height: 64, borderRadius: "50%", background: template.sealGradient, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 0 30px ${template.accentGlow}60`, border: "2px solid rgba(255,255,255,0.15)" }}>
-            <span style={{ color: "white", fontSize: 19, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
-            <span style={{ color: "rgba(255,255,255,0.7)", fontSize: 7, fontWeight: 700 }}>OFF</span>
+          <div style={{ width: 72, height: 72, borderRadius: "50%", background: template.sealGradient, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 0 30px ${template.accentGlow}60`, border: "2px solid rgba(255,255,255,0.15)" }}>
+            <span style={{ color: "white", fontSize: 8, fontWeight: 800, lineHeight: 1 }}>ATÉ</span>
+            <span style={{ color: "white", fontSize: 19, fontWeight: 900, lineHeight: 1 }}>60%</span>
+            <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 6, fontWeight: 700 }}>DE DESCONTO</span>
           </div>
         </div>
       )}

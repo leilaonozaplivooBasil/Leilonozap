@@ -33,9 +33,10 @@ export default function DiagonalTemplate({ displayTitle, displayImage, displayBa
       {/* Selo de desconto - triângulo canto */}
       {discount > 0 && (
         <div style={{ position: "absolute", top: 0, right: 0, zIndex: 10 }}>
-          <div style={{ width: 0, height: 0, borderTop: `90px solid ${accent}`, borderLeft: "90px solid transparent" }} />
-          <div style={{ position: "absolute", top: 18, right: 8, transform: "rotate(45deg)" }}>
-            <span style={{ color: "white", fontSize: 18, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
+          <div style={{ width: 0, height: 0, borderTop: `100px solid ${accent}`, borderLeft: "100px solid transparent" }} />
+          <div style={{ position: "absolute", top: 14, right: 4, transform: "rotate(45deg)", textAlign: "center" }}>
+            <span style={{ color: "white", fontSize: 8, fontWeight: 800, display: "block", lineHeight: 1 }}>ATÉ</span>
+            <span style={{ color: "white", fontSize: 16, fontWeight: 900, lineHeight: 1 }}>60%</span>
           </div>
         </div>
       )}

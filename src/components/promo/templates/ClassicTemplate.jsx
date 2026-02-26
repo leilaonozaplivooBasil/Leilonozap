@@ -34,9 +34,10 @@ export default function ClassicTemplate({ displayTitle, displayImage, displayBad
 
       {/* Selo desconto */}
       {discount > 0 && (
-        <div style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 72, height: 72, borderRadius: "50%", background: template.sealGradient, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 4px 24px ${template.accentGlow}`, border: "3px solid rgba(255,255,255,0.2)", transform: "rotate(12deg)" }}>
-          <span style={{ color: "white", fontSize: 22, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
-          <span style={{ color: "rgba(255,255,255,0.8)", fontSize: 8, fontWeight: 700 }}>OFF</span>
+        <div style={{ position: "absolute", top: 16, right: 16, zIndex: 10, width: 78, height: 78, borderRadius: "50%", background: template.sealGradient, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", boxShadow: `0 4px 24px ${template.accentGlow}`, border: "3px solid rgba(255,255,255,0.2)", transform: "rotate(12deg)" }}>
+          <span style={{ color: "white", fontSize: 10, fontWeight: 800, lineHeight: 1 }}>ATÉ</span>
+          <span style={{ color: "white", fontSize: 22, fontWeight: 900, lineHeight: 1 }}>60%</span>
+          <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 7, fontWeight: 700, lineHeight: 1.2 }}>DE DESCONTO</span>
         </div>
       )}
 

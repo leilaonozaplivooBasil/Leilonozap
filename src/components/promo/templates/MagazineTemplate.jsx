@@ -28,8 +28,9 @@ export default function MagazineTemplate({ displayTitle, displayImage, displayBa
         </div>
         {discount > 0 && (
           <div style={{ textAlign: "right" }}>
-            <p style={{ color: "#999", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>ECONOMIZE</p>
-            <p style={{ color: accent, fontSize: 28, fontWeight: 900, lineHeight: 1, letterSpacing: "-0.02em" }}>{discount}%</p>
+            <p style={{ color: "#999", fontSize: 9, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" }}>ATÉ</p>
+            <p style={{ color: accent, fontSize: 28, fontWeight: 900, lineHeight: 1, letterSpacing: "-0.02em" }}>60%</p>
+            <p style={{ color: "#999", fontSize: 8, fontWeight: 600, letterSpacing: "0.08em" }}>DE DESCONTO</p>
           </div>
         )}
       </div>

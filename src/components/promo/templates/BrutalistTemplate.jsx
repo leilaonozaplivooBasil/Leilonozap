@@ -27,8 +27,10 @@ export default function BrutalistTemplate({ displayTitle, displayImage, displayB
           <span style={{ color: "#000", fontSize: 16, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayBadge}</span>
         </div>
         {discount > 0 && (
-          <div style={{ background: "white", padding: "8px 14px", border: `3px solid ${accent}` }}>
-            <span style={{ color: "#000", fontSize: 24, fontWeight: 900, lineHeight: 1 }}>-{discount}%</span>
+          <div style={{ background: "white", padding: "8px 14px", border: `3px solid ${accent}`, textAlign: "center" }}>
+            <span style={{ color: "#000", fontSize: 9, fontWeight: 800, display: "block", lineHeight: 1 }}>ATÉ</span>
+            <span style={{ color: "#000", fontSize: 24, fontWeight: 900, lineHeight: 1 }}>60%</span>
+            <span style={{ color: "#000", fontSize: 7, fontWeight: 700, display: "block", lineHeight: 1.3 }}>DE DESCONTO</span>
           </div>
         )}
       </div>

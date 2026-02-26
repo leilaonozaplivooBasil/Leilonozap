@@ -35,9 +35,10 @@ export default function NeonTemplate({ displayTitle, displayImage, displayBadge,
 
       {/* Selo hexagonal */}
       {discount > 0 && (
-        <div style={{ position: "absolute", top: 18, right: 22, zIndex: 10, width: 70, height: 70, background: `${accent}20`, border: `2px solid ${accent}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)", boxShadow: `0 0 20px ${accent}40` }}>
-          <span style={{ color: accent, fontSize: 20, fontWeight: 900, lineHeight: 1, textShadow: `0 0 10px ${accent}` }}>-{discount}%</span>
-          <span style={{ color: `${accent}cc`, fontSize: 8, fontWeight: 700 }}>OFF</span>
+        <div style={{ position: "absolute", top: 18, right: 22, zIndex: 10, width: 76, height: 76, background: `${accent}20`, border: `2px solid ${accent}`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)", boxShadow: `0 0 20px ${accent}40` }}>
+          <span style={{ color: accent, fontSize: 8, fontWeight: 800, lineHeight: 1, textShadow: `0 0 10px ${accent}` }}>ATÉ</span>
+          <span style={{ color: accent, fontSize: 20, fontWeight: 900, lineHeight: 1, textShadow: `0 0 10px ${accent}` }}>60%</span>
+          <span style={{ color: `${accent}cc`, fontSize: 6, fontWeight: 700 }}>DE DESCONTO</span>
         </div>
       )}
 
