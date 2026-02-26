@@ -16,7 +16,8 @@ import DashboardTab from '@/components/pdv/DashboardTab';
 import VendedoresTab from '@/components/pdv/VendedoresTab';
 import TodaySummaryCards from '@/components/pdv/TodaySummaryCards';
 import { OpenCashModal, CloseCashModal, SessionDetailsModal, EditSaleModal, EditCommissionModal } from '@/components/pdv/CashRegisterModals';
-import { Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+
+
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 const getAdminCredentials = () => { try { const s = localStorage.getItem('currentUser'); if (s) { const u = JSON.parse(s); return { app_user_email: u.email, app_user_id: u.id }; } } catch (e) { } return {}; };
