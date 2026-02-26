@@ -119,6 +119,11 @@ export default function Financial() {
   const handleDelete = (exp) => {
     if (window.confirm(`Excluir "${exp.description}"?`)) deleteMutation.mutate(exp.id);
   };
+  const handlePaymentConfirm = async (id, data) => {
+    await FinancialExpense.update(id, data);
+    queryClient.invalidateQueries({ queryKey: ["financial-expenses"] });
+    setPaymentExpense(null);
+  };
 
   return (
     <div className="min-h-screen bg-gray-900 p-4 md:p-6">
