@@ -89,6 +89,10 @@ export default function PromoCreator() {
                     <Sparkles className="w-4 h-4" />
                     Imagem IA
                   </TabsTrigger>
+                  <TabsTrigger value="olx" className="gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+                    <MapPin className="w-4 h-4" />
+                    Anúncio OLX
+                  </TabsTrigger>
                 </TabsList>
 
                 {/* Templates Tab */}
@@ -185,6 +189,13 @@ export default function PromoCreator() {
                 <TabsContent value="ia">
                   <div className="max-w-lg">
                     <PromoVideoGenerator product={selectedProduct} />
+                  </div>
+                </TabsContent>
+
+                {/* OLX Ad Tab */}
+                <TabsContent value="olx">
+                  <div className="max-w-2xl">
+                    <OlxAdGenerator product={selectedProduct} />
                   </div>
                 </TabsContent>
               </Tabs>
