@@ -439,7 +439,7 @@ export default function DashboardTab({
               <tbody>
                 {(() => {
                   const productMap = {};
-                  periodSales.forEach(sale => {
+                  dashSales.forEach(sale => {
                     if (!productMap[sale.product_id]) {
                       productMap[sale.product_id] = { id: sale.product_id, description: sale.product_description, quantity_sold: 0, total_amount: 0, net_amount: 0, payment_methods: {} };
                     }
