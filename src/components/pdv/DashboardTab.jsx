@@ -74,6 +74,16 @@ export default function DashboardTab({
     ? periodSales.filter(s => s.receiving_bank === dashBankFilter)
     : periodSales;
 
+  if (showRentabilidade) {
+    return (
+      <RentabilidadeOperacao
+        sales={dashSales}
+        products={products}
+        onBack={() => setShowRentabilidade(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="space-y-4">
