@@ -136,17 +136,97 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
 
   const accent = template.accentColor;
 
+  // === DESIGN-SPECIFIC BACKGROUND ===
+  const getDesignBackground = () => {
+    switch (design) {
+      case "neon":
+        return `linear-gradient(145deg, #000010 0%, #0a0a2e 30%, #050520 60%, #000015 100%)`;
+      case "diagonal":
+        return `linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 40%, #0f0f0f 60%, #050505 100%)`;
+      case "spotlight":
+        return `radial-gradient(ellipse at 50% 35%, #1a1a1a 0%, #0a0a0a 40%, #000000 100%)`;
+      case "magazine":
+        return `linear-gradient(180deg, #f8f8f8 0%, #eeeeee 40%, #e0e0e0 100%)`;
+      case "brutalist":
+        return `#000000`;
+      default: // classic
+        return template.gradient;
+    }
+  };
+
+  const isMagazine = design === "magazine";
+  const textColor = isMagazine ? "#111" : "white";
+  const textMuted = isMagazine ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.4)";
+  const textSemi = isMagazine ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.6)";
+
   // === RENDER POR LAYOUT ===
-  const renderBgEffects = () => (
-    <>
-      <div style={{ position: "absolute", top: -60, right: -60, width: 220, height: 220, background: `radial-gradient(circle, ${template.accentGlow} 0%, transparent 70%)`, borderRadius: "50%", filter: "blur(40px)", opacity: 0.4 }} />
-      <div style={{ position: "absolute", bottom: 40, left: -40, width: 180, height: 180, background: `radial-gradient(circle, ${template.accentGlow} 0%, transparent 70%)`, borderRadius: "50%", filter: "blur(50px)", opacity: 0.25 }} />
-      <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: `linear-gradient(${accent}33 1px, transparent 1px), linear-gradient(90deg, ${accent}33 1px, transparent 1px)`, backgroundSize: "40px 40px" }} />
-      <div style={{ position: "absolute", top: 0, right: 0, width: "50%", height: "100%", borderLeft: `1px solid ${accent}15`, transform: "skewX(-15deg)", transformOrigin: "top right" }} />
-      <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: `1px solid ${accent}12`, pointerEvents: "none" }} />
-      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
-    </>
-  );
+  const renderBgEffects = () => {
+    if (design === "neon") {
+      return (
+        <>
+          <div style={{ position: "absolute", top: -80, right: -80, width: 280, height: 280, background: `radial-gradient(circle, ${accent}60 0%, transparent 60%)`, borderRadius: "50%", filter: "blur(60px)", opacity: 0.5 }} />
+          <div style={{ position: "absolute", bottom: -40, left: -60, width: 240, height: 240, background: `radial-gradient(circle, ${accent}50 0%, transparent 60%)`, borderRadius: "50%", filter: "blur(70px)", opacity: 0.35 }} />
+          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 300, height: 300, background: `radial-gradient(circle, ${accent}20 0%, transparent 70%)`, borderRadius: "50%", filter: "blur(50px)" }} />
+          <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: `2px solid ${accent}30`, pointerEvents: "none", boxShadow: `inset 0 0 40px ${accent}10, 0 0 30px ${accent}15` }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } } @keyframes neonFlicker { 0%,100% { opacity:1; } 50% { opacity:0.85; } }`}</style>
+        </>
+      );
+    }
+    if (design === "diagonal") {
+      return (
+        <>
+          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: "-20%", left: "-10%", width: "60%", height: "140%", background: `linear-gradient(135deg, ${accent}12, transparent)`, transform: "skewX(-20deg)" }} />
+            <div style={{ position: "absolute", top: "-10%", right: "-5%", width: "40%", height: "120%", background: `linear-gradient(-45deg, ${accent}08, transparent)`, transform: "skewX(15deg)" }} />
+          </div>
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 6, background: template.sealGradient }} />
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: template.sealGradient, opacity: 0.6 }} />
+          <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: `1px solid ${accent}15`, pointerEvents: "none" }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
+    if (design === "spotlight") {
+      return (
+        <>
+          <div style={{ position: "absolute", top: "5%", left: "50%", transform: "translateX(-50%)", width: 350, height: 350, background: `radial-gradient(circle, ${accent}15 0%, transparent 70%)`, borderRadius: "50%", filter: "blur(30px)" }} />
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 35%, transparent 30%, rgba(0,0,0,0.6) 100%)" }} />
+          <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: `1px solid ${accent}10`, pointerEvents: "none" }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
+    if (design === "magazine") {
+      return (
+        <>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: template.sealGradient }} />
+          <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 4, background: template.sealGradient }} />
+          <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: "1px solid rgba(0,0,0,0.08)", pointerEvents: "none" }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
+    if (design === "brutalist") {
+      return (
+        <>
+          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", border: `4px solid ${accent}`, borderRadius: 20, pointerEvents: "none", zIndex: 5 }} />
+          <div style={{ position: "absolute", top: 8, left: 8, right: 8, bottom: 8, border: `1px solid ${accent}40`, borderRadius: 14, pointerEvents: "none", zIndex: 5 }} />
+          <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+        </>
+      );
+    }
+    // classic
+    return (
+      <>
+        <div style={{ position: "absolute", top: -60, right: -60, width: 220, height: 220, background: `radial-gradient(circle, ${template.accentGlow} 0%, transparent 70%)`, borderRadius: "50%", filter: "blur(40px)", opacity: 0.4 }} />
+        <div style={{ position: "absolute", bottom: 40, left: -40, width: 180, height: 180, background: `radial-gradient(circle, ${template.accentGlow} 0%, transparent 70%)`, borderRadius: "50%", filter: "blur(50px)", opacity: 0.25 }} />
+        <div style={{ position: "absolute", inset: 0, opacity: 0.04, backgroundImage: `linear-gradient(${accent}33 1px, transparent 1px), linear-gradient(90deg, ${accent}33 1px, transparent 1px)`, backgroundSize: "40px 40px" }} />
+        <div style={{ position: "absolute", top: 0, right: 0, width: "50%", height: "100%", borderLeft: `1px solid ${accent}15`, transform: "skewX(-15deg)", transformOrigin: "top right" }} />
+        <div style={{ position: "absolute", inset: 0, borderRadius: 20, border: `1px solid ${accent}12`, pointerEvents: "none" }} />
+        <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+      </>
+    );
+  };
 
   const renderBadge = () => (
     <div style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(12px)", border: `1px solid ${accent}40`, borderRadius: 12, padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>
