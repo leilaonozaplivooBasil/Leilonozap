@@ -39,7 +39,7 @@ export default function FinancialSummaryCards({ expenses }) {
                 <Icon className={`w-4 h-4 ${card.iconColor}`} />
                 <span className="text-xs text-gray-400 font-medium">{card.label}</span>
               </div>
-              <p className="text-white text-xl font-bold">R$ {card.value.toFixed(2)}</p>
+              <p className="text-white text-xl font-bold">R$ {(card.value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
           );
         })}

@@ -53,7 +53,7 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
   const handlePaymentTypeChange = (type) => {
     setPaymentType(type);
     if (type === "pago_integral") {
-      setAmountPaying(remaining.toFixed(2));
+      setAmountPaying(remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     } else {
       setAmountPaying("");
     }
@@ -111,17 +111,17 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <span className="text-gray-500 text-xs">Valor Original</span>
-              <p className="text-white font-semibold">R$ {(expense.amount || 0).toFixed(2)}</p>
+              <p className="text-white font-semibold">R$ {(expense.amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             {expense.interest_amount > 0 && (
               <div>
                 <span className="text-gray-500 text-xs">Juros</span>
-                <p className="text-red-400 font-semibold">+ R$ {expense.interest_amount.toFixed(2)}</p>
+                <p className="text-red-400 font-semibold">+ R$ {expense.interest_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
               </div>
             )}
             <div>
               <span className="text-gray-500 text-xs">Valor Total</span>
-              <p className="text-white font-bold text-lg">R$ {totalAmount.toFixed(2)}</p>
+              <p className="text-white font-bold text-lg">R$ {totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
             </div>
             <div>
               <span className="text-gray-500 text-xs">Vencimento</span>
@@ -133,11 +133,11 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
             <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
               <div className="flex items-center justify-between">
                 <span className="text-blue-400 text-sm font-medium">Já Pago</span>
-                <span className="text-blue-300 font-bold">R$ {alreadyPaid.toFixed(2)}</span>
+                <span className="text-blue-300 font-bold">R$ {alreadyPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex items-center justify-between mt-1">
                 <span className="text-gray-400 text-sm">Restante</span>
-                <span className="text-white font-bold">R$ {remaining.toFixed(2)}</span>
+                <span className="text-white font-bold">R$ {remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             </div>
           )}
@@ -207,16 +207,16 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
                 <div className="mt-2 bg-gray-800/50 border border-gray-700/30 rounded-lg p-2 text-xs space-y-1">
                   <div className="flex justify-between text-gray-400">
                     <span>Pagando agora:</span>
-                    <span className="text-blue-400 font-medium">R$ {payingValue.toFixed(2)}</span>
+                    <span className="text-blue-400 font-medium">R$ {payingValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-gray-400">
                     <span>Total pago após baixa:</span>
-                    <span className="text-white font-medium">R$ {newTotalPaid.toFixed(2)}</span>
+                    <span className="text-white font-medium">R$ {newTotalPaid.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="flex justify-between text-gray-400">
                     <span>Restante após baixa:</span>
                     <span className={`font-medium ${(remaining - payingValue) > 0 ? "text-yellow-400" : "text-emerald-400"}`}>
-                      R$ {Math.max(0, remaining - payingValue).toFixed(2)}
+                      R$ {Math.max(0, remaining - payingValue).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
                 </div>

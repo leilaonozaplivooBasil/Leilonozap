@@ -84,12 +84,12 @@ export default function ExpenseTable({ expenses, onEdit, onDelete, onRowClick })
                   )}
                 </td>
                 <td className="py-3 px-3 text-right">
-                  <div className="text-white font-semibold">R$ {totalAmount.toFixed(2)}</div>
+                  <div className="text-white font-semibold">R$ {totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   {exp.interest_amount > 0 && (
-                    <div className="text-xs text-red-400">+R$ {exp.interest_amount.toFixed(2)} juros</div>
+                    <div className="text-xs text-red-400">+R$ {exp.interest_amount.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} juros</div>
                   )}
                   {exp.payment_status === "pago_parcial" && exp.amount_paid > 0 && (
-                    <div className="text-xs text-blue-400">Pago: R$ {exp.amount_paid.toFixed(2)}</div>
+                    <div className="text-xs text-blue-400">Pago: R$ {(exp.amount_paid).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                   )}
                 </td>
                 <td className="py-3 px-3 text-gray-300">{moment(exp.due_date).format("DD/MM/YYYY")}</td>
