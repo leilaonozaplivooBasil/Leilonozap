@@ -26,7 +26,8 @@ export default function Financial() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterType, setFilterType] = useState("all");
-  const [filterMonth, setFilterMonth] = useState(moment().format("YYYY-MM"));
+  const [filterDateFrom, setFilterDateFrom] = useState(moment().startOf("month").format("YYYY-MM-DD"));
+  const [filterDateTo, setFilterDateTo] = useState(moment().endOf("month").format("YYYY-MM-DD"));
   const [filterCategory, setFilterCategory] = useState("all");
   const [activeTab, setActiveTab] = useState("expenses");
   const [paymentExpense, setPaymentExpense] = useState(null);
@@ -112,7 +113,8 @@ export default function Financial() {
   const usedCategories = [...new Set(expenses.map(e => e.category).filter(Boolean))].sort();
 
   const filtered = expenses.filter(exp => {
-    const monthMatch = filterMonth === "all" || moment(exp.due_date).format("YYYY-MM") === filterMonth;
+    const expDate = moment(exp.due_date);
+    const monthMatch = (!filterDateFrom || expDate.isSameOrAfter(filterDateFrom, "day")) && (!filterDateTo || expDate.isSameOrBefore(filterDateTo, "day"));
     const statusMatch = filterStatus === "all" || exp.payment_status === filterStatus;
     const typeMatch = filterType === "all" || exp.expense_type === filterType;
     const categoryMatch = filterCategory === "all" || exp.category === filterCategory;
@@ -225,18 +227,24 @@ export default function Financial() {
                     placeholder="Buscar por descrição, empresa ou categoria..."
                     className="bg-gray-900 border-gray-700 text-white pl-10" />
                 </div>
-                <Select value={filterMonth} onValueChange={setFilterMonth}>
-                  <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-40">
-                    <SelectValue placeholder="Mês" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                    <SelectItem value="all">Todos os Meses</SelectItem>
-                    {Array.from({ length: 12 }, (_, i) => {
-                      const m = moment().subtract(i, "months");
-                      return <SelectItem key={m.format("YYYY-MM")} value={m.format("YYYY-MM")}>{m.format("MMM/YYYY")}</SelectItem>;
-                    })}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs whitespace-nowrap">De:</span>
+                  <Input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={e => setFilterDateFrom(e.target.value)}
+                    className="bg-gray-900 border-gray-700 text-white w-full md:w-40"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-xs whitespace-nowrap">Até:</span>
+                  <Input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={e => setFilterDateTo(e.target.value)}
+                    className="bg-gray-900 border-gray-700 text-white w-full md:w-40"
+                  />
+                </div>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
                   <SelectTrigger className="bg-gray-900 border-gray-700 text-white w-full md:w-36">
                     <SelectValue placeholder="Status" />
