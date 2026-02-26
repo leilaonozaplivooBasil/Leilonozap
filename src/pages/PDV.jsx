@@ -1132,22 +1132,22 @@ ${boletoInfo}================================
       <div className="max-w-[1800px] mx-auto p-3 sm:p-6">
 
         {/* STATUS DO CAIXA */}
-        <Card className={`mb-4 sm:mb-6 ${currentCashRegister ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+        <Card className={`mb-4 sm:mb-6 ${currentCashRegister ? 'bg-green-900/30 border-green-700' : 'bg-red-900/30 border-red-700'}`}>
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
               <div className="flex items-center gap-3 flex-1">
                 <div className={`w-3 h-3 rounded-full ${currentCashRegister ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                 <div className="flex-1">
-                  <p className="font-bold text-gray-900">
+                  <p className="font-bold text-white">
                     {currentCashRegister ? '🟢 Caixa Aberto' : '🔴 Caixa Fechado'}
                   </p>
                   {currentCashRegister && (
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-300">
                       Aberto às {new Date(currentCashRegister.opening_time).toLocaleTimeString('pt-BR')} por {currentCashRegister.operator_name}
                     </p>
                   )}
                   {!currentCashRegister && (
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-400 mt-1">
                       Abra o caixa manualmente para iniciar as vendas
                     </p>
                   )}
@@ -1196,27 +1196,27 @@ ${boletoInfo}================================
 
         {/* TABS - TEMA NOZAP */}
         <Tabs defaultValue="pdv" className="mb-4 sm:mb-6">
-          <TabsList className="bg-white border border-gray-200 w-full flex overflow-x-auto">
-            <TabsTrigger value="pdv" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
+          <TabsList className="bg-gray-800 border border-gray-700 w-full flex overflow-x-auto">
+            <TabsTrigger value="pdv" className="data-[state=active]:bg-green-600 data-[state=active]:text-white text-gray-400 flex-1 text-xs sm:text-sm whitespace-nowrap">
               🛒 Vendas
             </TabsTrigger>
-            <TabsTrigger value="extrato" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
+            <TabsTrigger value="extrato" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-gray-400 flex-1 text-xs sm:text-sm whitespace-nowrap">
               📊 Extrato
             </TabsTrigger>
-            <TabsTrigger value="dashboard" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
+            <TabsTrigger value="dashboard" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white text-gray-400 flex-1 text-xs sm:text-sm whitespace-nowrap">
               📈 Dashboard
             </TabsTrigger>
-            <TabsTrigger value="vendedores" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-700 flex-1 text-xs sm:text-sm whitespace-nowrap">
+            <TabsTrigger value="vendedores" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white text-gray-400 flex-1 text-xs sm:text-sm whitespace-nowrap">
               👥 Vendedores
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pdv" className="mt-6">
             {!currentCashRegister && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-lg p-8 text-center mb-6">
+              <div className="bg-red-900/20 border-2 border-red-700 rounded-lg p-8 text-center mb-6">
                 <div className="text-6xl mb-4">🔒</div>
-                <h3 className="text-2xl font-bold text-red-900 mb-2">Caixa Fechado</h3>
-                <p className="text-red-700 mb-4">Abra o caixa para iniciar as vendas</p>
+                <h3 className="text-2xl font-bold text-red-300 mb-2">Caixa Fechado</h3>
+                <p className="text-red-400 mb-4">Abra o caixa para iniciar as vendas</p>
                 <Button
                   onClick={() => setShowOpenCashModal(true)}
                   className="bg-green-600 hover:bg-green-700"
@@ -1231,15 +1231,15 @@ ${boletoInfo}================================
 
               {/* LISTA DE PRODUTOS - FUNDO BRANCO */}
               <div className="lg:col-span-2">
-                <Card className="bg-white border-gray-200 shadow-lg">
-                  <CardHeader className="border-b border-gray-200">
-                    <CardTitle className="text-gray-900 text-lg">Lista de Produtos</CardTitle>
+                <Card className="bg-gray-800 border-gray-700 shadow-lg">
+                  <CardHeader className="border-b border-gray-700">
+                    <CardTitle className="text-white text-lg">Lista de Produtos</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="max-h-[500px] overflow-y-auto">
                       <table className="w-full">
-                        <thead className="bg-gray-50 sticky top-0">
-                          <tr className="text-sm text-gray-700">
+                        <thead className="bg-gray-900 sticky top-0">
+                          <tr className="text-sm text-gray-400">
                             <th className="text-left p-3 font-semibold">Código/SKU</th>
                             <th className="text-left p-3 font-semibold">Produto</th>
                             <th className="text-center p-3 font-semibold">Estoque</th>
@@ -1250,12 +1250,12 @@ ${boletoInfo}================================
                         <tbody>
                           {filteredProducts.map((product, index) => (
                             <tr
-                              key={product.id}
-                              className={`border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
-                              onClick={() => addToCart(product)}
+                             key={product.id}
+                             className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors cursor-pointer ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'}`}
+                             onClick={() => addToCart(product)}
                             >
-                              <td className="p-3 text-sm text-gray-900 font-medium">{product.lot || 'N/A'}</td>
-                              <td className="p-3 text-sm text-gray-900">{product.description}</td>
+                             <td className="p-3 text-sm text-gray-300 font-medium">{product.lot || 'N/A'}</td>
+                             <td className="p-3 text-sm text-gray-300">{product.description}</td>
                               <td className="p-3 text-center">
                                 <Badge className="bg-blue-100 text-blue-800 border-0">
                                   {product.quantity}
@@ -1294,10 +1294,10 @@ ${boletoInfo}================================
 
               {/* CARRINHO - FUNDO BRANCO */}
               <div>
-                <Card className="bg-white border-gray-200 shadow-lg sticky top-6">
-                  <CardHeader className="bg-gray-50 border-b border-gray-200">
+                <Card className="bg-gray-800 border-gray-700 shadow-lg sticky top-6">
+                  <CardHeader className="bg-gray-900 border-b border-gray-700">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-gray-900 flex items-center gap-2 text-lg">
+                      <CardTitle className="text-white flex items-center gap-2 text-lg">
                         <ShoppingCart className="w-5 h-5" />
                         Carrinho ({cart.length})
                       </CardTitle>
@@ -1306,7 +1306,7 @@ ${boletoInfo}================================
                           size="sm"
                           variant="ghost"
                           onClick={() => setCart([])}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          className="text-red-400 hover:text-red-300 hover:bg-red-900/30"
                         >
                           Limpar
                         </Button>
@@ -1317,19 +1317,19 @@ ${boletoInfo}================================
 
                     {/* VENDEDORES E COMISSÕES */}
                     {cart.length > 0 && (
-                      <div className="space-y-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <h3 className="font-bold text-gray-900 mb-2">👥 Vendedores e Comissões</h3>
+                      <div className="space-y-3 mb-4 p-3 bg-blue-900/20 rounded-lg border border-blue-700">
+                        <h3 className="font-bold text-white mb-2">👥 Vendedores e Comissões</h3>
 
                         {/* LICENCIADO (Vendedor Principal) */}
-                        <div className="bg-white rounded-lg p-3 border border-blue-200">
-                          <p className="text-xs font-semibold text-gray-700 mb-2">Licenciado (Vendedor)</p>
+                        <div className="bg-gray-900/50 rounded-lg p-3 border border-blue-700">
+                          <p className="text-xs font-semibold text-gray-300 mb-2">Licenciado (Vendedor)</p>
                           <div className="space-y-2">
                             <div>
-                              <label className="text-gray-700 text-xs mb-1 block font-medium">Vendedor</label>
+                              <label className="text-gray-300 text-xs mb-1 block font-medium">Vendedor</label>
                               <select
                                 value={selectedSeller || ''}
                                 onChange={(e) => handleSellerChange(e.target.value || null)}
-                                className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                                className="w-full bg-gray-800 border border-gray-600 text-white rounded-md p-2 text-sm"
                               >
                                 <option value="">Sem vendedor</option>
                                 {sellers.map(seller => (
@@ -1344,30 +1344,30 @@ ${boletoInfo}================================
                               <>
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
-                                    <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo</label>
+                                    <label className="text-gray-300 text-xs mb-1 block font-medium">Tipo</label>
                                     <select
                                       value={commissionType}
                                       onChange={(e) => setCommissionType(e.target.value)}
-                                      className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                                      className="w-full bg-gray-800 border border-gray-600 text-white rounded-md p-2 text-sm"
                                     >
                                       <option value="percentage">%</option>
                                       <option value="fixed">R$</option>
                                     </select>
                                   </div>
                                   <div>
-                                    <label className="text-gray-700 text-xs mb-1 block font-medium">Valor</label>
+                                    <label className="text-gray-300 text-xs mb-1 block font-medium">Valor</label>
                                     <Input
                                       type="number"
                                       step="0.01"
                                       value={commissionValue}
                                       onChange={(e) => setCommissionValue(parseFloat(e.target.value) || 0)}
-                                      className="bg-white text-gray-900 border-gray-300 h-9"
+                                      className="bg-gray-800 text-white border-gray-600 h-9"
                                       placeholder={commissionType === 'percentage' ? '10' : '50.00'}
                                     />
                                   </div>
                                 </div>
                                 {commissionValue > 0 && (
-                                  <div className="bg-green-100 rounded p-2 text-xs font-bold text-green-900">
+                                  <div className="bg-green-900/30 rounded p-2 text-xs font-bold text-green-400">
                                     💰 Comissão Licenciado: R$ {commissionLicenciado.toFixed(2)}
                                   </div>
                                 )}
@@ -1377,22 +1377,22 @@ ${boletoInfo}================================
                         </div>
 
                         {/* LICENCIANTE (Segundo Vendedor) */}
-                        <div className="bg-white rounded-lg p-3 border border-purple-200">
+                        <div className="bg-gray-900/50 rounded-lg p-3 border border-purple-700">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs font-semibold text-purple-700">Licenciante (Indicador)</p>
+                            <p className="text-xs font-semibold text-purple-400">Licenciante (Indicador)</p>
                             {autoFilledLicenciante && (
-                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded">
+                              <span className="text-xs bg-green-900/30 text-green-400 px-2 py-0.5 rounded">
                                 ✓ Auto
                               </span>
                             )}
                           </div>
                           <div className="space-y-2">
                             <div>
-                              <label className="text-gray-700 text-xs mb-1 block font-medium">Licenciante</label>
+                              <label className="text-gray-300 text-xs mb-1 block font-medium">Licenciante</label>
                               <select
                                 value={selectedLicenciante || ''}
                                 onChange={(e) => setSelectedLicenciante(e.target.value || null)}
-                                className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                                className="w-full bg-gray-800 border border-gray-600 text-white rounded-md p-2 text-sm"
                               >
                                 <option value="">Sem licenciante</option>
                                 {sellers.filter(s => s.id !== selectedSeller).map(seller => (
@@ -1407,30 +1407,30 @@ ${boletoInfo}================================
                               <>
                                 <div className="grid grid-cols-2 gap-2">
                                   <div>
-                                    <label className="text-gray-700 text-xs mb-1 block font-medium">Tipo</label>
+                                    <label className="text-gray-300 text-xs mb-1 block font-medium">Tipo</label>
                                     <select
                                       value={tipoComissaoLicenciante}
                                       onChange={(e) => setTipoComissaoLicenciante(e.target.value)}
-                                      className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2 text-sm"
+                                      className="w-full bg-gray-800 border border-gray-600 text-white rounded-md p-2 text-sm"
                                     >
                                       <option value="percentage">%</option>
                                       <option value="fixed">R$</option>
                                     </select>
                                   </div>
                                   <div>
-                                    <label className="text-gray-700 text-xs mb-1 block font-medium">Valor</label>
+                                    <label className="text-gray-300 text-xs mb-1 block font-medium">Valor</label>
                                     <Input
                                       type="number"
                                       step="0.01"
                                       value={comissaoLicenciante}
                                       onChange={(e) => setComissaoLicenciante(parseFloat(e.target.value) || 0)}
-                                      className="bg-white text-gray-900 border-gray-300 h-9"
+                                      className="bg-gray-800 text-white border-gray-600 h-9"
                                       placeholder={tipoComissaoLicenciante === 'percentage' ? '5' : '25.00'}
                                     />
                                   </div>
                                 </div>
                                 {comissaoLicenciante > 0 && (
-                                  <div className="bg-purple-100 rounded p-2 text-xs font-bold text-purple-900">
+                                  <div className="bg-purple-900/30 rounded p-2 text-xs font-bold text-purple-400">
                                     💰 Comissão Licenciante: R$ {commissionLicencianteCalc.toFixed(2)}
                                   </div>
                                 )}
@@ -1441,7 +1441,7 @@ ${boletoInfo}================================
 
                         {/* TOTAL DE COMISSÕES */}
                         {totalCommission > 0 && (
-                          <div className="bg-orange-100 rounded p-2 text-sm font-bold text-orange-900">
+                          <div className="bg-orange-900/30 rounded p-2 text-sm font-bold text-orange-400">
                             💰 Total Comissões: R$ {totalCommission.toFixed(2)}
                           </div>
                         )}
@@ -1449,11 +1449,11 @@ ${boletoInfo}================================
                     )}
 
                     {/* ITENS DO CARRINHO - FUNDO BRANCO */}
-                    <div className="max-h-[250px] overflow-y-auto border border-gray-200 rounded">
+                    <div className="max-h-[250px] overflow-y-auto border border-gray-700 rounded">
                       {cart.length > 0 ? (
                         <table className="w-full text-sm">
-                          <thead className="bg-gray-50 sticky top-0">
-                            <tr className="text-xs text-gray-700">
+                          <thead className="bg-gray-900 sticky top-0">
+                            <tr className="text-xs text-gray-400">
                               <th className="text-left p-2">Produto</th>
                               <th className="text-center p-2">Qtd</th>
                               <th className="text-right p-2">Valor</th>
@@ -1463,20 +1463,20 @@ ${boletoInfo}================================
                           </thead>
                           <tbody>
                             {cart.map(item => (
-                              <tr key={item.product.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                <td className="p-2 text-gray-900 text-xs">{item.product.description}</td>
+                              <tr key={item.product.id} className="border-b border-gray-700 hover:bg-gray-700/50">
+                                <td className="p-2 text-gray-300 text-xs">{item.product.description}</td>
                                 <td className="p-2">
                                   <div className="flex items-center justify-center gap-1">
                                     <button
                                       onClick={() => updateQuantity(item.product.id, -1)}
-                                      className="text-gray-600 hover:text-gray-900 p-1"
+                                      className="text-gray-400 hover:text-white p-1"
                                     >
                                       <Minus className="w-3 h-3" />
                                     </button>
-                                    <span className="text-gray-900 font-bold w-6 text-center">{item.quantity}</span>
+                                    <span className="text-white font-bold w-6 text-center">{item.quantity}</span>
                                     <button
                                       onClick={() => updateQuantity(item.product.id, 1)}
-                                      className="text-gray-600 hover:text-gray-900 p-1"
+                                      className="text-gray-400 hover:text-white p-1"
                                     >
                                       <Plus className="w-3 h-3" />
                                     </button>
@@ -1488,7 +1488,7 @@ ${boletoInfo}================================
                                     step="0.01"
                                     value={item.customPrice || item.product.selling_price_retail}
                                     onChange={(e) => updatePrice(item.product.id, parseFloat(e.target.value) || 0)}
-                                    className="h-7 text-xs text-right w-20 bg-white border-gray-300 text-gray-900"
+                                    className="h-7 text-xs text-right w-20 bg-gray-800 border-gray-600 text-white"
                                   />
                                 </td>
                                 <td className="p-2 text-right text-green-600 font-bold text-xs">
@@ -1499,7 +1499,7 @@ ${boletoInfo}================================
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => removeFromCart(item.product.id)}
-                                    className="text-red-600 hover:text-red-700 h-7 w-7 p-0"
+                                    className="text-red-400 hover:text-red-300 h-7 w-7 p-0"
                                   >
                                     <Trash2 className="w-3 h-3" />
                                   </Button>
@@ -1520,7 +1520,7 @@ ${boletoInfo}================================
                     {cart.length > 0 && (
                       <>
                         <div>
-                          <label className="text-gray-700 text-sm mb-2 block font-medium">Forma de Pagamento</label>
+                          <label className="text-gray-300 text-sm mb-2 block font-medium">Forma de Pagamento</label>
                           <select
                             value={paymentMethod}
                             onChange={(e) => {
@@ -1529,7 +1529,7 @@ ${boletoInfo}================================
                                 setBoletoData({ cliente: '', documento: '', parcelas: 1 });
                               }
                             }}
-                            className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            className="w-full bg-gray-900 border border-gray-600 text-white rounded-md p-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           >
                             <option>PIX</option>
                             <option>DINHEIRO</option>
@@ -1541,11 +1541,11 @@ ${boletoInfo}================================
 
                         {/* BANCO DESTINO */}
                         <div>
-                          <label className="text-gray-700 text-sm mb-2 block font-medium">🏦 Banco Destino</label>
+                          <label className="text-gray-300 text-sm mb-2 block font-medium">🏦 Banco Destino</label>
                           <select
                             value={selectedBank}
                             onChange={(e) => setSelectedBank(e.target.value)}
-                            className="w-full bg-white border border-gray-300 text-gray-900 rounded-md p-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            className="w-full bg-gray-900 border border-gray-600 text-white rounded-md p-2.5 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                           >
                             <option value="santander">🔴 Santander (Venda de Produtos Físicos)</option>
                             <option value="itau">🟠 Itaú (Venda de Licenciados)</option>
@@ -1555,9 +1555,9 @@ ${boletoInfo}================================
 
                         {/* CAMPOS BOLETO */}
                         {paymentMethod === 'BOLETO PARCELADO' && (
-                          <div className="space-y-2 bg-blue-50 rounded-lg p-3 border border-blue-200">
+                          <div className="space-y-2 bg-blue-900/20 rounded-lg p-3 border border-blue-700">
                             <div>
-                              <label className="text-gray-700 text-xs mb-1 block">Nome do Cliente</label>
+                              <label className="text-gray-300 text-xs mb-1 block">Nome do Cliente</label>
                               <Input
                                 value={boletoData.cliente}
                                 onChange={(e) => setBoletoData({ ...boletoData, cliente: e.target.value })}
@@ -1566,7 +1566,7 @@ ${boletoInfo}================================
                               />
                             </div>
                             <div>
-                              <label className="text-gray-700 text-xs mb-1 block">Documento (CPF/RG)</label>
+                              <label className="text-gray-300 text-xs mb-1 block">Documento (CPF/RG)</label>
                               <Input
                                 value={boletoData.documento}
                                 onChange={(e) => setBoletoData({ ...boletoData, documento: e.target.value })}
@@ -1575,7 +1575,7 @@ ${boletoInfo}================================
                               />
                             </div>
                             <div>
-                              <label className="text-gray-700 text-xs mb-1 block">Número de Parcelas</label>
+                              <label className="text-gray-300 text-xs mb-1 block">Número de Parcelas</label>
                               <Input
                                 type="number"
                                 min="1"
@@ -1585,47 +1585,47 @@ ${boletoInfo}================================
                                 placeholder="1"
                               />
                             </div>
-                            <div className="bg-blue-100 rounded p-2 text-xs text-blue-900 font-medium">
+                            <div className="bg-blue-900/30 rounded p-2 text-xs text-blue-400 font-medium">
                               💰 Valor da parcela: R$ {(cartTotal / boletoData.parcelas).toFixed(2)}
                             </div>
                           </div>
                         )}
 
                         {/* TOTAL */}
-                        <div className="border-t border-gray-200 pt-3">
+                        <div className="border-t border-gray-700 pt-3">
                           {taxSettings && taxSettings.is_active && showTaxDetails && (
-                            <div className="bg-gray-50 rounded p-2 mb-2 space-y-1 text-xs">
-                              <div className="flex justify-between text-gray-600">
+                            <div className="bg-gray-900 rounded p-2 mb-2 space-y-1 text-xs">
+                              <div className="flex justify-between text-gray-400">
                                 <span>ICMS ({taxSettings.icms_rate}%):</span>
-                                <span className="text-red-600">-R$ {taxes.icms.toFixed(2)}</span>
+                                <span className="text-red-400">-R$ {taxes.icms.toFixed(2)}</span>
                               </div>
-                              <div className="flex justify-between text-gray-600">
+                              <div className="flex justify-between text-gray-400">
                                 <span>PIS ({taxSettings.pis_rate}%):</span>
-                                <span className="text-red-600">-R$ {taxes.pis.toFixed(2)}</span>
+                                <span className="text-red-400">-R$ {taxes.pis.toFixed(2)}</span>
                               </div>
-                              <div className="flex justify-between text-gray-600">
+                              <div className="flex justify-between text-gray-400">
                                 <span>COFINS ({taxSettings.cofins_rate}%):</span>
-                                <span className="text-red-600">-R$ {taxes.cofins.toFixed(2)}</span>
+                                <span className="text-red-400">-R$ {taxes.cofins.toFixed(2)}</span>
                               </div>
-                              <div className="flex justify-between text-gray-600">
+                              <div className="flex justify-between text-gray-400">
                                 <span>IRPJ ({taxSettings.irpj_rate}%):</span>
-                                <span className="text-red-600">-R$ {taxes.irpj.toFixed(2)}</span>
+                                <span className="text-red-400">-R$ {taxes.irpj.toFixed(2)}</span>
                               </div>
-                              <div className="flex justify-between text-gray-600">
+                              <div className="flex justify-between text-gray-400">
                                 <span>CSLL ({taxSettings.csll_rate}%):</span>
-                                <span className="text-red-600">-R$ {taxes.csll.toFixed(2)}</span>
+                                <span className="text-red-400">-R$ {taxes.csll.toFixed(2)}</span>
                               </div>
                               {taxSettings.iss_rate > 0 && (
-                                <div className="flex justify-between text-gray-600">
+                                <div className="flex justify-between text-gray-400">
                                   <span>ISS ({taxSettings.iss_rate}%):</span>
-                                  <span className="text-red-600">-R$ {taxes.iss.toFixed(2)}</span>
+                                  <span className="text-red-400">-R$ {taxes.iss.toFixed(2)}</span>
                                 </div>
                               )}
-                              <div className="flex justify-between font-bold text-gray-900 pt-1 border-t border-gray-200">
+                              <div className="flex justify-between font-bold text-white pt-1 border-t border-gray-700">
                                 <span>Total Impostos:</span>
-                                <span className="text-red-600">-R$ {taxes.total.toFixed(2)}</span>
+                                <span className="text-red-400">-R$ {taxes.total.toFixed(2)}</span>
                               </div>
-                              <div className="flex justify-between font-bold text-green-600 pt-1 border-t border-gray-200">
+                              <div className="flex justify-between font-bold text-green-400 pt-1 border-t border-gray-700">
                                 <span>Valor Líquido:</span>
                                 <span>R$ {taxes.netValue.toFixed(2)}</span>
                               </div>
@@ -1642,10 +1642,10 @@ ${boletoInfo}================================
                           )}
 
                           <div className="space-y-2">
-                            <div className="bg-gray-100 rounded-lg p-3 border border-gray-300">
+                            <div className="bg-gray-900 rounded-lg p-3 border border-gray-600">
                               <div className="flex items-center justify-between">
-                                <span className="text-gray-700 font-medium text-sm">TOTAL:</span>
-                                <span className="text-gray-900 text-xl font-bold">
+                                <span className="text-gray-300 font-medium text-sm">TOTAL:</span>
+                                <span className="text-white text-xl font-bold">
                                   R$ {cartTotal.toFixed(2)}
                                 </span>
                               </div>
@@ -1655,23 +1655,23 @@ ${boletoInfo}================================
                               <>
                                 <div className="text-xs space-y-1 px-1">
                                   {taxes.total > 0 && (
-                                    <div className="flex justify-between text-red-600">
+                                    <div className="flex justify-between text-red-400">
                                       <span>(-) Impostos:</span>
                                       <span className="font-semibold">-R$ {taxes.total.toFixed(2)}</span>
                                     </div>
                                   )}
                                   {totalCommission > 0 && (
-                                    <div className="flex justify-between text-orange-600">
+                                    <div className="flex justify-between text-orange-400">
                                       <span>(-) Comissão:</span>
                                       <span className="font-semibold">-R$ {totalCommission.toFixed(2)}</span>
                                     </div>
                                   )}
                                 </div>
 
-                                <div className="bg-green-50 rounded-lg p-3 border-2 border-green-600">
+                                <div className="bg-green-900/20 rounded-lg p-3 border-2 border-green-600">
                                   <div className="flex items-center justify-between">
-                                    <span className="text-gray-900 font-semibold text-sm">VALOR LÍQUIDO:</span>
-                                    <span className="text-green-600 text-2xl font-bold">
+                                    <span className="text-white font-semibold text-sm">VALOR LÍQUIDO:</span>
+                                    <span className="text-green-400 text-2xl font-bold">
                                       R$ {netAmount.toFixed(2)}
                                     </span>
                                   </div>
@@ -1680,10 +1680,10 @@ ${boletoInfo}================================
                             )}
 
                             {taxes.total === 0 && totalCommission === 0 && (
-                              <div className="bg-green-50 rounded-lg p-4 border-2 border-green-600">
+                              <div className="bg-green-900/20 rounded-lg p-4 border-2 border-green-600">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-gray-900 font-semibold text-lg">TOTAL:</span>
-                                  <span className="text-green-600 text-3xl font-bold">
+                                  <span className="text-white font-semibold text-lg">TOTAL:</span>
+                                  <span className="text-green-400 text-3xl font-bold">
                                     R$ {cartTotal.toFixed(2)}
                                   </span>
                                 </div>
@@ -1716,7 +1716,7 @@ ${boletoInfo}================================
                             <Button
                               onClick={printReceipt}
                               variant="outline"
-                              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                              className="border-gray-600 text-gray-300 hover:bg-gray-700"
                             >
                               <Printer className="w-4 h-4 mr-2" />
                               Imprimir
@@ -1724,7 +1724,7 @@ ${boletoInfo}================================
                             <Button
                               onClick={() => setCart([])}
                               variant="outline"
-                              className="border-red-300 text-red-600 hover:bg-red-50"
+                              className="border-red-700 text-red-400 hover:bg-red-900/30"
                             >
                               Cancelar
                             </Button>
