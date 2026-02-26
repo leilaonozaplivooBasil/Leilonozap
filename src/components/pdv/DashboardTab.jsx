@@ -475,7 +475,7 @@ export default function DashboardTab({
                 })()}
               </tbody>
             </table>
-            {periodSales.length === 0 && (
+            {dashSales.length === 0 && (
               <div className="text-center py-12 text-gray-400">
                 <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>Nenhuma venda registrada ainda</p>
