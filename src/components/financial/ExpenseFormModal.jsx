@@ -109,6 +109,19 @@ export default function ExpenseFormModal({ open, onClose, onSave, editingExpense
         </DialogHeader>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          {/* Upload de Boleto */}
+          <BoletoUploader onExtracted={(data) => {
+            setForm(prev => ({
+              ...prev,
+              description: data.description || prev.description,
+              company: data.company || prev.company,
+              amount: data.amount || prev.amount,
+              due_date: data.due_date || prev.due_date,
+              interest_amount: data.interest_amount || prev.interest_amount,
+              payment_method: data.payment_method || prev.payment_method,
+            }));
+          }} />
+
           {/* Descrição */}
           <div className="md:col-span-2">
             <Label className="text-gray-300 text-sm">Descrição *</Label>
