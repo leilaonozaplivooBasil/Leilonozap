@@ -18,6 +18,8 @@ const FinancialExpense = base44.entities.FinancialExpense;
 
 export default function Financial() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
   const [editingExpense, setEditingExpense] = useState(null);
@@ -31,8 +33,33 @@ export default function Financial() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const saved = localStorage.getItem("currentUser");
-    if (saved) setCurrentUser(JSON.parse(saved));
+    const checkAuth = async () => {
+      // 1. Verifica usuário customizado (AppUser) no localStorage
+      const saved = localStorage.getItem("currentUser");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setCurrentUser(parsed);
+        if (parsed.role === "admin") {
+          setIsAdmin(true);
+          setAuthChecked(true);
+          return;
+        }
+      }
+      // 2. Verifica usuário da plataforma Base44
+      try {
+        const platformUser = await base44.auth.me();
+        if (platformUser) {
+          setCurrentUser(platformUser);
+          if (platformUser.role === "admin") {
+            setIsAdmin(true);
+          }
+        }
+      } catch (e) {
+        // Não logado na plataforma
+      }
+      setAuthChecked(true);
+    };
+    checkAuth();
   }, []);
 
   const { data: expenses = [], isLoading } = useQuery({
