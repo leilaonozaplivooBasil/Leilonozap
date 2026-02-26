@@ -33,7 +33,7 @@ export default function PaymentModal({ open, onClose, expense, onConfirm }) {
   useEffect(() => {
     if (expense && open) {
       const remaining = (expense.amount || 0) + (expense.interest_amount || 0) - (expense.amount_paid || 0);
-      setAmountPaying(remaining.toFixed(2));
+      setAmountPaying(remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
       setPaymentMethod(expense.payment_method || "pix");
       setPixOrCardInfo(expense.pix_or_card_info || "");
       setPaymentDate(moment().format("YYYY-MM-DD"));
