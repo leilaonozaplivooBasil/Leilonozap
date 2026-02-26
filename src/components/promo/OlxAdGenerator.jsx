@@ -53,14 +53,15 @@ Use APENAS essas palavras extraídas no título.
 
 REGRAS OBRIGATÓRIAS - siga EXATAMENTE esta estrutura:
 
-1. TÍTULO em CAPS usando SOMENTE a palavra-chave extraída + localização. Varie o formato a cada geração usando padrões DIFERENTES como:
-- "[PALAVRA] BARATÃO EM [CIDADE]!"
-- "[PALAVRA] - DESAPEGO [BAIRRO] [CIDADE]"  
-- "TEM [PALAVRA] AQUI EM [CIDADE] - APROVEITA!"
-- "[PALAVRA] IMPERDIVEL - [BAIRRO], [CIDADE]"
-- "VENDO [PALAVRA] [CIDADE] - PREÇO PRA SAIR HOJE"
-- "SAINDO [PALAVRA] EM [BAIRRO]! CORRE!"
-Escolha UM desses formatos aleatoriamente, ou invente outro. NUNCA use o nome completo do produto no título.
+1. TÍTULO em CAPS usando SOMENTE as palavras extraídas no PASSO ZERO + localização. Varie o formato a cada geração usando padrões DIFERENTES como:
+- "[PALAVRAS] BARATAO EM [CIDADE]!"
+- "[PALAVRAS] COM PRECO INCRIVEL - [BAIRRO] [CIDADE]"  
+- "TEM [PALAVRAS] AQUI EM [CIDADE] - APROVEITA!"
+- "[PALAVRAS] IMPERDIVEL - [BAIRRO], [CIDADE]"
+- "VENDO [PALAVRAS] [CIDADE] - PRECO PRA SAIR HOJE"
+- "SAINDO [PALAVRAS] EM [BAIRRO]! CORRE!"
+- "[PALAVRAS] NOVO EM [CIDADE] - OPORTUNIDADE!"
+Escolha UM desses formatos aleatoriamente, ou invente outro. NUNCA use o nome completo/inteiro do produto no título, use SOMENTE as palavras do PASSO ZERO.
 
 2. Uma linha em branco
 
@@ -68,7 +69,7 @@ Escolha UM desses formatos aleatoriamente, ou invente outro. NUNCA use o nome co
 
 4. Uma linha em branco
 
-5. Descrição detalhada do produto (3-5 linhas), destacando qualidades, estado, e benefícios
+5. Descrição detalhada do produto (3-5 linhas), destacando qualidades e benefícios. TRATE COMO PRODUTO NOVO.
 
 6. Uma linha em branco
 
@@ -83,8 +84,8 @@ REGRAS ABSOLUTAS:
 - PROIBIDO usar emojis. ZERO emojis. Nenhum caractere especial tipo unicode/emoji em NENHUMA parte do texto. Se colocar emoji, o texto será REJEITADO.
 - Linguagem brasileira informal de marketplace
 - NÃO coloque preço no texto (o preço vai no campo separado da OLX)
-- No título use APENAS a palavra-chave principal, NUNCA o nome completo do produto
-- NUNCA use palavras como "usado", "seminovo", "segunda mão", "de segunda" ou qualquer termo que sugira produto usado. Trate SEMPRE como produto NOVO ou sem mencionar estado de uso.
+- No título use APENAS as 3-4 palavras extraídas no PASSO ZERO, NUNCA o nome completo do produto
+- PROIBIDO TERMINANTEMENTE usar as palavras: "usado", "seminovo", "segunda mão", "de segunda", "desapego", "estado de conservação", "bem conservado", "pouco uso". NENHUMA dessas palavras pode aparecer. Trate o produto SEMPRE como NOVO. Se mencionar estado, diga "NOVO" ou "LACRADO".
 - Retorne APENAS o texto do anúncio, nada mais`,
       response_json_schema: {
         type: "object",
