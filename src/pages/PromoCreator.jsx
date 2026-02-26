@@ -22,8 +22,7 @@ export default function PromoCreator() {
     title: "",
     badgeText: "",
     ctaText: "",
-    brandName: "",
-    brandSub: "",
+    whatsappNumber: "",
   });
 
   return (
@@ -53,14 +52,13 @@ export default function PromoCreator() {
           </div>
           <ProductSelector onSelect={(p) => {
             setSelectedProduct(p);
-            setOverrides({
+            setOverrides(prev => ({
               imageUrl: p?.image_urls?.[0] || "",
               title: p?.description || "",
               badgeText: "",
               ctaText: "",
-              brandName: "",
-              brandSub: "",
-            });
+              whatsappNumber: prev.whatsappNumber || "",
+            }));
           }} selectedProduct={selectedProduct} />
         </div>
 
