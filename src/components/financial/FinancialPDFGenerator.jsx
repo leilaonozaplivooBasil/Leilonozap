@@ -68,9 +68,12 @@ export default function FinancialPDFGenerator({ open, onClose, expenses }) {
     doc.setFillColor(16, 185, 129);
     doc.rect(0, 44, pw, 2, "F");
 
-    // Logo
+    // Logo (mantém proporção original)
     if (logoImg) {
-      doc.addImage(logoImg, "PNG", 14, 6, 32, 32);
+      const logoMaxH = 30;
+      const ratio = logoImg.naturalWidth / logoImg.naturalHeight;
+      const logoW = logoMaxH * ratio;
+      doc.addImage(logoImg, "PNG", 14, 7, logoW, logoMaxH);
     }
 
     // Título
