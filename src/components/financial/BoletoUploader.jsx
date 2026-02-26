@@ -220,13 +220,13 @@ export default function BoletoUploader({ onExtracted, onBulkExtracted }) {
             <div className="flex gap-2 mt-1">
               {selectedType !== "planilha" && (
                 <Button type="button" variant="outline" size="sm"
-                  className="border-gray-600 text-gray-300 hover:bg-gray-700 gap-1.5"
+                  className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-1.5"
                   onClick={() => cameraInputRef.current?.click()}>
                   <Camera className="w-3.5 h-3.5" /> Tirar Foto
                 </Button>
               )}
               <Button type="button" variant="outline" size="sm"
-                className="border-gray-600 text-gray-300 hover:bg-gray-700 gap-1.5"
+                className="bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 gap-1.5"
                 onClick={() => fileInputRef.current?.click()}>
                 <Upload className="w-3.5 h-3.5" /> Enviar Arquivo
               </Button>
