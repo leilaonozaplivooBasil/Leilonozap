@@ -203,11 +203,21 @@ export default function ExpenseFormModal({ open, onClose, onSave, editingExpense
             </Select>
           </div>
 
-          {/* PIX ou Cartão */}
+          {/* PIX ou Cartão - Banco */}
           <div>
             <Label className="text-gray-300 text-sm">PIX/Cartão Cadastrado</Label>
-            <Input value={form.pix_or_card_info} onChange={e => updateField("pix_or_card_info", e.target.value)}
-              placeholder="Ex: PIX Santander, Cartão Nubank" className="bg-gray-800 border-gray-700 text-white mt-1" />
+            <Select value={form.pix_or_card_info} onValueChange={v => updateField("pix_or_card_info", v)}>
+              <SelectTrigger className="bg-gray-800 border-gray-700 text-white mt-1">
+                <SelectValue placeholder="Selecione o banco" />
+              </SelectTrigger>
+              <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                <SelectItem value="Nubank">Nubank</SelectItem>
+                <SelectItem value="Santander">Santander</SelectItem>
+                <SelectItem value="ASAAS">ASAAS</SelectItem>
+                <SelectItem value="Mercado Pago">Mercado Pago</SelectItem>
+                <SelectItem value="Itaú">Itaú</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Status */}
