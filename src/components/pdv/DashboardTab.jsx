@@ -73,6 +73,39 @@ export default function DashboardTab({
           </CardContent>
         </Card>
 
+        {/* FILTRO DE PERÍODO */}
+        <Card className="bg-gray-800 border-gray-700">
+          <CardContent className="p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <p className="text-gray-300 text-sm font-medium whitespace-nowrap">📅 Período:</p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { value: 'all', label: 'Tudo' },
+                  { value: '30', label: '30 dias' },
+                  { value: '60', label: '60 dias' },
+                  { value: '90', label: '90 dias' },
+                  { value: '180', label: '180 dias' },
+                  { value: '365', label: '1 ano' },
+                ].map(p => (
+                  <Button
+                    key={p.value}
+                    size="sm"
+                    onClick={() => setPeriodFilter(p.value)}
+                    className={`text-xs text-white ${
+                      periodFilter === p.value
+                        ? 'ring-2 ring-white bg-emerald-600 hover:bg-emerald-500'
+                        : 'bg-gray-600 hover:bg-gray-500 opacity-60'
+                    }`}
+                  >
+                    {p.label}
+                  </Button>
+                ))}
+              </div>
+              <span className="text-xs text-gray-500 ml-auto">{periodSales.length} vendas</span>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* CARDS POR BANCO */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2 sm:gap-4">
           <Card className="bg-gray-800 border-2 border-red-600">
