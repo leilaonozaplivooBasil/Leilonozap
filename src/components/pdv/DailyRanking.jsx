@@ -198,14 +198,22 @@ export default function DailyRanking({ allSales }) {
         ]);
       } catch (e) { /* logos opcionais */ }
 
-      // Logo X-EOS à esquerda
+      // Logo X-EOS à esquerda (proporcional, altura máx 16mm)
       if (xeosBase64) {
-        doc.addImage(xeosBase64, 'PNG', 12, y, 30, 12);
+        const xeosProps = doc.getImageProperties(xeosBase64);
+        const xeosMaxH = 16;
+        const xeosH = xeosMaxH;
+        const xeosW = (xeosProps.width / xeosProps.height) * xeosH;
+        doc.addImage(xeosBase64, 'PNG', 12, y, xeosW, xeosH);
       }
 
-      // Logo NoZap à direita (mantém medida original)
+      // Logo NoZap à direita (proporcional, altura máx 16mm)
       if (nozapBase64) {
-        doc.addImage(nozapBase64, 'PNG', pw - 42, y, 30, 12);
+        const nzProps = doc.getImageProperties(nozapBase64);
+        const nzMaxH = 16;
+        const nzH = nzMaxH;
+        const nzW = (nzProps.width / nzProps.height) * nzH;
+        doc.addImage(nozapBase64, 'PNG', pw - 12 - nzW, y, nzW, nzH);
       }
 
       // Título central
