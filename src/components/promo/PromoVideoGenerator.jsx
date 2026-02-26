@@ -1,17 +1,87 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { base44 } from "@/api/base44Client";
-import { Sparkles, Download, Loader2, Image as ImageIcon } from "lucide-react";
+import { Sparkles, Download, Loader2, Image as ImageIcon, Phone } from "lucide-react";
+
+const LOGO_URL = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png";
 
 export default function PromoVideoGenerator({ product }) {
   const [generatedImage, setGeneratedImage] = useState(null);
+  const [compositeImage, setCompositeImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [whatsappNumber, setWhatsappNumber] = useState("");
 
   if (!product) return null;
 
   const price = product.price_catalog || product.selling_price_retail || 0;
   const marketPrice = product.market_value || product.selling_price_retail || 0;
   const discount = marketPrice > price ? Math.round((1 - price / marketPrice) * 100) : 0;
+
+  const addOverlay = (aiImageUrl) => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const aiImg = new Image();
+      aiImg.crossOrigin = "anonymous";
+      aiImg.onload = () => {
+        canvas.width = aiImg.width;
+        canvas.height = aiImg.height;
+        ctx.drawImage(aiImg, 0, 0);
+
+        // Barra inferior semi-transparente
+        const barH = Math.round(canvas.height * 0.12);
+        const barY = canvas.height - barH;
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(0, barY, canvas.width, barH);
+
+        // Linha verde no topo da barra
+        ctx.fillStyle = "#25d366";
+        ctx.fillRect(0, barY, canvas.width, 3);
+
+        const logoImg = new Image();
+        logoImg.crossOrigin = "anonymous";
+        logoImg.onload = () => {
+          // Logo à esquerda
+          const logoH = Math.round(barH * 0.7);
+          const logoW = Math.round(logoH * (logoImg.width / logoImg.height));
+          const logoX = Math.round(canvas.width * 0.04);
+          const logoY = barY + Math.round((barH - logoH) / 2);
+          ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
+
+          // WhatsApp ícone + número à direita
+          if (whatsappNumber) {
+            const fontSize = Math.round(canvas.width * 0.035);
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            ctx.fillStyle = "#25d366";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            const textX = canvas.width - Math.round(canvas.width * 0.04);
+            const textY = barY + Math.round(barH / 2);
+            ctx.fillText("📱 " + whatsappNumber, textX, textY);
+          }
+
+          resolve(canvas.toDataURL("image/png", 1.0));
+        };
+        logoImg.onerror = () => {
+          // Se logo falhar, gera sem ela
+          if (whatsappNumber) {
+            const fontSize = Math.round(canvas.width * 0.035);
+            ctx.font = `bold ${fontSize}px sans-serif`;
+            ctx.fillStyle = "#25d366";
+            ctx.textAlign = "right";
+            ctx.textBaseline = "middle";
+            const textX = canvas.width - Math.round(canvas.width * 0.04);
+            const textY = barY + Math.round(barH / 2);
+            ctx.fillText("📱 " + whatsappNumber, textX, textY);
+          }
+          resolve(canvas.toDataURL("image/png", 1.0));
+        };
+        logoImg.src = LOGO_URL;
+      };
+      aiImg.src = aiImageUrl;
+    });
+  };
 
   const generatePromoImage = async () => {
     setLoading(true);
@@ -20,10 +90,11 @@ The product is: "${product.description}".
 Price: R$ ${price.toFixed(2)}${discount > 0 ? ` (${discount}% OFF from R$ ${marketPrice.toFixed(2)})` : ''}.
 Style: Modern, vibrant, eye-catching promotional banner.
 Include visual elements like: sale badges, price tags, sparkles, dynamic background.
-Brand: "Leilão NoZap" - green and dark theme.
+Brand colors: green (#25d366) and dark theme.
 The image should be suitable for social media and WhatsApp stories.
-Do NOT include any text in the image, only visual design elements and product representation.
-Make it look premium and professional.`;
+Do NOT include any text or logos in the image, only visual design elements and product representation.
+Make it look premium and professional.
+IMPORTANT: Leave the bottom 12% of the image clean/empty - it will be used for a branded footer overlay.`;
 
     const result = await base44.integrations.Core.GenerateImage({
       prompt,
@@ -31,6 +102,8 @@ Make it look premium and professional.`;
     });
 
     setGeneratedImage(result.url);
+    const final = await addOverlay(result.url);
+    setCompositeImage(final);
     setLoading(false);
   };
 
