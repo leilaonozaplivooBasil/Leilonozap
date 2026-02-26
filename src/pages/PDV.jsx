@@ -12,9 +12,8 @@ import {
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import DailyRanking from '@/components/pdv/DailyRanking';
-import VendedoresDoDia from '@/components/pdv/VendedoresDoDia';
-import DailyReportPDF from '@/components/pdv/DailyReportPDF';
+import DashboardTab from '@/components/pdv/DashboardTab';
+import VendedoresTab from '@/components/pdv/VendedoresTab';
 import TodaySummaryCards from '@/components/pdv/TodaySummaryCards';
 import { OpenCashModal, CloseCashModal, SessionDetailsModal, EditSaleModal, EditCommissionModal } from '@/components/pdv/CashRegisterModals';
 import { Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
