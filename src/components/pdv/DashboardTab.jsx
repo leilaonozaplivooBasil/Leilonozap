@@ -33,6 +33,7 @@ export default function DashboardTab({
   const [dateFilterEnd, setDateFilterEnd] = React.useState('');
   const [bankPopoverOpen, setBankPopoverOpen] = React.useState(false);
   const [periodPopoverOpen, setPeriodPopoverOpen] = React.useState(false);
+  const [showRentabilidade, setShowRentabilidade] = React.useState(false);
 
   const periodSales = React.useMemo(() => {
     let filtered = allSales;
