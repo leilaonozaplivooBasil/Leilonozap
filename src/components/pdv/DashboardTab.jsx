@@ -63,65 +63,107 @@ export default function DashboardTab({
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        {/* FILTRO BANCO DESTINO */}
+        {/* FILTROS UNIFICADOS */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <p className="text-gray-300 text-sm font-medium whitespace-nowrap">🏦 Filtrar por Banco:</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { value: 'todos', label: 'Todos', color: 'bg-gray-600 hover:bg-gray-500' },
-                  { value: 'santander', label: '🔴 Santander', color: 'bg-red-700 hover:bg-red-600' },
-                  { value: 'itau', label: '🟠 Itaú', color: 'bg-orange-700 hover:bg-orange-600' },
-                  { value: 'nubank', label: '🟣 Nubank', color: 'bg-purple-700 hover:bg-purple-600' },
-                ].map(bank => (
-                  <Button
-                    key={bank.value}
-                    size="sm"
-                    onClick={() => setDashBankFilter(bank.value)}
-                    className={`text-xs text-white ${
-                      dashBankFilter === bank.value
-                        ? 'ring-2 ring-white ' + bank.color
-                        : bank.color + ' opacity-60'
-                    }`}
-                  >
-                    {bank.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          <CardContent className="p-3">
+            <div className="flex flex-wrap items-center gap-2">
 
-        {/* FILTRO DE PERÍODO */}
-        <Card className="bg-gray-800 border-gray-700">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <p className="text-gray-300 text-sm font-medium whitespace-nowrap">📅 Período:</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { value: 'all', label: 'Tudo' },
-                  { value: '30', label: '30 dias' },
-                  { value: '60', label: '60 dias' },
-                  { value: '90', label: '90 dias' },
-                  { value: '180', label: '180 dias' },
-                  { value: '365', label: '1 ano' },
-                ].map(p => (
-                  <Button
-                    key={p.value}
-                    size="sm"
-                    onClick={() => setPeriodFilter(p.value)}
-                    className={`text-xs text-white ${
-                      periodFilter === p.value
-                        ? 'ring-2 ring-white bg-emerald-600 hover:bg-emerald-500'
-                        : 'bg-gray-600 hover:bg-gray-500 opacity-60'
-                    }`}
-                  >
-                    {p.label}
+              {/* BANCO */}
+              <Popover open={bankPopoverOpen} onOpenChange={setBankPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button size="sm" className={`text-xs text-white gap-1.5 ${
+                    dashBankFilter !== 'todos' 
+                      ? dashBankFilter === 'santander' ? 'bg-red-700 hover:bg-red-600' 
+                        : dashBankFilter === 'itau' ? 'bg-orange-700 hover:bg-orange-600' 
+                        : 'bg-purple-700 hover:bg-purple-600'
+                      : 'bg-gray-600 hover:bg-gray-500'
+                  }`}>
+                    <Building2 className="w-3.5 h-3.5" />
+                    {dashBankFilter === 'todos' ? 'Banco' : dashBankFilter === 'santander' ? 'Santander' : dashBankFilter === 'itau' ? 'Itaú' : 'Nubank'}
+                    <ChevronDown className="w-3 h-3" />
                   </Button>
-                ))}
+                </PopoverTrigger>
+                <PopoverContent className="w-44 p-2 bg-gray-800 border-gray-700" align="start">
+                  <div className="flex flex-col gap-1">
+                    {[
+                      { value: 'todos', label: 'Todos', color: 'hover:bg-gray-700' },
+                      { value: 'santander', label: '🔴 Santander', color: 'hover:bg-red-900/50' },
+                      { value: 'itau', label: '🟠 Itaú', color: 'hover:bg-orange-900/50' },
+                      { value: 'nubank', label: '🟣 Nubank', color: 'hover:bg-purple-900/50' },
+                    ].map(bank => (
+                      <button
+                        key={bank.value}
+                        onClick={() => { setDashBankFilter(bank.value); setBankPopoverOpen(false); }}
+                        className={`text-left px-3 py-2 rounded text-sm transition-colors ${bank.color} ${
+                          dashBankFilter === bank.value ? 'text-white font-semibold bg-gray-700' : 'text-gray-300'
+                        }`}
+                      >
+                        {bank.label}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* PERÍODO */}
+              <Popover open={periodPopoverOpen} onOpenChange={setPeriodPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button size="sm" className={`text-xs text-white gap-1.5 ${
+                    periodFilter !== 'all' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-gray-600 hover:bg-gray-500'
+                  }`}>
+                    <Clock className="w-3.5 h-3.5" />
+                    {periodFilter === 'all' ? 'Período' : periodFilter === '365' ? '1 ano' : `${periodFilter} dias`}
+                    <ChevronDown className="w-3 h-3" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-40 p-2 bg-gray-800 border-gray-700" align="start">
+                  <div className="flex flex-col gap-1">
+                    {[
+                      { value: 'all', label: 'Tudo' },
+                      { value: '30', label: '30 dias' },
+                      { value: '60', label: '60 dias' },
+                      { value: '90', label: '90 dias' },
+                      { value: '180', label: '180 dias' },
+                      { value: '365', label: '1 ano' },
+                    ].map(p => (
+                      <button
+                        key={p.value}
+                        onClick={() => { setPeriodFilter(p.value); setDateFilter(''); setPeriodPopoverOpen(false); }}
+                        className={`text-left px-3 py-2 rounded text-sm transition-colors hover:bg-gray-700 ${
+                          periodFilter === p.value && !dateFilter ? 'text-white font-semibold bg-gray-700' : 'text-gray-300'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* DATA ESPECÍFICA */}
+              <div className="flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5 text-gray-400" />
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => {
+                    setDateFilter(e.target.value);
+                    if (e.target.value) setPeriodFilter('all');
+                  }}
+                  className="h-8 px-2 text-xs rounded bg-gray-700 border border-gray-600 text-white focus:ring-1 focus:ring-emerald-500 focus:outline-none [color-scheme:dark]"
+                />
+                {dateFilter && (
+                  <Button size="sm" variant="ghost" onClick={() => setDateFilter('')} className="h-7 px-2 text-xs text-gray-400 hover:text-white">
+                    ✕
+                  </Button>
+                )}
               </div>
-              <span className="text-xs text-gray-500 ml-auto">{periodSales.length} vendas</span>
+
+              {/* COUNTER */}
+              <span className="text-xs text-gray-500 ml-auto">
+                {periodSales.length} vendas
+                {dateFilter && <span className="text-emerald-400 ml-1">({new Date(dateFilter + 'T12:00:00').toLocaleDateString('pt-BR')})</span>}
+              </span>
             </div>
           </CardContent>
         </Card>
