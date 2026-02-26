@@ -9,8 +9,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  DollarSign, Search, ShoppingCart, Package, TrendingUp, BarChart3, ChevronDown, Building2, CalendarDays, Clock
+  DollarSign, Search, ShoppingCart, Package, TrendingUp, BarChart3, ChevronDown, Building2, CalendarDays, Clock, Target
 } from 'lucide-react';
+import RentabilidadeOperacao from './RentabilidadeOperacao';
 import { Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 const fmtBRL = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
