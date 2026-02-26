@@ -9,10 +9,12 @@ import PromoTemplateCard, { TEMPLATES } from "@/components/promo/PromoTemplateCa
 import PromoTextGenerator from "@/components/promo/PromoTextGenerator";
 import PromoVideoGenerator from "@/components/promo/PromoVideoGenerator";
 import PromoCustomizer from "@/components/promo/PromoCustomizer";
+import PromoLayoutSelector from "@/components/promo/PromoLayoutSelector";
 
 export default function PromoCreator() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedTemplate, setSelectedTemplate] = useState("oferta");
+  const [selectedLayout, setSelectedLayout] = useState("square");
   const [overrides, setOverrides] = useState({
     imageUrl: "",
     title: "",
@@ -92,11 +94,11 @@ export default function PromoCreator() {
                 <TabsContent value="templates">
                   <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                     {/* Coluna 1: Template + Customização */}
-                    <div className="xl:col-span-1 space-y-6">
+                    <div className="xl:col-span-1 space-y-6 max-h-[85vh] overflow-y-auto pr-1">
                       {/* Template Selector */}
                       <div>
                         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
-                          Escolha o Template
+                          Escolha o Estilo
                         </h3>
                         <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-2 gap-2">
                           {Object.entries(TEMPLATES).map(([key, tpl]) => (
@@ -115,6 +117,12 @@ export default function PromoCreator() {
                           ))}
                         </div>
                       </div>
+
+                      {/* Layout Selector */}
+                      <PromoLayoutSelector
+                        selectedLayout={selectedLayout}
+                        onSelect={setSelectedLayout}
+                      />
 
                       {/* Customizer */}
                       <div className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4">
@@ -135,6 +143,7 @@ export default function PromoCreator() {
                         product={selectedProduct}
                         templateKey={selectedTemplate}
                         overrides={overrides}
+                        layout={selectedLayout}
                       />
                     </div>
                   </div>
