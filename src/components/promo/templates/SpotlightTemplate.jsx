@@ -58,7 +58,7 @@ export default function SpotlightTemplate({ displayTitle, displayImage, displayB
         </div>
         {price > 50 && <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 10, textAlign: "center", marginBottom: 10 }}>12x de R$ {(price / 12).toFixed(2)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 28, width: "auto", objectFit: "contain", opacity: 0.7 }} />
+          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 44, width: "auto", objectFit: "contain", opacity: 0.8 }} />
           <div style={{ background: template.sealGradient, borderRadius: 20, padding: "8px 20px" }}>
             <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>

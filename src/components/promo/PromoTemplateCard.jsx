@@ -175,7 +175,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src={logoUrl} alt="Leilão NoZap" style={{ height: 32, width: "auto", objectFit: "contain" }} />
+        <img src={logoUrl} alt="Leilão NoZap" style={{ height: 48, width: "auto", objectFit: "contain" }} />
         <div style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)", borderRadius: 8, padding: "9px 22px", boxShadow: "0 4px 16px rgba(124,58,237,0.4)" }}>
           <span style={{ color: "white", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
         </div>
@@ -225,7 +225,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src={logoUrl} alt="Leilão NoZap" style={{ height: 30, width: "auto", objectFit: "contain" }} />
+        <img src={logoUrl} alt="Leilão NoZap" style={{ height: 46, width: "auto", objectFit: "contain" }} />
         <div style={{ background: "linear-gradient(135deg, #25d366, #128c7e)", borderRadius: 20, padding: "8px 18px", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 16px rgba(37,211,102,0.3)" }}>
           <span style={{ fontSize: 14 }}>📱</span>
           <span style={{ color: "white", fontSize: 11, fontWeight: 800 }}>PEÇA JÁ</span>
@@ -289,7 +289,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src={logoUrl} alt="Leilão NoZap" style={{ height: 30, width: "auto", objectFit: "contain" }} />
+        <img src={logoUrl} alt="Leilão NoZap" style={{ height: 46, width: "auto", objectFit: "contain" }} />
         <div style={{ background: template.sealGradient, borderRadius: 20, padding: "8px 20px", boxShadow: `0 4px 16px ${template.accentGlow}40` }}>
           <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>{displayCta}</span>
         </div>
@@ -344,7 +344,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
         </div>
         {/* Footer */}
         <div style={{ position: "absolute", bottom: 12, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <img src={logoUrl} alt="Leilão NoZap" style={{ height: 30, width: "auto", objectFit: "contain" }} />
+          <img src={logoUrl} alt="Leilão NoZap" style={{ height: 46, width: "auto", objectFit: "contain" }} />
           <div style={{ background: g, padding: "8px 20px", borderRadius: 2 }}>
             <span style={{ color: "#000", fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>
@@ -400,7 +400,7 @@ export default function PromoTemplateCard({ product, templateKey, overrides = {}
       </div>
       {/* Footer */}
       <div style={{ position: "absolute", bottom: 14, left: 24, right: 24, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <img src={logoUrl} alt="Leilão NoZap" style={{ height: 28, width: "auto", objectFit: "contain", filter: "brightness(0.2)" }} />
+        <img src={logoUrl} alt="Leilão NoZap" style={{ height: 44, width: "auto", objectFit: "contain", filter: "brightness(0.2)" }} />
         <div style={{ width: 54, height: 54, borderRadius: "50%", background: "#1f2937", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 16px rgba(0,0,0,0.25)" }}>
           <span style={{ color: "white", fontSize: 8, fontWeight: 800, textTransform: "uppercase", textAlign: "center", lineHeight: 1.2 }}>COMPRE<br/>AGORA</span>
         </div>

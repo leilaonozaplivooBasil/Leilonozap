@@ -59,7 +59,7 @@ export default function MagazineTemplate({ displayTitle, displayImage, displayBa
         </div>
         {price > 50 && <p style={{ color: "#999", fontSize: 10, marginBottom: 10 }}>ou 12x de R$ {(price / 12).toFixed(2)}</p>}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 26, width: "auto", objectFit: "contain", filter: "brightness(0.2)" }} />
+          <img src={logoUrl || LOGO_URL} alt="Leilão NoZap" style={{ height: 42, width: "auto", objectFit: "contain", filter: "brightness(0.2)" }} />
           <div style={{ background: "#111", borderRadius: 4, padding: "8px 20px" }}>
             <span style={{ color: "white", fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase" }}>{displayCta}</span>
           </div>
