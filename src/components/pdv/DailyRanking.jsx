@@ -417,6 +417,17 @@ export default function DailyRanking({ allSales }) {
     }
   };
 
+  const buildWhatsAppCopy = () => {
+    const firstPlace = ranking[0];
+    return firstPlace && firstPlace.name !== 'Sem dados'
+      ? `🎉 *Parabéns aos nossos vendedores do dia ${targetDate}!*\n\n🏆 *DESTAQUE DO DIA*\n👑 ${firstPlace.name}\n💰 Total vendido: R$ ${fmt(firstPlace.total)}\n\n${ranking.slice(0, 5).map((r, i) => {
+          const medals = ['🥇', '🥈', '🥉'];
+          const prefix = i < 3 ? medals[i] : `${i + 1}º`;
+          return `${prefix} ${r.name} — R$ ${fmt(r.total)}`;
+        }).join('\n')}\n\nContinuem com esse ritmo incrível! 🚀💪`
+      : `📊 Ranking de Vendas do dia ${targetDate}`;
+  };
+
   const handleGenerateImage = async () => {
     setGeneratingImage(true);
     try {
@@ -432,48 +443,43 @@ export default function DailyRanking({ allSales }) {
         imageTimeout: 5000,
       });
 
-      const firstPlace = ranking[0];
-      const whatsappMessage = firstPlace && firstPlace.name !== 'Sem dados'
-        ? `🎉 *Parabéns aos nossos vendedores do dia ${targetDate}!*\n\n🏆 *DESTAQUE DO DIA*\n👑 ${firstPlace.name}\n💰 Total vendido: R$ ${fmt(firstPlace.total)}\n\n${ranking.slice(0, 5).map((r, i) => {
-            const medals = ['🥇', '🥈', '🥉'];
-            const prefix = i < 3 ? medals[i] : `${i + 1}º`;
-            return `${prefix} ${r.name} — R$ ${fmt(r.total)}`;
-          }).join('\n')}\n\nContinuem com esse ritmo incrível! 🚀💪`
-        : `📊 Ranking de Vendas do dia ${targetDate}`;
+      const whatsappMessage = buildWhatsAppCopy();
 
-      // Tenta compartilhar nativamente (mobile)
       canvas.toBlob(async (blob) => {
         if (!blob) {
           alert('❌ Erro ao gerar imagem.');
+          setGeneratingImage(false);
           return;
         }
 
         const file = new File([blob], `ranking-${targetDate.replace(/\//g, '-')}.png`, { type: 'image/png' });
 
+        // Mobile: usa Web Share API para enviar direto ao WhatsApp com imagem + texto
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
           await navigator.share({
             text: whatsappMessage,
             files: [file],
           });
         } else {
-          // Desktop: baixa a imagem e copia texto
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `ranking-${targetDate.replace(/\//g, '-')}.png`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
+          // Desktop: faz upload da imagem, copia texto e abre WhatsApp
+          // Upload da imagem para ter URL pública
+          const { file_url } = await base44.integrations.Core.UploadFile({ file: blob });
 
+          // Copia a copy para clipboard
           await navigator.clipboard.writeText(whatsappMessage).catch(() => {});
-          alert('✅ Imagem baixada!\n\n📋 Mensagem copiada para área de transferência.\n\nCole no WhatsApp e anexe a imagem.');
+
+          // Abre WhatsApp Web com a mensagem + link da imagem
+          const fullMessage = whatsappMessage + `\n\n📸 Imagem do ranking:\n${file_url}`;
+          const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullMessage)}`;
+          window.open(whatsappUrl, '_blank');
         }
+
+        setGeneratingImage(false);
       }, 'image/png');
+      return; // setGeneratingImage é chamado dentro do toBlob callback
     } catch (error) {
       console.error('Erro ao gerar imagem:', error);
       alert('❌ Erro ao gerar imagem. Tente novamente.');
-    } finally {
       setGeneratingImage(false);
     }
   };
