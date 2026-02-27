@@ -71,6 +71,11 @@ export default function VendedoresTab({ allSales, sellersDataForPDF, loadAllSale
                         </div>
                         <div className="flex items-center gap-2 sm:gap-3">
                           <DailyReportPDF daySales={daySales} date={date} sellersData={sellersForDay} />
+                          <Link to={createPageUrl('DailyReportView') + `?date=${encodeURIComponent(date)}`} target="_blank">
+                            <Button className="bg-blue-600 hover:bg-blue-700 text-xs sm:text-sm">
+                              <Eye className="w-4 h-4 mr-1 sm:mr-2" /> Visualizar
+                            </Button>
+                          </Link>
                           <div className="text-right">
                             <p className="text-green-400 font-bold text-lg sm:text-2xl">R$ {fmtBRL(dayTotal)}</p>
                             <p className="text-gray-500 text-xs">Total do dia</p>
