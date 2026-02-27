@@ -6,7 +6,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Clock, Package, TrendingUp, FileText } from 'lucide-react';
+import { Clock, Package, TrendingUp, FileText, Wallet } from 'lucide-react';
 
 /**
  * REGRA DE NEGÓCIO - Vendas do Dia:
