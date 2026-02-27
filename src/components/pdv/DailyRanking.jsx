@@ -149,6 +149,8 @@ export default function DailyRanking({ allSales }) {
   const fmt = (v) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const [generating, setGenerating] = React.useState(false);
+  const [generatingImage, setGeneratingImage] = React.useState(false);
+  const rankingRef = React.useRef(null);
 
   const loadImageAsBase64 = async (url) => {
     const img = await fetch(url);
