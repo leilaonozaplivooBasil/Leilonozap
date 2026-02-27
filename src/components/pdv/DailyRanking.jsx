@@ -456,27 +456,33 @@ export default function DailyRanking({ allSales }) {
 
         // Mobile: usa Web Share API para enviar direto ao WhatsApp com imagem + texto
         if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            text: whatsappMessage,
-            files: [file],
-          });
+          try {
+            await navigator.share({
+              text: whatsappMessage,
+              files: [file],
+            });
+          } catch (shareErr) {
+            // Usuário cancelou o share, ignora
+          }
         } else {
-          // Desktop: faz upload da imagem, copia texto e abre WhatsApp
-          // Upload da imagem para ter URL pública
-          const { file_url } = await base44.integrations.Core.UploadFile({ file: blob });
+          // Desktop: baixa a imagem e abre WhatsApp com a copy
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `ranking-${targetDate.replace(/\//g, '-')}.png`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
 
-          // Copia a copy para clipboard
-          await navigator.clipboard.writeText(whatsappMessage).catch(() => {});
-
-          // Abre WhatsApp Web com a mensagem + link da imagem
-          const fullMessage = whatsappMessage + `\n\n📸 Imagem do ranking:\n${file_url}`;
-          const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(fullMessage)}`;
+          // Abre WhatsApp com a copy
+          const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMessage)}`;
           window.open(whatsappUrl, '_blank');
         }
 
         setGeneratingImage(false);
       }, 'image/png');
-      return; // setGeneratingImage é chamado dentro do toBlob callback
+      return;
     } catch (error) {
       console.error('Erro ao gerar imagem:', error);
       alert('❌ Erro ao gerar imagem. Tente novamente.');
