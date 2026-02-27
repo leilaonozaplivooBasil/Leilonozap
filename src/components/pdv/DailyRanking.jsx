@@ -486,14 +486,14 @@ export default function DailyRanking({ allSales }) {
         <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-9 sm:h-10 md:h-12 object-contain" onError={(e)=>{e.currentTarget.style.display='none';}} />
         <div className="text-center min-w-0">
           <div className="flex items-center justify-center gap-2 text-white">
-            <Trophy className="w-5 h-5 text-yellow-400" />
-            <h3 className="text-lg md:text-xl font-bold truncate">Ranking do Dia</h3>
+            <span className="text-yellow-400 text-lg">🏆</span>
+            <h3 className="text-lg md:text-xl font-bold" style={{ fontFamily: 'Arial, Helvetica, sans-serif', letterSpacing: '0.02em' }}>Ranking do Dia</h3>
           </div>
           <div className="flex items-center justify-center gap-2 text-gray-400 text-xs md:text-sm mt-1">
-            <CalendarIcon className="w-4 h-4" />
-            <span className="truncate max-w-[45vw] sm:max-w-none">{targetDate}</span>
+            <span>📅</span>
+            <span style={{ fontFamily: 'Arial, Helvetica, sans-serif', letterSpacing: '0.02em' }}>{targetDate}</span>
             <span className="text-gray-600">•</span>
-            <span className="text-green-400 font-semibold whitespace-nowrap">Total R$ {fmt(dayTotal || 0)}</span>
+            <span className="text-green-400 font-semibold whitespace-nowrap" style={{ fontFamily: 'Arial, Helvetica, sans-serif', letterSpacing: '0.02em' }}>Total R$ {fmt(dayTotal || 0)}</span>
           </div>
         </div>
         <img src={NoZapLogo} alt="Leilão NoZap" crossOrigin="anonymous" className="h-9 sm:h-10 md:h-12 object-contain rounded max-w-[80px]" onError={(e)=>{e.currentTarget.style.display='none';}} />
@@ -513,8 +513,8 @@ export default function DailyRanking({ allSales }) {
                 i === 1 ? 'bg-gray-500/20 text-gray-300 border border-gray-500/40' :
                 i === 2 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40' :
                 'bg-zinc-700/50 text-zinc-300 border border-zinc-600'
-              }`}>
-                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+              }`} style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
+                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1)}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-white font-medium leading-tight" style={{ letterSpacing: '0.01em', fontFamily: 'Arial, Helvetica, sans-serif' }}>{r.name}</p>
