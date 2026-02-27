@@ -14,7 +14,7 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
   const [editingInvestido, setEditingInvestido] = useState(false);
   const [customInvestido, setCustomInvestido] = useState(() => {
     const saved = localStorage.getItem('rentabilidade_custom_investido');
-    return saved !== null ? parseFloat(saved) : null;
+    return saved !== null ? parseFloat(saved) : 119170;
   });
   const [inputInvestido, setInputInvestido] = useState('');
 
@@ -131,50 +131,57 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
 
       {/* CARDS PRINCIPAIS - Linha 1 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="bg-gray-800 border-amber-600/30 cursor-pointer hover:border-amber-500/50 transition-colors" onClick={() => {
-          if (!editingInvestido) {
-            setInputInvestido(String(stats.valorInvestido.toFixed(2)).replace('.', ','));
-            setEditingInvestido(true);
-          }
-        }}>
+        <Card className="bg-gray-800 border-amber-600/30">
           <CardContent className="p-4">
-            <p className="text-amber-400 text-xs mb-1 flex items-center gap-1">
-              <Wallet className="w-3 h-3" /> Valor Investido
-              {!editingInvestido && <Pencil className="w-3 h-3 ml-1 text-gray-500" />}
-            </p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-amber-400 text-xs flex items-center gap-1">
+                <Wallet className="w-3 h-3" /> Valor Investido
+              </p>
+              {!editingInvestido && (
+                <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-gray-400 hover:text-amber-400 gap-1" onClick={() => {
+                  setInputInvestido(String(stats.valorInvestido.toFixed(2)).replace('.', ','));
+                  setEditingInvestido(true);
+                }}>
+                  <Pencil className="w-3 h-3" /> Editar
+                </Button>
+              )}
+            </div>
             {editingInvestido ? (
-              <div className="flex items-center gap-1 mt-1" onClick={e => e.stopPropagation()}>
-                <span className="text-white text-sm font-bold">R$</span>
-                <Input
-                  autoFocus
-                  value={inputInvestido}
-                  onChange={e => setInputInvestido(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      const val = parseFloat(inputInvestido.replace(/\./g, '').replace(',', '.'));
-                      if (!isNaN(val) && val >= 0) saveCustomInvestido(val);
-                      setEditingInvestido(false);
-                    }
-                    if (e.key === 'Escape') {
-                      setEditingInvestido(false);
-                    }
-                  }}
-                  className="bg-gray-900 border-amber-600/50 text-white h-8 text-lg font-bold w-full"
-                  placeholder="0,00"
-                />
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-emerald-400 hover:text-emerald-300" onClick={() => {
-                  const val = parseFloat(inputInvestido.replace(/\./g, '').replace(',', '.'));
-                  if (!isNaN(val) && val >= 0) saveCustomInvestido(val);
-                  setEditingInvestido(false);
-                }}>
-                  <Check className="w-4 h-4" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-red-400 hover:text-red-300" onClick={() => {
-                  saveCustomInvestido(null);
-                  setEditingInvestido(false);
-                }}>
-                  <X className="w-4 h-4" />
-                </Button>
+              <div className="space-y-2">
+                <div className="flex items-center gap-1">
+                  <span className="text-white text-sm font-bold">R$</span>
+                  <Input
+                    autoFocus
+                    value={inputInvestido}
+                    onChange={e => setInputInvestido(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        const val = parseFloat(inputInvestido.replace(/\./g, '').replace(',', '.'));
+                        if (!isNaN(val) && val >= 0) saveCustomInvestido(val);
+                        setEditingInvestido(false);
+                      }
+                      if (e.key === 'Escape') {
+                        setEditingInvestido(false);
+                      }
+                    }}
+                    className="bg-gray-900 border-amber-600/50 text-white h-8 text-lg font-bold w-full"
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="h-7 bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex-1 gap-1" onClick={() => {
+                    const val = parseFloat(inputInvestido.replace(/\./g, '').replace(',', '.'));
+                    if (!isNaN(val) && val >= 0) saveCustomInvestido(val);
+                    setEditingInvestido(false);
+                  }}>
+                    <Check className="w-3 h-3" /> Salvar
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs text-gray-400 hover:text-white" onClick={() => {
+                    setEditingInvestido(false);
+                  }}>
+                    Cancelar
+                  </Button>
+                </div>
               </div>
             ) : (
               <p className="text-2xl font-bold text-white">R$ {fmtBRL(stats.valorInvestido)}</p>
