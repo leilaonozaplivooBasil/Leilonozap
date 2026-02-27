@@ -31,10 +31,12 @@ export default function BalancoGeralTab({ sales, products, customInvestido }) {
       return sum + (s.product_cost || 0) * (s.quantity_sold || 1);
     }, 0);
 
-    // VALOR DO ESTOQUE ATUAL
-    const valorEstoqueAtual = products.reduce((sum, p) => {
-      return sum + (p.cost_price || 0) * (p.quantity || 0);
+    // VALOR DO ESTOQUE ATUAL - usa mesma lógica da aba Rentabilidade (valor investido customizado ou calculado)
+    const valorInvestidoCalculado = products.reduce((sum, p) => {
+      const totalQty = (p.quantity || 0) + (p.quantity_sold || 0);
+      return sum + (p.cost_price || 0) * totalQty;
     }, 0);
+    const valorEstoqueAtual = customInvestido !== null && customInvestido !== undefined ? customInvestido : valorInvestidoCalculado;
 
     // DESPESAS FIXAS E VARIÁVEIS
     const despesasPagas = expenses
