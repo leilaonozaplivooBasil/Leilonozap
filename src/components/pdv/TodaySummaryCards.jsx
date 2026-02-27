@@ -30,7 +30,7 @@ export default function TodaySummaryCards({ todaySales = [] }) {
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <Tooltip>
           <TooltipTrigger asChild>
             <Card className="bg-gray-800 border-gray-700 cursor-help hover:bg-gray-700/80 transition-colors">
