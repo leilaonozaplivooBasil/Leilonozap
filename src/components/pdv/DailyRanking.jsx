@@ -475,11 +475,15 @@ export default function DailyRanking({ allSales }) {
           a.remove();
           URL.revokeObjectURL(url);
 
-          // Abre WhatsApp com a copy (usa location.href para evitar bloqueio de popup)
+          // Abre WhatsApp via link clicado programaticamente
           const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMessage)}`;
-          setTimeout(() => {
-            window.location.href = whatsappUrl;
-          }, 500);
+          const link = document.createElement('a');
+          link.href = whatsappUrl;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
 
         setGeneratingImage(false);
