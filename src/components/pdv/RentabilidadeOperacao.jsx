@@ -157,9 +157,11 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
         </button>
       </div>
 
-      {activeTab === 'balanco' ? (
+      {activeTab === 'balanco' && (
         <BalancoGeralTab sales={sales} products={products} />
-      ) : (
+      )}
+
+      {activeTab === 'rentabilidade' && (
       <>
       {/* CARDS PRINCIPAIS - Linha 1 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
