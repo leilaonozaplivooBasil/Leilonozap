@@ -542,15 +542,26 @@ export default function DailyRanking({ allSales }) {
 
       </div>
       {/* Ações */}
-      <div className="mt-4 flex items-center justify-end">
-        <Button onClick={handleGeneratePDF} disabled={generating} className="bg-green-600 hover:bg-green-700 disabled:opacity-50">
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+        <Button onClick={handleGenerateImage} disabled={generatingImage} className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50">
+          {generatingImage ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...
+            </>
+          ) : (
+            <>
+              <Share2 className="w-4 h-4 mr-2" /> Compartilhar Ranking
+            </>
+          )}
+        </Button>
+        <Button onClick={handleGeneratePDF} disabled={generating} variant="outline" className="border-gray-600 text-gray-300 hover:bg-gray-800 disabled:opacity-50">
           {generating ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando PDF...
             </>
           ) : (
             <>
-              <FileSpreadsheet className="w-4 h-4 mr-2" /> Gerar PDF do Ranking
+              <FileSpreadsheet className="w-4 h-4 mr-2" /> PDF
             </>
           )}
         </Button>
