@@ -131,6 +131,36 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
         </div>
       </div>
 
+      {/* ABAS */}
+      <div className="flex gap-2 border-b border-gray-700 pb-0">
+        <button
+          onClick={() => setActiveTab('rentabilidade')}
+          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-all flex items-center gap-2 ${
+            activeTab === 'rentabilidade'
+              ? 'bg-gray-800 text-emerald-400 border border-gray-700 border-b-gray-800 -mb-px'
+              : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+          }`}
+        >
+          <Target className="w-4 h-4" />
+          Rentabilidade do Produto
+        </button>
+        <button
+          onClick={() => setActiveTab('balanco')}
+          className={`px-4 py-2.5 text-sm font-semibold rounded-t-lg transition-all flex items-center gap-2 ${
+            activeTab === 'balanco'
+              ? 'bg-gray-800 text-emerald-400 border border-gray-700 border-b-gray-800 -mb-px'
+              : 'text-gray-400 hover:text-white hover:bg-gray-800/50'
+          }`}
+        >
+          <Scale className="w-4 h-4" />
+          Balanço Geral Leilão NoZap
+        </button>
+      </div>
+
+      {activeTab === 'balanco' ? (
+        <BalancoGeralTab sales={sales} products={products} />
+      ) : (
+      <>
       {/* CARDS PRINCIPAIS - Linha 1 */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="bg-gray-800 border-amber-600/30">
