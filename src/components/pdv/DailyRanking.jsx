@@ -515,7 +515,7 @@ export default function DailyRanking({ allSales }) {
                 {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-white font-medium leading-tight truncate">{r.name}</p>
+                <p className="text-white font-medium leading-tight truncate" style={{ textTransform: 'none', letterSpacing: '0.02em' }}>{r.name}</p>
                 <div className="flex flex-col gap-0.5 text-[11px] text-gray-400">
                   <span>{r.count} vendas</span>
                   {r.comissaoLicenciado > 0 && (
