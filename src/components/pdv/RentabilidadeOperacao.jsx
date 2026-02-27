@@ -367,6 +367,8 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   );
 }
