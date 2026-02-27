@@ -417,9 +417,68 @@ export default function DailyRanking({ allSales }) {
     }
   };
 
+  const handleGenerateImage = async () => {
+    setGeneratingImage(true);
+    try {
+      if (!rankingRef.current) return;
+
+      const canvas = await html2canvas(rankingRef.current, {
+        backgroundColor: '#000000',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      });
+
+      const firstPlace = ranking[0];
+      const whatsappMessage = firstPlace && firstPlace.name !== 'Sem dados'
+        ? `🎉 *Parabéns aos nossos vendedores do dia ${targetDate}!*\n\n🏆 *DESTAQUE DO DIA*\n👑 ${firstPlace.name}\n💰 Total vendido: R$ ${fmt(firstPlace.total)}\n\n${ranking.slice(0, 5).map((r, i) => {
+            const medals = ['🥇', '🥈', '🥉'];
+            const prefix = i < 3 ? medals[i] : `${i + 1}º`;
+            return `${prefix} ${r.name} — R$ ${fmt(r.total)}`;
+          }).join('\n')}\n\nContinuem com esse ritmo incrível! 🚀💪`
+        : `📊 Ranking de Vendas do dia ${targetDate}`;
+
+      // Tenta compartilhar nativamente (mobile)
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          alert('❌ Erro ao gerar imagem.');
+          return;
+        }
+
+        const file = new File([blob], `ranking-${targetDate.replace(/\//g, '-')}.png`, { type: 'image/png' });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            text: whatsappMessage,
+            files: [file],
+          });
+        } else {
+          // Desktop: baixa a imagem e copia texto
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `ranking-${targetDate.replace(/\//g, '-')}.png`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+
+          await navigator.clipboard.writeText(whatsappMessage).catch(() => {});
+          alert('✅ Imagem baixada!\n\n📋 Mensagem copiada para área de transferência.\n\nCole no WhatsApp e anexe a imagem.');
+        }
+      }, 'image/png');
+    } catch (error) {
+      console.error('Erro ao gerar imagem:', error);
+      alert('❌ Erro ao gerar imagem. Tente novamente.');
+    } finally {
+      setGeneratingImage(false);
+    }
+  };
+
   return (
     <div className="mb-6">
-      <div className="relative bg-black text-white rounded-2xl p-5 md:p-6 border border-gray-800 mb-6 mx-auto w-full max-w-[420px] sm:max-w-[560px] md:max-w-2xl overflow-hidden min-h-[220px]">
+      <div ref={rankingRef} className="relative bg-black text-white rounded-2xl p-5 md:p-6 border border-gray-800 mb-6 mx-auto w-full max-w-[420px] sm:max-w-[560px] md:max-w-2xl overflow-hidden min-h-[220px]">
       {/* Header com logos */}
       <div className="flex items-center justify-between gap-4 mb-4">
         <img src={XEosLogo} alt="X-EOS" crossOrigin="anonymous" className="h-9 sm:h-10 md:h-12 object-contain" onError={(e)=>{e.currentTarget.style.display='none';}} />
