@@ -26,6 +26,7 @@ export default function TodaySummaryCards({ todaySales = [] }) {
 
   const todayTotal = salesOfToday.reduce((sum, sale) => sum + (sale.total_amount || 0), 0);
   const todayCount = salesOfToday.reduce((sum, sale) => sum + (sale.quantity_sold || 0), 0);
+  const todayCommissions = salesOfToday.reduce((sum, sale) => sum + (sale.commission_amount || 0), 0);
 
   return (
     <TooltipProvider>
