@@ -1,7 +1,9 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrendingUp, Calendar } from 'lucide-react';
+import { TrendingUp, Calendar, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 import DailyRanking from '@/components/pdv/DailyRanking';
 import VendedoresDoDia from '@/components/pdv/VendedoresDoDia';
 import DailyReportPDF from '@/components/pdv/DailyReportPDF';
