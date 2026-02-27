@@ -3,14 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  DollarSign, Package, TrendingUp, TrendingDown, BarChart3, ArrowLeft, Percent, Target, Wallet, Pencil, Check, X
+  DollarSign, Package, TrendingUp, TrendingDown, BarChart3, ArrowLeft, Percent, Target, Wallet, Pencil, Check, X, Scale
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
+import BalancoGeralTab from './BalancoGeralTab';
 
 const fmtBRL = (v) => (v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtPct = (v) => (v || 0).toFixed(2);
 
 export default function RentabilidadeOperacao({ sales, products, onBack }) {
+  const [activeTab, setActiveTab] = useState('rentabilidade');
   const [editingInvestido, setEditingInvestido] = useState(false);
   const [customInvestido, setCustomInvestido] = useState(() => {
     const saved = localStorage.getItem('rentabilidade_custom_investido');
