@@ -158,7 +158,7 @@ export default function RentabilidadeOperacao({ sales, products, onBack }) {
       </div>
 
       {activeTab === 'balanco' && (
-        <BalancoGeralTab sales={sales} products={products} />
+        <BalancoGeralTab sales={sales} products={products} customInvestido={customInvestido} />
       )}
 
       {activeTab === 'rentabilidade' && (
