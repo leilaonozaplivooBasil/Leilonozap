@@ -515,7 +515,7 @@ export default function DailyRanking({ allSales }) {
                 'bg-zinc-700/50 text-zinc-300 border border-zinc-600'
               }`} style={{ fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1' }}>
                 {i < 3 ? (
-                  <span style={{ display: 'block', marginTop: '-4px', fontSize: '14px' }}>
+                  <span style={{ fontSize: '15px', lineHeight: '28px', textAlign: 'center' }}>
                     {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
                   </span>
                 ) : String(i + 1)}
