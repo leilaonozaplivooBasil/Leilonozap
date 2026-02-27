@@ -424,10 +424,12 @@ export default function DailyRanking({ allSales }) {
 
       const canvas = await html2canvas(rankingRef.current, {
         backgroundColor: '#000000',
-        scale: 2,
+        scale: 3,
         useCORS: true,
         allowTaint: true,
         logging: false,
+        letterRendering: true,
+        imageTimeout: 5000,
       });
 
       const firstPlace = ranking[0];
