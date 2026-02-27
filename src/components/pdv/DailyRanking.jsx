@@ -465,7 +465,7 @@ export default function DailyRanking({ allSales }) {
             // Usuário cancelou o share, ignora
           }
         } else {
-          // Desktop: baixa a imagem e abre WhatsApp com a copy
+          // Desktop: baixa a imagem
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -475,9 +475,11 @@ export default function DailyRanking({ allSales }) {
           a.remove();
           URL.revokeObjectURL(url);
 
-          // Abre WhatsApp com a copy
+          // Abre WhatsApp com a copy (usa location.href para evitar bloqueio de popup)
           const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappMessage)}`;
-          window.open(whatsappUrl, '_blank');
+          setTimeout(() => {
+            window.location.href = whatsappUrl;
+          }, 500);
         }
 
         setGeneratingImage(false);
