@@ -1,8 +1,9 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileSpreadsheet, Trophy, Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { FileSpreadsheet, Trophy, Calendar as CalendarIcon, Loader2, Image as ImageIcon, Share2 } from "lucide-react";
 import { jsPDF } from "jspdf";
+import html2canvas from "html2canvas";
 import { base44 } from "@/api/base44Client";
 
 const XEosLogo = "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/9402aeaa5_leilonozap3.png";
