@@ -514,7 +514,11 @@ export default function DailyRanking({ allSales }) {
                 i === 2 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40' :
                 'bg-zinc-700/50 text-zinc-300 border border-zinc-600'
               }`} style={{ fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1' }}>
-                {String(i + 1)}
+                {i < 3 ? (
+                  <span style={{ display: 'block', marginTop: '-2px', fontSize: '14px' }}>
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                  </span>
+                ) : String(i + 1)}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-white font-medium leading-tight" style={{ letterSpacing: '0.01em', fontFamily: 'Arial, Helvetica, sans-serif' }}>{r.name}</p>
