@@ -123,6 +123,28 @@ export default function TodaySummaryCards({ todaySales = [] }) {
             <p className="text-sm text-gray-300">Vendas parceladas de hoje pendentes de recebimento.</p>
           </TooltipContent>
         </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Card className="bg-gray-800 border-gray-700 cursor-help hover:bg-gray-700/80 transition-colors">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-400 text-sm mb-1">Comissões a Pagar</p>
+                    <p className="text-2xl font-bold text-orange-400">
+                      R$ {todayCommissions.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                  </div>
+                  <Wallet className="w-8 h-8 text-orange-400" />
+                </div>
+              </CardContent>
+            </Card>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs bg-gray-900 border-orange-500/50">
+            <p className="font-semibold text-orange-400 mb-2">💰 Comissões a Pagar Hoje</p>
+            <p className="text-sm text-gray-300">Total de comissões das vendas de hoje ({todayDateStr}).</p>
+          </TooltipContent>
+        </Tooltip>
       </div>
     </TooltipProvider>
   );
