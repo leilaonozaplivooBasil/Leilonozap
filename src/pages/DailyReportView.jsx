@@ -153,7 +153,7 @@ export default function DailyReportView() {
   const totalComLicenciados = sellersGrouped.reduce((s, v) => s + v.total_commission, 0);
   const totalComLicenciantes = licenciantesGrouped.reduce((s, v) => s + v.total_commission, 0);
   const totalComissoes = totalComLicenciados + totalComLicenciantes;
-  const lucroLiquido = totalValor - totalCustos - totalComissoes;
+  const lucroLiquido = totalValor - totalComissoes;
 
   const totalPaidCommissions = commissions.filter(c => paidCommissions[c.id]).reduce((sum, c) => sum + (c.commission_amount || 0), 0);
   const totalPendingCommissions = totalComissoes - totalPaidCommissions;
