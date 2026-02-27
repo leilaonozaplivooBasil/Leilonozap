@@ -508,13 +508,13 @@ export default function DailyRanking({ allSales }) {
         ) : (ranking.length > 0 ? ranking : [{ name: 'Sem dados', total: 0, count: 0, commission: 0 }]).map((r, i) => (
           <div key={r.name} className="flex items-center justify-between bg-zinc-900/70 hover:bg-zinc-800 transition-colors rounded-lg px-3 py-2 border border-zinc-800">
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
                 i === 0 ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40' :
-                i === 1 ? 'bg-gray-500/20 text-gray-300 border border-gray-500/40' :
+                i === 1 ? 'bg-gray-400/20 text-gray-300 border border-gray-400/40' :
                 i === 2 ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40' :
                 'bg-zinc-700/50 text-zinc-300 border border-zinc-600'
-              }`} style={{ fontFamily: 'Arial, Helvetica, sans-serif' }}>
-                {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : String(i + 1)}
+              }`} style={{ fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: '1' }}>
+                {String(i + 1)}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-white font-medium leading-tight" style={{ letterSpacing: '0.01em', fontFamily: 'Arial, Helvetica, sans-serif' }}>{r.name}</p>
