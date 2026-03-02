@@ -86,8 +86,6 @@ const fetchWithRetry = async (fetchFunction, maxRetries = 3, baseDelay = 1000) =
 // 🆕 FUNÇÃO PARA ADICIONAR DELAY ENTRE CHAMADAS
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// LandingContent extracted to components/licensing/LandingContent
-
 const DashboardContent = ({ user, isAdmin }) => {
   const navigate = useNavigate();
   const walletCardRef = useRef(null);
