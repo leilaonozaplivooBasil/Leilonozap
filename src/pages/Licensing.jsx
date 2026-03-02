@@ -35,32 +35,344 @@ import EarningsSimulator from '../components/licensing/EarningsSimulator';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
 import DraggableUserHierarchy from '../components/licensing/DraggableUserHierarchy';
 import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
+import CatalogProductCard from '../components/catalog/CatalogProductCard';
+import RotatingBanner from '../components/banner/RotatingBanner';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
-import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
-import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
-import LandingContent from '../components/licensing/LandingContent';
-import NotaStackStyles from '../components/licensing/NotaStackStyles';
-import WithdrawalModalComponent from '../components/licensing/WithdrawalModal';
-const CatalogTab = CatalogTabComponent;
-const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) => (
-  <Card onClick={onClick} className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer ${isSaiDeBaixo ? 'hover:border-red-500/60' : 'hover:border-green-500/60'} hover:bg-gray-700/50` : ''}`}>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle><Icon className="h-4 w-4 text-gray-400" /></CardHeader>
-    <CardContent>{isLoading ? <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> : <div className="text-2xl font-bold text-white">{value}</div>}</CardContent>
-  </Card>
-);
 
+const Product = base44.entities.Product;
+
+const CatalogTab = ({ isSaiDeBaixo }) => {
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [banners, setBanners] = useState([]);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const catalogProducts = await Product.filter({ catalog_active: true }, '-created_date', 200);
+        setProducts(Array.isArray(catalogProducts) ? catalogProducts : []);
+      } catch (error) {
+        console.error('Erro ao carregar catálogo:', error);
+        toast.error('Erro ao carregar produtos');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  useEffect(() => {
+    base44.entities.BannerImage.filter({ is_active: true, context: 'catalog' }).
+    then((bannerData) => {
+      const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
+      setBanners(sortedBanners);
+    }).
+    catch(() => {});
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return products;
+    const term = searchTerm.toLowerCase();
+    return products.filter((p) => p.description?.toLowerCase().includes(term));
+  }, [products, searchTerm]);
+
+  return (
+    <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+      <CardHeader>
+          <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo de Produtos</CardTitle>
+          <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+            Produtos disponíveis para venda - Compartilhe seu link do catálogo
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {banners.length > 0 &&
+        <div className="-mt-2">
+              <RotatingBanner banners={banners} fit="contain" heightClass="h-56 md:h-72 lg:h-80" />
+            </div>
+        }
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Buscar produtos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={isSaiDeBaixo ? 'pl-10 bg-gray-100 border-gray-300 text-gray-900' : 'pl-10 bg-gray-700 border-gray-600 text-white'} />
+
+        </div>
+
+        {isLoading ?
+        <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+          </div> :
+        filteredProducts.length === 0 ?
+        <div className="text-center py-12 text-gray-400">
+            <Package className="w-16 h-16 mx-auto opacity-50 mb-4" />
+            <p>Nenhum produto disponível</p>
+          </div> :
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map((product) =>
+          <CatalogProductCard key={product.id} product={product} currentUser={null} />
+          )}
+          </div>
+        }
+      </CardContent>
+    </Card>);
+
+};
+
+const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) =>
+<Card
+  onClick={onClick}
+  className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer ${isSaiDeBaixo ? 'hover:border-red-500/60' : 'hover:border-green-500/60'} hover:bg-gray-700/50` : ''}`}>
+
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle>
+            <Icon className="h-4 w-4 text-gray-400" />
+        </CardHeader>
+        <CardContent>
+            {isLoading ?
+    <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> :
+
+    <div className="text-2xl font-bold text-white">{value}</div>
+    }
+        </CardContent>
+    </Card>;
+
+
+// 🆕 FUNÇÃO AUXILIAR PARA RETRY COM EXPONENTIAL BACKOFF
 const fetchWithRetry = async (fetchFunction, maxRetries = 3, baseDelay = 1000) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try { return await fetchFunction(); } catch (error) {
-      if (attempt === maxRetries || !(error.message?.includes('Network') || error.message?.includes('Failed to fetch'))) throw error;
-      await new Promise((resolve) => setTimeout(resolve, baseDelay * Math.pow(2, attempt - 1)));
+    try {
+      return await fetchFunction();
+    } catch (error) {
+      const isLastAttempt = attempt === maxRetries;
+      const isNetworkError = error.message?.includes('Network') || error.message?.includes('Failed to fetch');
+
+      if (isLastAttempt || !isNetworkError) {
+        throw error;
+      }
+
+      // Exponential backoff: 1s, 2s, 4s
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      console.log(`⏳ Tentativa ${attempt} falhou: ${error.message}, aguardando ${delay}ms antes de tentar novamente...`);
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 };
 
+// 🆕 FUNÇÃO PARA ADICIONAR DELAY ENTRE CHAMADAS
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const LandingContent = ({ onRegisterClick, onLoginClick }) => {
+  const [hoveredBenefit, setHoveredBenefit] = React.useState(null);
+  const cardsRef = React.useRef(null);
+
+  const handleRegisterClick = () => {
+    onRegisterClick();
+  };
+
+  const scrollToCards = () => {
+    cardsRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  };
+
+  const benefits = [
+  {
+    icon: DollarSign,
+    text: "Ganhos em Dinheiro Real",
+    description: "Receba comissões em dinheiro (R$) toda vez que seus indicados arrematarem produtos. Quanto mais eles compram, mais você ganha!"
+  },
+  {
+    icon: Zap,
+    text: "Comissões Recorrentes",
+    description: "Ganhe 3% em cada arremate dos seus indicados. Renda passiva e recorrente para você!"
+  },
+  {
+    icon: BarChart,
+    text: "Dashboard em Tempo Real",
+    description: "Acompanhe suas comissões, indicados e performance ao vivo. Transparência total sobre seus ganhos!"
+  },
+  {
+    icon: ShieldCheck,
+    text: "Sistema de Alavancagem",
+    description: "Construa sua rede de indicados e multiplique seus ganhos. Quanto mais você cresce, maiores são as recompensas!"
+  }];
+
+
+  return (
+    <>
+            <div className="text-center">
+                <div className="mb-12">
+                    <div className="inline-flex flex-col items-center gap-3 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border-2 border-gray-700 hover:border-green-500/50 transition-all duration-300">
+                        <p className="text-gray-400 text-sm font-medium">
+                            Já tem uma conta?
+                        </p>
+                        <button
+              onClick={onLoginClick}
+              className={`px-8 py-4 bg-gradient-to-r text-white font-bold text-lg rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-3 ${
+              sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+              'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50' :
+              'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:shadow-green-500/50'}`
+              }>
+
+                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                                <LogIn className="w-5 h-5" />
+                            </div>
+                            <span>Entrar na Minha Conta</span>
+                        </button>
+                        <p className="text-gray-500 text-xs">
+                            Acesse seu painel de influenciador
+                        </p>
+                    </div>
+                </div>
+
+                <div className="relative mb-8">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-700"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                        <button
+              onClick={scrollToCards}
+              className="px-4 bg-gray-900 text-gray-500 text-sm font-medium hover:text-green-400 transition-colors cursor-pointer">
+
+                            Ou cadastre-se agora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <JourneyAnimation />
+
+            <div className="mb-16 mt-20">
+              <EarningsSimulator />
+            </div>
+
+            <div ref={cardsRef} className="mt-16 max-w-2xl mx-auto">
+                <Card className="bg-gray-800/80 backdrop-blur-sm border-2 border-green-500/50 shadow-xl hover:shadow-green-500/30 hover:border-green-400 transition-all duration-300">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-xl">
+                            <div className="p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+                                <Smartphone className="w-6 h-6 text-green-400" />
+                            </div>
+                            <div>
+                                <div className="text-green-400 font-bold">Influencie</div>
+                                <div className="text-sm text-gray-400 font-normal">Programa de Influenciadores</div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <p className="text-gray-200 text-base leading-relaxed">
+                            Torne-se um <strong className="text-white">Influenciador Leilão NoZap</strong> e receba <strong className="text-green-400">3% em dinheiro real (R$)</strong> sobre CADA arremate que seus indicados fizerem. Ganhos passivos e recorrentes direto na sua conta!
+                        </p>
+                        
+                        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 space-y-2">
+                            <p className="text-green-400 font-semibold flex items-center gap-2">
+                                <Star className="w-4 h-4" />
+                                Benefícios de ser um Influenciador:
+                            </p>
+                            <ul className="space-y-1 text-sm text-gray-300">
+                                <li>✅ Link de indicação exclusivo</li>
+                                <li>✅ 3% em R$ de cada arremate dos indicados</li>
+                                <li>✅ Pagamento em dinheiro real</li>
+                                <li>✅ Dashboard com estatísticas em tempo real</li>
+                                <li>✅ Sistema de alavancagem para crescimento</li>
+                            </ul>
+                        </div>
+
+                        <div className="pt-2">
+                            <Button
+                size="lg"
+                className={`w-full text-white font-bold text-base py-6 rounded-lg shadow-lg transition-all ${
+                sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+                'bg-red-600 hover:bg-red-700 hover:shadow-red-500/50' :
+                'bg-green-600 hover:bg-green-700 hover:shadow-green-500/50'}`
+                }
+                onClick={handleRegisterClick}>
+
+                                <Smartphone className="w-5 h-5 mr-2" />
+                                Quero ser um Influenciador agora!
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="mt-20">
+                <h2 className="text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Influenciador</h2>
+                <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                    {benefits.map((item, index) =>
+          <div
+            key={item.text}
+            className="flex flex-col items-center group"
+            onMouseEnter={() => setHoveredBenefit(index)}
+            onMouseLeave={() => setHoveredBenefit(null)}>
+
+                            <div className={`flex h-20 w-20 items-center justify-center rounded-xl bg-gray-800 border-2 mb-4 transform group-hover:scale-110 transition-all shadow-lg cursor-pointer ${
+            sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+            'border-red-500/30 group-hover:border-red-400' :
+            'border-green-500/30 group-hover:border-green-400'}`
+            }>
+                                <item.icon className={`h-10 w-10 ${sessionStorage.getItem('saiDeBaixoContext') === 'true' ? 'text-red-400' : 'text-green-400'}`} />
+                            </div>
+                            <p className="font-semibold text-white text-base">{item.text}</p>
+                        </div>
+          )}
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {hoveredBenefit !== null &&
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none"
+          style={{ perspective: '1000px' }}>
+
+                        <div className={`bg-gray-800 border-2 rounded-2xl p-6 shadow-2xl max-w-sm mx-4 ${
+          sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+          'border-red-500/50' :
+          'border-green-500/50'}`
+          }
+          style={{
+            boxShadow: sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+            '0 0 60px rgba(239, 68, 68, 0.4), 0 20px 80px rgba(0,0,0,0.8)' :
+            '0 0 60px rgba(34, 197, 94, 0.4), 0 20px 80px rgba(0,0,0,0.8)'
+          }}>
+
+                           <div className="flex items-start gap-4">
+                               <div className={`p-3 rounded-xl flex-shrink-0 border ${
+              sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+              'bg-red-500/20 border-red-500/30' :
+              'bg-green-500/20 border-green-500/30'}`
+              }>
+                                   {React.createElement(benefits[hoveredBenefit].icon, {
+                  className: `w-8 h-8 ${sessionStorage.getItem('saiDeBaixoContext') === 'true' ? 'text-red-400' : 'text-green-400'}`
+                })}
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-white text-lg mb-2">
+                                        {benefits[hoveredBenefit].text}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm leading-relaxed">
+                                        {benefits[hoveredBenefit].description}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+        }
+            </AnimatePresence>
+        </>);
+
+};
 
 const DashboardContent = ({ user, isAdmin }) => {
   const navigate = useNavigate();
@@ -1870,8 +2182,267 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       }
 
-      <WithdrawalModalComponent show={showWithdrawalModal} onClose={() => setShowWithdrawalModal(false)} totalAvailable={totalAvailable} withdrawalAmount={withdrawalAmount} setWithdrawalAmount={setWithdrawalAmount} pixKey={pixKey} setPixKey={setPixKey} pixKeyType={pixKeyType} setPixKeyType={setPixKeyType} isProcessing={isProcessingWithdrawal} onSubmit={handleWithdrawalSubmit} />
-      <NotaStackStyles />
+      {/* Modal de Saque */}
+      {showWithdrawalModal &&
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <h3 className="text-2xl font-bold text-white">💸 Solicitar Saque</h3>
+              <button
+              onClick={() => setShowWithdrawalModal(false)}
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              disabled={isProcessingWithdrawal}>
+
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
+                <p className="text-sm text-gray-300 mb-1">Saldo Disponível para Saque:</p>
+                <p className="text-3xl font-bold text-green-400">
+                  R$ {totalAvailable.toFixed(2)}
+                </p>
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Valor do Saque</Label>
+                <Input
+                type="number"
+                value={withdrawalAmount}
+                onChange={(e) => setWithdrawalAmount(e.target.value)}
+                placeholder="0.00"
+                min="30"
+                className="bg-gray-700 border-gray-600 text-white text-lg"
+                disabled={isProcessingWithdrawal} />
+
+                <p className="text-xs text-gray-400 mt-1">Valor mínimo: R$ 30,00</p>
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Tipo de Chave PIX</Label>
+                <select
+                value={pixKeyType}
+                onChange={(e) => setPixKeyType(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white"
+                disabled={isProcessingWithdrawal}>
+
+                  <option value="CPF">CPF</option>
+                  <option value="CNPJ">CNPJ</option>
+                  <option value="EMAIL">E-mail</option>
+                  <option value="PHONE">Telefone</option>
+                  <option value="RANDOM">Chave Aleatória</option>
+                </select>
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Chave PIX</Label>
+                <Input
+                type="text"
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                placeholder="Sua chave PIX"
+                className="bg-gray-700 border-gray-600 text-white"
+                disabled={isProcessingWithdrawal} />
+
+              </div>
+
+              <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
+                <p className="text-sm text-blue-300">
+                  ℹ️ O saque será processado em até 2 dias úteis após aprovação.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                type="button"
+                onClick={() => setShowWithdrawalModal(false)}
+                variant="outline"
+                className="flex-1 border-gray-600 text-gray-300"
+                disabled={isProcessingWithdrawal}>
+
+                  Cancelar
+                </Button>
+                <Button
+                type="button"
+                onClick={handleWithdrawalSubmit}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                disabled={isProcessingWithdrawal}>
+
+                  {isProcessingWithdrawal ?
+                <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Processando...
+                    </> :
+
+                'Solicitar Saque'
+                }
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <style>{`
+        @keyframes entrance-guardian {
+          from {
+            transform: translateY(200px) translateX(-50px) rotate(-15deg) scale(0.5);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(12px) translateX(-4px) rotate(-15deg) scale(1);
+            opacity: 0.65;
+          }
+        }
+
+        @keyframes entrance-backback {
+          from {
+            transform: translateX(-300px) translateY(0) rotate(-10deg) scale(0.7);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0) translateY(8px) rotate(-10deg) scale(1);
+            opacity: 0.7;
+          }
+        }
+
+        @keyframes entrance-back {
+          from {
+            transform: translateX(300px) translateY(0) rotate(-5deg) scale(0.7);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0) translateY(4px) rotate(-5deg) scale(1);
+            opacity: 0.8;
+          }
+        }
+
+        @keyframes entrance-side {
+          from {
+            transform: translateX(400px) translateY(-100px) rotate(10deg) scale(0.5);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(12px) translateY(0) rotate(10deg) scale(1);
+            opacity: 0.9;
+          }
+        }
+
+        @keyframes entrance-front {
+          from {
+            transform: translateY(-300px) rotate(180deg) scale(0.3);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0) rotate(2deg) scale(1);
+            opacity: 1;
+          }
+        }
+
+        .nota-entrance-guardian {
+          animation: entrance-guardian 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1s both;
+        }
+
+        .nota-entrance-backback {
+          animation: entrance-backback 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1.2s both;
+        }
+
+        .nota-entrance-back {
+          animation: entrance-back 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1.4s both;
+        }
+
+        .nota-entrance-side {
+          animation: entrance-side 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1.6s both;
+        }
+
+        .nota-entrance-front {
+          animation: entrance-front 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 1.8s both;
+        }
+
+        .nota-stack-container {
+          animation: float-notes 4s ease-in-out 3.5s infinite;
+        }
+
+        .nota-stack-guardian {
+          animation: entrance-guardian 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1s both,
+                     float-guardian 5.5s ease-in-out 3.5s infinite;
+        }
+
+        .nota-stack-backback {
+          animation: entrance-backback 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1.2s both,
+                     float-backback 5s ease-in-out 3.5s infinite;
+        }
+
+        .nota-stack-back {
+          animation: entrance-back 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1.4s both,
+                     float-back 4.5s ease-in-out 3.5s infinite;
+        }
+
+        .nota-stack-front {
+          animation: entrance-front 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 1.8s both,
+                     float-front 4s ease-in-out 3.5s infinite;
+        }
+
+        .nota-stack-side {
+          animation: entrance-side 1s cubic-bezier(0.34, 1.56, 0.64, 1) 1.6s both,
+                     float-side 3.5s ease-in-out 3.5s infinite;
+        }
+
+        @keyframes float-notes {
+          0%, 100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-8px);
+          }
+        }
+
+        @keyframes float-guardian {
+          0%, 100% {
+            transform: rotate(-15deg) translateY(3px) translateX(-4px);
+          }
+          50% {
+            transform: rotate(-15deg) translateY(-3px) translateX(-4px);
+          }
+        }
+
+        @keyframes float-backback {
+          0%, 100% {
+            transform: rotate(-10deg) translateY(2px);
+          }
+          50% {
+            transform: rotate(-10deg) translateY(-4px);
+          }
+        }
+
+        @keyframes float-back {
+          0%, 100% {
+            transform: rotate(-5deg) translateY(1px);
+          }
+          50% {
+            transform: rotate(-5deg) translateY(-6px);
+          }
+        }
+
+        @keyframes float-front {
+          0%, 100% {
+            transform: rotate(2deg) translateY(0);
+          }
+          50% {
+            transform: rotate(2deg) translateY(-10px);
+          }
+        }
+
+        @keyframes float-side {
+          0%, 100% {
+            transform: rotate(10deg) translateX(12px) translateY(0);
+          }
+          50% {
+            transform: rotate(10deg) translateX(12px) translateY(-8px);
+          }
+        }
+      `}</style>
     </div>);
 
 };

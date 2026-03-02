@@ -1,11 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, X } from 'lucide-react';
+import { Loader2, X, Wallet } from 'lucide-react';
+import { toast } from "sonner";
 
-export default function WithdrawalModal({ show, onClose, totalAvailable, withdrawalAmount, setWithdrawalAmount, pixKey, setPixKey, pixKeyType, setPixKeyType, isProcessing, onSubmit }) {
-  if (!show) return null;
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+export default function WithdrawalModal({ user, totalAvailable, onClose, onSuccess }) {
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [pixKey, setPixKey] = useState('');
+  const [pixKeyType, setPixKeyType] = useState('CPF');
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async () => {
+    const amount = parseFloat(withdrawalAmount);
+    if (!amount || amount <= 0 || isNaN(amount)) { toast.error('Valor inválido'); return; }
+    if (amount < 30) { toast.error('Saque mínimo é de R$ 30,00'); return; }
+    if (amount > totalAvailable) { toast.error('Saldo indisponível'); return; }
+    if (!pixKey || pixKey.trim() === '') { toast.error('Informe a chave PIX'); return; }
+
+    setIsProcessing(true);
+    try {
+      const response = await base44.functions.invoke('requestWithdrawal', {
+        amount, pix_key: pixKey, pix_key_type: pixKeyType
+      });
+      const data = response?.data;
+      if (data?.success) {
+        toast.success(data.message || 'Saque solicitado com sucesso!');
+        onSuccess();
+      } else {
+        toast.error(data?.error || 'Erro ao solicitar saque');
+      }
+    } catch (error) {
+      if (error.response?.status === 404) {
+        toast.error('❌ ERRO 404: Função de saque não encontrada.');
+        try {
+          await base44.entities.SystemLog.create({
+            step: 'WITHDRAWAL_404_ERROR', status: 'error',
+            message: 'Função requestWithdrawal retornou 404',
+            component_name: 'WithdrawalModal', entity_id: user.id,
+            payload: { error: error.message, status: error.response?.status, timestamp: new Date().toISOString() }
+          });
+        } catch {}
+      } else if (error.message?.includes('Network')) {
+        toast.error('❌ Erro de conexão.');
+      } else {
+        toast.error(`❌ Erro: ${error.message || 'Erro desconhecido'}`);
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
       <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
@@ -44,7 +92,7 @@ export default function WithdrawalModal({ show, onClose, totalAvailable, withdra
           </div>
           <div className="flex gap-3 pt-2">
             <Button type="button" onClick={onClose} variant="outline" className="flex-1 border-gray-600 text-gray-300" disabled={isProcessing}>Cancelar</Button>
-            <Button type="button" onClick={onSubmit} className="flex-1 bg-green-600 hover:bg-green-700" disabled={isProcessing}>
+            <Button type="button" onClick={handleSubmit} className="flex-1 bg-green-600 hover:bg-green-700" disabled={isProcessing}>
               {isProcessing ? <><Loader2 className="w-5 h-5 animate-spin mr-2" />Processando...</> : 'Solicitar Saque'}
             </Button>
           </div>
