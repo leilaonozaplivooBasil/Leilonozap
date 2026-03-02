@@ -37,11 +37,11 @@ import DraggableUserHierarchy from '../components/licensing/DraggableUserHierarc
 import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogProductCard from '../components/catalog/CatalogProductCard';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
+import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
-import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
-import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) =>
 <Card
