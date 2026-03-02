@@ -40,8 +40,89 @@ import RotatingBanner from '../components/banner/RotatingBanner';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
-import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
-import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
+
+const Product = base44.entities.Product;
+
+const CatalogTab = ({ isSaiDeBaixo }) => {
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [banners, setBanners] = useState([]);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const catalogProducts = await Product.filter({ catalog_active: true }, '-created_date', 200);
+        setProducts(Array.isArray(catalogProducts) ? catalogProducts : []);
+      } catch (error) {
+        console.error('Erro ao carregar catálogo:', error);
+        toast.error('Erro ao carregar produtos');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  useEffect(() => {
+    base44.entities.BannerImage.filter({ is_active: true, context: 'catalog' }).
+    then((bannerData) => {
+      const sortedBanners = bannerData.sort((a, b) => a.order - b.order);
+      setBanners(sortedBanners);
+    }).
+    catch(() => {});
+  }, []);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) return products;
+    const term = searchTerm.toLowerCase();
+    return products.filter((p) => p.description?.toLowerCase().includes(term));
+  }, [products, searchTerm]);
+
+  return (
+    <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+      <CardHeader>
+          <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo de Produtos</CardTitle>
+          <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+            Produtos disponíveis para venda - Compartilhe seu link do catálogo
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {banners.length > 0 &&
+        <div className="-mt-2">
+              <RotatingBanner banners={banners} fit="contain" heightClass="h-56 md:h-72 lg:h-80" />
+            </div>
+        }
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Input
+            placeholder="Buscar produtos..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={isSaiDeBaixo ? 'pl-10 bg-gray-100 border-gray-300 text-gray-900' : 'pl-10 bg-gray-700 border-gray-600 text-white'} />
+
+        </div>
+
+        {isLoading ?
+        <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+          </div> :
+        filteredProducts.length === 0 ?
+        <div className="text-center py-12 text-gray-400">
+            <Package className="w-16 h-16 mx-auto opacity-50 mb-4" />
+            <p>Nenhum produto disponível</p>
+          </div> :
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map((product) =>
+          <CatalogProductCard key={product.id} product={product} currentUser={null} />
+          )}
+          </div>
+        }
+      </CardContent>
+    </Card>);
+
+};
 
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) =>
 <Card
@@ -86,9 +167,212 @@ const fetchWithRetry = async (fetchFunction, maxRetries = 3, baseDelay = 1000) =
 // 🆕 FUNÇÃO PARA ADICIONAR DELAY ENTRE CHAMADAS
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-import LandingContent from '../components/licensing/LandingContent';
-import WithdrawalModal from '../components/licensing/WithdrawalModal';
-import CommissionsTab from '../components/licensing/CommissionsTab';
+const LandingContent = ({ onRegisterClick, onLoginClick }) => {
+  const [hoveredBenefit, setHoveredBenefit] = React.useState(null);
+  const cardsRef = React.useRef(null);
+
+  const handleRegisterClick = () => {
+    onRegisterClick();
+  };
+
+  const scrollToCards = () => {
+    cardsRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  };
+
+  const benefits = [
+  {
+    icon: DollarSign,
+    text: "Ganhos em Dinheiro Real",
+    description: "Receba comissões em dinheiro (R$) toda vez que seus indicados arrematarem produtos. Quanto mais eles compram, mais você ganha!"
+  },
+  {
+    icon: Zap,
+    text: "Comissões Recorrentes",
+    description: "Ganhe 3% em cada arremate dos seus indicados. Renda passiva e recorrente para você!"
+  },
+  {
+    icon: BarChart,
+    text: "Dashboard em Tempo Real",
+    description: "Acompanhe suas comissões, indicados e performance ao vivo. Transparência total sobre seus ganhos!"
+  },
+  {
+    icon: ShieldCheck,
+    text: "Sistema de Alavancagem",
+    description: "Construa sua rede de indicados e multiplique seus ganhos. Quanto mais você cresce, maiores são as recompensas!"
+  }];
+
+
+  return (
+    <>
+            <div className="text-center">
+                <div className="mb-12">
+                    <div className="inline-flex flex-col items-center gap-3 bg-gray-800/50 backdrop-blur-sm rounded-2xl p-6 border-2 border-gray-700 hover:border-green-500/50 transition-all duration-300">
+                        <p className="text-gray-400 text-sm font-medium">
+                            Já tem uma conta?
+                        </p>
+                        <button
+              onClick={onLoginClick}
+              className={`px-8 py-4 bg-gradient-to-r text-white font-bold text-lg rounded-xl shadow-lg transition-all duration-300 transform hover:scale-105 flex items-center gap-3 ${
+              sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+              'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50' :
+              'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 hover:shadow-green-500/50'}`
+              }>
+
+                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                                <LogIn className="w-5 h-5" />
+                            </div>
+                            <span>Entrar na Minha Conta</span>
+                        </button>
+                        <p className="text-gray-500 text-xs">
+                            Acesse seu painel de influenciador
+                        </p>
+                    </div>
+                </div>
+
+                <div className="relative mb-8">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-700"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                        <button
+              onClick={scrollToCards}
+              className="px-4 bg-gray-900 text-gray-500 text-sm font-medium hover:text-green-400 transition-colors cursor-pointer">
+
+                            Ou cadastre-se agora
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <JourneyAnimation />
+
+            <div className="mb-16 mt-20">
+              <EarningsSimulator />
+            </div>
+
+            <div ref={cardsRef} className="mt-16 max-w-2xl mx-auto">
+                <Card className="bg-gray-800/80 backdrop-blur-sm border-2 border-green-500/50 shadow-xl hover:shadow-green-500/30 hover:border-green-400 transition-all duration-300">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-3 text-xl">
+                            <div className="p-3 bg-green-500/20 rounded-lg border border-green-500/30">
+                                <Smartphone className="w-6 h-6 text-green-400" />
+                            </div>
+                            <div>
+                                <div className="text-green-400 font-bold">Influencie</div>
+                                <div className="text-sm text-gray-400 font-normal">Programa de Influenciadores</div>
+                            </div>
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <p className="text-gray-200 text-base leading-relaxed">
+                            Torne-se um <strong className="text-white">Influenciador Leilão NoZap</strong> e receba <strong className="text-green-400">3% em dinheiro real (R$)</strong> sobre CADA arremate que seus indicados fizerem. Ganhos passivos e recorrentes direto na sua conta!
+                        </p>
+                        
+                        <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 space-y-2">
+                            <p className="text-green-400 font-semibold flex items-center gap-2">
+                                <Star className="w-4 h-4" />
+                                Benefícios de ser um Influenciador:
+                            </p>
+                            <ul className="space-y-1 text-sm text-gray-300">
+                                <li>✅ Link de indicação exclusivo</li>
+                                <li>✅ 3% em R$ de cada arremate dos indicados</li>
+                                <li>✅ Pagamento em dinheiro real</li>
+                                <li>✅ Dashboard com estatísticas em tempo real</li>
+                                <li>✅ Sistema de alavancagem para crescimento</li>
+                            </ul>
+                        </div>
+
+                        <div className="pt-2">
+                            <Button
+                size="lg"
+                className={`w-full text-white font-bold text-base py-6 rounded-lg shadow-lg transition-all ${
+                sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+                'bg-red-600 hover:bg-red-700 hover:shadow-red-500/50' :
+                'bg-green-600 hover:bg-green-700 hover:shadow-green-500/50'}`
+                }
+                onClick={handleRegisterClick}>
+
+                                <Smartphone className="w-5 h-5 mr-2" />
+                                Quero ser um Influenciador agora!
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <div className="mt-20">
+                <h2 className="text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Influenciador</h2>
+                <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                    {benefits.map((item, index) =>
+          <div
+            key={item.text}
+            className="flex flex-col items-center group"
+            onMouseEnter={() => setHoveredBenefit(index)}
+            onMouseLeave={() => setHoveredBenefit(null)}>
+
+                            <div className={`flex h-20 w-20 items-center justify-center rounded-xl bg-gray-800 border-2 mb-4 transform group-hover:scale-110 transition-all shadow-lg cursor-pointer ${
+            sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+            'border-red-500/30 group-hover:border-red-400' :
+            'border-green-500/30 group-hover:border-green-400'}`
+            }>
+                                <item.icon className={`h-10 w-10 ${sessionStorage.getItem('saiDeBaixoContext') === 'true' ? 'text-red-400' : 'text-green-400'}`} />
+                            </div>
+                            <p className="font-semibold text-white text-base">{item.text}</p>
+                        </div>
+          )}
+                </div>
+            </div>
+
+            <AnimatePresence>
+                {hoveredBenefit !== null &&
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.8 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center pointer-events-none"
+          style={{ perspective: '1000px' }}>
+
+                        <div className={`bg-gray-800 border-2 rounded-2xl p-6 shadow-2xl max-w-sm mx-4 ${
+          sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+          'border-red-500/50' :
+          'border-green-500/50'}`
+          }
+          style={{
+            boxShadow: sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+            '0 0 60px rgba(239, 68, 68, 0.4), 0 20px 80px rgba(0,0,0,0.8)' :
+            '0 0 60px rgba(34, 197, 94, 0.4), 0 20px 80px rgba(0,0,0,0.8)'
+          }}>
+
+                           <div className="flex items-start gap-4">
+                               <div className={`p-3 rounded-xl flex-shrink-0 border ${
+              sessionStorage.getItem('saiDeBaixoContext') === 'true' ?
+              'bg-red-500/20 border-red-500/30' :
+              'bg-green-500/20 border-green-500/30'}`
+              }>
+                                   {React.createElement(benefits[hoveredBenefit].icon, {
+                  className: `w-8 h-8 ${sessionStorage.getItem('saiDeBaixoContext') === 'true' ? 'text-red-400' : 'text-green-400'}`
+                })}
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-white text-lg mb-2">
+                                        {benefits[hoveredBenefit].text}
+                                    </h4>
+                                    <p className="text-gray-300 text-sm leading-relaxed">
+                                        {benefits[hoveredBenefit].description}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+        }
+            </AnimatePresence>
+        </>);
+
+};
 
 const DashboardContent = ({ user, isAdmin }) => {
   const navigate = useNavigate();
@@ -114,6 +398,12 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [selectedUsersToLink, setSelectedUsersToLink] = useState([]);
   const [isLinking, setIsLinking] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [pixKey, setPixKey] = useState('');
+  const [pixKeyType, setPixKeyType] = useState('CPF');
+  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState(false);
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientDocument, setRecipientDocument] = useState('');
 
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
@@ -788,7 +1078,125 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
 
-  // Withdrawal logic moved to WithdrawalModal component
+  const handleWithdrawalSubmit = async (e) => {
+    if (e) e.preventDefault();
+
+    console.log('🔍 [SAQUE] Botão clicado!');
+    console.log('📊 [SAQUE] Valor digitado:', withdrawalAmount);
+    console.log('💰 [SAQUE] Saldo de comissão disponível:', user.commission_balance);
+
+    const amount = parseFloat(withdrawalAmount);
+    console.log('💵 [SAQUE] Valor convertido:', amount);
+
+    if (!amount || amount <= 0 || isNaN(amount)) {
+      console.log('❌ [SAQUE] Valor inválido');
+      toast.error('Valor inválido');
+      return;
+    }
+
+    if (amount < 30) {
+      console.log('❌ [SAQUE] Valor menor que mínimo');
+      toast.error('Saque mínimo é de R$ 30,00');
+      return;
+    }
+
+    if (amount > totalAvailable) {
+      console.log('❌ [SAQUE] Saldo insuficiente');
+      toast.error('Saldo indisponível');
+      return;
+    }
+
+    if (!pixKey || pixKey.trim() === '') {
+      console.log('❌ [SAQUE] Chave PIX não informada');
+      toast.error('Informe a chave PIX');
+      return;
+    }
+
+    console.log('✅ [SAQUE] Validações OK, processando...');
+    console.log('📤 [SAQUE] Enviando:', { amount, pixKey, pixKeyType });
+
+    setIsProcessingWithdrawal(true);
+
+    try {
+      console.log('📡 [VIGIA] Testando conexão com função requestWithdrawal...');
+
+      const response = await base44.functions.invoke('requestWithdrawal', {
+        amount,
+        pix_key: pixKey,
+        pix_key_type: pixKeyType
+      });
+
+      console.log('📥 [SAQUE] Resposta completa:', response);
+
+      const data = response?.data;
+
+      if (data?.success) {
+        console.log('✅ [SAQUE] Sucesso!');
+        toast.success(data.message || 'Saque solicitado com sucesso! Aguarde aprovação.');
+        setShowWithdrawalModal(false);
+        setWithdrawalAmount('');
+        setPixKey('');
+
+        await delay(2000);
+        await fetchRealMetrics();
+        await delay(1000);
+        await fetchMyWithdrawals();
+      } else {
+        const errorMsg = data?.error || 'Erro ao solicitar saque';
+        console.error('❌ [SAQUE] Erro da API:', errorMsg);
+        toast.error(errorMsg);
+      }
+    } catch (error) {
+      console.error('❌ [VIGIA DE ERRO] Erro capturado:', error);
+      console.error('❌ [VIGIA DE ERRO] Status:', error.response?.status);
+      console.error('❌ [VIGIA DE ERRO] Mensagem:', error.message);
+      console.error('❌ [VIGIA DE ERRO] Stack:', error.stack);
+
+      // 🔥 SISTEMA DE DIAGNÓSTICO AUTOMÁTICO
+      if (error.response?.status === 404 || error.message?.includes('404')) {
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Função requestWithdrawal NÃO EXISTE!');
+        console.error('🚨 [VIGIA] CAUSA: A função não foi criada ou não está deployada.');
+        console.error('🚨 [VIGIA] SOLUÇÃO:');
+        console.error('   1. Verifique se functions/requestWithdrawal.js existe');
+        console.error('   2. Deploy pode estar pendente');
+        console.error('   3. Nome da função pode estar incorreto');
+
+        toast.error('❌ ERRO 404: Função de saque não encontrada. Por favor, contate o suporte técnico.');
+
+        // Cria registro de erro no banco
+        try {
+          await base44.entities.SystemLog.create({
+            step: 'WITHDRAWAL_404_ERROR',
+            status: 'error',
+            message: 'Função requestWithdrawal retornou 404',
+            component_name: 'LicensingPage',
+            entity_id: user.id,
+            payload: {
+              error: error.message,
+              status: error.response?.status,
+              timestamp: new Date().toISOString()
+            }
+          });
+        } catch {}
+
+      } else if (error.message?.includes('Network')) {
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro de rede/conexão');
+        toast.error('❌ Erro de conexão. Verifique sua internet e tente novamente.');
+      } else if (error.response?.status === 401) {
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Não autorizado');
+        toast.error('❌ Sessão expirada. Faça login novamente.');
+      } else if (error.response?.status === 500) {
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro no servidor');
+        toast.error('❌ Erro no servidor. Tente novamente em instantes.');
+      } else {
+        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro desconhecido');
+        toast.error(`❌ Erro: ${error.message || 'Erro desconhecido'}`);
+      }
+    } finally {
+      setIsProcessingWithdrawal(false);
+      console.log('🏁 [SAQUE] Processo finalizado');
+    }
+  };
 
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-8">
@@ -1357,31 +1765,231 @@ const DashboardContent = ({ user, isAdmin }) => {
         </TabsContent>
 
         <TabsContent value="comissoes" className="space-y-6">
-          <CommissionsTab user={user} isSaiDeBaixo={isSaiDeBaixo} isLoadingCommissions={isLoadingCommissions} myCommissionRecords={myCommissionRecords} onViewHistory={() => setViewingCommissionsFor(user)} />
-        </TabsContent>
+          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+            <CardHeader>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>💰 Extrato de Comissões</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                Acompanhe seus ganhos por canal de venda
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              
+              {/* Saldo Total Disponível */}
+              <div className={`p-5 rounded-xl border-2 ${isSaiDeBaixo ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400' : 'bg-gradient-to-r from-green-900/30 to-emerald-900/30 border-green-500/50'}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`text-sm font-medium ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>💵 Saldo Disponível para Saque</p>
+                    <p className={`text-3xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
+                      R$ {(user.commission_balance || 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <Wallet className={`w-10 h-10 ${isSaiDeBaixo ? 'text-green-500' : 'text-green-400'}`} />
+                </div>
+                <p className={`text-xs mt-2 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Este é o valor que você pode sacar agora. Após saques, este valor diminui.
+                </p>
+              </div>
 
-        <TabsContent value="meu-crm" className="space-y-6">
-          <LicenseeCRM />
+              {/* Explicação dos Canais */}
+              <div className={`p-4 rounded-lg ${isSaiDeBaixo ? 'bg-gray-100' : 'bg-gray-700/50'}`}>
+                <h4 className={`font-semibold mb-3 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>📊 Como funcionam suas comissões:</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="text-green-500">📱</span>
+                    <div>
+                      <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>App (3%):</strong>
+                      <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> Você ganha 3% sobre cada arremate feito pelos seus indicados no aplicativo.</span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="text-blue-500">🛍️</span>
+                    <div>
+                      <strong className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Catálogo (26%):</strong>
+                      <span className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}> 26% de cada venda é distribuído entre os cargos da hierarquia. Você recebe de acordo com seus cargos ativos.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cards por Canal */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Card App */}
+                <div className={`p-5 rounded-xl border-2 ${isSaiDeBaixo ? 'bg-green-50 border-green-300' : 'bg-green-900/20 border-green-500/30'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                      <Smartphone className="w-5 h-5 text-green-400" />
+                    </div>
+                    <div>
+                      <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>📱 App (Influencer)</p>
+                      <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>3% por arremate dos indicados</p>
+                    </div>
+                  </div>
+                  <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-green-600' : 'text-green-400'}`}>
+                    R$ {Math.max(0, (user.total_commissions_generated || 0) - (user.catalog_total_commissions_generated || 0)).toFixed(2)}
+                  </p>
+                  <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
+                  
+                  <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-green-200' : 'border-green-500/30'}`}>
+                    <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                      ✅ Compartilhe seu link do App<br/>
+                      ✅ Quando seu indicado arremata, você ganha 3%
+                    </p>
+                  </div>
+                </div>
+
+                {/* Card Catálogo */}
+                <div className={`p-5 rounded-xl border-2 ${isSaiDeBaixo ? 'bg-blue-50 border-blue-300' : 'bg-blue-900/20 border-blue-500/30'}`}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <Package className="w-5 h-5 text-blue-400" />
+                    </div>
+                    <div>
+                      <p className={`font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>🛍️ Catálogo (Licenciado)</p>
+                      <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>26% distribuídos na hierarquia</p>
+                    </div>
+                  </div>
+                  <p className={`text-2xl font-bold ${isSaiDeBaixo ? 'text-blue-600' : 'text-blue-400'}`}>
+                    R$ {(user.catalog_total_commissions_generated || 0).toFixed(2)}
+                  </p>
+                  <p className={`text-xs mt-1 ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-500'}`}>Total histórico gerado</p>
+                  
+                  <div className={`mt-3 pt-3 border-t ${isSaiDeBaixo ? 'border-blue-200' : 'border-blue-500/30'}`}>
+                    <p className={`text-xs ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                      ✅ Âncora: 13% direto<br/>
+                      ✅ Cargos ativos: bônus extras
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão Ver Histórico */}
+              <Button
+                onClick={() => setViewingCommissionsFor(user)}
+                className={`w-full ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700'}`}
+                size="lg">
+                <BarChart className="w-5 h-5 mr-2" />
+                Ver Histórico Detalhado por Venda
+              </Button>
+
+              {/* Histórico de Comissões */}
+              <div className={`mt-6 rounded-xl border ${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}`}>
+                <div className="p-4 border-b border-gray-700/50">
+                  <h4 className={`${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} font-semibold`}>Histórico de Comissões</h4>
+                  <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm`}>Últimos lançamentos de App e Catálogo</p>
+                </div>
+                {isLoadingCommissions ? (
+                  <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-green-500" /></div>
+                ) : myCommissionRecords.length === 0 ? (
+                  <div className={`text-center py-10 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>Nenhuma comissão encontrada.</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Canal</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Cargo</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Produto</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700 text-right' : 'text-gray-400 text-right'}>%</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700 text-right' : 'text-gray-400 text-right'}>Valor (R$)</TableHead>
+                          <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {myCommissionRecords.map((rec) => (
+                          <TableRow key={rec.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>
+                              {new Date(rec.created_date).toLocaleString('pt-BR')}
+                            </TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>
+                              {rec.sale_type === 'catalog' ? 'Catálogo' : 'App'}
+                            </TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.role}</TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.product_title || '-'}</TableCell>
+                            <TableCell className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-right text-sm`}>{(rec.percent || 0).toFixed(2)}%</TableCell>
+                            <TableCell className="text-green-400 text-right font-semibold">R$ {(rec.amount || 0).toFixed(2)}</TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{rec.status || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="saques" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
               <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Histórico de Saques</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                Acompanhe suas solicitações de saque
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingWithdrawals ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-green-500" /></div> :
-              myWithdrawals.length > 0 ? <div className="space-y-3">
-                {myWithdrawals.map((w) => <div key={w.id} className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
-                  <div className="flex items-center gap-3 mb-1">
-                    <span className="text-xl font-bold text-green-400">R$ {w.amount.toFixed(2)}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${w.status==='pending'?'bg-yellow-500/20 text-yellow-400':w.status==='completed'?'bg-green-500/20 text-green-400':'bg-gray-500/20 text-gray-400'}`}>
-                      {w.status==='pending'?'⏳ Pendente':w.status==='approved'?'✅ Aprovado':w.status==='completed'?'✅ Concluído':w.status==='rejected'?'❌ Rejeitado':w.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-400">PIX: {w.pix_key} • {new Date(w.created_date).toLocaleDateString('pt-BR')}</p>
-                </div>)}
-              </div> : <div className="text-center py-12 text-gray-500"><Wallet className="w-12 h-12 mx-auto mb-4 opacity-50" /><p>Nenhum saque solicitado</p></div>}
+              {isLoadingWithdrawals ?
+              <div className="flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
+                </div> :
+              myWithdrawals.length > 0 ?
+              <div className="space-y-4">
+                  {myWithdrawals.map((withdrawal) =>
+                <Card key={withdrawal.id} className="bg-gray-700/50 border-gray-600">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <div className="text-2xl font-bold text-green-400">
+                                R$ {withdrawal.amount.toFixed(2)}
+                              </div>
+                              <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          withdrawal.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                          withdrawal.status === 'approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                          withdrawal.status === 'processing' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                          withdrawal.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                          'bg-red-500/20 text-red-400 border border-red-500/30'}`
+                          }>
+                                {withdrawal.status === 'pending' && '⏳ Aguardando Aprovação'}
+                                {withdrawal.status === 'approved' && '✅ Aprovado'}
+                                {withdrawal.status === 'processing' && '🔄 Processando'}
+                                {withdrawal.status === 'completed' && '✅ Concluído'}
+                                {withdrawal.status === 'rejected' && '❌ Rejeitado'}
+                                {withdrawal.status === 'failed' && '❌ Falhou'}
+                              </div>
+                            </div>
+                            <div className="space-y-1 text-sm text-gray-400">
+                              <p>
+                                <strong className="text-gray-300">Chave PIX:</strong> {withdrawal.pix_key} ({withdrawal.pix_key_type})
+                              </p>
+                              <p>
+                                <strong className="text-gray-300">Solicitado em:</strong> {new Date(withdrawal.created_date).toLocaleString('pt-BR')}
+                              </p>
+                              {withdrawal.processed_date &&
+                          <p className="text-green-400">
+                                  <strong>Processado em:</strong> {new Date(withdrawal.processed_date).toLocaleString('pt-BR')}
+                                </p>
+                          }
+                              {withdrawal.notes &&
+                          <p className="text-gray-500 italic mt-2">
+                                  Obs: {withdrawal.notes}
+                                </p>
+                          }
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                )}
+                </div> :
+
+              <div className="text-center py-12 text-gray-500">
+                  <Wallet className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                  <p className="font-semibold">Nenhum saque solicitado ainda</p>
+                  <p className="text-sm mt-2">Use o botão "Sacar Dinheiro" para solicitar seu primeiro saque</p>
+                </div>
+              }
             </CardContent>
           </Card>
         </TabsContent>
@@ -1575,20 +2183,106 @@ const DashboardContent = ({ user, isAdmin }) => {
       }
 
       {/* Modal de Saque */}
-      {showWithdrawalModal && (
-        <WithdrawalModal
-          user={user}
-          totalAvailable={totalAvailable}
-          onClose={() => setShowWithdrawalModal(false)}
-          onSuccess={async () => {
-            setShowWithdrawalModal(false);
-            await delay(2000);
-            await fetchRealMetrics();
-            await delay(1000);
-            await fetchMyWithdrawals();
-          }}
-        />
-      )}
+      {showWithdrawalModal &&
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
+            <div className="flex items-center justify-between p-6 border-b border-gray-700">
+              <h3 className="text-2xl font-bold text-white">💸 Solicitar Saque</h3>
+              <button
+              onClick={() => setShowWithdrawalModal(false)}
+              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+              disabled={isProcessingWithdrawal}>
+
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
+                <p className="text-sm text-gray-300 mb-1">Saldo Disponível para Saque:</p>
+                <p className="text-3xl font-bold text-green-400">
+                  R$ {totalAvailable.toFixed(2)}
+                </p>
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Valor do Saque</Label>
+                <Input
+                type="number"
+                value={withdrawalAmount}
+                onChange={(e) => setWithdrawalAmount(e.target.value)}
+                placeholder="0.00"
+                min="30"
+                className="bg-gray-700 border-gray-600 text-white text-lg"
+                disabled={isProcessingWithdrawal} />
+
+                <p className="text-xs text-gray-400 mt-1">Valor mínimo: R$ 30,00</p>
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Tipo de Chave PIX</Label>
+                <select
+                value={pixKeyType}
+                onChange={(e) => setPixKeyType(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white"
+                disabled={isProcessingWithdrawal}>
+
+                  <option value="CPF">CPF</option>
+                  <option value="CNPJ">CNPJ</option>
+                  <option value="EMAIL">E-mail</option>
+                  <option value="PHONE">Telefone</option>
+                  <option value="RANDOM">Chave Aleatória</option>
+                </select>
+              </div>
+
+              <div>
+                <Label className="text-gray-300">Chave PIX</Label>
+                <Input
+                type="text"
+                value={pixKey}
+                onChange={(e) => setPixKey(e.target.value)}
+                placeholder="Sua chave PIX"
+                className="bg-gray-700 border-gray-600 text-white"
+                disabled={isProcessingWithdrawal} />
+
+              </div>
+
+              <div className="bg-blue-900/20 rounded-lg p-4 border border-blue-500/30">
+                <p className="text-sm text-blue-300">
+                  ℹ️ O saque será processado em até 2 dias úteis após aprovação.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                type="button"
+                onClick={() => setShowWithdrawalModal(false)}
+                variant="outline"
+                className="flex-1 border-gray-600 text-gray-300"
+                disabled={isProcessingWithdrawal}>
+
+                  Cancelar
+                </Button>
+                <Button
+                type="button"
+                onClick={handleWithdrawalSubmit}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                disabled={isProcessingWithdrawal}>
+
+                  {isProcessingWithdrawal ?
+                <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Processando...
+                    </> :
+
+                'Solicitar Saque'
+                }
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
 
       <style>{`
         @keyframes entrance-guardian {
