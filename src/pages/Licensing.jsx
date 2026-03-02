@@ -40,28 +40,11 @@ import RotatingBanner from '../components/banner/RotatingBanner';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
-
+import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
+import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
+import CommissionsTab from '../components/licensing/CommissionsTab';
 const Product = base44.entities.Product;
-
-const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) =>
-<Card
-  onClick={onClick}
-  className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer ${isSaiDeBaixo ? 'hover:border-red-500/60' : 'hover:border-green-500/60'} hover:bg-gray-700/50` : ''}`}>
-
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle>
-            <Icon className="h-4 w-4 text-gray-400" />
-        </CardHeader>
-        <CardContent>
-            {isLoading ?
-    <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> :
-
-    <div className="text-2xl font-bold text-white">{value}</div>
-    }
-        </CardContent>
-    </Card>;
-
-
+const StatCard = ({ icon: Icon, label, value, onClick, isLoading: isL, isSaiDeBaixo }) => <Card onClick={onClick} className={`bg-gray-800/50 border-gray-700/80 backdrop-blur-sm transition-all duration-300 ${onClick ? `cursor-pointer ${isSaiDeBaixo ? 'hover:border-red-500/60' : 'hover:border-green-500/60'} hover:bg-gray-700/50` : ''}`}><CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-sm font-medium text-gray-400">{label}</CardTitle><Icon className="h-4 w-4 text-gray-400" /></CardHeader><CardContent>{isL ? <Loader2 className="h-6 w-6 animate-spin text-gray-500" /> : <div className="text-2xl font-bold text-white">{value}</div>}</CardContent></Card>;
 // 🆕 FUNÇÃO AUXILIAR PARA RETRY COM EXPONENTIAL BACKOFF
 const fetchWithRetry = async (fetchFunction, maxRetries = 3, baseDelay = 1000) => {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
