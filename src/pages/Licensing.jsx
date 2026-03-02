@@ -37,11 +37,11 @@ import DraggableUserHierarchy from '../components/licensing/DraggableUserHierarc
 import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogProductCard from '../components/catalog/CatalogProductCard';
 import RotatingBanner from '../components/banner/RotatingBanner';
+import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
+import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
-import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
-import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) =>
 <Card
@@ -317,6 +317,12 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [selectedUsersToLink, setSelectedUsersToLink] = useState([]);
   const [isLinking, setIsLinking] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
+  const [withdrawalAmount, setWithdrawalAmount] = useState('');
+  const [pixKey, setPixKey] = useState('');
+  const [pixKeyType, setPixKeyType] = useState('CPF');
+  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState(false);
+  const [recipientName, setRecipientName] = useState('');
+  const [recipientDocument, setRecipientDocument] = useState('');
 
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
@@ -1477,20 +1483,13 @@ const DashboardContent = ({ user, isAdmin }) => {
           </TabsContent>
         }
 
-        {/* ABA: PLANO DE CARREIRA */}
         <TabsContent value="plano-carreira" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader>
-              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Plano de Carreira</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Veja sua evolução no sistema de alavancagem
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CareerPath currentUser={user} />
-            </CardContent>
+            <CardHeader><CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Plano de Carreira</CardTitle></CardHeader>
+            <CardContent><CareerPath currentUser={user} /></CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="meu-crm" className="space-y-6"><LicenseeCRM /></TabsContent>
 
         <TabsContent value="visao-geral" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
