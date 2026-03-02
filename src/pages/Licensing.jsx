@@ -35,8 +35,6 @@ import EarningsSimulator from '../components/licensing/EarningsSimulator';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
 import DraggableUserHierarchy from '../components/licensing/DraggableUserHierarchy';
 import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
-import CatalogProductCard from '../components/catalog/CatalogProductCard';
-import RotatingBanner from '../components/banner/RotatingBanner';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
