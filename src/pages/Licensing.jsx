@@ -37,11 +37,11 @@ import DraggableUserHierarchy from '../components/licensing/DraggableUserHierarc
 import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogProductCard from '../components/catalog/CatalogProductCard';
 import RotatingBanner from '../components/banner/RotatingBanner';
-import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
-import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
+import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
+import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) =>
 <Card
@@ -317,12 +317,6 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [selectedUsersToLink, setSelectedUsersToLink] = useState([]);
   const [isLinking, setIsLinking] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
-  const [withdrawalAmount, setWithdrawalAmount] = useState('');
-  const [pixKey, setPixKey] = useState('');
-  const [pixKeyType, setPixKeyType] = useState('CPF');
-  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState(false);
-  const [recipientName, setRecipientName] = useState('');
-  const [recipientDocument, setRecipientDocument] = useState('');
 
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
@@ -997,125 +991,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
 
-  const handleWithdrawalSubmit = async (e) => {
-    if (e) e.preventDefault();
-
-    console.log('🔍 [SAQUE] Botão clicado!');
-    console.log('📊 [SAQUE] Valor digitado:', withdrawalAmount);
-    console.log('💰 [SAQUE] Saldo de comissão disponível:', user.commission_balance);
-
-    const amount = parseFloat(withdrawalAmount);
-    console.log('💵 [SAQUE] Valor convertido:', amount);
-
-    if (!amount || amount <= 0 || isNaN(amount)) {
-      console.log('❌ [SAQUE] Valor inválido');
-      toast.error('Valor inválido');
-      return;
-    }
-
-    if (amount < 30) {
-      console.log('❌ [SAQUE] Valor menor que mínimo');
-      toast.error('Saque mínimo é de R$ 30,00');
-      return;
-    }
-
-    if (amount > totalAvailable) {
-      console.log('❌ [SAQUE] Saldo insuficiente');
-      toast.error('Saldo indisponível');
-      return;
-    }
-
-    if (!pixKey || pixKey.trim() === '') {
-      console.log('❌ [SAQUE] Chave PIX não informada');
-      toast.error('Informe a chave PIX');
-      return;
-    }
-
-    console.log('✅ [SAQUE] Validações OK, processando...');
-    console.log('📤 [SAQUE] Enviando:', { amount, pixKey, pixKeyType });
-
-    setIsProcessingWithdrawal(true);
-
-    try {
-      console.log('📡 [VIGIA] Testando conexão com função requestWithdrawal...');
-
-      const response = await base44.functions.invoke('requestWithdrawal', {
-        amount,
-        pix_key: pixKey,
-        pix_key_type: pixKeyType
-      });
-
-      console.log('📥 [SAQUE] Resposta completa:', response);
-
-      const data = response?.data;
-
-      if (data?.success) {
-        console.log('✅ [SAQUE] Sucesso!');
-        toast.success(data.message || 'Saque solicitado com sucesso! Aguarde aprovação.');
-        setShowWithdrawalModal(false);
-        setWithdrawalAmount('');
-        setPixKey('');
-
-        await delay(2000);
-        await fetchRealMetrics();
-        await delay(1000);
-        await fetchMyWithdrawals();
-      } else {
-        const errorMsg = data?.error || 'Erro ao solicitar saque';
-        console.error('❌ [SAQUE] Erro da API:', errorMsg);
-        toast.error(errorMsg);
-      }
-    } catch (error) {
-      console.error('❌ [VIGIA DE ERRO] Erro capturado:', error);
-      console.error('❌ [VIGIA DE ERRO] Status:', error.response?.status);
-      console.error('❌ [VIGIA DE ERRO] Mensagem:', error.message);
-      console.error('❌ [VIGIA DE ERRO] Stack:', error.stack);
-
-      // 🔥 SISTEMA DE DIAGNÓSTICO AUTOMÁTICO
-      if (error.response?.status === 404 || error.message?.includes('404')) {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Função requestWithdrawal NÃO EXISTE!');
-        console.error('🚨 [VIGIA] CAUSA: A função não foi criada ou não está deployada.');
-        console.error('🚨 [VIGIA] SOLUÇÃO:');
-        console.error('   1. Verifique se functions/requestWithdrawal.js existe');
-        console.error('   2. Deploy pode estar pendente');
-        console.error('   3. Nome da função pode estar incorreto');
-
-        toast.error('❌ ERRO 404: Função de saque não encontrada. Por favor, contate o suporte técnico.');
-
-        // Cria registro de erro no banco
-        try {
-          await base44.entities.SystemLog.create({
-            step: 'WITHDRAWAL_404_ERROR',
-            status: 'error',
-            message: 'Função requestWithdrawal retornou 404',
-            component_name: 'LicensingPage',
-            entity_id: user.id,
-            payload: {
-              error: error.message,
-              status: error.response?.status,
-              timestamp: new Date().toISOString()
-            }
-          });
-        } catch {}
-
-      } else if (error.message?.includes('Network')) {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro de rede/conexão');
-        toast.error('❌ Erro de conexão. Verifique sua internet e tente novamente.');
-      } else if (error.response?.status === 401) {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Não autorizado');
-        toast.error('❌ Sessão expirada. Faça login novamente.');
-      } else if (error.response?.status === 500) {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro no servidor');
-        toast.error('❌ Erro no servidor. Tente novamente em instantes.');
-      } else {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro desconhecido');
-        toast.error(`❌ Erro: ${error.message || 'Erro desconhecido'}`);
-      }
-    } finally {
-      setIsProcessingWithdrawal(false);
-      console.log('🏁 [SAQUE] Processo finalizado');
-    }
-  };
+  // Withdrawal logic moved to WithdrawalModal component
 
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-8">
@@ -1306,10 +1182,12 @@ const DashboardContent = ({ user, isAdmin }) => {
            {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
            <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
            <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
-           <TabsTrigger value="meu-crm" className="text-xs sm:text-sm whitespace-nowrap">🔥 Meu CRM</TabsTrigger>
            <TabsTrigger value="plano-carreira" className="text-xs sm:text-sm whitespace-nowrap">🎯 Carreira</TabsTrigger>
            {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
          </TabsList>
+
+
+
         {/* ABA: MINHAS VENDAS */}
         <TabsContent value="minhas-vendas" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
@@ -1481,13 +1359,20 @@ const DashboardContent = ({ user, isAdmin }) => {
           </TabsContent>
         }
 
+        {/* ABA: PLANO DE CARREIRA */}
         <TabsContent value="plano-carreira" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader><CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Plano de Carreira</CardTitle></CardHeader>
-            <CardContent><CareerPath currentUser={user} /></CardContent>
+            <CardHeader>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Plano de Carreira</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                Veja sua evolução no sistema de alavancagem
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CareerPath currentUser={user} />
+            </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="meu-crm" className="space-y-6"><LicenseeCRM /></TabsContent>
 
         <TabsContent value="visao-geral" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
@@ -1834,72 +1719,20 @@ const DashboardContent = ({ user, isAdmin }) => {
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
             <CardHeader>
               <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Histórico de Saques</CardTitle>
-              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                Acompanhe suas solicitações de saque
-              </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingWithdrawals ?
-              <div className="flex justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-green-500" />
-                </div> :
-              myWithdrawals.length > 0 ?
-              <div className="space-y-4">
-                  {myWithdrawals.map((withdrawal) =>
-                <Card key={withdrawal.id} className="bg-gray-700/50 border-gray-600">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="text-2xl font-bold text-green-400">
-                                R$ {withdrawal.amount.toFixed(2)}
-                              </div>
-                              <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          withdrawal.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                          withdrawal.status === 'approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                          withdrawal.status === 'processing' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                          withdrawal.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                          'bg-red-500/20 text-red-400 border border-red-500/30'}`
-                          }>
-                                {withdrawal.status === 'pending' && '⏳ Aguardando Aprovação'}
-                                {withdrawal.status === 'approved' && '✅ Aprovado'}
-                                {withdrawal.status === 'processing' && '🔄 Processando'}
-                                {withdrawal.status === 'completed' && '✅ Concluído'}
-                                {withdrawal.status === 'rejected' && '❌ Rejeitado'}
-                                {withdrawal.status === 'failed' && '❌ Falhou'}
-                              </div>
-                            </div>
-                            <div className="space-y-1 text-sm text-gray-400">
-                              <p>
-                                <strong className="text-gray-300">Chave PIX:</strong> {withdrawal.pix_key} ({withdrawal.pix_key_type})
-                              </p>
-                              <p>
-                                <strong className="text-gray-300">Solicitado em:</strong> {new Date(withdrawal.created_date).toLocaleString('pt-BR')}
-                              </p>
-                              {withdrawal.processed_date &&
-                          <p className="text-green-400">
-                                  <strong>Processado em:</strong> {new Date(withdrawal.processed_date).toLocaleString('pt-BR')}
-                                </p>
-                          }
-                              {withdrawal.notes &&
-                          <p className="text-gray-500 italic mt-2">
-                                  Obs: {withdrawal.notes}
-                                </p>
-                          }
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                )}
-                </div> :
-
-              <div className="text-center py-12 text-gray-500">
-                  <Wallet className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="font-semibold">Nenhum saque solicitado ainda</p>
-                  <p className="text-sm mt-2">Use o botão "Sacar Dinheiro" para solicitar seu primeiro saque</p>
-                </div>
-              }
+              {isLoadingWithdrawals ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-green-500" /></div> :
+              myWithdrawals.length > 0 ? <div className="space-y-3">
+                {myWithdrawals.map((w) => <div key={w.id} className="bg-gray-700/50 border border-gray-600 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-xl font-bold text-green-400">R$ {w.amount.toFixed(2)}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${w.status==='pending'?'bg-yellow-500/20 text-yellow-400':w.status==='completed'?'bg-green-500/20 text-green-400':'bg-gray-500/20 text-gray-400'}`}>
+                      {w.status==='pending'?'⏳ Pendente':w.status==='approved'?'✅ Aprovado':w.status==='completed'?'✅ Concluído':w.status==='rejected'?'❌ Rejeitado':w.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">PIX: {w.pix_key} • {new Date(w.created_date).toLocaleDateString('pt-BR')}</p>
+                </div>)}
+              </div> : <div className="text-center py-12 text-gray-500"><Wallet className="w-12 h-12 mx-auto mb-4 opacity-50" /><p>Nenhum saque solicitado</p></div>}
             </CardContent>
           </Card>
         </TabsContent>
