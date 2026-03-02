@@ -78,6 +78,7 @@ import CreateAuctionV2 from './pages/CreateAuctionV2';
 import CreateCatalogProduct from './pages/CreateCatalogProduct';
 import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
 import CustomerDetails from './pages/CustomerDetails';
+import DailyReportView from './pages/DailyReportView';
 import DiretoDeFabrica from './pages/DiretoDeFabrica';
 import EditAuction from './pages/EditAuction';
 import EditCatalogProduct from './pages/EditCatalogProduct';
@@ -130,7 +131,6 @@ import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import DailyReportView from './pages/DailyReportView';
 import __Layout from './Layout.jsx';
 
 
@@ -166,6 +166,7 @@ export const PAGES = {
     "CreateCatalogProduct": CreateCatalogProduct,
     "CreateLuxuryAuction": CreateLuxuryAuction,
     "CustomerDetails": CustomerDetails,
+    "DailyReportView": DailyReportView,
     "DiretoDeFabrica": DiretoDeFabrica,
     "EditAuction": EditAuction,
     "EditCatalogProduct": EditCatalogProduct,
@@ -218,7 +219,6 @@ export const PAGES = {
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "DailyReportView": DailyReportView,
 }
 
 export const pagesConfig = {
