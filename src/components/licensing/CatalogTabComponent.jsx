@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Loader2, Search, Package } from 'lucide-react';
-import { toast } from "sonner";
+import { Search, Loader2, Package } from 'lucide-react';
 import CatalogProductCard from '../catalog/CatalogProductCard';
 import RotatingBanner from '../banner/RotatingBanner';
 
@@ -22,7 +21,6 @@ export default function CatalogTabComponent({ isSaiDeBaixo }) {
         setProducts(Array.isArray(catalogProducts) ? catalogProducts : []);
       } catch (error) {
         console.error('Erro ao carregar catálogo:', error);
-        toast.error('Erro ao carregar produtos');
       } finally {
         setIsLoading(false);
       }
