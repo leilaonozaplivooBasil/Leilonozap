@@ -37,11 +37,11 @@ import DraggableUserHierarchy from '../components/licensing/DraggableUserHierarc
 import HierarchyTreeView from '../components/licensing/HierarchyTreeView';
 import CatalogProductCard from '../components/catalog/CatalogProductCard';
 import RotatingBanner from '../components/banner/RotatingBanner';
-import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
-import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 import CatalogHome from '../components/lojista/CatalogHome';
 import CatalogOrders from '../components/lojista/CatalogOrders';
 import CatalogClients from '../components/lojista/CatalogClients';
+import LicenseeCRM from '../components/licensee-crm/LicenseeCRM';
+import CatalogTabComponent from '../components/licensing/CatalogTabComponent';
 
 const StatCard = ({ icon: Icon, label, value, onClick, isLoading, isSaiDeBaixo }) =>
 <Card
@@ -317,12 +317,6 @@ const DashboardContent = ({ user, isAdmin }) => {
   const [selectedUsersToLink, setSelectedUsersToLink] = useState([]);
   const [isLinking, setIsLinking] = useState(false);
   const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
-  const [withdrawalAmount, setWithdrawalAmount] = useState('');
-  const [pixKey, setPixKey] = useState('');
-  const [pixKeyType, setPixKeyType] = useState('CPF');
-  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState(false);
-  const [recipientName, setRecipientName] = useState('');
-  const [recipientDocument, setRecipientDocument] = useState('');
 
   const [realMetrics, setRealMetrics] = useState({
     indicatedCount: null,
@@ -997,125 +991,7 @@ const DashboardContent = ({ user, isAdmin }) => {
     }
   };
 
-  const handleWithdrawalSubmit = async (e) => {
-    if (e) e.preventDefault();
-
-    console.log('🔍 [SAQUE] Botão clicado!');
-    console.log('📊 [SAQUE] Valor digitado:', withdrawalAmount);
-    console.log('💰 [SAQUE] Saldo de comissão disponível:', user.commission_balance);
-
-    const amount = parseFloat(withdrawalAmount);
-    console.log('💵 [SAQUE] Valor convertido:', amount);
-
-    if (!amount || amount <= 0 || isNaN(amount)) {
-      console.log('❌ [SAQUE] Valor inválido');
-      toast.error('Valor inválido');
-      return;
-    }
-
-    if (amount < 30) {
-      console.log('❌ [SAQUE] Valor menor que mínimo');
-      toast.error('Saque mínimo é de R$ 30,00');
-      return;
-    }
-
-    if (amount > totalAvailable) {
-      console.log('❌ [SAQUE] Saldo insuficiente');
-      toast.error('Saldo indisponível');
-      return;
-    }
-
-    if (!pixKey || pixKey.trim() === '') {
-      console.log('❌ [SAQUE] Chave PIX não informada');
-      toast.error('Informe a chave PIX');
-      return;
-    }
-
-    console.log('✅ [SAQUE] Validações OK, processando...');
-    console.log('📤 [SAQUE] Enviando:', { amount, pixKey, pixKeyType });
-
-    setIsProcessingWithdrawal(true);
-
-    try {
-      console.log('📡 [VIGIA] Testando conexão com função requestWithdrawal...');
-
-      const response = await base44.functions.invoke('requestWithdrawal', {
-        amount,
-        pix_key: pixKey,
-        pix_key_type: pixKeyType
-      });
-
-      console.log('📥 [SAQUE] Resposta completa:', response);
-
-      const data = response?.data;
-
-      if (data?.success) {
-        console.log('✅ [SAQUE] Sucesso!');
-        toast.success(data.message || 'Saque solicitado com sucesso! Aguarde aprovação.');
-        setShowWithdrawalModal(false);
-        setWithdrawalAmount('');
-        setPixKey('');
-
-        await delay(2000);
-        await fetchRealMetrics();
-        await delay(1000);
-        await fetchMyWithdrawals();
-      } else {
-        const errorMsg = data?.error || 'Erro ao solicitar saque';
-        console.error('❌ [SAQUE] Erro da API:', errorMsg);
-        toast.error(errorMsg);
-      }
-    } catch (error) {
-      console.error('❌ [VIGIA DE ERRO] Erro capturado:', error);
-      console.error('❌ [VIGIA DE ERRO] Status:', error.response?.status);
-      console.error('❌ [VIGIA DE ERRO] Mensagem:', error.message);
-      console.error('❌ [VIGIA DE ERRO] Stack:', error.stack);
-
-      // 🔥 SISTEMA DE DIAGNÓSTICO AUTOMÁTICO
-      if (error.response?.status === 404 || error.message?.includes('404')) {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Função requestWithdrawal NÃO EXISTE!');
-        console.error('🚨 [VIGIA] CAUSA: A função não foi criada ou não está deployada.');
-        console.error('🚨 [VIGIA] SOLUÇÃO:');
-        console.error('   1. Verifique se functions/requestWithdrawal.js existe');
-        console.error('   2. Deploy pode estar pendente');
-        console.error('   3. Nome da função pode estar incorreto');
-
-        toast.error('❌ ERRO 404: Função de saque não encontrada. Por favor, contate o suporte técnico.');
-
-        // Cria registro de erro no banco
-        try {
-          await base44.entities.SystemLog.create({
-            step: 'WITHDRAWAL_404_ERROR',
-            status: 'error',
-            message: 'Função requestWithdrawal retornou 404',
-            component_name: 'LicensingPage',
-            entity_id: user.id,
-            payload: {
-              error: error.message,
-              status: error.response?.status,
-              timestamp: new Date().toISOString()
-            }
-          });
-        } catch {}
-
-      } else if (error.message?.includes('Network')) {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro de rede/conexão');
-        toast.error('❌ Erro de conexão. Verifique sua internet e tente novamente.');
-      } else if (error.response?.status === 401) {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Não autorizado');
-        toast.error('❌ Sessão expirada. Faça login novamente.');
-      } else if (error.response?.status === 500) {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro no servidor');
-        toast.error('❌ Erro no servidor. Tente novamente em instantes.');
-      } else {
-        console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro desconhecido');
-        toast.error(`❌ Erro: ${error.message || 'Erro desconhecido'}`);
-      }
-    } finally {
-      setIsProcessingWithdrawal(false);
-      console.log('🏁 [SAQUE] Processo finalizado');
-    }
-  };
+  // Withdrawal logic moved to WithdrawalModal component
 
   return (
     <div className="p-3 sm:p-4 md:p-6 lg:p-8">
@@ -1483,13 +1359,20 @@ const DashboardContent = ({ user, isAdmin }) => {
           </TabsContent>
         }
 
+        {/* ABA: PLANO DE CARREIRA */}
         <TabsContent value="plano-carreira" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
-            <CardHeader><CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Plano de Carreira</CardTitle></CardHeader>
-            <CardContent><CareerPath currentUser={user} /></CardContent>
+            <CardHeader>
+              <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Seu Plano de Carreira</CardTitle>
+              <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                Veja sua evolução no sistema de alavancagem
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CareerPath currentUser={user} />
+            </CardContent>
           </Card>
         </TabsContent>
-        <TabsContent value="meu-crm" className="space-y-6"><LicenseeCRM /></TabsContent>
 
         <TabsContent value="visao-geral" className="space-y-6">
           <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
