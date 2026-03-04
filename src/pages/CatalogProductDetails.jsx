@@ -77,14 +77,14 @@ export default function CatalogProductDetails() {
 
   const handlePrevImage = () => {
     if (!product?.image_urls || product.image_urls.length === 0) return;
-    setCurrentImageIndex((prev) => 
+    setCurrentImageIndex((prev) =>
       prev === 0 ? product.image_urls.length - 1 : prev - 1
     );
   };
 
   const handleNextImage = () => {
     if (!product?.image_urls || product.image_urls.length === 0) return;
-    setCurrentImageIndex((prev) => 
+    setCurrentImageIndex((prev) =>
       prev === product.image_urls.length - 1 ? 0 : prev + 1
     );
   };
@@ -93,7 +93,7 @@ export default function CatalogProductDetails() {
     console.log('🛒 Botão Comprar clicado!');
     console.log('👤 Current User:', currentUser);
     console.log('📦 Product:', product);
-    
+
     if (!currentUser) {
       toast.error('Faça login para continuar');
       navigate(createPageUrl("Register"));
@@ -102,7 +102,7 @@ export default function CatalogProductDetails() {
 
     const checkoutUrl = createPageUrl("CatalogCheckout2") + `?product_id=${product.id}`;
     console.log('🔗 Navegando para:', checkoutUrl);
-    
+
     sessionStorage.setItem('selectedProduct', JSON.stringify(product));
     navigate(checkoutUrl);
   };
@@ -155,8 +155,8 @@ export default function CatalogProductDetails() {
       <div className="min-h-screen flex items-center justify-center p-4 text-center bg-gray-900">
         <div>
           <h2 className="text-xl font-semibold mb-2 text-white">Produto não encontrado</h2>
-          <Button 
-            onClick={() => navigate(createPageUrl("Catalog"))} 
+          <Button
+            onClick={() => navigate(createPageUrl("Catalog"))}
             className="bg-green-600 hover:bg-green-700"
           >
             Voltar ao Catálogo
@@ -172,9 +172,9 @@ export default function CatalogProductDetails() {
   const handleAddToCart = () => {
     const savedCart = localStorage.getItem('catalogCart');
     let cart = savedCart ? JSON.parse(savedCart) : [];
-    
+
     const existingIndex = cart.findIndex(item => item.id === product.id);
-    
+
     if (existingIndex >= 0) {
       cart[existingIndex].quantity += quantity;
       toast.success(`Quantidade atualizada: ${cart[existingIndex].quantity}x`);
@@ -190,10 +190,10 @@ export default function CatalogProductDetails() {
       });
       toast.success('Produto adicionado ao carrinho!');
     }
-    
+
     localStorage.setItem('catalogCart', JSON.stringify(cart));
     window.dispatchEvent(new Event('cartUpdated'));
-    
+
     // Abre o popup do carrinho
     window.dispatchEvent(new Event('openCartPopup'));
   };
@@ -227,9 +227,9 @@ export default function CatalogProductDetails() {
     <div className="min-h-screen bg-gray-900 text-white">
       {/* HEADER */}
       <header className="sticky top-0 z-40 bg-gray-900/95 backdrop-blur border-b border-gray-800 px-4 py-3 flex items-center justify-between">
-        <Button 
-          variant="ghost" 
-          size="icon" 
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={() => navigate(createPageUrl("Catalog"))}
           className="text-white hover:bg-gray-800"
         >
@@ -246,14 +246,14 @@ export default function CatalogProductDetails() {
       {/* MAIN CONTENT - DESKTOP LAYOUT */}
       <main className="max-w-6xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
+
           {/* COLUNA ESQUERDA - IMAGENS */}
           <div className="space-y-4">
             {/* IMAGEM PRINCIPAL */}
             <div className="relative bg-white rounded-lg overflow-hidden aspect-square">
               {currentImage ? (
-                <img 
-                  src={currentImage} 
+                <img
+                  src={currentImage}
                   alt={product.description}
                   className="w-full h-full object-contain"
                 />
@@ -297,9 +297,8 @@ export default function CatalogProductDetails() {
                   <button
                     key={idx}
                     onClick={() => setCurrentImageIndex(idx)}
-                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${
-                      idx === currentImageIndex ? 'border-green-500' : 'border-gray-600 hover:border-gray-400'
-                    }`}
+                    className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${idx === currentImageIndex ? 'border-green-500' : 'border-gray-600 hover:border-gray-400'
+                      }`}
                   >
                     <img src={img} alt="" className="w-full h-full object-cover" />
                   </button>
@@ -321,35 +320,35 @@ export default function CatalogProductDetails() {
             </div>
 
             {/* BOTÕES DE AÇÃO */}
-             <div className="space-y-3">
-               {/* ADICIONAR AO CARRINHO */}
-               {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
-                 <Button
-                   disabled
-                   className="w-full h-12 bg-yellow-600 hover:bg-yellow-600 text-white font-bold text-base rounded-lg cursor-not-allowed opacity-90"
-                 >
-                   ESGOTADO
-                 </Button>
-               ) : (
-                 <Button
-                   onClick={handleAddToCart}
-                   className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
-                 >
-                   <ShoppingCart className="w-5 h-5 mr-2" />
-                   ADICIONAR AO CARRINHO
-                 </Button>
-               )}
+            <div className="space-y-3">
+              {/* ADICIONAR AO CARRINHO */}
+              {(product.quantity === 0 || product.quantity === null || product.quantity === undefined) ? (
+                <Button
+                  disabled
+                  className="w-full h-12 bg-yellow-600 hover:bg-yellow-600 text-white font-bold text-base rounded-lg cursor-not-allowed opacity-90"
+                >
+                  ESGOTADO
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleAddToCart}
+                  className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-bold text-base rounded-lg"
+                >
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  ADICIONAR AO CARRINHO
+                </Button>
+              )}
 
-               {/* PEDIR PELO WHATSAPP */}
-               <Button
-                 onClick={handleWhatsAppToLicensee}
-                 variant="outline"
-                 className="w-full h-12 border-2 border-emerald-500 text-emerald-600 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent shadow-[inset_0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[inset_0_0_18px_rgba(16,185,129,0.6)] transition-shadow duration-300 transition-colors"
-               >
-                 <MessageCircle className="w-5 h-5 mr-2" />
-                 PEDIR PELO WHATSAPP
-               </Button>
-             </div>
+              {/* PEDIR PELO WHATSAPP */}
+              <Button
+                onClick={handleWhatsAppToLicensee}
+                variant="outline"
+                className="w-full h-12 border-2 border-emerald-500 text-emerald-600 hover:text-white hover:bg-emerald-500/10 rounded-lg font-bold bg-transparent shadow-[inset_0_0_12px_rgba(16,185,129,0.4)] hover:shadow-[inset_0_0_18px_rgba(16,185,129,0.6)] transition-shadow duration-300 transition-colors"
+              >
+                <MessageCircle className="w-5 h-5 mr-2" />
+                PEDIR PELO WHATSAPP
+              </Button>
+            </div>
 
             {/* ESTOQUE */}
             {product.quantity && (
@@ -387,7 +386,7 @@ export default function CatalogProductDetails() {
 
       {/* MODAL FULLSCREEN */}
       {showFullscreen && currentImage && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
           onClick={() => setShowFullscreen(false)}
         >
@@ -397,8 +396,8 @@ export default function CatalogProductDetails() {
           >
             <ArrowLeft className="w-8 h-8" />
           </button>
-          <img 
-            src={currentImage} 
+          <img
+            src={currentImage}
             alt={product.description}
             className="max-w-full max-h-full object-contain"
             onClick={(e) => e.stopPropagation()}
@@ -425,7 +424,7 @@ export default function CatalogProductDetails() {
       {/* COMPARAI BUTTON FLUTUANTE */}
       {product && (
         <div className="fixed bottom-4 right-4 z-40">
-          <ComparaiButton 
+          <ComparaiButton
             auction={{
               id: product.id,
               title: product.description,

@@ -51,7 +51,7 @@ export default function StoreRegistration() {
       try {
         const savedUserJSON = localStorage.getItem('currentUser');
         const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-        
+
         let userFound = null;
 
         if (savedUserJSON && isLoggedIn) {
@@ -116,7 +116,7 @@ export default function StoreRegistration() {
 
   const handleShareLoginLink = () => {
     const loginUrl = `${window.location.origin}${createPageUrl("LojistaDashboard")}`;
-    
+
     if (navigator.share) {
       navigator.share({
         title: "Portal do Lojista",
@@ -139,9 +139,26 @@ export default function StoreRegistration() {
 
   const handleUpdateStore = async (e) => {
     e.preventDefault();
-    
+
     try {
-      await StoreEntity.update(editingStore.id, editingStore);
+      const updateData = { ...editingStore };
+
+      // 🔒 Se a senha foi alterada, hashear antes de salvar
+      if (updateData.store_password && !updateData.store_password.startsWith('$2')) {
+        try {
+          const hashResponse = await base44.functions.invoke('hashStorePassword', {
+            password: updateData.store_password
+          });
+          const hashResult = hashResponse?.data || hashResponse;
+          if (hashResult?.success && hashResult?.hashed_password) {
+            updateData.store_password = hashResult.hashed_password;
+          }
+        } catch (hashErr) {
+          console.warn('⚠️ Erro ao hashear senha na edição:', hashErr);
+        }
+      }
+
+      await StoreEntity.update(editingStore.id, updateData);
       toast.success("Lojista atualizado com sucesso!");
       setShowEditModal(false);
       setEditingStore(null);
@@ -154,7 +171,7 @@ export default function StoreRegistration() {
 
   const handleDeleteStore = async (storeId) => {
     if (!confirm("Tem certeza que deseja excluir este lojista?")) return;
-    
+
     try {
       await StoreEntity.delete(storeId);
       toast.success("Lojista excluído com sucesso!");
@@ -184,7 +201,7 @@ export default function StoreRegistration() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!formData.store_name || !formData.owner_name || !formData.email || !formData.phone) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
@@ -206,10 +223,23 @@ export default function StoreRegistration() {
         status: "active"
       };
 
+      // 🔒 Hashear senha antes de salvar no banco
+      try {
+        const hashResponse = await base44.functions.invoke('hashStorePassword', {
+          password: formData.store_password
+        });
+        const hashResult = hashResponse?.data || hashResponse;
+        if (hashResult?.success && hashResult?.hashed_password) {
+          storeData.store_password = hashResult.hashed_password;
+        }
+      } catch (hashErr) {
+        console.warn('⚠️ Erro ao hashear senha, salvando como texto puro (fallback):', hashErr);
+      }
+
       await StoreEntity.create(storeData);
-      
+
       toast.success("Loja registrada e ativada com sucesso!");
-      
+
       // Limpar formulário e recarregar lista
       setFormData({
         store_name: "",
@@ -225,7 +255,7 @@ export default function StoreRegistration() {
         store_password: "",
         notes: ""
       });
-      
+
       loadStores();
     } catch (error) {
       console.error("Erro ao registrar loja:", error);
@@ -379,7 +409,7 @@ export default function StoreRegistration() {
                   🔐 <strong>Configuração de Acesso:</strong> Defina o login e senha que o lojista usará para acessar o portal.
                 </p>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-gray-300">Login de Acesso *</Label>
@@ -473,7 +503,7 @@ export default function StoreRegistration() {
                             <p className="text-gray-400 text-sm">{store.owner_name}</p>
                           </div>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3 text-sm">
                           <div>
                             <span className="text-gray-500">Email:</span>
@@ -495,7 +525,7 @@ export default function StoreRegistration() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex gap-2 ml-4">
                         <Button
                           variant="outline"
@@ -528,7 +558,7 @@ export default function StoreRegistration() {
             <DialogHeader>
               <DialogTitle>Editar Lojista</DialogTitle>
             </DialogHeader>
-            
+
             {editingStore && (
               <form onSubmit={handleUpdateStore} className="space-y-4 mt-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -536,64 +566,64 @@ export default function StoreRegistration() {
                     <Label className="text-gray-300">Nome da Loja</Label>
                     <Input
                       value={editingStore.store_name}
-                      onChange={(e) => setEditingStore({...editingStore, store_name: e.target.value})}
+                      onChange={(e) => setEditingStore({ ...editingStore, store_name: e.target.value })}
                       className="bg-gray-900 border-gray-700 text-white"
                     />
                   </div>
-                  
+
                   <div>
                     <Label className="text-gray-300">Proprietário</Label>
                     <Input
                       value={editingStore.owner_name}
-                      onChange={(e) => setEditingStore({...editingStore, owner_name: e.target.value})}
+                      onChange={(e) => setEditingStore({ ...editingStore, owner_name: e.target.value })}
                       className="bg-gray-900 border-gray-700 text-white"
                     />
                   </div>
-                  
+
                   <div>
                     <Label className="text-gray-300">Email</Label>
                     <Input
                       type="email"
                       value={editingStore.email}
-                      onChange={(e) => setEditingStore({...editingStore, email: e.target.value})}
+                      onChange={(e) => setEditingStore({ ...editingStore, email: e.target.value })}
                       className="bg-gray-900 border-gray-700 text-white"
                     />
                   </div>
-                  
+
                   <div>
                     <Label className="text-gray-300">Telefone</Label>
                     <Input
                       value={editingStore.phone}
-                      onChange={(e) => setEditingStore({...editingStore, phone: e.target.value})}
+                      onChange={(e) => setEditingStore({ ...editingStore, phone: e.target.value })}
                       className="bg-gray-900 border-gray-700 text-white"
                     />
                   </div>
-                  
+
                   <div>
                     <Label className="text-gray-300">Login de Acesso</Label>
                     <Input
                       value={editingStore.store_login}
-                      onChange={(e) => setEditingStore({...editingStore, store_login: e.target.value})}
+                      onChange={(e) => setEditingStore({ ...editingStore, store_login: e.target.value })}
                       className="bg-gray-900 border-gray-700 text-white"
                     />
                   </div>
-                  
+
                   <div>
                     <Label className="text-gray-300">Nova Senha (deixe em branco para manter)</Label>
                     <Input
                       type="password"
                       placeholder="Nova senha"
-                      onChange={(e) => setEditingStore({...editingStore, store_password: e.target.value || editingStore.store_password})}
+                      onChange={(e) => setEditingStore({ ...editingStore, store_password: e.target.value || editingStore.store_password })}
                       className="bg-gray-900 border-gray-700 text-white"
                     />
                   </div>
-                  
+
                   <div>
                     <Label className="text-gray-300">Status de Acesso</Label>
                     <div className="flex gap-3 mt-2">
                       <Button
                         type="button"
-                        onClick={() => setEditingStore({...editingStore, status: 'active'})}
+                        onClick={() => setEditingStore({ ...editingStore, status: 'active' })}
                         className={editingStore.status === 'active' ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-700 hover:bg-gray-600'}
                       >
                         <Unlock className="w-4 h-4 mr-2" />
@@ -601,7 +631,7 @@ export default function StoreRegistration() {
                       </Button>
                       <Button
                         type="button"
-                        onClick={() => setEditingStore({...editingStore, status: 'inactive'})}
+                        onClick={() => setEditingStore({ ...editingStore, status: 'inactive' })}
                         className={editingStore.status === 'inactive' ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-700 hover:bg-gray-600'}
                       >
                         <Lock className="w-4 h-4 mr-2" />
@@ -610,27 +640,27 @@ export default function StoreRegistration() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <Label className="text-gray-300">Endereço</Label>
                   <Textarea
                     value={editingStore.address || ""}
-                    onChange={(e) => setEditingStore({...editingStore, address: e.target.value})}
+                    onChange={(e) => setEditingStore({ ...editingStore, address: e.target.value })}
                     className="bg-gray-900 border-gray-700 text-white"
                     rows={2}
                   />
                 </div>
-                
+
                 <div>
                   <Label className="text-gray-300">Observações</Label>
                   <Textarea
                     value={editingStore.notes || ""}
-                    onChange={(e) => setEditingStore({...editingStore, notes: e.target.value})}
+                    onChange={(e) => setEditingStore({ ...editingStore, notes: e.target.value })}
                     className="bg-gray-900 border-gray-700 text-white"
                     rows={3}
                   />
                 </div>
-                
+
                 <div className="flex gap-3 pt-4">
                   <Button
                     type="button"

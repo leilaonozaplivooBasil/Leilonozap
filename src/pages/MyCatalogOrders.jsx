@@ -25,17 +25,17 @@ const CatalogOrderCard = ({ order, onTrackClick }) => {
   return (
     <div className="group cursor-pointer">
       <Card className="bg-gradient-to-br from-gray-800/50 to-gray-900/50 backdrop-blur-xl border border-white/10 shadow-lg shadow-black/30 text-white overflow-hidden flex flex-col h-full hover:border-green-500/40 hover:shadow-xl hover:shadow-green-500/20 transition-all duration-300">
-        
+
         {/* IMAGEM - Destaque Principal */}
         <div className="relative w-full bg-gradient-to-b from-gray-600/30 to-gray-900/60 px-5 pt-6 pb-5 flex justify-center">
           <div className="relative w-32 h-32 rounded-xl overflow-hidden bg-gradient-to-br from-white/10 to-gray-900/40 border border-white/20 flex items-center justify-center group-hover:scale-110 transition-all duration-300 shadow-lg shadow-black/40">
-            <img 
-              src={mainImage} 
-              alt={order.product_title} 
+            <img
+              src={mainImage}
+              alt={order.product_title}
               onError={(e) => {
                 e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%23374151' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='12' fill='%239CA3AF' text-anchor='middle' dy='.3em'%3EImagem%3C/text%3E%3C/svg%3E"
               }}
-              className="w-full h-full object-cover" 
+              className="w-full h-full object-cover"
             />
           </div>
         </div>
@@ -132,19 +132,19 @@ export default function MyCatalogOrders() {
 
         // Buscar pedidos do catálogo pelo buyer_id ou buyer_email
         console.log('🔍 Buscando pedidos para user:', { id: user.id, email: user.email });
-        
+
         const allOrders = await CatalogSale.list("-created_date", 500);
         console.log('📦 Total de pedidos no sistema:', allOrders?.length || 0);
-        
+
         // Filtrar pedidos do usuário (por ID, email ou created_by)
-        const userOrders = allOrders.filter(order => 
-          order.buyer_id === user.id || 
-          order.buyer_email === user.email || 
+        const userOrders = allOrders.filter(order =>
+          order.buyer_id === user.id ||
+          order.buyer_email === user.email ||
           order.created_by === user.email
         );
 
         console.log('🔍 Pedidos encontrados:', userOrders.length, 'Filtros - buyer_id:', user.id, 'email:', user.email);
-        
+
         console.log('✅ Pedidos do usuário:', userOrders.length, userOrders);
         setOrders(userOrders);
       } catch (error) {
@@ -153,7 +153,7 @@ export default function MyCatalogOrders() {
         setIsLoading(false);
       }
     };
-    
+
     loadData();
 
     // 🔄 Subscrever a atualizações em tempo real de CatalogSale
@@ -161,21 +161,21 @@ export default function MyCatalogOrders() {
       if (event.type === 'update') {
         const savedUser = localStorage.getItem('currentUser');
         if (!savedUser) return;
-        
+
         const user = JSON.parse(savedUser);
-        
+
         // Se atualização é para um pedido desse usuário, recarregar
         if (event.data?.buyer_id === user.id || event.data?.buyer_email === user.email) {
           console.log('📢 Pedido atualizado em tempo real:', event.id);
-          
-          setOrders(prev => 
+
+          setOrders(prev =>
             prev.map(order => order.id === event.id ? event.data : order)
           );
 
           // Se o pagamento foi confirmado, mostrar notificação
           if (event.data?.status === 'paid' && prev.find(o => o.id === event.id)?.status !== 'paid') {
             console.log('✅ Pagamento confirmado para pedido:', event.id);
-            
+
             // Dispara evento global para mostrar popup
             window.dispatchEvent(new CustomEvent('paymentConfirmed', {
               detail: {
@@ -237,7 +237,7 @@ export default function MyCatalogOrders() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Voltar
           </Button>
-          
+
           <div className="flex items-center gap-3 sm:gap-4 mb-2">
             <div className="p-2.5 sm:p-3 rounded-lg bg-gradient-to-br from-green-500/20 to-emerald-500/20 border border-green-500/30">
               <ShoppingBag className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
@@ -272,18 +272,16 @@ export default function MyCatalogOrders() {
                 <button
                   key={option.id}
                   onClick={() => setActiveFilter(option.id)}
-                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${
-                    activeFilter === option.id
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-300 flex items-center gap-2 ${activeFilter === option.id
                       ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30'
                       : 'bg-gray-800/50 border border-gray-700 text-gray-300 hover:bg-gray-700 hover:border-gray-600'
-                  }`}
+                    }`}
                 >
                   {option.label}
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    activeFilter === option.id
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${activeFilter === option.id
                       ? 'bg-white/20'
                       : 'bg-gray-700'
-                  }`}>
+                    }`}>
                     {option.count}
                   </span>
                 </button>
@@ -299,9 +297,9 @@ export default function MyCatalogOrders() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
                 {filteredOrders.map(order => (
-                  <CatalogOrderCard 
-                    key={order.id} 
-                    order={order} 
+                  <CatalogOrderCard
+                    key={order.id}
+                    order={order}
                     onTrackClick={handleTrackClick}
                   />
                 ))}

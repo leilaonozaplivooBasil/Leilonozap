@@ -3,11 +3,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  Package, 
-  TruckIcon, 
-  CheckCircle, 
-  Clock, 
+import {
+  Package,
+  TruckIcon,
+  CheckCircle,
+  Clock,
   ArrowLeft,
   Mail
 } from 'lucide-react';
@@ -24,7 +24,7 @@ export default function CatalogOrderTracking() {
     const loadOrderData = async () => {
       try {
         setIsLoading(true);
-        
+
         // Busca venda do catálogo
         const saleData = await base44.entities.CatalogSale.filter({ id: saleId });
         if (saleData.length > 0) {
@@ -44,39 +44,39 @@ export default function CatalogOrderTracking() {
 
   const getStatusInfo = (status) => {
     const statuses = {
-      pending_payment: { 
-        label: 'Aguardando Pagamento', 
-        color: 'bg-yellow-500', 
+      pending_payment: {
+        label: 'Aguardando Pagamento',
+        color: 'bg-yellow-500',
         icon: Clock,
         description: 'Realize o pagamento para prosseguir com o envio'
       },
-      paid: { 
-        label: 'Pagamento Confirmado', 
-        color: 'bg-green-500', 
+      paid: {
+        label: 'Pagamento Confirmado',
+        color: 'bg-green-500',
         icon: CheckCircle,
         description: 'Seu pedido está sendo preparado para envio'
       },
-      processing: { 
-        label: 'Processando', 
-        color: 'bg-blue-500', 
+      processing: {
+        label: 'Processando',
+        color: 'bg-blue-500',
         icon: Package,
         description: 'Seu pedido está sendo preparado'
       },
-      shipped: { 
-        label: 'Em Transporte', 
-        color: 'bg-indigo-500', 
+      shipped: {
+        label: 'Em Transporte',
+        color: 'bg-indigo-500',
         icon: TruckIcon,
         description: 'Seu pedido está a caminho'
       },
-      delivered: { 
-        label: 'Entregue', 
-        color: 'bg-green-600', 
+      delivered: {
+        label: 'Entregue',
+        color: 'bg-green-600',
         icon: Package,
         description: 'Pedido entregue com sucesso!'
       },
-      canceled: { 
-        label: 'Cancelado', 
-        color: 'bg-red-500', 
+      canceled: {
+        label: 'Cancelado',
+        color: 'bg-red-500',
         icon: Clock,
         description: 'Este pedido foi cancelado'
       }
@@ -117,8 +117,8 @@ export default function CatalogOrderTracking() {
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => navigate(-1)}
             className="bg-white border-gray-300 text-gray-900 font-semibold hover:bg-blue-900 hover:text-white hover:border-blue-900"
           >
@@ -203,8 +203,8 @@ export default function CatalogOrderTracking() {
           <CardContent>
             <div className="flex gap-4">
               {order.product_image && (
-                <img 
-                  src={order.product_image} 
+                <img
+                  src={order.product_image}
                   alt={order.product_title}
                   className="w-24 h-24 object-cover rounded-lg"
                 />

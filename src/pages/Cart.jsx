@@ -6,17 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  ArrowLeft, 
-  Loader2, 
-  Truck, 
+import {
+  ArrowLeft,
+  Loader2,
+  Truck,
   MapPin,
   Store,
   Trash2,
@@ -44,7 +44,7 @@ export default function Cart() {
   const [pollingInterval, setPollingInterval] = useState(null);
   const [pixConfirmed, setPixConfirmed] = useState(false);
   const [createdSales, setCreatedSales] = useState([]);
-  
+
   // Form data
   const [formData, setFormData] = useState({
     name: '',
@@ -325,7 +325,7 @@ export default function Cart() {
     }
 
     const totalAmount = calculateSubtotal();
-    
+
     if (totalAmount < 5) {
       toast.error('Valor mínimo para pagamento: R$ 5,00');
       return;
@@ -338,11 +338,11 @@ export default function Cart() {
 
     try {
       const referralCode = sessionStorage.getItem('referralCode');
-      
+
       // Resolver licensee
       let licenseeId = 'site_official';
       let licenseeData = null;
-      
+
       if (referralCode) {
         try {
           const licensees = await base44.entities.AppUser.filter({ referral_code: referralCode });
@@ -390,8 +390,9 @@ export default function Cart() {
       setCreatedSales(salesBatch);
 
       // Criar pagamento ASAAS único para todo o carrinho
+      // 🔒 Envia TODOS os IDs separados por vírgula no campo existente (sem mudar schema)
       const paymentPayload = {
-        catalog_sale_id: salesBatch[0].id, // Usa primeiro como referência
+        catalog_sale_id: salesBatch.map(s => s.id).join(','),
         buyer_name: formData.name.trim(),
         buyer_email: formData.email.trim(),
         buyer_cpf: formData.cpf.replace(/\D/g, ''),
@@ -420,13 +421,13 @@ export default function Cart() {
       if (paymentResponse?.success) {
         setPixData({ ...paymentResponse, billing_type: paymentType });
         toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
-        
+
         // Limpa carrinho apenas se pagamento foi criado
         updateCart([]);
       } else {
         const errorMsg = paymentResponse?.error || 'Erro desconhecido';
         const errorDetails = paymentResponse?.details;
-        
+
         if (errorDetails && Array.isArray(errorDetails)) {
           const asaasError = errorDetails.map(e => e.description).join(', ');
           // Mensagem amigável para CPF inválido
@@ -438,7 +439,7 @@ export default function Cart() {
         } else {
           toast.error(`Erro: ${errorMsg}`);
         }
-        
+
         // Limpar vendas criadas em caso de erro
         for (const sale of salesBatch) {
           try {
@@ -454,7 +455,7 @@ export default function Cart() {
       setIsProcessing(false);
       toast.dismiss('checkout-loading');
       toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
-      
+
       // Limpar vendas em caso de erro
       for (const sale of salesBatch) {
         try {
@@ -498,7 +499,7 @@ export default function Cart() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Coluna Esquerda - Formulários */}
           <div className="space-y-4">
-            
+
             {/* Seção 1 - Seus Dados */}
             <Card className="bg-gray-800 border-gray-700 p-5">
               <div className="flex items-center gap-2 mb-5">
@@ -674,8 +675,8 @@ export default function Cart() {
                       </div>
                       <div>
                         <Label className="text-gray-300 text-sm">Estado</Label>
-                        <Select 
-                          value={formData.state} 
+                        <Select
+                          value={formData.state}
                           onValueChange={(value) => setFormData(prev => ({ ...prev, state: value }))}
                         >
                           <SelectTrigger className="bg-gray-700 border-gray-600 text-white mt-1.5 h-11">
@@ -695,7 +696,7 @@ export default function Cart() {
                 )}
 
                 {/* Banner WhatsApp */}
-                <div 
+                <div
                   onClick={openWhatsApp}
                   className="bg-gradient-to-r from-green-600/20 to-green-500/10 border border-green-600/30 rounded-lg p-4 cursor-pointer hover:from-green-600/30 transition-all"
                 >
@@ -727,7 +728,7 @@ export default function Cart() {
                     {cartItems.map((item) => {
                       const price = item.price_catalog || item.selling_price_wholesale || 0;
                       const imageUrl = item.image_urls?.[0] || 'https://via.placeholder.com/80';
-                      
+
                       return (
                         <div key={item.id} className="flex gap-4 p-4 bg-gray-700/40 rounded-xl border border-gray-600/50">
                           <img
@@ -803,7 +804,7 @@ export default function Cart() {
                     onChange={(e) => setCoupon(e.target.value)}
                     className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-10"
                   />
-                  <Button 
+                  <Button
                     className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white h-10"
                   >
                     Aplicar
@@ -831,11 +832,10 @@ export default function Cart() {
                   <button
                     type="button"
                     onClick={() => setPaymentType('PIX')}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      paymentType === 'PIX'
-                        ? 'border-green-500 bg-green-500/10'
-                        : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
-                    }`}
+                    className={`p-3 rounded-lg border-2 transition-all ${paymentType === 'PIX'
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
+                      }`}
                   >
                     <p className="text-white font-semibold">PIX</p>
                     <p className="text-gray-400 text-xs">Aprovação imediata</p>
@@ -843,11 +843,10 @@ export default function Cart() {
                   <button
                     type="button"
                     onClick={() => setPaymentType('CREDIT_CARD')}
-                    className={`p-3 rounded-lg border-2 transition-all ${
-                      paymentType === 'CREDIT_CARD'
-                        ? 'border-green-500 bg-green-500/10'
-                        : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
-                    }`}
+                    className={`p-3 rounded-lg border-2 transition-all ${paymentType === 'CREDIT_CARD'
+                      ? 'border-green-500 bg-green-500/10'
+                      : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
+                      }`}
                   >
                     <p className="text-white font-semibold">Cartão</p>
                     <p className="text-gray-400 text-xs">Crédito</p>
@@ -879,7 +878,7 @@ export default function Cart() {
                         onChange={(e) => {
                           let v = e.target.value.replace(/\D/g, '');
                           if (v.length > 4) v = v.slice(0, 4);
-                          if (v.length >= 2) v = `${v.slice(0,2)}/${v.slice(2,4)}`;
+                          if (v.length >= 2) v = `${v.slice(0, 2)}/${v.slice(2, 4)}`;
                           setCardExpiry(v);
                         }}
                         maxLength={5}
@@ -914,7 +913,7 @@ export default function Cart() {
             {pixData && pixData.billing_type === 'PIX' && !pixConfirmed && (
               <Card className="bg-gray-800 border-gray-700 p-5">
                 <h3 className="text-lg font-bold text-green-400 text-center mb-4">💚 Pague com PIX</h3>
-                
+
                 {/* Indicador de monitoramento */}
                 <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
@@ -922,9 +921,9 @@ export default function Cart() {
                 </div>
 
                 <div className="bg-white rounded-lg p-4 mb-4">
-                  <img 
-                    src={pixData.pix_qr_code} 
-                    alt="QR Code PIX" 
+                  <img
+                    src={pixData.pix_qr_code}
+                    alt="QR Code PIX"
                     className="w-full max-w-[280px] mx-auto"
                   />
                 </div>

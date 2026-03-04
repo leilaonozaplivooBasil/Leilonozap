@@ -78,10 +78,21 @@ export default function LojistaDashboard() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const stores = await StoreEntity.list();
-      const store = stores.find(s => s.store_login === loginForm.login && s.store_password === loginForm.password);
-      if (!store) { toast.error("Login ou senha incorretos"); setIsLoading(false); return; }
-      if (store.status !== "active") { toast.error("Sua loja ainda não foi aprovada pelo administrador"); setIsLoading(false); return; }
+      // 🔒 Auth segura: valida credenciais no backend, sem trafegar senhas
+      const response = await base44.functions.invoke('lojistaAuth', {
+        login: loginForm.login,
+        password: loginForm.password
+      });
+
+      const result = response?.data || response;
+
+      if (!result?.success) {
+        toast.error(result?.error || "Login ou senha incorretos");
+        setIsLoading(false);
+        return;
+      }
+
+      const store = result.store;
       sessionStorage.setItem("lojista_login", JSON.stringify(store));
       setCurrentStore(store);
       setIsLoggedIn(true);
@@ -191,7 +202,7 @@ export default function LojistaDashboard() {
       }
       const printWindow = window.open('', '_blank');
       if (!printWindow) { toast.error("Bloqueio de pop-up detectado."); return; }
-      const htmlContent = `<html><head><title>Comprovante</title><style>body{font-family:Arial,sans-serif;padding:20px;max-width:800px;margin:0 auto}.header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}.section{margin:20px 0}.section-title{font-weight:bold;font-size:14px;margin-bottom:10px;border-bottom:1px solid #ccc;padding-bottom:5px}.info{margin:8px 0;font-size:13px}.footer{margin-top:30px;text-align:center;font-size:12px;border-top:1px solid #ccc;padding-top:10px}</style></head><body><div class="header"><h2>${currentStore.store_name}</h2><p>CNPJ: ${currentStore.cnpj||'N/A'}</p></div><h3>Comprovante de Venda</h3><div class="section"><div class="section-title">Produto</div><div class="info"><strong>Descrição:</strong> ${auction.title||'N/A'}</div><div class="info"><strong>Valor:</strong> R$ ${(auction.current_price||0).toFixed(2)}</div><div class="info"><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</div></div><div class="section"><div class="section-title">Cliente</div><div class="info"><strong>Nome:</strong> ${clientData?.full_name||auction.winner_name||'N/A'}</div><div class="info"><strong>Email:</strong> ${clientData?.email||'N/A'}</div><div class="info"><strong>Telefone:</strong> ${clientData?.phone||'N/A'}</div></div>${clientData?.address_street?`<div class="section"><div class="section-title">Endereço</div><div class="info">${clientData.address_street}${clientData.address_number?', '+clientData.address_number:''}</div><div class="info">${clientData.address_neighborhood||''} - ${clientData.address_city||''} / ${clientData.address_state||''}</div><div class="info">CEP: ${clientData.address_zip_code||'N/A'}</div></div>`:''}<div class="footer"><p>Obrigado pela preferência!</p><p style="font-size:10px;color:#666">Gerado em ${new Date().toLocaleString('pt-BR')}</p></div></body></html>`;
+      const htmlContent = `<html><head><title>Comprovante</title><style>body{font-family:Arial,sans-serif;padding:20px;max-width:800px;margin:0 auto}.header{text-align:center;border-bottom:2px solid #000;padding-bottom:10px;margin-bottom:20px}.section{margin:20px 0}.section-title{font-weight:bold;font-size:14px;margin-bottom:10px;border-bottom:1px solid #ccc;padding-bottom:5px}.info{margin:8px 0;font-size:13px}.footer{margin-top:30px;text-align:center;font-size:12px;border-top:1px solid #ccc;padding-top:10px}</style></head><body><div class="header"><h2>${currentStore.store_name}</h2><p>CNPJ: ${currentStore.cnpj || 'N/A'}</p></div><h3>Comprovante de Venda</h3><div class="section"><div class="section-title">Produto</div><div class="info"><strong>Descrição:</strong> ${auction.title || 'N/A'}</div><div class="info"><strong>Valor:</strong> R$ ${(auction.current_price || 0).toFixed(2)}</div><div class="info"><strong>Data:</strong> ${new Date().toLocaleDateString('pt-BR')}</div></div><div class="section"><div class="section-title">Cliente</div><div class="info"><strong>Nome:</strong> ${clientData?.full_name || auction.winner_name || 'N/A'}</div><div class="info"><strong>Email:</strong> ${clientData?.email || 'N/A'}</div><div class="info"><strong>Telefone:</strong> ${clientData?.phone || 'N/A'}</div></div>${clientData?.address_street ? `<div class="section"><div class="section-title">Endereço</div><div class="info">${clientData.address_street}${clientData.address_number ? ', ' + clientData.address_number : ''}</div><div class="info">${clientData.address_neighborhood || ''} - ${clientData.address_city || ''} / ${clientData.address_state || ''}</div><div class="info">CEP: ${clientData.address_zip_code || 'N/A'}</div></div>` : ''}<div class="footer"><p>Obrigado pela preferência!</p><p style="font-size:10px;color:#666">Gerado em ${new Date().toLocaleString('pt-BR')}</p></div></body></html>`;
       printWindow.document.write(htmlContent);
       printWindow.document.close();
       setTimeout(() => printWindow.print(), 250);

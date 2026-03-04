@@ -3,10 +3,10 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
     const startTime = Date.now();
     console.log('⏱️ START createAsaasPayment');
-    
+
     try {
         const base44 = createClientFromRequest(req);
-        
+
         // ⚠️ REMOVIDO: Validação de auth (frontend já valida)
         // Backend functions podem ser chamadas sem auth quando invocadas via SDK
 
@@ -24,6 +24,11 @@ Deno.serve(async (req) => {
             card_data, // Dados do cartão (se CREDIT_CARD)
             deposit_type // 'digital_wallet' ou null (para identificar tipo de depósito)
         } = await req.json();
+
+        // 🔒 Normalizar IDs do lote: catalog_sale_id pode conter vírgulas (ex: "id1,id2,id3")
+        const allCatalogSaleIds = catalog_sale_id
+            ? String(catalog_sale_id).split(',').map((id: string) => id.trim()).filter(Boolean)
+            : [];
 
         // Validações
         if (!amount || amount <= 0) {
@@ -43,13 +48,13 @@ Deno.serve(async (req) => {
 
         // 🔒 PASSO 1: Criar ou buscar cliente no ASAAS
         console.log('📋 Criando/buscando cliente no ASAAS...');
-        
+
         let customerId = null;
-        
+
         // Buscar cliente existente por CPF
         const searchController = new AbortController();
         const searchTimeout = setTimeout(() => searchController.abort(), 10000); // 10s timeout
-        
+
         const searchResponse = await fetch(
             `https://api.asaas.com/v3/customers?cpfCnpj=${cleanCpf}`,
             {
@@ -61,9 +66,9 @@ Deno.serve(async (req) => {
             }
         );
         clearTimeout(searchTimeout);
-        
+
         const searchData = await searchResponse.json();
-        
+
         if (searchData.data && searchData.data.length > 0) {
             customerId = searchData.data[0].id;
             console.log('✅ Cliente existente encontrado:', customerId);
@@ -71,7 +76,7 @@ Deno.serve(async (req) => {
             // Criar novo cliente
             const createController = new AbortController();
             const createTimeout = setTimeout(() => createController.abort(), 10000); // 10s timeout
-            
+
             const customerResponse = await fetch('https://api.asaas.com/v3/customers', {
                 method: 'POST',
                 headers: {
@@ -90,7 +95,7 @@ Deno.serve(async (req) => {
             clearTimeout(createTimeout);
 
             const customerData = await customerResponse.json();
-            
+
             if (customerData.errors) {
                 console.error('❌ Erro ao criar cliente:', customerData.errors);
                 return Response.json({ error: 'Erro ao criar cliente ASAAS', details: customerData.errors }, { status: 400 });
@@ -102,14 +107,14 @@ Deno.serve(async (req) => {
 
         // 🔒 PASSO 2: Criar cobrança no ASAAS
         console.log('💳 Criando cobrança no ASAAS...', { billing_type, amount, customer: customerId });
-        
+
         const externalReference = catalog_sale_id || auction_id;
-        
+
         // dueDate é OBRIGATÓRIO (sim, mesmo para cartão)
         const dueDate = new Date();
         dueDate.setDate(dueDate.getDate() + 1);
         const dueDateStr = dueDate.toISOString().split('T')[0];
-        
+
         const paymentPayload = {
             customer: customerId,
             billingType: billing_type,
@@ -122,7 +127,7 @@ Deno.serve(async (req) => {
 
         // Se for cartão, adicionar dados do cartão
         if (billing_type === 'CREDIT_CARD' && card_data) {
-            
+
             paymentPayload.creditCard = {
                 holderName: card_data.holderName,
                 number: card_data.number,
@@ -130,7 +135,7 @@ Deno.serve(async (req) => {
                 expiryYear: card_data.expiryYear,
                 ccv: card_data.ccv
             };
-            
+
             // Adicionar endereço se disponível
             if (card_data.address) {
                 paymentPayload.creditCardHolderInfo = {
@@ -147,10 +152,10 @@ Deno.serve(async (req) => {
         }
 
         console.log('📤 Enviando payload para ASAAS:', JSON.stringify(paymentPayload, null, 2));
-        
+
         const paymentController = new AbortController();
         const paymentTimeout = setTimeout(() => paymentController.abort(), 15000); // 15s timeout
-        
+
         const paymentResponse = await fetch('https://api.asaas.com/v3/payments', {
             method: 'POST',
             headers: {
@@ -163,13 +168,13 @@ Deno.serve(async (req) => {
         clearTimeout(paymentTimeout);
 
         const paymentData = await paymentResponse.json();
-        
+
         console.log('📥 Resposta ASAAS:', { status: paymentResponse.status, data: paymentData });
-        
+
         if (paymentData.errors) {
             console.error('❌ Erro ao criar cobrança:', paymentData.errors);
-            return Response.json({ 
-                error: 'Erro ao criar cobrança ASAAS', 
+            return Response.json({
+                error: 'Erro ao criar cobrança ASAAS',
                 details: paymentData.errors,
                 payload_sent: paymentPayload
             }, { status: 400 });
@@ -185,7 +190,7 @@ Deno.serve(async (req) => {
         if (billing_type === 'PIX') {
             const qrController = new AbortController();
             const qrTimeout = setTimeout(() => qrController.abort(), 10000); // 10s timeout
-            
+
             const qrCodeResponse = await fetch(
                 `https://api.asaas.com/v3/payments/${paymentData.id}/pixQrCode`,
                 {
@@ -199,7 +204,7 @@ Deno.serve(async (req) => {
             clearTimeout(qrTimeout);
 
             const qrCodeData = await qrCodeResponse.json();
-            
+
             if (qrCodeData.encodedImage && qrCodeData.payload) {
                 pixQrCode = `data:image/png;base64,${qrCodeData.encodedImage}`;
                 pixPayload = qrCodeData.payload;
@@ -218,97 +223,105 @@ Deno.serve(async (req) => {
         }
 
         // 🔒 PASSO 4: Registrar no banco de dados
-         const isWalletDeposit = !catalog_sale_id && !auction_id;
-         const isDigitalWallet = deposit_type === 'digital_wallet';
+        const isWalletDeposit = !catalog_sale_id && !auction_id;
+        const isDigitalWallet = deposit_type === 'digital_wallet';
 
-         // Para depósito de carteira, obter user_id
-         // PRIORIDADE: usar o ID explícito passado pelo frontend (mais confiável)
-         let walletDepositUserId = null;
-         if (isWalletDeposit) {
-             // 🛡️ PRIORIDADE 1: ID explícito do frontend (garante isolamento entre contas)
-             if (explicitBuyerId) {
-                 walletDepositUserId = explicitBuyerId;
-                 console.log('✅ User ID recebido do frontend (confiável):', walletDepositUserId);
-             } else {
-                 // FALLBACK: Buscar por email (menos confiável, pode haver duplicatas)
-                 try {
-                     let users = await base44.asServiceRole.entities.AppUser.filter({ email: buyer_email });
-                     if (users && users.length > 0) {
-                         walletDepositUserId = users[0].id;
-                         console.log('✅ User encontrado por email (fallback):', walletDepositUserId);
-                     }
+        // Para depósito de carteira, obter user_id
+        // PRIORIDADE: usar o ID explícito passado pelo frontend (mais confiável)
+        let walletDepositUserId = null;
+        if (isWalletDeposit) {
+            // 🛡️ PRIORIDADE 1: ID explícito do frontend (garante isolamento entre contas)
+            if (explicitBuyerId) {
+                walletDepositUserId = explicitBuyerId;
+                console.log('✅ User ID recebido do frontend (confiável):', walletDepositUserId);
+            } else {
+                // FALLBACK: Buscar por email (menos confiável, pode haver duplicatas)
+                try {
+                    let users = await base44.asServiceRole.entities.AppUser.filter({ email: buyer_email });
+                    if (users && users.length > 0) {
+                        walletDepositUserId = users[0].id;
+                        console.log('✅ User encontrado por email (fallback):', walletDepositUserId);
+                    }
 
-                     if (!walletDepositUserId && cleanCpf) {
-                         users = await base44.asServiceRole.entities.AppUser.filter({ cpf: cleanCpf });
-                         if (users && users.length > 0) {
-                             walletDepositUserId = users[0].id;
-                             console.log('✅ User encontrado por CPF (fallback):', walletDepositUserId);
-                         }
-                     }
+                    if (!walletDepositUserId && cleanCpf) {
+                        users = await base44.asServiceRole.entities.AppUser.filter({ cpf: cleanCpf });
+                        if (users && users.length > 0) {
+                            walletDepositUserId = users[0].id;
+                            console.log('✅ User encontrado por CPF (fallback):', walletDepositUserId);
+                        }
+                    }
 
-                     if (!walletDepositUserId) {
-                         console.warn('⚠️ Não conseguiu encontrar user. Webhook tentará resolver depois.');
-                     }
-                 } catch (e) {
-                     console.warn('⚠️ Erro ao buscar user para wallet deposit:', e.message);
-                 }
-             }
-         }
+                    if (!walletDepositUserId) {
+                        console.warn('⚠️ Não conseguiu encontrar user. Webhook tentará resolver depois.');
+                    }
+                } catch (e) {
+                    console.warn('⚠️ Erro ao buscar user para wallet deposit:', e.message);
+                }
+            }
+        }
 
-         // Buscar buyer_id apenas se for catalog_sale
-         let buyerId = null;
-         if (catalog_sale_id) {
-             try {
-                 const sales = await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }, null, 1);
-                 buyerId = sales && sales.length > 0 ? sales[0].buyer_id : null;
-             } catch (e) {
-                 console.warn('⚠️ Erro ao buscar buyer_id de CatalogSale:', e.message);
-             }
-         }
+        // Buscar buyer_id apenas se for catalog_sale
+        let buyerId = null;
+        if (catalog_sale_id) {
+            try {
+                const sales = await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }, null, 1);
+                buyerId = sales && sales.length > 0 ? sales[0].buyer_id : null;
+            } catch (e) {
+                console.warn('⚠️ Erro ao buscar buyer_id de CatalogSale:', e.message);
+            }
+        }
 
-         await base44.asServiceRole.entities.AsaasPayment.create({
-              payment_id: paymentData.id,
-              customer_id: customerId,
-              billing_type: billing_type,
-              value: amount,
-              status: paymentStatus,
-              external_reference: isDigitalWallet ? 'digital-wallet-deposit' : (externalReference || paymentData.id),
-              catalog_sale_id: catalog_sale_id || null,
-              auction_id: auction_id || null,
-              wallet_deposit_user_id: walletDepositUserId,
-              is_wallet_deposit: isWalletDeposit,
-              buyer_id: buyerId || explicitBuyerId || null,
-              buyer_name: buyer_name,
-              buyer_email: buyer_email,
-              buyer_cpf: cleanCpf,
-              pix_qr_code: pixQrCode,
-              pix_payload: pixPayload,
-              boleto_url: paymentData.bankSlipUrl || null,
-              invoice_url: paymentData.invoiceUrl || null,
-              due_date: paymentData.dueDate,
-              payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
-          });
+        await base44.asServiceRole.entities.AsaasPayment.create({
+            payment_id: paymentData.id,
+            customer_id: customerId,
+            billing_type: billing_type,
+            value: amount,
+            status: paymentStatus,
+            external_reference: isDigitalWallet ? 'digital-wallet-deposit' : (externalReference || paymentData.id),
+            catalog_sale_id: catalog_sale_id || null, // 🔒 Pode conter vírgulas para lote
+            auction_id: auction_id || null,
+            wallet_deposit_user_id: walletDepositUserId,
+            is_wallet_deposit: isWalletDeposit,
+            buyer_id: buyerId || explicitBuyerId || null,
+            buyer_name: buyer_name,
+            buyer_email: buyer_email,
+            buyer_cpf: cleanCpf,
+            pix_qr_code: pixQrCode,
+            pix_payload: pixPayload,
+            boleto_url: paymentData.bankSlipUrl || null,
+            invoice_url: paymentData.invoiceUrl || null,
+            due_date: paymentData.dueDate,
+            payment_date: paymentStatus === 'confirmed' ? new Date().toISOString() : null
+        });
 
         console.log('✅ AsaasPayment registrado no banco');
 
         // Se cartão foi aprovado, confirmar a venda automaticamente
         if (billing_type === 'CREDIT_CARD' && paymentStatus === 'confirmed') {
-            if (catalog_sale_id) {
-                await base44.asServiceRole.entities.CatalogSale.update(catalog_sale_id, {
-                    status: 'paid',
-                    payment_confirmed_date: new Date().toISOString(),
-                    asaas_payment_id: paymentData.id
-                });
-                console.log('✅ CatalogSale atualizada para PAID');
+            if (allCatalogSaleIds.length > 0) {
+                // 🔒 Processar TODOS os itens do lote
+                console.log(`🔄 Processando ${allCatalogSaleIds.length} item(s) do lote...`);
+                for (const saleId of allCatalogSaleIds) {
+                    try {
+                        await base44.asServiceRole.entities.CatalogSale.update(saleId, {
+                            status: 'paid',
+                            payment_confirmed_date: new Date().toISOString(),
+                            asaas_payment_id: paymentData.id
+                        });
+                        console.log(`✅ CatalogSale ${saleId} atualizada para PAID`);
 
-                // Processar comissões
-                try {
-                    await base44.asServiceRole.functions.invoke('processCatalogCommission', {
-                        catalog_sale_id: catalog_sale_id
-                    });
-                    console.log('✅ Comissões processadas');
-                } catch (commErr) {
-                    console.warn('⚠️ Erro ao processar comissões:', commErr.message);
+                        // Processar comissões para cada item
+                        try {
+                            await base44.asServiceRole.functions.invoke('processCatalogCommission', {
+                                catalog_sale_id: saleId
+                            });
+                            console.log(`✅ Comissões processadas para ${saleId}`);
+                        } catch (commErr) {
+                            console.warn(`⚠️ Erro ao processar comissões para ${saleId}:`, commErr.message);
+                        }
+                    } catch (saleErr) {
+                        console.error(`❌ Erro ao atualizar CatalogSale ${saleId}:`, saleErr.message);
+                    }
                 }
             } else if (auction_id) {
                 await base44.asServiceRole.entities.Auction.update(auction_id, {
@@ -399,7 +412,7 @@ Deno.serve(async (req) => {
         // Retornar dados para o frontend
         const executionTime = Date.now() - startTime;
         console.log(`⏱️ END createAsaasPayment - Tempo total: ${executionTime}ms`);
-        
+
         return Response.json({
             success: true,
             payment_id: paymentData.id,
@@ -418,16 +431,16 @@ Deno.serve(async (req) => {
         const executionTime = Date.now() - startTime;
         console.error(`⏱️ ERRO após ${executionTime}ms em createAsaasPayment:`, error);
         console.error('❌ Stack completo:', error.stack);
-        
+
         // Tratamento específico para timeout
         if (error.name === 'AbortError') {
             console.error('⏱️ TIMEOUT detectado - operação cancelada');
-            return Response.json({ 
+            return Response.json({
                 error: 'Timeout ao comunicar com ASAAS',
                 execution_time_ms: executionTime
             }, { status: 504 });
         }
-        
+
         // Log detalhado no SystemLog
         try {
             const base44ForLog = createClientFromRequest(req);
@@ -436,16 +449,16 @@ Deno.serve(async (req) => {
                 status: 'error',
                 message: `Erro ao criar pagamento ASAAS: ${error.message}`,
                 component_name: 'createAsaasPayment',
-                error_details: { 
-                    message: error.message, 
+                error_details: {
+                    message: error.message,
                     stack: error.stack
                 }
             });
         } catch (logErr) {
             console.warn('Falha ao logar erro');
         }
-        
-        return Response.json({ 
+
+        return Response.json({
             error: error.message,
             details: error.toString()
         }, { status: 500 });
