@@ -260,11 +260,11 @@ Deno.serve(async (req) => {
             }
         }
 
-        // Buscar buyer_id apenas se for catalog_sale
+        // Buscar buyer_id apenas se for catalog_sale (usar primeiro ID do lote)
         let buyerId = null;
-        if (catalog_sale_id) {
+        if (allCatalogSaleIds.length > 0) {
             try {
-                const sales = await base44.asServiceRole.entities.CatalogSale.filter({ id: catalog_sale_id }, null, 1);
+                const sales = await base44.asServiceRole.entities.CatalogSale.filter({ id: allCatalogSaleIds[0] }, null, 1);
                 buyerId = sales && sales.length > 0 ? sales[0].buyer_id : null;
             } catch (e) {
                 console.warn('⚠️ Erro ao buscar buyer_id de CatalogSale:', e.message);
