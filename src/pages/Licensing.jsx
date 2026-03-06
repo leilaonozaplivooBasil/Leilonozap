@@ -125,8 +125,8 @@ const DashboardContent = ({ user, isAdmin }) => {
 
   const isSaiDeBaixo = sessionStorage.getItem('saiDeBaixoContext') === 'true';
   const referralLink = isSaiDeBaixo ?
-  `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}` :
-  `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}`;
+    `https://leilaonozap.net${createPageUrl('SaiDeBaixo')}?ref=${user.referral_code}` :
+    `https://leilaonozap.net${createPageUrl('Home')}?ref=${user.referral_code}`;
 
   const userLevels = Array.isArray(user.career_levels) ? user.career_levels : user.career_levels ? [user.career_levels] : ['usuario'];
   const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
@@ -154,30 +154,30 @@ const DashboardContent = ({ user, isAdmin }) => {
   const highestLevel = careerHierarchy.find((level) => userLevels.includes(level)) || 'usuario';
 
   const shortName = user.display_first_name && user.display_last_name ?
-  `${user.display_first_name} ${user.display_last_name}` :
-  (() => {
-    const nameParts = user.full_name.split(' ');
-    return nameParts.length > 1 ?
-    `${nameParts[0]} ${nameParts[nameParts.length - 1]}` :
-    nameParts[0];
-  })();
+    `${user.display_first_name} ${user.display_last_name}` :
+    (() => {
+      const nameParts = user.full_name.split(' ');
+      return nameParts.length > 1 ?
+        `${nameParts[0]} ${nameParts[nameParts.length - 1]}` :
+        nameParts[0];
+    })();
 
   const highestLevelName = careerLevelsMap[highestLevel];
   const primaryLevelName = careerLevelsMap[primaryLevel];
   const totalAvailable = ((user.commission_balance || 0) + (user.catalog_commission_balance || 0));
 
   const rolesText = highestLevel === primaryLevel ?
-  highestLevelName :
-  `${highestLevelName} e ${primaryLevelName}`;
+    highestLevelName :
+    `${highestLevelName} e ${primaryLevelName}`;
 
   const valoraNotesDashboard = [
-  { value: 200, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/83f8b9a48_200_front.jpg" },
-  { value: 100, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/15d210cda_cdula-100-reais_anverso.jpg" },
-  { value: 50, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/109de79bd_50_front.jpg" },
-  { value: 20, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/81c45e110_20_front.jpg" },
-  { value: 10, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/85f62789d_Anverso_da_cdula_de_10_reais.PNG" },
-  { value: 5, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/8f25db571_5_front.jpg" },
-  { value: 2, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/90f9e2b2b_Anverso_da_cdula_de_dois_reais.PNG" }];
+    { value: 200, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/83f8b9a48_200_front.jpg" },
+    { value: 100, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/15d210cda_cdula-100-reais_anverso.jpg" },
+    { value: 50, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/109de79bd_50_front.jpg" },
+    { value: 20, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/81c45e110_20_front.jpg" },
+    { value: 10, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/85f62789d_Anverso_da_cdula_de_10_reais.PNG" },
+    { value: 5, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/8f25db571_5_front.jpg" },
+    { value: 2, url: "https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/90f9e2b2b_Anverso_da_cdula_de_dois_reais.PNG" }];
 
 
   // 🔥 NOVA FUNÇÃO COM PROTEÇÃO CONTRA RATE LIMIT
@@ -287,8 +287,8 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       // Calcula total de saques pendentes
       const pending = withdrawals.
-      filter((w) => w.status === 'pending').
-      reduce((sum, w) => sum + (w.amount || 0), 0);
+        filter((w) => w.status === 'pending').
+        reduce((sum, w) => sum + (w.amount || 0), 0);
       setPendingWithdrawalAmount(pending);
     } catch (error) {
       console.error("Erro ao buscar saques:", error);
@@ -312,15 +312,22 @@ const DashboardContent = ({ user, isAdmin }) => {
       console.log('📊 Usuários indicados:', referredIds.length);
       console.log('🔑 Meu código de referral:', user.referral_code);
 
-      // Buscar arremates de leilão (ended OU sold) dos indicados
-      const allAuctions = await Auction.list('-updated_date', 300);
-      const wonAuctions = Array.isArray(allAuctions) ?
-      allAuctions.filter((a) =>
-      a.winner_id &&
-      referredIds.includes(a.winner_id) && (
-      a.status === 'sold' || a.status === 'ended')
-      ) :
-      [];
+      // Buscar arremates de leilão (ended OU sold) dos indicados ignorando limitador obsoleto de 300 (Memory-safe)
+      let wonAuctions = [];
+      if (referredIds.length > 0) {
+        try {
+          // Buscando diretamente com $in para puxar o histórico ilimitado do afiliado
+          const allAuctions = await Auction.filter({
+            winner_id: { $in: referredIds }
+          });
+
+          wonAuctions = Array.isArray(allAuctions) ?
+            allAuctions.filter(a => a.status === 'sold' || a.status === 'ended') :
+            [];
+        } catch (filterError) {
+          console.error("Erro ao filtrar via $in, listando fallback", filterError);
+        }
+      }
 
       console.log('🏆 Arremates encontrados:', wonAuctions.length);
       setMyAuctions(wonAuctions);
@@ -328,15 +335,15 @@ const DashboardContent = ({ user, isAdmin }) => {
       // Buscar vendas do catálogo onde EU SOU O LICENCIADO (vendedor)
       try {
         const CatalogSale = base44.entities.CatalogSale;
-        
+
         // ✅ ISOLAMENTO CRÍTICO: Filtrar NO SERVIDOR, não na UI
         // Busca apenas vendas onde licensee_id = meu ID (não código de referral)
         const catalogSales = Array.isArray(user.id) ? [] :
-        await CatalogSale.filter(
-          { licensee_id: user.id },
-          '-created_date',
-          300
-        );
+          await CatalogSale.filter(
+            { licensee_id: user.id },
+            '-created_date',
+            300
+          );
 
         console.log('✅ [ISOLAMENTO] Vendas catálogo do user_id:', user.id, '→', catalogSales.length, 'vendas');
         setMySales(Array.isArray(catalogSales) ? catalogSales : []);
@@ -436,7 +443,7 @@ const DashboardContent = ({ user, isAdmin }) => {
   const getNoteStack = (balance) => {
     // 🆕 PILHA FIXA: R$ 200 sempre na frente, independente do saldo
     // Ordem: R$ 200 (frente) → R$ 100 → R$ 50 → R$ 20 → R$ 10 → R$ 5 → R$ 2 (guardião/fundo)
-    
+
     const frontNote = valoraNotesDashboard.find(n => n.value === 200) || valoraNotesDashboard[0];
     const backNote = valoraNotesDashboard.find(n => n.value === 100) || valoraNotesDashboard[1];
     const backBackNote = valoraNotesDashboard.find(n => n.value === 50) || valoraNotesDashboard[2];
@@ -531,7 +538,7 @@ const DashboardContent = ({ user, isAdmin }) => {
       setTimeout(() => {
         try {
           document.body.removeChild(coin);
-        } catch (e) {}
+        } catch (e) { }
         navigate(createPageUrl(`AuctionRoom?id=${auctionId}&useBalance=true`));
       }, 1800);
 
@@ -733,9 +740,9 @@ const DashboardContent = ({ user, isAdmin }) => {
     if (!searchTerm) return myClients;
     const term = searchTerm.toLowerCase();
     return myClients.filter((client) =>
-    client.full_name && client.full_name.toLowerCase().includes(term) ||
-    client.nickname && client.nickname.toLowerCase().includes(term) ||
-    client.email && client.email.toLowerCase().includes(term)
+      client.full_name && client.full_name.toLowerCase().includes(term) ||
+      client.nickname && client.nickname.toLowerCase().includes(term) ||
+      client.email && client.email.toLowerCase().includes(term)
     );
   }, [myClients, searchTerm]);
 
@@ -872,7 +879,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               timestamp: new Date().toISOString()
             }
           });
-        } catch {}
+        } catch { }
 
       } else if (error.message?.includes('Network')) {
         console.error('🚨 [VIGIA] DIAGNÓSTICO: Erro de rede/conexão');
@@ -906,33 +913,33 @@ const DashboardContent = ({ user, isAdmin }) => {
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {isAdmin &&
-          <>
+            <>
               <Button
-              onClick={handleForceSync}
-              disabled={isSyncing}
-              variant="outline"
-              className="bg-gray-700 border-green-500 text-green-400 hover:bg-gray-600"
-              size="sm">
+                onClick={handleForceSync}
+                disabled={isSyncing}
+                variant="outline"
+                className="bg-gray-700 border-green-500 text-green-400 hover:bg-gray-600"
+                size="sm">
 
                 {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                 Sincronizar
               </Button>
               <Button
-              onClick={handleResetTestData}
-              disabled={isResetting}
-              variant="outline"
-              className="bg-gray-700 border-red-500 text-red-400 hover:bg-gray-600"
-              size="sm">
+                onClick={handleResetTestData}
+                disabled={isResetting}
+                variant="outline"
+                className="bg-gray-700 border-red-500 text-red-400 hover:bg-gray-600"
+                size="sm">
 
                 {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
                 Reset Teste
               </Button>
               <Button
-              onClick={handleResetAllBalances}
-              disabled={isResetting}
-              variant="outline"
-              className="bg-gray-700 border-orange-500 text-orange-400 hover:bg-gray-600"
-              size="sm">
+                onClick={handleResetAllBalances}
+                disabled={isResetting}
+                variant="outline"
+                className="bg-gray-700 border-orange-500 text-orange-400 hover:bg-gray-600"
+                size="sm">
 
                 {isResetting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
                 Zerar Saldos
@@ -942,10 +949,9 @@ const DashboardContent = ({ user, isAdmin }) => {
         </div>
       </div>
 
-      <Card ref={walletCardRef} className={`mb-8 bg-gradient-to-br backdrop-blur-sm overflow-hidden ${
-      isSaiDeBaixo ?
-      'from-red-900/30 to-red-800/20 border-red-500/30' :
-      'from-green-900/30 to-green-800/20 border-green-500/30'}`
+      <Card ref={walletCardRef} className={`mb-8 bg-gradient-to-br backdrop-blur-sm overflow-hidden ${isSaiDeBaixo ?
+          'from-red-900/30 to-red-800/20 border-red-500/30' :
+          'from-green-900/30 to-green-800/20 border-green-500/30'}`
       }>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -958,7 +964,7 @@ const DashboardContent = ({ user, isAdmin }) => {
               </div>
 
               {pendingWithdrawalAmount > 0 &&
-              <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4">
+                <div className="bg-yellow-900/30 border border-yellow-500/30 rounded-lg p-3 mb-4">
                   <p className="text-sm text-yellow-400 font-semibold flex items-center gap-2">
                     <Clock className="w-4 h-4" />
                     Saque em Processo: R$ {pendingWithdrawalAmount.toFixed(2)}
@@ -985,55 +991,55 @@ const DashboardContent = ({ user, isAdmin }) => {
                 </Button>
               </div>
             </div>
-            
+
             <div className="relative w-64 h-40 flex items-center justify-center nota-stack-container">
               {guardianNote && guardianNote.url &&
-              <img
-                src={guardianNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-15 translate-y-3 -translate-x-1 nota-stack-guardian nota-entrance-guardian"
-                style={{ zIndex: 0, opacity: 0.65 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
+                <img
+                  src={guardianNote.url}
+                  alt=""
+                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-15 translate-y-3 -translate-x-1 nota-stack-guardian nota-entrance-guardian"
+                  style={{ zIndex: 0, opacity: 0.65 }}
+                  onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
-              
+
               {backBackNote && backBackNote.url &&
-              <img
-                src={backBackNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-10 translate-y-2 nota-stack-backback nota-entrance-backback"
-                style={{ zIndex: 1, opacity: 0.7 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
+                <img
+                  src={backBackNote.url}
+                  alt=""
+                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-10 translate-y-2 nota-stack-backback nota-entrance-backback"
+                  style={{ zIndex: 1, opacity: 0.7 }}
+                  onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
-              
+
               {backNote && backNote.url &&
-              <img
-                src={backNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-5 translate-y-1 nota-stack-back nota-entrance-back"
-                style={{ zIndex: 2, opacity: 0.8 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
+                <img
+                  src={backNote.url}
+                  alt=""
+                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform -rotate-5 translate-y-1 nota-stack-back nota-entrance-back"
+                  style={{ zIndex: 2, opacity: 0.8 }}
+                  onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
-              
+
               {sideNote && sideNote.url &&
-              <img
-                src={sideNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
-                style={{ zIndex: 3, opacity: 0.9 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
+                <img
+                  src={sideNote.url}
+                  alt=""
+                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-10 translate-x-3 nota-stack-side nota-entrance-side"
+                  style={{ zIndex: 3, opacity: 0.9 }}
+                  onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
 
               {frontNote && frontNote.url &&
-              <img
-                src={frontNote.url}
-                alt=""
-                className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-2 nota-stack-front nota-entrance-front"
-                style={{ zIndex: 4 }}
-                onError={(e) => {e.target.style.display = 'none';}} />
+                <img
+                  src={frontNote.url}
+                  alt=""
+                  className="absolute w-60 h-36 rounded-lg shadow-2xl transform rotate-2 nota-stack-front nota-entrance-front"
+                  style={{ zIndex: 4 }}
+                  onError={(e) => { e.target.style.display = 'none'; }} />
 
               }
             </div>
@@ -1073,18 +1079,18 @@ const DashboardContent = ({ user, isAdmin }) => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-         <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
-           <TabsTrigger value="visao-geral" className="text-xs sm:text-sm whitespace-nowrap">Visão Geral</TabsTrigger>
-           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Catálogo</TabsTrigger>}
+        <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
+          <TabsTrigger value="visao-geral" className="text-xs sm:text-sm whitespace-nowrap">Visão Geral</TabsTrigger>
+          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="catalogo" className="text-xs sm:text-sm whitespace-nowrap">🛍️ Catálogo</TabsTrigger>}
 
-           <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
-           {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
-           {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
-           <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
-           <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
-           <TabsTrigger value="plano-carreira" className="text-xs sm:text-sm whitespace-nowrap">🎯 Carreira</TabsTrigger>
-           {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
-         </TabsList>
+          <TabsTrigger value="minhas-vendas" className="text-xs sm:text-sm whitespace-nowrap">Minhas Vendas</TabsTrigger>
+          {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) && <TabsTrigger value="vendas-equipe" className="text-xs sm:text-sm whitespace-nowrap">Vendas Equipe</TabsTrigger>}
+          {userLevels.includes('licenciado_catalogo') && <TabsTrigger value="pedidos" className="text-xs sm:text-sm whitespace-nowrap">📦 Pedidos</TabsTrigger>}
+          <TabsTrigger value="meus-clientes" className="text-xs sm:text-sm whitespace-nowrap">👥 Clientes ({myClients.length})</TabsTrigger>
+          <TabsTrigger value="comissoes" className="text-xs sm:text-sm whitespace-nowrap">💰 Comissões</TabsTrigger>
+          <TabsTrigger value="plano-carreira" className="text-xs sm:text-sm whitespace-nowrap">🎯 Carreira</TabsTrigger>
+          {isAdmin && <TabsTrigger value="admin" className="text-xs sm:text-sm whitespace-nowrap">Admin</TabsTrigger>}
+        </TabsList>
 
 
 
@@ -1099,23 +1105,23 @@ const DashboardContent = ({ user, isAdmin }) => {
             </CardHeader>
             <CardContent>
               {isLoadingSales ?
-              <div className="flex justify-center py-12">
+                <div className="flex justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-green-500" />
                 </div> :
 
-              <Tabs defaultValue="leilao" className="w-full">
+                <Tabs defaultValue="leilao" className="w-full">
                   <TabsList className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300' : 'bg-gray-700 border-gray-600'}>
                     <TabsTrigger value="leilao">Leilão</TabsTrigger>
                     <TabsTrigger value="catalogo">Catálogo</TabsTrigger>
                   </TabsList>
-                  
+
                   <TabsContent value="leilao" className="mt-4">
                     {myAuctions.length === 0 ?
-                  <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                      <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
                         Arremates dos indicados: 0
                       </p> :
 
-                  <div className="overflow-x-auto">
+                      <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
@@ -1128,7 +1134,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                           </TableHeader>
                           <TableBody>
                             {myAuctions.map((auction) =>
-                        <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                              <TableRow key={auction.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{auction.title}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{auction.winner_name}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {auction.current_price?.toFixed(2)}</TableCell>
@@ -1137,20 +1143,20 @@ const DashboardContent = ({ user, isAdmin }) => {
                                   {new Date(auction.updated_date).toLocaleDateString('pt-BR')}
                                 </TableCell>
                               </TableRow>
-                        )}
+                            )}
                           </TableBody>
                         </Table>
                       </div>
-                  }
+                    }
                   </TabsContent>
 
                   <TabsContent value="catalogo" className="mt-4">
                     {mySales.length === 0 ?
-                  <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
+                      <p className={`text-center py-8 ${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}`}>
                         Nenhuma venda do catálogo
                       </p> :
 
-                  <div className="overflow-x-auto">
+                      <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
@@ -1163,7 +1169,7 @@ const DashboardContent = ({ user, isAdmin }) => {
                           </TableHeader>
                           <TableBody>
                             {mySales.map((sale) =>
-                        <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                              <TableRow key={sale.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-900 text-sm' : 'text-gray-300 text-sm'}>{sale.product_title}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-700 text-sm' : 'text-gray-300 text-sm'}>{sale.buyer_name}</TableCell>
                                 <TableCell className={isSaiDeBaixo ? 'text-gray-900 font-semibold' : 'text-white font-semibold'}>R$ {sale.sale_price?.toFixed(2)}</TableCell>
@@ -1172,11 +1178,11 @@ const DashboardContent = ({ user, isAdmin }) => {
                                   {new Date(sale.created_date).toLocaleDateString('pt-BR')}
                                 </TableCell>
                               </TableRow>
-                        )}
+                            )}
                           </TableBody>
                         </Table>
                       </div>
-                  }
+                    }
                   </TabsContent>
                 </Tabs>
               }
@@ -1186,7 +1192,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         {/* ABA: VENDAS DA EQUIPE - Apenas diretores+ */}
         {['diretor', 'diretoria', 'ceo', 'conselheiro', 'fundador'].some((l) => userLevels.includes(l)) &&
-        <TabsContent value="vendas-equipe" className="space-y-6">
+          <TabsContent value="vendas-equipe" className="space-y-6">
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
                 <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Vendas da Minha Equipe</CardTitle>
@@ -1207,7 +1213,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         {/* ABA: PEDIDOS - Apenas licenciados de catálogo */}
         {userLevels.includes('licenciado_catalogo') &&
-        <TabsContent value="pedidos" className="space-y-6">
+          <TabsContent value="pedidos" className="space-y-6">
             <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
                 <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>Pedidos do Catálogo</CardTitle>
@@ -1228,7 +1234,7 @@ const DashboardContent = ({ user, isAdmin }) => {
 
         {/* ABA: CATÁLOGO - Produtos para vender + Dashboard */}
         {userLevels.includes('licenciado_catalogo') &&
-        <TabsContent value="catalogo" className="space-y-6">
+          <TabsContent value="catalogo" className="space-y-6">
             <Tabs defaultValue="catalogo-home" className="w-full">
               <TabsList className={`${isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'} flex-wrap h-auto gap-2 p-2`}>
                 <TabsTrigger value="catalogo-home" className="text-xs sm:text-sm">📊 Página Inicial</TabsTrigger>
@@ -1304,7 +1310,7 @@ const DashboardContent = ({ user, isAdmin }) => {
           </Card>
 
           {userLevels.includes('licenciado_catalogo') &&
-          <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
+            <Card className={isSaiDeBaixo ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700'}>
               <CardHeader>
                 <CardTitle className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>🛍️ Link Licenciado (Catálogo) - 26% distribuídos</CardTitle>
                 <CardDescription className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
@@ -1314,16 +1320,16 @@ const DashboardContent = ({ user, isAdmin }) => {
               <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                  value={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`}
-                  readOnly
-                  className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
+                    value={`https://leilaonozap.net/Catalog?ref=${user.referral_code}`}
+                    readOnly
+                    className={isSaiDeBaixo ? 'bg-gray-100 border-gray-300 text-gray-900 font-mono text-sm' : 'bg-gray-700 border-gray-600 text-white font-mono text-sm'} />
 
                   <Button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`);
-                    toast.success('Link copiado!');
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700">
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://leilaonozap.net/Catalog?ref=${user.referral_code}`);
+                      toast.success('Link copiado!');
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700">
 
                     <Copy className="w-4 h-4 mr-2" />
                     Copiar
@@ -1410,50 +1416,50 @@ const DashboardContent = ({ user, isAdmin }) => {
             </CardHeader>
             <CardContent>
               {isLoadingClients ?
-              <div className="flex justify-center py-12">
+                <div className="flex justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-green-500" />
                 </div> :
-              filteredClients.length > 0 ?
-              <Table>
-                  <TableHeader>
-                    <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                      <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Nome</TableHead>
-                      <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Email</TableHead>
-                      <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Indicado Por</TableHead>
-                      <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data de Cadastro</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredClients.map((client) => {
-                    const referrer = client.referred_by_id ?
-                    allUsers.find((u) => u.id === client.referred_by_id) :
-                    null;
+                filteredClients.length > 0 ?
+                  <Table>
+                    <TableHeader>
+                      <TableRow className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Nome</TableHead>
+                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Email</TableHead>
+                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Indicado Por</TableHead>
+                        <TableHead className={isSaiDeBaixo ? 'text-gray-700' : 'text-gray-400'}>Data de Cadastro</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredClients.map((client) => {
+                        const referrer = client.referred_by_id ?
+                          allUsers.find((u) => u.id === client.referred_by_id) :
+                          null;
 
-                    return (
-                      <TableRow key={client.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
-                          <TableCell className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>{client.full_name}</TableCell>
-                          <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>{client.email}</TableCell>
-                          <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                            {referrer ?
-                          <span className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>👤 {referrer.full_name}</span> :
+                        return (
+                          <TableRow key={client.id} className={isSaiDeBaixo ? 'border-gray-300' : 'border-gray-700'}>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-900' : 'text-white'}>{client.full_name}</TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>{client.email}</TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                              {referrer ?
+                                <span className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>👤 {referrer.full_name}</span> :
 
-                          <span className={isSaiDeBaixo ? 'text-gray-400' : 'text-gray-500'}>Sem indicação</span>
-                          }
-                          </TableCell>
-                          <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
-                            {new Date(client.created_date).toLocaleDateString('pt-BR')}
-                          </TableCell>
-                        </TableRow>);
+                                <span className={isSaiDeBaixo ? 'text-gray-400' : 'text-gray-500'}>Sem indicação</span>
+                              }
+                            </TableCell>
+                            <TableCell className={isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'}>
+                              {new Date(client.created_date).toLocaleDateString('pt-BR')}
+                            </TableCell>
+                          </TableRow>);
 
-                  })}
-                  </TableBody>
-                </Table> :
+                      })}
+                    </TableBody>
+                  </Table> :
 
-              <div className="text-center py-12 text-gray-500">
-                  <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="font-semibold">Nenhum cliente indicado ainda</p>
-                  <p className="text-sm mt-2">Compartilhe seu link para começar!</p>
-                </div>
+                  <div className="text-center py-12 text-gray-500">
+                    <Users className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p className="font-semibold">Nenhum cliente indicado ainda</p>
+                    <p className="text-sm mt-2">Compartilhe seu link para começar!</p>
+                  </div>
               }
             </CardContent>
           </Card>
@@ -1478,72 +1484,71 @@ const DashboardContent = ({ user, isAdmin }) => {
             </CardHeader>
             <CardContent>
               {isLoadingWithdrawals ?
-              <div className="flex justify-center py-12">
+                <div className="flex justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-green-500" />
                 </div> :
-              myWithdrawals.length > 0 ?
-              <div className="space-y-4">
-                  {myWithdrawals.map((withdrawal) =>
-                <Card key={withdrawal.id} className="bg-gray-700/50 border-gray-600">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <div className="text-2xl font-bold text-green-400">
-                                R$ {withdrawal.amount.toFixed(2)}
+                myWithdrawals.length > 0 ?
+                  <div className="space-y-4">
+                    {myWithdrawals.map((withdrawal) =>
+                      <Card key={withdrawal.id} className="bg-gray-700/50 border-gray-600">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="text-2xl font-bold text-green-400">
+                                  R$ {withdrawal.amount.toFixed(2)}
+                                </div>
+                                <div className={`px-3 py-1 rounded-full text-xs font-semibold ${withdrawal.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
+                                    withdrawal.status === 'approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                      withdrawal.status === 'processing' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                        withdrawal.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                          'bg-red-500/20 text-red-400 border border-red-500/30'}`
+                                }>
+                                  {withdrawal.status === 'pending' && '⏳ Aguardando Aprovação'}
+                                  {withdrawal.status === 'approved' && '✅ Aprovado'}
+                                  {withdrawal.status === 'processing' && '🔄 Processando'}
+                                  {withdrawal.status === 'completed' && '✅ Concluído'}
+                                  {withdrawal.status === 'rejected' && '❌ Rejeitado'}
+                                  {withdrawal.status === 'failed' && '❌ Falhou'}
+                                </div>
                               </div>
-                              <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          withdrawal.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                          withdrawal.status === 'approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                          withdrawal.status === 'processing' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                          withdrawal.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                          'bg-red-500/20 text-red-400 border border-red-500/30'}`
-                          }>
-                                {withdrawal.status === 'pending' && '⏳ Aguardando Aprovação'}
-                                {withdrawal.status === 'approved' && '✅ Aprovado'}
-                                {withdrawal.status === 'processing' && '🔄 Processando'}
-                                {withdrawal.status === 'completed' && '✅ Concluído'}
-                                {withdrawal.status === 'rejected' && '❌ Rejeitado'}
-                                {withdrawal.status === 'failed' && '❌ Falhou'}
+                              <div className="space-y-1 text-sm text-gray-400">
+                                <p>
+                                  <strong className="text-gray-300">Chave PIX:</strong> {withdrawal.pix_key} ({withdrawal.pix_key_type})
+                                </p>
+                                <p>
+                                  <strong className="text-gray-300">Solicitado em:</strong> {new Date(withdrawal.created_date).toLocaleString('pt-BR')}
+                                </p>
+                                {withdrawal.processed_date &&
+                                  <p className="text-green-400">
+                                    <strong>Processado em:</strong> {new Date(withdrawal.processed_date).toLocaleString('pt-BR')}
+                                  </p>
+                                }
+                                {withdrawal.notes &&
+                                  <p className="text-gray-500 italic mt-2">
+                                    Obs: {withdrawal.notes}
+                                  </p>
+                                }
                               </div>
-                            </div>
-                            <div className="space-y-1 text-sm text-gray-400">
-                              <p>
-                                <strong className="text-gray-300">Chave PIX:</strong> {withdrawal.pix_key} ({withdrawal.pix_key_type})
-                              </p>
-                              <p>
-                                <strong className="text-gray-300">Solicitado em:</strong> {new Date(withdrawal.created_date).toLocaleString('pt-BR')}
-                              </p>
-                              {withdrawal.processed_date &&
-                          <p className="text-green-400">
-                                  <strong>Processado em:</strong> {new Date(withdrawal.processed_date).toLocaleString('pt-BR')}
-                                </p>
-                          }
-                              {withdrawal.notes &&
-                          <p className="text-gray-500 italic mt-2">
-                                  Obs: {withdrawal.notes}
-                                </p>
-                          }
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                )}
-                </div> :
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div> :
 
-              <div className="text-center py-12 text-gray-500">
-                  <Wallet className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                  <p className="font-semibold">Nenhum saque solicitado ainda</p>
-                  <p className="text-sm mt-2">Use o botão "Sacar Dinheiro" para solicitar seu primeiro saque</p>
-                </div>
+                  <div className="text-center py-12 text-gray-500">
+                    <Wallet className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <p className="font-semibold">Nenhum saque solicitado ainda</p>
+                    <p className="text-sm mt-2">Use o botão "Sacar Dinheiro" para solicitar seu primeiro saque</p>
+                  </div>
               }
             </CardContent>
           </Card>
         </TabsContent>
 
         {isAdmin &&
-        <TabsContent value="admin" className="space-y-6">
+          <TabsContent value="admin" className="space-y-6">
             <Accordion type="single" collapsible className="w-full space-y-4">
               <AccordionItem value="grant" className="bg-gray-800 border-gray-700 rounded-lg overflow-hidden">
                 <AccordionTrigger className="px-6 hover:bg-gray-700/50">
@@ -1575,16 +1580,16 @@ const DashboardContent = ({ user, isAdmin }) => {
                     <div>
                       <Label className="text-gray-300">Valor da Comissão (R$)</Label>
                       <Input
-                      type="number"
-                      placeholder="100.00"
-                      onChange={(e) => setCommissionAmount(e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white" />
+                        type="number"
+                        placeholder="100.00"
+                        onChange={(e) => setCommissionAmount(e.target.value)}
+                        className="bg-gray-700 border-gray-600 text-white" />
 
                     </div>
                     <Button
-                    onClick={handleGrantCommission}
-                    disabled={isGranting || !selectedLicenseeId || !commissionAmount}
-                    className="w-full bg-green-600 hover:bg-green-700">
+                      onClick={handleGrantCommission}
+                      disabled={isGranting || !selectedLicenseeId || !commissionAmount}
+                      className="w-full bg-green-600 hover:bg-green-700">
 
                       {isGranting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                       Conceder Comissão
@@ -1610,31 +1615,31 @@ const DashboardContent = ({ user, isAdmin }) => {
                         </SelectTrigger>
                         <SelectContent>
                           {licensees.map((lic) =>
-                        <SelectItem key={lic.id} value={lic.id}>
+                            <SelectItem key={lic.id} value={lic.id}>
                               {lic.full_name}
                             </SelectItem>
-                        )}
+                          )}
                         </SelectContent>
                       </Select>
                     </div>
                     {selectedLicenseeForLink &&
-                  <div className="max-h-64 overflow-y-auto bg-gray-700/30 rounded-lg p-4 space-y-2">
+                      <div className="max-h-64 overflow-y-auto bg-gray-700/30 rounded-lg p-4 space-y-2">
                         {availableUsersToLink.map((u) =>
-                    <div key={u.id} className="flex items-center gap-3 p-2 hover:bg-gray-700/50 rounded">
+                          <div key={u.id} className="flex items-center gap-3 p-2 hover:bg-gray-700/50 rounded">
                             <Checkbox
-                        checked={selectedUsersToLink.includes(u.id)}
-                        onCheckedChange={() => toggleUserSelection(u.id)} />
+                              checked={selectedUsersToLink.includes(u.id)}
+                              onCheckedChange={() => toggleUserSelection(u.id)} />
 
                             <span className="text-white">{u.full_name}</span>
                             <span className="text-gray-400 text-sm ml-auto">{u.email}</span>
                           </div>
-                    )}
+                        )}
                       </div>
-                  }
+                    }
                     <Button
-                    onClick={handleOrganizeAlavancagem}
-                    disabled={isLinking || !selectedLicenseeForLink || selectedUsersToLink.length === 0}
-                    className="w-full bg-blue-600 hover:bg-blue-700">
+                      onClick={handleOrganizeAlavancagem}
+                      disabled={isLinking || !selectedLicenseeForLink || selectedUsersToLink.length === 0}
+                      className="w-full bg-blue-600 hover:bg-blue-700">
 
                       {isLinking ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                       Vincular {selectedUsersToLink.length} Usuário(s)
@@ -1651,8 +1656,8 @@ const DashboardContent = ({ user, isAdmin }) => {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
-                  <HierarchyTreeView 
-                    users={allUsers} 
+                  <HierarchyTreeView
+                    users={allUsers}
                     isLoading={isLoadingUsers}
                   />
                 </AccordionContent>
@@ -1673,10 +1678,10 @@ const DashboardContent = ({ user, isAdmin }) => {
                     </AlertDescription>
                   </Alert>
                   <Button
-                  onClick={handleCleanDuplicates}
-                  disabled={isCleaningDuplicates}
-                  variant="destructive"
-                  className="w-full">
+                    onClick={handleCleanDuplicates}
+                    disabled={isCleaningDuplicates}
+                    variant="destructive"
+                    className="w-full">
 
                     {isCleaningDuplicates ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                     Limpar Duplicatas
@@ -1689,57 +1694,57 @@ const DashboardContent = ({ user, isAdmin }) => {
       </Tabs>
 
       {viewingIndicationsFor &&
-      <IndicatedUsersModal
-        licensee={viewingIndicationsFor}
-        isOpen={true}
-        onClose={() => setViewingIndicationsFor(null)} />
+        <IndicatedUsersModal
+          licensee={viewingIndicationsFor}
+          isOpen={true}
+          onClose={() => setViewingIndicationsFor(null)} />
 
       }
       {viewingCommissionsFor &&
-      <CommissionStatementModal
-        licensee={viewingCommissionsFor}
-        isOpen={true}
-        onClose={() => setViewingCommissionsFor(null)} />
+        <CommissionStatementModal
+          licensee={viewingCommissionsFor}
+          isOpen={true}
+          onClose={() => setViewingCommissionsFor(null)} />
 
       }
       {isAuctionSelectionModalOpen &&
-      <AuctionSelectionModal
-        isOpen={isAuctionSelectionModalOpen}
-        onClose={() => setIsAuctionSelectionModalOpen(false)}
-        onSelectAuction={handleAuctionSelect} />
+        <AuctionSelectionModal
+          isOpen={isAuctionSelectionModalOpen}
+          onClose={() => setIsAuctionSelectionModalOpen(false)}
+          onSelectAuction={handleAuctionSelect} />
 
       }
       {editingUser &&
-      <UserEditModal
-        user={editingUser}
-        isOpen={true}
-        onClose={() => setEditingUser(null)}
-        onSuccess={handleUserUpdate}
-        allUsers={allUsers} />
+        <UserEditModal
+          user={editingUser}
+          isOpen={true}
+          onClose={() => setEditingUser(null)}
+          onSuccess={handleUserUpdate}
+          allUsers={allUsers} />
 
       }
       {changingPasswordUser &&
-      <UserPasswordModal
-        user={changingPasswordUser}
-        isOpen={true}
-        onClose={() => setChangingPasswordUser(null)}
-        onSave={() => {
-          setChangingPasswordUser(null);
-          loadAllUsers();
-        }} />
+        <UserPasswordModal
+          user={changingPasswordUser}
+          isOpen={true}
+          onClose={() => setChangingPasswordUser(null)}
+          onSave={() => {
+            setChangingPasswordUser(null);
+            loadAllUsers();
+          }} />
 
       }
 
       {/* Modal de Saque */}
       {showWithdrawalModal &&
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
           <div className="bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md border border-gray-700">
             <div className="flex items-center justify-between p-6 border-b border-gray-700">
               <h3 className="text-2xl font-bold text-white">💸 Solicitar Saque</h3>
               <button
-              onClick={() => setShowWithdrawalModal(false)}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-              disabled={isProcessingWithdrawal}>
+                onClick={() => setShowWithdrawalModal(false)}
+                className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
+                disabled={isProcessingWithdrawal}>
 
                 <X className="w-5 h-5 text-gray-400" />
               </button>
@@ -1756,13 +1761,13 @@ const DashboardContent = ({ user, isAdmin }) => {
               <div>
                 <Label className="text-gray-300">Valor do Saque</Label>
                 <Input
-                type="number"
-                value={withdrawalAmount}
-                onChange={(e) => setWithdrawalAmount(e.target.value)}
-                placeholder="0.00"
-                min="30"
-                className="bg-gray-700 border-gray-600 text-white text-lg"
-                disabled={isProcessingWithdrawal} />
+                  type="number"
+                  value={withdrawalAmount}
+                  onChange={(e) => setWithdrawalAmount(e.target.value)}
+                  placeholder="0.00"
+                  min="30"
+                  className="bg-gray-700 border-gray-600 text-white text-lg"
+                  disabled={isProcessingWithdrawal} />
 
                 <p className="text-xs text-gray-400 mt-1">Valor mínimo: R$ 30,00</p>
               </div>
@@ -1770,10 +1775,10 @@ const DashboardContent = ({ user, isAdmin }) => {
               <div>
                 <Label className="text-gray-300">Tipo de Chave PIX</Label>
                 <select
-                value={pixKeyType}
-                onChange={(e) => setPixKeyType(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white"
-                disabled={isProcessingWithdrawal}>
+                  value={pixKeyType}
+                  onChange={(e) => setPixKeyType(e.target.value)}
+                  className="w-full px-4 py-2 border border-gray-600 rounded-lg bg-gray-700 text-white"
+                  disabled={isProcessingWithdrawal}>
 
                   <option value="CPF">CPF</option>
                   <option value="CNPJ">CNPJ</option>
@@ -1786,12 +1791,12 @@ const DashboardContent = ({ user, isAdmin }) => {
               <div>
                 <Label className="text-gray-300">Chave PIX</Label>
                 <Input
-                type="text"
-                value={pixKey}
-                onChange={(e) => setPixKey(e.target.value)}
-                placeholder="Sua chave PIX"
-                className="bg-gray-700 border-gray-600 text-white"
-                disabled={isProcessingWithdrawal} />
+                  type="text"
+                  value={pixKey}
+                  onChange={(e) => setPixKey(e.target.value)}
+                  placeholder="Sua chave PIX"
+                  className="bg-gray-700 border-gray-600 text-white"
+                  disabled={isProcessingWithdrawal} />
 
               </div>
 
@@ -1803,28 +1808,28 @@ const DashboardContent = ({ user, isAdmin }) => {
 
               <div className="flex gap-3 pt-2">
                 <Button
-                type="button"
-                onClick={() => setShowWithdrawalModal(false)}
-                variant="outline"
-                className="flex-1 border-gray-600 text-gray-300"
-                disabled={isProcessingWithdrawal}>
+                  type="button"
+                  onClick={() => setShowWithdrawalModal(false)}
+                  variant="outline"
+                  className="flex-1 border-gray-600 text-gray-300"
+                  disabled={isProcessingWithdrawal}>
 
                   Cancelar
                 </Button>
                 <Button
-                type="button"
-                onClick={handleWithdrawalSubmit}
-                className="flex-1 bg-green-600 hover:bg-green-700"
-                disabled={isProcessingWithdrawal}>
+                  type="button"
+                  onClick={handleWithdrawalSubmit}
+                  className="flex-1 bg-green-600 hover:bg-green-700"
+                  disabled={isProcessingWithdrawal}>
 
                   {isProcessingWithdrawal ?
-                <>
+                    <>
                       <Loader2 className="w-5 h-5 animate-spin mr-2" />
                       Processando...
                     </> :
 
-                'Solicitar Saque'
-                }
+                    'Solicitar Saque'
+                  }
                 </Button>
               </div>
             </div>
@@ -1914,7 +1919,7 @@ export default function LicensingPage() {
 
   const handleRegistrationSuccess = async (user) => {
     console.log("✅ Login/Cadastro bem-sucedido:", user.full_name);
-    
+
     // Busca dados atualizados do usuário no banco para garantir que temos os career_levels corretos
     try {
       const freshUsers = await AppUser.filter({ email: user.email });
@@ -1930,7 +1935,7 @@ export default function LicensingPage() {
       console.warn("Não foi possível atualizar dados do usuário:", err);
       setCurrentUser(user);
     }
-    
+
     setShowLicenseeRegisterModal(false);
     setShowLoginModal(false);
   };
@@ -2024,17 +2029,15 @@ export default function LicensingPage() {
 
   return (
     <>
-      <div className={`min-h-screen ${
-      isSaiDeBaixo ?
-      'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' :
-      'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
+      <div className={`min-h-screen ${isSaiDeBaixo ?
+          'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' :
+          'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
       }>
         {/* Hero Section */}
         <div className="relative overflow-hidden py-20 px-6">
-          <div className={`absolute inset-0 bg-gradient-to-r ${
-          isSaiDeBaixo ?
-          'from-red-500/10 to-orange-500/10' :
-          'from-green-500/10 to-blue-500/10'}`
+          <div className={`absolute inset-0 bg-gradient-to-r ${isSaiDeBaixo ?
+              'from-red-500/10 to-orange-500/10' :
+              'from-green-500/10 to-blue-500/10'}`
           }></div>
           <div className="relative max-w-6xl mx-auto text-center">
             <motion.div
@@ -2042,18 +2045,17 @@ export default function LicensingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}>
 
-              <div className={`inline-flex items-center gap-3 mb-6 px-6 py-3 rounded-full border ${
-              isSaiDeBaixo ?
-              'bg-red-500/10 border-red-500/30' :
-              'bg-green-500/10 border-green-500/30'}`
+              <div className={`inline-flex items-center gap-3 mb-6 px-6 py-3 rounded-full border ${isSaiDeBaixo ?
+                  'bg-red-500/10 border-red-500/30' :
+                  'bg-green-500/10 border-green-500/30'}`
               }>
                 <TrendingUp className={`w-6 h-6 ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`} />
                 <span className={`font-semibold ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`}>Programa de Influenciadores</span>
               </div>
-              
+
               {/* TÍTULO DINÂMICO */}
               {userLevel === 'guest' || userLevel === 'usuario' ?
-              <>
+                <>
                   <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
                     Torne-se um Influenciador
                   </h1>
@@ -2064,44 +2066,44 @@ export default function LicensingPage() {
                     Construa um negócio sólido com o sistema de alavancagem {isSaiDeBaixo ? 'do Sai de Baixo' : 'da Leilão NoZap'}!
                   </p>
                 </> :
-              userLevel === 'influencer' ?
-              <>
-                  <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                    Você já é um Influenciador!
-                  </h1>
-                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Você ganha 3% em dinheiro real!</strong>
-                  </p>
-                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Continue crescendo sua rede e <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>aumente seus ganhos</strong> com o sistema de alavancagem!
-                  </p>
-                </> :
+                userLevel === 'influencer' ?
+                  <>
+                    <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+                      Você já é um Influenciador!
+                    </h1>
+                    <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                      Compartilhe seu link &rarr; Seus indicados arrematam &rarr; <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-green-400'}>Você ganha 3% em dinheiro real!</strong>
+                    </p>
+                    <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                      Continue crescendo sua rede e <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>aumente seus ganhos</strong> com o sistema de alavancagem!
+                    </p>
+                  </> :
 
-              <>
-                  <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                    Parabéns! Você é {getLevelLabel(userLevel)} 🎉
-                  </h1>
-                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                    {getMotivationalMessage(userLevel)}
-                  </p>
-                  <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
-                    Ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>comissões em dinheiro real (R$)</strong> + bônus do seu sistema de alavancagem!
-                  </p>
-                </>
+                  <>
+                    <h1 className={`text-3xl md:text-4xl font-bold mb-6 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
+                      Parabéns! Você é {getLevelLabel(userLevel)} 🎉
+                    </h1>
+                    <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                      {getMotivationalMessage(userLevel)}
+                    </p>
+                    <p className={`text-lg max-w-3xl mx-auto mb-8 ${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'}`}>
+                      Ganhe <strong className={isSaiDeBaixo ? 'text-red-600' : 'text-yellow-400'}>comissões em dinheiro real (R$)</strong> + bônus do seu sistema de alavancagem!
+                    </p>
+                  </>
               }
 
               {/* CARD DINÂMICO */}
               {isLicensee && userLevel === 'influencer' &&
-              <div className="max-w-2xl mx-auto mt-8">
+                <div className="max-w-2xl mx-auto mt-8">
                   <Card className="bg-gradient-to-br from-blue-900/30 to-blue-800/20 border-2 border-blue-500/50">
                     <CardHeader>
                       <CardTitle className="text-blue-400">🚀 Quero Evoluir no Sistema</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <a
-                      href="https://wa.me/5521966629605?text=Olá,%20quero%20evoluir%20no%20sistema%20de%20alavancagem!"
-                      target="_blank"
-                      rel="noopener noreferrer">
+                        href="https://wa.me/5521966629605?text=Olá,%20quero%20evoluir%20no%20sistema%20de%20alavancagem!"
+                        target="_blank"
+                        rel="noopener noreferrer">
 
                         <Button className="w-full bg-green-600 hover:bg-green-700 text-white font-bold">
                           <MessageCircle className="w-5 h-5 mr-2" />
@@ -2114,16 +2116,16 @@ export default function LicensingPage() {
               }
 
               {isLicensee && ['licenciado_catalogo', 'executivo', 'diretor', 'ceo', 'conselheiro', 'fundador'].includes(userLevel) &&
-              <div className="max-w-2xl mx-auto mt-8">
+                <div className="max-w-2xl mx-auto mt-8">
                   <Card className="bg-gradient-to-br from-purple-900/30 to-purple-800/20 border-2 border-purple-500/50">
                     <CardHeader>
                       <CardTitle className="text-purple-400">👑 Suporte VIP</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <a
-                      href={`https://wa.me/5521966629605?text=Olá,%20sou%20${userLevel}%20e%20preciso%20de%20suporte!`}
-                      target="_blank"
-                      rel="noopener noreferrer">
+                        href={`https://wa.me/5521966629605?text=Olá,%20sou%20${userLevel}%20e%20preciso%20de%20suporte!`}
+                        target="_blank"
+                        rel="noopener noreferrer">
 
                         <Button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold">
                           <MessageCircle className="w-5 h-5 mr-2" />
@@ -2140,11 +2142,11 @@ export default function LicensingPage() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           {isLicensee ?
-          <DashboardContent user={currentUser} isAdmin={isAdmin} /> :
+            <DashboardContent user={currentUser} isAdmin={isAdmin} /> :
 
-          <LandingContent
-            onRegisterClick={() => setShowLicenseeRegisterModal(true)}
-            onLoginClick={() => setShowLoginModal(true)} />
+            <LandingContent
+              onRegisterClick={() => setShowLicenseeRegisterModal(true)}
+              onLoginClick={() => setShowLoginModal(true)} />
 
           }
         </div>
@@ -2163,22 +2165,22 @@ export default function LicensingPage() {
       </div>
 
       {showLicenseeRegisterModal &&
-      <LicenseeRegistrationModal
-        onClose={() => setShowLicenseeRegisterModal(false)}
-        onSuccess={handleRegistrationSuccess} />
+        <LicenseeRegistrationModal
+          onClose={() => setShowLicenseeRegisterModal(false)}
+          onSuccess={handleRegistrationSuccess} />
 
       }
       {showLoginModal &&
-      <LoginModal
-        onClose={() => setShowLoginModal(false)}
-        onSuccess={handleRegistrationSuccess}
-        onSwitchToRegister={() => {
-          setShowLoginModal(false);
-          setShowLicenseeRegisterModal(true);
-        }} />
+        <LoginModal
+          onClose={() => setShowLoginModal(false)}
+          onSuccess={handleRegistrationSuccess}
+          onSwitchToRegister={() => {
+            setShowLoginModal(false);
+            setShowLicenseeRegisterModal(true);
+          }} />
 
       }
-      
+
       <style>{`
         @keyframes logoGrowSpin {
           0% {

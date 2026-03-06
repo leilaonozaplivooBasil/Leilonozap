@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  Loader2, 
-  ShoppingCart, 
-  Copy, 
+import {
+  Loader2,
+  ShoppingCart,
+  Copy,
   ArrowLeft,
   Check,
   Lock,
@@ -34,7 +34,7 @@ export default function AuctionCheckoutModern() {
   const [isWalletDeposit, setIsWalletDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState(0);
   const [depositType, setDepositType] = useState(null); // 'digital_wallet' ou null
-  
+
   const [auction, setAuction] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
@@ -58,14 +58,16 @@ export default function AuctionCheckoutModern() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState('info'); // 'info', 'payment', 'success'
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-  
+  const initialTimeoutRef = useRef(null);
+  const intervalRef = useRef(null);
+
   // Cartão de crédito
   const [cardHolder, setCardHolder] = useState('');
   const [cardNumber, setCardNumber] = useState('');
   const [cardMonth, setCardMonth] = useState('');
   const [cardYear, setCardYear] = useState('');
   const [cardCvv, setCardCvv] = useState('');
-  
+
   // Accordion states
   const [expandedSection, setExpandedSection] = useState('personal');
 
@@ -173,7 +175,7 @@ export default function AuctionCheckoutModern() {
 
   const validateCardData = () => {
     if (paymentType !== 'CREDIT_CARD') return true;
-    
+
     const cleanCard = cardNumber.replace(/\D/g, '');
     if (cleanCard.length !== 16) {
       toast.error('Cartão deve ter 16 dígitos');
@@ -196,7 +198,7 @@ export default function AuctionCheckoutModern() {
 
   const handleCreatePayment = async () => {
     console.log('🔘 handleCreatePayment chamado', { auction: !!auction, auctionId: auction?.id, isProcessing });
-    
+
     if (!validateForm()) {
       console.log('❌ validateForm falhou', formErrors);
       return;
@@ -240,9 +242,9 @@ export default function AuctionCheckoutModern() {
         buyer_phone: phone.trim(),
         amount: amount,
         billing_type: paymentType,
-        description: isWalletDeposit 
-          ? (depositType === 'digital_wallet' 
-            ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}` 
+        description: isWalletDeposit
+          ? (depositType === 'digital_wallet'
+            ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}`
             : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
           : `Arremate - ${auction.title}`,
         card_data: cardData,
@@ -280,7 +282,7 @@ export default function AuctionCheckoutModern() {
               const parsed = JSON.parse(saved);
               localStorage.setItem('currentUser', JSON.stringify({ ...parsed, ...updateData }));
             }
-          }).catch(() => {});
+          }).catch(() => { });
         }
       } else {
         const errorDetails = responseData?.details || null;
@@ -318,7 +320,7 @@ export default function AuctionCheckoutModern() {
             errorDets = details || null;
           }
         }
-      } catch (_) {}
+      } catch (_) { }
 
       if (error.message?.includes('timeout')) {
         errorDesc = 'O servidor demorou para responder. Tente novamente em instantes.';
@@ -428,11 +430,11 @@ export default function AuctionCheckoutModern() {
     };
 
     // Primeira checagem imediata após 3s
-    const initialTimeout = setTimeout(checkPaymentStatus, 3000);
-    const interval = setInterval(checkPaymentStatus, 5000);
+    initialTimeoutRef.current = setTimeout(checkPaymentStatus, 3000);
+    intervalRef.current = setInterval(checkPaymentStatus, 5000);
     return () => {
-      clearTimeout(initialTimeout);
-      clearInterval(interval);
+      if (initialTimeoutRef.current) clearTimeout(initialTimeoutRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [step, pixData, paymentConfirmed]);
 
@@ -449,9 +451,9 @@ export default function AuctionCheckoutModern() {
 
   if (!auction) return null;
 
-  const isFormValid = firstName?.trim() && email?.trim() && phone?.trim() && cpf?.trim() && 
-                     addressStreet?.trim() && addressNumber?.trim() && addressCity?.trim() && 
-                     addressState?.trim() && addressZip?.trim();
+  const isFormValid = firstName?.trim() && email?.trim() && phone?.trim() && cpf?.trim() &&
+    addressStreet?.trim() && addressNumber?.trim() && addressCity?.trim() &&
+    addressState?.trim() && addressZip?.trim();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
@@ -474,8 +476,8 @@ export default function AuctionCheckoutModern() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 auto-rows-max lg:auto-rows-auto">
-           {/* Coluna Principal - Formulário */}
-           <div className="lg:col-span-2 order-2 lg:order-1">
+          {/* Coluna Principal - Formulário */}
+          <div className="lg:col-span-2 order-2 lg:order-1">
             {step === 'info' && (
               <div className="space-y-4">
                 {/* Dados Pessoais - Accordion */}
@@ -495,10 +497,9 @@ export default function AuctionCheckoutModern() {
                             {isPersonalComplete && <p className="text-xs text-green-400">✓ Completo</p>}
                           </div>
                         </div>
-                        <ChevronDown 
-                          className={`w-5 h-5 text-gray-400 transition-transform ${
-                            expandedSection === 'personal' ? 'rotate-180' : ''
-                          }`}
+                        <ChevronDown
+                          className={`w-5 h-5 text-gray-400 transition-transform ${expandedSection === 'personal' ? 'rotate-180' : ''
+                            }`}
                         />
                       </div>
                     </CardHeader>
@@ -615,10 +616,9 @@ export default function AuctionCheckoutModern() {
                             {isAddressComplete && <p className="text-xs text-green-400">✓ Completo</p>}
                           </div>
                         </div>
-                        <ChevronDown 
-                          className={`w-5 h-5 text-gray-400 transition-transform ${
-                            expandedSection === 'address' ? 'rotate-180' : ''
-                          }`}
+                        <ChevronDown
+                          className={`w-5 h-5 text-gray-400 transition-transform ${expandedSection === 'address' ? 'rotate-180' : ''
+                            }`}
                         />
                       </div>
                     </CardHeader>
@@ -875,11 +875,11 @@ export default function AuctionCheckoutModern() {
                         </div>
                         <h3 className="text-2xl font-bold text-white">Pague com PIX</h3>
                         <p className="text-gray-400">Escaneie o QR Code abaixo para pagar</p>
-                        
+
                         <div className="bg-white rounded-lg p-6 inline-block">
-                          <img 
-                            src={pixData.pix_qr_code} 
-                            alt="QR Code PIX" 
+                          <img
+                            src={pixData.pix_qr_code}
+                            alt="QR Code PIX"
                             className="w-64 h-64"
                           />
                         </div>
@@ -896,9 +896,9 @@ export default function AuctionCheckoutModern() {
                         </Button>
 
                         <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-                           <p className="text-xs text-gray-300 mb-2">Ou copie e cole este código:</p>
-                           <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
-                         </div>
+                          <p className="text-xs text-gray-300 mb-2">Ou copie e cole este código:</p>
+                          <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                        </div>
 
                         <div className="flex items-center justify-center gap-2 text-gray-400 text-sm">
                           <Loader2 className="w-4 h-4 animate-spin" />
@@ -939,9 +939,9 @@ export default function AuctionCheckoutModern() {
                   </div>
                   {!isWalletDeposit && (
                     <div className="flex justify-between text-sm">
-                        <span className="text-white">Frete</span>
-                        <span className="text-green-400">A combinar</span>
-                      </div>
+                      <span className="text-white">Frete</span>
+                      <span className="text-green-400">A combinar</span>
+                    </div>
                   )}
                   <div className="flex justify-between text-base font-bold pt-2">
                     <span className="text-white">Total</span>
@@ -958,11 +958,10 @@ export default function AuctionCheckoutModern() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
                       <button
                         onClick={() => setPaymentType('PIX')}
-                        className={`p-3 rounded-lg border-2 transition-all text-left ${
-                          paymentType === 'PIX'
+                        className={`p-3 rounded-lg border-2 transition-all text-left ${paymentType === 'PIX'
                             ? 'border-green-500 bg-green-500/10'
                             : 'border-gray-700 bg-gray-800/30 hover:border-green-500/50'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-2">
                           <div className={`flex-shrink-0 p-2 rounded-lg ${paymentType === 'PIX' ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600'}`}>
@@ -976,11 +975,10 @@ export default function AuctionCheckoutModern() {
                       </button>
                       <button
                         onClick={() => setPaymentType('CREDIT_CARD')}
-                        className={`p-3 rounded-lg border-2 transition-all text-left ${
-                          paymentType === 'CREDIT_CARD'
+                        className={`p-3 rounded-lg border-2 transition-all text-left ${paymentType === 'CREDIT_CARD'
                             ? 'border-green-500 bg-green-500/10'
                             : 'border-gray-700 bg-gray-800/30 hover:border-green-500/50'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center gap-2">
                           <div className={`flex-shrink-0 p-2 rounded-lg ${paymentType === 'CREDIT_CARD' ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600'}`}>

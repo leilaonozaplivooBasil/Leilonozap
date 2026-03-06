@@ -18,7 +18,8 @@ export default function WalletHistory() {
   const [currentPage, setCurrentPage] = useState({
     overview: 0,
     deposits: 0,
-    usage: 0
+    usage: 0,
+    refunds: 0
   });
   const ITEMS_PER_PAGE = 10;
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function WalletHistory() {
     const loadUser = () => {
       const savedUserJSON = localStorage.getItem('currentUser');
       const isLoggedIn = sessionStorage.getItem('isLoggedIn');
-      
+
       if (savedUserJSON && isLoggedIn) {
         const user = JSON.parse(savedUserJSON);
         setCurrentUser(user);
@@ -100,7 +101,8 @@ export default function WalletHistory() {
 
   const deposits = transactions.filter(t => t.type === "deposit");
   const walletUsage = transactions.filter(t => t.type === "purchase");
-  
+  const refunds = transactions.filter(t => t.type === "refund");
+
   const totalDeposited = deposits.reduce((sum, t) => sum + t.amount, 0);
   const totalUsed = walletUsage.reduce((sum, t) => sum + t.amount, 0);
 
@@ -117,6 +119,7 @@ export default function WalletHistory() {
   const getDataForTab = () => {
     if (activeTab === "overview") return transactions;
     if (activeTab === "deposits") return deposits;
+    if (activeTab === "refunds") return refunds;
     return walletUsage;
   };
 
@@ -175,22 +178,22 @@ export default function WalletHistory() {
             <CardContent className="p-8 relative z-10">
               <div className="flex items-start justify-between mb-8">
                 <div>
-                   <p className="text-green-300/70 text-sm font-light uppercase tracking-widest mb-3">Saldo Disponível</p>
-                   <div className="flex items-baseline gap-2">
-                     <p className="text-6xl font-black text-white">R$</p>
-                     <p className="text-6xl font-black bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
+                  <p className="text-green-300/70 text-sm font-light uppercase tracking-widest mb-3">Saldo Disponível</p>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-6xl font-black text-white">R$</p>
+                    <p className="text-6xl font-black bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
                       {wallet?.balance?.toFixed(2) || '0.00'}
                     </p>
                   </div>
                 </div>
                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500/30 to-emerald-500/30 flex items-center justify-center border border-green-400/30">
-                   <WalletIcon className="w-10 h-10 text-green-400" />
+                  <WalletIcon className="w-10 h-10 text-green-400" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-6 pt-6 border-t border-green-400/20">
-                 <div className="space-y-2">
-                   <p className="text-green-300/50 text-xs font-light uppercase tracking-wider">Entradas</p>
+                <div className="space-y-2">
+                  <p className="text-green-300/50 text-xs font-light uppercase tracking-wider">Entradas</p>
                   <div className="flex items-center gap-2">
                     <ArrowUpRight className="w-5 h-5 text-green-400" />
                     <p className="text-2xl font-bold text-green-400">R$ {totalDeposited.toFixed(2)}</p>
@@ -235,36 +238,43 @@ export default function WalletHistory() {
             <div className="flex gap-2 md:gap-6">
               <button
                 onClick={() => handleTabChange("overview")}
-                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
-                   activeTab === "overview"
-                     ? "text-green-300 border-green-400"
-                     : "text-green-200/50 hover:text-green-300 border-transparent"
-                 }`}
+                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${activeTab === "overview"
+                    ? "text-green-300 border-green-400"
+                    : "text-green-200/50 hover:text-green-300 border-transparent"
+                  }`}
               >
                 <TrendingDown className="w-5 h-5 inline mr-2" />
                 Todas
               </button>
               <button
                 onClick={() => handleTabChange("deposits")}
-                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
-                   activeTab === "deposits"
-                     ? "text-green-300 border-green-400"
-                     : "text-green-200/50 hover:text-green-300 border-transparent"
-                 }`}
+                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${activeTab === "deposits"
+                    ? "text-green-300 border-green-400"
+                    : "text-green-200/50 hover:text-green-300 border-transparent"
+                  }`}
               >
                 <TrendingUp className="w-5 h-5 inline mr-2" />
                 Entradas <span className="ml-1 text-xs">({deposits.length})</span>
               </button>
               <button
                 onClick={() => handleTabChange("usage")}
-                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${
-                   activeTab === "usage"
-                     ? "text-red-300 border-red-400"
-                     : "text-green-200/50 hover:text-green-300 border-transparent"
-                 }`}
+                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${activeTab === "usage"
+                    ? "text-red-300 border-red-400"
+                    : "text-green-200/50 hover:text-green-300 border-transparent"
+                  }`}
               >
                 <TrendingDown className="w-5 h-5 inline mr-2" />
                 Saídas <span className="ml-1 text-xs">({walletUsage.length})</span>
+              </button>
+              <button
+                onClick={() => handleTabChange("refunds")}
+                className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${activeTab === "refunds"
+                    ? "text-blue-300 border-blue-400"
+                    : "text-green-200/50 hover:text-green-300 border-transparent"
+                  }`}
+              >
+                <TrendingUp className="w-5 h-5 inline mr-2" />
+                Reembolsos <span className="ml-1 text-xs">({refunds.length})</span>
               </button>
             </div>
           </CardHeader>
@@ -273,7 +283,7 @@ export default function WalletHistory() {
               <div className="text-center py-16">
                 <div className="inline-block">
                   <div className="animate-spin rounded-full h-12 w-12 border-4 border-green-500/30 border-t-green-400 mx-auto mb-4"></div>
-                   <p className="text-green-300/70 font-light">Carregando transações...</p>
+                  <p className="text-green-300/70 font-light">Carregando transações...</p>
                 </div>
               </div>
             ) : (
@@ -284,8 +294,8 @@ export default function WalletHistory() {
                     <div className="space-y-4">
                       {transactions.length === 0 ? (
                         <div className="text-center py-16">
-                           <DollarSign className="w-16 h-16 text-green-400/20 mx-auto mb-4" />
-                           <p className="text-green-300/50 font-light">Nenhuma transação registrada</p>
+                          <DollarSign className="w-16 h-16 text-green-400/20 mx-auto mb-4" />
+                          <p className="text-green-300/50 font-light">Nenhuma transação registrada</p>
                         </div>
                       ) : (
                         getPaginatedData(transactions).map((transaction) => (
@@ -316,28 +326,28 @@ export default function WalletHistory() {
                       )}
                     </div>
                     {transactions.length > ITEMS_PER_PAGE && (
-                       <div className="flex items-center justify-between mt-8 pt-6 border-t border-green-400/20">
-                          <Button
-                            onClick={handlePreviousPage}
-                            disabled={currentPage.overview === 0}
-                            variant="outline"
-                            className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          >
-                            ← Anterior
-                          </Button>
-                          <span className="text-green-300/60 text-sm font-light">
-                            Página {currentPage.overview + 1} de {getTotalPages(transactions)}
-                          </span>
-                          <Button
-                            onClick={handleNextPage}
-                            disabled={currentPage.overview >= getTotalPages(transactions) - 1}
-                            variant="outline"
-                            className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          >
-                            Próxima →
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between mt-8 pt-6 border-t border-green-400/20">
+                        <Button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage.overview === 0}
+                          variant="outline"
+                          className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          ← Anterior
+                        </Button>
+                        <span className="text-green-300/60 text-sm font-light">
+                          Página {currentPage.overview + 1} de {getTotalPages(transactions)}
+                        </span>
+                        <Button
+                          onClick={handleNextPage}
+                          disabled={currentPage.overview >= getTotalPages(transactions) - 1}
+                          variant="outline"
+                          className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          Próxima →
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -347,8 +357,8 @@ export default function WalletHistory() {
                     <div className="space-y-4">
                       {deposits.length === 0 ? (
                         <div className="text-center py-16">
-                           <Plus className="w-16 h-16 text-green-400/20 mx-auto mb-4" />
-                           <p className="text-green-300/50 font-light mb-6">Nenhum depósito registrado</p>
+                          <Plus className="w-16 h-16 text-green-400/20 mx-auto mb-4" />
+                          <p className="text-green-300/50 font-light mb-6">Nenhum depósito registrado</p>
                           <Button onClick={() => navigate(createPageUrl("AddFunds"))} className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-bold shadow-lg shadow-green-500/50">
                             Fazer Primeiro Depósito
                           </Button>
@@ -380,28 +390,28 @@ export default function WalletHistory() {
                       )}
                     </div>
                     {deposits.length > ITEMS_PER_PAGE && (
-                       <div className="flex items-center justify-between mt-8 pt-6 border-t border-green-400/20">
-                          <Button
-                            onClick={handlePreviousPage}
-                            disabled={currentPage.deposits === 0}
-                            variant="outline"
-                            className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          >
-                            ← Anterior
-                          </Button>
-                          <span className="text-green-300/60 text-sm font-light">
-                            Página {currentPage.deposits + 1} de {getTotalPages(deposits)}
-                          </span>
-                          <Button
-                            onClick={handleNextPage}
-                            disabled={currentPage.deposits >= getTotalPages(deposits) - 1}
-                            variant="outline"
-                            className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          >
-                            Próxima →
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-between mt-8 pt-6 border-t border-green-400/20">
+                        <Button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage.deposits === 0}
+                          variant="outline"
+                          className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          ← Anterior
+                        </Button>
+                        <span className="text-green-300/60 text-sm font-light">
+                          Página {currentPage.deposits + 1} de {getTotalPages(deposits)}
+                        </span>
+                        <Button
+                          onClick={handleNextPage}
+                          disabled={currentPage.deposits >= getTotalPages(deposits) - 1}
+                          variant="outline"
+                          className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          Próxima →
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -411,8 +421,8 @@ export default function WalletHistory() {
                     <div className="space-y-4">
                       {walletUsage.length === 0 ? (
                         <div className="text-center py-16">
-                           <DollarSign className="w-16 h-16 text-red-400/20 mx-auto mb-4" />
-                           <p className="text-green-300/50 font-light">Nenhuma saída registrada</p>
+                          <DollarSign className="w-16 h-16 text-red-400/20 mx-auto mb-4" />
+                          <p className="text-green-300/50 font-light">Nenhuma saída registrada</p>
                         </div>
                       ) : (
                         getPaginatedData(walletUsage).map((transaction) => (
@@ -441,28 +451,89 @@ export default function WalletHistory() {
                       )}
                     </div>
                     {walletUsage.length > ITEMS_PER_PAGE && (
-                       <div className="flex items-center justify-between mt-8 pt-6 border-t border-green-400/20">
-                          <Button
-                            onClick={handlePreviousPage}
-                            disabled={currentPage.usage === 0}
-                            variant="outline"
-                            className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          >
-                            ← Anterior
-                          </Button>
-                          <span className="text-green-300/60 text-sm font-light">
-                            Página {currentPage.usage + 1} de {getTotalPages(walletUsage)}
-                          </span>
-                          <Button
-                            onClick={handleNextPage}
-                            disabled={currentPage.usage >= getTotalPages(walletUsage) - 1}
-                            variant="outline"
-                            className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
-                          >
-                            Próxima →
-                          </Button>
+                      <div className="flex items-center justify-between mt-8 pt-6 border-t border-green-400/20">
+                        <Button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage.usage === 0}
+                          variant="outline"
+                          className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          ← Anterior
+                        </Button>
+                        <span className="text-green-300/60 text-sm font-light">
+                          Página {currentPage.usage + 1} de {getTotalPages(walletUsage)}
+                        </span>
+                        <Button
+                          onClick={handleNextPage}
+                          disabled={currentPage.usage >= getTotalPages(walletUsage) - 1}
+                          variant="outline"
+                          className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          Próxima →
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Reembolsos */}
+                {activeTab === "refunds" && (
+                  <div>
+                    <div className="space-y-4">
+                      {refunds.length === 0 ? (
+                        <div className="text-center py-16">
+                          <TrendingUp className="w-16 h-16 text-blue-400/20 mx-auto mb-4" />
+                          <p className="text-green-300/50 font-light">Nenhum reembolso registrado</p>
                         </div>
+                      ) : (
+                        getPaginatedData(refunds).map((transaction) => (
+                          <div key={transaction.id} className="group p-4 bg-gradient-to-r from-slate-700/30 to-slate-800/30 border border-blue-400/20 rounded-xl hover:border-blue-400/50 hover:shadow-sm transition-all duration-300">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-400/30">
+                                  <TrendingUp className="w-5 h-5 text-blue-400" />
+                                </div>
+                                <div>
+                                  <p className="text-white font-semibold">Reembolso Confirmado</p>
+                                  <p className="text-green-300/60 text-sm font-light">{(transaction.description || "Estorno de saldo").replace(/\s*-\s*pay_[a-zA-Z0-9]+/g, '')}</p>
+                                  <div className="flex items-center gap-2 text-green-300/40 text-xs mt-1">
+                                    <Clock className="w-3 h-3" />
+                                    {new Date(transaction.created_date + (transaction.created_date.endsWith('Z') ? '' : 'Z')).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-lg font-bold text-blue-400">+R$ {transaction.amount.toFixed(2)}</p>
+                                {getStatusBadge(transaction.status)}
+                              </div>
+                            </div>
+                          </div>
+                        ))
                       )}
+                    </div>
+                    {refunds.length > ITEMS_PER_PAGE && (
+                      <div className="flex items-center justify-between mt-8 pt-6 border-t border-green-400/20">
+                        <Button
+                          onClick={handlePreviousPage}
+                          disabled={currentPage.refunds === 0}
+                          variant="outline"
+                          className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          ← Anterior
+                        </Button>
+                        <span className="text-green-300/60 text-sm font-light">
+                          Página {currentPage.refunds + 1} de {getTotalPages(refunds)}
+                        </span>
+                        <Button
+                          onClick={handleNextPage}
+                          disabled={currentPage.refunds >= getTotalPages(refunds) - 1}
+                          variant="outline"
+                          className="border-green-400/30 text-green-300 hover:bg-green-400/10 hover:border-green-400/50 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                        >
+                          Próxima →
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
               </>
