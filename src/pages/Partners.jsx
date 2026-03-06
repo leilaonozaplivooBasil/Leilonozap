@@ -4,10 +4,10 @@ import { createPageUrl } from '@/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ShoppingCart, 
-  TrendingUp, 
-  Check, 
+import {
+  ShoppingCart,
+  TrendingUp,
+  Check,
   DollarSign,
   Package,
   LogIn,
@@ -21,27 +21,27 @@ import ProductCarousel from '../components/licensing/ProductCarousel';
 
 const AppUser = base44.entities.AppUser;
 
-const LandingContent = ({ onLoginClick }) => {
+const LandingContent = ({ onLoginClick, onPackageSelect }) => {
   const [hoveredBenefit, setHoveredBenefit] = React.useState(null);
 
   const benefits = [
-    { 
-      icon: DollarSign, 
+    {
+      icon: DollarSign,
       text: "Lucro Garantido",
       description: "Receba 3% de lucro garantido sobre todas as vendas realizadas com seu investimento. Ganhos previsíveis e seguros!"
     },
-    { 
-      icon: ShoppingCart, 
+    {
+      icon: ShoppingCart,
       text: "Nós Vendemos Tudo",
       description: "Nossa equipe cuida de toda a operação: vendas, estoque, atendimento, logística e entrega. Você só investe e lucra!"
     },
-    { 
-      icon: Package, 
+    {
+      icon: Package,
       text: "Produtos de Alta Liquidez",
       description: "Trabalhamos com produtos selecionados de alta demanda. Risco baixo e retorno garantido em 60 dias!"
     },
-    { 
-      icon: ShieldCheck, 
+    {
+      icon: ShieldCheck,
       text: "Compra Segura",
       description: "Gestão 100% profissional do seu capital. Transparência total e contratos formalizados!"
     },
@@ -71,7 +71,7 @@ const LandingContent = ({ onLoginClick }) => {
         </div>
       </div>
 
-      <JourneyAnimation 
+      <JourneyAnimation
         journeyTitle="Jornada do Parceiro"
         customPhases={[
           {
@@ -105,7 +105,7 @@ const LandingContent = ({ onLoginClick }) => {
         ]}
       />
 
-      <ProductCarousel />
+      <ProductCarousel onBuyClick={onPackageSelect} />
 
       {/* COMO FUNCIONA - Mantém conteúdo original */}
       <div className="mb-12 sm:mb-16 max-w-4xl mx-auto px-4">
@@ -243,8 +243,8 @@ const LandingContent = ({ onLoginClick }) => {
         <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4 text-center">Seus Benefícios Como Parceiro</h2>
         <div className="mt-8 sm:mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-8 text-center">
           {benefits.map((item, index) => (
-            <div 
-              key={item.text} 
+            <div
+              key={item.text}
               className="flex flex-col items-center group"
               onMouseEnter={() => setHoveredBenefit(index)}
               onMouseLeave={() => setHoveredBenefit(null)}
@@ -269,9 +269,9 @@ const LandingContent = ({ onLoginClick }) => {
             style={{ perspective: '1000px' }}
           >
             <div className="bg-gray-800 border-2 border-green-500/50 rounded-2xl p-6 shadow-2xl max-w-sm mx-4"
-                 style={{ 
-                   boxShadow: '0 0 60px rgba(34, 197, 94, 0.4), 0 20px 80px rgba(0,0,0,0.8)'
-                 }}
+              style={{
+                boxShadow: '0 0 60px rgba(34, 197, 94, 0.4), 0 20px 80px rgba(0,0,0,0.8)'
+              }}
             >
               <div className="flex items-start gap-4">
                 <div className="p-3 bg-green-500/20 rounded-xl flex-shrink-0 border border-green-500/30">
@@ -301,6 +301,7 @@ export default function PartnersPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState(null);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -326,13 +327,23 @@ export default function PartnersPage() {
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
     setShowLoginModal(false);
-    
+
     // 🔥 REDIRECIONA PARA INVESTOR DASHBOARD
     console.log('✅ Login Partners bem-sucedido, redirecionando...');
     setTimeout(() => {
-      navigate(createPageUrl("InvestorDashboard"));
+      navigate(createPageUrl("InvestorDashboard"), { state: { package: selectedPackage } });
     }, 500);
   };
+
+  const handlePackageSelect = (pkg) => {
+    if (pkg && pkg.investment) {
+      const amountText = pkg.investment.replace('R$', '').replace(/\./g, '').replace(',', '.').trim();
+      const amount = parseFloat(amountText);
+      setSelectedPackage({ minInvestment: amount, name: pkg.name });
+    }
+    setShowLoginModal(true);
+  };
+
 
   const handleLoginClick = () => {
     setShowLoginModal(true);
@@ -390,7 +401,7 @@ export default function PartnersPage() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <LandingContent onLoginClick={handleLoginClick} />
+          <LandingContent onLoginClick={handleLoginClick} onPackageSelect={handlePackageSelect} />
         </div>
 
         <div className="py-20 px-6 bg-gray-800/50">

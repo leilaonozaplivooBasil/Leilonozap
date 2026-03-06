@@ -799,15 +799,15 @@ export default function Cart() {
                 <h3 className="text-white font-medium mb-3">Aplicar cupom</h3>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Insira o cupom aqui"
-                    value={coupon}
-                    onChange={(e) => setCoupon(e.target.value)}
-                    className="bg-gray-700 border-gray-600 text-white placeholder:text-gray-500 flex-1 h-10"
+                    placeholder="Cupons em breve..."
+                    disabled={true}
+                    className="bg-gray-700 border-gray-600 text-gray-500 placeholder:text-gray-500 flex-1 h-10 opacity-60 cursor-not-allowed"
                   />
                   <Button
-                    className="bg-gray-700 border-gray-600 text-gray-300 hover:bg-gray-600 hover:text-white h-10"
+                    disabled={true}
+                    className="bg-gray-700 border-gray-600 text-gray-500 h-10 opacity-60 cursor-not-allowed"
                   >
-                    Aplicar
+                    Em breve
                   </Button>
                 </div>
               </Card>

@@ -271,7 +271,7 @@ export default function PDV() {
 
       const response = await getPDVData({ ...getAdminCredentials(), action: 'cashSessions' });
       const closedSessions = response?.data?.cashSessions || [];
-      
+
       // 🛡️ DEDUPLICAÇÃO NO FRONTEND: Remove sessões duplicadas pelo ID
       const uniqueMap = {};
       closedSessions.forEach(session => {
@@ -1042,7 +1042,7 @@ ${boletoInfo}================================
 
       await pdvAction({
         ...getAdminCredentials(), action: 'updateSale', sale_id: editingSale.id, sale_data: {
-          quantity_sold: parseInt(editSaleData.quantity_sold),
+          quantity_sold: parseInt(editSaleData.quantity_sold, 10),
           unit_price: parseFloat(editSaleData.unit_price),
           total_amount: newTotalAmount,
           total_taxes: itemTaxes.total,
@@ -1250,12 +1250,12 @@ ${boletoInfo}================================
                         <tbody>
                           {filteredProducts.map((product, index) => (
                             <tr
-                             key={product.id}
-                             className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors cursor-pointer ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'}`}
-                             onClick={() => addToCart(product)}
+                              key={product.id}
+                              className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors cursor-pointer ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'}`}
+                              onClick={() => addToCart(product)}
                             >
-                             <td className="p-3 text-sm text-gray-300 font-medium">{product.lot || 'N/A'}</td>
-                             <td className="p-3 text-sm text-gray-300">{product.description}</td>
+                              <td className="p-3 text-sm text-gray-300 font-medium">{product.lot || 'N/A'}</td>
+                              <td className="p-3 text-sm text-gray-300">{product.description}</td>
                               <td className="p-3 text-center">
                                 <Badge className="bg-blue-900/50 text-blue-300 border-0">
                                   {product.quantity}
@@ -1580,7 +1580,7 @@ ${boletoInfo}================================
                                 type="number"
                                 min="1"
                                 value={boletoData.parcelas}
-                                onChange={(e) => setBoletoData({ ...boletoData, parcelas: parseInt(e.target.value) || 1 })}
+                                onChange={(e) => setBoletoData({ ...boletoData, parcelas: parseInt(e.target.value, 10) || 1 })}
                                 className="h-9"
                                 placeholder="1"
                               />

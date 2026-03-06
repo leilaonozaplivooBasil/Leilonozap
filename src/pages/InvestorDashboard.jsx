@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,10 +12,10 @@ import { generateContractPDF } from '@/functions/generateContractPDF';
 import { getPartnerPurchases } from '@/functions/getPartnerPurchases';
 import { toast } from 'sonner';
 
-import { 
-  DollarSign, 
-  Package, 
-  CheckCircle, 
+import {
+  DollarSign,
+  Package,
+  CheckCircle,
   ArrowRight,
   ShieldCheck,
   Calculator,
@@ -46,6 +46,7 @@ const FeaturedProduct = base44.entities.FeaturedProduct;
 
 export default function InvestorDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeInvestments, setActiveInvestments] = useState([]);
@@ -68,11 +69,11 @@ export default function InvestorDashboard() {
       const savedUserJSON = localStorage.getItem('currentUser');
       if (savedUserJSON) {
         const userFromStorage = JSON.parse(savedUserJSON);
-        
+
         // ✅ SEMPRE sincroniza com o banco para pegar ativações mais recentes
         const freshUsers = await base44.entities.AppUser.filter({ id: userFromStorage.id });
         const user = freshUsers && freshUsers.length > 0 ? freshUsers[0] : userFromStorage;
-        
+
         // 🕒 Registra último acesso
         try {
           await base44.entities.AppUser.update(user.id, {
@@ -82,153 +83,153 @@ export default function InvestorDashboard() {
         } catch (e) {
           console.debug('Registro de acesso ignorado');
         }
-          
-          setCurrentUser(user);
-          setPixFormData({
-            name: user?.full_name || '',
-            phone: user?.phone || '',
-            email: user?.email || '',
-            cpf: user?.cpf || ''
-          });
 
-          // Carrega imagens dos produtos em destaque
-          try {
-            const products = await FeaturedProduct.filter({ is_active: true });
-            const imageMap = {};
-            products.forEach(product => {
-              const category = product.category?.toLowerCase();
-              if (category === 'eletrônicos' || category === 'eletronicos') {
-                imageMap.eletronicos = product.image_url;
-              } else if (category === 'eletrodomésticos' || category === 'eletrodomesticos') {
-                imageMap.eletrodomesticos = product.image_url;
-              } else if (category === 'apple') {
-                imageMap.apple = product.image_url;
+        setCurrentUser(user);
+        setPixFormData({
+          name: user?.full_name || '',
+          phone: user?.phone || '',
+          email: user?.email || '',
+          cpf: user?.cpf || ''
+        });
+
+        // Carrega imagens dos produtos em destaque
+        try {
+          const products = await FeaturedProduct.filter({ is_active: true });
+          const imageMap = {};
+          products.forEach(product => {
+            const category = product.category?.toLowerCase();
+            if (category === 'eletrônicos' || category === 'eletronicos') {
+              imageMap.eletronicos = product.image_url;
+            } else if (category === 'eletrodomésticos' || category === 'eletrodomesticos') {
+              imageMap.eletrodomesticos = product.image_url;
+            } else if (category === 'apple') {
+              imageMap.apple = product.image_url;
+            }
+          });
+          setProductImages(imageMap);
+        } catch (error) {
+          console.error('Erro ao carregar imagens:', error);
+        }
+
+        // ✅ Busca TODOS os planos ativos do parceiro (sistema novo + legacy)
+        const investments = [];
+
+        try {
+          // 🔍 DIAGNÓSTICO COMPLETO DO PROBLEMA
+          console.log('🔍 DEBUG - User object:', { id: user.id, email: user.email, full_name: user.full_name, role: user.role });
+
+          if (!user.id) {
+            console.error('❌ ERRO CRÍTICO: user.id está undefined!');
+            throw new Error('User ID não encontrado');
+          }
+
+          console.log('🔍 Buscando planos para user_id:', user.id);
+
+          // 🔐 Busca via backend function (bypassa RLS corretamente)
+          const response = await getPartnerPurchases({
+            mode: 'user',
+            user_id: user.id,
+            status_filter: 'active',
+            app_user_email: user.email,
+            app_user_id: user.id
+          });
+          const purchases = response?.data?.purchases || [];
+
+          console.log('✅ Planos ativos encontrados:', purchases.length);
+
+          if (purchases && purchases.length > 0) {
+            console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
+              id: p.id,
+              plan: p.plan_name,
+              amount: p.plan_amount,
+              is_investment: p.is_investment,
+              rate: p.investment_rate,
+              activated_at: p.activated_at
+            })));
+
+            console.log('🔄 Processando', purchases.length, 'planos...');
+
+            purchases.forEach((purchase, index) => {
+              console.log(`📦 Processando plano ${index + 1}/${purchases.length}:`, purchase.id);
+              // Se for investimento com rendimento
+              // Taxa vem da entidade (padrão 3%)
+              const rate = (purchase.investment_rate || 3) / 100;
+              // Calcula parcelas pagas do purchase_periods
+              const periods = purchase.purchase_periods || [];
+              const paidPeriods = periods.filter(p => p.status === 'paid').length;
+              const monthlyProfit = Math.round(purchase.plan_amount * rate);
+              const paidProfit = paidPeriods * monthlyProfit;
+              // Lucro total estimado = 12 parcelas (1 ano)
+              const totalEstimatedProfit = 12 * monthlyProfit;
+
+              if (purchase.is_investment) {
+                investments.push({
+                  id: purchase.id,
+                  plan: `${purchase.plan_name} - Investimento ${purchase.investment_rate}%`,
+                  amount: purchase.plan_amount,
+                  startDate: purchase.activated_at,
+                  currentStep: 0,
+                  products: [],
+                  isInvestment: true,
+                  investmentRate: purchase.investment_rate || 3,
+                  accumulatedReturn: purchase.accumulated_return || 0,
+                  withdrawalDate: purchase.withdrawal_available_date,
+                  estimatedProfit: totalEstimatedProfit,
+                  monthlyProfit,
+                  paidPeriods,
+                  paidProfit,
+                  totalPeriods: 12,
+                  purchasePeriods: periods,
+                  estimatedReturn: purchase.withdrawal_available_date || new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
+                });
+              } else {
+                investments.push({
+                  id: purchase.id,
+                  plan: purchase.plan_name,
+                  amount: purchase.plan_amount,
+                  startDate: purchase.activated_at,
+                  currentStep: 0,
+                  products: [],
+                  isInvestment: false,
+                  investmentRate: purchase.investment_rate || 3,
+                  estimatedProfit: totalEstimatedProfit,
+                  monthlyProfit,
+                  paidPeriods,
+                  paidProfit,
+                  totalPeriods: 12,
+                  purchasePeriods: periods,
+                  estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
+                });
+                console.log('✅ Plano de compra adicionado:', purchase.plan_name);
               }
             });
-            setProductImages(imageMap);
-          } catch (error) {
-            console.error('Erro ao carregar imagens:', error);
+
+            console.log('📊 Total de planos processados e adicionados:', investments.length);
+          } else {
+            console.log('⚠️ Nenhum plano encontrado no PartnerPlanPurchase para este usuário');
           }
-          
-          // ✅ Busca TODOS os planos ativos do parceiro (sistema novo + legacy)
-          const investments = [];
-          
-          try {
-            // 🔍 DIAGNÓSTICO COMPLETO DO PROBLEMA
-            console.log('🔍 DEBUG - User object:', { id: user.id, email: user.email, full_name: user.full_name, role: user.role });
-            
-            if (!user.id) {
-              console.error('❌ ERRO CRÍTICO: user.id está undefined!');
-              throw new Error('User ID não encontrado');
-            }
-            
-            console.log('🔍 Buscando planos para user_id:', user.id);
-            
-            // 🔐 Busca via backend function (bypassa RLS corretamente)
-            const response = await getPartnerPurchases({ 
-              mode: 'user', 
-              user_id: user.id, 
-              status_filter: 'active',
-              app_user_email: user.email,
-              app_user_id: user.id
+        } catch (error) {
+          console.error('❌ Erro ao buscar PartnerPlanPurchase:', error.message);
+        }
+
+        // 2️⃣ FALLBACK: Se não encontrou nada no sistema novo, busca legacy no AppUser
+        if (investments.length === 0) {
+          if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
+            console.log('⚠️ Usando plano legacy do AppUser');
+            investments.push({
+              id: `legacy_${user.id}`,
+              plan: user.active_partner_plan,
+              amount: user.partner_plan_amount,
+              startDate: user.partner_plan_activated_at,
+              currentStep: 0,
+              products: [],
+              isInvestment: false,
+              estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
+              estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
             });
-            const purchases = response?.data?.purchases || [];
-            
-            console.log('✅ Planos ativos encontrados:', purchases.length);
-            
-            if (purchases && purchases.length > 0) {
-              console.log('✅ DETALHES DOS PLANOS ENCONTRADOS:', purchases.map(p => ({
-                id: p.id,
-                plan: p.plan_name,
-                amount: p.plan_amount,
-                is_investment: p.is_investment,
-                rate: p.investment_rate,
-                activated_at: p.activated_at
-              })));
-              
-              console.log('🔄 Processando', purchases.length, 'planos...');
-              
-              purchases.forEach((purchase, index) => {
-                console.log(`📦 Processando plano ${index + 1}/${purchases.length}:`, purchase.id);
-                // Se for investimento com rendimento
-                // Taxa vem da entidade (padrão 3%)
-                const rate = (purchase.investment_rate || 3) / 100;
-                // Calcula parcelas pagas do purchase_periods
-                const periods = purchase.purchase_periods || [];
-                const paidPeriods = periods.filter(p => p.status === 'paid').length;
-                const monthlyProfit = Math.round(purchase.plan_amount * rate);
-                const paidProfit = paidPeriods * monthlyProfit;
-                // Lucro total estimado = 12 parcelas (1 ano)
-                const totalEstimatedProfit = 12 * monthlyProfit;
-                
-                if (purchase.is_investment) {
-                  investments.push({
-                    id: purchase.id,
-                    plan: `${purchase.plan_name} - Investimento ${purchase.investment_rate}%`,
-                    amount: purchase.plan_amount,
-                    startDate: purchase.activated_at,
-                    currentStep: 0,
-                    products: [],
-                    isInvestment: true,
-                    investmentRate: purchase.investment_rate || 3,
-                    accumulatedReturn: purchase.accumulated_return || 0,
-                    withdrawalDate: purchase.withdrawal_available_date,
-                    estimatedProfit: totalEstimatedProfit,
-                    monthlyProfit,
-                    paidPeriods,
-                    paidProfit,
-                    totalPeriods: 12,
-                    purchasePeriods: periods,
-                    estimatedReturn: purchase.withdrawal_available_date || new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
-                  });
-                } else {
-                  investments.push({
-                    id: purchase.id,
-                    plan: purchase.plan_name,
-                    amount: purchase.plan_amount,
-                    startDate: purchase.activated_at,
-                    currentStep: 0,
-                    products: [],
-                    isInvestment: false,
-                    investmentRate: purchase.investment_rate || 3,
-                    estimatedProfit: totalEstimatedProfit,
-                    monthlyProfit,
-                    paidPeriods,
-                    paidProfit,
-                    totalPeriods: 12,
-                    purchasePeriods: periods,
-                    estimatedReturn: new Date(new Date(purchase.activated_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
-                  });
-                  console.log('✅ Plano de compra adicionado:', purchase.plan_name);
-                }
-              });
-              
-              console.log('📊 Total de planos processados e adicionados:', investments.length);
-            } else {
-              console.log('⚠️ Nenhum plano encontrado no PartnerPlanPurchase para este usuário');
-            }
-          } catch (error) {
-            console.error('❌ Erro ao buscar PartnerPlanPurchase:', error.message);
           }
-          
-          // 2️⃣ FALLBACK: Se não encontrou nada no sistema novo, busca legacy no AppUser
-          if (investments.length === 0) {
-            if (user.active_partner_plan && user.partner_plan_amount && user.partner_plan_activated_at) {
-              console.log('⚠️ Usando plano legacy do AppUser');
-              investments.push({
-                id: `legacy_${user.id}`,
-                plan: user.active_partner_plan,
-                amount: user.partner_plan_amount,
-                startDate: user.partner_plan_activated_at,
-                currentStep: 0,
-                products: [],
-                isInvestment: false,
-                estimatedProfit: Math.round(user.partner_plan_amount * 0.03),
-                estimatedReturn: new Date(new Date(user.partner_plan_activated_at).getTime() + 60 * 24 * 60 * 60 * 1000).toISOString()
-              });
-            }
-          }
-          
+        }
+
         console.log('✅ Total de investimentos carregados:', investments.length);
         setActiveInvestments(investments);
       } else {
@@ -301,6 +302,24 @@ export default function InvestorDashboard() {
     }
   ];
 
+  useEffect(() => {
+    if (location.state?.package) {
+      const pkgRequested = location.state.package;
+      const matchedIdx = portfolios.findIndex(p =>
+        p.minInvestment === pkgRequested.minInvestment ||
+        p.name === pkgRequested.name
+      );
+      if (matchedIdx !== -1) {
+        setSelectedPlanIndex(matchedIdx);
+        setShowPlansModal(true);
+      }
+      // Limpar o state para não reabrir em caso de reload de página
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state?.package]);
+
+  // Se estiver carregando, mostra tela de delay
   const getInvestmentSteps = (investment) => [
     {
       id: 1,
@@ -346,7 +365,7 @@ export default function InvestorDashboard() {
       id: 5,
       title: "Lucro Contabilizado",
       icon: DollarSign,
-      description: investment 
+      description: investment
         ? `${investment.paidPeriods || 0} de ${investment.totalPeriods || 12} parcelas pagas • R$ ${(investment.paidProfit || 0).toLocaleString('pt-BR')} recebido`
         : "Seu retorno está garantido!",
       color: "text-green-400",
@@ -391,7 +410,7 @@ export default function InvestorDashboard() {
 
   useEffect(() => {
     if (!showPlansModal || isPaused) return;
-    
+
     const interval = setInterval(() => {
       setSelectedPlanIndex((prev) => (prev === portfolios.length - 1 ? 0 : prev + 1));
     }, 4000);
@@ -413,7 +432,7 @@ export default function InvestorDashboard() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-        
+
         {/* Perfil do Parceiro */}
         <Card className="bg-gradient-to-br from-gray-800 via-gray-800 to-green-900/20 backdrop-blur-sm border-2 border-green-500/30 mb-8 shadow-2xl shadow-green-500/10 hover:shadow-green-500/20 transition-all duration-500">
           <CardContent className="p-4 sm:p-8">
@@ -446,9 +465,9 @@ export default function InvestorDashboard() {
             </div>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-              <motion.div 
+              <motion.div
                 className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-3xl sm:text-4xl font-bold shadow-lg shadow-green-500/50 relative"
-                animate={{ 
+                animate={{
                   boxShadow: [
                     '0 10px 40px rgba(34, 197, 94, 0.5)',
                     '0 10px 60px rgba(34, 197, 94, 0.7)',
@@ -464,15 +483,15 @@ export default function InvestorDashboard() {
                   {currentUser?.full_name?.charAt(0) || 'P'}
                 </motion.span>
                 <div className="absolute inset-0 rounded-full bg-green-400/20 blur-xl animate-pulse"></div>
-                </motion.div>
-                <div className="flex-1 text-center sm:text-left">
-                <motion.h1 
+              </motion.div>
+              <div className="flex-1 text-center sm:text-left">
+                <motion.h1
                   className="text-2xl sm:text-4xl font-bold mb-2 bg-gradient-to-r from-white to-green-400 bg-clip-text text-transparent"
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5 }}
                 >
-                  {currentUser?.full_name || 'Investidor'} 
+                  {currentUser?.full_name || 'Investidor'}
                 </motion.h1>
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -482,14 +501,14 @@ export default function InvestorDashboard() {
                 >
                   <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   <p className="text-green-400 font-semibold text-sm sm:text-base">Parceiro de Compra</p>
-                  </motion.div>
-                  </div>
-                  <div className="flex flex-col items-center sm:items-end gap-4 w-full sm:w-auto">
-                  <motion.div
+                </motion.div>
+              </div>
+              <div className="flex flex-col items-center sm:items-end gap-4 w-full sm:w-auto">
+                <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   className="w-full sm:w-auto"
-                  >
+                >
                   <Button
                     onClick={() => setShowPlansModal(true)}
                     className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 shadow-lg shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 text-base sm:text-lg px-4 sm:px-6 py-4 sm:py-6 font-bold relative overflow-hidden group"
@@ -502,20 +521,20 @@ export default function InvestorDashboard() {
                     />
                     <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-2 relative z-10" />
                     <span className="relative z-10">Contratar Novo Plano</span>
-                    </Button>
-                    </motion.div>
-                    <motion.div 
-                    className="text-center sm:text-right bg-green-500/10 rounded-lg px-4 py-2 border border-green-500/30 w-full sm:w-auto"
-                  animate={{ 
+                  </Button>
+                </motion.div>
+                <motion.div
+                  className="text-center sm:text-right bg-green-500/10 rounded-lg px-4 py-2 border border-green-500/30 w-full sm:w-auto"
+                  animate={{
                     borderColor: ['rgba(34, 197, 94, 0.3)', 'rgba(34, 197, 94, 0.6)', 'rgba(34, 197, 94, 0.3)']
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   <div className="flex items-center justify-center sm:justify-end gap-2 text-green-400 mb-1">
                     <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6" />
-                    <motion.span 
+                    <motion.span
                       className="text-2xl sm:text-3xl font-bold"
-                      animate={{ 
+                      animate={{
                         textShadow: [
                           '0 0 10px rgba(34, 197, 94, 0.5)',
                           '0 0 20px rgba(34, 197, 94, 0.8)',
@@ -562,7 +581,7 @@ export default function InvestorDashboard() {
                 <div>
                   <p className="text-gray-400 text-xs sm:text-sm">Lucro Contabilizado / Total</p>
                   <p className="text-xl sm:text-2xl font-bold text-green-400">
-                    R$ {totalPaidProfit.toLocaleString('pt-BR')} 
+                    R$ {totalPaidProfit.toLocaleString('pt-BR')}
                     <span className="text-sm text-gray-500 font-normal"> / R$ {totalProfit.toLocaleString('pt-BR')}</span>
                   </p>
                 </div>
@@ -570,7 +589,7 @@ export default function InvestorDashboard() {
             </CardContent>
           </Card>
 
-          <Card 
+          <Card
             className="bg-gray-800/80 backdrop-blur-sm border-gray-700 cursor-pointer hover:border-purple-500/50 transition-all"
             onClick={() => setShowInvestments(!showInvestments)}
           >
@@ -594,14 +613,14 @@ export default function InvestorDashboard() {
             <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">
               Minhas <span className="text-green-400">Compras Ativas</span>
             </h2>
-            
+
             <div className="space-y-6">
               {activeInvestments.map((investment) => {
                 const daysPassed = calculateDaysPassed(investment.startDate);
                 const currentStepIndex = getCurrentStep(daysPassed);
                 const liquidFillPercentage = getLiquidFillPercentage(investment);
                 const investmentSteps = getInvestmentSteps(investment);
-                
+
                 return (
                   <Card key={investment.id} className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
                     <CardHeader className="p-4 sm:p-6">
@@ -641,16 +660,15 @@ export default function InvestorDashboard() {
                               return (
                                 <div key={step.id} className="relative flex items-start gap-3 sm:gap-4">
                                   {/* Ícone */}
-                                  <div className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all overflow-hidden ${
-                                    isCompleted 
-                                      ? 'bg-green-500/20 border-green-500' 
-                                      : isCurrent
+                                  <div className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all overflow-hidden ${isCompleted
+                                    ? 'bg-green-500/20 border-green-500'
+                                    : isCurrent
                                       ? `${step.bgColor} ${step.borderColor}`
                                       : 'bg-gray-800 border-gray-700'
-                                  }`}>
+                                    }`}>
                                     {/* Efeito de preenchimento líquido para última etapa */}
                                     {step.id === 5 && (
-                                      <div 
+                                      <div
                                         className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-green-500/40 to-green-500/20 transition-all duration-1000"
                                         style={{ height: `${liquidFillPercentage}%` }}
                                       >
@@ -663,18 +681,17 @@ export default function InvestorDashboard() {
                                     ) : (
                                       <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${isCurrent ? step.color : 'text-gray-600'} relative z-10`} />
                                     )}
-                                    </div>
+                                  </div>
 
-                                    {/* Conteúdo */}
-                                    <div className={`flex-1 pb-3 sm:pb-4 ${isCurrent ? 'animate-pulse' : ''}`}>
-                                    <h5 className={`font-semibold mb-1 text-sm sm:text-base ${
-                                      isCompleted ? 'text-green-400' : isCurrent ? step.color : 'text-gray-500'
-                                    }`}>
+                                  {/* Conteúdo */}
+                                  <div className={`flex-1 pb-3 sm:pb-4 ${isCurrent ? 'animate-pulse' : ''}`}>
+                                    <h5 className={`font-semibold mb-1 text-sm sm:text-base ${isCompleted ? 'text-green-400' : isCurrent ? step.color : 'text-gray-500'
+                                      }`}>
                                       {step.title}
                                       {isCompleted && ' ✓'}
                                       {isCurrent && ' - Em andamento'}
-                                      </h5>
-                                      <p className="text-xs sm:text-sm text-gray-400">{step.description}</p>
+                                    </h5>
+                                    <p className="text-xs sm:text-sm text-gray-400">{step.description}</p>
 
                                     {/* Barra de progresso para última etapa */}
                                     {step.id === 5 && currentStepIndex >= 4 && (
@@ -684,7 +701,7 @@ export default function InvestorDashboard() {
                                           <span>{liquidFillPercentage.toFixed(0)}%</span>
                                         </div>
                                         <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
-                                          <div 
+                                          <div
                                             className="h-full bg-gradient-to-r from-green-500 to-green-400 transition-all duration-1000"
                                             style={{ width: `${liquidFillPercentage}%` }}
                                           />
@@ -694,9 +711,9 @@ export default function InvestorDashboard() {
                                   </div>
                                 </div>
                               );
-                              })}
-                              </div>
+                            })}
                           </div>
+                        </div>
                       </div>
 
                       {/* Data de Retorno */}
@@ -737,8 +754,8 @@ export default function InvestorDashboard() {
                 <span className="text-green-400">Novo Plano</span>
               </DialogTitle>
               <p className="text-gray-400 text-xs text-center">
-                {activeInvestments.length > 0 
-                  ? 'Faça novas compras e aumente seus lucros' 
+                {activeInvestments.length > 0
+                  ? 'Faça novas compras e aumente seus lucros'
                   : 'Selecione o plano ideal para começar a comprar'
                 }
               </p>
@@ -752,7 +769,7 @@ export default function InvestorDashboard() {
                 className="space-y-4"
               >
                 <div className="text-center mb-4">
-                  <img 
+                  <img
                     src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
                     alt="Leilão NoZap"
                     className="h-16 mx-auto mb-4"
@@ -764,7 +781,7 @@ export default function InvestorDashboard() {
                 <ScrollArea className="h-[50vh] bg-gray-800 rounded-lg border border-gray-700 p-4">
                   <div className="text-gray-300 text-sm space-y-4 pr-4">
                     <h4 className="text-green-400 font-bold text-center text-base">CONTRATO DE PARCERIA DE COMPRA E OPERAÇÃO COMERCIAL</h4>
-                    
+
                     <p>Pelo presente instrumento particular, de um lado <strong className="text-white">LEILÃO NOZAP</strong>, pessoa jurídica de direito privado, inscrita no CNPJ sob nº 51.544.091/0001-67, com sede em Av. das Américas, 3500 - Barra da Tijuca, Rio de Janeiro - RJ, 22640-102, doravante denominada PLATAFORMA, e de outro lado <strong className="text-white">PARCEIRO DE COMPRA</strong>, pessoa física ou jurídica devidamente cadastrada na plataforma, doravante denominado simplesmente PARCEIRO, resolvem celebrar o presente Contrato de Parceria de Compra e Operação Comercial, que se regerá pelas cláusulas e condições abaixo.</p>
 
                     <h5 className="text-green-400 font-bold mt-4">1. OBJETO</h5>
@@ -860,14 +877,14 @@ export default function InvestorDashboard() {
                     onClick={async () => {
                       try {
                         toast.info("Gerando PDF do contrato...");
-                        
+
                         // Detecta dispositivo
                         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                        
+
                         // Para todos os dispositivos: usa base64 (mais compatível)
                         const response = await base44.functions.invoke('generateContractPDF', { format: 'base64' });
-                        
+
                         if (response?.pdf_base64) {
                           if (isIOS) {
                             // iOS: abre em nova aba (Safari lida melhor assim)
@@ -943,8 +960,8 @@ export default function InvestorDashboard() {
               <>
                 {/* Carousel para todos os tamanhos */}
                 <div className="relative py-2"
-                     onMouseEnter={() => setIsPaused(true)}
-                     onMouseLeave={() => setIsPaused(false)}>
+                  onMouseEnter={() => setIsPaused(true)}
+                  onMouseLeave={() => setIsPaused(false)}>
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={selectedPlanIndex}
@@ -960,11 +977,11 @@ export default function InvestorDashboard() {
 
                         return (
                           <Card className="bg-gray-800 backdrop-blur-sm border-2 border-gray-700 w-full max-w-md overflow-hidden">
-                           {/* Imagem do Produto - ALTURA RESPONSIVA */}
-                           <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden bg-gray-900">
+                            {/* Imagem do Produto - ALTURA RESPONSIVA */}
+                            <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden bg-gray-900">
                               {productImages[portfolio.imageKey] ? (
-                                <img 
-                                  src={productImages[portfolio.imageKey]} 
+                                <img
+                                  src={productImages[portfolio.imageKey]}
                                   alt={portfolio.name}
                                   className="w-full h-full object-cover"
                                 />
@@ -982,7 +999,7 @@ export default function InvestorDashboard() {
                               {/* Título e Descrição */}
                               <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">{portfolio.name}</h3>
                               <p className="text-gray-400 text-xs sm:text-sm mb-3 sm:mb-4 leading-relaxed">{portfolio.description}</p>
-                              
+
                               {/* Cards de Valores - MOBILE OTIMIZADO */}
                               <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
                                 <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700">
@@ -1006,7 +1023,7 @@ export default function InvestorDashboard() {
                               </div>
 
                               {/* Botão - TAMANHO RESPONSIVO */}
-                              <Button 
+                              <Button
                                 className="w-full bg-green-600 hover:bg-green-700 text-sm sm:text-base py-3 sm:py-4 font-semibold"
                                 onClick={() => {
                                   setSelectedPlan(portfolio);
@@ -1045,11 +1062,10 @@ export default function InvestorDashboard() {
                     <button
                       key={idx}
                       onClick={() => setSelectedPlanIndex(idx)}
-                      className={`h-1.5 rounded-full transition-all duration-300 ${
-                        idx === selectedPlanIndex 
-                          ? 'w-6 bg-green-500' 
-                          : 'w-1.5 bg-gray-600 hover:bg-gray-500'
-                      }`}
+                      className={`h-1.5 rounded-full transition-all duration-300 ${idx === selectedPlanIndex
+                        ? 'w-6 bg-green-500'
+                        : 'w-1.5 bg-gray-600 hover:bg-gray-500'
+                        }`}
                     />
                   ))}
                 </div>
@@ -1073,7 +1089,7 @@ export default function InvestorDashboard() {
                     <Label className="text-gray-300">Nome Completo</Label>
                     <Input
                       value={pixFormData.name}
-                      onChange={(e) => setPixFormData({...pixFormData, name: e.target.value})}
+                      onChange={(e) => setPixFormData({ ...pixFormData, name: e.target.value })}
                       placeholder="João Silva"
                       className="bg-gray-700 border-gray-600 text-white"
                     />
@@ -1082,7 +1098,7 @@ export default function InvestorDashboard() {
                     <Label className="text-gray-300">Telefone</Label>
                     <Input
                       value={pixFormData.phone}
-                      onChange={(e) => setPixFormData({...pixFormData, phone: e.target.value})}
+                      onChange={(e) => setPixFormData({ ...pixFormData, phone: e.target.value })}
                       placeholder="(11) 99999-9999"
                       className="bg-gray-700 border-gray-600 text-white"
                     />
@@ -1091,7 +1107,7 @@ export default function InvestorDashboard() {
                     <Label className="text-gray-300">E-mail</Label>
                     <Input
                       value={pixFormData.email}
-                      onChange={(e) => setPixFormData({...pixFormData, email: e.target.value})}
+                      onChange={(e) => setPixFormData({ ...pixFormData, email: e.target.value })}
                       placeholder="joao@email.com"
                       type="email"
                       className="bg-gray-700 border-gray-600 text-white"
@@ -1103,8 +1119,8 @@ export default function InvestorDashboard() {
                       value={pixFormData.cpf}
                       onChange={(e) => {
                         const value = e.target.value;
-                        setPixFormData({...pixFormData, cpf: value});
-                        
+                        setPixFormData({ ...pixFormData, cpf: value });
+
                         // Valida CPF em tempo real
                         const cleanCpf = value.replace(/\D/g, '');
                         if (cleanCpf.length === 11) {
@@ -1144,14 +1160,14 @@ export default function InvestorDashboard() {
 
                 {/* Checkbox Aceitar Contrato */}
                 <div className="flex items-center space-x-3 bg-gray-800 rounded-lg p-3 border border-gray-700 mb-3">
-                  <Checkbox 
-                    id="accept-contract" 
+                  <Checkbox
+                    id="accept-contract"
                     checked={acceptedContract}
                     onCheckedChange={(checked) => setAcceptedContract(checked)}
                     className="border-green-500 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
                   />
-                  <label 
-                    htmlFor="accept-contract" 
+                  <label
+                    htmlFor="accept-contract"
                     className="text-sm text-gray-300 cursor-pointer leading-tight"
                   >
                     Li e aceito os termos do <span className="text-green-400 font-semibold">Contrato de Parceria</span>
@@ -1170,86 +1186,86 @@ export default function InvestorDashboard() {
                     Voltar
                   </Button>
                   <Button
-                  onClick={async () => {
-                    const { name, phone, email, cpf } = pixFormData;
-                    if (!name || !phone || !email || !cpf) {
-                      toast.error("Preencha todos os campos");
-                      return;
-                    }
-
-                    const cleanCpf = cpf.replace(/\D/g, '');
-                    if (cleanCpf.length !== 11) {
-                      toast.error("CPF inválido. Deve ter 11 dígitos.");
-                      return;
-                    }
-
-                    const validateCPF = (cpf) => {
-                      if (cpf.length !== 11) return false;
-                      if (/^(\d)\1+$/.test(cpf)) return false;
-
-                      let sum = 0;
-                      for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
-                      let remainder = (sum * 10) % 11;
-                      if (remainder === 10 || remainder === 11) remainder = 0;
-                      if (remainder !== parseInt(cpf[9])) return false;
-
-                      sum = 0;
-                      for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
-                      remainder = (sum * 10) % 11;
-                      if (remainder === 10 || remainder === 11) remainder = 0;
-                      if (remainder !== parseInt(cpf[10])) return false;
-
-                      return true;
-                    };
-
-                    if (!validateCPF(cleanCpf)) {
-                      toast.error("CPF inválido. Verifique os números digitados.");
-                      return;
-                    }
-
-                    setIsProcessing(true);
-                    try {
-                      toast.info("Gerando QR Code PIX...");
-
-                      const response = await base44.functions.invoke('createPartnerPlanPix', {
-                        licensee_id: currentUser.id,
-                        user_name: name,
-                        user_email: email,
-                        user_phone: phone,
-                        user_cpf: cpf,
-                        plan_code: selectedPlan.name
-                      });
-
-                      console.log('🔍 Response completo:', response);
-                      console.log('🔍 response.data:', response?.data);
-                      
-                      // ✅ FIX: response.data já vem como objeto direto
-                      const pixInfo = response?.data || response;
-                      
-                      console.log('🔍 pixInfo extraído:', pixInfo);
-                      console.log('🔍 pixInfo.success:', pixInfo?.success);
-                      console.log('🔍 pixInfo.qr_code_base64:', pixInfo?.qr_code_base64 ? 'EXISTS' : 'MISSING');
-                      
-                      if (pixInfo?.success) {
-                        setPixData({
-                          billing_id: pixInfo.billing_id || pixInfo.payment_id,
-                          qr_code_base64: pixInfo.qr_code_base64,
-                          pix_code: pixInfo.pix_code
-                        });
-                        toast.success("✅ QR Code gerado com sucesso!");
-                      } else {
-                        const errorMsg = pixInfo?.error || "Erro ao gerar QR Code";
-                        const errorDetails = pixInfo?.details;
-                        console.error('❌ Erro ao gerar PIX:', { errorMsg, errorDetails });
-                        toast.error(errorMsg + (errorDetails ? ` - ${JSON.stringify(errorDetails)}` : ''));
+                    onClick={async () => {
+                      const { name, phone, email, cpf } = pixFormData;
+                      if (!name || !phone || !email || !cpf) {
+                        toast.error("Preencha todos os campos");
+                        return;
                       }
-                    } catch (error) {
-                      console.error('❌ Erro:', error);
-                      toast.error("Erro ao processar: " + error.message);
-                    } finally {
-                      setIsProcessing(false);
-                    }
-                  }}
+
+                      const cleanCpf = cpf.replace(/\D/g, '');
+                      if (cleanCpf.length !== 11) {
+                        toast.error("CPF inválido. Deve ter 11 dígitos.");
+                        return;
+                      }
+
+                      const validateCPF = (cpf) => {
+                        if (cpf.length !== 11) return false;
+                        if (/^(\d)\1+$/.test(cpf)) return false;
+
+                        let sum = 0;
+                        for (let i = 0; i < 9; i++) sum += parseInt(cpf[i]) * (10 - i);
+                        let remainder = (sum * 10) % 11;
+                        if (remainder === 10 || remainder === 11) remainder = 0;
+                        if (remainder !== parseInt(cpf[9])) return false;
+
+                        sum = 0;
+                        for (let i = 0; i < 10; i++) sum += parseInt(cpf[i]) * (11 - i);
+                        remainder = (sum * 10) % 11;
+                        if (remainder === 10 || remainder === 11) remainder = 0;
+                        if (remainder !== parseInt(cpf[10])) return false;
+
+                        return true;
+                      };
+
+                      if (!validateCPF(cleanCpf)) {
+                        toast.error("CPF inválido. Verifique os números digitados.");
+                        return;
+                      }
+
+                      setIsProcessing(true);
+                      try {
+                        toast.info("Gerando QR Code PIX...");
+
+                        const response = await base44.functions.invoke('createPartnerPlanPix', {
+                          licensee_id: currentUser.id,
+                          user_name: name,
+                          user_email: email,
+                          user_phone: phone,
+                          user_cpf: cpf,
+                          plan_code: selectedPlan.name
+                        });
+
+                        console.log('🔍 Response completo:', response);
+                        console.log('🔍 response.data:', response?.data);
+
+                        // ✅ FIX: response.data já vem como objeto direto
+                        const pixInfo = response?.data || response;
+
+                        console.log('🔍 pixInfo extraído:', pixInfo);
+                        console.log('🔍 pixInfo.success:', pixInfo?.success);
+                        console.log('🔍 pixInfo.qr_code_base64:', pixInfo?.qr_code_base64 ? 'EXISTS' : 'MISSING');
+
+                        if (pixInfo?.success) {
+                          setPixData({
+                            billing_id: pixInfo.billing_id || pixInfo.payment_id,
+                            qr_code_base64: pixInfo.qr_code_base64,
+                            pix_code: pixInfo.pix_code
+                          });
+                          toast.success("✅ QR Code gerado com sucesso!");
+                        } else {
+                          const errorMsg = pixInfo?.error || "Erro ao gerar QR Code";
+                          const errorDetails = pixInfo?.details;
+                          console.error('❌ Erro ao gerar PIX:', { errorMsg, errorDetails });
+                          toast.error(errorMsg + (errorDetails ? ` - ${JSON.stringify(errorDetails)}` : ''));
+                        }
+                      } catch (error) {
+                        console.error('❌ Erro:', error);
+                        toast.error("Erro ao processar: " + error.message);
+                      } finally {
+                        setIsProcessing(false);
+                      }
+                    }}
                     disabled={isProcessing || !acceptedContract}
                     className={`flex-1 ${acceptedContract ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 cursor-not-allowed'}`}
                   >
@@ -1270,9 +1286,9 @@ export default function InvestorDashboard() {
               >
                 <h3 className="text-lg font-bold text-white text-center">💚 Pague com PIX</h3>
                 <div className="bg-white rounded-lg p-4">
-                  <img 
-                    src={pixData.qr_code_base64} 
-                    alt="QR Code PIX" 
+                  <img
+                    src={pixData.qr_code_base64}
+                    alt="QR Code PIX"
                     className="w-64 h-64 mx-auto"
                   />
                 </div>
@@ -1370,8 +1386,8 @@ export default function InvestorDashboard() {
             )}
 
 
-              </DialogContent>
-            </Dialog>
+          </DialogContent>
+        </Dialog>
 
         {/* Informações */}
         <Card className="bg-gray-800/80 backdrop-blur-sm border-gray-700">
