@@ -298,7 +298,7 @@ export default function InvestorDashboard() {
       risk: "Baixo",
       description: "Máximo retorno com acesso a todas as oportunidades.",
       features: commonFeatures,
-      imageKey: "ferramentas"
+      imageKey: "apple"
     }
   ];
 
@@ -661,10 +661,10 @@ export default function InvestorDashboard() {
                                 <div key={step.id} className="relative flex items-start gap-3 sm:gap-4">
                                   {/* Ícone */}
                                   <div className={`relative z-10 w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center border-2 transition-all overflow-hidden ${isCompleted
-                                      ? 'bg-green-500/20 border-green-500'
-                                      : isCurrent
-                                        ? `${step.bgColor} ${step.borderColor}`
-                                        : 'bg-gray-800 border-gray-700'
+                                    ? 'bg-green-500/20 border-green-500'
+                                    : isCurrent
+                                      ? `${step.bgColor} ${step.borderColor}`
+                                      : 'bg-gray-800 border-gray-700'
                                     }`}>
                                     {/* Efeito de preenchimento líquido para última etapa */}
                                     {step.id === 5 && (
@@ -1063,8 +1063,8 @@ export default function InvestorDashboard() {
                       key={idx}
                       onClick={() => setSelectedPlanIndex(idx)}
                       className={`h-1.5 rounded-full transition-all duration-300 ${idx === selectedPlanIndex
-                          ? 'w-6 bg-green-500'
-                          : 'w-1.5 bg-gray-600 hover:bg-gray-500'
+                        ? 'w-6 bg-green-500'
+                        : 'w-1.5 bg-gray-600 hover:bg-gray-500'
                         }`}
                     />
                   ))}

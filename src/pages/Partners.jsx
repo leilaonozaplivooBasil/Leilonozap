@@ -21,8 +21,6 @@ import ProductCarousel from '../components/licensing/ProductCarousel';
 
 const AppUser = base44.entities.AppUser;
 
-const AppUser = base44.entities.AppUser;
-
 const LandingContent = ({ onLoginClick, onPackageSelect }) => {
   const [hoveredBenefit, setHoveredBenefit] = React.useState(null);
 
