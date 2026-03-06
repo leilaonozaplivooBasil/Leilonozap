@@ -97,14 +97,15 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         }
       }
 
-      let allUsers;
+      // 🔒 Busca SOMENTE o usuário com esse email (não baixa todos)
+      let users;
       try {
-        allUsers = await AppUser.list('-created_date', 1000);
+        users = await AppUser.filter({ email: normalizedEmail });
       } catch (networkError) {
-        console.warn("[LOGIN] Primeira tentativa de buscar usuários falhou, tentando novamente...", networkError);
+        console.warn("[LOGIN] Primeira tentativa falhou, tentando novamente...", networkError);
         await new Promise(resolve => setTimeout(resolve, 1000));
         try {
-          allUsers = await AppUser.list('-created_date', 1000);
+          users = await AppUser.filter({ email: normalizedEmail });
         } catch (error2) {
           console.error("[LOGIN] Segunda tentativa falhou:", error2);
           setErrorMessage("❌ Erro de conexão. Verifique sua internet e tente novamente.");
@@ -113,10 +114,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         }
       }
 
-      console.log(`[LOGIN] Total de usuários retornados: ${allUsers.length}`);
-
-      const users = allUsers.filter(u => u.email && u.email.toLowerCase().trim() === normalizedEmail);
-      console.log(`[LOGIN] Encontrados ${users.length} usuários após o filtro.`);
+      console.log(`[LOGIN] Usuários encontrados: ${users.length}`);
 
       if (users.length === 0) {
         setErrorMessage("❌ E-mail não encontrado. Verifique os dados ou crie uma conta.");
@@ -269,7 +267,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
       console.log('📧 Tentando enviar código via função backend...');
       console.log('📦 Payload:', { email: normalizedResetEmail, code, userName: user.full_name?.split(' ')[0] || 'Usuário' });
-      
+
       const result = await base44.functions.invoke('sendPasswordResetEmail', {
         email: normalizedResetEmail,
         code: code,
@@ -291,7 +289,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         console.error('❌ Sucesso = false');
         throw new Error('Falha ao enviar email');
       }
-      
+
       console.log('✅ Email enviado com sucesso!');
 
       await base44.entities.SystemLog.create({
