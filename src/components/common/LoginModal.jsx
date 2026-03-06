@@ -97,14 +97,23 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         }
       }
 
-      let allUsers;
+      // 🔒 AUTENTICAÇÃO SEGURA VIA BACKEND
+      console.log(`[LOGIN] Autenticando via backend...`);
+
+      let authResult;
       try {
-        allUsers = await AppUser.list('-created_date', 1000);
+        authResult = await base44.functions.invoke('userAuth', {
+          email: normalizedEmail,
+          password: password
+        });
       } catch (networkError) {
-        console.warn("[LOGIN] Primeira tentativa de buscar usuários falhou, tentando novamente...", networkError);
+        console.warn("[LOGIN] Primeira tentativa falhou, tentando novamente...", networkError);
         await new Promise(resolve => setTimeout(resolve, 1000));
         try {
-          allUsers = await AppUser.list('-created_date', 1000);
+          authResult = await base44.functions.invoke('userAuth', {
+            email: normalizedEmail,
+            password: password
+          });
         } catch (error2) {
           console.error("[LOGIN] Segunda tentativa falhou:", error2);
           setErrorMessage("❌ Erro de conexão. Verifique sua internet e tente novamente.");
@@ -113,72 +122,21 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         }
       }
 
-      console.log(`[LOGIN] Total de usuários retornados: ${allUsers.length}`);
+      const response = authResult?.data;
 
-      const users = allUsers.filter(u => u.email && u.email.toLowerCase().trim() === normalizedEmail);
-      console.log(`[LOGIN] Encontrados ${users.length} usuários após o filtro.`);
-
-      if (users.length === 0) {
-        setErrorMessage("❌ E-mail não encontrado. Verifique os dados ou crie uma conta.");
+      if (!response?.success) {
+        const errMsg = response?.error || 'E-mail ou senha incorretos';
+        console.log(`[LOGIN] Falha: ${errMsg}`);
+        setErrorMessage(`❌ ${errMsg}`);
         setIsLogging(false);
         return;
       }
 
-      // TRATAMENTO DE DUPLICATAS
-      if (users.length > 1) {
-        console.warn("⚠️ Encontrados múltiplos usuários com o mesmo E-mail!");
-        users.sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
-        const [keepUser, ...oldUsers] = users;
-        console.log(`✅ Mantendo usuário: ${keepUser.id} (${keepUser.created_date})`);
-
-        for (const oldUser of oldUsers) {
-          try {
-            console.log(`❌ Removendo duplicata: ${oldUser.id} (${oldUser.created_date})`);
-            await AppUser.delete(oldUser.id);
-          } catch (e) {
-            console.error("Erro ao remover duplicata:", e);
-          }
-        }
-
-        const user = keepUser;
-
-        if (user.password !== password) {
-          setErrorMessage("❌ Senha incorreta.");
-          setIsLogging(false);
-          return;
-        }
-
-        localStorage.setItem('currentUser', JSON.stringify(user));
-        sessionStorage.setItem('isLoggedIn', 'true');
-
-        console.log(`[LOGIN] Login bem-sucedido: ${user.full_name} (duplicatas removidas)`);
-
-        setTimeout(() => {
-          try {
-            if (onSuccess) {
-              onSuccess(user);
-            }
-            onClose();
-          } catch (err) {
-            console.error("Erro no callback:", err);
-          }
-        }, 500);
-
-        return;
-      }
-
-      const user = users[0];
-
-      if (user.password !== password) {
-        setErrorMessage("❌ Senha incorreta.");
-        setIsLogging(false);
-        return;
-      }
+      const user = response.user;
+      console.log(`[LOGIN] Login bem-sucedido para: ${user.full_name}, Role: ${user.role}`);
 
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
-
-      console.log(`[LOGIN] Login bem-sucedido para: ${user.full_name}, Role: ${user.role}`);
 
       // 🆕 LOGGING NO SYSTEMLOG
       try {
@@ -199,7 +157,6 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
           onClose();
         } catch (err) {
           console.error("Erro no callback:", err);
-          // 🆕 LOGA ERRO NO CALLBACK
           base44.entities.SystemLog.create({
             step: 'Login_Callback_Error',
             status: 'error',
@@ -269,7 +226,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
       console.log('📧 Tentando enviar código via função backend...');
       console.log('📦 Payload:', { email: normalizedResetEmail, code, userName: user.full_name?.split(' ')[0] || 'Usuário' });
-      
+
       const result = await base44.functions.invoke('sendPasswordResetEmail', {
         email: normalizedResetEmail,
         code: code,
@@ -291,7 +248,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
         console.error('❌ Sucesso = false');
         throw new Error('Falha ao enviar email');
       }
-      
+
       console.log('✅ Email enviado com sucesso!');
 
       await base44.entities.SystemLog.create({
