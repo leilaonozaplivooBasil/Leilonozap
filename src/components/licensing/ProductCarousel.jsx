@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 
-export default function ProductCarousel() {
+export default function ProductCarousel({ onBuyClick }) {
   const [products, setProducts] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [direction, setDirection] = useState(0);
@@ -62,7 +62,7 @@ export default function ProductCarousel() {
 
   useEffect(() => {
     if (isPaused || products.length === 0) return;
-    
+
     const interval = setInterval(() => {
       paginate(1);
     }, 4000);
@@ -96,11 +96,11 @@ export default function ProductCarousel() {
       <div className="relative max-w-5xl mx-auto" style={{ perspective: '2000px' }}>
         {/* Background Stacked Cards - ESCONDE EM MOBILE */}
         <div className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none">
-          <div 
+          <div
             className="absolute w-[85%] h-[400px] bg-gray-800/40 rounded-2xl border border-gray-700/50"
             style={{ transform: 'translateZ(-100px) scale(0.9)', filter: 'blur(2px)' }}
           />
-          <div 
+          <div
             className="absolute w-[90%] h-[420px] bg-gray-800/60 rounded-2xl border border-gray-700/50"
             style={{ transform: 'translateZ(-50px) scale(0.95)', filter: 'blur(1px)' }}
           />
@@ -129,8 +129,8 @@ export default function ProductCarousel() {
               <div className="bg-gray-800 rounded-xl sm:rounded-2xl shadow-2xl border-2 border-gray-700 overflow-hidden transform-gpu">
                 {/* IMAGEM RESPONSIVA */}
                 <div className="relative h-48 sm:h-64 md:h-80 overflow-hidden bg-gray-900">
-                  <img 
-                    src={currentProduct.image_url} 
+                  <img
+                    src={currentProduct.image_url}
                     alt={currentProduct.name}
                     className="w-full h-full object-cover"
                   />
@@ -138,10 +138,10 @@ export default function ProductCarousel() {
                     {currentProduct.category}
                   </div>
                 </div>
-                
+
                 <div className="p-3 sm:p-4 md:p-6">
                   <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-white mb-3">{currentProduct.name}</h3>
-                  
+
                   <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-3 sm:mb-4">
                     <div className="bg-gray-900/50 rounded-lg p-2 sm:p-3 border border-gray-700">
                       <p className="text-gray-400 text-xs sm:text-sm mb-1">Investimento</p>
@@ -157,6 +157,15 @@ export default function ProductCarousel() {
                     <span className="flex items-center gap-1">⏱️ Retorno em 60 dias</span>
                     <span className="flex items-center gap-1">📦 Gestão 100% nossa</span>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      if (onBuyClick) onBuyClick(currentProduct);
+                    }}
+                    className="mt-4 sm:mt-5 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 sm:py-4 rounded-xl text-sm sm:text-base border-2 border-green-500/50 shadow-[0_0_15px_rgba(34,197,94,0.3)] hover:shadow-[0_0_25px_rgba(34,197,94,0.5)] transition-all flex items-center justify-center gap-2"
+                  >
+                    🛒 Comprar Pacote
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -169,7 +178,7 @@ export default function ProductCarousel() {
           >
             <ChevronLeft className="w-6 h-6 sm:w-7 sm:h-7" />
           </button>
-          
+
           <button
             onClick={() => paginate(1)}
             className="absolute right-1 sm:right-0 top-1/2 -translate-y-1/2 z-10 w-12 h-12 sm:w-14 sm:h-14 bg-gray-800/90 hover:bg-gray-700 border border-gray-600 rounded-full flex items-center justify-center text-white transition-all hover:scale-110 shadow-lg"
@@ -187,11 +196,10 @@ export default function ProductCarousel() {
                 setDirection(index > currentIndex ? 1 : -1);
                 setCurrentIndex(index);
               }}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex 
-                  ? 'w-6 sm:w-8 bg-green-500' 
+              className={`h-2 rounded-full transition-all duration-300 ${index === currentIndex
+                  ? 'w-6 sm:w-8 bg-green-500'
                   : 'w-2 bg-gray-600 hover:bg-gray-500'
-              }`}
+                }`}
             />
           ))}
         </div>

@@ -182,7 +182,7 @@ export default function WalletHistory() {
                   <div className="flex items-baseline gap-2">
                     <p className="text-6xl font-black text-white">R$</p>
                     <p className="text-6xl font-black bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent">
-                      {wallet?.balance?.toFixed(2) || '0.00'}
+                      {(wallet?.balance ?? (totalDeposited - totalUsed)).toFixed(2)}
                     </p>
                   </div>
                 </div>
@@ -239,8 +239,8 @@ export default function WalletHistory() {
               <button
                 onClick={() => handleTabChange("overview")}
                 className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${activeTab === "overview"
-                    ? "text-green-300 border-green-400"
-                    : "text-green-200/50 hover:text-green-300 border-transparent"
+                  ? "text-green-300 border-green-400"
+                  : "text-green-200/50 hover:text-green-300 border-transparent"
                   }`}
               >
                 <TrendingDown className="w-5 h-5 inline mr-2" />
@@ -249,8 +249,8 @@ export default function WalletHistory() {
               <button
                 onClick={() => handleTabChange("deposits")}
                 className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${activeTab === "deposits"
-                    ? "text-green-300 border-green-400"
-                    : "text-green-200/50 hover:text-green-300 border-transparent"
+                  ? "text-green-300 border-green-400"
+                  : "text-green-200/50 hover:text-green-300 border-transparent"
                   }`}
               >
                 <TrendingUp className="w-5 h-5 inline mr-2" />
@@ -259,8 +259,8 @@ export default function WalletHistory() {
               <button
                 onClick={() => handleTabChange("usage")}
                 className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${activeTab === "usage"
-                    ? "text-red-300 border-red-400"
-                    : "text-green-200/50 hover:text-green-300 border-transparent"
+                  ? "text-red-300 border-red-400"
+                  : "text-green-200/50 hover:text-green-300 border-transparent"
                   }`}
               >
                 <TrendingDown className="w-5 h-5 inline mr-2" />
@@ -269,8 +269,8 @@ export default function WalletHistory() {
               <button
                 onClick={() => handleTabChange("refunds")}
                 className={`pb-4 px-4 font-semibold transition-all border-b-2 relative text-sm md:text-base ${activeTab === "refunds"
-                    ? "text-blue-300 border-blue-400"
-                    : "text-green-200/50 hover:text-green-300 border-transparent"
+                  ? "text-blue-300 border-blue-400"
+                  : "text-green-200/50 hover:text-green-300 border-transparent"
                   }`}
               >
                 <TrendingUp className="w-5 h-5 inline mr-2" />
