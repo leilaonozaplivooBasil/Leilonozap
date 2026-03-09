@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createPageUrl } from '@/utils';
+import bcrypt from 'bcryptjs';
 
 const AppUser = base44.entities.AppUser;
 
@@ -118,7 +119,7 @@ export default function Register() {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    
+
     if (!fullName || !email || !phone || !cpf || !password || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode) {
       setErrorMessage("❌ Por favor, preencha todos os campos obrigatórios.");
       return;
@@ -171,7 +172,7 @@ export default function Register() {
       // 🆕 VERIFICA CÓDIGO DE INDICAÇÃO
       const refCode = sessionStorage.getItem('referralCode');
       let referredById = null;
-      
+
       if (refCode) {
         try {
           const licensees = await AppUser.filter({ referral_code: refCode });
@@ -198,6 +199,10 @@ export default function Register() {
         }
       }
 
+      // Hash the password before saving
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(password, salt);
+
       const newUser = await AppUser.create({
         full_name: fullName.trim(),
         display_first_name: firstName || null,
@@ -205,7 +210,7 @@ export default function Register() {
         email: normalizedEmail,
         phone: phoneDigits,
         cpf: cpfDigits,
-        password: password,
+        password: hashedPassword,
         role: 'user',
         address_street: addressStreet,
         address_number: addressNumber,
@@ -260,7 +265,7 @@ export default function Register() {
               Criar Nova Conta
             </CardTitle>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleRegister} className="space-y-5 sm:space-y-6">
               {errorMessage && (
@@ -269,16 +274,16 @@ export default function Register() {
                   <p className={`${isSaiDeBaixo ? 'text-red-800' : 'text-red-300'} text-sm`}>{errorMessage}</p>
                 </div>
               )}
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 <div>
                   <Label htmlFor="fullName" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Nome Completo *</Label>
-                  <Input 
-                    id="fullName" 
-                    type="text" 
-                    value={fullName} 
-                    onChange={(e) => setFullName(e.target.value)} 
-                    placeholder="Seu nome completo" 
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Seu nome completo"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                     disabled={isRegistering}
                   />
@@ -286,13 +291,13 @@ export default function Register() {
 
                 <div>
                   <Label htmlFor="email" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>E-mail *</Label>
-                  <Input 
-                    id="email" 
-                    type="email" 
-                    value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     onBlur={() => checkDuplicateOnBlur('email')}
-                    placeholder="seu@email.com" 
+                    placeholder="seu@email.com"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.email ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
@@ -303,13 +308,13 @@ export default function Register() {
 
                 <div>
                   <Label htmlFor="phone" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Telefone *</Label>
-                  <Input 
-                    id="phone" 
-                    type="tel" 
-                    value={phone} 
-                    onChange={(e) => setPhone(e.target.value)} 
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     onBlur={() => checkDuplicateOnBlur('phone')}
-                    placeholder="(XX) XXXXX-XXXX" 
+                    placeholder="(XX) XXXXX-XXXX"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.phone ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
@@ -320,13 +325,13 @@ export default function Register() {
 
                 <div>
                   <Label htmlFor="cpf" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>CPF *</Label>
-                  <Input 
-                    id="cpf" 
-                    type="text" 
-                    value={cpf} 
-                    onChange={(e) => setCpf(e.target.value)} 
+                  <Input
+                    id="cpf"
+                    type="text"
+                    value={cpf}
+                    onChange={(e) => setCpf(e.target.value)}
                     onBlur={() => checkDuplicateOnBlur('cpf')}
-                    placeholder="000.000.000-00" 
+                    placeholder="000.000.000-00"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${dup.cpf ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
@@ -337,13 +342,13 @@ export default function Register() {
 
                 <div className="md:col-span-2">
                   <Label htmlFor="password" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Senha *</Label>
-                  <Input 
-                    id="password" 
-                    type="password" 
-                    value={password} 
-                    onChange={(e) => setPassword(e.target.value)} 
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     onBlur={() => setPasswordTouched(true)}
-                    placeholder="Mínimo 8 caracteres com letra, número e caractere especial" 
+                    placeholder="Mínimo 8 caracteres com letra, número e caractere especial"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${passwordTouched && !validatePassword(password) ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
@@ -358,13 +363,13 @@ export default function Register() {
                 {/* CEP primeiro */}
                 <div className="mb-3">
                   <Label htmlFor="addressZipCode" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>CEP *</Label>
-                  <Input 
-                    id="addressZipCode" 
-                    type="text" 
-                    value={addressZipCode} 
-                    onChange={(e) => { setAddressZipCode(e.target.value); setCepError(''); }} 
+                  <Input
+                    id="addressZipCode"
+                    type="text"
+                    value={addressZipCode}
+                    onChange={(e) => { setAddressZipCode(e.target.value); setCepError(''); }}
                     onBlur={handleCepLookup}
-                    placeholder="00000-000" 
+                    placeholder="00000-000"
                     className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base ${cepError ? (isSaiDeBaixo ? ' border-red-500 bg-red-50 text-red-800 placeholder:text-red-500' : ' border-red-500/70 bg-red-900/20 text-red-200 placeholder:text-red-300') : ''}`}
                     disabled={isRegistering}
                   />
@@ -374,12 +379,12 @@ export default function Register() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                   <div className="md:col-span-2">
                     <Label htmlFor="addressStreet" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Rua/Avenida *</Label>
-                    <Input 
-                      id="addressStreet" 
-                      type="text" 
-                      value={addressStreet} 
-                      onChange={(e) => setAddressStreet(e.target.value)} 
-                      placeholder="Nome da rua" 
+                    <Input
+                      id="addressStreet"
+                      type="text"
+                      value={addressStreet}
+                      onChange={(e) => setAddressStreet(e.target.value)}
+                      placeholder="Nome da rua"
                       className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                       disabled={isRegistering}
                     />
@@ -387,12 +392,12 @@ export default function Register() {
 
                   <div>
                     <Label htmlFor="addressNumber" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Número *</Label>
-                    <Input 
-                      id="addressNumber" 
-                      type="text" 
-                      value={addressNumber} 
-                      onChange={(e) => setAddressNumber(e.target.value)} 
-                      placeholder="123" 
+                    <Input
+                      id="addressNumber"
+                      type="text"
+                      value={addressNumber}
+                      onChange={(e) => setAddressNumber(e.target.value)}
+                      placeholder="123"
                       className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                       disabled={isRegistering}
                     />
@@ -400,12 +405,12 @@ export default function Register() {
 
                   <div>
                     <Label htmlFor="addressComplement" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Complemento</Label>
-                    <Input 
-                      id="addressComplement" 
-                      type="text" 
-                      value={addressComplement} 
-                      onChange={(e) => setAddressComplement(e.target.value)} 
-                      placeholder="Apto, Bloco..." 
+                    <Input
+                      id="addressComplement"
+                      type="text"
+                      value={addressComplement}
+                      onChange={(e) => setAddressComplement(e.target.value)}
+                      placeholder="Apto, Bloco..."
                       className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                       disabled={isRegistering}
                     />
@@ -413,12 +418,12 @@ export default function Register() {
 
                   <div>
                     <Label htmlFor="addressNeighborhood" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Bairro *</Label>
-                    <Input 
-                      id="addressNeighborhood" 
-                      type="text" 
-                      value={addressNeighborhood} 
-                      onChange={(e) => setAddressNeighborhood(e.target.value)} 
-                      placeholder="Nome do bairro" 
+                    <Input
+                      id="addressNeighborhood"
+                      type="text"
+                      value={addressNeighborhood}
+                      onChange={(e) => setAddressNeighborhood(e.target.value)}
+                      placeholder="Nome do bairro"
                       className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                       disabled={isRegistering}
                     />
@@ -426,12 +431,12 @@ export default function Register() {
 
                   <div>
                     <Label htmlFor="addressCity" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Cidade *</Label>
-                    <Input 
-                      id="addressCity" 
-                      type="text" 
-                      value={addressCity} 
-                      onChange={(e) => setAddressCity(e.target.value)} 
-                      placeholder="Nome da cidade" 
+                    <Input
+                      id="addressCity"
+                      type="text"
+                      value={addressCity}
+                      onChange={(e) => setAddressCity(e.target.value)}
+                      placeholder="Nome da cidade"
                       className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                       disabled={isRegistering}
                     />
@@ -439,12 +444,12 @@ export default function Register() {
 
                   <div>
                     <Label htmlFor="addressState" className={`${isSaiDeBaixo ? 'text-gray-700' : 'text-gray-300'} text-base`}>Estado *</Label>
-                    <Input 
-                      id="addressState" 
-                      type="text" 
-                      value={addressState} 
-                      onChange={(e) => setAddressState(e.target.value)} 
-                      placeholder="UF (ex: SP)" 
+                    <Input
+                      id="addressState"
+                      type="text"
+                      value={addressState}
+                      onChange={(e) => setAddressState(e.target.value)}
+                      placeholder="UF (ex: SP)"
                       maxLength={2}
                       className={`${isSaiDeBaixo ? 'bg-white border-gray-300 text-gray-900' : 'bg-gray-700 border-gray-600 text-white'} h-12 text-base`}
                       disabled={isRegistering}
@@ -458,7 +463,7 @@ export default function Register() {
               </div>
 
               <div className="flex flex-col gap-3 sm:gap-4">
-                <Button 
+                <Button
                   type="submit"
                   disabled={isRegistering || !fullName || !email || !phone || !cpf || !password || !validatePassword(password) || !addressStreet || !addressNumber || !addressNeighborhood || !addressCity || !addressState || !addressZipCode}
                   className={`w-full h-12 text-base ${isSaiDeBaixo ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
@@ -478,7 +483,7 @@ export default function Register() {
 
                 <div className="text-center">
                   <p className={`${isSaiDeBaixo ? 'text-gray-600' : 'text-gray-400'} text-sm mb-2`}>Já tem uma conta?</p>
-                  <Button 
+                  <Button
                     type="button"
                     onClick={() => navigate(createPageUrl("Home"))}
                     className={`h-12 text-base ${isSaiDeBaixo ? 'bg-gray-800 text-white hover:bg-gray-900' : 'bg-green-600 text-white hover:bg-green-700'}`}
