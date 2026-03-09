@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createPageUrl } from '@/utils';
-import bcrypt from 'bcryptjs';
 
 const AppUser = base44.entities.AppUser;
 
@@ -199,10 +198,6 @@ export default function Register() {
         }
       }
 
-      // Hash the password before saving
-      const salt = bcrypt.genSaltSync(10);
-      const hashedPassword = bcrypt.hashSync(password, salt);
-
       const newUser = await AppUser.create({
         full_name: fullName.trim(),
         display_first_name: firstName || null,
@@ -210,7 +205,7 @@ export default function Register() {
         email: normalizedEmail,
         phone: phoneDigits,
         cpf: cpfDigits,
-        password: hashedPassword,
+        password: password,
         role: 'user',
         address_street: addressStreet,
         address_number: addressNumber,

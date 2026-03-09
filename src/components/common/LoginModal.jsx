@@ -167,34 +167,7 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
       const user = users[0];
 
-      // VALIDAÇÃO E AUTO-MIGRAÇÃO COM BCRYPTJS
-      const storedPassword = user.password;
-      const isBcryptHash = storedPassword && storedPassword.startsWith('$2');
-      let passwordValid = false;
-
-      if (isBcryptHash) {
-        // Validar hash bcrypt
-        passwordValid = bcrypt.compareSync(password, storedPassword);
-        console.log(`[LOGIN] Validação bcrypt para: ${user.full_name}`);
-      } else {
-        // Validação legado (texto puro)
-        passwordValid = (storedPassword === password);
-
-        if (passwordValid) {
-          // Auto-migrar a senha antiga para bcrypt sem bloquear o usuário
-          try {
-            const salt = bcrypt.genSaltSync(10);
-            const hashedPassword = bcrypt.hashSync(password, salt);
-            await AppUser.update(user.id, { password: hashedPassword });
-            console.log(`[LOGIN] 🔄 AUTO-MIGRAÇÃO: Senha de ${user.full_name} convertida para bcrypt.`);
-            user.password = hashedPassword; // Atualiza a sessão local também
-          } catch (migrationErr) {
-            console.warn("[LOGIN] ⚠️ Erro na auto-migração de senha (não-bloqueante):", migrationErr);
-          }
-        }
-      }
-
-      if (!passwordValid) {
+      if (user.password !== password) {
         setErrorMessage("❌ Senha incorreta.");
         setIsLogging(false);
         return;
