@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
+import bcrypt from 'bcryptjs';
 
 const AppUser = base44.entities.AppUser;
 const SendEmail = (params) => base44.integrations.Core.SendEmail(params);
