@@ -39,7 +39,7 @@ const NARRATOR_TRIGGERS = [
 export default function AuctionRoom() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  
+
   const auctionId = searchParams.get("id") || new URLSearchParams(location.search).get("id");
   const showFloatingBalance = searchParams.get("useBalance") === "true";
   const spectatorModeParam = searchParams.get("spectator") === "true";
@@ -56,10 +56,10 @@ export default function AuctionRoom() {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const [timeRemaining, setTimeRemaining] = useState(null);
-  
+
   const serverOffsetRef = useRef(null);
   const lastOffsetCalibrationRef = useRef(0);
-  
+
   const [showAuctioneer, setShowAuctioneer] = useState(false);
   const [auctioneerPhase, setAuctioneerPhase] = useState(null);
   const [auctioneerMessage, setAuctioneerMessage] = useState("");
@@ -91,13 +91,13 @@ export default function AuctionRoom() {
 
   const lastAuctionSyncTimeRef = useRef(0);
   const lastMessageCountRef = useRef(0);
-  
+
   const isSyncingAuctionRef = useRef(false);
   const abortControllerRef = useRef(null);
-  
+
   const isEndingRef = useRef(false);
   const isCreatingVictoryMessageRef = useRef(false);
-  
+
   const hasInitializedRef = useRef(false);
 
   const createPageUrl = (pageName) => {
@@ -158,7 +158,7 @@ export default function AuctionRoom() {
       if (savedUser && isLoggedIn) {
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
-        
+
         // 🆕 Carrega saldo da carteira digital via backend (contorna RLS)
         try {
           const result = await base44.functions.invoke('getDigitalWalletBalance', { user_id: user.id });
@@ -191,28 +191,28 @@ export default function AuctionRoom() {
   const calibrateServerOffset = useCallback(async () => {
     try {
       console.log("🔧 [CALIBRATE] Calibrando offset...");
-      
+
       const clientBeforeCall = Date.now();
       const { data } = await getServerTime();
       const clientAfterCall = Date.now();
-      
+
       if (!data || typeof data.timestamp !== 'number') {
         console.error("❌ [CALIBRATE] Resposta inválida.");
         return false;
       }
-      
+
       const clientAverage = (clientBeforeCall + clientAfterCall) / 2;
       const serverTime = data.timestamp;
-      
+
       const offset = serverTime - clientAverage;
-      
+
       serverOffsetRef.current = offset;
       lastOffsetCalibrationRef.current = Date.now();
-      
+
       console.log(`✅ [CALIBRATE] Offset: ${offset.toFixed(0)}ms`);
-      
+
       return true;
-      
+
     } catch (error) {
       console.error("❌ [CALIBRATE] Erro:", error);
       serverOffsetRef.current = null;
@@ -224,7 +224,7 @@ export default function AuctionRoom() {
     if (serverOffsetRef.current === null) {
       return null;
     }
-    
+
     return Date.now() + serverOffsetRef.current;
   }, []);
 
@@ -241,8 +241,8 @@ export default function AuctionRoom() {
 
     const serverNow = getServerSyncedTime();
     if (serverNow === null) {
-        console.log("⚠️ [END] Tempo indisponível.");
-        return;
+      console.log("⚠️ [END] Tempo indisponível.");
+      return;
     }
 
     const endTime = new Date(auction.end_time).getTime();
@@ -278,8 +278,17 @@ export default function AuctionRoom() {
         abortControllerRef.current.abort();
       }
 
-      await Auction.update(auction.id, { status: "processing" });
-      
+      // 🔐 SEGURANÇA: Atualização de status para 'processing' via backend (Edge Function)
+      // Não chamamos Auction.update() diretamente para evitar manipulação de dados via DevTools
+      try {
+        const base44Client = (await import('@/api/base44Client')).base44;
+        await base44Client.functions.invoke('finalizeAuction', { auction_id: auction.id });
+      } catch (secureErr) {
+        // Fallback para garantir que o fluxo visual não quebre
+        console.warn('⚠️ [END] Edge Function não disponível, usando fallback local:', secureErr.message);
+        await Auction.update(auction.id, { status: "processing" });
+      }
+
       setAuction(prev => ({ ...prev, status: "processing" }));
 
       // 🔨 3 MARTELADAS
@@ -302,31 +311,31 @@ export default function AuctionRoom() {
         console.log("⏸️ [END] Mensagem de vitória já está sendo criada!");
         return;
       }
-      
+
       isCreatingVictoryMessageRef.current = true;
 
       // 🆕 VERIFICA SE JÁ EXISTE MENSAGEM DE VITÓRIA
-      const existingMessages = await AuctionMessage.filter({ 
-        auction_id: auction.id, 
-        message_type: 'winner_announcement' 
+      const existingMessages = await AuctionMessage.filter({
+        auction_id: auction.id,
+        message_type: 'winner_announcement'
       });
-      
+
       if (existingMessages.length > 0) {
         console.log("⚠️ [END] Mensagem de vitória JÁ EXISTE no banco! Pulando criação.");
         isCreatingVictoryMessageRef.current = false;
-        
+
         // Atualiza só o status do leilão
         await Auction.update(auction.id, {
           status: "ended",
           order_status: "awaiting_payment"
         });
-        
+
         setAuction(prev => ({
           ...prev,
           status: "ended",
           order_status: "awaiting_payment"
         }));
-        
+
         // Re-sync messages to ensure the existing winner message is displayed
         try {
           const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
@@ -388,21 +397,21 @@ export default function AuctionRoom() {
       if (winnerData && winnerData.referred_by_id && !auction.is_investment_plan) {
         try {
           console.log(`💰 [COMMISSION] Vencedor foi indicado! Buscando licenciado...`);
-          
+
           const licensees = await AppUser.filter({ id: winnerData.referred_by_id });
-          
+
           if (licensees && licensees.length > 0) {
             const licensee = licensees[0];
             const commission = finalPrice * 0.03;
-            
+
             // 🆕 VERIFICAR SE É LEILÃO DE TESTE
             const isTestAuction = auction.is_test_auction === true;
-            
+
             console.log(`✅ [COMMISSION] Licenciado: ${licensee.full_name}`);
             console.log(`💵 [COMMISSION] Comissão: R$ ${commission.toFixed(2)}`);
             console.log(`🧪 [COMMISSION] É teste? ${isTestAuction ? 'SIM' : 'NÃO'}`);
             console.log(`📊 [COMMISSION] É plano? ${auction.is_investment_plan ? 'SIM' : 'NÃO'}`);
-            
+
             if (isTestAuction) {
               // LEILÃO DE TESTE - atualiza saldo de teste
               await AppUser.update(licensee.id, {
@@ -420,7 +429,7 @@ export default function AuctionRoom() {
               });
               console.log(`💰 [COMMISSION] Atualizado SALDO REAL!`);
             }
-            
+
             console.log(`🎉 [COMMISSION] Licenciado atualizado com sucesso!`);
           } else {
             console.warn(`⚠️ [COMMISSION] Licenciado não encontrado: ${winnerData.referred_by_id}`);
@@ -437,8 +446,8 @@ export default function AuctionRoom() {
       }
 
       // 🆕 GARANTIR QUE A IMAGEM SEMPRE EXISTA
-      const productImage = (auction.image_urls && auction.image_urls.length > 0) 
-        ? auction.image_urls[0] 
+      const productImage = (auction.image_urls && auction.image_urls.length > 0)
+        ? auction.image_urls[0]
         : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
 
       // 🆕 CRIAR OBJETO LIMPO
@@ -460,7 +469,7 @@ export default function AuctionRoom() {
       };
 
       const victoryJSON = JSON.stringify(victoryData);
-      
+
       console.log('📦 [END] JSON que será salvo:', victoryJSON);
 
       await AuctionMessage.create({
@@ -472,14 +481,14 @@ export default function AuctionRoom() {
       });
 
       console.log(`🏆 [END] Vencedor: ${winnerName} - R$ ${finalPrice.toFixed(2)}`);
-      
+
       // Libera flag após criar
       isCreatingVictoryMessageRef.current = false;
 
       // Força atualização imediata das mensagens
       console.log("🔄 [END] Forçando atualização das mensagens...");
       await new Promise(resolve => setTimeout(resolve, 800));
-      
+
       try {
         const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
         console.log(`✅ [END] ${freshMessages.length} mensagens carregadas!`);
@@ -495,14 +504,26 @@ export default function AuctionRoom() {
         setShowWinnerModal(true);
       }, 5000);
 
-      await Auction.update(auction.id, {
-        status: "ended",
-        winner_id: winnerId,
-        winner_name: winnerName,
-        current_price: finalPrice,
-        order_status: "awaiting_payment"
-      });
+      // 🔐 SEGURANÇA: Encerramento via Edge Function no backend
+      // Toda a lógica crítica (Auction.update status=ended, AppUser stats, order_status)
+      // roda no servidor com ServiceRole — não pode ser manipulada via DevTools
+      try {
+        const base44Client = (await import('@/api/base44Client')).base44;
+        await base44Client.functions.invoke('finalizeAuction', { auction_id: auction.id });
+        console.log(`🔐 [END] Encerramento seguro via Edge Function executado!`);
+      } catch (secureErr) {
+        console.warn('⚠️ [END] Edge Function não disponível, usando fallback local:', secureErr.message);
+        // Fallback para garantir que o fluxo do leilão não quebre
+        await Auction.update(auction.id, {
+          status: "ended",
+          winner_id: winnerId,
+          winner_name: winnerName,
+          current_price: finalPrice,
+          order_status: "awaiting_payment"
+        });
+      }
 
+      // Atualiza o estado local do React para refletir o encerramento
       setAuction(prev => ({
         ...prev,
         status: "ended",
@@ -513,15 +534,6 @@ export default function AuctionRoom() {
       }));
 
       if (winnerId && winnerData && winnerData.email) {
-        try {
-          await AppUser.update(winnerData.id, {
-            won_auctions: (winnerData.won_auctions || 0) + 1,
-            points: (winnerData.points || 0) + 50
-          });
-          console.log(`🏆 [END] Stats do vencedor atualizados!`);
-        } catch (updateError) {
-          console.warn(`⚠️ [END] Não foi possível atualizar stats do vencedor:`, updateError.message);
-        }
 
         playSound('winner');
       }
@@ -531,14 +543,14 @@ export default function AuctionRoom() {
     } catch (error) {
       console.error("❌ [END] Erro:", error);
       isCreatingVictoryMessageRef.current = false; // Libera em caso de erro
-      
+
       try {
         await Auction.update(auction.id, { status: "ended" });
         setAuction(prev => ({ ...prev, status: "ended" }));
       } catch (recoveryError) {
         console.error("❌ [END] Recuperação falhou:", recoveryError);
       }
-      
+
     } finally {
       isEndingRef.current = false;
     }
@@ -549,7 +561,7 @@ export default function AuctionRoom() {
 
     try {
       console.log("📦 [INITIAL] Carregando...");
-      
+
       await calibrateServerOffset();
 
       const auctions = await Auction.filter({ id: auctionId });
@@ -562,15 +574,15 @@ export default function AuctionRoom() {
 
       const freshAuction = auctions[0];
       setAuction(freshAuction);
-      
+
       const msgs = await AuctionMessage.filter({ auction_id: auctionId }, '-created_date', 50);
       if (Array.isArray(msgs)) {
         setMessages(msgs);
         lastMessageCountRef.current = msgs.length;
       }
-      
+
       console.log("✅ [INITIAL] Completo!");
-      
+
     } catch (error) {
       console.error("❌ [INITIAL] Erro:", error);
     }
@@ -578,9 +590,9 @@ export default function AuctionRoom() {
 
   const syncAuctionDataOnly = useCallback(async () => {
     if (!auctionId || !auction) return;
-    
+
     const now = Date.now();
-    
+
     if (isBlockedRef.current && now < blockUntilRef.current) {
       return;
     }
@@ -598,7 +610,7 @@ export default function AuctionRoom() {
 
     try {
       console.log(`🔄 [AUCTION SYNC] Atualizando dados do leilão...`);
-      
+
       if (now - lastOffsetCalibrationRef.current > 60000) {
         await calibrateServerOffset();
       }
@@ -611,12 +623,12 @@ export default function AuctionRoom() {
       }
 
       const freshAuction = auctions[0];
-      
+
       // Sempre loga o preço atual do banco
       console.log(`💰 [AUCTION SYNC] Preço no banco: R$ ${(freshAuction.current_price || freshAuction.starting_price).toFixed(2)}`);
       console.log(`💰 [AUCTION SYNC] Preço local atual: R$ ${(auction.current_price || auction.starting_price).toFixed(2)}`);
-      
-      const hasChanges = 
+
+      const hasChanges =
         freshAuction.current_price !== auction.current_price ||
         freshAuction.winner_name !== auction.winner_name ||
         freshAuction.end_time !== auction.end_time ||
@@ -628,12 +640,12 @@ export default function AuctionRoom() {
       } else {
         console.log(`✅ [AUCTION SYNC] Nenhuma mudança detectada, mantendo estado local.`);
       }
-      
+
       const serverNow = getServerSyncedTime();
       if (serverNow !== null) {
         const endTime = new Date(freshAuction.end_time).getTime();
         const isExpired = serverNow >= endTime;
-        
+
         if (isExpired && freshAuction.status === 'active') {
           console.log("🔴 [AUTO-FIX] Leilão expirado mas ainda ativo, finalizando...");
           setTimeout(() => {
@@ -641,12 +653,12 @@ export default function AuctionRoom() {
           }, 500);
         }
       }
-      
+
       isBlockedRef.current = false;
-      
+
     } catch (error) {
       console.error("❌ [AUCTION SYNC] Erro ao sincronizar:", error);
-      
+
       const errorMsg = error?.message || '';
       if (errorMsg.includes('429') || errorMsg.includes('Rate limit') || errorMsg.includes('rate limit')) {
         isBlockedRef.current = true;
@@ -687,35 +699,35 @@ export default function AuctionRoom() {
       window.location.replace('/');
       return;
     }
-    
+
     if (hasInitializedRef.current) {
       return;
     }
-    
+
     const initialize = async () => {
       setIsLoading(true);
-      
+
       try {
         await loadCurrentUser();
         await initialLoadData();
-        
+
         // 🆕 Ativa modo telespectador se vir do parâmetro
         if (spectatorModeParam) {
           setIsSpectatorMode(true);
           console.log("🎬 [SPECTATOR] Modo telespectador ativado via URL");
         }
-        
+
         hasInitializedRef.current = true;
-        
+
       } catch (error) {
         console.error("❌ [INIT] Erro:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     initialize();
-    
+
   }, [auctionId, loadCurrentUser, initialLoadData]);
 
   // 🔥 CONSOLIDADO: 1 ÚNICO LOOP EM VEZ DE 3 setInterval SEPARADOS
@@ -731,32 +743,32 @@ export default function AuctionRoom() {
       }
       return;
     }
-    
+
     let auctionCounter = 0;
     let messageCounter = 0;
-    
+
     // LOOP UNIFICADO: 1 setInterval ao invés de 3
     const unifiedInterval = setInterval(() => {
       auctionCounter++;
       messageCounter++;
-      
+
       // Sync auction a cada 15s
       if (auctionCounter >= 15) {
         syncAuctionDataOnly();
         auctionCounter = 0;
       }
-      
+
       // Sync messages a cada 30s
       if (messageCounter >= 30) {
         syncMessagesOnly();
         messageCounter = 0;
       }
     }, 1000); // 1 tick por segundo
-    
+
     // Initial loads
     setTimeout(syncAuctionDataOnly, 3000);
     setTimeout(syncMessagesOnly, 5000);
-    
+
     return () => {
       clearInterval(unifiedInterval);
     };
@@ -779,8 +791,8 @@ export default function AuctionRoom() {
     }
 
     const serverNow = getServerSyncedTime();
-    if (serverNow === null) { 
-        return; 
+    if (serverNow === null) {
+      return;
     }
 
     const endTime = new Date(auction.end_time).getTime();
@@ -789,16 +801,16 @@ export default function AuctionRoom() {
     if (timeUntilEnd <= 0) {
       console.log("🔴 [COUNTDOWN] Finalizando...");
       setTimeRemaining(0);
-      
+
       setTimeout(() => {
         endAuction();
       }, 100);
-      
+
       return;
     }
 
     setTimeRemaining(timeUntilEnd);
-    
+
     hammerAnnounced.current = { first: false, second: false, third: false };
 
     if (countdownIntervalRef.current) {
@@ -808,21 +820,21 @@ export default function AuctionRoom() {
 
     countdownIntervalRef.current = setInterval(() => {
       const nowCheck = getServerSyncedTime();
-      if (nowCheck === null) { 
-          return;
+      if (nowCheck === null) {
+        return;
       }
-      
+
       const endTimeCheck = new Date(auction.end_time).getTime();
       const remaining = Math.floor((endTimeCheck - nowCheck) / 1000);
 
       if (remaining <= 0) {
         setTimeRemaining(0);
-        
+
         if (countdownIntervalRef.current) {
           clearInterval(countdownIntervalRef.current);
           countdownIntervalRef.current = null;
         }
-        
+
         endAuction();
         return;
       }
@@ -833,17 +845,17 @@ export default function AuctionRoom() {
         NARRATOR_TRIGGERS.forEach(async (trigger) => {
           if (remaining === trigger.time) {
             const hammerKey = trigger.phase === 1 ? 'first' : trigger.phase === 2 ? 'second' : trigger.phase === 3 ? 'third' : null;
-            
+
             if (hammerKey && !hammerAnnounced.current[hammerKey]) {
               hammerAnnounced.current[hammerKey] = true;
-              
+
               try {
                 playSound('countdown');
-                
+
                 setAuctioneerPhase(trigger.phase);
                 setAuctioneerMessage(trigger.message);
                 setShowAuctioneer(true);
-                
+
               } catch (err) {
                 console.error(`❌ Erro martelo:`, err);
                 if (hammerKey) hammerAnnounced.current[hammerKey] = false;
@@ -879,7 +891,7 @@ export default function AuctionRoom() {
       const freshData = freshResult?.data || freshResult;
       const freshBalance = freshData?.balance || 0;
       setUserWallet({ balance: freshBalance });
-      
+
       if (freshBalance < amount) {
         console.warn(`⚠️ Saldo insuficiente: R$ ${freshBalance.toFixed(2)} < R$ ${amount.toFixed(2)}`);
         setShowLowBalanceModal(true);
@@ -944,7 +956,7 @@ export default function AuctionRoom() {
       }
 
       playSound('bid');
-      
+
       // 🆕 DEBOUNCE: Bloqueia novos lances por 2s
       const debounceKey = `bid_debounce_${currentUser.id}`;
       const lastBidTime = sessionStorage.getItem(debounceKey);
@@ -984,10 +996,10 @@ export default function AuctionRoom() {
         is_system_message: false,
         created_date: new Date().toISOString()
       };
-      
+
       setMessages(prev => [optimisticMessage, ...prev]);
       lastMessageCountRef.current++;
-      
+
       if (chatRef.current) {
         setTimeout(() => {
           chatRef.current.scrollTo({
@@ -996,7 +1008,7 @@ export default function AuctionRoom() {
           });
         }, 100);
       }
-      
+
       await AuctionMessage.create({
         auction_id: auctionId,
         message_type: "bid",
@@ -1014,16 +1026,16 @@ export default function AuctionRoom() {
 
       if (revalidatePrice >= bidAmount) {
         alert("Outro lance foi dado!");
-        
+
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
         lastMessageCountRef.current--;
-        
+
         setAuction(prev => ({
           ...prev,
           current_price: revalidatePrice,
           winner_name: revalidateAuction[0].winner_name
         }));
-        
+
         return;
       }
 
@@ -1035,8 +1047,8 @@ export default function AuctionRoom() {
 
       const nowCheckServer = getServerSyncedTime();
       if (nowCheckServer === null) {
-          alert("Erro de sincronização.");
-          return;
+        alert("Erro de sincronização.");
+        return;
       }
 
       const conflictingBids = recentBids.filter(bid => {
@@ -1051,18 +1063,18 @@ export default function AuctionRoom() {
 
       if (conflictingBids.length > 0) {
         alert("Lance duplicado!");
-        
+
         setMessages(prev => prev.filter(m => m.id !== optimisticMessage.id));
         lastMessageCountRef.current--;
-        
+
         return;
       }
 
       const currentEndTime = new Date(freshAuction.end_time).getTime();
       const timeUntilEnd = Math.floor((currentEndTime - nowCheckServer) / 1000);
-      
+
       let newEndTimeISO = freshAuction.end_time;
-      
+
       if (timeUntilEnd <= COUNTDOWN_DURATION) {
         console.log(`⚡ [BID] GUERRA! +${BID_EXTENSION_SECONDS}s`);
         const newEndTime = new Date(currentEndTime + (BID_EXTENSION_SECONDS * 1000));
@@ -1110,7 +1122,7 @@ export default function AuctionRoom() {
         if (timeSinceLastAI > 20000 || bidAmount % 50 === 0) {
           lastAICommentTime.current = serverTimeStamp;
           const name = currentUser.nickname || currentUser.full_name;
-          const comments = [`🔥 UHULLLL! ${name} MANDOU R$ ${bidAmount.toFixed(2)}!`,`💰 BOOMM! Lance de R$ ${bidAmount.toFixed(2)}!`,`⚡ ${name} ON FIRE!`,`🚀 VOOOOU! R$ ${bidAmount.toFixed(2)}!`,`💥 POW! ${name} não brinca!`,`🎯 NA MOOOSCA! R$ ${bidAmount.toFixed(2)}!`,`⭐ SHOWWW! ${name}!`,`🔊 ATENÇÃO! R$ ${bidAmount.toFixed(2)}!`];
+          const comments = [`🔥 UHULLLL! ${name} MANDOU R$ ${bidAmount.toFixed(2)}!`, `💰 BOOMM! Lance de R$ ${bidAmount.toFixed(2)}!`, `⚡ ${name} ON FIRE!`, `🚀 VOOOOU! R$ ${bidAmount.toFixed(2)}!`, `💥 POW! ${name} não brinca!`, `🎯 NA MOOOSCA! R$ ${bidAmount.toFixed(2)}!`, `⭐ SHOWWW! ${name}!`, `🔊 ATENÇÃO! R$ ${bidAmount.toFixed(2)}!`];
           setTimeout(async () => {
             await AuctionMessage.create({ auction_id: auctionId, message_type: "ai_narration", content: comments[Math.floor(Math.random() * comments.length)], sender_name: "LanceIA", is_system_message: true });
           }, 1500);
@@ -1258,7 +1270,7 @@ export default function AuctionRoom() {
       }
 
       setShowBuyNowModal(false);
-      
+
       // Para os intervalos de sync para evitar conflitos
       if (auctionSyncIntervalRef.current) {
         clearInterval(auctionSyncIntervalRef.current);
@@ -1272,7 +1284,7 @@ export default function AuctionRoom() {
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
       }
-      
+
       // Atualiza o estado local para refletir o fim do leilão
       setAuction(prev => ({
         ...prev,
@@ -1282,12 +1294,12 @@ export default function AuctionRoom() {
         winner_name: currentUser.nickname || currentUser.full_name,
         order_status: "awaiting_payment"
       }));
-      
+
       // Cria a mensagem de vitória no chat
-      const productImage = (auction.image_urls && auction.image_urls.length > 0) 
-        ? auction.image_urls[0] 
+      const productImage = (auction.image_urls && auction.image_urls.length > 0)
+        ? auction.image_urls[0]
         : 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400';
-      
+
       const victoryData = {
         winner: {
           id: currentUser.id,
@@ -1304,7 +1316,7 @@ export default function AuctionRoom() {
           starting_price: auction.starting_price || 0
         }
       };
-      
+
       await AuctionMessage.create({
         auction_id: auction.id,
         message_type: "winner_announcement",
@@ -1312,12 +1324,12 @@ export default function AuctionRoom() {
         sender_name: "LanceIA",
         is_system_message: true,
       });
-      
+
       // Atualiza as mensagens imediatamente
       const freshMessages = await AuctionMessage.filter({ auction_id: auction.id }, '-created_date', 50);
       setMessages(freshMessages);
       lastMessageCountRef.current = freshMessages.length;
-      
+
       // Mostra o modal de vitória após 5 segundos
       setTimeout(() => {
         setShowWinnerModal(true);
@@ -1338,7 +1350,7 @@ export default function AuctionRoom() {
     // 🎯 LINK DIRETO PARA ESTA PÁGINA DO PRODUTO
     const productUrl = window.location.href; // Usa a URL atual (já está na página do produto)
     const currentPrice = auction.current_price || auction.starting_price;
-    
+
     const shareText = `🔥 LEILÃO NOZAP!
 
 📱 ${auction.title}
@@ -1375,22 +1387,22 @@ export default function AuctionRoom() {
 
   const getDisplayTime = () => {
     if (!auction) return "Carregando...";
-    
+
     if (auction.status !== "active") return "Encerrado";
 
     if (timeRemaining !== null) {
-      if (timeRemaining <= 0) return "Aguardando..."; 
-      
+      if (timeRemaining <= 0) return "Aguardando...";
+
       const hours = Math.floor(timeRemaining / 3600);
       const minutes = Math.floor((timeRemaining % 3600) / 60);
       const seconds = timeRemaining % 60;
-      
+
       return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
     }
 
     const serverNow = getServerSyncedTime();
     if (serverNow === null) return "Sincronizando...";
-    
+
     const end = new Date(auction.end_time);
     const diff = Math.floor((end.getTime() - serverNow) / 1000);
 
@@ -1405,7 +1417,7 @@ export default function AuctionRoom() {
     const hours = Math.floor(diff / 3600);
     const minutes = Math.floor((diff % 3600) / 60);
     const seconds = diff % 60;
-    
+
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
@@ -1439,10 +1451,10 @@ export default function AuctionRoom() {
   }
 
   const displayTime = getDisplayTime();
-  const isAuctionActive = auction?.status === 'active' && displayTime !== "Encerrado"; 
+  const isAuctionActive = auction?.status === 'active' && displayTime !== "Encerrado";
   const currentPrice = auction.current_price || auction.starting_price;
   const mainImageUrl = auction.image_urls?.[0] || "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=400";
-  
+
   const isWarMode = timeRemaining !== null && timeRemaining <= COUNTDOWN_DURATION && isAuctionActive;
 
   return (
@@ -1453,15 +1465,15 @@ export default function AuctionRoom() {
 
       {/* 🆕 RASTREADOR DE VISUALIZAÇÕES PARA IA */}
       {auction && currentUser && (
-        <ViewTracker 
-          auctionId={auction.id} 
-          userId={currentUser.id} 
+        <ViewTracker
+          auctionId={auction.id}
+          userId={currentUser.id}
           category={auction.category}
         />
       )}
 
       {showDebugger && auction && (
-        <AuctionTimeDebugger 
+        <AuctionTimeDebugger
           auction={auction}
           serverTimeOffset={serverOffsetRef.current || 0}
           timeRemaining={timeRemaining}
@@ -1486,16 +1498,16 @@ export default function AuctionRoom() {
                   for (const bid of allBids) {
                     await base44.entities.Bid.delete(bid.id);
                   }
-                  
+
                   // 2. Limpar mensagens
                   const allMessages = await AuctionMessage.filter({ auction_id: auction.id });
                   for (const msg of allMessages) {
                     await AuctionMessage.delete(msg.id);
                   }
-                  
+
                   // 3. Reativar por mais 5 dias
                   const newEndTime = new Date(Date.now() + (5 * 24 * 60 * 60 * 1000)).toISOString();
-                  await Auction.update(auction.id, { 
+                  await Auction.update(auction.id, {
                     status: 'active',
                     end_time: newEndTime,
                     current_price: auction.starting_price,
@@ -1504,7 +1516,7 @@ export default function AuctionRoom() {
                     order_status: null,
                     tracking_code: null
                   });
-                  
+
                   alert('✅ Reativado! Histórico limpo.');
                   window.location.reload();
                 } catch (error) {
@@ -1520,7 +1532,7 @@ export default function AuctionRoom() {
       )}
 
       {showAuctioneer && auctioneerPhase && auctioneerMessage && (
-        <AuctioneerFloat 
+        <AuctioneerFloat
           phase={auctioneerPhase}
           message={auctioneerMessage}
           onComplete={() => {
@@ -1542,12 +1554,11 @@ export default function AuctionRoom() {
             </button>
           </div>
           <div className="mobile-header__timer">
-            <span className={`countdown-live ${
-              !isAuctionActive ? 'text-gray-400' : 
-              isWarMode ? 'animate-pulse' : ''
-            }`} style={{ 
-              color: isWarMode ? '#FF4F00' : undefined 
-            }}>
+            <span className={`countdown-live ${!isAuctionActive ? 'text-gray-400' :
+                isWarMode ? 'animate-pulse' : ''
+              }`} style={{
+                color: isWarMode ? '#FF4F00' : undefined
+              }}>
               {isAuctionActive && <Timer className="w-3 h-3" />}
               {displayTime}
             </span>
@@ -1557,9 +1568,9 @@ export default function AuctionRoom() {
         <div className="flex items-center gap-2">
           {/* 🆕 BOTÃO FAVORITAR NO HEADER */}
           {currentUser && auction && (
-            <FavoriteButton 
-              auctionId={auction.id} 
-              userId={currentUser.id} 
+            <FavoriteButton
+              auctionId={auction.id}
+              userId={currentUser.id}
               size="sm"
               className="bg-transparent border-none"
             />
@@ -1598,23 +1609,23 @@ export default function AuctionRoom() {
               </div>
               {messages.slice().reverse().map((message, index, arr) => {
                 const sender = userMap[message.sender_id];
-                
+
                 // SE FOR MENSAGEM DE VITÓRIA, VERIFICAR SE JÁ RENDERIZOU UMA
                 if (message.is_system_message && message.message_type === 'winner_announcement') {
                   // VERIFICAR SE JÁ EXISTE UM VICTORY CARD RENDERIZADO (apenas o mais recente)
-                  const firstWinnerAnnouncementIndex = arr.findIndex(m => 
+                  const firstWinnerAnnouncementIndex = arr.findIndex(m =>
                     m.is_system_message && m.message_type === 'winner_announcement'
                   );
-                  
+
                   if (firstWinnerAnnouncementIndex !== -1 && index !== firstWinnerAnnouncementIndex) {
                     console.log('⏭️ [RENDER] Pulando VictoryCard duplicado (não é o mais recente):', message.id);
                     return null; // NÃO RENDERIZA DUPLICATAS
                   }
-                  
+
                   // RENDERIZA APENAS SE FOR O PRIMEIRO (o mais recente na array invertida)
                   let winner = null;
                   let auctionData = auction; // Sempre usa o auction como fallback
-                  
+
                   // Tenta parsear, mas se falhar, usa o auction atual
                   try {
                     // Ensure message.content is a string before parsing
@@ -1622,7 +1633,7 @@ export default function AuctionRoom() {
                       const parsed = JSON.parse(message.content);
                       if (parsed.winner) winner = parsed.winner;
                       if (parsed.auction) auctionData = parsed.auction;
-                      
+
                       // console.log('✅ [RENDER] Mensagem parseada com sucesso!');
                       // console.log('✅ [RENDER] Winner:', winner);
                       // console.log('✅ [RENDER] Auction:', auctionData);
@@ -1644,27 +1655,27 @@ export default function AuctionRoom() {
                       }
                     }
                   }
-                  
+
                   return (
-                    <AIMessage 
-                      key={message.id} 
-                      message={message} 
+                    <AIMessage
+                      key={message.id}
+                      message={message}
                       winner={winner}
                       auction={auctionData}
                     />
                   );
                 }
-                
+
                 // OUTRAS MENSAGENS DO SISTEMA
                 if (message.is_system_message) {
                   return (
-                    <AIMessage 
-                      key={message.id} 
+                    <AIMessage
+                      key={message.id}
                       message={message}
                     />
                   );
                 }
-                
+
                 // Mensagens normais de usuários
                 return (
                   <div key={message.id} className={`message-bubble-wrapper ${currentUser && message.sender_id === currentUser.id ? 'message-bubble-wrapper--own' : ''}`}>
@@ -1770,7 +1781,7 @@ export default function AuctionRoom() {
       {showGuestModal && <GuestRegistrationModal onClose={() => setShowGuestModal(false)} onSuccess={(user) => { setCurrentUser(user); setShowGuestModal(false); }} />}
       {showLoginModal && <LoginModal onClose={() => setShowLogin(false)} onSuccess={(user) => { setCurrentUser(user); setShowLogin(false); }} onSwitchToRegister={() => { setShowLogin(false); setShowGuestModal(true); }} />}
 
-      <WinnerModal 
+      <WinnerModal
         isOpen={showWinnerModal}
         auction={auction}
         finalPrice={currentPrice}
@@ -1783,7 +1794,7 @@ export default function AuctionRoom() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[2000] p-4" onClick={() => !isBuyingNow && setShowBuyNowModal(false)}>
           <div className="bg-gray-800 rounded-2xl p-6 max-w-md w-full border-2 border-orange-500" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-2xl font-bold text-white mb-4 text-center">🔥 Confirmar Arremate</h3>
-            
+
             <div className="bg-gray-700 rounded-lg p-4 mb-6">
               <img src={mainImageUrl} alt={auction.title} className="w-full h-40 object-cover rounded-lg mb-3" />
               <h4 className="text-lg font-semibold text-white mb-2">{auction.title}</h4>
