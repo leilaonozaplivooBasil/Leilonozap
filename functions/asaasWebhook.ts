@@ -10,6 +10,23 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
 
+    // 🔐 VALIDAÇÃO DE AUTENTICIDADE — Rejeitar requisições não-originadas do ASAAS
+    const receivedToken = req.headers.get('asaas-access-token');
+    const expectedToken = Deno.env.get('ASAAS_WEBHOOK_TOKEN');
+
+    if (!expectedToken) {
+        // Se a variável de ambiente não estiver configurada, logar aviso mas não bloquear (modo permissivo de desenvolvimento)
+        console.warn('⚠️ ASAAS_WEBHOOK_TOKEN não configurado! Configure a variável de ambiente para ativar a validação de segurança.');
+    } else if (receivedToken !== expectedToken) {
+        console.error('🚫 WEBHOOK REJEITADO: Token inválido ou ausente.', {
+            received: receivedToken ? 'presente (incorreto)' : 'ausente',
+            timestamp: new Date().toISOString()
+        });
+        return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    } else {
+        console.log('✅ Token ASAAS validado com sucesso.');
+    }
+
     try {
         const base44 = createClientFromRequest(req);
         const body = await req.text();
