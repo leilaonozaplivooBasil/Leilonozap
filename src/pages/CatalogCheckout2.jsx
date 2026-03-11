@@ -58,10 +58,10 @@ export default function CatalogCheckout2() {
 
     const handleCepChange = (e) => {
         let v = e.target.value.replace(/\D/g, '');
-        if (v.length > 8) v = v.slice(0,8);
-        if (v.length > 5) v = `${v.slice(0,5)}-${v.slice(5)}`;
+        if (v.length > 8) v = v.slice(0, 8);
+        if (v.length > 5) v = `${v.slice(0, 5)}-${v.slice(5)}`;
         setAddressZip(v);
-        if (v.replace(/\D/g,'').length === 8) searchCep(v);
+        if (v.replace(/\D/g, '').length === 8) searchCep(v);
     };
 
     const handleCreatePreference = async () => {
@@ -194,7 +194,7 @@ export default function CatalogCheckout2() {
 
             // 🔒 PASSO 3: ASAAS - Criar pagamento
             console.log('📤 Criando pagamento ASAAS...');
-            
+
             const paymentPayload = {
                 catalog_sale_id: sale.id,
                 buyer_name: firstName.trim(),
@@ -222,9 +222,9 @@ export default function CatalogCheckout2() {
                     }
                 };
             }
-            
+
             console.log('📤 Payload enviado:', paymentPayload);
-            
+
             // Chamar function diretamente via fetch (não depende de auth do SDK)
             const functionUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/createAsaasPayment`;
             const response = await fetch(functionUrl, {
@@ -232,7 +232,7 @@ export default function CatalogCheckout2() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(paymentPayload)
             });
-            
+
             const paymentResponse = await response.json();
             console.log('📥 Resposta COMPLETA ASAAS:', paymentResponse);
             console.log('📥 Status HTTP:', response.status);
@@ -241,9 +241,19 @@ export default function CatalogCheckout2() {
             toast.dismiss('checkout-loading');
 
             if (paymentResponse?.success) {
-                setPixData({...paymentResponse, billing_type: paymentType});
+
+                // 🛡 BLOQUEIO ANTI-FRUSTRAÇÃO: Evitar tela de Sucesso se o cartão foi recusado imediatamente
+                const isRejected = paymentResponse.asaas_status === 'REJECTED' || paymentResponse.asaas_status === 'FAILED';
+
+                if (isRejected) {
+                    toast.error('Pagamento recusado pela operadora do cartão. Tente novamente ou use outro meio de pagamento.');
+                    setIsProcessing(false);
+                    return;
+                }
+
+                setPixData({ ...paymentResponse, billing_type: paymentType });
                 toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
-                
+
                 // Registrar tracking (via fetch direto)
                 try {
                     const trackUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/trackPaymentFlow`;
@@ -270,7 +280,7 @@ export default function CatalogCheckout2() {
                 console.error('❌ ASAAS RETORNOU ERRO:', paymentResponse);
                 const errorMsg = paymentResponse?.error || 'Erro desconhecido';
                 const errorDetails = paymentResponse?.details;
-                
+
                 // Mostrar erro específico do ASAAS
                 if (errorDetails && Array.isArray(errorDetails)) {
                     const asaasError = errorDetails.map(e => e.description).join(', ');
@@ -279,7 +289,7 @@ export default function CatalogCheckout2() {
                 } else {
                     toast.error(`Erro: ${errorMsg}`);
                 }
-                
+
                 throw new Error(errorMsg);
             }
 
@@ -394,7 +404,7 @@ export default function CatalogCheckout2() {
                 <h1 className="text-2xl md:text-3xl font-bold mb-6 text-white">Finalizar Pedido</h1>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    
+
                     {/* CARD ESQUERDO - SEUS DADOS */}
                     <div className="space-y-6">
                         {/* Card 1 - Seus dados */}
@@ -406,7 +416,7 @@ export default function CatalogCheckout2() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                
+
                                 {/* Nome */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -480,7 +490,7 @@ export default function CatalogCheckout2() {
                                     <label className="block text-sm font-medium text-gray-300 mb-2">
                                         Escolha a forma de entrega
                                     </label>
-                                    <select 
+                                    <select
                                         value={deliveryType}
                                         onChange={(e) => setDeliveryType(e.target.value)}
                                         className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-green-500"
@@ -637,13 +647,13 @@ export default function CatalogCheckout2() {
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            
+
                             {/* Produto */}
                             <div className="bg-gray-700/30 border border-gray-600 rounded-lg p-4">
                                 <div className="flex items-center gap-4">
                                     {product.image_urls && product.image_urls[0] && (
-                                        <img 
-                                            src={product.image_urls[0]} 
+                                        <img
+                                            src={product.image_urls[0]}
                                             alt={product.description}
                                             className="w-20 h-20 object-cover rounded-lg"
                                         />
@@ -684,7 +694,7 @@ export default function CatalogCheckout2() {
                                             className="flex-1 px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 text-sm focus:outline-none focus:border-green-500"
                                             disabled
                                         />
-                                        <button 
+                                        <button
                                             className="px-4 py-2 bg-gray-600 text-gray-400 rounded-lg text-sm font-semibold cursor-not-allowed"
                                             disabled
                                         >
@@ -711,11 +721,10 @@ export default function CatalogCheckout2() {
                                         <button
                                             type="button"
                                             onClick={() => setPaymentType('PIX')}
-                                            className={`p-3 rounded-lg border-2 transition-all ${
-                                                paymentType === 'PIX'
+                                            className={`p-3 rounded-lg border-2 transition-all ${paymentType === 'PIX'
                                                     ? 'border-green-500 bg-green-500/10'
                                                     : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
-                                            }`}
+                                                }`}
                                         >
                                             <p className="text-white font-semibold">PIX</p>
                                             <p className="text-gray-400 text-xs">Aprovação imediata</p>
@@ -723,11 +732,10 @@ export default function CatalogCheckout2() {
                                         <button
                                             type="button"
                                             onClick={() => setPaymentType('CREDIT_CARD')}
-                                            className={`p-3 rounded-lg border-2 transition-all ${
-                                                paymentType === 'CREDIT_CARD'
+                                            className={`p-3 rounded-lg border-2 transition-all ${paymentType === 'CREDIT_CARD'
                                                     ? 'border-green-500 bg-green-500/10'
                                                     : 'border-gray-600 bg-gray-700/50 hover:border-gray-500'
-                                            }`}
+                                                }`}
                                         >
                                             <p className="text-white font-semibold">Cartão</p>
                                             <p className="text-gray-400 text-xs">Crédito</p>
@@ -759,7 +767,7 @@ export default function CatalogCheckout2() {
                                                     onChange={(e) => {
                                                         let v = e.target.value.replace(/\D/g, '');
                                                         if (v.length > 4) v = v.slice(0, 4);
-                                                        if (v.length >= 2) v = `${v.slice(0,2)}/${v.slice(2,4)}`;
+                                                        if (v.length >= 2) v = `${v.slice(0, 2)}/${v.slice(2, 4)}`;
                                                         setCardExpiry(v);
                                                     }}
                                                     maxLength="5"
@@ -793,11 +801,11 @@ export default function CatalogCheckout2() {
                                         type="button"
                                         onClick={handleCreatePreference}
                                         disabled={
-                                            isProcessing || 
-                                            !firstName?.trim() || 
-                                            !email?.trim() || 
-                                            !phone?.trim() || 
-                                            !cpf?.trim() || 
+                                            isProcessing ||
+                                            !firstName?.trim() ||
+                                            !email?.trim() ||
+                                            !phone?.trim() ||
+                                            !cpf?.trim() ||
                                             (deliveryType === 'delivery' && (!addressStreet?.trim() || !addressNumber?.trim() || !addressCity?.trim() || !addressState?.trim() || !addressZip?.trim())) ||
                                             (paymentType === 'CREDIT_CARD' && (!cardNumber?.trim() || !cardName?.trim() || !cardExpiry?.trim() || !cardCvv?.trim()))
                                         }
@@ -812,7 +820,7 @@ export default function CatalogCheckout2() {
                                             </>
                                         )}
                                     </button>
-                                    
+
                                     <p className="text-xs text-gray-500 text-center mt-3">
                                         Pagamento processado de forma segura via ASAAS
                                     </p>
@@ -824,9 +832,9 @@ export default function CatalogCheckout2() {
                                 <div className="space-y-4 pt-4 border-t border-gray-700">
                                     <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
                                     <div className="bg-white rounded-lg p-4">
-                                        <img 
-                                            src={pixData.pix_qr_code} 
-                                            alt="QR Code PIX" 
+                                        <img
+                                            src={pixData.pix_qr_code}
+                                            alt="QR Code PIX"
                                             className="w-full max-w-[280px] mx-auto"
                                         />
                                     </div>
