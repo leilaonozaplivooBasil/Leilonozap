@@ -419,13 +419,32 @@ export default function Cart() {
       toast.dismiss('checkout-loading');
 
       if (paymentResponse?.success) {
+        // 🛡 BLOQUEIO ANTI-FRUSTRAÇÃO: Evitar esvaziar carrinho se o cartão foi recusado imediatamente
+        const isRejected = paymentResponse.asaas_status === 'REJECTED' || paymentResponse.asaas_status === 'FAILED';
+
+        if (isRejected) {
+          toast.error('Pagamento recusado pela operadora do cartão. Tente novamente ou use outro meio de pagamento.');
+          setIsProcessing(false);
+
+          // Limpar as vendas de lote pré-geradas para não travar o estoque ou comissionamento
+          for (const sale of salesBatch) {
+            try {
+              await base44.entities.CatalogSale.delete(sale.id);
+            } catch (e) {
+              console.warn('Erro ao limpar venda recusada:', e.message);
+            }
+          }
+          setCreatedSales([]);
+          return;
+        }
+
         setPixData({ ...paymentResponse, billing_type: paymentType });
         toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
 
-        // Limpa carrinho apenas se pagamento foi criado
+        // Limpa carrinho apenas se o pagamento foi criado E não foi rejeitado
         updateCart([]);
       } else {
-        const errorMsg = paymentResponse?.error || 'Erro desconhecido';
+        const errorMsg = paymentResponse?.error || 'Erro na transação. Verifique seus dados.';
         const errorDetails = paymentResponse?.details;
 
         if (errorDetails && Array.isArray(errorDetails)) {
