@@ -634,8 +634,12 @@ const DashboardContent = ({ user, isAdmin }) => {
         throw new Error("Valor inválido");
       }
 
-      await AppUser.update(selectedLicenseeId, {
-        commission_balance: (licensee.commission_balance || 0) + amount
+      const base44Client = (await import('@/api/base44Client')).base44;
+      await base44Client.functions.invoke('updateUserNetwork', {
+        target_user_id: selectedLicenseeId,
+        update_data: {
+          commission_balance: (licensee.commission_balance || 0) + amount
+        }
       });
 
       toast.success(`R$ ${amount.toFixed(2)} creditados!`);
@@ -664,7 +668,11 @@ const DashboardContent = ({ user, isAdmin }) => {
       let updated = 0;
       for (const userId of selectedUsersToLink) {
         try {
-          await AppUser.update(userId, { referred_by_id: selectedLicenseeForLink });
+          const base44Client = (await import('@/api/base44Client')).base44;
+          await base44Client.functions.invoke('updateUserNetwork', {
+            target_user_id: userId,
+            update_data: { referred_by_id: selectedLicenseeForLink }
+          });
           updated++;
           await delay(500);
         } catch (error) {
@@ -950,8 +958,8 @@ const DashboardContent = ({ user, isAdmin }) => {
       </div>
 
       <Card ref={walletCardRef} className={`mb-8 bg-gradient-to-br backdrop-blur-sm overflow-hidden ${isSaiDeBaixo ?
-          'from-red-900/30 to-red-800/20 border-red-500/30' :
-          'from-green-900/30 to-green-800/20 border-green-500/30'}`
+        'from-red-900/30 to-red-800/20 border-red-500/30' :
+        'from-green-900/30 to-green-800/20 border-green-500/30'}`
       }>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
@@ -1499,10 +1507,10 @@ const DashboardContent = ({ user, isAdmin }) => {
                                   R$ {withdrawal.amount.toFixed(2)}
                                 </div>
                                 <div className={`px-3 py-1 rounded-full text-xs font-semibold ${withdrawal.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30' :
-                                    withdrawal.status === 'approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                                      withdrawal.status === 'processing' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                                        withdrawal.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
-                                          'bg-red-500/20 text-red-400 border border-red-500/30'}`
+                                  withdrawal.status === 'approved' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                                    withdrawal.status === 'processing' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                                      withdrawal.status === 'completed' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+                                        'bg-red-500/20 text-red-400 border border-red-500/30'}`
                                 }>
                                   {withdrawal.status === 'pending' && '⏳ Aguardando Aprovação'}
                                   {withdrawal.status === 'approved' && '✅ Aprovado'}
@@ -2030,14 +2038,14 @@ export default function LicensingPage() {
   return (
     <>
       <div className={`min-h-screen ${isSaiDeBaixo ?
-          'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' :
-          'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
+        'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900' :
+        'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white'}`
       }>
         {/* Hero Section */}
         <div className="relative overflow-hidden py-20 px-6">
           <div className={`absolute inset-0 bg-gradient-to-r ${isSaiDeBaixo ?
-              'from-red-500/10 to-orange-500/10' :
-              'from-green-500/10 to-blue-500/10'}`
+            'from-red-500/10 to-orange-500/10' :
+            'from-green-500/10 to-blue-500/10'}`
           }></div>
           <div className="relative max-w-6xl mx-auto text-center">
             <motion.div
@@ -2046,8 +2054,8 @@ export default function LicensingPage() {
               transition={{ duration: 0.6 }}>
 
               <div className={`inline-flex items-center gap-3 mb-6 px-6 py-3 rounded-full border ${isSaiDeBaixo ?
-                  'bg-red-500/10 border-red-500/30' :
-                  'bg-green-500/10 border-green-500/30'}`
+                'bg-red-500/10 border-red-500/30' :
+                'bg-green-500/10 border-green-500/30'}`
               }>
                 <TrendingUp className={`w-6 h-6 ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`} />
                 <span className={`font-semibold ${isSaiDeBaixo ? 'text-red-400' : 'text-green-400'}`}>Programa de Influenciadores</span>
