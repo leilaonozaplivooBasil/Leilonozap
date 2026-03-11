@@ -53,20 +53,20 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
   // 🔧 CORREÇÃO 1: Iniciais CORRETAS do nome real
   const getInitials = (fullName) => {
     if (!fullName || fullName.trim() === '') return '??';
-    
+
     const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
-    
+
     if (nameParts.length === 1) {
       return nameParts[0].substring(0, 2).toUpperCase();
     }
-    
+
     return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
   };
 
   const initials = getInitials(user.full_name);
 
-  const referrer = user.referred_by_id 
-    ? allUsers.find(u => u.id === user.referred_by_id) 
+  const referrer = user.referred_by_id
+    ? allUsers.find(u => u.id === user.referred_by_id)
     : null;
 
   // 🔧 CORREÇÃO 2: Saldo formatado corretamente (agora em R$)
@@ -81,13 +81,13 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
               <div className={`w-12 h-12 rounded-full ${primaryLevelConfig.color} flex items-center justify-center text-white font-bold text-lg flex-shrink-0`}>
                 {initials}
               </div>
-              
+
               {/* 🔧 CORREÇÃO 4: Nome real visível */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-white font-semibold text-sm truncate">{user.full_name}</h3>
                 <p className="text-xs text-gray-400 truncate">{user.email}</p>
               </div>
-              
+
               <button
                 onClick={() => setShowDetails(!showDetails)}
                 className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-700 flex-shrink-0"
@@ -96,9 +96,9 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
                 <Eye className="w-4 h-4" />
               </button>
             </div>
-            
+
             {!isLinearView && hasChildren && (
-              <button 
+              <button
                 onClick={onToggle}
                 className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-700 flex-shrink-0"
               >
@@ -106,14 +106,14 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
               </button>
             )}
           </div>
-          
+
           {/* 🔧 CORREÇÃO 3: Mostrar APENAS o nível principal */}
           <div className="flex items-center gap-2 mb-2">
             <Badge className={`${primaryLevelConfig.color} text-white text-xs px-3 py-1 font-bold ring-2 ring-white/20`}>
               ⭐ {primaryLevelConfig.name}
             </Badge>
           </div>
-          
+
           {showDetails && (
             <div className="mt-3 pt-3 border-t border-gray-700 space-y-2">
               {user.nickname && (
@@ -122,14 +122,14 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
                   <p className="text-sm text-green-400 font-semibold">{user.nickname}</p>
                 </>
               )}
-              
+
               {user.phone && (
                 <>
                   <p className="text-xs text-gray-400 mt-2">Telefone:</p>
                   <p className="text-xs text-gray-300">{user.phone}</p>
                 </>
               )}
-              
+
               {/* Mostrar TODOS os níveis apenas em detalhes */}
               {userLevels.length > 1 && (
                 <>
@@ -149,7 +149,7 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
                   </div>
                 </>
               )}
-              
+
               {referrer ? (
                 <>
                   <p className="text-xs text-gray-400 mt-2">Indicado por:</p>
@@ -178,18 +178,18 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
               </div>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2">
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               className="bg-green-600 hover:bg-green-700 text-xs h-8"
               onClick={() => onPromote(user)}
             >
               <Award className="w-3 h-3 mr-1" />
               Promover
             </Button>
-            <Button 
-              size="sm" 
+            <Button
+              size="sm"
               variant="outline"
               className="border-blue-500 text-blue-400 hover:bg-blue-500/10 text-xs h-8"
               onClick={() => onEdit(user)}
@@ -197,21 +197,21 @@ function UserCard({ user, level, onPromote, children, isExpanded, onToggle, isLi
               <Pencil className="w-3 h-3 mr-1" />
               Editar
             </Button>
+          </div>
+          {/* Botão deletar no painel expandido */}
+          {showDetails && (
+            <div className="mt-3 pt-3 border-t border-gray-700">
+              <Button
+                size="sm"
+                variant="destructive"
+                className="w-full text-xs h-8 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => onDelete && onDelete(user)}
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Deletar Usuário
+              </Button>
             </div>
-            {/* Botão deletar no painel expandido */}
-            {showDetails && (
-             <div className="mt-3 pt-3 border-t border-gray-700">
-               <Button
-                 size="sm"
-                 variant="destructive"
-                 className="w-full text-xs h-8 bg-red-600 hover:bg-red-700 text-white"
-                 onClick={() => onDelete && onDelete(user)}
-               >
-                 <Trash2 className="w-3 h-3 mr-1" />
-                 Deletar Usuário
-               </Button>
-             </div>
-            )}
+          )}
         </CardContent>
       </Card>
 
@@ -292,11 +292,11 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
     const children = users.filter(u => u.referred_by_id === user.id);
     const isExpanded = expandedUsers.has(user.id);
     const hasChildren = children.length > 0;
-    
+
     const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
     const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
     const primaryLevelConfig = CAREER_LEVELS.find(l => l.id === primaryLevel) || CAREER_LEVELS[0];
-    
+
     const getInitials = (fullName) => {
       if (!fullName || fullName.trim() === '') return '??';
       const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
@@ -338,18 +338,18 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
           {/* Linha conectora visual */}
           {level > 0 && (
             <>
-              <div className="absolute left-0 top-1/2 w-8 h-0.5 bg-gradient-to-r from-green-500/50 to-green-500/20" 
-                   style={{ transform: 'translateX(-100%)' }}></div>
-              <div className="absolute left-0 top-0 w-0.5 h-1/2 bg-gradient-to-b from-green-500/20 to-green-500/50" 
-                   style={{ transform: 'translateX(-40px)' }}></div>
+              <div className="absolute left-0 top-1/2 w-8 h-0.5 bg-gradient-to-r from-green-500/50 to-green-500/20"
+                style={{ transform: 'translateX(-100%)' }}></div>
+              <div className="absolute left-0 top-0 w-0.5 h-1/2 bg-gradient-to-b from-green-500/20 to-green-500/50"
+                style={{ transform: 'translateX(-40px)' }}></div>
             </>
           )}
-          
+
           {/* Avatar */}
           <div className={`w-10 h-10 rounded-full ${primaryLevelConfig.color} flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>
             {getInitials(user.full_name)}
           </div>
-          
+
           {/* Info principal */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -360,7 +360,7 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
             </div>
             <p className="text-xs text-gray-400 truncate">{user.email}</p>
           </div>
-          
+
           {/* Stats rápidas */}
           <div className="flex items-center gap-3 text-xs">
             <div className="text-center">
@@ -372,59 +372,59 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
               <div className="text-green-400 font-bold">R$ {(user.valora_pay_balance || 0).toFixed(2)}</div>
             </div>
           </div>
-          
+
           {/* Botões de ação */}
           <div className="flex items-center gap-2">
-           <Button 
-             size="sm" 
-             className="bg-green-600 hover:bg-green-700 h-8 px-3 text-xs"
-             onClick={(e) => {
-               e.stopPropagation();
-               onPromote(user);
-             }}
-           >
-             <Award className="w-3 h-3" />
-           </Button>
-           <Button 
-             size="sm" 
-             variant="outline"
-             className="border-blue-500 text-blue-400 hover:bg-blue-500/10 h-8 px-3 text-xs"
-             onClick={(e) => {
-               e.stopPropagation();
-               onEdit(user);
-             }}
-           >
-             <Pencil className="w-3 h-3" />
-           </Button>
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 h-8 px-3 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onPromote(user);
+              }}
+            >
+              <Award className="w-3 h-3" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-blue-500 text-blue-400 hover:bg-blue-500/10 h-8 px-3 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(user);
+              }}
+            >
+              <Pencil className="w-3 h-3" />
+            </Button>
 
-           <Button 
-             size="sm" 
-             variant="destructive"
-             className="bg-red-600 hover:bg-red-700 h-8 px-3 text-xs"
-             onClick={(e) => {
-               e.stopPropagation();
-               onDelete && onDelete(user);
-             }}
-             title="Deletar usuário e todos os dados"
-           >
-             <Trash2 className="w-3 h-3" />
-           </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700 h-8 px-3 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete && onDelete(user);
+              }}
+              title="Deletar usuário e todos os dados"
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
 
-           {/* Botão expandir/recolher */}
-           {hasChildren && (
-             <button 
-               onClick={(e) => {
-                 e.stopPropagation();
-                 toggleExpand(user.id);
-               }}
-               className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-700"
-             >
-               {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-             </button>
-           )}
+            {/* Botão expandir/recolher */}
+            {hasChildren && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleExpand(user.id);
+                }}
+                className="text-gray-400 hover:text-white transition-colors p-1 rounded hover:bg-gray-700"
+              >
+                {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+              </button>
+            )}
           </div>
         </div>
-        
+
         {/* Filhos (indicados por este usuário) */}
         {hasChildren && isExpanded && (
           <div className="mt-2 space-y-2">
@@ -437,7 +437,7 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
 
   // Usuários raiz (sem indicador)
   const rootUsers = users.filter(u => !u.referred_by_id || u.referred_by_id === null);
-  
+
   // Ordena por quantidade de indicados
   const sortedRoots = [...rootUsers].sort((a, b) => {
     const aCount = users.filter(u => u.referred_by_id === a.id).length;
@@ -487,11 +487,11 @@ function NetworkTree({ users, onPromote, onEdit, onRelink, onDelete }) {
         Solte aqui para mover para “Leilão NoZap - Site Oficial”
       </div>
 
-       {/* Árvore em cascata */}
-       <div className="space-y-3">
-         {sortedRoots.map(rootUser => renderUserCascade(rootUser, 0))}
-       </div>
-      
+      {/* Árvore em cascata */}
+      <div className="space-y-3">
+        {sortedRoots.map(rootUser => renderUserCascade(rootUser, 0))}
+      </div>
+
       {/* Estatísticas gerais */}
       <div className="mt-8 bg-gradient-to-r from-green-900/20 to-blue-900/20 border border-green-500/30 rounded-lg p-4">
         <div className="grid grid-cols-3 gap-4 text-center">
@@ -532,7 +532,7 @@ export default function NetworkOverview() {
   const [viewingIndicationsFor, setViewingIndicationsFor] = useState(null);
   const [viewingCommissionsFor, setViewingCommissionsFor] = useState(null);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isResetting, setIsResetting] = useState(false); 
+  const [isResetting, setIsResetting] = useState(false);
   const [selectedLicenseeId, setSelectedLicenseeId] = useState('');
   const [commissionAmount, setCommissionAmount] = useState('');
   const [isGranting, setIsGranting] = useState(false);
@@ -545,7 +545,7 @@ export default function NetworkOverview() {
   const [showMessageDispatcher, setShowMessageDispatcher] = useState(false);
   const [deletingUserId, setDeletingUserId] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   const siteLicensee = useMemo(() => {
     return allUsers.find(u =>
       (u.email && u.email.toLowerCase() === 'site@leilaonozap.com') ||
@@ -557,11 +557,11 @@ export default function NetworkOverview() {
     // 🔧 CORREÇÃO CRÍTICA: Validar ADMIN PRIMEIRO
     const savedUser = localStorage.getItem('currentUser');
     let user = null;
-    
+
     if (savedUser) {
       user = JSON.parse(savedUser);
       setCurrentUser(user);
-      
+
       if (user.role !== 'admin') {
         toast.error("❌ Acesso negado. Apenas administradores.");
         setIsLoading(false);
@@ -581,7 +581,7 @@ export default function NetworkOverview() {
 
       setAllUsers(Array.isArray(users) ? users : []);
       setAllAuctions(Array.isArray(auctions) ? auctions : []);
-      
+
       // Auto-link órfãos (role=user) ao Site Oficial
       try {
         const hasOrphans = (Array.isArray(users) ? users : []).some(u => !u.referred_by_id && u.role === 'user');
@@ -593,7 +593,7 @@ export default function NetworkOverview() {
       } catch (e) {
         console.debug('Auto-link órfãos ignorado:', e?.message);
       }
-      
+
       console.log("✅ Dados carregados:", users.length, "usuários");
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
@@ -656,7 +656,7 @@ export default function NetworkOverview() {
     const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
     setSelectedLevels(userLevels);
     setPrimaryLevel(user.primary_career_level || userLevels[0] || 'usuario');
-    
+
     const nameParts = user.full_name.split(' ').filter(part => part.trim() !== '');
     setDisplayFirstName(user.display_first_name && user.display_first_name.trim() !== '' ? user.display_first_name : (nameParts[0] || ''));
     setDisplayLastName(user.display_last_name && user.display_last_name.trim() !== '' ? user.display_last_name : (nameParts.length > 1 ? nameParts[nameParts.length - 1] : ''));
@@ -665,7 +665,7 @@ export default function NetworkOverview() {
   const toggleLevel = (levelId) => {
     setSelectedLevels(prev => {
       const newLevels = prev.includes(levelId) ? prev.filter(l => l !== levelId) : [...prev, levelId];
-      
+
       if (levelId === primaryLevel && !newLevels.includes(levelId)) {
         setPrimaryLevel(newLevels[0] || 'usuario');
       } else if (newLevels.length === 0) {
@@ -673,7 +673,7 @@ export default function NetworkOverview() {
       } else if (!newLevels.includes(primaryLevel)) {
         setPrimaryLevel(newLevels[0]);
       }
-      
+
       return newLevels;
     });
   };
@@ -691,19 +691,23 @@ export default function NetworkOverview() {
 
     setIsPromoting(true);
     try {
-      await AppUser.update(promotingUser.id, { 
-        career_levels: selectedLevels,
-        primary_career_level: primaryLevel,
-        display_first_name: displayFirstName.trim() || null,
-        display_last_name: displayLastName.trim() || null
+      const base44Client = (await import('@/api/base44Client')).base44;
+      await base44Client.functions.invoke('updateUserNetwork', {
+        target_user_id: promotingUser.id,
+        update_data: {
+          career_levels: selectedLevels,
+          primary_career_level: primaryLevel,
+          display_first_name: displayFirstName.trim() || null,
+          display_last_name: displayLastName.trim() || null
+        }
       });
-      
+
       await fetchData();
-      
+
       const levelNames = selectedLevels.map(id => CAREER_LEVELS.find(l => l.id === id)?.name).join(', ');
       const primaryName = CAREER_LEVELS.find(l => l.id === primaryLevel)?.name;
       toast.success(`${promotingUser.full_name} agora é: ${levelNames}!\nFunção principal: ⭐ ${primaryName}`);
-      
+
       setPromotingUser(null);
       setSelectedLevels([]);
       setPrimaryLevel('');
@@ -745,9 +749,13 @@ export default function NetworkOverview() {
       if (!licensee) throw new Error("Licenciado não encontrado.");
 
       const amount = parseFloat(commissionAmount);
-      await AppUser.update(selectedLicenseeId, {
-        commission_balance: (licensee.commission_balance || 0) + amount,
-        valora_pay_balance: (licensee.valora_pay_balance || 0) + amount
+      const base44Client = (await import('@/api/base44Client')).base44;
+      await base44Client.functions.invoke('updateUserNetwork', {
+        target_user_id: selectedLicenseeId,
+        update_data: {
+          commission_balance: (licensee.commission_balance || 0) + amount,
+          valora_pay_balance: (licensee.valora_pay_balance || 0) + amount
+        }
       });
 
       toast.success(`R$ ${amount.toFixed(2)} creditados!`);
@@ -788,6 +796,8 @@ export default function NetworkOverview() {
 
     setIsLinking(true);
     try {
+      const base44Client = (await import('@/api/base44Client')).base44;
+
       for (const userId of selectedUsersToLink) {
         if (userId === licensee.id) continue; // ignora auto-vínculo
         const userToLink = allUsers.find(u => u.id === userId);
@@ -795,10 +805,16 @@ export default function NetworkOverview() {
 
         // Evita ciclo imediato (quando o licenciado é indicado pelo usuário que será movido)
         if (licensee.referred_by_id === userToLink.id) {
-          await AppUser.update(licensee.id, { referred_by_id: null });
+          await base44Client.functions.invoke('updateUserNetwork', {
+            target_user_id: licensee.id,
+            update_data: { referred_by_id: null }
+          });
         }
 
-        await AppUser.update(userId, { referred_by_id: licensee.id });
+        await base44Client.functions.invoke('updateUserNetwork', {
+          target_user_id: userId,
+          update_data: { referred_by_id: licensee.id }
+        });
       }
 
       toast.info("Recalculando estatísticas...");
@@ -849,11 +865,19 @@ export default function NetworkOverview() {
 
         if (isDescendant(draggedId, targetId)) {
           // Quebra o ciclo: solta o alvo na raiz antes de mover o arrastado
-          await AppUser.update(targetId, { referred_by_id: null });
+          const base44Client = (await import('@/api/base44Client')).base44;
+          await base44Client.functions.invoke('updateUserNetwork', {
+            target_user_id: targetId,
+            update_data: { referred_by_id: null }
+          });
         }
       }
 
-      await AppUser.update(draggedId, { referred_by_id: targetId });
+      const base44Client = (await import('@/api/base44Client')).base44;
+      await base44Client.functions.invoke('updateUserNetwork', {
+        target_user_id: draggedId,
+        update_data: { referred_by_id: targetId }
+      });
       toast.success('Vínculo atualizado!');
       await fetchData();
     } catch (error) {
@@ -869,10 +893,10 @@ export default function NetworkOverview() {
 
     setIsCleaningDuplicates(true);
     toast.info("🔍 Buscando duplicatas...");
-    
+
     try {
       const allUsersToProcess = await AppUser.list("-created_date", 1000);
-      
+
       if (!Array.isArray(allUsersToProcess)) {
         throw new Error("Falha ao buscar usuários.");
       }
@@ -889,7 +913,7 @@ export default function NetworkOverview() {
 
       let duplicatesRemoved = 0;
       let duplicateEmails = [];
-      
+
       for (const [email, users] of Object.entries(emailMap)) {
         if (users.length > 1) {
           duplicateEmails.push({
@@ -897,18 +921,18 @@ export default function NetworkOverview() {
             count: users.length,
             users: users
           });
-          
+
           users.sort((a, b) => {
             const dateA = new Date(a.created_date || 0).getTime();
             const dateB = new Date(b.created_date || 0).getTime();
             return dateB - dateA;
           });
-          
+
           const [keepUser, ...deleteUsers] = users;
-          
+
           console.log(`📧 Email: ${email}`);
           console.log(`✅ Mantendo: ${keepUser.full_name} (${keepUser.id}) - Criado em ${keepUser.created_date}`);
-          
+
           for (const userToDelete of deleteUsers) {
             try {
               console.log(`❌ Removendo: ${userToDelete.full_name} (${userToDelete.id}) - Criado em ${userToDelete.created_date}`);
@@ -928,7 +952,7 @@ export default function NetworkOverview() {
         console.log("\n📊 RELATÓRIO DE LIMPEZA:");
         console.log(`Total de emails duplicados: ${duplicateEmails.length}`);
         console.log(`Total de usuários removidos: ${duplicatesRemoved}`);
-        
+
         duplicateEmails.forEach(dup => {
           console.log(`\n📧 ${dup.email} (${dup.count} cadastros)`);
           dup.users.forEach((u, i) => {
@@ -957,14 +981,14 @@ export default function NetworkOverview() {
 
     setIsLinkingOrphans(true);
     toast.info("🔍 Buscando usuários órfãos...");
-    
+
     try {
       const response = await linkOrphanUsers();
-      
+
       if (response.data && response.data.success) {
         const { linkedCount, totalOrphans, siteLicenseeName } = response.data;
         toast.success(`✅ ${linkedCount} de ${totalOrphans} usuários vinculados ao "${siteLicenseeName}"!`);
-        
+
         await fetchData();
       } else {
         throw new Error(response.data?.error || "Erro desconhecido");
@@ -991,19 +1015,19 @@ export default function NetworkOverview() {
 
     setIsCleaningDuplicates(true);
     toast.info("🔍 Buscando duplicatas...");
-    
+
     try {
       console.log("📞 Chamando cleanSiteDuplicates...");
       const response = await cleanSiteDuplicates({});
-      
+
       console.log("📥 Resposta recebida:", response);
-      
+
       if (response.data) {
         if (response.data.success) {
           if (response.data.action === "cleaned") {
             console.log(`✅ ${response.data.duplicatesRemoved} duplicatas removidas`);
             console.log("📋 Detalhes:", response.data.deletionDetails);
-            
+
             toast.success(
               `✅ ${response.data.duplicatesRemoved} duplicatas removidas!\n` +
               `🏆 Mantido: ${response.data.siteLicensee.full_name}` +
@@ -1013,16 +1037,16 @@ export default function NetworkOverview() {
             console.log("✅ Sistema já está limpo");
             toast.success("✅ Site Oficial já está único!");
           }
-          
+
           await fetchData();
         } else {
           // Erro retornado pela função
           console.error("❌ Erro na função:", response.data.error);
-          
+
           if (response.data.debug) {
             console.log("🔍 DEBUG Info:", response.data.debug);
           }
-          
+
           throw new Error(response.data.error || "Erro desconhecido");
         }
       } else {
@@ -1060,7 +1084,7 @@ export default function NetworkOverview() {
     setDeletingUserId(user.id);
     setIsDeleting(true);
     toast.info("Deletando usuário...");
-    
+
     try {
       // Chamar função backend para deletar usuário e todos os dados associados
       await base44.functions.invoke('deleteUserAndData', { user_id: user.id });
@@ -1289,7 +1313,7 @@ export default function NetworkOverview() {
                   </CardHeader>
                   <CardContent className="p-0">
                     {allUsers.length > 0 ? (
-                      <TreeHierarchy 
+                      <TreeHierarchy
                         users={allUsers}
                         onEdit={handleEditUser}
                         onDelete={handleDeleteUser}
@@ -1357,14 +1381,14 @@ export default function NetworkOverview() {
                           </TableHeader>
                           <TableBody>
                             {filteredUsers.map((user) => {
-                              const referrer = user.referred_by_id 
-                                ? allUsers.find(u => u.id === user.referred_by_id) 
+                              const referrer = user.referred_by_id
+                                ? allUsers.find(u => u.id === user.referred_by_id)
                                 : null;
-                              
+
                               const userLevels = Array.isArray(user.career_levels) ? user.career_levels : (user.career_levels ? [user.career_levels] : ['usuario']);
                               const primaryLevel = user.primary_career_level || userLevels[0] || 'usuario';
                               const primaryLevelConfig = CAREER_LEVELS.find(l => l.id === primaryLevel) || CAREER_LEVELS[0];
-                              
+
                               return (
                                 <TableRow key={user.id} className="border-gray-700 hover:bg-gray-700/50">
                                   <TableCell className="font-medium text-white">
@@ -1404,30 +1428,30 @@ export default function NetworkOverview() {
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex gap-2">
-                                                     <Button
-                                                       size="sm"
-                                                       variant="ghost"
-                                                       onClick={() => handleEditUser(user)}
-                                                       className="text-blue-400 hover:text-blue-300"
-                                                       title="Editar usuário"
-                                                     >
-                                                       <Pencil className="w-4 h-4" />
-                                                     </Button>
-                                                     <Button
-                                                       size="sm"
-                                                       variant="ghost"
-                                                       onClick={() => handleDeleteUser(user)}
-                                                       className="text-red-400 hover:text-red-300"
-                                                       title="Deletar usuário"
-                                                       disabled={isDeleting && deletingUserId === user.id}
-                                                     >
-                                                       {isDeleting && deletingUserId === user.id ? (
-                                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                                       ) : (
-                                                         <Trash2 className="w-4 h-4" />
-                                                       )}
-                                                     </Button>
-                                                   </div>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleEditUser(user)}
+                                        className="text-blue-400 hover:text-blue-300"
+                                        title="Editar usuário"
+                                      >
+                                        <Pencil className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleDeleteUser(user)}
+                                        className="text-red-400 hover:text-red-300"
+                                        title="Deletar usuário"
+                                        disabled={isDeleting && deletingUserId === user.id}
+                                      >
+                                        {isDeleting && deletingUserId === user.id ? (
+                                          <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="w-4 h-4" />
+                                        )}
+                                      </Button>
+                                    </div>
                                   </TableCell>
                                 </TableRow>
                               );
@@ -1486,10 +1510,10 @@ export default function NetworkOverview() {
 
               <p className="text-sm text-gray-400">Selecione um ou mais cargos:</p>
               <div className="space-y-3 max-h-64 overflow-y-auto">
-               {CAREER_LEVELS.slice().reverse().map(level => {
+                {CAREER_LEVELS.slice().reverse().map(level => {
                   const isSelected = selectedLevels.includes(level.id);
                   const isPrimary = primaryLevel === level.id;
-                  
+
                   return (
                     <div key={level.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-700/50 transition-colors border border-gray-700">
                       <div className="flex items-center space-x-3">
@@ -1536,8 +1560,8 @@ export default function NetworkOverview() {
               <Button variant="outline" onClick={() => setPromotingUser(null)} className="border-gray-600">
                 Cancelar
               </Button>
-              <Button 
-                onClick={confirmPromotion} 
+              <Button
+                onClick={confirmPromotion}
                 disabled={isPromoting || selectedLevels.length === 0}
                 className="bg-green-600 hover:bg-green-700"
               >
@@ -1551,12 +1575,12 @@ export default function NetworkOverview() {
 
       {editingUserFull && (
         <UserEditModal
-           user={editingUserFull}
-           isOpen={true}
-           onClose={() => setEditingUserFull(null)}
-           onSuccess={handleSaveEditUser}
-           allUsers={allUsers}
-         />
+          user={editingUserFull}
+          isOpen={true}
+          onClose={() => setEditingUserFull(null)}
+          onSuccess={handleSaveEditUser}
+          allUsers={allUsers}
+        />
       )}
 
       {/* MODAL DISPARADOR DE MENSAGENS */}
