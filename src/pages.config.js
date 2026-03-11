@@ -49,6 +49,7 @@
  */
 import ActivePartners from './pages/ActivePartners';
 import AddCatalogProduct from './pages/AddCatalogProduct';
+import AnaliseDeLotes from './pages/AnaliseDeLotes';
 import AddFunds from './pages/AddFunds';
 import AdminCatalogSales from './pages/AdminCatalogSales';
 import AdminUsers from './pages/AdminUsers';
@@ -138,6 +139,7 @@ import __Layout from './Layout.jsx';
 export const PAGES = {
     "ActivePartners": ActivePartners,
     "AddCatalogProduct": AddCatalogProduct,
+    "AnaliseDeLotes": AnaliseDeLotes,
     "AddFunds": AddFunds,
     "AdminCatalogSales": AdminCatalogSales,
     "AdminUsers": AdminUsers,
