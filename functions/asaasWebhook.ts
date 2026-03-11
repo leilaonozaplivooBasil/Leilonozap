@@ -62,9 +62,12 @@ Deno.serve(async (req) => {
             }
         }
 
-        // 🔒 VALIDAÇÃO RÁPIDA
-        if (data.event !== 'PAYMENT_CONFIRMED' && data.event !== 'PAYMENT_RECEIVED') {
-            console.log('⏭️ Evento não é confirmação de pagamento:', data.event);
+        // 🔒 VALIDAÇÃO RÁPIDA E CLASSIFICAÇÃO DE EVENTOS
+        const isPaymentConfirmation = data.event === 'PAYMENT_CONFIRMED' || data.event === 'PAYMENT_RECEIVED';
+        const isPaymentReversal = ['PAYMENT_DELETED', 'PAYMENT_REFUNDED', 'PAYMENT_CHARGEBACK_REQUESTED', 'PAYMENT_CHARGEBACK_DISPUTE'].includes(data.event);
+
+        if (!isPaymentConfirmation && !isPaymentReversal) {
+            console.log('⏭️ Evento ignorado (não é confirmação nem reversão):', data.event);
             return responsePromise;
         }
 
@@ -73,9 +76,9 @@ Deno.serve(async (req) => {
             return responsePromise;
         }
 
-        console.log('✅ Payment ID:', paymentId);
+        console.log('✅ Payment ID:', paymentId, '| Evento:', data.event);
 
-        // 🔄 PROCESSAR ANTES DE RESPONDER (garantir que tudo seja creditado)
+        // 🔄 PROCESSAR ANTES DE RESPONDER (garantir que tudo seja creditado ou revertido)
         try {
             // Registrar evento
             await base44.asServiceRole.entities.WebhookLog.create({
@@ -100,6 +103,66 @@ Deno.serve(async (req) => {
 
             const asaasPayment = asaasPayments[0];
             console.log('✅ AsaasPayment encontrado:', asaasPayment.id);
+
+            // ==========================================
+            // 🛑 FLUXO DE REVERSÃO / ESTORNO / CHARGEBACK
+            // ==========================================
+            if (isPaymentReversal) {
+                console.warn(`🚨 INICIANDO PROTOCOLO DE REVERSÃO PARA EVENTO: ${data.event}`);
+
+                // 1. Atualizar AsaasPayment para estornado/cancelado
+                await base44.asServiceRole.entities.AsaasPayment.update(asaasPayment.id, {
+                    status: 'refunded', // Mapeamos todos esses problemas críticos para refunded/revertido
+                    webhook_event_id: eventId
+                });
+
+                // 2. Reverter CatalogSale (compras no catálogo)
+                const saleIdsToProcess = asaasPayment.catalog_sale_id
+                    ? String(asaasPayment.catalog_sale_id).split(',').map((id: string) => id.trim()).filter(Boolean)
+                    : [];
+
+                for (const saleId of saleIdsToProcess) {
+                    try {
+                        const catalogSales = await base44.asServiceRole.entities.CatalogSale.filter({ id: saleId }, null, 1);
+                        if (catalogSales && catalogSales.length > 0) {
+                            const sale = catalogSales[0];
+                            await base44.asServiceRole.entities.CatalogSale.update(sale.id, {
+                                status: 'refunded', // Status modificado para revogar acesso e entrega
+                            });
+                            console.log(`❌ CatalogSale ${sale.id} atualizada para REFUNDED devido a reversão.`);
+                        }
+                    } catch (e) {
+                        console.error(`❌ Erro ao estornar CatalogSale ${saleId}:`, e.message);
+                    }
+                }
+
+                // 3. Reverter Leilão
+                if (asaasPayment.auction_id) {
+                    const auctions = await base44.asServiceRole.entities.Auction.filter({ id: asaasPayment.auction_id }, null, 1);
+                    if (auctions && auctions.length > 0) {
+                        await base44.asServiceRole.entities.Auction.update(auctions[0].id, {
+                            order_status: 'refunded'
+                        });
+                        console.log(`❌ Auction ${auctions[0].id} atualizada para REFUNDED.`);
+                    }
+                }
+
+                // 4. Log Crítico de Reversão
+                await base44.asServiceRole.entities.SystemLog.create({
+                    step: 'ASAAS_PAYMENT_REVERSED',
+                    status: 'warning',
+                    message: `Fraude / Estorno / Deleção evitada (${data.event}) para Pagamento ASAAS: ${paymentId}`,
+                    component_name: 'asaasWebhook',
+                    entity_id: asaasPayment.catalog_sale_id || asaasPayment.auction_id,
+                    payload: { payment_id: paymentId, event: data.event }
+                });
+
+                return Response.json({ received: true });
+            }
+
+            // ==========================================
+            // ✅ FLUXO DE CONFIRMAÇÃO
+            // ==========================================
 
             // ✅ PASSO 1: Atualizar AsaasPayment
             await base44.asServiceRole.entities.AsaasPayment.update(asaasPayment.id, {
