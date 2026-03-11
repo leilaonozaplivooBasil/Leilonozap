@@ -469,6 +469,7 @@ export default function Layout({ children, currentPageName }) {
         { title: "🔴 Live Shop", pageName: "LiveShopControlNoZap" },
         { title: "✨ Direto de Fábrica", pageName: "DiretoDeFabrica" },
         { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
+        { title: "📉 Análise de Lotes (Excel)", pageName: "AnaliseDeLotes" },
       ]
     },
     {
@@ -624,8 +625,8 @@ export default function Layout({ children, currentPageName }) {
                       key={item.title}
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
                       className={`text-sm font-semibold transition-all duration-300 flex items-center gap-1.5 px-3 py-1.5 rounded-lg ${currentPageName === item.pageName
-                          ? "text-emerald-300"
-                          : "text-gray-300 hover:text-white"
+                        ? "text-emerald-300"
+                        : "text-gray-300 hover:text-white"
                         }`}
                       style={currentPageName === item.pageName ? {
                         background: 'rgba(16, 185, 129, 0.1)',
@@ -651,8 +652,8 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       to={createPageUrl("Profile") + (isCatalogPage ? "?from=catalog" : "")}
                       className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === "Profile"
-                          ? "text-green-400"
-                          : "text-gray-300 hover:text-white"
+                        ? "text-green-400"
+                        : "text-gray-300 hover:text-white"
                         }`}
                     >
                       <UserIcon className="w-4 h-4" />
@@ -665,8 +666,8 @@ export default function Layout({ children, currentPageName }) {
                     <Link
                       to={createPageUrl("Cart")}
                       className={`text-sm font-semibold transition-colors flex items-center gap-1.5 ${currentPageName === "Cart"
-                          ? "text-green-400"
-                          : "text-gray-300 hover:text-white"
+                        ? "text-green-400"
+                        : "text-gray-300 hover:text-white"
                         }`}
                     >
                       <CartIcon className="w-4 h-4" />
@@ -805,8 +806,8 @@ export default function Layout({ children, currentPageName }) {
                 <div className="flex items-center justify-between p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                   <h2 className="text-xl font-bold text-white">Menu</h2>
                   <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-lg transition-colors hover:bg-white/5"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="p-2 rounded-lg transition-colors hover:bg-white/5"
                   >
                     <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -824,8 +825,8 @@ export default function Layout({ children, currentPageName }) {
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${currentPageName === item.pageName
-                          ? "text-emerald-300"
-                          : "text-gray-400 hover:text-white hover:translate-x-1"
+                        ? "text-emerald-300"
+                        : "text-gray-400 hover:text-white hover:translate-x-1"
                         }`}
                       style={currentPageName === item.pageName ? {
                         background: 'rgba(16,185,129,0.1)',
@@ -843,8 +844,8 @@ export default function Layout({ children, currentPageName }) {
                       to={createPageUrl("Cart")}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${currentPageName === "Cart"
-                          ? "text-emerald-300"
-                          : "text-gray-400 hover:text-white hover:translate-x-1"
+                        ? "text-emerald-300"
+                        : "text-gray-400 hover:text-white hover:translate-x-1"
                         }`}
                       style={currentPageName === "Cart" ? {
                         background: 'rgba(16,185,129,0.1)',
@@ -874,8 +875,8 @@ export default function Layout({ children, currentPageName }) {
                       to={createPageUrl("Profile") + "?from=catalog"}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${currentPageName === "Profile"
-                          ? "text-emerald-300"
-                          : "text-gray-400 hover:text-white hover:translate-x-1"
+                        ? "text-emerald-300"
+                        : "text-gray-400 hover:text-white hover:translate-x-1"
                         }`}
                       style={currentPageName === "Profile" ? {
                         background: 'rgba(16,185,129,0.1)',
@@ -931,8 +932,8 @@ export default function Layout({ children, currentPageName }) {
                             to={createPageUrl(item.pageName)}
                             onClick={() => setMobileMenuOpen(false)}
                             className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 ${item.highlight
-                                ? "text-purple-300"
-                                : "text-gray-400 hover:text-white"
+                              ? "text-purple-300"
+                              : "text-gray-400 hover:text-white"
                               }`}
                             style={item.highlight ? {
                               background: 'linear-gradient(135deg, rgba(147,51,234,0.12), rgba(59,130,246,0.12))',
