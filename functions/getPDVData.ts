@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     }
 
     if (requestAction === 'full' || requestAction === 'commissions') {
-      result.commissions = await base44.asServiceRole.entities.SaleCommission.list();
+      result.commissions = await base44.asServiceRole.entities.SaleCommission.list('-created_date', 5000);
     }
 
     return Response.json({ success: true, ...result });
