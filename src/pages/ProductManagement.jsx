@@ -256,11 +256,12 @@ export default function ProductManagement() {
       const dataToSave = {
         ...formData,
         profit,
-        cost_price: parseFloat(formData.cost_price),
-        selling_price_retail: parseFloat(formData.selling_price_retail),
-        selling_price_wholesale: parseFloat(formData.selling_price_wholesale),
+        cost_price: parseFloat(formData.cost_price) || 0,
+        selling_price_retail: parseFloat(formData.selling_price_retail) || 0,
+        selling_price_wholesale: parseFloat(formData.selling_price_wholesale) || 0,
         sold_amount: parseFloat(formData.sold_amount || 0),
-        quantity: parseInt(formData.quantity) || 1,
+        status: formData.status || 'ESTOQUE',
+        quantity: Math.max(1, parseInt(formData.quantity) || 1),
         qty_perfeito: parseInt(formData.qty_perfeito) || 0,
         qty_bom: parseInt(formData.qty_bom) || 0,
         qty_ruim: 0, // Sempre zero - ruim não existe mais
