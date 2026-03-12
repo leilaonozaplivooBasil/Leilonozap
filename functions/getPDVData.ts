@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     const result = {};
 
     if (requestAction === 'full' || requestAction === 'products') {
-      const allProducts = await base44.asServiceRole.entities.Product.list(); // Traz tudo do BD
+      const allProducts = await base44.asServiceRole.entities.Product.list('-created_date', 5000); // Força um limite maciço de inventário
       // Na tela do PDV, status não deveria bloquear itens vivos. 
       // Se tiver em estoque quantitativo, ele vai pro PDV.
       result.products = allProducts.filter(p => p.quantity > 0);
