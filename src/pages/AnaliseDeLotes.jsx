@@ -191,11 +191,58 @@ function AnaliseDeLotes() {
             gradesData[classificacao].valorMarket += valor;
         }
 
+        // Extrair sub-itens por categoria da aba LOTE principal
+        const subItemsByCategory = {};
+        const loteSheetName = rawWorkbookData.SheetNames.find(s => s.toUpperCase() === 'LOTE') || rawWorkbookData.SheetNames[0];
+        if (loteSheetName) {
+            const loteRaw = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets[loteSheetName], { header: 1 });
+            // Encontrar linha de cabeçalho com DESCRIÇÃO ou PRODUTO
+            let loteHeaderIdx = -1;
+            let loteHeaders = [];
+            for (let i = 0; i < Math.min(30, loteRaw.length); i++) {
+                const row = loteRaw[i];
+                if (row && row.some(c => typeof c === 'string' && (c.toUpperCase().includes('DESCRI') || c.toUpperCase().includes('PRODUTO') || c.toUpperCase().includes('ITEM')))) {
+                    loteHeaderIdx = i;
+                    loteHeaders = row;
+                    break;
+                }
+            }
+            if (loteHeaderIdx >= 0) {
+                const normH = loteHeaders.map(h => typeof h === 'string' ? h.toUpperCase().trim() : '');
+                const colDesc = normH.findIndex(h => h.includes('DESCRI') || h.includes('PRODUTO') || h.includes('ITEM'));
+                const colCat = normH.findIndex(h => h.includes('CATEGOR') || h.includes('DEPART') || h.includes('VERTICAL') || h.includes('LINHA'));
+                const colQtdL = normH.findIndex(h => h.includes('QUANT') || h.includes('QTD'));
+                const colValL = normH.findIndex(h => h.includes('VALOR TOTAL') || h.includes('VALOR DE MERCADO') || h.includes('VALOR'));
+
+                for (let i = loteHeaderIdx + 1; i < loteRaw.length; i++) {
+                    const row = loteRaw[i];
+                    if (!row || !row[colDesc]) continue;
+                    const desc = String(row[colDesc]).trim();
+                    if (!desc || desc.toUpperCase().includes('TOTAL')) continue;
+
+                    // Tentar associar ao nome da categoria do Resumo
+                    const catKey = colCat >= 0 && row[colCat] ? String(row[colCat]).trim() : null;
+                    const matchedCat = catKey
+                        ? (resumoCategorias.find(c => c.nome.toLowerCase() === catKey.toLowerCase()) || resumoCategorias.find(c => catKey.toLowerCase().includes(c.nome.toLowerCase()) || c.nome.toLowerCase().includes(catKey.toLowerCase())))
+                        : null;
+                    const key = matchedCat ? matchedCat.nome : catKey || 'Outros';
+
+                    if (!subItemsByCategory[key]) subItemsByCategory[key] = [];
+                    subItemsByCategory[key].push({
+                        desc,
+                        qtd: colQtdL >= 0 && row[colQtdL] != null ? (parseInt(row[colQtdL]) || 1) : 1,
+                        valor: colValL >= 0 && row[colValL] != null ? (typeof row[colValL] === 'number' ? row[colValL] : parseFloat(String(row[colValL]).replace(/[R$\s]/g, '').replace(',', '.')) || 0) : 0
+                    });
+                }
+            }
+        }
+
         setLoteData({
             nomePlanilha: filename,
             nomeLote: filename.replace(/\.xlsx?$/, ''),
             localColeta,
             resumoCategorias,
+            subItemsByCategory,
             quantidadeTotal: totalItemsQtd,
             valorMercadoTotal: referenceMarketValue !== null && referenceMarketValue > 0 ? referenceMarketValue : valorMercadoTotal,
             classCount,
