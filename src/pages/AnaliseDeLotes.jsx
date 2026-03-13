@@ -192,56 +192,57 @@ function AnaliseDeLotes() {
         }
 
         // Extrair sub-itens por categoria da aba LOTE principal
-        // Estrutura: cada linha tem colunas fixas incluindo "Categoria" (col 11) e "Descrição do Item" (col 7)
+        // Estrutura real do arquivo: col4=Qtd, col7=Descrição, col10=ValorTotal, col11=Categoria
         const subItemsByCategory = {};
         const loteSheetName = rawWorkbookData.SheetNames.find(s => s.toUpperCase() === 'LOTE') || rawWorkbookData.SheetNames[0];
         if (loteSheetName) {
             const loteRaw = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets[loteSheetName], { header: 1 });
 
-            // Encontrar linha de cabeçalho (contém "Descrição do Item" ou "QTD")
-            let headerIdx = -1;
-            let colDesc = -1, colQtdL = -1, colValL = -1, colCatL = -1;
+            // Detectar colunas dinamicamente procurando na linha de cabeçalho
+            // O cabeçalho pode estar em 2 linhas; varrer as primeiras 15 linhas
+            let colDesc = 7, colQtdL = 4, colValL = 10, colCatL = 11; // defaults baseados na estrutura real
+            let dataStartRow = 2; // default: pular 2 linhas de header
 
-            for (let i = 0; i < Math.min(20, loteRaw.length); i++) {
+            for (let i = 0; i < Math.min(15, loteRaw.length); i++) {
                 const row = loteRaw[i];
                 if (!row) continue;
-                const found = row.findIndex(c => typeof c === 'string' && c.toLowerCase().replace(/\s/g,'').includes('descrição') || typeof c === 'string' && c.toLowerCase().includes('descri'));
-                if (found >= 0) {
-                    headerIdx = i;
-                    row.forEach((h, idx) => {
-                        if (typeof h !== 'string') return;
-                        const hn = h.toUpperCase().replace(/\s|\n/g, '');
-                        if (hn.includes('DESCRI') || hn.includes('ITEM')) colDesc = idx;
-                        else if ((hn === 'QTD' || hn === 'QTDE' || hn.startsWith('QUANT')) && colQtdL < 0) colQtdL = idx;
-                        else if (hn.includes('VALORTOTAL') || hn.includes('VALORMERCADO')) colValL = idx;
-                        else if (hn.includes('CATEGOR')) colCatL = idx;
-                    });
-                    // Fallback para colunas não encontradas pelas keywords
-                    if (colValL < 0) colValL = row.findIndex(h => typeof h === 'string' && h.toUpperCase().includes('VALOR'));
+                row.forEach((h, idx) => {
+                    if (typeof h !== 'string') return;
+                    const hn = h.toUpperCase().trim();
+                    if (hn.includes('DESCRI') && hn.includes('ITEM')) colDesc = idx;
+                    else if (hn === 'QTD' || hn === 'QTDE') colQtdL = idx;
+                    else if (hn.includes('VALOR') && hn.includes('TOTAL')) colValL = idx;
+                    else if (hn.includes('CATEGOR') && !hn.includes('SUB')) colCatL = idx;
+                });
+                // Se encontrou pelo menos a coluna de categoria, essa é a última linha de header
+                if (row.some(h => typeof h === 'string' && h.toUpperCase().includes('CATEGOR'))) {
+                    dataStartRow = i + 1;
                     break;
                 }
             }
 
-            if (headerIdx >= 0) {
-                for (let i = headerIdx + 1; i < loteRaw.length; i++) {
-                    const row = loteRaw[i];
-                    if (!row) continue;
+            for (let i = dataStartRow; i < loteRaw.length; i++) {
+                const row = loteRaw[i];
+                if (!row) continue;
 
-                    const desc = colDesc >= 0 && row[colDesc] ? String(row[colDesc]).trim() : null;
-                    if (!desc || desc.toUpperCase().includes('TOTAL') || desc.toUpperCase().includes('SUBTOTAL')) continue;
+                // Linha de dado válida: col0 deve ser string de tipo (ex: "Retiro") e col4 deve ser número
+                const tipo = row[0];
+                if (typeof tipo !== 'string' || tipo.trim() === '') continue;
 
-                    const catRaw = colCatL >= 0 && row[colCatL] ? String(row[colCatL]).trim() : null;
-                    if (!catRaw) continue;
+                const catRaw = row[colCatL] ? String(row[colCatL]).trim() : null;
+                if (!catRaw) continue;
 
-                    const qtdVal = colQtdL >= 0 && row[colQtdL] != null ? (parseInt(row[colQtdL]) || 1) : 1;
-                    const rawValor = colValL >= 0 ? row[colValL] : null;
-                    const valor = rawValor != null
-                        ? (typeof rawValor === 'number' ? rawValor : parseFloat(String(rawValor).replace(/[R$\s]/g, '').replace(',', '.')) || 0)
-                        : 0;
+                const desc = row[colDesc] ? String(row[colDesc]).trim() : null;
+                if (!desc) continue;
 
-                    if (!subItemsByCategory[catRaw]) subItemsByCategory[catRaw] = [];
-                    subItemsByCategory[catRaw].push({ desc, qtd: qtdVal, valor });
-                }
+                const qtdVal = row[colQtdL] != null ? (parseInt(row[colQtdL]) || 1) : 1;
+                const rawValor = row[colValL];
+                const valor = rawValor != null
+                    ? (typeof rawValor === 'number' ? rawValor : parseFloat(String(rawValor).replace(/[R$\s]/g, '').replace(',', '.')) || 0)
+                    : 0;
+
+                if (!subItemsByCategory[catRaw]) subItemsByCategory[catRaw] = [];
+                subItemsByCategory[catRaw].push({ desc, qtd: qtdVal, valor });
             }
         }
 
