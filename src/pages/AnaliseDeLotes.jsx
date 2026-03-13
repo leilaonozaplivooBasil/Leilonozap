@@ -192,51 +192,40 @@ function AnaliseDeLotes() {
         }
 
         // Extrair sub-itens por categoria da aba LOTE principal
-        // Estrutura real do arquivo: col4=Qtd, col7=Descrição, col10=ValorTotal, col11=Categoria
+        // Estrutura fixa: col0=Tipo, col4=Qtd, col7=Descrição, col10=ValorTotal, col11=Categoria
+        // ATENÇÃO: o header está dividido em 2 linhas físicas com offset — NÃO tentar detectar colunas
         const subItemsByCategory = {};
         const loteSheetName = rawWorkbookData.SheetNames.find(s => s.toUpperCase() === 'LOTE') || rawWorkbookData.SheetNames[0];
         if (loteSheetName) {
             const loteRaw = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets[loteSheetName], { header: 1 });
 
-            // Detectar colunas dinamicamente procurando na linha de cabeçalho
-            // O cabeçalho pode estar em 2 linhas; varrer as primeiras 15 linhas
-            let colDesc = 7, colQtdL = 4, colValL = 10, colCatL = 11; // defaults baseados na estrutura real
-            let dataStartRow = 2; // default: pular 2 linhas de header
-
-            for (let i = 0; i < Math.min(15, loteRaw.length); i++) {
+            // Encontrar a primeira linha onde col0 é "Retiro" (ou outro tipo válido de linha de produto)
+            let dataStartRow = -1;
+            for (let i = 0; i < Math.min(20, loteRaw.length); i++) {
                 const row = loteRaw[i];
-                if (!row) continue;
-                row.forEach((h, idx) => {
-                    if (typeof h !== 'string') return;
-                    const hn = h.toUpperCase().trim();
-                    if (hn.includes('DESCRI') && hn.includes('ITEM')) colDesc = idx;
-                    else if (hn === 'QTD' || hn === 'QTDE') colQtdL = idx;
-                    else if (hn.includes('VALOR') && hn.includes('TOTAL')) colValL = idx;
-                    else if (hn.includes('CATEGOR') && !hn.includes('SUB')) colCatL = idx;
-                });
-                // Se encontrou pelo menos a coluna de categoria, essa é a última linha de header
-                if (row.some(h => typeof h === 'string' && h.toUpperCase().includes('CATEGOR'))) {
-                    dataStartRow = i + 1;
+                if (row && typeof row[0] === 'string' && row[0].trim().length > 0 &&
+                    row[4] != null && typeof row[11] === 'string' && row[11].length > 0) {
+                    dataStartRow = i;
                     break;
                 }
             }
+            if (dataStartRow < 0) dataStartRow = 9; // fallback seguro
 
             for (let i = dataStartRow; i < loteRaw.length; i++) {
                 const row = loteRaw[i];
                 if (!row) continue;
 
-                // Linha de dado válida: col0 deve ser string de tipo (ex: "Retiro") e col4 deve ser número
-                const tipo = row[0];
-                if (typeof tipo !== 'string' || tipo.trim() === '') continue;
+                // Validar linha: col0 deve ser string não vazia (tipo de produto) e col11 deve ser categoria
+                if (typeof row[0] !== 'string' || row[0].trim() === '') continue;
 
-                const catRaw = row[colCatL] ? String(row[colCatL]).trim() : null;
-                if (!catRaw) continue;
+                const catRaw = row[11] != null ? String(row[11]).trim() : null;
+                if (!catRaw || catRaw === '') continue;
 
-                const desc = row[colDesc] ? String(row[colDesc]).trim() : null;
-                if (!desc) continue;
+                const desc = row[7] != null ? String(row[7]).trim() : null;
+                if (!desc || desc === '') continue;
 
-                const qtdVal = row[colQtdL] != null ? (parseInt(row[colQtdL]) || 1) : 1;
-                const rawValor = row[colValL];
+                const qtdVal = row[4] != null ? (parseInt(row[4]) || 1) : 1;
+                const rawValor = row[10];
                 const valor = rawValor != null
                     ? (typeof rawValor === 'number' ? rawValor : parseFloat(String(rawValor).replace(/[R$\s]/g, '').replace(',', '.')) || 0)
                     : 0;
