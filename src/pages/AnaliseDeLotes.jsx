@@ -7,6 +7,15 @@ function AnaliseDeLotes() {
     const [loteData, setLoteData] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState('');
+    const [expandedCategories, setExpandedCategories] = useState(new Set());
+
+    const toggleCategory = (nome) => {
+        setExpandedCategories(prev => {
+            const next = new Set(prev);
+            next.has(nome) ? next.delete(nome) : next.add(nome);
+            return next;
+        });
+    };
 
     // Editable Financials
     // Default values suggested by the user
