@@ -191,41 +191,58 @@ function AnaliseDeLotes() {
             gradesData[classificacao].valorMarket += valor;
         }
 
-        // Extrair sub-itens por categoria da aba LOTE principal
-        // Estrutura fixa: col0=Tipo, col4=Qtd, col7=Descrição, col10=ValorTotal, col11=Categoria
-        // ATENÇÃO: o header está dividido em 2 linhas físicas com offset — NÃO tentar detectar colunas
+        // Extrair sub-itens por categoria — usando wmsSheetData já validado + detecção dinâmica da coluna de categoria
         const subItemsByCategory = {};
-        const loteSheetName = rawWorkbookData.SheetNames.find(s => s.toUpperCase() === 'LOTE') || rawWorkbookData.SheetNames[0];
-        if (loteSheetName) {
-            const loteRaw = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets[loteSheetName], { header: 1 });
+        if (wmsSheetData && headerRowIndex >= 0) {
+            // Detectar a coluna de categoria procurando qual coluna de dados contém nomes de categoria conhecidos
+            const catNamesSet = new Set(resumoCategorias.map(c => String(c.nome).trim().toLowerCase()));
+            let detectedCatCol = -1;
+            let detectedDescCol = -1;
 
-            // Encontrar a primeira linha onde col0 é "Retiro" (ou outro tipo válido de linha de produto)
-            let dataStartRow = -1;
-            for (let i = 0; i < Math.min(20, loteRaw.length); i++) {
-                const row = loteRaw[i];
-                if (row && typeof row[0] === 'string' && row[0].trim().length > 0 &&
-                    row[4] != null && typeof row[11] === 'string' && row[11].length > 0) {
-                    dataStartRow = i;
-                    break;
+            // Tentar encontrar nas 2 linhas de header (headerRowIndex e headerRowIndex-1)
+            const headerRows = [
+                wmsSheetData[headerRowIndex],
+                headerRowIndex > 0 ? wmsSheetData[headerRowIndex - 1] : null
+            ].filter(Boolean);
+
+            for (const hRow of headerRows) {
+                hRow.forEach((h, i) => {
+                    if (typeof h !== 'string') return;
+                    const hn = h.toUpperCase().trim();
+                    if (hn.includes('CATEGOR') && !hn.includes('SUB') && detectedCatCol < 0) detectedCatCol = i;
+                    if ((hn.includes('DESCRI') || hn.includes('ITEM')) && detectedDescCol < 0) detectedDescCol = i;
+                });
+            }
+
+            // Se não achou no header, detectar pela primeira linha de dados (qual coluna tem nome de categoria)
+            if (detectedCatCol < 0 || detectedDescCol < 0) {
+                const firstDataRow = wmsSheetData[headerRowIndex + 1];
+                if (firstDataRow) {
+                    firstDataRow.forEach((cell, i) => {
+                        if (!cell || typeof cell !== 'string') return;
+                        const cellTrim = cell.trim().toLowerCase();
+                        if (detectedCatCol < 0 && catNamesSet.has(cellTrim)) detectedCatCol = i;
+                    });
                 }
             }
-            if (dataStartRow < 0) dataStartRow = 9; // fallback seguro
 
-            for (let i = dataStartRow; i < loteRaw.length; i++) {
-                const row = loteRaw[i];
-                if (!row) continue;
+            // Fallbacks baseados na estrutura conhecida do arquivo
+            if (detectedCatCol < 0) detectedCatCol = 11;
+            if (detectedDescCol < 0) detectedDescCol = 7;
 
-                // Validar linha: col0 deve ser string não vazia (tipo de produto) e col11 deve ser categoria
-                if (typeof row[0] !== 'string' || row[0].trim() === '') continue;
+            for (let i = headerRowIndex + 1; i < wmsSheetData.length; i++) {
+                const row = wmsSheetData[i];
+                if (!row || !row[0]) continue;
+                if (typeof row[0] === 'string' && row[0].toUpperCase().includes('TOTAL')) continue;
 
-                const catRaw = row[11] != null ? String(row[11]).trim() : null;
-                if (!catRaw || catRaw === '') continue;
+                const catRaw = row[detectedCatCol] != null ? String(row[detectedCatCol]).trim() : null;
+                if (!catRaw) continue;
 
-                const desc = row[7] != null ? String(row[7]).trim() : null;
-                if (!desc || desc === '') continue;
+                const desc = row[detectedDescCol] != null ? String(row[detectedDescCol]).trim() : null;
+                if (!desc) continue;
 
-                const qtdVal = row[4] != null ? (parseInt(row[4]) || 1) : 1;
-                const rawValor = row[10];
+                const qtdVal = colQtd >= 0 && row[colQtd] != null ? (parseInt(row[colQtd]) || 1) : 1;
+                const rawValor = colValue >= 0 ? row[colValue] : null;
                 const valor = rawValor != null
                     ? (typeof rawValor === 'number' ? rawValor : parseFloat(String(rawValor).replace(/[R$\s]/g, '').replace(',', '.')) || 0)
                     : 0;
