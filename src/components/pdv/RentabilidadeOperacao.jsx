@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  DollarSign, Package, TrendingUp, TrendingDown, BarChart3, ArrowLeft, Percent, Target, Wallet, Pencil, Check, X, Scale
+  DollarSign, Package, TrendingUp, BarChart3, ArrowLeft, Percent, Target, Wallet, Pencil, Check, Scale
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell } from 'recharts';
 import BalancoGeralTab from './BalancoGeralTab';

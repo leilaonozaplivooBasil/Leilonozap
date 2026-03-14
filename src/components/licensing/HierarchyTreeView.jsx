@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { GripVertical, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { GripVertical, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 const careerHierarchy = ['fundador', 'conselheiro', 'ceo', 'diretoria', 'diretor', 'executivo', 'licenciado_catalogo', 'influencer', 'usuario'];

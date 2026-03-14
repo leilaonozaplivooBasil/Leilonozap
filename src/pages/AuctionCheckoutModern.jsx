@@ -14,14 +14,11 @@ import {
   Lock,
   CreditCard,
   QrCode,
-  Zap,
   AlertCircle,
-  Image as ImageIcon,
   Wallet,
   ChevronDown,
   User,
-  MapPin,
-  Smartphone
+  MapPin
 } from 'lucide-react';
 import { toast } from 'sonner';
 import PaymentErrorModal from '@/components/payment/PaymentErrorModal';

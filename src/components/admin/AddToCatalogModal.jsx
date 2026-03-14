@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { base44 } from "@/api/base44Client";
 import { toast } from "sonner";
-import { ShoppingCart, Copy } from "lucide-react";
+import { Copy } from "lucide-react";
 
 const Product = base44.entities.Product;
 

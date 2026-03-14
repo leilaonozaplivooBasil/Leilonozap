@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Crop, ZoomIn, ZoomOut, RotateCw, Check, X } from 'lucide-react';
-import { toast } from 'sonner';
+import { Crop, ZoomIn, ZoomOut, Check, X } from 'lucide-react';
 
 export default function ImageCropEditor({ imageFile, targetWidth = 1200, targetHeight = 600, onSave, onCancel }) {
   const canvasRef = useRef(null);

@@ -6,7 +6,6 @@ const Auction = base44.entities.Auction;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 import { extractDataFromUrl } from "@/functions/extractDataFromUrl";
-import { scrapeWithFallback } from "@/functions/scrapeWithFallback";
 import { Button } from "@/components/ui/button";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +26,6 @@ import { resetTestData } from "@/functions/resetTestData";
 import { resetTestValora } from "@/functions/resetTestValora";
 import { toast } from "sonner";
 import { addSeconds } from 'date-fns';
-import ImageAnalyzer from "../components/admin/ImageAnalyzer";
 import ProductImagePreview from "../components/admin/ProductImagePreview";
 import ConfirmProductDuplicationModal from "../components/admin/ConfirmProductDuplicationModal";
 

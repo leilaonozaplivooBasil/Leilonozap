@@ -5,11 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { createPageUrl } from "@/utils";
 import { Link } from "react-router-dom";
-import { Truck, CreditCard, Filter, Search } from "lucide-react";
+import { Truck, CreditCard, Search } from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, Tooltip } from "recharts";
 
 function currency(v){

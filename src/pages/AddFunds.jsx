@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import DigitalWalletBalance from "../components/wallet/DigitalWalletBalance";
 import { 
   Wallet, 
-  TrendingUp, 
   Sparkles, 
   ArrowLeft, 
   Check, 

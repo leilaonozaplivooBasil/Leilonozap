@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateContractPDF } from '@/functions/generateContractPDF';
 import { getPartnerPurchases } from '@/functions/getPartnerPurchases';
 import { toast } from 'sonner';
 
@@ -18,16 +17,13 @@ import {
   CheckCircle,
   ArrowRight,
   ShieldCheck,
-  Calculator,
   Wallet,
   TrendingUp,
   Clock,
   MapPin,
   TestTube,
   Store,
-  User,
   Plus,
-  X,
   ChevronLeft,
   ChevronRight,
   Loader2,
@@ -316,7 +312,7 @@ export default function InvestorDashboard() {
       // Limpar o state para não reabrir em caso de reload de página
       navigate(location.pathname, { replace: true, state: {} });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [location.state?.package]);
 
   // Se estiver carregando, mostra tela de delay

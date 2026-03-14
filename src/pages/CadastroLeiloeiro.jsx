@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { UserPlus, AlertCircle, ArrowLeft } from 'lucide-react';
 import { createPageUrl } from '@/utils';
+import bcrypt from 'bcryptjs';
 
 const AppUser = base44.entities.AppUser;
 
-export default function Register() {
+export default function CadastroLeiloeiro() {
   const navigate = useNavigate();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -140,7 +141,7 @@ export default function Register() {
 
     setIsRegistering(true);
     setErrorMessage('');
-    setDup({ email: false, phone: false, cpf: false, name: false, nameDL: false });
+    setDup({ email: false, phone: false, cpf: false });
 
     try {
       const normalizedEmail = email.toLowerCase().trim();
@@ -198,6 +199,10 @@ export default function Register() {
         }
       }
 
+      // 🔒 Hashear senha com bcrypt antes de salvar
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(password, salt);
+
       const newUser = await AppUser.create({
         full_name: fullName.trim(),
         display_first_name: firstName || null,
@@ -205,8 +210,8 @@ export default function Register() {
         email: normalizedEmail,
         phone: phoneDigits,
         cpf: cpfDigits,
-        password: password,
-        role: 'user',
+        password: hashedPassword,
+        role: 'leiloeiro',
         address_street: addressStreet,
         address_number: addressNumber,
         address_complement: addressComplement,
@@ -220,17 +225,10 @@ export default function Register() {
       localStorage.setItem('currentUser', JSON.stringify(newUser));
       sessionStorage.setItem('isLoggedIn', 'true');
 
-      console.log(`[REGISTER] Registro bem-sucedido: ${newUser.full_name}`);
+      console.log(`[REGISTER LEILOEIRO] Registro bem-sucedido: ${newUser.full_name}`);
 
       setTimeout(() => {
-        // Verifica se veio da página Partners
-        const fromPartners = sessionStorage.getItem('registerFromPartners');
-        if (fromPartners === 'true') {
-          sessionStorage.removeItem('registerFromPartners');
-          window.location.href = createPageUrl("InvestorDashboard");
-        } else {
-          window.location.href = createPageUrl("Home");
-        }
+        window.location.href = createPageUrl("CRMInvestidores");
       }, 500);
 
     } catch (error) {

@@ -3,7 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, X, Wallet } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { toast } from "sonner";
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

@@ -1,5 +1,5 @@
 /**
- * pages.config.js - Page routing configuration
+ * pages.config.jsx.js - Page routing configuration
  * 
  * This file is AUTO-GENERATED. Do not add imports or modify PAGES manually.
  * Pages are auto-registered when you create files in the ./pages/ folder.
@@ -62,7 +62,11 @@ import AuctionDetails from './pages/AuctionDetails';
 import AuctionRoom from './pages/AuctionRoom';
 import AuditSnapshot from './pages/AuditSnapshot';
 import BannerManagement from './pages/BannerManagement';
+import CadastroInvestidor from './pages/CadastroInvestidor';
+import CadastroLeiloeiro from './pages/CadastroLeiloeiro';
+import CarteiraInvestidor from './pages/CarteiraInvestidor';
 import CRM from './pages/CRM';
+import CRMInvestidores from './pages/CRMInvestidores';
 import CareerLevelsReport from './pages/CareerLevelsReport';
 import Cart from './pages/Cart';
 import Catalog from './pages/Catalog';
@@ -101,6 +105,7 @@ import LojistaDashboard from './pages/LojistaDashboard';
 import LuxuryAccessManager from './pages/LuxuryAccessManager';
 import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
 import LuxuryCollection from './pages/LuxuryCollection';
+import MarketplaceLotes from './pages/MarketplaceLotes';
 import MemoryBackup from './pages/MemoryBackup';
 import MyCatalogOrders from './pages/MyCatalogOrders';
 import MyWinnings from './pages/MyWinnings';
@@ -133,6 +138,7 @@ import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
 import SchemaBackup from './pages/SchemaBackup';
+import { RequireRole } from '@/components/common';
 import __Layout from './Layout.jsx';
 
 
@@ -152,7 +158,19 @@ export const PAGES = {
     "AuctionRoom": AuctionRoom,
     "AuditSnapshot": AuditSnapshot,
     "BannerManagement": BannerManagement,
+    "CadastroInvestidor": CadastroInvestidor,
+    "CadastroLeiloeiro": CadastroLeiloeiro,
+    "CarteiraInvestidor": () => (
+        <RequireRole allowedRoles={['admin', 'investidor']} fallbackRoute="Home">
+            <CarteiraInvestidor />
+        </RequireRole>
+    ),
     "CRM": CRM,
+    "CRMInvestidores": () => (
+        <RequireRole allowedRoles={['admin', 'leiloeiro']} fallbackRoute="Home">
+            <CRMInvestidores />
+        </RequireRole>
+    ),
     "CareerLevelsReport": CareerLevelsReport,
     "Cart": Cart,
     "Catalog": Catalog,
@@ -191,6 +209,11 @@ export const PAGES = {
     "LuxuryAccessManager": LuxuryAccessManager,
     "LuxuryBannerManagement": LuxuryBannerManagement,
     "LuxuryCollection": LuxuryCollection,
+    "MarketplaceLotes": () => (
+        <RequireRole allowedRoles={['admin', 'investidor']} fallbackRoute="Home">
+            <MarketplaceLotes />
+        </RequireRole>
+    ),
     "MemoryBackup": MemoryBackup,
     "MyCatalogOrders": MyCatalogOrders,
     "MyWinnings": MyWinnings,

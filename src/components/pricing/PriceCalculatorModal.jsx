@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Calculator, TrendingDown, DollarSign } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PriceCalculatorModal({ isOpen, onClose, product, onSave }) {

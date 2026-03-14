@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Loader2, Truck } from "lucide-react";
 import { toast } from "sonner";
-import { base44 } from "@/api/base44Client";
 import { calculateShipping } from "@/functions/calculateShipping";
 
 export default function FreteCalculator({ productId }) {

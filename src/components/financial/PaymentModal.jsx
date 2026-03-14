@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, CircleDashed, DollarSign, Calendar, AlertTriangle, Clock, XCircle, CreditCard } from "lucide-react";
+import { CheckCircle2, CircleDashed, DollarSign, AlertTriangle, Clock, XCircle } from "lucide-react";
 import moment from "moment";
 
 const METHOD_LABELS = {

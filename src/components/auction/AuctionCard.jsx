@@ -20,7 +20,6 @@ import { Clock, Users, TrendingUp, Search, Play, Pause, Info, Edit, Flame, Share
 import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
-import PechincaBadge from '../comparai/PechincaBadge';
 import ComparaiModal from '../comparai/ComparaiModal';
 
 // 🔍 DEBUG: Log para verificar se auction está sendo passado

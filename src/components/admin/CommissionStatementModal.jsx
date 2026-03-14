@@ -4,9 +4,9 @@ import { base44 } from '@/api/base44Client';
 const CommissionRecord = base44.entities.CommissionRecord;
 const CatalogSale = base44.entities.CatalogSale;
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, DollarSign, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp, Smartphone, Package, Wallet } from 'lucide-react';
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, DollarSign, ShoppingBag, Calendar, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 
 const ROLE_LABELS = {
   influencer_app: "Influencer",

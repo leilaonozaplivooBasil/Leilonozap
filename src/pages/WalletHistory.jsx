@@ -2,12 +2,11 @@ import React, { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, TrendingUp, TrendingDown, DollarSign, Plus, CreditCard, Wallet as WalletIcon, ArrowUpRight, ArrowDownLeft, Clock } from "lucide-react";
 import { toast } from "sonner";
-import WalletBalance from "../components/wallet/WalletBalance";
 
 export default function WalletHistory() {
   const [currentUser, setCurrentUser] = useState(null);

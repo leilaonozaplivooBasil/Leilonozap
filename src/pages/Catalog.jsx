@@ -1,20 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { createPageUrl } from "@/utils";
+import { useNavigate, useLocation } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 
 const Product = base44.entities.Product;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
 const Store = base44.entities.Store;
-import { Eye, TrendingUp, Zap, Filter, CheckCircle, Package, Smartphone, Percent, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, SlidersHorizontal, X, ChevronDown } from "lucide-react";
+import { Filter, Package, Flame, MessageCircle, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger } from
-"@/components/ui/tooltip";
+
+
 
 import CatalogProductCard from "../components/catalog/CatalogProductCard";
 import WelcomeModal from "../components/common/WelcomeModal";

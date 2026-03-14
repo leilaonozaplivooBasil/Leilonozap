@@ -1,7 +1,6 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { FileSpreadsheet, Trophy, Calendar as CalendarIcon, Loader2, Image as ImageIcon, Share2 } from "lucide-react";
+import { FileSpreadsheet, Loader2, Share2 } from "lucide-react";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 import { base44 } from "@/api/base44Client";
