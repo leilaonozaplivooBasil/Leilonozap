@@ -1705,16 +1705,19 @@ export default function AuctionRoom() {
         </div>
       </main>
 
-      {isAuctionActive && !isSpectatorMode && (
+      {isAuctionActive && !isSpectatorMode && !auction?.is_investment_plan && (
         <footer className="bid-input-container">
-          <BidInput
-            currentPrice={currentPrice}
-            increment={auction.increment}
-            onSubmitBid={submitBid}
-            isLoading={isSubmittingBid}
-            buyNowPrice={auction.buy_now_price}
-            onBuyNow={handleBuyNow}
-          />
+          <BidInput currentPrice={currentPrice} increment={auction.increment} onSubmitBid={submitBid} isLoading={isSubmittingBid} buyNowPrice={auction.buy_now_price} onBuyNow={handleBuyNow} />
+        </footer>
+      )}
+      {isAuctionActive && auction?.is_investment_plan && (
+        <footer className="bid-input-container">
+          <div className="flex items-center justify-center px-4 py-3">
+            <div className="bg-blue-900/40 border border-blue-500/40 rounded-xl px-6 py-3 w-full max-w-lg text-center">
+              <p className="text-blue-300 text-sm font-semibold">🏦 Este lote é operado pela equipe NoZap</p>
+              <p className="text-slate-400 text-xs mt-1">Autorize seu lance no <a href="/MarketplaceLotes" className="text-blue-400 underline">Marketplace de Lotes</a> e acompanhe na sua Carteira.</p>
+            </div>
+          </div>
         </footer>
       )}
 
