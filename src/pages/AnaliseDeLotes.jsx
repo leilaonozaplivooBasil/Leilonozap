@@ -24,8 +24,11 @@ function AnaliseDeLotes() {
         });
     };
 
+    // Campos manuais de data/hora do leilão (quando não detectados na planilha)
+    const [dataLeilao, setDataLeilao] = useState('');
+    const [horarioLeilao, setHorarioLeilao] = useState('');
+
     // Editable Financials
-    // Default values suggested by the user
     const [arremateInputValue, setArremateInputValue] = useState('15639.00');
     const [taxaPct, setTaxaPct] = useState(7);
     const [frete, setFrete] = useState(1000.00);
