@@ -92,7 +92,7 @@ export default function SistemaDeArremate() {
             Sistema Inteligente de Arremate
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight mb-2">
-            Central de <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Lotes & Investimentos</span>
+            Sistema Inteligente de Arremate <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Leilões NoZap</span>
           </h1>
           <p className="text-slate-400 text-sm max-w-2xl">
             Importe planilhas de leilão, analise lotes automaticamente, conecte investidores e gerencie todo o ciclo do arremate em um único lugar.
