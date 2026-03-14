@@ -327,11 +327,17 @@ export default function MarketplaceLotes() {
                                         <CheckCircle2 className="text-emerald-400" size={32} />
                                     </div>
                                     <h3 className="text-xl font-bold text-white mb-2">Autorização Registrada!</h3>
+                                    <p className="text-slate-400 text-sm mb-1">
+                                        Modelo: <span className="text-white font-bold">Modelo {modeloEscolhido}</span>
+                                        {modeloEscolhido === 'B' && percentualCotas && <span className="text-purple-300"> · {percentualCotas}% do lote</span>}
+                                    </p>
                                     <p className="text-slate-400 text-sm mb-2">
                                         Valor máximo autorizado: <span className="text-white font-bold">{formatCurrency(parseFloat(valorAutorizado))}</span>
                                     </p>
                                     <p className="text-slate-400 text-sm mb-6">
-                                        Total a depositar: <span className="text-indigo-300 font-bold">{formatCurrency(calcDeposito(valorAutorizado).total)}</span>
+                                        Total a depositar: <span className="text-indigo-300 font-bold">
+                                            {formatCurrency(calcDeposito(valorAutorizado).total * (modeloEscolhido === 'B' && percentualCotas ? parseFloat(percentualCotas) / 100 : 1))}
+                                        </span>
                                     </p>
                                     <p className="text-slate-500 text-xs mb-6">Nossa equipe entrará em contato via WhatsApp para confirmar o depósito e sua participação no lote.</p>
                                     <button
