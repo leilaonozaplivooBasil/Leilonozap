@@ -37,11 +37,8 @@ export default function MarketplaceLotes() {
         setErro(null);
         try {
             // Busca leilões marcados como lote de investimento ou todos ativos
-            const data = await Auction.list('-created_date', 100);
-            // Filtra apenas os lotes publicados via AnaliseDeLotes/GestaoLotes
-            const lotesInvestimento = data.filter(a =>
-                a.is_investment_plan === true
-            );
+            // Busca direto pelo filtro no banco — só lotes publicados no marketplace
+            const lotesInvestimento = await Auction.filter({ is_investment_plan: true });
             setLotes(lotesInvestimento);
         } catch (error) {
             console.error('[MarketplaceLotes] Erro ao carregar lotes:', error);
