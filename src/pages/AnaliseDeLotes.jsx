@@ -344,6 +344,12 @@ function AnaliseDeLotes() {
         <div className="min-h-screen bg-[#0d1117] text-slate-200 p-4 font-sans selection:bg-blue-500/30">
             <div className="max-w-7xl mx-auto">
                 <header className="mb-10 text-center flex flex-col items-center">
+                    <button
+                        onClick={() => navigate(createPageUrl('SistemaDeArremate'))}
+                        className="mb-4 flex items-center gap-2 text-slate-500 hover:text-slate-300 text-xs transition-colors"
+                    >
+                        <ArrowLeft size={14} /> Central de Lotes & Investimentos
+                    </button>
                     <div className="inline-flex items-center gap-3 mb-3 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 shadow-sm">
                         <BarChart3 size={18} className="text-blue-400" />
                         <span className="text-sm font-semibold tracking-wide text-slate-300">AVALIADOR INTELIGENTE DE LEILÕES</span>
