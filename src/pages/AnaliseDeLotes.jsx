@@ -425,6 +425,16 @@ function AnaliseDeLotes() {
                                         📍 Retirada: {loteData.localColeta}
                                     </div>
                                 )}
+                                <div className="flex flex-wrap gap-3 mt-3">
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Data do Leilão</label>
+                                        <input type="date" value={dataLeilao} onChange={e => setDataLeilao(e.target.value)} className="bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500" />
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Horário do Leilão</label>
+                                        <input type="time" value={horarioLeilao} onChange={e => setHorarioLeilao(e.target.value)} className="bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500" />
+                                    </div>
+                                </div>
                             </div>
                             <div className="flex gap-2 flex-wrap">
                                 <button
