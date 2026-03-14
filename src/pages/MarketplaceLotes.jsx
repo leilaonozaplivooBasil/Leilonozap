@@ -129,21 +129,19 @@ export default function MarketplaceLotes() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.05 }}
-                                className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 hover:border-blue-500/40 transition-all group cursor-pointer"
-                                onClick={() => navigate(createPageUrl('AuctionRoom') + `?id=${lote.id}`)}
+                                className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 hover:border-blue-500/40 transition-all group"
                             >
                                 <div className="flex items-start justify-between mb-4">
                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border ${st.color}`}>
                                         {st.label}
                                     </span>
-                                    <ArrowRight size={18} className="text-slate-600 group-hover:text-blue-400 transition-colors" />
                                 </div>
 
                                 <h3 className="font-bold text-white text-base leading-tight mb-4 line-clamp-2">
                                     {lote.title}
                                 </h3>
 
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 gap-3 mb-4">
                                     <div>
                                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Lance Atual</p>
                                         <p className="text-lg font-black text-emerald-400">
@@ -167,9 +165,18 @@ export default function MarketplaceLotes() {
                                     )}
                                 </div>
 
-                                <div className="mt-4 pt-4 border-t border-[#30363d] flex justify-end">
-                                    <button className="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors">
-                                        Ver detalhes <ArrowRight size={12} />
+                                <div className="pt-4 border-t border-[#30363d] flex gap-2">
+                                    <button
+                                        onClick={() => navigate(createPageUrl('AuctionRoom') + `?id=${lote.id}`)}
+                                        className="flex-1 text-xs font-bold text-slate-400 hover:text-white border border-[#30363d] hover:border-slate-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        Ver sala <ArrowRight size={12} />
+                                    </button>
+                                    <button
+                                        onClick={() => { setLoteModal(lote); setValorAutorizado(''); setAutorizado(false); }}
+                                        className="flex-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
+                                    >
+                                        <DollarSign size={12} /> Autorizar Lance
                                     </button>
                                 </div>
                             </motion.div>
@@ -177,6 +184,106 @@ export default function MarketplaceLotes() {
                     })}
                 </div>
             </div>
+
+            {/* Modal Autorização de Lance */}
+            <AnimatePresence>
+                {loteModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        onClick={() => setLoteModal(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 w-full max-w-md shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            {!autorizado ? (
+                                <>
+                                    <div className="flex items-start justify-between mb-5">
+                                        <div>
+                                            <h3 className="font-bold text-white text-lg">Autorizar Lance</h3>
+                                            <p className="text-slate-400 text-xs mt-1 line-clamp-1">{loteModal.title}</p>
+                                        </div>
+                                        <button onClick={() => setLoteModal(null)} className="text-slate-500 hover:text-white transition-colors">
+                                            <X size={20} />
+                                        </button>
+                                    </div>
+
+                                    <div className="bg-[#0d1117] rounded-xl p-4 mb-5 border border-[#30363d]">
+                                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Lance atual do lote</p>
+                                        <p className="text-2xl font-black text-emerald-400">
+                                            {formatCurrency(loteModal.current_price || loteModal.starting_price)}
+                                        </p>
+                                    </div>
+
+                                    <div className="mb-5">
+                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                                            Autorizo ir até (R$)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={valorAutorizado}
+                                            onChange={e => setValorAutorizado(e.target.value)}
+                                            placeholder="Ex: 25000"
+                                            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-4 py-3 text-white text-lg font-bold focus:outline-none focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    {valorAutorizado && parseFloat(valorAutorizado) > 0 && (() => {
+                                        const dep = calcDeposito(valorAutorizado);
+                                        return (
+                                            <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4 mb-5 space-y-2">
+                                                <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Resumo do Depósito Obrigatório</p>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-slate-400">Valor máximo autorizado</span>
+                                                    <span className="text-white font-semibold">{formatCurrency(dep.valor)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-slate-400">Taxa de operação (10%)</span>
+                                                    <span className="text-amber-400 font-semibold">+ {formatCurrency(dep.taxa)}</span>
+                                                </div>
+                                                <div className="flex justify-between text-base font-black pt-2 border-t border-indigo-500/20">
+                                                    <span className="text-white">Total a depositar</span>
+                                                    <span className="text-indigo-300">{formatCurrency(dep.total)}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    <button
+                                        disabled={!valorAutorizado || parseFloat(valorAutorizado) <= 0}
+                                        onClick={() => setAutorizado(true)}
+                                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors"
+                                    >
+                                        Confirmar Autorização
+                                    </button>
+                                </>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <CheckCircle2 className="text-emerald-400" size={32} />
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-2">Autorização Registrada!</h3>
+                                    <p className="text-slate-400 text-sm mb-2">
+                                        Valor máximo autorizado: <span className="text-white font-bold">{formatCurrency(parseFloat(valorAutorizado))}</span>
+                                    </p>
+                                    <p className="text-slate-400 text-sm mb-6">
+                                        Total a depositar: <span className="text-indigo-300 font-bold">{formatCurrency(calcDeposito(valorAutorizado).total)}</span>
+                                    </p>
+                                    <p className="text-slate-500 text-xs mb-6">Nossa equipe entrará em contato via WhatsApp para confirmar o depósito e sua participação no lote.</p>
+                                    <button
+                                        onClick={() => { setLoteModal(null); navigate(createPageUrl('CarteiraInvestidor')); }}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors"
+                                    >
+                                        Ver minha Carteira
+                                    </button>
+                                </div>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
