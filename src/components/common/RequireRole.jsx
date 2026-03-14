@@ -1,61 +1,76 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User } from '@/entities/User';
+import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 
 /**
- * Componente Wrapper para proteger rotas baseado na 'role' do usuário.
+ * Protege rotas baseado na role do usuário.
+ * Lê do localStorage (padrão do app) com fallback para base44.auth.me().
  * 
- * @param {Object} props
- * @param {React.ReactNode} props.children O componente a ser renderizado se autorizado.
- * @param {string[]} props.allowedRoles Array com as roles permitidas (ex: ['admin', 'investidor'])
- * @param {string} props.fallbackRoute Rota para redirecionar se não autorizado (padrão: 'Home')
+ * @param {string[]} allowedRoles - Roles permitidas (ex: ['admin', 'investidor'])
+ * @param {string} fallbackRoute  - Rota de redirecionamento se não autorizado (padrão: 'Home')
+ * @param {string} noAuthRoute    - Rota de redirecionamento se não logado (padrão: 'Landing')
  */
-export default function RequireRole({ children, allowedRoles, fallbackRoute = 'Home' }) {
-    const [isAuthorized, setIsAuthorized] = useState(null); // null = carregando, true/false
+export default function RequireRole({ children, allowedRoles, fallbackRoute = 'Home', noAuthRoute = 'Landing' }) {
+    const [status, setStatus] = useState('loading'); // 'loading' | 'authorized' | 'unauthorized' | 'unauthenticated'
     const navigate = useNavigate();
 
-    // Estabiliza a referência do array para evitar loop infinito no useEffect
-    // quando allowedRoles é passado como literal inline (ex: allowedRoles={['admin', 'investidor']})
-    const stableAllowedRoles = useMemo(() => allowedRoles, [allowedRoles.join(',')]);
-
     useEffect(() => {
-        let isMounted = true;
+        let active = true;
 
-        const checkRole = async () => {
+        const check = async () => {
             try {
-                const user = await User.me();
-                if (isMounted) {
-                    if (user && user.role && stableAllowedRoles.includes(user.role)) {
-                        setIsAuthorized(true);
-                    } else {
-                        setIsAuthorized(false);
-                        navigate(createPageUrl(fallbackRoute), { replace: true });
+                // Tenta ler do cache local primeiro (igual ao Layout)
+                const savedUserJSON = localStorage.getItem('currentUser');
+                const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+
+                let user = null;
+
+                if (savedUserJSON && isLoggedIn) {
+                    user = JSON.parse(savedUserJSON);
+                } else {
+                    // Fallback: tenta plataforma
+                    try {
+                        user = await base44.auth.me();
+                    } catch (_) {
+                        // não logado
                     }
                 }
-            } catch (error) {
-                if (isMounted) {
-                    setIsAuthorized(false);
-                    // Se não estiver logado, manda pro landing
-                    navigate(createPageUrl('Landing'), { replace: true });
+
+                if (!active) return;
+
+                if (!user || !user.email) {
+                    setStatus('unauthenticated');
+                    navigate(createPageUrl(noAuthRoute), { replace: true });
+                    return;
+                }
+
+                const role = user.role || 'user';
+                if (allowedRoles.includes(role)) {
+                    setStatus('authorized');
+                } else {
+                    setStatus('unauthorized');
+                    navigate(createPageUrl(fallbackRoute), { replace: true });
+                }
+            } catch (_) {
+                if (active) {
+                    setStatus('unauthenticated');
+                    navigate(createPageUrl(noAuthRoute), { replace: true });
                 }
             }
         };
 
-        checkRole();
+        check();
+        return () => { active = false; };
+    }, [allowedRoles.join(','), fallbackRoute, noAuthRoute]);
 
-        return () => {
-            isMounted = false;
-        };
-    }, [stableAllowedRoles, fallbackRoute, navigate]);
-
-    if (isAuthorized === null) {
+    if (status === 'loading') {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin" />
             </div>
         );
     }
 
-    return isAuthorized ? <>{children}</> : null;
+    return status === 'authorized' ? <>{children}</> : null;
 }
