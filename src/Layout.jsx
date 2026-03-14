@@ -844,7 +844,7 @@ export default function Layout({ children, currentPageName }) {
                 <div className="flex-1 overflow-y-auto p-4 space-y-1">
 
                   {/* ITENS DO MENU */}
-                  {finalMenuItems.map((item) => (
+                  {finalMenuItems.filter(item => item.pageName).map((item) => (
                     <Link
                       key={item.title}
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
