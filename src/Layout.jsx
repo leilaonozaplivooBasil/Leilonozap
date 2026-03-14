@@ -553,7 +553,7 @@ export default function Layout({ children, currentPageName }) {
         { title: "Leilões", pageName: "Home" },
         { title: "Lojista", pageName: "LojistaDashboard" },
         { title: "Sistema de Alavancagem", pageName: "Licensing" },
-        ...(isLoggedIn ? rolesSpecificMenu : [])
+        ...(isLoggedIn && !isAdmin ? rolesSpecificMenu : [])
       ];
 
   const isLojistaPage = currentPageName === 'LojistaDashboard';
