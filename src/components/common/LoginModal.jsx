@@ -156,6 +156,16 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
           try {
             if (onSuccess) {
               onSuccess(user);
+            } else {
+              // Roteamento por role (mesmo comportamento do fluxo normal)
+              if (user.role === 'investidor') {
+                window.location.href = createPageUrl("MarketplaceLotes");
+              } else if (user.role === 'leiloeiro') {
+                window.location.href = createPageUrl("CRMInvestidores");
+              } else {
+                // admin e outros vão para Home (acesso livre ao menu completo)
+                window.location.href = createPageUrl("Home");
+              }
             }
             onClose();
           } catch (err) {
@@ -221,7 +231,19 @@ export default function LoginModal({ onClose, onSuccess, onSwitchToRegister, the
 
       setTimeout(() => {
         try {
-          if (onSuccess) onSuccess(user);
+          if (onSuccess) {
+            onSuccess(user);
+          } else {
+            // Se não houver onSuccess explicitamente passado, fazemos o roteamento por role
+            if (user.role === 'investidor') {
+              window.location.href = createPageUrl("MarketplaceLotes");
+            } else if (user.role === 'leiloeiro') {
+              window.location.href = createPageUrl("CRMInvestidores");
+            } else {
+              // admin e outros vão para Home (acesso livre ao menu completo)
+              window.location.href = createPageUrl("Home");
+            }
+          }
           onClose();
         } catch (err) {
           console.error("Erro no callback:", err);

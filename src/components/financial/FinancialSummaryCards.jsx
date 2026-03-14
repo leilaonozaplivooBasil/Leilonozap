@@ -1,5 +1,5 @@
 import React from "react";
-import { DollarSign, AlertTriangle, CheckCircle2, Clock, TrendingDown } from "lucide-react";
+import { DollarSign, AlertTriangle, CheckCircle2, Clock } from "lucide-react";
 import moment from "moment";
 
 export default function FinancialSummaryCards({ expenses }) {

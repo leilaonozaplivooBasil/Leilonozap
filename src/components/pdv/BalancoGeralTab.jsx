@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
-  DollarSign, TrendingUp, TrendingDown, Wallet, Receipt, Percent, BarChart3, Pencil, Check, Scale
+  DollarSign, TrendingDown, Wallet, Receipt, Percent, BarChart3, Scale
 } from 'lucide-react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Cell, PieChart, Pie } from 'recharts';
 import { base44 } from '@/api/base44Client';

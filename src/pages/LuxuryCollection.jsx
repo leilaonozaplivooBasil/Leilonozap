@@ -1,11 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { base44 } from "@/api/base44Client";
-import { Link } from "react-router-dom";
-import { createPageUrl } from "@/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Crown, Sparkles, Search, Gem, ArrowLeft, Lock, Key } from "lucide-react";
+import { Crown, Sparkles, Search, Gem, Lock, Key } from "lucide-react";
 import LuxuryCard from "../components/luxury/LuxuryCard";
 import RotatingBanner from "../components/banner/RotatingBanner";
 import GoldDiamondRain from "../components/luxury/GoldDiamondRain";

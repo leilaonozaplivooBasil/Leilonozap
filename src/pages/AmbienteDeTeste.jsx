@@ -185,7 +185,7 @@ export default function AmbienteDeTeste() {
     if (!anchorUser || !saleValue) return;
     const t = setTimeout(() => simulate(), 450);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [anchorUser?.id, saleValue]);
 
   const percentOk = totalPercent <= 26 + 0.0001;

@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 
 import LoginModal from '../components/common/LoginModal';
-import ValoraNotesGallery from '../components/licensing/ValoraNotesGallery';
 import JourneyAnimation from '../components/licensing/JourneyAnimation';
 import ProductCarousel from '../components/licensing/ProductCarousel';
 

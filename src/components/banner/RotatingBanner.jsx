@@ -67,7 +67,7 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                   alt={banner.title || 'Banner'}
                   className={`w-full h-full cursor-pointer ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}
                   loading="eager"
-                  fetchpriority="high"
+                  fetchPriority="high"
                   decoding="sync"
                   style={{
                     imageRendering: '-webkit-optimize-contrast',
@@ -87,7 +87,7 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                   alt={banner.title || 'Banner'}
                   className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}
                   loading="eager"
-                  fetchpriority="high"
+                  fetchPriority="high"
                   decoding="sync"
                   style={{
                     imageRendering: '-webkit-optimize-contrast',

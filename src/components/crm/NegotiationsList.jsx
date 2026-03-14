@@ -2,7 +2,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  TrendingUp, Calendar, User, Package, DollarSign
+  TrendingUp, Calendar, User, Package
 } from 'lucide-react';
 
 export default function NegotiationsList({ negotiations, onNegotiationClick }) {

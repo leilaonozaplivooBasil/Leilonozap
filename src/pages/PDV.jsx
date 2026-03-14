@@ -8,10 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   DollarSign, Search, ShoppingCart, Trash2, Plus, Minus,
-  ArrowLeft, Package, TrendingUp, Clock, Printer, X, Calendar, FileText
+  ArrowLeft, Package, Clock, Printer, Calendar, FileText
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea';
 import DashboardTab from '@/components/pdv/DashboardTab';
 import VendedoresTab from '@/components/pdv/VendedoresTab';
 import TodaySummaryCards from '@/components/pdv/TodaySummaryCards';

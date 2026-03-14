@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import ShareAppModal from "@/components/common/ShareAppModal";
@@ -18,7 +18,7 @@ import { base44 } from '@/api/base44Client';
 
 const AppUser = base44.entities.AppUser;
 const User = { me: () => base44.auth.me() };
-import { Menu, Share2, LogOut, Settings, MessageCircle, Plus, User as UserIcon, ShoppingCart as CartIcon } from "lucide-react";
+import { Menu, Share2, LogOut, Settings, MessageCircle, User as UserIcon, ShoppingCart as CartIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -450,6 +450,18 @@ export default function Layout({ children, currentPageName }) {
     { title: "Perfil", pageName: "Profile" },
   ];
 
+  const investorMenuItems = [
+    { title: "Marketplace de Lotes", pageName: "MarketplaceLotes" },
+    { title: "Minha Carteira", pageName: "CarteiraInvestidor" },
+    { title: "Perfil", pageName: "Profile" },
+  ];
+
+  const leiloeiroMenuItems = [
+    { title: "CRM de Investidores", pageName: "CRMInvestidores" },
+    { title: "Controle de Leilões", pageName: "AuctionControl" },
+    { title: "Perfil", pageName: "Profile" },
+  ];
+
   const adminMenuItems = [
     {
       title: "🤖 Arquiteto IA",
@@ -500,6 +512,8 @@ export default function Layout({ children, currentPageName }) {
 
   const isLoggedIn = currentUser && currentUser.email;
   const isAdmin = isLoggedIn && currentUser.role === 'admin';
+  const isLeiloeiro = isLoggedIn && currentUser.role === 'leiloeiro';
+  const isInvestidor = isLoggedIn && currentUser.role === 'investidor';
   const isLicensee = isLoggedIn && currentUser.role === 'licensee';
 
   // Determina se estamos em páginas do catálogo
@@ -513,6 +527,17 @@ export default function Layout({ children, currentPageName }) {
 
   // Verifica se está na página de Licensing vindo do catálogo
   const isLicensingFromCatalog = currentPageName === 'Licensing' && fromCatalog;
+
+  let rolesSpecificMenu = [];
+  if (isAdmin) {
+    rolesSpecificMenu = adminMenuItems;
+  } else if (isInvestidor) {
+    rolesSpecificMenu = investorMenuItems;
+  } else if (isLeiloeiro) {
+    rolesSpecificMenu = leiloeiroMenuItems;
+  } else if (isLoggedIn) {
+    rolesSpecificMenu = loggedMenuItems;
+  }
 
   const finalMenuItems = (isCatalogPage && !isProfileFromCatalog && !isLicensingFromCatalog)
     ? [
@@ -528,7 +553,7 @@ export default function Layout({ children, currentPageName }) {
         { title: "Leilões", pageName: "Home" },
         { title: "Lojista", pageName: "LojistaDashboard" },
         { title: "Sistema de Alavancagem", pageName: "Licensing" },
-        ...(isLoggedIn ? loggedMenuItems : [])
+        ...(isLoggedIn ? rolesSpecificMenu : [])
       ];
 
   const isLojistaPage = currentPageName === 'LojistaDashboard';

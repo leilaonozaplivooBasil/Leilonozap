@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import {
-  X, Plus, Trash2, Search, Package, DollarSign, Save, TrendingDown
+  X, Trash2, Search, Package, Save, TrendingDown
 } from 'lucide-react';
 
 export default function NegotiationModal({ customer, onClose, onSave, sellers }) {

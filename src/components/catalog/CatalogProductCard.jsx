@@ -2,12 +2,9 @@ import React, { useState, useEffect, useRef, memo } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Play, Pause, Share2, Info, Edit, Plus, Check } from "lucide-react";
-import FavoriteButton from '../recommendations/FavoriteButton';
+import { ShoppingCart, Play, Pause, Edit, Check } from "lucide-react";
 import ComparaiModal from '../comparai/ComparaiModal';
-import { toast } from 'sonner';
 
 function CatalogProductCard({ product, currentUser }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);

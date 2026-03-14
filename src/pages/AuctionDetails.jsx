@@ -4,8 +4,7 @@ import { base44 } from '@/api/base44Client';
 
 const Auction = base44.entities.Auction;
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Zap, CheckCircle, Package, Clock, TrendingUp, Shield, Info, Flame } from "lucide-react";
+import { ArrowLeft, CheckCircle, Package, Clock, TrendingUp, Shield, Info, Flame } from "lucide-react";
 import { createPageUrl } from "@/utils";
 
 import CountdownTimer from "../components/common/CountdownTimer";
