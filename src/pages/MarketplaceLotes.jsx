@@ -220,24 +220,76 @@ export default function MarketplaceLotes() {
                                         </p>
                                     </div>
 
+                                    {/* MODELO A / B */}
                                     <div className="mb-5">
-                                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                            Autorizo ir até (R$)
-                                        </label>
-                                        <input
-                                            type="number"
-                                            value={valorAutorizado}
-                                            onChange={e => setValorAutorizado(e.target.value)}
-                                            placeholder="Ex: 25000"
-                                            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-4 py-3 text-white text-lg font-bold focus:outline-none focus:border-blue-500"
-                                        />
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Modelo de Participação</p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={() => setModeloEscolhido('A')}
+                                                className={`p-4 rounded-xl border text-left transition-all ${modeloEscolhido === 'A' ? 'border-blue-500 bg-blue-900/20' : 'border-[#30363d] bg-[#0d1117] hover:border-slate-500'}`}
+                                            >
+                                                <p className="font-black text-white text-sm mb-1">Modelo A</p>
+                                                <p className="text-xs text-slate-400 leading-relaxed">Compra o lote inteiro. Capital 100% seu.</p>
+                                            </button>
+                                            <button
+                                                onClick={() => setModeloEscolhido('B')}
+                                                className={`p-4 rounded-xl border text-left transition-all ${modeloEscolhido === 'B' ? 'border-purple-500 bg-purple-900/20' : 'border-[#30363d] bg-[#0d1117] hover:border-slate-500'}`}
+                                            >
+                                                <p className="font-black text-white text-sm mb-1">Modelo B</p>
+                                                <p className="text-xs text-slate-400 leading-relaxed">Divide o capital com outros investidores.</p>
+                                            </button>
+                                        </div>
                                     </div>
 
-                                    {valorAutorizado && parseFloat(valorAutorizado) > 0 && (() => {
+                                    {modeloEscolhido === 'B' && (
+                                        <div className="mb-4">
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                                                Minha participação (%)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                max="99"
+                                                value={percentualCotas}
+                                                onChange={e => setPercentualCotas(e.target.value)}
+                                                placeholder="Ex: 25"
+                                                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-4 py-2.5 text-white font-bold focus:outline-none focus:border-purple-500"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {modeloEscolhido && (
+                                        <div className="mb-5">
+                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                                                Autorizo ir até (R$)
+                                            </label>
+                                            <input
+                                                type="number"
+                                                value={valorAutorizado}
+                                                onChange={e => setValorAutorizado(e.target.value)}
+                                                placeholder="Ex: 25000"
+                                                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-4 py-3 text-white text-lg font-bold focus:outline-none focus:border-blue-500"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {modeloEscolhido && valorAutorizado && parseFloat(valorAutorizado) > 0 && (() => {
                                         const dep = calcDeposito(valorAutorizado);
+                                        const pct = modeloEscolhido === 'B' && percentualCotas ? parseFloat(percentualCotas) / 100 : 1;
+                                        const depositoProporcional = dep.total * pct;
                                         return (
                                             <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4 mb-5 space-y-2">
                                                 <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Resumo do Depósito Obrigatório</p>
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="text-slate-400">Modelo escolhido</span>
+                                                    <span className="text-white font-semibold">Modelo {modeloEscolhido}</span>
+                                                </div>
+                                                {modeloEscolhido === 'B' && percentualCotas && (
+                                                    <div className="flex justify-between text-sm">
+                                                        <span className="text-slate-400">Sua participação</span>
+                                                        <span className="text-purple-300 font-semibold">{percentualCotas}%</span>
+                                                    </div>
+                                                )}
                                                 <div className="flex justify-between text-sm">
                                                     <span className="text-slate-400">Valor máximo autorizado</span>
                                                     <span className="text-white font-semibold">{formatCurrency(dep.valor)}</span>
@@ -247,15 +299,22 @@ export default function MarketplaceLotes() {
                                                     <span className="text-amber-400 font-semibold">+ {formatCurrency(dep.taxa)}</span>
                                                 </div>
                                                 <div className="flex justify-between text-base font-black pt-2 border-t border-indigo-500/20">
-                                                    <span className="text-white">Total a depositar</span>
-                                                    <span className="text-indigo-300">{formatCurrency(dep.total)}</span>
+                                                    <span className="text-white">
+                                                        {modeloEscolhido === 'B' && percentualCotas ? 'Sua cota a depositar' : 'Total a depositar'}
+                                                    </span>
+                                                    <span className="text-indigo-300">{formatCurrency(depositoProporcional)}</span>
                                                 </div>
                                             </div>
                                         );
                                     })()}
 
                                     <button
-                                        disabled={!valorAutorizado || parseFloat(valorAutorizado) <= 0}
+                                        disabled={
+                                            !modeloEscolhido ||
+                                            !valorAutorizado ||
+                                            parseFloat(valorAutorizado) <= 0 ||
+                                            (modeloEscolhido === 'B' && (!percentualCotas || parseFloat(percentualCotas) <= 0))
+                                        }
                                         onClick={() => setAutorizado(true)}
                                         className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors"
                                     >
