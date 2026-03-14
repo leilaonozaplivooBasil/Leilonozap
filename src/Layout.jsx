@@ -482,6 +482,7 @@ export default function Layout({ children, currentPageName }) {
         { title: "✨ Direto de Fábrica", pageName: "DiretoDeFabrica" },
         { title: "📊 Controle de Leilões", pageName: "AuctionControl" },
         { title: "📉 Análise de Lotes (Excel)", pageName: "AnaliseDeLotes" },
+        { title: "🏗️ Sistema de Arremate", pageName: "SistemaDeArremate" },
       ]
     },
     {
