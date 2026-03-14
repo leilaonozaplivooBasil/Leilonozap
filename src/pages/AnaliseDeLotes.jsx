@@ -6,6 +6,7 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } 
 import * as XLSX from 'xlsx';
 
 function AnaliseDeLotes() {
+    const navigate = useNavigate();
     const [loteData, setLoteData] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [error, setError] = useState('');
