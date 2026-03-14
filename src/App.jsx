@@ -67,6 +67,13 @@ const AuthenticatedApp = () => {
           }
         />
       ))}
+      {/* Rotas explícitas para páginas não incluídas no pages.config.jsx */}
+      <Route path="/CRMInvestidores" element={<LayoutWrapper currentPageName="CRMInvestidores"><CRMInvestidores /></LayoutWrapper>} />
+      <Route path="/CarteiraInvestidor" element={<LayoutWrapper currentPageName="CarteiraInvestidor"><CarteiraInvestidor /></LayoutWrapper>} />
+      <Route path="/CadastroInvestidor" element={<LayoutWrapper currentPageName="CadastroInvestidor"><CadastroInvestidor /></LayoutWrapper>} />
+      <Route path="/CadastroLeiloeiro" element={<LayoutWrapper currentPageName="CadastroLeiloeiro"><CadastroLeiloeiro /></LayoutWrapper>} />
+      <Route path="/MarketplaceLotes" element={<LayoutWrapper currentPageName="MarketplaceLotes"><MarketplaceLotes /></LayoutWrapper>} />
+      <Route path="/AnaliseDeLotes" element={<LayoutWrapper currentPageName="AnaliseDeLotes"><AnaliseDeLotes /></LayoutWrapper>} />
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
