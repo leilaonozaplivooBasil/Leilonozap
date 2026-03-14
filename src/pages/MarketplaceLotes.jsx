@@ -312,7 +312,23 @@ export default function MarketplaceLotes() {
                                             parseFloat(valorAutorizado) <= 0 ||
                                             (modeloEscolhido === 'B' && (!percentualCotas || parseFloat(percentualCotas) <= 0))
                                         }
-                                        onClick={() => setAutorizado(true)}
+                                        onClick={async () => {
+                                          try {
+                                            const dep = calcDeposito(valorAutorizado);
+                                            const pct = modeloEscolhido === 'B' && percentualCotas ? parseFloat(percentualCotas) / 100 : 1;
+                                            await base44.functions.invoke('persistBidAuthorization', {
+                                              auction_id: loteModal.id,
+                                              auction_title: loteModal.title,
+                                              modelo: modeloEscolhido === 'A' ? 'individual' : 'compartilhado',
+                                              valor_maximo_autorizado: parseFloat(valorAutorizado),
+                                              percentual_compartilhado: modeloEscolhido === 'B' ? parseFloat(percentualCotas) : 0,
+                                              deposito_confirmado: dep.total * pct
+                                            });
+                                            setAutorizado(true);
+                                          } catch (error) {
+                                            alert('Erro ao registrar autorização: ' + error.message);
+                                          }
+                                        }}
                                         className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors"
                                     >
                                         Confirmar Autorização
