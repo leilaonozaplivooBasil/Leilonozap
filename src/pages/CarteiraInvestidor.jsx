@@ -31,17 +31,22 @@ export default function CarteiraInvestidor() {
         try {
             const stored = localStorage.getItem('currentUser');
             if (!stored) return;
-            const currentUser = JSON.parse(stored);
+            const cachedUser = JSON.parse(stored);
 
-            // Busca dados atualizados do usuário
-            const users = await AppUser.filter({ email: currentUser.email });
-            if (users && users.length > 0) {
-                setUsuario(users[0]);
-            }
+            // Usa email como chave confiável (id do localStorage pode ser stale)
+            const users = await AppUser.filter({ email: cachedUser.email });
+            if (!users || users.length === 0) return;
+            const user = users[0];
+            setUsuario(user);
 
-            // Busca leilões em que o usuário foi vencedor (lotes participando)
-            const auctions = await Auction.filter({ winner_id: currentUser.id });
+            // Busca lotes arrematados pelo ID real do banco
+            const [auctions, walletTx] = await Promise.all([
+                Auction.filter({ winner_id: user.id }),
+                base44.entities.WalletTransaction.filter({ user_id: user.id })
+            ]);
             setLotesParticipando(auctions || []);
+            // Ordena do mais recente ao mais antigo
+            setHistorico((walletTx || []).sort((a, b) => new Date(b.created_date) - new Date(a.created_date)));
         } catch (error) {
             console.error('[CarteiraInvestidor] Erro ao carregar dados:', error);
         } finally {
