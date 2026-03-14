@@ -4,6 +4,12 @@ import { queryClientInstance } from '@/lib/query-client'
 import NavigationTracker from '@/lib/NavigationTracker'
 import { pagesConfig } from './pages.config.jsx'
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import CRMInvestidores from '@/pages/CRMInvestidores';
+import CarteiraInvestidor from '@/pages/CarteiraInvestidor';
+import CadastroInvestidor from '@/pages/CadastroInvestidor';
+import CadastroLeiloeiro from '@/pages/CadastroLeiloeiro';
+import MarketplaceLotes from '@/pages/MarketplaceLotes';
+import AnaliseDeLotes from '@/pages/AnaliseDeLotes';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
