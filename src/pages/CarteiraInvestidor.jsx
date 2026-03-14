@@ -56,12 +56,12 @@ export default function CarteiraInvestidor() {
 
     const handleSimulatePayment = () => {
         setIsProcessingDeposit(true);
-        setTimeout(() => {
+        const timer = setTimeout(() => {
             setIsProcessingDeposit(false);
             setShowSuccess(true);
-            // Em produção: criar registro de depósito via backend
-            // Ex: await base44.entities.Deposito.create({ user_id, valor: pendingAmount, status: 'pendente' })
         }, 2000);
+        // Garante limpeza do timer se componente desmontar
+        return () => clearTimeout(timer);
     };
 
     const saldoDisponivel = usuario?.saldo_disponivel ?? 0;
