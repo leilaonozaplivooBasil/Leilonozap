@@ -180,6 +180,7 @@ export default function MarketplaceLotes() {
                                     >
                                         <DollarSign size={12} /> Autorizar Lance
                                     </button>
+
                                 </div>
                             </motion.div>
                         );
