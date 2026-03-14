@@ -460,6 +460,33 @@ function AnaliseDeLotes() {
                                     }}
                                     disabled={isPublishing}
                                     className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                                    onClick={async () => {
+                                        if (!loteData || !calculations) return;
+                                        setIsPublishing(true);
+                                        let endTime;
+                                        if (dataLeilao && horarioLeilao) {
+                                            endTime = new Date(`${dataLeilao}T${horarioLeilao}:00`);
+                                        } else if (dataLeilao) {
+                                            endTime = new Date(`${dataLeilao}T12:00:00`);
+                                        } else {
+                                            endTime = new Date();
+                                            endTime.setDate(endTime.getDate() + 30);
+                                        }
+                                        await Auction.create({
+                                            title: loteData.nomeLote,
+                                            description: `Local de Retirada: ${loteData.localColeta}\nTotal de Itens: ${loteData.quantidadeTotal}\nValor de Mercado: R$ ${loteData.valorMercadoTotal.toFixed(2)}`,
+                                            starting_price: calculations.custoTotal,
+                                            current_price: calculations.custoTotal,
+                                            increment: 100,
+                                            end_time: endTime.toISOString(),
+                                            status: 'active',
+                                            is_investment_plan: true,
+                                            market_price: loteData.valorMercadoTotal,
+                                            manual_market_price: loteData.valorMercadoTotal,
+                                        });
+                                        setIsPublishing(false);
+                                        navigate(createPageUrl('GestaoLotes'));
+                                    }}
                                 >
                                     <ShoppingBag size={15} /> {isPublishing ? 'Publicando...' : 'Publicar no Marketplace'}
                                 </button>
