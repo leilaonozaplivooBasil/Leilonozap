@@ -398,6 +398,7 @@ function AnaliseDeLotes() {
 
                         {/* HEADER DASHBOARD */}
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[#161b22] border border-[#30363d] rounded-2xl p-6 shadow-xl">
+
                             <div>
                                 <h2 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
                                     <Package className="text-blue-500" size={24} />
