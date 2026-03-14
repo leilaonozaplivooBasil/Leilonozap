@@ -38,9 +38,9 @@ export default function MarketplaceLotes() {
         try {
             // Busca leilões marcados como lote de investimento ou todos ativos
             const data = await Auction.list('-created_date', 100);
-            // Filtra apenas os lotes publicados para investimento (status active ou captação)
+            // Filtra apenas os lotes publicados via AnaliseDeLotes/GestaoLotes
             const lotesInvestimento = data.filter(a =>
-                a.is_investment_plan === true || a.status === 'active'
+                a.is_investment_plan === true
             );
             setLotes(lotesInvestimento);
         } catch (error) {
