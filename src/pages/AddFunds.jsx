@@ -451,7 +451,7 @@ export default function AddFunds() {
                         <QrCode className="w-5 h-5 text-blue-400" />
                       </div>
                     </div>
-                    <p className="text-gray-300">Realize o pagamento via PIX ou Boleto</p>
+                    <p className="text-gray-300">Realize o pagamento via PIX ou Cartão de Crédito</p>
                   </div>
                   <div className="flex items-center gap-4 p-3 backdrop-blur-sm bg-white/5 rounded-xl border border-white/10 hover:border-purple-400/30 transition-all group/item">
                     <div className="relative flex-shrink-0">
