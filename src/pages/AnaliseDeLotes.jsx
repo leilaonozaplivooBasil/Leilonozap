@@ -1,5 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
-import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, BarChart3, Package, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
+import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, BarChart3, Package, CheckCircle2, ShoppingBag, ArrowLeft } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 
