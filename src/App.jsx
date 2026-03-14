@@ -10,6 +10,7 @@ import CadastroInvestidor from '@/pages/CadastroInvestidor';
 import CadastroLeiloeiro from '@/pages/CadastroLeiloeiro';
 import MarketplaceLotes from '@/pages/MarketplaceLotes';
 import AnaliseDeLotes from '@/pages/AnaliseDeLotes';
+import GestaoLotes from '@/pages/GestaoLotes';
 import RequireRole from '@/components/common/RequireRole';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
