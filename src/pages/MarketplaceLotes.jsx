@@ -17,6 +17,8 @@ export default function MarketplaceLotes() {
     const [loteModal, setLoteModal] = useState(null); // lote selecionado para autorizar lance
     const [valorAutorizado, setValorAutorizado] = useState('');
     const [autorizado, setAutorizado] = useState(false);
+    const [modeloEscolhido, setModeloEscolhido] = useState(null); // 'A' | 'B' | null
+    const [percentualCotas, setPercentualCotas] = useState('');
     const navigate = useNavigate();
 
     const TAXA_OPERACAO = 0.10;
