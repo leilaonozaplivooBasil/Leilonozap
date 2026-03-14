@@ -419,12 +419,20 @@ function AnaliseDeLotes() {
                                     </div>
                                 )}
                             </div>
-                            <button
-                                onClick={() => setLoteData(null)}
-                                className="px-5 py-2.5 bg-[#0d1117] border border-[#30363d] hover:border-slate-500 hover:bg-slate-800 rounded-xl text-sm font-semibold transition-all shadow-sm"
-                            >
-                                Importar Outro Lote
-                            </button>
+                            <div className="flex gap-2 flex-wrap">
+                                <button
+                                    onClick={() => navigate(createPageUrl('GestaoLotes'))}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
+                                >
+                                    <ShoppingBag size={15} /> Publicar no Marketplace
+                                </button>
+                                <button
+                                    onClick={() => setLoteData(null)}
+                                    className="px-5 py-2.5 bg-[#0d1117] border border-[#30363d] hover:border-slate-500 hover:bg-slate-800 rounded-xl text-sm font-semibold transition-all shadow-sm"
+                                >
+                                    Importar Outro Lote
+                                </button>
+                            </div>
                         </div>
 
                         {/* NOTIFICATION SCORE BANNER */}
