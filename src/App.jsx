@@ -11,6 +11,7 @@ import CadastroLeiloeiro from '@/pages/CadastroLeiloeiro';
 import MarketplaceLotes from '@/pages/MarketplaceLotes';
 import AnaliseDeLotes from '@/pages/AnaliseDeLotes';
 import GestaoLotes from '@/pages/GestaoLotes';
+import SistemaDeArremate from '@/pages/SistemaDeArremate';
 import RequireRole from '@/components/common/RequireRole';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
@@ -94,6 +95,11 @@ const AuthenticatedApp = () => {
       <Route path="/CadastroInvestidor" element={<LayoutWrapper currentPageName="CadastroInvestidor"><CadastroInvestidor /></LayoutWrapper>} />
       <Route path="/CadastroLeiloeiro" element={<LayoutWrapper currentPageName="CadastroLeiloeiro"><CadastroLeiloeiro /></LayoutWrapper>} />
       <Route path="/AnaliseDeLotes" element={<LayoutWrapper currentPageName="AnaliseDeLotes"><AnaliseDeLotes /></LayoutWrapper>} />
+      <Route path="/SistemaDeArremate" element={
+        <LayoutWrapper currentPageName="SistemaDeArremate">
+          <SistemaDeArremate />
+        </LayoutWrapper>
+      } />
       <Route path="/GestaoLotes" element={
         <LayoutWrapper currentPageName="GestaoLotes">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
