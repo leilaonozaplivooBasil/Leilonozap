@@ -26,7 +26,7 @@ export default function GestaoLotes() {
         setIsLoading(true);
         try {
             const [loteData, invData] = await Promise.all([
-                Auction.list('-created_date', 100),
+                Auction.filter({ is_investment_plan: true }),
                 AppUser.filter({ role: 'investidor' })
             ]);
             setLotes(loteData || []);
