@@ -13,6 +13,7 @@ export default function CarteiraInvestidor() {
     const [searchParams] = useSearchParams();
     const [usuario, setUsuario] = useState(null);
     const [lotesParticipando, setLotesParticipando] = useState([]);
+    const [historico, setHistorico] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isProcessingDeposit, setIsProcessingDeposit] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
