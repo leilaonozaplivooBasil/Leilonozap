@@ -12,6 +12,7 @@ const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currenc
 
 export default function CarteiraInvestidor() {
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const [usuario, setUsuario] = useState(null);
     const [lotesParticipando, setLotesParticipando] = useState([]);
     const [historico, setHistorico] = useState([]);
