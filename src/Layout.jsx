@@ -645,7 +645,7 @@ export default function Layout({ children, currentPageName }) {
                 <div className="hidden md:flex md:gap-x-6 items-center">
 
                   {/* ITENS DO MENU */}
-                  {finalMenuItems.map((item) => (
+                  {finalMenuItems.filter(item => item.pageName).map((item) => (
                     <Link
                       key={item.title}
                       to={createPageUrl(item.pageName) + (item.addFromCatalog ? "?from=catalog" : "")}
