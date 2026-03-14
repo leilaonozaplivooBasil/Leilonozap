@@ -175,6 +175,46 @@ export default function CarteiraInvestidor() {
                     </div>
                 </div>
 
+                {/* Histórico de Movimentações */}
+                {historico.length > 0 && (
+                    <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden mt-8">
+                        <div className="p-6 border-b border-[#30363d] bg-slate-800/10 flex items-center gap-3">
+                            <TrendingUp className="text-slate-400" />
+                            <h3 className="font-bold text-white text-lg">Histórico de Movimentações</h3>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-[#0d1117] text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                                        <th className="px-6 py-4">Data</th>
+                                        <th className="px-6 py-4">Descrição</th>
+                                        <th className="px-6 py-4">Tipo</th>
+                                        <th className="px-6 py-4 text-right">Valor</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="text-sm">
+                                    {historico.map(tx => (
+                                        <tr key={tx.id} className="border-b border-[#30363d]/50 hover:bg-white/[0.02] transition-colors">
+                                            <td className="px-6 py-4 text-slate-400 whitespace-nowrap">
+                                                {new Date(tx.created_date).toLocaleDateString('pt-BR')}
+                                            </td>
+                                            <td className="px-6 py-4 text-slate-200">{tx.description || '—'}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider ${tx.direction === 'credit' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                    {tx.direction === 'credit' ? 'ENTRADA' : 'SAÍDA'}
+                                                </span>
+                                            </td>
+                                            <td className={`px-6 py-4 text-right font-bold ${tx.direction === 'credit' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                                {tx.direction === 'credit' ? '+' : '-'}{formatCurrency(tx.amount)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
                 {/* Lotes Participando */}
                 <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden mt-8">
                     <div className="p-6 border-b border-[#30363d] bg-slate-800/10 flex items-center gap-3">
