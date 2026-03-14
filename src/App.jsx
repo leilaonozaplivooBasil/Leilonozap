@@ -13,6 +13,7 @@ import AnaliseDeLotes from '@/pages/AnaliseDeLotes';
 import GestaoLotes from '@/pages/GestaoLotes';
 import SistemaDeArremate from '@/pages/SistemaDeArremate';
 import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
+import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
 import RequireRole from '@/components/common/RequireRole';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
