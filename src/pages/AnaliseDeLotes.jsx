@@ -12,6 +12,7 @@ function AnaliseDeLotes() {
     const navigate = useNavigate();
     const [loteData, setLoteData] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
     const [error, setError] = useState('');
     const [expandedCategories, setExpandedCategories] = useState(new Set());
 
