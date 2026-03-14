@@ -175,7 +175,7 @@ export default function MarketplaceLotes() {
                                         Ver sala <ArrowRight size={12} />
                                     </button>
                                     <button
-                                        onClick={() => { setLoteModal(lote); setValorAutorizado(''); setAutorizado(false); }}
+                                        onClick={() => { setLoteModal(lote); setValorAutorizado(''); setAutorizado(false); setModeloEscolhido(null); setPercentualCotas(''); }}
                                         className="flex-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
                                     >
                                         <DollarSign size={12} /> Autorizar Lance
