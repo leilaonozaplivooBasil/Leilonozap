@@ -14,7 +14,17 @@ export default function MarketplaceLotes() {
     const [isLoading, setIsLoading] = useState(true);
     const [erro, setErro] = useState(null);
     const [busca, setBusca] = useState('');
+    const [loteModal, setLoteModal] = useState(null); // lote selecionado para autorizar lance
+    const [valorAutorizado, setValorAutorizado] = useState('');
+    const [autorizado, setAutorizado] = useState(false);
     const navigate = useNavigate();
+
+    const TAXA_OPERACAO = 0.10;
+
+    const calcDeposito = (val) => {
+        const v = parseFloat(String(val).replace(',', '.')) || 0;
+        return { valor: v, taxa: v * TAXA_OPERACAO, total: v * (1 + TAXA_OPERACAO) };
+    };
 
     useEffect(() => {
         loadLotes();
