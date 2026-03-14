@@ -148,13 +148,13 @@ export default function CarteiraInvestidor() {
                         <p className="text-4xl font-black text-white tracking-tight">{formatCurrency(saldoDisponivel)}</p>
                         <div className="mt-6 flex gap-3">
                             <button
-                                onClick={() => alert('Entre em contato com nossa equipe pelo WhatsApp para realizar um depósito.')}
-                                className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors flex justify-center items-center gap-2">
+                                onClick={() => navigate(createPageUrl('AddFunds'))}
+                                className="flex-1 bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold py-2 rounded-lg transition-colors flex justify-center items-center gap-2">
                                 <ArrowDownToLine size={16} /> Depositar
                             </button>
                             <button
-                                className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors flex justify-center items-center gap-2"
-                                onClick={() => alert('Entre em contato com nossa equipe pelo WhatsApp para solicitar um saque.')}
+                                className="flex-1 bg-slate-800 hover:bg-slate-700 text-white text-sm font-semibold py-2 rounded-lg transition-colors flex justify-center items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                                onClick={() => navigate(createPageUrl('AdminWithdrawals'))}
                                 disabled={saldoDisponivel <= 0}>
                                 <ArrowUpFromLine size={16} /> Sacar
                             </button>
