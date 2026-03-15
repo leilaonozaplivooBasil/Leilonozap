@@ -200,6 +200,37 @@ export default function GestaoLotes() {
         return matchBusca && matchStatus;
     });
 
+    const distribuirComissao = async (lote) => {
+        if (lote.commissions_distributed) {
+            toast.info('Comissões já foram distribuídas para este lote.');
+            return;
+        }
+        if (!lote.partner_id || !lote.partner_commission_percentual) {
+            toast.error('Defina parceiro e percentual de comissão antes de distribuir.');
+            return;
+        }
+        if (!confirm(`Distribuir comissão de ${lote.partner_commission_percentual}% para ${lote.partner_name}?`)) return;
+        setIsSaving(lote.id);
+        try {
+            const res = await distributeAuctionCommissions({ auction_id: lote.id });
+            const data = res?.data || res;
+            if (data?.status === 'success' || data?.status === 'already_processed') {
+                await Auction.update(lote.id, { commissions_distributed: true, lot_status: 'finalizado' });
+                setLotes(prev => prev.map(l => l.id === lote.id
+                    ? { ...l, commissions_distributed: true, lot_status: 'finalizado' }
+                    : l
+                ));
+                toast.success(`✅ Comissão de R$ ${data.valor_parceiro?.toFixed(2) || '—'} creditada para ${lote.partner_name}`);
+            } else {
+                toast.error(data?.error || 'Erro ao distribuir comissão.');
+            }
+        } catch (err) {
+            toast.error('Erro ao distribuir comissão: ' + err.message);
+        } finally {
+            setIsSaving(null);
+        }
+    };
+
     const statsInvestidores = investidores.length;
     const lotesMarketplace = lotes.filter(l => l.is_investment_plan).length;
     const lotesSold = lotes.filter(l => l.status === 'sold').length;
