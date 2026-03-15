@@ -238,8 +238,10 @@ export default function AuctionCheckoutModern() {
 
       console.log('📤 Enviando para backend:', { auction_id: isWalletDeposit ? null : auction.id, amount, billing_type: paymentType });
 
+      // Para depósito de capital de investidor, passa o auction_id real + flag especial
+      const isInvestorCapital = depositType === 'investor_capital';
       const paymentResponse = await base44.functions.invoke('createAsaasPayment', {
-        auction_id: isWalletDeposit ? null : auction.id,
+        auction_id: isInvestorCapital ? auction.id : (isWalletDeposit ? null : auction.id),
         buyer_id: currentUser?.id || null,
         buyer_name: firstName.trim(),
         buyer_email: email.trim(),
@@ -248,12 +250,15 @@ export default function AuctionCheckoutModern() {
         amount: amount,
         billing_type: paymentType,
         description: isWalletDeposit
-          ? (depositType === 'digital_wallet'
-            ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}`
-            : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
+          ? (isInvestorCapital
+            ? `Depósito de Capital — Lote de Investimento - R$ ${amount.toFixed(2)}`
+            : depositType === 'digital_wallet'
+              ? `Depósito na Carteira Digital - R$ ${amount.toFixed(2)}`
+              : `Depósito na Carteira de Comissões - R$ ${amount.toFixed(2)}`)
           : `Arremate - ${auction.title}`,
         card_data: cardData,
-        deposit_type: depositType
+        deposit_type: depositType,
+        is_investor_capital: isInvestorCapital // flag para o backend reconhecer
       });
 
       console.log('📥 Resposta do backend:', paymentResponse);
