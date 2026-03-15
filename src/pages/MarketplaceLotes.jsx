@@ -156,6 +156,27 @@ export default function MarketplaceLotes() {
                                             }
                                         </p>
                                     </div>
+                                    {/* ROI estimado (cenário realista 60%) */}
+                                    {(lote.market_price || lote.manual_market_price) && (() => {
+                                        const vm = lote.market_price || lote.manual_market_price;
+                                        const custo = lote.current_price || lote.starting_price;
+                                        const projecao60 = vm * 0.60;
+                                        const lucro = projecao60 - custo;
+                                        const roi = custo > 0 ? (lucro / custo) * 100 : 0;
+                                        const roiColor = roi >= 100 ? 'text-emerald-400' : roi >= 50 ? 'text-blue-400' : 'text-amber-400';
+                                        return (
+                                            <>
+                                                <div>
+                                                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Val. Mercado</p>
+                                                    <p className="text-sm font-semibold text-slate-300">{formatCurrency(vm)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">ROI Est. (60%)</p>
+                                                    <p className={`text-sm font-black ${roiColor}`}>{roi >= 0 ? '+' : ''}{roi.toFixed(0)}%</p>
+                                                </div>
+                                            </>
+                                        );
+                                    })()}
                                     {lote.winner_name && (
                                         <div className="col-span-2">
                                             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Vencedor</p>
