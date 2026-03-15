@@ -275,7 +275,8 @@ Deno.serve(async (req) => {
             }
 
             // ✅ PASSO 3: Atualizar Auction (se aplicável)
-            if (asaasPayment.auction_id) {
+            // 🛡️ NÃO atualizar lote de investimento aqui — ele ainda está em disputa
+            if (asaasPayment.auction_id && !asaasPayment.is_investor_capital) {
                 const auctions = await base44.asServiceRole.entities.Auction.filter(
                     { id: asaasPayment.auction_id },
                     null,
