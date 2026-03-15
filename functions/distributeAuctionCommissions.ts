@@ -70,11 +70,16 @@ Deno.serve(async (req) => {
     const valorPlataforma = parseFloat((valorArremate * (platformPct / 100)).toFixed(2));
 
     // 3. Buscar parceiro
-    const parceiros = await base44.asServiceRole.entities.AppUser.filter({ id: auction.partner_id }, null, 1);
-    if (!parceiros || parceiros.length === 0) {
+    let parceiro;
+    try {
+      const parceiros = await base44.asServiceRole.entities.AppUser.filter({ id: auction.partner_id }, null, 1);
+      if (!parceiros || parceiros.length === 0) {
+        return Response.json({ error: 'Parceiro não encontrado' }, { status: 404 });
+      }
+      parceiro = parceiros[0];
+    } catch (e) {
       return Response.json({ error: 'Parceiro não encontrado' }, { status: 404 });
     }
-    const parceiro = parceiros[0];
 
     // 4. Creditar comissão ao parceiro (commission_balance)
     const novoSaldoParceiro = (parceiro.commission_balance || 0) + valorParceiro;
