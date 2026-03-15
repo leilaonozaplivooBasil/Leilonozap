@@ -43,12 +43,38 @@ export default function GestaoLotes() {
     };
 
     const toggleInvestmentPlan = async (lote) => {
+        // Bloqueia publicação no marketplace sem parceiro definido
+        if (!lote.is_investment_plan && !lote.partner_id) {
+            toast.error('Defina o parceiro responsável antes de publicar no marketplace.');
+            return;
+        }
         setIsSaving(lote.id);
         try {
             await Auction.update(lote.id, { is_investment_plan: !lote.is_investment_plan });
             setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, is_investment_plan: !l.is_investment_plan } : l));
         } catch (err) {
             console.error('[GestaoLotes] Erro ao atualizar:', err);
+        } finally {
+            setIsSaving(null);
+        }
+    };
+
+    const atualizarParceiro = async (lote, parceiroId) => {
+        const parceiro = parceiros.find(p => p.id === parceiroId);
+        setIsSaving(lote.id);
+        try {
+            await Auction.update(lote.id, {
+                partner_id: parceiroId || null,
+                partner_name: parceiro?.full_name || null
+            });
+            setLotes(prev => prev.map(l => l.id === lote.id
+                ? { ...l, partner_id: parceiroId || null, partner_name: parceiro?.full_name || null }
+                : l
+            ));
+            toast.success(parceiro ? `Parceiro "${parceiro.full_name}" associado.` : 'Parceiro removido.');
+        } catch (err) {
+            console.error('[GestaoLotes] Erro ao associar parceiro:', err);
+            toast.error('Erro ao associar parceiro.');
         } finally {
             setIsSaving(null);
         }
