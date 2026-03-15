@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
-import { Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users, DollarSign, Gavel } from 'lucide-react';
+import { Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users, DollarSign, Gavel, Coins } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
+import { distributeAuctionCommissions } from '@/functions/distributeAuctionCommissions';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
