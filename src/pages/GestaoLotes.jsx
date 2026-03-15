@@ -134,8 +134,10 @@ export default function GestaoLotes() {
             setLotes(prev => prev.map(l => l.id === lote.id ? {
                 ...l, status: 'sold', winner_id: vencedor.id, winner_name: vencedor.full_name
             } : l));
+            toast.success(`✅ Arremate registrado para ${vencedor.full_name}`);
         } catch (err) {
             console.error('[GestaoLotes] Erro ao registrar arremate:', err);
+            toast.error('Erro ao registrar arremate. Tente novamente.');
         } finally {
             setIsSaving(null);
         }
