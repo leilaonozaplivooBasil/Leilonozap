@@ -208,6 +208,20 @@ export default function ArquitetoIA() {
                   )}
                   Analisar Sistema
                 </Button>
+                <a
+                  href={base44.agents.getWhatsAppConnectURL('arquiteto_base44')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-green-400 hover:text-green-300 hover:bg-green-600/20"
+                  >
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    WhatsApp
+                  </Button>
+                </a>
                 <Button
                   variant="ghost"
                   size="sm"
