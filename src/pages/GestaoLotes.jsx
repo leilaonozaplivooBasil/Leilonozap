@@ -270,6 +270,7 @@ export default function GestaoLotes() {
                                         <th className="px-6 py-4">Lote</th>
                                         <th className="px-6 py-4">Lance Atual</th>
                                         <th className="px-6 py-4">Status</th>
+                                        <th className="px-6 py-4">Parceiro</th>
                                         <th className="px-6 py-4 text-center">Marketplace</th>
                                         <th className="px-6 py-4">Vencedor / Registrar</th>
                                         <th className="px-6 py-4"></th>
