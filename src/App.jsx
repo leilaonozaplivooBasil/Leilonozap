@@ -125,6 +125,13 @@ const AuthenticatedApp = () => {
           </RequireRole>
         </LayoutWrapper>
       } />
+      <Route path="/ParceiroLotes" element={
+        <LayoutWrapper currentPageName="ParceiroLotes">
+          <RequireRole allowedRoles={['admin', 'leiloeiro']} fallbackRoute="Home" noAuthRoute="Landing">
+            <ParceiroLotes />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/AdminLancesAutorizados" element={
         <LayoutWrapper currentPageName="AdminLancesAutorizados">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
