@@ -52,6 +52,13 @@ export default function AuctionCheckoutModern() {
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [paymentType, setPaymentType] = useState('PIX');
   const isInvestidor = currentUser?.role === 'investidor';
+
+  // Garante que investidor só pague com PIX
+  React.useEffect(() => {
+    if (isInvestidor && paymentType !== 'PIX') {
+      setPaymentType('PIX');
+    }
+  }, [isInvestidor]);
   const [pixData, setPixData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState('info'); // 'info', 'payment', 'success'
