@@ -224,7 +224,8 @@ Deno.serve(async (req) => {
         }
 
         // 🔒 PASSO 4: Registrar no banco de dados
-        const isWalletDeposit = !catalog_sale_id && !auction_id;
+        // Depósito de capital de investidor é is_wallet_deposit=true mesmo com auction_id presente
+        const isWalletDeposit = !catalog_sale_id && (!auction_id || is_investor_capital);
         const isDigitalWallet = deposit_type === 'digital_wallet';
 
         // Para depósito de carteira, obter user_id
