@@ -117,6 +117,13 @@ const AuthenticatedApp = () => {
           </RequireRole>
         </LayoutWrapper>
       } />
+      <Route path="/SentinelNoZap" element={
+        <LayoutWrapper currentPageName="SentinelNoZap">
+          <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <SentinelNoZap />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/AdminLancesAutorizados" element={
         <LayoutWrapper currentPageName="AdminLancesAutorizados">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
