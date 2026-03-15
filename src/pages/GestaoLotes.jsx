@@ -54,14 +54,82 @@ export default function GestaoLotes() {
         if (!vencedorId) return;
         const vencedor = investidores.find(i => i.id === vencedorId);
         if (!vencedor) return;
+
+        const valorFinal = lote.current_price || lote.starting_price;
+        const confirmMsg = `Confirmar arremate do lote "${lote.title}" para ${vencedor.full_name} por ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valorFinal)}?`;
+        if (!confirm(confirmMsg)) return;
+
         setIsSaving(lote.id);
         try {
+            // 1. Atualiza lote como arrematado
             await Auction.update(lote.id, {
                 status: 'sold',
                 winner_id: vencedor.id,
                 winner_name: vencedor.full_name,
                 order_status: 'paid'
             });
+
+            // 2. Libera saldo restante: saldo_alocado → saldo_disponivel
+            // Busca autorizações confirmadas do investidor para este lote
+            try {
+                const autorizacoes = await base44.asServiceRole.entities.LanceAutorizado.filter({
+                    investidor_id: vencedor.id,
+                    auction_id: lote.id,
+                    status_autorizacao: 'confirmada'
+                });
+
+                if (autorizacoes && autorizacoes.length > 0) {
+                    const auth = autorizacoes[0];
+                    const depositoTotal = auth.deposito_confirmado || 0;
+                    const valorUtilizado = valorFinal;
+                    const saldoRestante = Math.max(0, depositoTotal - valorUtilizado);
+
+                    // Atualiza saldos do investidor
+                    const saldoAlocadoAtual = vencedor.saldo_alocado || 0;
+                    const saldoDisponivelAtual = vencedor.saldo_disponivel || 0;
+
+                    await base44.entities.AppUser.update(vencedor.id, {
+                        saldo_alocado: Math.max(0, saldoAlocadoAtual - depositoTotal),
+                        saldo_disponivel: saldoDisponivelAtual + saldoRestante
+                    });
+
+                    // Registra resultado no histórico
+                    await base44.entities.WalletTransaction.create({
+                        user_id: vencedor.id,
+                        type: 'purchase',
+                        direction: 'debit',
+                        amount: valorUtilizado,
+                        status: 'confirmed',
+                        related_auction_id: lote.id,
+                        description: `Arremate: ${lote.title} - ${new Date().toLocaleDateString('pt-BR')}`
+                    });
+
+                    if (saldoRestante > 0) {
+                        await base44.entities.WalletTransaction.create({
+                            user_id: vencedor.id,
+                            type: 'refund',
+                            direction: 'credit',
+                            amount: saldoRestante,
+                            status: 'confirmed',
+                            related_auction_id: lote.id,
+                            description: `Saldo restante liberado: ${lote.title}`
+                        });
+                    }
+
+                    // Marca autorização como concluída
+                    await base44.asServiceRole.entities.LanceAutorizado.update(auth.id, {
+                        status_autorizacao: 'concluida',
+                        data_conclusao: new Date().toISOString(),
+                        observacoes: `Arremate registrado em ${new Date().toLocaleDateString('pt-BR')} por R$ ${valorFinal.toFixed(2)}. Saldo restante liberado: R$ ${saldoRestante.toFixed(2)}`
+                    });
+
+                    console.log('[GestaoLotes] Saldo liberado:', { valorUtilizado, saldoRestante, investidor: vencedor.id });
+                }
+            } catch (saldoErr) {
+                // Não-bloqueante: arremate já foi registrado, só loga o erro de saldo
+                console.error('[GestaoLotes] Aviso: erro ao liberar saldo (arremate já registrado):', saldoErr);
+            }
+
             setLotes(prev => prev.map(l => l.id === lote.id ? {
                 ...l, status: 'sold', winner_id: vencedor.id, winner_name: vencedor.full_name
             } : l));
