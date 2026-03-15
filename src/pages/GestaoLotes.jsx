@@ -80,6 +80,21 @@ export default function GestaoLotes() {
         }
     };
 
+    const atualizarComissaoParceiro = async (lote, pct) => {
+        const valor = parseFloat(pct);
+        if (isNaN(valor) || valor < 0 || valor > 100) return;
+        setIsSaving(lote.id);
+        try {
+            await Auction.update(lote.id, { partner_commission_percentual: valor });
+            setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, partner_commission_percentual: valor } : l));
+        } catch (err) {
+            console.error('[GestaoLotes] Erro ao atualizar comissão:', err);
+            toast.error('Erro ao atualizar comissão.');
+        } finally {
+            setIsSaving(null);
+        }
+    };
+
     const registrarArremate = async (lote, vencedorId) => {
         if (!vencedorId) return;
         const vencedor = investidores.find(i => i.id === vencedorId);
