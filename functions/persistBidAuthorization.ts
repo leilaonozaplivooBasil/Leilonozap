@@ -45,6 +45,9 @@ Deno.serve(async (req) => {
           modelo,
           valor_maximo_autorizado,
           percentual_compartilhado: percentual_compartilhado || 0,
+          taxa_operacao_percentual: TAXA_OPERACAO_PERCENTUAL,
+          valor_taxa_operacao,
+          valor_capital_liquido,
           deposito_confirmado: deposito_confirmado || 0,
           status_autorizacao: 'confirmada',
           data_autorizacao: new Date().toISOString()
@@ -61,6 +64,9 @@ Deno.serve(async (req) => {
         modelo,
         valor_maximo_autorizado,
         percentual_compartilhado: percentual_compartilhado || 0,
+        taxa_operacao_percentual: TAXA_OPERACAO_PERCENTUAL,
+        valor_taxa_operacao,
+        valor_capital_liquido,
         deposito_confirmado: deposito_confirmado || 0,
         status_autorizacao: 'confirmada',
         data_autorizacao: new Date().toISOString()
