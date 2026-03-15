@@ -287,6 +287,8 @@ Deno.serve(async (req) => {
             auction_id: auction_id || null,
             wallet_deposit_user_id: walletDepositUserId,
             is_wallet_deposit: isWalletDeposit,
+            // 🆕 Flag para identificar depósitos de capital de investidor no webhook
+            is_investor_capital: is_investor_capital || false,
             buyer_id: buyerId || explicitBuyerId || null,
             buyer_name: buyer_name,
             buyer_email: buyer_email,
