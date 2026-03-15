@@ -428,12 +428,15 @@ Deno.serve(async (req) => {
             }
 
             // ✅ PASSO 5: Creditar saldo do investidor (depósito de capital para lote de investimento)
-            // Identificado por: is_wallet_deposit=true + external_reference='investor-deposit'
-            if (
+            // Identificado por: is_wallet_deposit=true + auction_id presente + sem catalog_sale_id + sem digital-wallet-deposit
+            const isInvestorDeposit =
                 asaasPayment.is_wallet_deposit &&
                 asaasPayment.wallet_deposit_user_id &&
-                asaasPayment.external_reference === 'investor-deposit'
-            ) {
+                asaasPayment.auction_id &&
+                !asaasPayment.catalog_sale_id &&
+                asaasPayment.external_reference !== 'digital-wallet-deposit';
+
+            if (isInvestorDeposit) {
                 try {
                     console.log('💼 Processando depósito de capital de investidor...');
 
