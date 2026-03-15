@@ -51,6 +51,7 @@ export default function AuctionCheckoutModern() {
   const [addressZip, setAddressZip] = useState('');
   const [isLoadingCep, setIsLoadingCep] = useState(false);
   const [paymentType, setPaymentType] = useState('PIX');
+  const isInvestidor = currentUser?.role === 'investidor';
   const [pixData, setPixData] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState('info'); // 'info', 'payment', 'success'
