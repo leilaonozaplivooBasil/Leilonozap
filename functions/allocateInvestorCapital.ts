@@ -63,11 +63,16 @@ Deno.serve(async (req) => {
     }
 
     // 3. Buscar investidor
-    const investidores = await base44.asServiceRole.entities.AppUser.filter({ id: investidorId }, null, 1);
-    if (!investidores || investidores.length === 0) {
+    let investidor;
+    try {
+      const investidores = await base44.asServiceRole.entities.AppUser.filter({ id: investidorId }, null, 1);
+      if (!investidores || investidores.length === 0) {
+        return Response.json({ error: 'Investidor não encontrado' }, { status: 404 });
+      }
+      investidor = investidores[0];
+    } catch (e) {
       return Response.json({ error: 'Investidor não encontrado' }, { status: 404 });
     }
-    const investidor = investidores[0];
 
     const saldoDisponivel = investidor.saldo_disponivel || 0;
     const saldoAlocado = investidor.saldo_alocado || 0;
