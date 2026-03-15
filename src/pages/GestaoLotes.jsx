@@ -176,8 +176,11 @@ export default function GestaoLotes() {
                 console.error('[GestaoLotes] Aviso: erro ao liberar saldo (arremate já registrado):', saldoErr);
             }
 
+            // Atualiza lot_status para arrematado
+            await Auction.update(lote.id, { lot_status: 'arrematado' });
+
             setLotes(prev => prev.map(l => l.id === lote.id ? {
-                ...l, status: 'sold', winner_id: vencedor.id, winner_name: vencedor.full_name
+                ...l, status: 'sold', lot_status: 'arrematado', winner_id: vencedor.id, winner_name: vencedor.full_name
             } : l));
             toast.success(`✅ Arremate registrado para ${vencedor.full_name}`);
         } catch (err) {
