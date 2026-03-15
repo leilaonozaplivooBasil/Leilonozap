@@ -56,14 +56,17 @@ export default function CarteiraInvestidor() {
         }
     };
 
-    const handleSimulatePayment = () => {
-        setIsProcessingDeposit(true);
-        const timer = setTimeout(() => {
-            setIsProcessingDeposit(false);
-            setShowSuccess(true);
-        }, 2000);
-        // Garante limpeza do timer se componente desmontar
-        return () => clearTimeout(timer);
+    // Redireciona para o checkout real com os dados do depósito de capital
+    const handleDepositarCapital = () => {
+        // Busca o auction_id da URL (parâmetro 'lote_id')
+        const loteId = searchParams.get('lote_id');
+        navigate(createPageUrl('AuctionCheckoutModern'), {
+            state: {
+                amount: pendingAmount,
+                depositType: 'investor_capital', // Identifica como depósito de capital de investidor
+                auctionId: loteId || null
+            }
+        });
     };
 
     const saldoDisponivel = usuario?.saldo_disponivel ?? 0;
