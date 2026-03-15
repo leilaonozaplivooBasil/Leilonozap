@@ -116,15 +116,10 @@ export default function CarteiraInvestidor() {
                             <span className="block text-xs text-slate-400 uppercase font-bold tracking-wider mb-1">Valor do Depósito</span>
                             <span className="block text-3xl font-black text-white mb-4">{formatCurrency(pendingAmount)}</span>
                             <button
-                                onClick={handleSimulatePayment}
-                                disabled={isProcessingDeposit}
-                                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2"
+                               onClick={handleDepositarCapital}
+                               className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2"
                             >
-                                {isProcessingDeposit ? (
-                                    <><RefreshCw className="animate-spin" size={18} /> Processando...</>
-                                ) : (
-                                    <>Realizar Depósito PIX</>
-                                )}
+                               Realizar Depósito PIX
                             </button>
                         </div>
                     </motion.div>
