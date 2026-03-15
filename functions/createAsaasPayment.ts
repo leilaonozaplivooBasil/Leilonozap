@@ -109,6 +109,9 @@ Deno.serve(async (req) => {
         // 🔒 PASSO 2: Criar cobrança no ASAAS
         console.log('💳 Criando cobrança no ASAAS...', { billing_type, amount, customer: customerId });
 
+        // Para depósito de investidor, external_reference é o auction_id (identificador do lote)
+        // Para depósito de carteira digital, é 'digital-wallet-deposit'
+        // Para outros, é catalog_sale_id ou auction_id
         const externalReference = catalog_sale_id || auction_id;
 
         // dueDate é OBRIGATÓRIO (sim, mesmo para cartão)
