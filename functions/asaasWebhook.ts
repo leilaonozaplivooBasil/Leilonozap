@@ -427,6 +427,61 @@ Deno.serve(async (req) => {
                 }
             }
 
+            // ✅ PASSO 5: Creditar saldo do investidor (depósito de capital para lote de investimento)
+            // Identificado por: is_wallet_deposit=true + external_reference='investor-deposit'
+            if (
+                asaasPayment.is_wallet_deposit &&
+                asaasPayment.wallet_deposit_user_id &&
+                asaasPayment.external_reference === 'investor-deposit'
+            ) {
+                try {
+                    console.log('💼 Processando depósito de capital de investidor...');
+
+                    // Idempotência: verifica se já foi creditado
+                    const existingTxs = await base44.asServiceRole.entities.WalletTransaction.filter(
+                        { user_id: asaasPayment.wallet_deposit_user_id, related_auction_id: asaasPayment.auction_id || 'investor-deposit' },
+                        null, 5
+                    );
+                    const alreadyCredited = existingTxs && existingTxs.some(tx =>
+                        tx.status === 'confirmed' && tx.direction === 'credit' && tx.description?.includes(paymentId)
+                    );
+
+                    if (alreadyCredited) {
+                        console.log('⏭️ Saldo do investidor já creditado para este pagamento:', paymentId);
+                    } else {
+                        // Atualiza saldo_disponivel no AppUser
+                        const investors = await base44.asServiceRole.entities.AppUser.filter(
+                            { id: asaasPayment.wallet_deposit_user_id }, null, 1
+                        );
+                        if (investors && investors.length > 0) {
+                            const investor = investors[0];
+                            const novoSaldoDisponivel = (investor.saldo_disponivel || 0) + asaasPayment.value;
+                            await base44.asServiceRole.entities.AppUser.update(investor.id, {
+                                saldo_disponivel: novoSaldoDisponivel
+                            });
+                            console.log('✅ saldo_disponivel do investidor atualizado:', investor.id, '->', novoSaldoDisponivel);
+
+                            // Registra transação para histórico
+                            await base44.asServiceRole.entities.WalletTransaction.create({
+                                user_id: investor.id,
+                                type: 'deposit',
+                                direction: 'credit',
+                                amount: asaasPayment.value,
+                                status: 'confirmed',
+                                related_auction_id: asaasPayment.auction_id || 'investor-deposit',
+                                description: `Depósito de capital - PIX - ${paymentId}`
+                            });
+                            console.log('✅ WalletTransaction de investidor registrada');
+                        } else {
+                            console.warn('⚠️ Investidor não encontrado para creditar saldo:', asaasPayment.wallet_deposit_user_id);
+                        }
+                    }
+                } catch (investorErr) {
+                    console.error('❌ Erro ao creditar saldo do investidor:', investorErr.message);
+                    // Não-bloqueante: loga e continua
+                }
+            }
+
             // 🔗 [EVENT ADAPTER] Exportar evento de performance (assíncrono, não-bloqueante)
             try {
                 const eventPayload = {
