@@ -29,11 +29,16 @@ Deno.serve(async (req) => {
     }
 
     // 1. Buscar o lote
-    const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id }, null, 1);
-    if (!auctions || auctions.length === 0) {
+    let auction;
+    try {
+      const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id }, null, 1);
+      if (!auctions || auctions.length === 0) {
+        return Response.json({ error: 'Lote não encontrado' }, { status: 404 });
+      }
+      auction = auctions[0];
+    } catch (e) {
       return Response.json({ error: 'Lote não encontrado' }, { status: 404 });
     }
-    const auction = auctions[0];
 
     if (auction.status !== 'sold') {
       return Response.json({ error: 'Lote não está com status sold' }, { status: 400 });
