@@ -418,6 +418,18 @@ export default function GestaoLotes() {
                                                     </select>
                                                 ) : <span className="text-slate-600 text-xs">—</span>}
                                             </td>
+                                            <td className="px-6 py-4 text-center">
+                                                {lote.status === 'sold' && (
+                                                    <button
+                                                        onClick={() => distribuirComissao(lote)}
+                                                        disabled={isSaving === lote.id || lote.commissions_distributed}
+                                                        title={lote.commissions_distributed ? 'Comissão já distribuída' : 'Distribuir comissão ao parceiro'}
+                                                        className={`transition-colors ${lote.commissions_distributed ? 'text-emerald-400 cursor-default' : 'text-slate-500 hover:text-amber-400'}`}
+                                                    >
+                                                        <DollarSign size={16} />
+                                                    </button>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4 text-right">
                                                 <button
                                                     onClick={() => navigate(createPageUrl('AuctionRoom') + `?id=${lote.id}`)}
