@@ -22,7 +22,8 @@ Deno.serve(async (req) => {
             billing_type = 'PIX', // PIX ou CREDIT_CARD
             description,
             card_data, // Dados do cartão (se CREDIT_CARD)
-            deposit_type // 'digital_wallet' ou null (para identificar tipo de depósito)
+            deposit_type, // 'digital_wallet', 'investor_capital' ou null
+            is_investor_capital = false // Flag: depósito de capital de investidor
         } = await req.json();
 
         // 🔒 Normalizar IDs do lote: catalog_sale_id pode conter vírgulas (ex: "id1,id2,id3")
