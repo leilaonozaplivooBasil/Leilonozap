@@ -297,6 +297,23 @@ export default function GestaoLotes() {
                                                     {lote.status === 'active' ? 'ATIVO' : lote.status === 'sold' ? 'ARREMATADO' : lote.status?.toUpperCase()}
                                                 </span>
                                             </td>
+                                            <td className="px-6 py-4">
+                                                {lote.status === 'sold' ? (
+                                                    <span className="text-slate-400 text-xs">{lote.partner_name || '—'}</span>
+                                                ) : (
+                                                    <select
+                                                        value={lote.partner_id || ''}
+                                                        onChange={e => atualizarParceiro(lote, e.target.value)}
+                                                        disabled={isSaving === lote.id}
+                                                        className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 max-w-[140px]"
+                                                    >
+                                                        <option value="">Sem parceiro</option>
+                                                        {parceiros.map(p => (
+                                                            <option key={p.id} value={p.id}>{p.full_name}</option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4 text-center">
                                                 <button
                                                     onClick={() => toggleInvestmentPlan(lote)}
