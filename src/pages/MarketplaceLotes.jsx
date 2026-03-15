@@ -375,7 +375,7 @@ export default function MarketplaceLotes() {
                                     </p>
                                     <p className="text-slate-500 text-xs mb-6">Nossa equipe entrará em contato via WhatsApp para confirmar o depósito e sua participação no lote.</p>
                                     <button
-                                        onClick={() => { setLoteModal(null); navigate(createPageUrl('CarteiraInvestidor')); }}
+                                        onClick={() => { setLoteModal(null); navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(calcDeposito(valorAutorizado).total * (modeloEscolhido === 'B' && percentualCotas ? parseFloat(percentualCotas) / 100 : 1))}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`); }}
                                         className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors"
                                     >
                                         Ver minha Carteira
