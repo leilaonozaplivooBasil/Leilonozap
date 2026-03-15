@@ -971,23 +971,25 @@ export default function AuctionCheckoutModern() {
                           </div>
                         </div>
                       </button>
-                      <button
-                        onClick={() => setPaymentType('CREDIT_CARD')}
-                        className={`p-3 rounded-lg border-2 transition-all text-left ${paymentType === 'CREDIT_CARD'
-                            ? 'border-green-500 bg-green-500/10'
-                            : 'border-gray-700 bg-gray-800/30 hover:border-green-500/50'
-                          }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <div className={`flex-shrink-0 p-2 rounded-lg ${paymentType === 'CREDIT_CARD' ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600'}`}>
-                            <CreditCard className={`w-4 h-4 ${paymentType === 'CREDIT_CARD' ? 'text-green-400' : 'text-gray-400'}`} />
+                      {!isInvestidor && (
+                        <button
+                          onClick={() => setPaymentType('CREDIT_CARD')}
+                          className={`p-3 rounded-lg border-2 transition-all text-left ${paymentType === 'CREDIT_CARD'
+                              ? 'border-green-500 bg-green-500/10'
+                              : 'border-gray-700 bg-gray-800/30 hover:border-green-500/50'
+                            }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <div className={`flex-shrink-0 p-2 rounded-lg ${paymentType === 'CREDIT_CARD' ? 'bg-green-500/20 border border-green-400/30' : 'bg-gray-700/50 border border-gray-600'}`}>
+                              <CreditCard className={`w-4 h-4 ${paymentType === 'CREDIT_CARD' ? 'text-green-400' : 'text-gray-400'}`} />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-white">Cartão de Crédito</p>
+                              <p className="text-xs text-gray-400">Em até 12x</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-white">Cartão de Crédito</p>
-                            <p className="text-xs text-gray-400">Em até 12x</p>
-                          </div>
-                        </div>
-                      </button>
+                        </button>
+                      )}
                     </div>
 
                     <Button
