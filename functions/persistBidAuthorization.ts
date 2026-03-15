@@ -73,6 +73,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Tenta alocar capital automaticamente (não-bloqueante: falha silenciosa se saldo insuficiente)
+    let capital_alocado = false;
+    try {
+      const allocResult = await base44.functions.invoke('allocateInvestorCapital', {
+        authorization_id: result.id
+      });
+      const allocData = allocResult?.data || allocResult;
+      capital_alocado = allocData?.status === 'success' || allocData?.status === 'already_processed';
+    } catch (allocErr) {
+      // Não-bloqueante: autorização já foi salva com sucesso
+      console.warn('Alocação automática não realizada:', allocErr.message);
+    }
+
     return Response.json({
       status: 'success',
       message: 'Autorização persistida',
@@ -80,7 +93,8 @@ Deno.serve(async (req) => {
       investidor: user.full_name,
       auction_id,
       modelo,
-      valor_autorizado: valor_maximo_autorizado
+      valor_autorizado: valor_maximo_autorizado,
+      capital_alocado
     });
 
   } catch (error) {
