@@ -352,17 +352,19 @@ export default function AuctionCheckoutModern() {
         const savedUser = JSON.parse(savedUserJSON);
         setCurrentUser(savedUser);
 
-        // Verifica se veio de AddFunds (depósito de carteira)
+        // Verifica se veio de AddFunds (depósito de carteira) ou CarteiraInvestidor (depósito de capital)
         const stateAmount = location.state?.amount;
-        const stateDepositType = location.state?.depositType; // 'digital_wallet' ou null
+        const stateDepositType = location.state?.depositType; // 'digital_wallet', 'investor_capital' ou null
+        const stateAuctionId = location.state?.auctionId; // auction_id para depósito de investidor
 
         if (stateAmount) {
           setIsWalletDeposit(true);
           setDepositAmount(stateAmount);
           setDepositType(stateDepositType); // Armazena tipo de depósito
+          const isInvestorCapital = stateDepositType === 'investor_capital';
           setAuction({
-            id: stateDepositType === 'digital_wallet' ? 'digital-wallet-deposit' : 'wallet-deposit',
-            title: stateDepositType === 'digital_wallet' ? 'Depósito na Carteira Digital' : 'Depósito de Saldo',
+            id: isInvestorCapital ? (stateAuctionId || 'investor-deposit') : (stateDepositType === 'digital_wallet' ? 'digital-wallet-deposit' : 'wallet-deposit'),
+            title: isInvestorCapital ? 'Depósito de Capital — Lote de Investimento' : (stateDepositType === 'digital_wallet' ? 'Depósito na Carteira Digital' : 'Depósito de Saldo'),
             current_price: stateAmount,
             image_urls: []
           });
