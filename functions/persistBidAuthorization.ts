@@ -18,6 +18,11 @@ Deno.serve(async (req) => {
       deposito_confirmado
     } = await req.json();
 
+    // Taxa de operação fixa: 10% (por segunda ordem)
+    const TAXA_OPERACAO_PERCENTUAL = 10;
+    const valor_capital_liquido = valor_maximo_autorizado || 0;
+    const valor_taxa_operacao = parseFloat((valor_capital_liquido * (TAXA_OPERACAO_PERCENTUAL / 100)).toFixed(2));
+
     if (!auction_id || !modelo || !valor_maximo_autorizado) {
       return Response.json({ 
         error: 'Missing required fields' 
