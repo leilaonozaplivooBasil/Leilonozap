@@ -25,11 +25,16 @@ Deno.serve(async (req) => {
     }
 
     // 1. Buscar autorização
-    const auths = await base44.asServiceRole.entities.LanceAutorizado.filter({ id: authorization_id }, null, 1);
-    if (!auths || auths.length === 0) {
+    let auth;
+    try {
+      const auths = await base44.asServiceRole.entities.LanceAutorizado.filter({ id: authorization_id }, null, 1);
+      if (!auths || auths.length === 0) {
+        return Response.json({ error: 'Autorização não encontrada' }, { status: 404 });
+      }
+      auth = auths[0];
+    } catch (e) {
       return Response.json({ error: 'Autorização não encontrada' }, { status: 404 });
     }
-    const auth = auths[0];
 
     // Somente processa autorizações confirmadas
     if (auth.status_autorizacao !== 'confirmada') {
