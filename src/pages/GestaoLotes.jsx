@@ -347,6 +347,9 @@ export default function GestaoLotes() {
                                                 }`}>
                                                     {lote.status === 'active' ? 'ATIVO' : lote.status === 'sold' ? 'ARREMATADO' : lote.status?.toUpperCase()}
                                                 </span>
+                                                {lote.lot_status && (
+                                                    <p className="text-[9px] text-slate-500 mt-0.5 uppercase tracking-wider">{lote.lot_status.replace('_', ' ')}</p>
+                                                )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 {lote.status === 'sold' ? (
