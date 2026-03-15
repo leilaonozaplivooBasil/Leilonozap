@@ -14,6 +14,7 @@ import GestaoLotes from '@/pages/GestaoLotes';
 import SistemaDeArremate from '@/pages/SistemaDeArremate';
 import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
 import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
+import SentinelNoZap from '@/pages/SentinelNoZap';
 import RequireRole from '@/components/common/RequireRole';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
