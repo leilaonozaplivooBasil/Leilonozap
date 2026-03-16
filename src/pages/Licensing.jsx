@@ -315,10 +315,11 @@ const DashboardContent = ({ user, isAdmin }) => {
 
       setMyWithdrawals(Array.isArray(withdrawals) ? withdrawals : []);
 
-      // Calcula total de saques pendentes
-      const pending = withdrawals.
-        filter((w) => w.status === 'pending').
-        reduce((sum, w) => sum + (w.amount || 0), 0);
+      // Calcula total de saques pendentes (guarda contra resposta não-array)
+      const safeWithdrawals = Array.isArray(withdrawals) ? withdrawals : [];
+      const pending = safeWithdrawals
+        .filter((w) => w.status === 'pending')
+        .reduce((sum, w) => sum + (w.amount || 0), 0);
       setPendingWithdrawalAmount(pending);
     } catch (error) {
       console.error("Erro ao buscar saques:", error);
@@ -778,20 +779,20 @@ const DashboardContent = ({ user, isAdmin }) => {
     if (!searchTerm) return myClients;
     const term = searchTerm.toLowerCase();
     return myClients.filter((client) =>
-      client.full_name && client.full_name.toLowerCase().includes(term) ||
-      client.nickname && client.nickname.toLowerCase().includes(term) ||
-      client.email && client.email.toLowerCase().includes(term)
+      (client.full_name && client.full_name.toLowerCase().includes(term)) ||
+      (client.nickname && client.nickname.toLowerCase().includes(term)) ||
+      (client.email && client.email.toLowerCase().includes(term))
     );
   }, [myClients, searchTerm]);
 
   const licensees = useMemo(() => {
-    return allUsers.filter((u) => u.role === 'licensee' || u.role === 'admin' && u.referral_code);
+    return allUsers.filter((u) => u.role === 'licensee' || (u.role === 'admin' && u.referral_code));
   }, [allUsers]);
 
   const availableUsersToLink = useMemo(() => {
     return allUsers.filter((u) => {
       if (u.id === selectedLicenseeForLink) return false;
-      return u.role === 'user' || u.role === 'licensee' || u.role === 'admin' && u.referral_code;
+      return u.role === 'user' || u.role === 'licensee' || (u.role === 'admin' && u.referral_code);
     });
   }, [allUsers, selectedLicenseeForLink]);
 

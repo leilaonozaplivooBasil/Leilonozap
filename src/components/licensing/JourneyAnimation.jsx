@@ -41,7 +41,11 @@ export default function JourneyAnimation({ customPhases, journeyTitle, theme = '
 
     const playCoinSound = () => {
         if (!audioContextRef.current) {
-            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            audioContextRef.current = new (window.AudioContext || window['webkitAudioContext'])();
+        }
+        // Retoma o contexto caso esteja suspenso (política de autoplay dos browsers modernos)
+        if (audioContextRef.current.state === 'suspended') {
+            audioContextRef.current.resume();
         }
 
         try {
