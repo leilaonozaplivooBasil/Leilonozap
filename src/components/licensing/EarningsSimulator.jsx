@@ -238,7 +238,7 @@ export default function EarningsSimulator({ theme = 'nozap' }) {
                   }`}>
                     <div className={`text-xs font-bold mb-0.5 ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>Ganho Anual Estimado</div>
                     <div className={`text-lg font-bold ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'}`}>
-                      R$ {(yourEarnings * 12).toLocaleString('pt-BR', { minimumFractionDigals: 2 })}
+                      R$ {(yourEarnings * 12).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </div>
                   </div>
                 </div>
