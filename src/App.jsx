@@ -64,7 +64,6 @@ const AuthenticatedApp = () => {
         const hasVisited = localStorage.getItem('hasVisitedBefore');
         if (!hasVisited) {
           localStorage.setItem('hasVisitedBefore', 'true');
-          const { Navigate } = require('react-router-dom');
           return <Navigate to="/Landing" replace />;
         }
         return (
