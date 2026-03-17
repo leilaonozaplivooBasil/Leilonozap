@@ -116,11 +116,13 @@ export default function LandingPage() {
             alt="Leilão NoZap"
             className="h-12 w-auto"
           />
-          <a href="https://leilaonozap.base44.app/login" target="_self">
-            <button style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))', border: '1px solid rgba(16,185,129,0.3)', boxShadow: '0 4px 16px rgba(16,185,129,0.15)' }} className="text-white text-sm font-semibold px-4 py-2 rounded-xl hover:scale-105 transition-transform">
-              Painel do Arrematante
-            </button>
-          </a>
+          <button
+            onClick={() => base44.auth.redirectToLogin('/Home')}
+            style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))', border: '1px solid rgba(16,185,129,0.3)', boxShadow: '0 4px 16px rgba(16,185,129,0.15)' }}
+            className="text-white text-sm font-semibold px-4 py-2 rounded-xl hover:scale-105 transition-transform"
+          >
+            Painel do Arrematante
+          </button>
         </div>
       </header>
 
