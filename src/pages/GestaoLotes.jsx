@@ -253,7 +253,7 @@ export default function GestaoLotes() {
                         </h1>
                         <div className="flex gap-2">
                                 <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm border border-[#30363d] rounded-lg px-3 py-2 transition-colors">
-                                <ArrowLeft size={14} />
+                                <ArrowLeft size={14} /> Voltar
                             </button>
                             <button onClick={loadDados} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm border border-[#30363d] rounded-lg px-3 py-2 transition-colors">
                                 <RefreshCw size={14} />
