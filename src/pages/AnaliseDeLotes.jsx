@@ -355,7 +355,7 @@ function AnaliseDeLotes() {
                         onClick={() => navigate(createPageUrl('SistemaDeArremate'))}
                         className="mb-4 flex items-center gap-2 text-slate-500 hover:text-slate-300 text-xs transition-colors"
                     >
-                        <ArrowLeft size={14} /> Central de Lotes & Investimentos
+                        <ArrowLeft size={14} /> Voltar
                     </button>
                     <div className="inline-flex items-center gap-3 mb-3 px-4 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 shadow-sm">
                         <BarChart3 size={18} className="text-blue-400" />
