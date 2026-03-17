@@ -37,6 +37,12 @@ export default function VisualizarLote() {
         };
     }, [lote]);
 
+    // Parseia o JSON de categorias salvo na publicação
+    const categorias = useMemo(() => {
+        if (!lote?.lot_categories_json) return [];
+        try { return JSON.parse(lote.lot_categories_json); } catch { return []; }
+    }, [lote]);
+
     const calculations = useMemo(() => {
         if (!lote) return null;
 
