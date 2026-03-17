@@ -283,7 +283,7 @@ function AnaliseDeLotes() {
 
     // --- CALCULATIONS MEMOIZED ---
     const calculations = useMemo(() => {
-        if (!loteData) return null;
+        if (!loteAtual) return null;
 
         const valorArrematado = parseCurrencyInput(arremateInputValue);
         const taxaValor = valorArrematado * (taxaPct / 100);
