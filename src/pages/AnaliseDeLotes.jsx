@@ -761,7 +761,7 @@ function AnaliseDeLotes() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                   {loteAtual.resumoCategorias.map((cat, i) => {
+                                                    {loteAtual.resumoCategorias.map((cat, i) => {
                                                         const subs = loteAtual.subItemsByCategory?.[cat.nome] || [];
                                                         const isOpen = expandedCategories.has(cat.nome);
                                                         return (
