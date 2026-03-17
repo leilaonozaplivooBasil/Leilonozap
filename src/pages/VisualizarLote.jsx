@@ -121,6 +121,58 @@ export default function VisualizarLote() {
                         </div>
                     </div>
 
+                    {/* Detalhes do Lote */}
+                    {loteMeta && (
+                        <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
+                            <div className="p-5 border-b border-[#30363d] bg-slate-800/20 flex items-center gap-2">
+                                <List size={16} className="text-indigo-400" />
+                                <h3 className="font-bold text-white text-sm uppercase tracking-wider">Informações do Lote</h3>
+                            </div>
+                            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                {loteMeta.localRetirada && (
+                                    <div className="flex items-start gap-3 bg-[#0d1117] p-4 rounded-xl border border-[#30363d]">
+                                        <MapPin size={18} className="text-blue-400 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Local de Retirada</p>
+                                            <p className="text-sm text-slate-200 leading-relaxed">{loteMeta.localRetirada}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {loteMeta.totalItens && (
+                                    <div className="flex items-start gap-3 bg-[#0d1117] p-4 rounded-xl border border-[#30363d]">
+                                        <Hash size={18} className="text-emerald-400 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total de Itens</p>
+                                            <p className="text-2xl font-black text-emerald-400">{loteMeta.totalItens}</p>
+                                        </div>
+                                    </div>
+                                )}
+                                {loteMeta.valorMercado && (
+                                    <div className="flex items-start gap-3 bg-[#0d1117] p-4 rounded-xl border border-[#30363d]">
+                                        <DollarSign size={18} className="text-amber-400 shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Valor de Mercado</p>
+                                            <p className="text-2xl font-black text-amber-400">{loteMeta.valorMercado}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                            {/* Imagens do lote se houver */}
+                            {lote.image_urls && lote.image_urls.length > 0 && (
+                                <div className="px-5 pb-5">
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Imagens do Lote</p>
+                                    <div className="flex flex-wrap gap-3">
+                                        {lote.image_urls.map((url, i) => (
+                                            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                                                <img src={url} alt={`Imagem ${i + 1}`} className="w-24 h-24 object-cover rounded-xl border border-[#30363d] hover:border-blue-500 transition-colors" />
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Score Banner */}
                     {calculations && vm > 0 && (
                         <div className={`p-4 rounded-2xl border ${calculations.score.border} ${calculations.score.color} flex items-center gap-4 shadow-lg`}>
