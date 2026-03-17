@@ -265,7 +265,7 @@ export default function LandingPage() {
                       <h4 className="font-bold text-orange-300 text-lg mb-3">Transparência Total:</h4>
                       <div className="text-orange-300/90 space-y-3 text-sm leading-relaxed">
                         <p>• O Leilão NoZap é uma <strong>estratégia de venda</strong>, não um leilão oficial regido por leiloeiro.</p>
-                        <p>• Nossos produtos são <strong>arrematados e devolvidos</strong>. Na grande maioria, são <strong>produtos zerados que nunca foram usados</strong>. Você não compra usado, compra novo que foi devolvido, apenas sem a garantia da loja original.</p>
+                        <p>• Nossos produtos são <strong>arrematados e devolvidos no período de 7 dias</strong>. Na grande maioria, são <strong>produtos zerados que nunca foram usados</strong>. Você não compra usado, compra novo que foi devolvido, apenas sem a garantia da loja original.</p>
                         <p>• Como trabalhamos com produtos de repasse, <strong>não oferecemos devolução</strong>. Mas é por isso que conseguimos oferecer preços tão abaixo do mercado.</p>
                       </div>
                     </div>
