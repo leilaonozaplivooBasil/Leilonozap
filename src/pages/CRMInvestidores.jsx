@@ -15,6 +15,7 @@ export default function CRMInvestidores() {
     const [lotes, setLotes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [busca, setBusca] = useState('');
+    const [showCadastro, setShowCadastro] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
