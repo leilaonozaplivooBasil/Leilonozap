@@ -229,6 +229,6 @@ export default function CRMInvestidores() {
                 onSuccess={() => { setShowCadastro(false); loadDados(); }}
             />
         )}
-    </div>
+        </>
     );
 }
