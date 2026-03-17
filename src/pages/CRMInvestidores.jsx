@@ -27,7 +27,7 @@ export default function CRMInvestidores() {
         try {
             const [usuarios, leiloesData] = await Promise.all([
                 AppUser.filter({ role: 'investidor' }),
-                Auction.list('-created_date', 100)
+                Auction.filter({ is_investment_plan: true })
             ]);
             setInvestidores(usuarios || []);
             setLotes(leiloesData || []);
