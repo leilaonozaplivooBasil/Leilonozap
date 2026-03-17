@@ -28,6 +28,7 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
   const [cpf, setCpf] = useState('');
   const [addressCity, setAddressCity] = useState('');
   const [addressState, setAddressState] = useState('');
+  const [platformCommission, setPlatformCommission] = useState('');
   const [sendEmail, setSendEmail] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
