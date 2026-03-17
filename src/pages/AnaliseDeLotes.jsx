@@ -765,9 +765,8 @@ function AnaliseDeLotes() {
                                                         const subs = loteAtual.subItemsByCategory?.[cat.nome] || [];
                                                         const isOpen = expandedCategories.has(cat.nome);
                                                         return (
-                                                            <>
+                                                            <React.Fragment key={i}>
                                                                 <tr
-                                                                    key={i}
                                                                     onClick={() => subs.length > 0 && toggleCategory(cat.nome)}
                                                                     className={`border-b border-[#30363d]/50 transition-colors ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}
                                                                 >
@@ -790,7 +789,7 @@ function AnaliseDeLotes() {
                                                                         <td className="px-6 py-2.5 border-l border-[#30363d]/30 text-right text-emerald-600 text-sm font-medium">{formatCurrency(sub.valor)}</td>
                                                                     </tr>
                                                                 ))}
-                                                            </>
+                                                            </React.Fragment>
                                                         );
                                                     })}
                                                 </tbody>
