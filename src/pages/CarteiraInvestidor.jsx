@@ -91,9 +91,14 @@ export default function CarteiraInvestidor() {
                         <ShieldCheck size={14} className="fill-emerald-400/20" />
                         Conta Segura — {usuario?.full_name || 'Investidor'}
                     </div>
-                    <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-                        Sistema de Capital e <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Saldo</span>
-                    </h1>
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => navigate(-1)} className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2 text-slate-400 hover:text-white hover:border-slate-500 transition-colors">
+                            <ArrowLeft size={16} />
+                        </button>
+                        <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
+                            Sistema de Capital e <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">Saldo</span>
+                        </h1>
+                    </div>
                 </header>
 
                 {/* Intent de Depósito Pendente */}
