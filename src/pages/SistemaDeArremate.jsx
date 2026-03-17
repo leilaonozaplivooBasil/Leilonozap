@@ -86,6 +86,7 @@ const flow = [
 
 export default function SistemaDeArremate() {
   const navigate = useNavigate();
+  const [showCadastro, setShowCadastro] = useState(false);
 
   const stored = localStorage.getItem('currentUser');
   const currentUser = stored ? JSON.parse(stored) : null;
