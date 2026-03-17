@@ -49,7 +49,7 @@ export default function CRMInvestidores() {
     const lotesAtivos = lotes.filter(l => l.status === 'active');
 
     return (
-        <div className="min-h-screen bg-[#0d1117] text-slate-200 font-sans p-4 xl:p-8">
+        <><div className="min-h-screen bg-[#0d1117] text-slate-200 font-sans p-4 xl:p-8">
             <div className="max-w-7xl mx-auto space-y-6">
 
                 {/* Header */}
