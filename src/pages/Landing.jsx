@@ -164,7 +164,7 @@ export default function LandingPage() {
                     <p className="text-center">
                       Um canal de vendas exclusivo via WhatsApp com 
                       <span className="text-green-400 font-bold"> ofertas-relâmpago e descontos reais</span>. 
-                      Trabalhamos com produtos <strong className="text-white">arrematados e devolvidos</strong>, 100% testados e prontos para entrega.
+                      Trabalhamos com produtos <strong className="text-white">arrematados e devolvidos no período de 7 dias</strong>, 100% testados e prontos para entrega.
                     </p>
                     <div className="bg-green-500/10 p-6 rounded-2xl border border-green-500/20">
                       <p className="text-white font-medium text-center text-xl">
