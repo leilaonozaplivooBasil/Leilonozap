@@ -487,11 +487,11 @@ function AnaliseDeLotes() {
                             </div>
                             <div className="flex gap-2 flex-wrap">
                                 <button
-                                    disabled={isPublishing}
+                                    disabled={isPublishing === loteAtual.id}
                                     className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow-sm"
                                     onClick={async () => {
-                                        if (!loteData || !calculations) return;
-                                        setIsPublishing(true);
+                                        if (!loteAtual || !calculations) return;
+                                        setIsPublishing(loteAtual.id);
                                         let endTime;
                                         if (dataLeilao && horarioLeilao) {
                                             endTime = new Date(`${dataLeilao}T${horarioLeilao}:00`);
@@ -502,31 +502,27 @@ function AnaliseDeLotes() {
                                             endTime.setDate(endTime.getDate() + 30);
                                         }
                                         await Auction.create({
-                                            title: loteData.nomeLote,
-                                            description: `Local de Retirada: ${loteData.localColeta}\nTotal de Itens: ${loteData.quantidadeTotal}\nValor de Mercado: R$ ${loteData.valorMercadoTotal.toFixed(2)}`,
+                                            title: loteAtual.nomeLote,
+                                            description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${loteAtual.valorMercadoTotal.toFixed(2)}`,
                                             starting_price: calculations.custoTotal,
                                             current_price: calculations.custoTotal,
                                             increment: 100,
                                             end_time: endTime.toISOString(),
                                             status: 'active',
                                             is_investment_plan: true,
-                                            market_price: loteData.valorMercadoTotal,
-                                            manual_market_price: loteData.valorMercadoTotal,
-                                            lot_categories_json: loteData.resumoCategorias && loteData.resumoCategorias.length > 0
-                                                ? JSON.stringify(loteData.resumoCategorias)
+                                            market_price: loteAtual.valorMercadoTotal,
+                                            manual_market_price: loteAtual.valorMercadoTotal,
+                                            lot_categories_json: loteAtual.resumoCategorias && loteAtual.resumoCategorias.length > 0
+                                                ? JSON.stringify(loteAtual.resumoCategorias)
                                                 : null,
                                         });
-                                        setIsPublishing(false);
+                                        setIsPublishing(null);
+                                        setLotesImportados(prev => prev.filter(l => l.id !== loteAtual.id));
+                                        setLoteAtual(lotesImportados[0] || null);
                                         navigate(createPageUrl('GestaoLotes'));
                                     }}
                                 >
-                                    <ShoppingBag size={15} /> {isPublishing ? 'Publicando...' : 'Publicar no Marketplace'}
-                                </button>
-                                <button
-                                    onClick={() => setLoteData(null)}
-                                    className="px-5 py-2.5 bg-[#0d1117] border border-[#30363d] hover:border-slate-500 hover:bg-slate-800 rounded-xl text-sm font-semibold transition-all shadow-sm"
-                                >
-                                    Importar Outro Lote
+                                    <ShoppingBag size={15} /> {isPublishing === loteAtual.id ? 'Publicando...' : 'Publicar no Marketplace'}
                                 </button>
                             </div>
                         </div>
