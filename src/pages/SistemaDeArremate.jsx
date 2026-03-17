@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
-import { FileSpreadsheet, BarChart3, ShoppingBag, Wallet, Users, Settings, ArrowRight, ChevronRight } from 'lucide-react';
+import { FileSpreadsheet, BarChart3, ShoppingBag, Wallet, Users, Settings, ArrowRight, ChevronRight, UserPlus } from 'lucide-react';
+import CadastroArrematanteModal from '@/components/crm/CadastroArrematanteModal';
 
 const modules = [
   {
