@@ -72,6 +72,10 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
       const salt = bcrypt.genSaltSync(10);
       const hashedPassword = bcrypt.hashSync(tempPassword, salt);
 
+      // Gera token de primeiro acesso (válido por 7 dias)
+      const resetToken = Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+      const resetExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
       const nameParts = fullName.trim().split(/\s+/);
       const newUser = await AppUser.create({
         full_name: fullName.trim(),
@@ -84,11 +88,13 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
         role: 'investidor',
         address_city: addressCity,
         address_state: addressState,
+        password_reset_token: resetToken,
+        password_reset_expires: resetExpires,
       });
 
       // Envia e-mail de boas-vindas com link para redefinir senha
       if (sendEmail) {
-        const resetLink = `https://leilaonozap.net/ResetPassword?email=${encodeURIComponent(normalizedEmail)}`;
+        const resetLink = `https://leilaonozap.net/ResetPassword?token=${encodeURIComponent(resetToken)}`;
         await base44.integrations.Core.SendEmail({
           to: normalizedEmail,
           subject: 'Bem-vindo ao Leilão NoZap — Acesse sua conta',
