@@ -143,6 +143,11 @@ const AuthenticatedApp = () => {
           </RequireRole>
         </LayoutWrapper>
       } />
+      <Route path="/AcessoArrematante" element={
+        <LayoutWrapper currentPageName="AcessoArrematante">
+          <AcessoArrematante />
+        </LayoutWrapper>
+      } />
       <Route path="/AdminLancesAutorizados" element={
         <LayoutWrapper currentPageName="AdminLancesAutorizados">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
