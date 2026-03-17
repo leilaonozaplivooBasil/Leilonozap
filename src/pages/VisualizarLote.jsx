@@ -23,6 +23,21 @@ export default function VisualizarLote() {
         }).finally(() => setIsLoading(false));
     }, [loteId]);
 
+    // Parseia a description do lote (salva como texto pela AnaliseDeLotes)
+    const loteMeta = useMemo(() => {
+        if (!lote?.description) return null;
+        const lines = lote.description.split('\n');
+        const get = (prefix) => {
+            const line = lines.find(l => l.startsWith(prefix));
+            return line ? line.replace(prefix, '').trim() : null;
+        };
+        return {
+            localRetirada: get('Local de Retirada:'),
+            totalItens: get('Total de Itens:'),
+            valorMercado: get('Valor de Mercado:'),
+        };
+    }, [lote]);
+
     const calculations = useMemo(() => {
         if (!lote) return null;
 
