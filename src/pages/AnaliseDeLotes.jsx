@@ -469,9 +469,9 @@ function AnaliseDeLotes() {
                                 <p className="text-slate-400 text-sm flex items-center gap-2 mb-2">
                                     <CheckCircle2 size={14} className="text-emerald-500" /> Planilha importada e processada com sucesso
                                 </p>
-                                {loteData.localColeta && (
+                                {loteAtual.localColeta && (
                                     <div className="inline-block mt-1 px-3 py-1 bg-blue-900/30 border border-blue-800/50 rounded-md text-xs text-blue-300 font-medium">
-                                        📍 Retirada: {loteData.localColeta}
+                                        📍 Retirada: {loteAtual.localColeta}
                                     </div>
                                 )}
                                 <div className="flex flex-wrap gap-3 mt-3">
