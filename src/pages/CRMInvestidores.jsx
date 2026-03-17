@@ -62,9 +62,17 @@ export default function CRMInvestidores() {
                         <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
                             CRM de <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Investidores</span>
                         </h1>
-                        <button onClick={loadDados} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors border border-[#30363d] rounded-lg px-3 py-2">
-                            <RefreshCw size={14} /> Atualizar
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowCadastro(true)}
+                                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold rounded-lg px-4 py-2 transition-colors"
+                            >
+                                <UserPlus size={14} /> Cadastrar Arrematante
+                            </button>
+                            <button onClick={loadDados} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors border border-[#30363d] rounded-lg px-3 py-2">
+                                <RefreshCw size={14} /> Atualizar
+                            </button>
+                        </div>
                     </div>
                 </header>
 
