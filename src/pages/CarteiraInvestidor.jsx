@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Activity, CheckCircle2, DollarSign, History, ShieldCheck, AlertCircle, Clock, TrendingUp } from 'lucide-react';
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Activity, CheckCircle2, DollarSign, History, ShieldCheck, AlertCircle, Clock, TrendingUp, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
