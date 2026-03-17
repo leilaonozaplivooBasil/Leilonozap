@@ -15,6 +15,7 @@ export default function GestaoLotes() {
     const [lotes, setLotes] = useState([]);
     const [investidores, setInvestidores] = useState([]);
     const [parceiros, setParceiros] = useState([]);
+    const [arrematantes, setArrematantes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [busca, setBusca] = useState('');
     const [filtroStatus, setFiltroStatus] = useState('todos');
