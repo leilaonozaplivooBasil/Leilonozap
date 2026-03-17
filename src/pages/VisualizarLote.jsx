@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Hash, List } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin } from 'lucide-react';
 
 const Auction = base44.entities.Auction;
 
@@ -25,7 +24,7 @@ export default function VisualizarLote() {
 
     // Parseia a description do lote (salva como texto pela AnaliseDeLotes)
     const loteMeta = useMemo(() => {
-        if (!lote?.description) return null;
+        if (!lote?.description) return { localRetirada: null, totalItens: null, valorMercadoText: null };
         const lines = lote.description.split('\n');
         const get = (prefix) => {
             const line = lines.find(l => l.startsWith(prefix));
@@ -34,7 +33,7 @@ export default function VisualizarLote() {
         return {
             localRetirada: get('Local de Retirada:'),
             totalItens: get('Total de Itens:'),
-            valorMercado: get('Valor de Mercado:'),
+            valorMercadoText: get('Valor de Mercado:'),
         };
     }, [lote]);
 
@@ -43,6 +42,7 @@ export default function VisualizarLote() {
 
         const custoTotal = lote.starting_price || 0;
         const vm = lote.market_price || lote.manual_market_price || 0;
+        const totalItens = parseInt(loteMeta?.totalItens) || 0;
 
         const projCurto = vm * 0.50;
         const projMedio = vm * 0.60;
@@ -50,6 +50,9 @@ export default function VisualizarLote() {
 
         const lucroEstimado = projMedio - custoTotal;
         const rentabilidade = custoTotal > 0 ? (lucroEstimado / custoTotal) * 100 : 0;
+
+        const ticketMedio = totalItens > 0 ? vm / totalItens : 0;
+        const custoMedio = totalItens > 0 ? custoTotal / totalItens : 0;
 
         let score = { label: 'INDEFINIDO', color: 'bg-slate-600', border: 'border-slate-500', text: 'text-slate-400', icon: null };
         if (custoTotal > 0 && vm > 0) {
@@ -59,8 +62,8 @@ export default function VisualizarLote() {
             else score = { label: 'ARRISCADO', color: 'bg-red-500/20', border: 'border-red-500', text: 'text-red-400', icon: <AlertTriangle className="text-red-400" /> };
         }
 
-        return { custoTotal, vm, projCurto, projMedio, projLongo, lucroEstimado, rentabilidade, score };
-    }, [lote]);
+        return { custoTotal, vm, totalItens, projCurto, projMedio, projLongo, lucroEstimado, rentabilidade, score, ticketMedio, custoMedio };
+    }, [lote, loteMeta]);
 
     if (isLoading) return (
         <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
@@ -77,7 +80,7 @@ export default function VisualizarLote() {
     const vm = calculations?.vm || 0;
 
     return (
-        <div className="min-h-screen bg-[#0d1117] text-slate-200 p-4 font-sans">
+        <div className="min-h-screen bg-[#0d1117] text-slate-200 p-4 font-sans selection:bg-blue-500/30">
             <div className="max-w-7xl mx-auto">
 
                 {/* Header */}
@@ -109,8 +112,10 @@ export default function VisualizarLote() {
                             <p className="text-slate-400 text-sm flex items-center gap-2 mb-2">
                                 <CheckCircle2 size={14} className="text-emerald-500" /> Lote publicado no marketplace
                             </p>
-                            {lote.description && (
-                                <p className="text-xs text-slate-500 mt-1 max-w-xl">{lote.description}</p>
+                            {loteMeta.localRetirada && (
+                                <div className="inline-flex items-center gap-1.5 mt-1 px-3 py-1 bg-blue-900/30 border border-blue-800/50 rounded-md text-xs text-blue-300 font-medium">
+                                    <MapPin size={12} /> {loteMeta.localRetirada}
+                                </div>
                             )}
                         </div>
                         <div className="shrink-0 text-right">
@@ -120,58 +125,6 @@ export default function VisualizarLote() {
                             </p>
                         </div>
                     </div>
-
-                    {/* Detalhes do Lote */}
-                    {loteMeta && (
-                        <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
-                            <div className="p-5 border-b border-[#30363d] bg-slate-800/20 flex items-center gap-2">
-                                <List size={16} className="text-indigo-400" />
-                                <h3 className="font-bold text-white text-sm uppercase tracking-wider">Informações do Lote</h3>
-                            </div>
-                            <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                {loteMeta.localRetirada && (
-                                    <div className="flex items-start gap-3 bg-[#0d1117] p-4 rounded-xl border border-[#30363d]">
-                                        <MapPin size={18} className="text-blue-400 shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Local de Retirada</p>
-                                            <p className="text-sm text-slate-200 leading-relaxed">{loteMeta.localRetirada}</p>
-                                        </div>
-                                    </div>
-                                )}
-                                {loteMeta.totalItens && (
-                                    <div className="flex items-start gap-3 bg-[#0d1117] p-4 rounded-xl border border-[#30363d]">
-                                        <Hash size={18} className="text-emerald-400 shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total de Itens</p>
-                                            <p className="text-2xl font-black text-emerald-400">{loteMeta.totalItens}</p>
-                                        </div>
-                                    </div>
-                                )}
-                                {loteMeta.valorMercado && (
-                                    <div className="flex items-start gap-3 bg-[#0d1117] p-4 rounded-xl border border-[#30363d]">
-                                        <DollarSign size={18} className="text-amber-400 shrink-0 mt-0.5" />
-                                        <div>
-                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Valor de Mercado</p>
-                                            <p className="text-2xl font-black text-amber-400">{loteMeta.valorMercado}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            {/* Imagens do lote se houver */}
-                            {lote.image_urls && lote.image_urls.length > 0 && (
-                                <div className="px-5 pb-5">
-                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Imagens do Lote</p>
-                                    <div className="flex flex-wrap gap-3">
-                                        {lote.image_urls.map((url, i) => (
-                                            <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                                <img src={url} alt={`Imagem ${i + 1}`} className="w-24 h-24 object-cover rounded-xl border border-[#30363d] hover:border-blue-500 transition-colors" />
-                                            </a>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
 
                     {/* Score Banner */}
                     {calculations && vm > 0 && (
@@ -186,24 +139,24 @@ export default function VisualizarLote() {
                         </div>
                     )}
 
-                    {/* KPIs */}
+                    {/* KPIs — igual ao AnaliseDeLotes */}
                     <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
                         {[
-                            { label: "Custo do Lote (Lance Inicial)", val: formatCurrency(lote.starting_price), color: "border-l-amber-500" },
-                            { label: "Lance Atual", val: formatCurrency(lote.current_price || lote.starting_price), color: "border-l-blue-500" },
-                            { label: "Valor de Mercado", val: formatCurrency(vm), color: "border-l-emerald-500" },
-                            { label: "Status", val: lote.status === 'active' ? 'ATIVO' : lote.status === 'sold' ? 'ARREMATADO' : lote.status?.toUpperCase(), color: "border-l-indigo-500" },
-                            { label: "Vencedor", val: lote.winner_name || '—', color: "border-l-purple-500" },
+                            { label: "Total de Itens (Qtd)", val: calculations?.totalItens || '—', color: "border-l-blue-500" },
+                            { label: "Valor de Mercado Total", val: formatCurrency(vm), color: "border-l-emerald-500" },
+                            { label: "Ticket Médio (Mercado)", val: calculations?.ticketMedio > 0 ? formatCurrency(calculations.ticketMedio) : '—', color: "border-l-indigo-500" },
+                            { label: "Custo Total do Lote", val: formatCurrency(lote.starting_price), color: "border-l-amber-500" },
+                            { label: "Custo Médio p/ Unidade", val: calculations?.custoMedio > 0 ? formatCurrency(calculations.custoMedio) : '—', color: "border-l-red-500" },
                         ].map((kpi, i) => (
                             <div key={i} className={`bg-[#161b22] p-6 rounded-2xl border border-[#30363d] border-l-4 ${kpi.color} shadow-lg`}>
                                 <p className="text-slate-400 text-xs font-bold mb-1 tracking-wider uppercase">{kpi.label}</p>
-                                <p className="text-2xl font-black tracking-tight text-slate-200">{kpi.val}</p>
+                                <p className="text-3xl font-black tracking-tight text-slate-200">{kpi.val}</p>
                             </div>
                         ))}
                     </div>
 
-                    {/* Cenário Financeiro (READ-ONLY) + Projeções */}
-                    {vm > 0 && calculations && (
+                    {/* Cenário Financeiro (READ-ONLY) + Projeções — igual ao AnaliseDeLotes */}
+                    {calculations && (
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
                             {/* Col 1: Financeiro Read-Only */}
@@ -216,16 +169,36 @@ export default function VisualizarLote() {
                                 </div>
                                 <div className="p-5 space-y-4">
                                     {[
-                                        { label: 'Custo do Lote', val: formatCurrency(calculations.custoTotal), highlight: true },
+                                        { label: 'Valor Arremato', val: formatCurrency(calculations.custoTotal), highlight: true },
+                                        { label: 'Custo Total do Lote', val: formatCurrency(calculations.custoTotal) },
                                         { label: 'Valor de Mercado Total', val: formatCurrency(vm) },
                                         { label: 'Lucro Estimado (60%)', val: formatCurrency(calculations.lucroEstimado) },
                                         { label: 'Rentabilidade Estimada', val: `${calculations.rentabilidade.toFixed(1)}%` },
                                     ].map((item, i) => (
                                         <div key={i} className="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
                                             <span className="text-sm text-slate-400">{item.label}</span>
-                                            <span className={`font-bold ${item.highlight ? 'text-amber-400 text-lg' : 'text-white'}`}>{item.val}</span>
+                                            <span className={`font-bold ${item.highlight ? 'text-amber-400 text-xl' : 'text-white'}`}>{item.val}</span>
                                         </div>
                                     ))}
+                                    {/* Status e Vencedor */}
+                                    <div className="pt-3 border-t border-[#30363d] space-y-2">
+                                        <div className="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
+                                            <span className="text-sm text-slate-400">Status</span>
+                                            <span className={`font-bold text-sm px-2 py-0.5 rounded ${lote.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : lote.status === 'sold' ? 'bg-blue-500/10 text-blue-400' : 'bg-slate-500/10 text-slate-400'}`}>
+                                                {lote.status === 'active' ? 'ATIVO' : lote.status === 'sold' ? 'ARREMATADO' : lote.status?.toUpperCase()}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
+                                            <span className="text-sm text-slate-400">Lance Atual</span>
+                                            <span className="font-bold text-blue-400">{formatCurrency(lote.current_price || lote.starting_price)}</span>
+                                        </div>
+                                        {lote.winner_name && (
+                                            <div className="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
+                                                <span className="text-sm text-slate-400">Vencedor</span>
+                                                <span className="font-bold text-purple-400 text-sm">{lote.winner_name}</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -242,16 +215,40 @@ export default function VisualizarLote() {
                                         { title: "Venda (70% do Valor Mercado)", val: calculations.projLongo, color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
                                     ].map((item, idx) => (
                                         <div key={idx} className={`flex justify-between items-center p-4 rounded-xl border ${item.color}`}>
-                                            <p className="font-semibold text-sm">{item.title}</p>
+                                            <p className="font-semibold text-sm sm:text-base">{item.title}</p>
                                             <div className="text-right">
-                                                <p className="font-bold text-xl">{formatCurrency(item.val)}</p>
-                                                <p className="text-xs mt-0.5 font-medium">
-                                                    Lucro Bruto: {formatCurrency(item.val - calculations.custoTotal)}
+                                                <p className="font-bold text-lg sm:text-xl">{formatCurrency(item.val)}</p>
+                                                <p className="text-xs mt-0.5 font-medium flex items-center justify-end gap-1">
+                                                    <span>Lucro Bruto:</span>
+                                                    <span>{formatCurrency(item.val - calculations.custoTotal)}</span>
                                                 </p>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
+
+                                {/* Ticket Médio por Grade (se tiver totalItens) */}
+                                {calculations.totalItens > 0 && vm > 0 && (
+                                    <div className="mt-6 pt-5 border-t border-[#30363d]">
+                                        <h4 className="font-bold text-white mb-3 uppercase tracking-wider text-xs flex items-center gap-2">
+                                            <Activity size={14} className="text-blue-400" />
+                                            Ticket Médio por Cenário
+                                        </h4>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {[
+                                                { label: "50% do VM", val: calculations.projCurto / calculations.totalItens, color: "text-blue-400" },
+                                                { label: "60% do VM", val: calculations.projMedio / calculations.totalItens, color: "text-indigo-400" },
+                                                { label: "70% do VM", val: calculations.projLongo / calculations.totalItens, color: "text-purple-400" },
+                                            ].map((t, i) => (
+                                                <div key={i} className="bg-[#0d1117] border border-[#30363d] rounded-xl p-3 text-center">
+                                                    <p className="text-xs text-slate-500 mb-1">{t.label}</p>
+                                                    <p className={`font-bold text-sm ${t.color}`}>{formatCurrency(t.val)}</p>
+                                                    <p className="text-[10px] text-slate-600 mt-0.5">por unidade</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
