@@ -259,7 +259,7 @@ export default function GestaoLotes() {
                                 <RefreshCw size={14} />
                             </button>
                             <button
-                                onClick={() => navigate(createPageUrl('CreateAuction'))}
+                                onClick={() => navigate(createPageUrl('AnaliseDeLotes'))}
                                 className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold rounded-lg px-4 py-2 transition-colors"
                             >
                                 <Plus size={14} /> Novo Lote
