@@ -516,9 +516,12 @@ function AnaliseDeLotes() {
                                                 ? JSON.stringify(loteAtual.resumoCategorias)
                                                 : null,
                                         });
+                                        const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
+                                        setLotesImportados(newLotes);
+                                        setLoteAtual(newLotes[0] || null);
+                                        setDataLeilao('');
+                                        setHorarioLeilao('');
                                         setIsPublishing(null);
-                                        setLotesImportados(prev => prev.filter(l => l.id !== loteAtual.id));
-                                        setLoteAtual(lotesImportados[0] || null);
                                         navigate(createPageUrl('GestaoLotes'));
                                     }}
                                 >
