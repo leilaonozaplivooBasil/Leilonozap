@@ -798,9 +798,9 @@ function AnaliseDeLotes() {
                             )}
 
                         </div>
-                    </div>
-                )}
-            </div>
+                    )}
+                </div>
+                </div>
         </div>
     );
 }
