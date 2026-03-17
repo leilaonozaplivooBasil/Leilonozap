@@ -60,6 +60,17 @@ const modules = [
     role: 'admin',
     cta: 'Abrir CRM',
   },
+  {
+    step: '06',
+    title: 'Cadastrar Arrematante',
+    desc: 'Cadastre novos arrematantes diretamente pelo painel. O sistema envia e-mail com link de acesso automático.',
+    icon: UserPlus,
+    color: 'from-rose-500/20 to-rose-600/10 border-rose-500/30',
+    iconColor: 'text-rose-400',
+    page: null, // abre modal
+    role: 'admin',
+    cta: 'Cadastrar Arrematante',
+  },
 ];
 
 const flow = [
