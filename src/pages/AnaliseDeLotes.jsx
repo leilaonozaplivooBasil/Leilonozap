@@ -289,7 +289,7 @@ function AnaliseDeLotes() {
         const taxaValor = valorArrematado * (taxaPct / 100);
         const custoTotal = valorArrematado + taxaValor + frete + outros;
 
-        const vm = loteData.valorMercadoTotal;
+        const vm = loteAtual.valorMercadoTotal;
 
         // Projections requested: 50%, 60%, 70%
         const projCurto = vm * 0.50;
