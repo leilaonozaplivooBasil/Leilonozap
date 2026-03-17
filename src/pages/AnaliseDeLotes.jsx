@@ -263,7 +263,8 @@ function AnaliseDeLotes() {
             }
         }
 
-        setLoteData({
+        const novoLote = {
+            id: Date.now(),
             nomePlanilha: filename,
             nomeLote: filename.replace(/\.xlsx?$/, ''),
             localColeta,
@@ -273,7 +274,9 @@ function AnaliseDeLotes() {
             valorMercadoTotal: referenceMarketValue !== null && referenceMarketValue > 0 ? referenceMarketValue : valorMercadoTotal,
             classCount,
             gradesData
-        });
+        };
+        setLotesImportados(prev => [...prev, novoLote]);
+        setLoteAtual(novoLote);
 
     };
 
