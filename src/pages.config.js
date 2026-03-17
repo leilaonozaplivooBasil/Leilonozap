@@ -47,8 +47,210 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import AcessoArrematante from './pages/AcessoArrematante';
+import ActivePartners from './pages/ActivePartners';
+import AddCatalogProduct from './pages/AddCatalogProduct';
+import AddFunds from './pages/AddFunds';
+import AdminCatalogSales from './pages/AdminCatalogSales';
+import AdminDepositosConfirmados from './pages/AdminDepositosConfirmados';
+import AdminLancesAutorizados from './pages/AdminLancesAutorizados';
+import AdminUsers from './pages/AdminUsers';
+import AdminWithdrawals from './pages/AdminWithdrawals';
+import AmbienteDeTeste from './pages/AmbienteDeTeste';
+import AnaliseDeLotes from './pages/AnaliseDeLotes';
+import ArquitetoIA from './pages/ArquitetoIA';
+import AuctionCheckoutModern from './pages/AuctionCheckoutModern';
+import AuctionControl from './pages/AuctionControl';
+import AuctionDetails from './pages/AuctionDetails';
+import AuctionRoom from './pages/AuctionRoom';
+import AuditSnapshot from './pages/AuditSnapshot';
+import BannerManagement from './pages/BannerManagement';
+import CRM from './pages/CRM';
+import CRMInvestidores from './pages/CRMInvestidores';
+import CadastroInvestidor from './pages/CadastroInvestidor';
+import CadastroLeiloeiro from './pages/CadastroLeiloeiro';
+import CareerLevelsReport from './pages/CareerLevelsReport';
+import Cart from './pages/Cart';
+import CarteiraInvestidor from './pages/CarteiraInvestidor';
+import Catalog from './pages/Catalog';
+import CatalogCheckout from './pages/CatalogCheckout';
+import CatalogCheckout2 from './pages/CatalogCheckout2';
+import CatalogManagement from './pages/CatalogManagement';
+import CatalogOrderTracking from './pages/CatalogOrderTracking';
+import CatalogProductDetails from './pages/CatalogProductDetails';
+import Checkout from './pages/Checkout';
+import CommissionDistributionFull from './pages/CommissionDistributionFull';
+import CommissionPilot from './pages/CommissionPilot';
+import CreateAuction from './pages/CreateAuction';
+import CreateAuctionV2 from './pages/CreateAuctionV2';
+import CreateCatalogProduct from './pages/CreateCatalogProduct';
+import CreateLuxuryAuction from './pages/CreateLuxuryAuction';
+import CustomerDetails from './pages/CustomerDetails';
+import DailyReportView from './pages/DailyReportView';
+import DiretoDeFabrica from './pages/DiretoDeFabrica';
+import EditAuction from './pages/EditAuction';
+import EditCatalogProduct from './pages/EditCatalogProduct';
+import ErrorReport from './pages/ErrorReport';
+import Financial from './pages/Financial';
+import ForgotPassword from './pages/ForgotPassword';
+import GestaoLotes from './pages/GestaoLotes';
+import Home from './pages/Home';
+import Influencers from './pages/Influencers';
+import InfluencersDashboard from './pages/InfluencersDashboard';
+import InvestorDashboard from './pages/InvestorDashboard';
+import Landing from './pages/Landing';
+import LicenseeOrders from './pages/LicenseeOrders';
+import Licensing from './pages/Licensing';
+import LicensorCRM from './pages/LicensorCRM';
+import LiveShop from './pages/LiveShop';
+import LiveShopControlNoZap from './pages/LiveShopControlNoZap';
+import LiveShopNoZap from './pages/LiveShopNoZap';
+import LojistaDashboard from './pages/LojistaDashboard';
+import LuxuryAccessManager from './pages/LuxuryAccessManager';
+import LuxuryBannerManagement from './pages/LuxuryBannerManagement';
+import LuxuryCollection from './pages/LuxuryCollection';
+import MarketplaceLotes from './pages/MarketplaceLotes';
+import MemoryBackup from './pages/MemoryBackup';
+import MyCatalogOrders from './pages/MyCatalogOrders';
+import MyWinnings from './pages/MyWinnings';
+import NetworkOverview from './pages/NetworkOverview';
+import OrderTracking from './pages/OrderTracking';
+import PDV from './pages/PDV';
+import ParceiroLotes from './pages/ParceiroLotes';
+import PartnerPlanActivation from './pages/PartnerPlanActivation';
+import Partners from './pages/Partners';
+import PaymentFailure from './pages/PaymentFailure';
+import PaymentSettings from './pages/PaymentSettings';
+import ProductManagement from './pages/ProductManagement';
+import ProductOperationHistory from './pages/ProductOperationHistory';
+import Profile from './pages/Profile';
+import PromoCreator from './pages/PromoCreator';
+import ProtecaoCriacao from './pages/ProtecaoCriacao';
+import ProtectionDashboard from './pages/ProtectionDashboard';
+import Register from './pages/Register';
+import RegisterBatches from './pages/RegisterBatches';
+import RegisterLicensee from './pages/RegisterLicensee';
+import ResetPassword from './pages/ResetPassword';
+import SchemaBackup from './pages/SchemaBackup';
+import SentinelNoZap from './pages/SentinelNoZap';
+import ShippingSettings from './pages/ShippingSettings';
+import SistemaDeArremate from './pages/SistemaDeArremate';
+import StockPosition from './pages/StockPosition';
+import StoreRegistration from './pages/StoreRegistration';
+import StressTest from './pages/StressTest';
+import SystemChecklist from './pages/SystemChecklist';
+import SystemDiagnostics from './pages/SystemDiagnostics';
+import SystemTest from './pages/SystemTest';
+import TesteLeilao from './pages/TesteLeilao';
+import TransactionHistory from './pages/TransactionHistory';
+import UserManagement from './pages/UserManagement';
+import WalletHistory from './pages/WalletHistory';
+import __Layout from './Layout.jsx';
 
-export const pagesConfig = {
-	Pages: {}
+
+export const PAGES = {
+    "AcessoArrematante": AcessoArrematante,
+    "ActivePartners": ActivePartners,
+    "AddCatalogProduct": AddCatalogProduct,
+    "AddFunds": AddFunds,
+    "AdminCatalogSales": AdminCatalogSales,
+    "AdminDepositosConfirmados": AdminDepositosConfirmados,
+    "AdminLancesAutorizados": AdminLancesAutorizados,
+    "AdminUsers": AdminUsers,
+    "AdminWithdrawals": AdminWithdrawals,
+    "AmbienteDeTeste": AmbienteDeTeste,
+    "AnaliseDeLotes": AnaliseDeLotes,
+    "ArquitetoIA": ArquitetoIA,
+    "AuctionCheckoutModern": AuctionCheckoutModern,
+    "AuctionControl": AuctionControl,
+    "AuctionDetails": AuctionDetails,
+    "AuctionRoom": AuctionRoom,
+    "AuditSnapshot": AuditSnapshot,
+    "BannerManagement": BannerManagement,
+    "CRM": CRM,
+    "CRMInvestidores": CRMInvestidores,
+    "CadastroInvestidor": CadastroInvestidor,
+    "CadastroLeiloeiro": CadastroLeiloeiro,
+    "CareerLevelsReport": CareerLevelsReport,
+    "Cart": Cart,
+    "CarteiraInvestidor": CarteiraInvestidor,
+    "Catalog": Catalog,
+    "CatalogCheckout": CatalogCheckout,
+    "CatalogCheckout2": CatalogCheckout2,
+    "CatalogManagement": CatalogManagement,
+    "CatalogOrderTracking": CatalogOrderTracking,
+    "CatalogProductDetails": CatalogProductDetails,
+    "Checkout": Checkout,
+    "CommissionDistributionFull": CommissionDistributionFull,
+    "CommissionPilot": CommissionPilot,
+    "CreateAuction": CreateAuction,
+    "CreateAuctionV2": CreateAuctionV2,
+    "CreateCatalogProduct": CreateCatalogProduct,
+    "CreateLuxuryAuction": CreateLuxuryAuction,
+    "CustomerDetails": CustomerDetails,
+    "DailyReportView": DailyReportView,
+    "DiretoDeFabrica": DiretoDeFabrica,
+    "EditAuction": EditAuction,
+    "EditCatalogProduct": EditCatalogProduct,
+    "ErrorReport": ErrorReport,
+    "Financial": Financial,
+    "ForgotPassword": ForgotPassword,
+    "GestaoLotes": GestaoLotes,
+    "Home": Home,
+    "Influencers": Influencers,
+    "InfluencersDashboard": InfluencersDashboard,
+    "InvestorDashboard": InvestorDashboard,
+    "Landing": Landing,
+    "LicenseeOrders": LicenseeOrders,
+    "Licensing": Licensing,
+    "LicensorCRM": LicensorCRM,
+    "LiveShop": LiveShop,
+    "LiveShopControlNoZap": LiveShopControlNoZap,
+    "LiveShopNoZap": LiveShopNoZap,
+    "LojistaDashboard": LojistaDashboard,
+    "LuxuryAccessManager": LuxuryAccessManager,
+    "LuxuryBannerManagement": LuxuryBannerManagement,
+    "LuxuryCollection": LuxuryCollection,
+    "MarketplaceLotes": MarketplaceLotes,
+    "MemoryBackup": MemoryBackup,
+    "MyCatalogOrders": MyCatalogOrders,
+    "MyWinnings": MyWinnings,
+    "NetworkOverview": NetworkOverview,
+    "OrderTracking": OrderTracking,
+    "PDV": PDV,
+    "ParceiroLotes": ParceiroLotes,
+    "PartnerPlanActivation": PartnerPlanActivation,
+    "Partners": Partners,
+    "PaymentFailure": PaymentFailure,
+    "PaymentSettings": PaymentSettings,
+    "ProductManagement": ProductManagement,
+    "ProductOperationHistory": ProductOperationHistory,
+    "Profile": Profile,
+    "PromoCreator": PromoCreator,
+    "ProtecaoCriacao": ProtecaoCriacao,
+    "ProtectionDashboard": ProtectionDashboard,
+    "Register": Register,
+    "RegisterBatches": RegisterBatches,
+    "RegisterLicensee": RegisterLicensee,
+    "ResetPassword": ResetPassword,
+    "SchemaBackup": SchemaBackup,
+    "SentinelNoZap": SentinelNoZap,
+    "ShippingSettings": ShippingSettings,
+    "SistemaDeArremate": SistemaDeArremate,
+    "StockPosition": StockPosition,
+    "StoreRegistration": StoreRegistration,
+    "StressTest": StressTest,
+    "SystemChecklist": SystemChecklist,
+    "SystemDiagnostics": SystemDiagnostics,
+    "SystemTest": SystemTest,
+    "TesteLeilao": TesteLeilao,
+    "TransactionHistory": TransactionHistory,
+    "UserManagement": UserManagement,
+    "WalletHistory": WalletHistory,
 }
 
+export const pagesConfig = {
+    mainPage: "CRMInvestidores",
+    Pages: PAGES,
+    Layout: __Layout,
+};

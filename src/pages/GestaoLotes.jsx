@@ -271,8 +271,8 @@ export default function GestaoLotes() {
                         { label: 'Total de Lotes', value: lotes.length, icon: Package, color: 'text-slate-400' },
                         { label: 'No Marketplace', value: lotesMarketplace, icon: DollarSign, color: 'text-blue-400' },
                         { label: 'Arrematados', value: lotesSold, icon: CheckCircle2, color: 'text-emerald-400' },
-                        { label: 'Investidores', value: statsInvestidores, icon: Users, color: 'text-violet-400' },
                         { label: 'Arrematantes', value: arrematantes.length, icon: Users, color: 'text-rose-400' },
+                        { label: 'Investidores', value: statsInvestidores, icon: Users, color: 'text-violet-400' },
                     ].map((m, i) => (
                         <div key={i} className="bg-[#161b22] border border-[#30363d] rounded-2xl p-5">
                             <m.icon className={`${m.color} mb-3`} size={22} />
