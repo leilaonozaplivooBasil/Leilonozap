@@ -89,6 +89,7 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
         role: 'investidor',
         address_city: addressCity,
         address_state: addressState,
+        partner_plan_amount: platformCommission ? parseFloat(platformCommission) : undefined,
         password_reset_token: resetToken,
         password_reset_expires: resetExpires,
       });
