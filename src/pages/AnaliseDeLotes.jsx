@@ -348,7 +348,7 @@ function AnaliseDeLotes() {
             valA, valAB, valABC, valABCD, valALL,
             qtdA, qtdAB, qtdABC, qtdABCD, qtdALL
         };
-    }, [loteData, arremateInputValue, taxaPct, frete, outros]);
+    }, [loteAtual, arremateInputValue, taxaPct, frete, outros]);
 
 
     return (
