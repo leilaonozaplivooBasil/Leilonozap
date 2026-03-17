@@ -6,17 +6,6 @@ import { FileSpreadsheet, BarChart3, ShoppingBag, Wallet, Users, Settings, Arrow
 const modules = [
   {
     step: '01',
-    title: 'Importar & Analisar Planilha',
-    desc: 'Faça upload do Excel do lote. O sistema extrai automaticamente produtos, classificações e valores de mercado.',
-    icon: FileSpreadsheet,
-    color: 'from-blue-500/20 to-blue-600/10 border-blue-500/30',
-    iconColor: 'text-blue-400',
-    page: 'AnaliseDeLotes',
-    role: 'all',
-    cta: 'Analisar Lote',
-  },
-  {
-    step: '02',
     title: 'Gestão de Lotes',
     desc: 'Publique lotes no marketplace, registre arremates e controle o ciclo de vida de cada lote.',
     icon: Settings,
@@ -25,6 +14,17 @@ const modules = [
     page: 'GestaoLotes',
     role: 'admin',
     cta: 'Gerenciar Lotes',
+  },
+  {
+    step: '02',
+    title: 'Importar & Analisar Planilha',
+    desc: 'Faça upload do Excel do lote. O sistema extrai automaticamente produtos, classificações e valores de mercado.',
+    icon: FileSpreadsheet,
+    color: 'from-blue-500/20 to-blue-600/10 border-blue-500/30',
+    iconColor: 'text-blue-400',
+    page: 'AnaliseDeLotes',
+    role: 'all',
+    cta: 'Analisar Lote',
   },
   {
     step: '03',
