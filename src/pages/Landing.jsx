@@ -108,7 +108,23 @@ export default function LandingPage() {
         </div>
       </div>
 
-      <div className="landing-container">
+      {/* Header exclusivo da Landing */}
+      <header style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: 'rgba(10, 15, 28, 0.55)', backdropFilter: 'blur(24px)', borderBottom: '1px solid rgba(16, 185, 129, 0.08)' }}>
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <img
+            src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
+            alt="Leilão NoZap"
+            className="h-12 w-auto"
+          />
+          <a href="https://leilaonozap.base44.app/login" target="_self">
+            <button style={{ background: 'linear-gradient(135deg, rgba(16,185,129,0.5), rgba(5,150,105,0.6))', border: '1px solid rgba(16,185,129,0.3)', boxShadow: '0 4px 16px rgba(16,185,129,0.15)' }} className="text-white text-sm font-semibold px-4 py-2 rounded-xl hover:scale-105 transition-transform">
+              Painel do Arrematante
+            </button>
+          </a>
+        </div>
+      </header>
+
+      <div className="landing-container" style={{ paddingTop: '64px' }}>
         <div className="shape-blob"></div>
         <div className="shape-blob one"></div>
         <div className="shape-blob two"></div>
