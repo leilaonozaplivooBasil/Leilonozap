@@ -435,14 +435,6 @@ export default function GestaoLotes() {
                                                     </button>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <button
-                                                    onClick={() => navigate(createPageUrl('AuctionRoom') + `?id=${lote.id}`)}
-                                                    className="text-slate-500 hover:text-amber-400 transition-colors"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
