@@ -5,6 +5,7 @@ import { Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users, Do
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import { distributeAuctionCommissions } from '@/functions/distributeAuctionCommissions';
+import ImportarLotesModal from '@/components/lotes/ImportarLotesModal';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
@@ -20,6 +21,7 @@ export default function GestaoLotes() {
     const [busca, setBusca] = useState('');
     const [filtroStatus, setFiltroStatus] = useState('todos');
     const [isSaving, setIsSaving] = useState(null); // id do lote sendo atualizado
+    const [showImportModal, setShowImportModal] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -259,7 +261,7 @@ export default function GestaoLotes() {
                                 <RefreshCw size={14} />
                             </button>
                             <button
-                                onClick={() => navigate(createPageUrl('AnaliseDeLotes'))}
+                                onClick={() => setShowImportModal(true)}
                                 className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold rounded-lg px-4 py-2 transition-colors"
                             >
                                 <Plus size={14} /> Novo Lote
@@ -443,6 +445,12 @@ export default function GestaoLotes() {
                     )}
                 </div>
             </div>
+
+            <ImportarLotesModal
+                isOpen={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                onPublished={() => loadDados()}
+            />
         </div>
     );
 }
