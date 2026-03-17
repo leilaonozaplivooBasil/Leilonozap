@@ -464,7 +464,7 @@ function AnaliseDeLotes() {
                             <div>
                                 <h2 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
                                     <Package className="text-blue-500" size={24} />
-                                    {loteData.nomeLote}
+                                    {loteAtual.nomeLote}
                                 </h2>
                                 <p className="text-slate-400 text-sm flex items-center gap-2 mb-2">
                                     <CheckCircle2 size={14} className="text-emerald-500" /> Planilha importada e processada com sucesso
