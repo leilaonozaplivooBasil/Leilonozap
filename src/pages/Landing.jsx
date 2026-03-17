@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from "react";
 // import { User } from "@/entities/User"; // Removed as per instructions (no login flow)
 import { createPageUrl } from "@/utils";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, ArrowRight } from "lucide-react";
