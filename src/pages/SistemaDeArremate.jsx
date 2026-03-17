@@ -179,6 +179,13 @@ export default function SistemaDeArremate() {
         </div>
 
       </div>
+
+      {showCadastro && (
+        <CadastroArrematanteModal
+          onClose={() => setShowCadastro(false)}
+          onSuccess={() => setShowCadastro(false)}
+        />
+      )}
     </div>
   );
 }
