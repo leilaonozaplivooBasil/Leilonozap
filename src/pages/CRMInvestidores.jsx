@@ -222,5 +222,13 @@ export default function CRMInvestidores() {
                 </div>
             </div>
         </div>
+
+        {showCadastro && (
+            <CadastroArrematanteModal
+                onClose={() => setShowCadastro(false)}
+                onSuccess={() => { setShowCadastro(false); loadDados(); }}
+            />
+        )}
+    </div>
     );
 }
