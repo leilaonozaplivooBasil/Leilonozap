@@ -87,6 +87,12 @@ export default function MarketplaceLotes() {
                         />
                     </div>
                     <button
+                        onClick={() => navigate(-1)}
+                        className="bg-[#161b22] border border-[#30363d] rounded-lg px-4 py-2.5 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
+                    >
+                        <ArrowLeft size={16} />
+                    </button>
+                    <button
                         onClick={loadLotes}
                         className="bg-[#161b22] border border-[#30363d] rounded-lg px-4 py-2.5 text-slate-400 hover:text-white hover:border-slate-500 transition-colors"
                     >
