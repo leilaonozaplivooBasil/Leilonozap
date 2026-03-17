@@ -741,7 +741,7 @@ function AnaliseDeLotes() {
                             </div>
 
                             {/* RESUMO CATEGORIAS */}
-                            {loteData.resumoCategorias && loteData.resumoCategorias.length > 0 && (
+                            {loteAtual.resumoCategorias && loteAtual.resumoCategorias.length > 0 && (
                                 <div className="xl:col-span-3">
                                     <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
                                         <div className="p-5 border-b border-[#30363d] bg-slate-800/20">
@@ -758,38 +758,38 @@ function AnaliseDeLotes() {
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-                                                   {loteData.resumoCategorias.map((cat, i) => {
-                                                       const subs = loteData.subItemsByCategory?.[cat.nome] || [];
-                                                       const isOpen = expandedCategories.has(cat.nome);
-                                                       return (
-                                                           <>
-                                                               <tr
-                                                                   key={i}
-                                                                   onClick={() => subs.length > 0 && toggleCategory(cat.nome)}
-                                                                   className={`border-b border-[#30363d]/50 transition-colors ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}
-                                                               >
-                                                                   <td className="px-6 py-4 font-medium text-slate-300 flex items-center gap-2">
-                                                                       {subs.length > 0 && (
-                                                                           <span className={`text-slate-500 transition-transform inline-block ${isOpen ? 'rotate-90' : ''}`}>▶</span>
-                                                                       )}
-                                                                       {cat.nome}
-                                                                       {subs.length > 0 && <span className="text-xs text-slate-600 ml-1">({subs.length} itens)</span>}
-                                                                   </td>
-                                                                   <td className="px-6 py-4 border-l border-[#30363d]/50 text-center text-slate-400">{cat.qtd} un</td>
-                                                                   <td className="px-6 py-4 border-l border-[#30363d]/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
-                                                               </tr>
-                                                               {isOpen && subs.map((sub, si) => (
-                                                                   <tr key={`sub-${i}-${si}`} className="border-b border-[#30363d]/30 bg-[#0d1117]/60">
-                                                                       <td className="pl-12 pr-6 py-2.5 text-slate-400 text-sm">
-                                                                           <span className="text-slate-600 mr-2">└</span>{sub.desc}
-                                                                       </td>
-                                                                       <td className="px-6 py-2.5 border-l border-[#30363d]/30 text-center text-slate-500 text-sm">{sub.qtd} un</td>
-                                                                       <td className="px-6 py-2.5 border-l border-[#30363d]/30 text-right text-emerald-600 text-sm font-medium">{formatCurrency(sub.valor)}</td>
-                                                                   </tr>
-                                                               ))}
-                                                           </>
-                                                       );
-                                                   })}
+                                                   {loteAtual.resumoCategorias.map((cat, i) => {
+                                                        const subs = loteAtual.subItemsByCategory?.[cat.nome] || [];
+                                                        const isOpen = expandedCategories.has(cat.nome);
+                                                        return (
+                                                            <>
+                                                                <tr
+                                                                    key={i}
+                                                                    onClick={() => subs.length > 0 && toggleCategory(cat.nome)}
+                                                                    className={`border-b border-[#30363d]/50 transition-colors ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}
+                                                                >
+                                                                    <td className="px-6 py-4 font-medium text-slate-300 flex items-center gap-2">
+                                                                        {subs.length > 0 && (
+                                                                            <span className={`text-slate-500 transition-transform inline-block ${isOpen ? 'rotate-90' : ''}`}>▶</span>
+                                                                        )}
+                                                                        {cat.nome}
+                                                                        {subs.length > 0 && <span className="text-xs text-slate-600 ml-1">({subs.length} itens)</span>}
+                                                                    </td>
+                                                                    <td className="px-6 py-4 border-l border-[#30363d]/50 text-center text-slate-400">{cat.qtd} un</td>
+                                                                    <td className="px-6 py-4 border-l border-[#30363d]/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
+                                                                </tr>
+                                                                {isOpen && subs.map((sub, si) => (
+                                                                    <tr key={`sub-${i}-${si}`} className="border-b border-[#30363d]/30 bg-[#0d1117]/60">
+                                                                        <td className="pl-12 pr-6 py-2.5 text-slate-400 text-sm">
+                                                                            <span className="text-slate-600 mr-2">└</span>{sub.desc}
+                                                                        </td>
+                                                                        <td className="px-6 py-2.5 border-l border-[#30363d]/30 text-center text-slate-500 text-sm">{sub.qtd} un</td>
+                                                                        <td className="px-6 py-2.5 border-l border-[#30363d]/30 text-right text-emerald-600 text-sm font-medium">{formatCurrency(sub.valor)}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </>
+                                                        );
+                                                    })}
                                                 </tbody>
                                             </table>
                                         </div>
