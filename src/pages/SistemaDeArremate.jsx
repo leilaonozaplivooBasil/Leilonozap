@@ -149,7 +149,7 @@ export default function SistemaDeArremate() {
                   <p className="text-slate-400 text-xs leading-relaxed">{mod.desc}</p>
                 </div>
                 <button
-                  onClick={() => navigate(createPageUrl(mod.page))}
+                  onClick={() => mod.page ? navigate(createPageUrl(mod.page)) : setShowCadastro(true)}
                   className="flex items-center justify-between w-full mt-auto px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-bold text-white transition-colors"
                 >
                   {mod.cta}
