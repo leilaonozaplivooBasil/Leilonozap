@@ -307,7 +307,7 @@ function AnaliseDeLotes() {
             else score = { label: 'ARRISCADO', color: 'bg-red-500/20', border: 'border-red-500', text: 'text-red-400', icon: <AlertTriangle className="text-red-400" /> };
         }
 
-        const chartData = Object.entries(loteData.classCount)
+        const chartData = Object.entries(loteAtual.classCount)
             .filter(([k, v]) => v > 0)
             .map(([name, value]) => ({ name, value }));
 
