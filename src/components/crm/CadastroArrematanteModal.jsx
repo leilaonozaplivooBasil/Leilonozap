@@ -231,6 +231,26 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500 uppercase"
                 />
               </div>
+
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  % Comissão da Plataforma
+                  <span className="ml-2 normal-case font-normal text-slate-600">(opcional)</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.5"
+                    value={platformCommission}
+                    onChange={e => setPlatformCommission(e.target.value)}
+                    placeholder="Ex: 10"
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2.5 pr-8 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-bold">%</span>
+                </div>
+              </div>
             </div>
 
             {/* Opção de envio de e-mail */}
