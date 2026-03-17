@@ -16,7 +16,6 @@ import SistemaDeArremate from '@/pages/SistemaDeArremate';
 import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
 import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
 import VisualizarLote from '@/pages/VisualizarLote';
-import VisualizarLote from '@/pages/VisualizarLote';
 import SentinelNoZap from '@/pages/SentinelNoZap';
 import ParceiroLotes from '@/pages/ParceiroLotes';
 import AcessoArrematante from '@/pages/AcessoArrematante';
