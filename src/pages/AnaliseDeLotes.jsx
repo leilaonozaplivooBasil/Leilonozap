@@ -317,7 +317,7 @@ function AnaliseDeLotes() {
         };
 
         // Custom metrics A+B, A+B+C, A+B+C+D
-        const g = loteData.gradesData;
+        const g = loteAtual.gradesData;
 
         const qtdA = g.A.qtd;
         const valA = g.A.valorMarket;
@@ -335,8 +335,8 @@ function AnaliseDeLotes() {
         const valABCD = valABC + g.D.valorMarket;
         const tmABCD = qtdABCD > 0 ? valABCD / qtdABCD : 0;
 
-        const qtdALL = loteData.quantidadeTotal;
-        const valALL = loteData.valorMercadoTotal;
+        const qtdALL = loteAtual.quantidadeTotal;
+        const valALL = loteAtual.valorMercadoTotal;
         const tmALL = qtdALL > 0 ? valALL / qtdALL : 0;
 
         return {
