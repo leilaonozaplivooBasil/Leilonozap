@@ -259,6 +259,36 @@ export default function VisualizarLote() {
                         </div>
                     )}
 
+                    {/* Distribuição Departamental */}
+                    {categorias.length > 0 && (
+                        <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
+                            <div className="p-5 border-b border-[#30363d] bg-slate-800/20">
+                                <h3 className="font-bold text-white uppercase tracking-wider text-sm">Distribuição Departamental (Resumo Oficial)</h3>
+                                <p className="text-xs text-slate-400 mt-1">Visão macrostática das categorias do lote.</p>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse text-sm">
+                                    <thead>
+                                        <tr className="bg-[#0d1117] border-b border-[#30363d] text-slate-400 uppercase tracking-wider">
+                                            <th className="px-6 py-4 font-semibold text-xs">Categoria / Departamento</th>
+                                            <th className="px-6 py-4 font-semibold text-xs border-l border-[#30363d] w-32 text-center">Quantidade</th>
+                                            <th className="px-6 py-4 font-semibold text-xs border-l border-[#30363d] w-48 text-right">Valor de Avaliação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {categorias.map((cat, i) => (
+                                            <tr key={i} className="border-b border-[#30363d]/50 hover:bg-white/[0.02] transition-colors">
+                                                <td className="px-6 py-4 font-medium text-slate-300">{cat.nome}</td>
+                                                <td className="px-6 py-4 border-l border-[#30363d]/50 text-center text-slate-400">{cat.qtd} un</td>
+                                                <td className="px-6 py-4 border-l border-[#30363d]/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             </div>
         </div>
