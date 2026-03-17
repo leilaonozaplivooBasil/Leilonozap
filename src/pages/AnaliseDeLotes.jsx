@@ -370,7 +370,8 @@ function AnaliseDeLotes() {
                     </h1>
                 </header>
 
-                {!loteData ? (
+                <div className="space-y-6">
+                    {/* UPLOAD SECTION */}
                     <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-12 text-center shadow-2xl relative overflow-hidden group">
                         <div className="absolute top-0 left-1/2 w-96 h-96 bg-blue-500/10 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 pointer-events-none group-hover:bg-blue-500/20 transition-all duration-700"></div>
 
@@ -378,9 +379,9 @@ function AnaliseDeLotes() {
                             <div className="w-24 h-24 bg-[#0d1117] border border-[#30363d] text-blue-400 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner rotate-3 group-hover:rotate-6 transition-transform">
                                 <UploadCloud size={40} className="drop-shadow-lg" />
                             </div>
-                            <h3 className="text-2xl font-bold mb-3 text-white">Importar Lote</h3>
+                            <h3 className="text-2xl font-bold mb-3 text-white">Importar Lotes</h3>
                             <p className="text-slate-400 mb-8 max-w-[280px] mx-auto text-sm leading-relaxed">
-                                Carregue a planilha Excel do lote para extrairmos quantidades, classificação e valores totais.
+                                Carregue uma ou mais planilhas Excel para análise. Elas aparecerão na lista abaixo.
                             </p>
 
                             <label className="relative overflow-hidden cursor-pointer flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-indigo-600 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 w-full hover:-translate-y-0.5">
@@ -410,7 +411,51 @@ function AnaliseDeLotes() {
                             )}
                         </div>
                     </div>
-                ) : (
+
+                    {/* LOTES IMPORTADOS LIST */}
+                    {lotesImportados.length > 0 && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-xl font-bold text-white">Lotes Importados ({lotesImportados.length})</h2>
+                                <button
+                                    onClick={() => { setLotesImportados([]); setLoteAtual(null); setDataLeilao(''); setHorarioLeilao(''); }}
+                                    className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-white transition-colors"
+                                >
+                                    Limpar Tudo
+                                </button>
+                            </div>
+                            {lotesImportados.map((lote) => (
+                                <div
+                                    key={lote.id}
+                                    onClick={() => setLoteAtual(lote)}
+                                    className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                                        loteAtual?.id === lote.id
+                                            ? 'bg-[#161b22] border-blue-500/50 shadow-lg shadow-blue-500/10'
+                                            : 'bg-[#161b22] border-[#30363d] hover:border-blue-500/30'
+                                    }`}
+                                >
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-bold text-white text-base">{lote.nomeLote}</p>
+                                            <p className="text-xs text-slate-500 mt-1">{lote.quantidadeTotal} itens • {formatCurrency(lote.valorMercadoTotal)}</p>
+                                        </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setLotesImportados(prev => prev.filter(l => l.id !== lote.id));
+                                                if (loteAtual?.id === lote.id) setLoteAtual(null);
+                                            }}
+                                            className="text-slate-500 hover:text-red-400 text-sm font-semibold transition-colors"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {loteAtual && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-forwards">
 
                         {/* HEADER DASHBOARD */}
