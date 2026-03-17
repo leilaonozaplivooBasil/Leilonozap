@@ -210,7 +210,7 @@ export default function CRMInvestidores() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <button
-                                                    onClick={() => navigate(createPageUrl('AuctionRoom') + `?id=${lote.id}`)}
+                                                    onClick={() => navigate(createPageUrl('VisualizarLote') + `?id=${lote.id}`)}
                                                     className="text-slate-500 hover:text-blue-400 transition-colors"
                                                 >
                                                     <Eye size={16} />
