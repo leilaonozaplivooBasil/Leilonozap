@@ -463,6 +463,9 @@ function AnaliseDeLotes() {
                                             is_investment_plan: true,
                                             market_price: loteData.valorMercadoTotal,
                                             manual_market_price: loteData.valorMercadoTotal,
+                                            lot_categories_json: loteData.resumoCategorias && loteData.resumoCategorias.length > 0
+                                                ? JSON.stringify(loteData.resumoCategorias)
+                                                : null,
                                         });
                                         setIsPublishing(false);
                                         navigate(createPageUrl('GestaoLotes'));
