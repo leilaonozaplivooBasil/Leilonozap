@@ -10,9 +10,10 @@ import * as XLSX from 'xlsx';
 
 function AnaliseDeLotes() {
     const navigate = useNavigate();
-    const [loteData, setLoteData] = useState(null);
+    const [lotesImportados, setLotesImportados] = useState([]);
+    const [loteAtual, setLoteAtual] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isPublishing, setIsPublishing] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(null);
     const [error, setError] = useState('');
     const [expandedCategories, setExpandedCategories] = useState(new Set());
 
