@@ -330,7 +330,6 @@ export default function GestaoLotes() {
                                         <th className="px-6 py-4 text-center">Marketplace</th>
                                         <th className="px-6 py-4">Vencedor / Registrar</th>
                                         <th className="px-6 py-4 text-center">Comissão</th>
-                                        <th className="px-6 py-4"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
