@@ -252,6 +252,9 @@ export default function GestaoLotes() {
                             Gestão de <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">Lotes</span>
                         </h1>
                         <div className="flex gap-2">
+                                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm border border-[#30363d] rounded-lg px-3 py-2 transition-colors">
+                                <ArrowLeft size={14} />
+                            </button>
                             <button onClick={loadDados} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm border border-[#30363d] rounded-lg px-3 py-2 transition-colors">
                                 <RefreshCw size={14} />
                             </button>
