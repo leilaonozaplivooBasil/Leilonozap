@@ -191,21 +191,12 @@ export default function MarketplaceLotes() {
                                     )}
                                 </div>
 
-                                <div className="pt-4 border-t border-[#30363d] flex gap-2">
-                                    <button
-                                        onClick={() => navigate(createPageUrl('AuctionRoom') + `?id=${lote.id}`)}
-                                        className="flex-1 text-xs font-bold text-slate-400 hover:text-white border border-[#30363d] hover:border-slate-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
-                                    >
-                                        Ver sala <ArrowRight size={12} />
-                                    </button>
-                                    <button
-                                        onClick={() => { setLoteModal(lote); setValorAutorizado(''); setAutorizado(false); setModeloEscolhido(null); setPercentualCotas(''); }}
-                                        className="flex-1 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
-                                    >
-                                        <DollarSign size={12} /> Autorizar Lance
-                                    </button>
-
-                                </div>
+                                <button
+                                    onClick={() => { setLoteModal(lote); setValorAutorizado(''); setAutorizado(false); setModeloEscolhido(null); setPercentualCotas(''); }}
+                                    className="w-full text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
+                                >
+                                    <DollarSign size={12} /> Autorizar Lance
+                                </button>
                             </motion.div>
                         );
                     })}
