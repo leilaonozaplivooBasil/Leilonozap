@@ -541,11 +541,11 @@ function AnaliseDeLotes() {
                         {/* MAIN KPIs */}
                         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
                             {[
-                                { label: "Total de Itens (Qtd)", val: loteData.quantidadeTotal, prefix: "", color: "border-l-blue-500" },
-                                { label: "Valor de Mercado Total", val: formatCurrency(loteData.valorMercadoTotal), color: "border-l-emerald-500" },
-                                { label: "Ticket Avaliado (Mercado)", val: formatCurrency(loteData.quantidadeTotal ? loteData.valorMercadoTotal / loteData.quantidadeTotal : 0), color: "border-l-indigo-500" },
+                                { label: "Total de Itens (Qtd)", val: loteAtual.quantidadeTotal, prefix: "", color: "border-l-blue-500" },
+                                { label: "Valor de Mercado Total", val: formatCurrency(loteAtual.valorMercadoTotal), color: "border-l-emerald-500" },
+                                { label: "Ticket Avaliado (Mercado)", val: formatCurrency(loteAtual.quantidadeTotal ? loteAtual.valorMercadoTotal / loteAtual.quantidadeTotal : 0), color: "border-l-indigo-500" },
                                 { label: "Custo Total Lote", val: formatCurrency(calculations.custoTotal), color: "border-l-amber-500" },
-                                { label: "Custo Médio p/ Unidade", val: formatCurrency(loteData.quantidadeTotal ? calculations.custoTotal / loteData.quantidadeTotal : 0), color: "border-l-red-500", highlight: true },
+                                { label: "Custo Médio p/ Unidade", val: formatCurrency(loteAtual.quantidadeTotal ? calculations.custoTotal / loteAtual.quantidadeTotal : 0), color: "border-l-red-500", highlight: true },
                             ].map((kpi, i) => (
                                 <div key={i} className={`bg-[#161b22] p-6 rounded-2xl border border-[#30363d] border-l-4 ${kpi.color} shadow-lg relative overflow-hidden group`}>
                                     <div className="relative z-10">
