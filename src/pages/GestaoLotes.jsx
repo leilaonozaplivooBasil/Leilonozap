@@ -29,16 +29,15 @@ export default function GestaoLotes() {
     const loadDados = async () => {
         setIsLoading(true);
         try {
-            const [loteData, invData, parcData, arrData] = await Promise.all([
+            const [loteData, invData, parcData] = await Promise.all([
                 Auction.filter({ is_investment_plan: true }),
                 AppUser.filter({ role: 'investidor' }),
-                AppUser.filter({ role: 'leiloeiro' }),
-                AppUser.filter({ role: 'investidor' })
+                AppUser.filter({ role: 'leiloeiro' })
             ]);
             setLotes(loteData || []);
             setInvestidores(invData || []);
             setParceiros(parcData || []);
-            setArrematantes(arrData || []);
+            setArrematantes(invData || []);
         } catch (err) {
             console.error('[GestaoLotes] Erro:', err);
         } finally {
