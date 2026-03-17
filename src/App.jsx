@@ -17,6 +17,7 @@ import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
 import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
 import SentinelNoZap from '@/pages/SentinelNoZap';
 import ParceiroLotes from '@/pages/ParceiroLotes';
+import AcessoArrematante from '@/pages/AcessoArrematante';
 import RequireRole from '@/components/common/RequireRole';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
