@@ -544,15 +544,19 @@ function AnaliseDeLotes() {
                         {/* MAIN KPIs */}
                         <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
                             {[
-                                { label: "Total de Itens (Qtd)", val: loteAtual.quantidadeTotal, prefix: "", color: "border-l-blue-500" },
+                                { label: "Total de Itens (Qtd)", val: loteAtual.quantidadeTotal, prefix: "", color: "border-l-blue-500", anchor: "distribuicao-departamental" },
                                 { label: "Valor de Mercado Total", val: formatCurrency(loteAtual.valorMercadoTotal), color: "border-l-emerald-500" },
                                 { label: "Ticket Avaliado (Mercado)", val: formatCurrency(loteAtual.quantidadeTotal ? loteAtual.valorMercadoTotal / loteAtual.quantidadeTotal : 0), color: "border-l-indigo-500" },
                                 { label: "Custo Total Lote", val: formatCurrency(calculations.custoTotal), color: "border-l-amber-500" },
                                 { label: "Custo Médio p/ Unidade", val: formatCurrency(loteAtual.quantidadeTotal ? calculations.custoTotal / loteAtual.quantidadeTotal : 0), color: "border-l-red-500", highlight: true },
                             ].map((kpi, i) => (
-                                <div key={i} className={`bg-[#161b22] p-6 rounded-2xl border border-[#30363d] border-l-4 ${kpi.color} shadow-lg relative overflow-hidden group`}>
+                                <div
+                                    key={i}
+                                    className={`bg-[#161b22] p-6 rounded-2xl border border-[#30363d] border-l-4 ${kpi.color} shadow-lg relative overflow-hidden group ${kpi.anchor ? 'cursor-pointer hover:border-blue-500/50' : ''}`}
+                                    onClick={() => kpi.anchor && document.getElementById(kpi.anchor)?.scrollIntoView({ behavior: 'smooth' })}
+                                >
                                     <div className="relative z-10">
-                                        <p className="text-slate-400 text-xs font-bold mb-1 tracking-wider uppercase">{kpi.label}</p>
+                                        <p className="text-slate-400 text-xs font-bold mb-1 tracking-wider uppercase">{kpi.label} {kpi.anchor ? '↓' : ''}</p>
                                         <p className={`text-3xl font-black tracking-tight ${kpi.highlight ? 'text-white' : 'text-slate-200'}`}>{kpi.val}</p>
                                     </div>
                                 </div>
@@ -745,7 +749,7 @@ function AnaliseDeLotes() {
 
                             {/* RESUMO CATEGORIAS */}
                             {loteAtual.resumoCategorias && loteAtual.resumoCategorias.length > 0 && (
-                                <div className="xl:col-span-3">
+                                <div className="xl:col-span-3" id="distribuicao-departamental">
                                     <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
                                         <div className="p-5 border-b border-[#30363d] bg-slate-800/20">
                                             <h3 className="font-bold text-white uppercase tracking-wider text-sm">Distribuição Departamental (Resumo Oficial)</h3>
