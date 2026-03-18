@@ -501,6 +501,9 @@ export default function Home() {
   { value: "outros", label: "Outros", icon: Package }],
   []);
 
+  // Reseta página ao trocar filtro
+  useEffect(() => { setCurrentPage(1); }, [activeCategory, activeSourceFilter, showFavoritesOnly]);
+
   const handleAcceptWelcome = useCallback(async () => {
     setShowWelcomeModal(false);
   }, []);
@@ -817,25 +820,82 @@ export default function Home() {
             }
               </div> :
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {filteredAuctions.map((auction) => {
-              // 🛡️ PROTEÇÃO: Valida se auction tem dados mínimos necessários
-              if (!auction || !auction.id) {
-                console.warn('⚠️ Auction inválido detectado:', auction);
-                return null;
-              }
-              return (
-                <AuctionCard
-                  key={auction.id}
-                  auction={auction}
-                  isAdmin={currentUser?.role === 'admin'}
-                  showFavoriteButton={true}
-                  userId={currentUser?.id}
-                  favoriteContext="nozap" />);
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {paginatedAuctions.map((auction) => {
+                if (!auction || !auction.id) return null;
+                return (
+                  <AuctionCard
+                    key={auction.id}
+                    auction={auction}
+                    isAdmin={currentUser?.role === 'admin'}
+                    showFavoriteButton={true}
+                    userId={currentUser?.id}
+                    favoriteContext="nozap" />
+                );
+              })}
+            </div>
 
+            {/* PAGINAÇÃO */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-3 mt-10 mb-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => { setCurrentPage(p => Math.max(1, p - 1)); window.scrollTo({ top: 400, behavior: 'smooth' }); }}
+                  className="rounded-xl border-0 text-white disabled:opacity-30"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" /> Anterior
+                </Button>
 
-            })}
+                <div className="flex items-center gap-1.5">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                    .map((p, idx, arr) => (
+                      <React.Fragment key={p}>
+                        {idx > 0 && arr[idx - 1] !== p - 1 && (
+                          <span className="text-gray-600 text-sm px-1">...</span>
+                        )}
+                        <button
+                          onClick={() => { setCurrentPage(p); window.scrollTo({ top: 400, behavior: 'smooth' }); }}
+                          className={`w-9 h-9 rounded-lg text-sm font-bold transition-all ${
+                            p === currentPage
+                              ? 'text-white'
+                              : 'text-gray-400 hover:text-white'
+                          }`}
+                          style={p === currentPage ? {
+                            background: 'linear-gradient(135deg, #059669, #065f46)',
+                            boxShadow: '0 2px 12px rgba(16,185,129,0.4)',
+                          } : {
+                            background: 'rgba(255,255,255,0.06)',
+                          }}
+                        >
+                          {p}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => { setCurrentPage(p => Math.min(totalPages, p + 1)); window.scrollTo({ top: 400, behavior: 'smooth' }); }}
+                  className="rounded-xl border-0 text-white disabled:opacity-30"
+                  style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+                >
+                  Próxima <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
               </div>
+            )}
+
+            {/* Info de contagem */}
+            <div className="text-center text-sm text-gray-500 mt-2">
+              Mostrando {Math.min(paginatedAuctions.length, ITEMS_PER_PAGE)} de {filteredAuctions.length} leilões
+            </div>
+          </>
           }
         </div>
       </div>
