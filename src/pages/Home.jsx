@@ -12,7 +12,7 @@ import { base44 } from "@/api/base44Client";
 const Auction = base44.entities.Auction;
 const User = { me: () => base44.auth.me() };
 const AppUser = base44.entities.AppUser;
-import { Zap, Filter, CheckCircle, Package, Smartphone, Percent, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign } from "lucide-react";
+import { Zap, Filter, CheckCircle, Package, Smartphone, Percent, Plug, Sofa, Home as HomeIcon, Shirt, Car, Flame, MessageCircle, DollarSign, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -87,6 +87,8 @@ export default function Home() {
   const [banners, setBanners] = useState([]);
   const [userRegion, setUserRegion] = useState(null);
   const [productStockMap, setProductStockMap] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 12;
 
   const { refresh: refreshAuctions } = useRealtimeSync({
     entityName: 'Auction',
