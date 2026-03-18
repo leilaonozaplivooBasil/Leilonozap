@@ -90,23 +90,25 @@ export default function Home() {
     filters: {},
     onUpdate: (freshAuctions) => {
       if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
-        // 🛡️ DEDUPLICAÇÃO na origem: garante IDs únicos antes de persistir
         const seen = new Set();
         const unique = freshAuctions.filter(a => {
           if (!a?.id || seen.has(a.id)) return false;
           seen.add(a.id);
           return true;
         });
-        console.log(`🔄 [Home] Sync recebeu ${unique.length} leilões únicos, ${unique.filter(a => a.status === 'active').length} ativos`);
         const serialized = JSON.stringify(unique);
-        sessionStorage.setItem('auctions_cache', serialized);
-        sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-        localStorage.setItem('auctions_cache_persistent', serialized);
-        setAuctions(unique);
+        // Só atualiza state se os dados mudaram de verdade
+        const current = sessionStorage.getItem('auctions_cache');
+        if (current !== serialized) {
+          sessionStorage.setItem('auctions_cache', serialized);
+          sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+          localStorage.setItem('auctions_cache_persistent', serialized);
+          setAuctions(unique);
+        }
         setIsLoading(false);
       }
     },
-    interval: 90000,
+    interval: 120000,
     enabled: true,
     priority: 'normal'
   });
