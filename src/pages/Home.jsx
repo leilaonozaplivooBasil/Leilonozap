@@ -40,37 +40,40 @@ export default function Home() {
   const retryTimeoutRef = useRef(null);
   const location = useLocation();
 
-  // 🚀 INICIALIZA COM CACHE IMEDIATO
+  // 🚀 INICIALIZA COM CACHE — DEDUPLICADO NA ORIGEM
   const [auctions, setAuctions] = useState(() => {
-    const cached = sessionStorage.getItem('auctions_cache');
-    const cacheTime = sessionStorage.getItem('auctions_cache_time');
-    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 300000) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      } catch (e) {}
-    }
-    // Fallback rápido entre sessões
+    // Helper: deduplica array por id
+    const dedup = (arr) => {
+      if (!Array.isArray(arr) || arr.length === 0) return [];
+      const seen = new Set();
+      return arr.filter(a => {
+        if (!a?.id || seen.has(a.id)) return false;
+        seen.add(a.id);
+        return true;
+      });
+    };
+    // Tenta sessionStorage primeiro
+    try {
+      const cached = sessionStorage.getItem('auctions_cache');
+      const cacheTime = sessionStorage.getItem('auctions_cache_time');
+      if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 300000) {
+        const parsed = dedup(JSON.parse(cached));
+        if (parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    // Fallback localStorage
     try {
       const persisted = localStorage.getItem('auctions_cache_persistent');
       if (persisted) {
-        const parsed = JSON.parse(persisted);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
+        const parsed = dedup(JSON.parse(persisted));
+        if (parsed.length > 0) return parsed;
       }
     } catch (e) {}
     return [];
   });
   const [isLoading, setIsLoading] = useState(() => {
     const cached = sessionStorage.getItem('auctions_cache');
-    const cacheTime = sessionStorage.getItem('auctions_cache_time');
-    const hasFreshSession = cached && cacheTime && Date.now() - parseInt(cacheTime) < 300000;
-    if (hasFreshSession) return false;
-    const persisted = localStorage.getItem('auctions_cache_persistent');
-    return !persisted;
+    return !cached;
   });
   const [activeCategory, setActiveCategory] = useState("todos");
   const [activeSourceFilter, setActiveSourceFilter] = useState("todos");
