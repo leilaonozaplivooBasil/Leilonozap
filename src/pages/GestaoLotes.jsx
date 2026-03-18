@@ -235,6 +235,21 @@ export default function GestaoLotes() {
         }
     };
 
+    const excluirLote = async (lote) => {
+        if (!confirm(`Excluir o lote "${lote.title}"? Esta ação não pode ser desfeita.`)) return;
+        setIsSaving(lote.id);
+        try {
+            await Auction.delete(lote.id);
+            setLotes(prev => prev.filter(l => l.id !== lote.id));
+            toast.success('Lote excluído com sucesso.');
+        } catch (err) {
+            console.error('[GestaoLotes] Erro ao excluir:', err);
+            toast.error('Erro ao excluir lote.');
+        } finally {
+            setIsSaving(null);
+        }
+    };
+
     const statsInvestidores = investidores.length;
     const lotesMarketplace = lotes.filter(l => l.is_investment_plan).length;
     const lotesSold = lotes.filter(l => l.status === 'sold').length;

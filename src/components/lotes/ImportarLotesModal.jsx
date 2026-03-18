@@ -152,7 +152,17 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
             if (errors.length > 0) {
                 toast.error(`${errors.length} planilha(s) com erro de leitura.`);
             }
-            setLotes(prev => [...prev, ...valid]);
+            setLotes(prev => {
+                const existingNames = new Set(prev.map(l => l.nomePlanilha));
+                const novas = valid.filter(l => {
+                    if (existingNames.has(l.nomePlanilha)) {
+                        toast.error(`"${l.nomePlanilha}" já foi importada.`);
+                        return false;
+                    }
+                    return true;
+                });
+                return [...prev, ...novas];
+            });
             setIsProcessing(false);
             // Reset file input
             if (fileInputRef.current) fileInputRef.current.value = '';
