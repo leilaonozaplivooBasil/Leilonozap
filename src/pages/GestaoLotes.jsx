@@ -347,6 +347,7 @@ export default function GestaoLotes() {
                                         <th className="px-6 py-4 text-center">Marketplace</th>
                                         <th className="px-6 py-4">Vencedor / Registrar</th>
                                         <th className="px-6 py-4 text-center">Comissão</th>
+                                        <th className="px-6 py-4"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -451,6 +452,16 @@ export default function GestaoLotes() {
                                                         <DollarSign size={16} />
                                                     </button>
                                                 )}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <button
+                                                    onClick={() => excluirLote(lote)}
+                                                    disabled={isSaving === lote.id}
+                                                    title="Excluir lote"
+                                                    className="text-slate-600 hover:text-red-400 transition-colors disabled:opacity-40"
+                                                >
+                                                    <Trash2 size={15} />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
