@@ -555,6 +555,7 @@ export default function Layout({ children, currentPageName }) {
       ]
       : [
         { title: "Leilões", pageName: "Home" },
+        ...(isLoggedIn ? [{ title: "💰 Carteira", pageName: "AddFunds" }] : []),
         { title: "Lojista", pageName: "LojistaDashboard" },
         { title: "Sistema de Alavancagem", pageName: "Licensing" },
         ...(isLoggedIn && !isAdmin ? rolesSpecificMenu : [])
