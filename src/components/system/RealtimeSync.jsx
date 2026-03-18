@@ -60,7 +60,7 @@ export function useRealtimeSync({
     }
 
     // PROTEÇÃO 2: Intervalo mínimo entre chamadas
-    const minInterval = priority === 'high' ? 8000 : 45000;
+    const minInterval = priority === 'high' ? 8000 : 60000;
     if (now - lastSuccessRef.current < minInterval) {
       return;
     }
@@ -72,8 +72,8 @@ export function useRealtimeSync({
       if (!Entity) return;
       
       const data = await Promise.race([
-        Entity.list('-updated_date', 100),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000))
+        Entity.list('-updated_date', 80),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 12000))
       ]);
       
       retryCountRef.current = 0;
@@ -81,14 +81,18 @@ export function useRealtimeSync({
       lastSuccessRef.current = Date.now();
       syncModeRef.current = 'fast';
       
-      const dataStr = JSON.stringify(data);
-      if (lastDataRef.current !== dataStr) {
-        lastDataRef.current = dataStr;
+      // Comparação leve: só compara contagem + primeiro/último id
+      const dataLen = Array.isArray(data) ? data.length : 0;
+      const lastLen = lastDataRef.current ? lastDataRef.current.length : -1;
+      const firstId = dataLen > 0 ? data[0]?.id : null;
+      const lastId = dataLen > 0 ? data[dataLen - 1]?.id : null;
+      const fingerprint = `${dataLen}:${firstId}:${lastId}`;
+      
+      if (lastDataRef.current !== fingerprint) {
+        lastDataRef.current = fingerprint;
         if (mountedRef.current) onUpdate(data);
         
-        if (channelRef.current) {
-          try { channelRef.current.postMessage({ type: 'update', payload: data }); } catch (e) {}
-        }
+        // NÃO repassa via BroadcastChannel para evitar duplicação entre abas
       }
     } catch (error) {
       const errorMsg = error.message || '';
