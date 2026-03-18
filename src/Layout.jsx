@@ -446,6 +446,7 @@ export default function Layout({ children, currentPageName }) {
   const noZapLoggedItems = [];
 
   const loggedMenuItems = [
+    { title: "💰 Minha Carteira", pageName: "AddFunds" },
     { title: "Meus Arremates", pageName: "MyWinnings" },
     { title: "Perfil", pageName: "Profile" },
   ];
