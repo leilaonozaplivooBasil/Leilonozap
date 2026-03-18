@@ -24,29 +24,8 @@ export function useRealtimeSync({
 
   const syncModeRef = useRef(priority === 'high' ? 'fast' : 'normal');
 
-  // Cria canal de broadcast
-  useEffect(() => {
-    if (!enabled) return;
-
-    try {
-      channelRef.current = new BroadcastChannel(`realtime-${entityName}`);
-      
-      channelRef.current.onmessage = (event) => {
-        if (event.data.type === 'update' && mountedRef.current) {
-          onUpdate(event.data.payload);
-          lastSuccessRef.current = Date.now();
-        }
-      };
-    } catch (error) {
-      // BroadcastChannel não disponível
-    }
-
-    return () => {
-      if (channelRef.current) {
-        channelRef.current.close();
-      }
-    };
-  }, [entityName, enabled]);
+  // BroadcastChannel DESABILITADO — causava duplicação de dados entre abas
+  // Cada aba faz seu próprio polling de forma independente
 
   // FETCH DATA COM PRIORIDADE
   const fetchData = useCallback(async () => {
