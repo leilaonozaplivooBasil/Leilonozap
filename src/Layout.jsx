@@ -512,6 +512,8 @@ export default function Layout({ children, currentPageName }) {
     { title: "💲 Financeiro", pageName: "Financial" },
     { title: "Painel de Controle", pageName: "NetworkOverview" },
     { title: "Gerenciar Senhas", pageName: "AdminUsers" },
+    { title: "💰 Carteira Leilões", pageName: "AddFunds" },
+    { title: "💼 Carteira Investidor", pageName: "CarteiraInvestidor" },
   ];
 
   const isLoggedIn = currentUser && currentUser.email;
