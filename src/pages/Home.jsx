@@ -90,12 +90,19 @@ export default function Home() {
     filters: {},
     onUpdate: (freshAuctions) => {
       if (Array.isArray(freshAuctions) && freshAuctions.length > 0) {
-        console.log(`🔄 [Home] Sync recebeu ${freshAuctions.length} leilões, ${freshAuctions.filter(a => a.status === 'active').length} ativos`);
-        const serialized = JSON.stringify(freshAuctions);
+        // 🛡️ DEDUPLICAÇÃO na origem: garante IDs únicos antes de persistir
+        const seen = new Set();
+        const unique = freshAuctions.filter(a => {
+          if (!a?.id || seen.has(a.id)) return false;
+          seen.add(a.id);
+          return true;
+        });
+        console.log(`🔄 [Home] Sync recebeu ${unique.length} leilões únicos, ${unique.filter(a => a.status === 'active').length} ativos`);
+        const serialized = JSON.stringify(unique);
         sessionStorage.setItem('auctions_cache', serialized);
         sessionStorage.setItem('auctions_cache_time', Date.now().toString());
         localStorage.setItem('auctions_cache_persistent', serialized);
-        setAuctions(freshAuctions);
+        setAuctions(unique);
         setIsLoading(false);
       }
     },
