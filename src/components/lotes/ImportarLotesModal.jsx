@@ -153,10 +153,20 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
                 toast.error(`${errors.length} planilha(s) com erro de leitura.`);
             }
             setLotes(prev => {
-                const existingNames = new Set(prev.map(l => l.nomePlanilha));
                 const novas = valid.filter(l => {
-                    if (existingNames.has(l.nomePlanilha)) {
+                    // Checa nome duplicado
+                    const nomeDup = prev.find(p => p.nomePlanilha === l.nomePlanilha);
+                    if (nomeDup) {
                         toast.error(`"${l.nomePlanilha}" já foi importada.`);
+                        return false;
+                    }
+                    // Checa conteúdo duplicado (mesmo VM + mesma quantidade)
+                    const conteudoDup = prev.find(p =>
+                        p.quantidadeTotal === l.quantidadeTotal &&
+                        Math.abs(p.valorMercadoTotal - l.valorMercadoTotal) < 1
+                    );
+                    if (conteudoDup) {
+                        toast.error(`"${l.nomePlanilha}" tem o mesmo conteúdo de "${conteudoDup.nomeLote}" já importado.`);
                         return false;
                     }
                     return true;
