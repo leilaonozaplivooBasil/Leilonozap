@@ -217,12 +217,28 @@ export default function Home() {
     }
 
     // ORDENAÇÃO OTIMIZADA
-    return filtered.sort((a, b) => {
+    filtered.sort((a, b) => {
       if (a.status === 'active' && b.status !== 'active') return -1;
       if (a.status !== 'active' && b.status === 'active') return 1;
       return a.status === 'active' ? new Date(a.end_time) - new Date(b.end_time) : new Date(b.end_time) - new Date(a.end_time);
     });
+
+    // DEDUPLICAÇÃO POR TÍTULO: mesmo produto listado várias vezes → mantém só o primeiro (ativo tem prioridade pela ordenação acima)
+    const seenTitles = new Set();
+    return filtered.filter(a => {
+      const normalizedTitle = (a.title || '').trim().toLowerCase();
+      if (!normalizedTitle || seenTitles.has(normalizedTitle)) return false;
+      seenTitles.add(normalizedTitle);
+      return true;
+    });
   }, [auctions, activeCategory, activeSourceFilter, showFavoritesOnly, favoriteAuctions, userRegion, productStockMap]);
+
+  // Paginação derivada
+  const totalPages = Math.max(1, Math.ceil(filteredAuctions.length / ITEMS_PER_PAGE));
+  const paginatedAuctions = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredAuctions.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredAuctions, currentPage, ITEMS_PER_PAGE]);
 
   const loadUserFavorites = React.useCallback(async (userId, retryCount = 0) => {
     if (!userId) return;
