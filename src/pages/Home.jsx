@@ -154,6 +154,14 @@ export default function Home() {
   const filteredAuctions = useMemo(() => {
     if (!Array.isArray(auctions) || auctions.length === 0) return [];
 
+    // 🛡️ DEDUPLICAÇÃO: Remove IDs duplicados antes de qualquer filtro
+    const seen = new Set();
+    const deduped = auctions.filter(a => {
+      if (!a?.id || seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
+
     let filtered = auctions;
 
     // FAVORITOS
