@@ -453,7 +453,8 @@ export default function Layout({ children, currentPageName }) {
 
   const investorMenuItems = [
     { title: "Marketplace de Lotes", pageName: "MarketplaceLotes" },
-    { title: "Minha Carteira", pageName: "CarteiraInvestidor" },
+    { title: "Carteira Investidor", pageName: "CarteiraInvestidor" },
+    { title: "💰 Carteira Leilões", pageName: "AddFunds" },
     { title: "Perfil", pageName: "Profile" },
   ];
 
