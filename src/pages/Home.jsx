@@ -391,14 +391,33 @@ export default function Home() {
   useEffect(() => {
 
     const loadInitialData = async () => {
-      // 🧹 Limpa cache antigo corrompido (> 10 minutos)
-      const cacheTime = sessionStorage.getItem('auctions_cache_time');
-      if (cacheTime && Date.now() - parseInt(cacheTime) > 600000) {
+      // 🧹 LIMPA CACHES CORROMPIDOS: força deduplicação no storage existente
+      try {
+        const existingCache = sessionStorage.getItem('auctions_cache');
+        if (existingCache) {
+          const parsed = JSON.parse(existingCache);
+          if (Array.isArray(parsed)) {
+            const seen = new Set();
+            const clean = parsed.filter(a => {
+              if (!a?.id || seen.has(a.id)) return false;
+              seen.add(a.id);
+              return true;
+            });
+            if (clean.length !== parsed.length) {
+              // Cache estava corrompido com duplicatas — limpa
+              const fixed = JSON.stringify(clean);
+              sessionStorage.setItem('auctions_cache', fixed);
+              localStorage.setItem('auctions_cache_persistent', fixed);
+              setAuctions(clean);
+            }
+          }
+        }
+      } catch (e) {
         sessionStorage.removeItem('auctions_cache');
-        sessionStorage.removeItem('auctions_cache_time');
         localStorage.removeItem('auctions_cache_persistent');
       }
 
+      const cacheTime = sessionStorage.getItem('auctions_cache_time');
       const cachedData = sessionStorage.getItem('auctions_cache');
       const hasValidCache = cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 120000;
 
