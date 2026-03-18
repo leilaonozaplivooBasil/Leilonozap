@@ -388,36 +388,33 @@ export default function Home() {
   useEffect(() => {
 
     const loadInitialData = async () => {
-      // Verifica cache ANTES de ativar loading
-      const cachedData = sessionStorage.getItem('auctions_cache');
+      // 🧹 Limpa cache antigo corrompido (> 10 minutos)
       const cacheTime = sessionStorage.getItem('auctions_cache_time');
-      const hasValidCache = cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 300000;
+      if (cacheTime && Date.now() - parseInt(cacheTime) > 600000) {
+        sessionStorage.removeItem('auctions_cache');
+        sessionStorage.removeItem('auctions_cache_time');
+        localStorage.removeItem('auctions_cache_persistent');
+      }
+
+      const cachedData = sessionStorage.getItem('auctions_cache');
+      const hasValidCache = cachedData && cacheTime && Date.now() - parseInt(cacheTime) < 120000;
 
       if (!hasValidCache) {
         setIsLoading(true);
       }
 
       const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('filter') === 'ativos') setActiveCategory('ativos');
+      if (urlParams.get('favorites') === 'true') setShowFavoritesOnly(true);
 
-      if (urlParams.get('filter') === 'ativos') {
-        setActiveCategory('ativos');
-      }
-      if (urlParams.get('favorites') === 'true') {
-        setShowFavoritesOnly(true);
-      }
-
-      // Localização em background (não consome rate limit do Base44)
       checkLocation().then((locationData) => {
-        if (locationData?.location?.region) {
-          setUserRegion(locationData.location.region);
-        }
+        if (locationData?.location?.region) setUserRegion(locationData.location.region);
       }).catch(() => {});
 
-      // ESTRATÉGIA: Apenas 1 chamada por vez, escalonada com delays longos
-      // O RealtimeSync já faz a atualização contínua dos leilões
+      // Uma única carga inicial — o RealtimeSync cuida das atualizações
       loadAuctions();
       setTimeout(() => loadCurrentUser(), 2000);
-      setTimeout(() => loadProductStock(), 5000);
+      setTimeout(() => loadProductStock(), 6000);
 
       // Banners: cache de 10 minutos (raramente mudam)
       const cachedBanners = sessionStorage.getItem('home_banners_cache');
