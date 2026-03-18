@@ -152,15 +152,31 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
             if (errors.length > 0) {
                 toast.error(`${errors.length} planilha(s) com erro de leitura.`);
             }
+
+            // Deduplica primeiro dentro do próprio lote selecionado
+            const deduplicados = [];
+            for (const l of valid) {
+                const dupNome = deduplicados.find(d => d.nomePlanilha === l.nomePlanilha);
+                const dupConteudo = deduplicados.find(d =>
+                    d.quantidadeTotal === l.quantidadeTotal &&
+                    Math.abs(d.valorMercadoTotal - l.valorMercadoTotal) < 1
+                );
+                if (dupNome) {
+                    toast.error(`"${l.nomePlanilha}" duplicada na seleção — ignorada.`);
+                } else if (dupConteudo) {
+                    toast.error(`"${l.nomePlanilha}" tem o mesmo conteúdo de "${dupConteudo.nomeLote}" — ignorada.`);
+                } else {
+                    deduplicados.push(l);
+                }
+            }
+
             setLotes(prev => {
-                const novas = valid.filter(l => {
-                    // Checa nome duplicado
+                const novas = deduplicados.filter(l => {
                     const nomeDup = prev.find(p => p.nomePlanilha === l.nomePlanilha);
                     if (nomeDup) {
                         toast.error(`"${l.nomePlanilha}" já foi importada.`);
                         return false;
                     }
-                    // Checa conteúdo duplicado (mesmo VM + mesma quantidade)
                     const conteudoDup = prev.find(p =>
                         p.quantidadeTotal === l.quantidadeTotal &&
                         Math.abs(p.valorMercadoTotal - l.valorMercadoTotal) < 1
@@ -174,7 +190,6 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
                 return [...prev, ...novas];
             });
             setIsProcessing(false);
-            // Reset file input
             if (fileInputRef.current) fileInputRef.current.value = '';
         });
     }, []);
