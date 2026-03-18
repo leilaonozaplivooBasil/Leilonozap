@@ -327,76 +327,59 @@ export default function Home() {
     }
   }, []);
 
+  const deduplicateAndSet = React.useCallback((data) => {
+    if (!Array.isArray(data) || data.length === 0) { setAuctions([]); return; }
+    const seen = new Set();
+    const unique = data.filter(a => {
+      if (!a?.id || seen.has(a.id)) return false;
+      seen.add(a.id);
+      return true;
+    });
+    const serialized = JSON.stringify(unique);
+    sessionStorage.setItem('auctions_cache', serialized);
+    sessionStorage.setItem('auctions_cache_time', Date.now().toString());
+    localStorage.setItem('auctions_cache_persistent', serialized);
+    setAuctions(unique);
+  }, []);
+
   const loadAuctions = React.useCallback(async (isRetry = false) => {
     const cachedData = sessionStorage.getItem('auctions_cache');
     const cacheTime = sessionStorage.getItem('auctions_cache_time');
 
-    // CACHE INSTANTÂNEO: Mostra imediatamente se existir
+    // CACHE VÁLIDO: Usa diretamente sem nova requisição
     if (cachedData && cacheTime) {
       const age = Date.now() - parseInt(cacheTime);
-      if (age < 60000) {
+      if (age < 120000) {
         try {
           const parsedData = JSON.parse(cachedData);
           if (Array.isArray(parsedData) && parsedData.length > 0) {
-            setAuctions(parsedData);
+            deduplicateAndSet(parsedData);
             setIsLoading(false);
-
-            // Atualização silenciosa em background após 15s
-            if (age > 15000 && !isRetry) {
-              setTimeout(() => {
-                Auction.list("-created_date", 100).then((data) => {
-                  if (Array.isArray(data) && data.length > 0) {
-                    const serialized = JSON.stringify(data);
-                    sessionStorage.setItem('auctions_cache', serialized);
-                    sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-                    localStorage.setItem('auctions_cache_persistent', serialized);
-                    setAuctions(data);
-                  }
-                }).catch(() => {});
-              }, 3000);
-            }
             return;
           }
-        } catch (e) {
-          console.error('Cache parse error:', e);
-        }
+        } catch (e) {}
       }
     }
 
-    // Se não tem cache válido, busca do servidor
+    // Sem cache válido: busca do servidor (uma única vez)
     try {
       const data = await Promise.race([
-      Auction.list("-created_date", 100),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000))]
-      );
-      if (Array.isArray(data) && data.length > 0) {
-        setAuctions(data);
-        const serialized = JSON.stringify(data);
-        sessionStorage.setItem('auctions_cache', serialized);
-        sessionStorage.setItem('auctions_cache_time', Date.now().toString());
-        localStorage.setItem('auctions_cache_persistent', serialized);
-        setRetryCount(0);
-      } else {
-        setAuctions([]);
-      }
+        Auction.list("-created_date", 80),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 10000))
+      ]);
+      deduplicateAndSet(data);
+      setRetryCount(0);
     } catch (error) {
-      const oldCache = sessionStorage.getItem('auctions_cache');
+      const oldCache = sessionStorage.getItem('auctions_cache') || localStorage.getItem('auctions_cache_persistent');
       if (oldCache) {
-        try {
-          const parsedCache = JSON.parse(oldCache);
-          if (Array.isArray(parsedCache)) {
-            setAuctions(parsedCache);
-          }
-        } catch (e) {
-          setAuctions([]);
-        }
+        try { deduplicateAndSet(JSON.parse(oldCache)); } catch (e) { setAuctions([]); }
       } else {
         setAuctions([]);
       }
     } finally {
       setIsLoading(false);
     }
-  }, [retryCount]);
+  }, [retryCount, deduplicateAndSet]);
 
 
 
