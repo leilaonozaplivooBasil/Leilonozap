@@ -162,7 +162,7 @@ export default function Home() {
       return true;
     });
 
-    let filtered = auctions;
+    let filtered = deduped;
 
     // FAVORITOS
     if (showFavoritesOnly) {
@@ -172,7 +172,7 @@ export default function Home() {
     // Removido: filtro específico 'sai_de_baixo' (desativado permanentemente)
 
     // NOZAP - FILTRO BASE + ESTOQUE
-    filtered = auctions.filter((a) => {
+    filtered = deduped.filter((a) => {
       if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
       
       // 🆕 FILTRO DE ESTOQUE: Verifica se produto vinculado tem estoque > 0
