@@ -115,7 +115,8 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
           await sendWelcomeArrematante({
             email: normalizedEmail,
             fullName: fullName.trim(),
-            resetLink
+            resetLink,
+            role: 'investidor'
           });
         } catch (emailErr) {
           console.warn('E-mail de boas-vindas não enviado (não crítico):', emailErr.message);
