@@ -95,24 +95,13 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
         password_reset_expires: resetExpires,
       });
 
-      // Envia e-mail de boas-vindas com link para redefinir senha
+      // Envia e-mail de boas-vindas via Brevo (backend function)
       if (sendEmail) {
         const resetLink = `https://leilaonozap.net/ResetPassword?token=${encodeURIComponent(resetToken)}`;
-        await base44.integrations.Core.SendEmail({
-          to: normalizedEmail,
-          subject: 'Bem-vindo ao Leilão NoZap — Acesse sua conta',
-          body: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0d1117; color: #e2e8f0; padding: 32px; border-radius: 12px;">
-              <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png" alt="Leilão NoZap" style="height: 60px; margin-bottom: 24px;" />
-              <h2 style="color: #10b981; margin-bottom: 8px;">Olá, ${fullName.trim()}!</h2>
-              <p style="color: #94a3b8; margin-bottom: 16px;">Sua conta de arrematante foi criada com sucesso no <strong style="color: #fff;">Leilão NoZap</strong>.</p>
-              <p style="color: #94a3b8; margin-bottom: 24px;">Você precisa definir sua senha para acessar o sistema. Clique no botão abaixo:</p>
-              <a href="${resetLink}" style="display: inline-block; background: #10b981; color: white; font-weight: bold; padding: 14px 28px; border-radius: 8px; text-decoration: none; margin-bottom: 24px;">
-                Definir minha senha
-              </a>
-              <p style="color: #64748b; font-size: 12px;">Se não solicitou esse cadastro, ignore este e-mail.</p>
-            </div>
-          `
+        await sendWelcomeArrematante({
+          email: normalizedEmail,
+          fullName: fullName.trim(),
+          resetLink
         });
       }
 
