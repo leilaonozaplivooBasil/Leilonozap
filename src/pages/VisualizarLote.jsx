@@ -312,13 +312,38 @@ export default function VisualizarLote() {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {categorias.map((cat, i) => (
-                                            <tr key={i} className="border-b border-[#30363d]/50 hover:bg-white/[0.02] transition-colors">
-                                                <td className="px-6 py-4 font-medium text-slate-300">{cat.nome}</td>
-                                                <td className="px-6 py-4 border-l border-[#30363d]/50 text-center text-slate-400">{cat.qtd} un</td>
-                                                <td className="px-6 py-4 border-l border-[#30363d]/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
-                                            </tr>
-                                        ))}
+                                        {categorias.map((cat, i) => {
+                                            if (cat.nome === 'Total Geral') return null;
+                                            const subs = subItemsByCategory[cat.nome] || [];
+                                            const isOpen = expandedCategories.has(cat.nome);
+                                            return (
+                                                <React.Fragment key={i}>
+                                                    <tr
+                                                        onClick={() => subs.length > 0 && toggleCategory(cat.nome)}
+                                                        className={`border-b border-[#30363d]/50 transition-colors ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}
+                                                    >
+                                                        <td className="px-6 py-4 font-medium text-slate-300 flex items-center gap-2">
+                                                            {subs.length > 0 && (
+                                                                <ChevronRight size={14} className={`text-slate-500 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                                                            )}
+                                                            {cat.nome}
+                                                            {subs.length > 0 && <span className="text-xs text-slate-600 ml-1">({subs.length} itens)</span>}
+                                                        </td>
+                                                        <td className="px-6 py-4 border-l border-[#30363d]/50 text-center text-slate-400">{cat.qtd} un</td>
+                                                        <td className="px-6 py-4 border-l border-[#30363d]/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
+                                                    </tr>
+                                                    {isOpen && subs.map((sub, si) => (
+                                                        <tr key={`sub-${i}-${si}`} className="border-b border-[#30363d]/30 bg-[#0d1117]/60">
+                                                            <td className="pl-12 pr-6 py-2.5 text-slate-400 text-sm">
+                                                                <span className="text-slate-600 mr-2">└</span>{sub.desc}
+                                                            </td>
+                                                            <td className="px-6 py-2.5 border-l border-[#30363d]/30 text-center text-slate-500 text-sm">{sub.qtd} un</td>
+                                                            <td className="px-6 py-2.5 border-l border-[#30363d]/30 text-right text-emerald-600 text-sm font-medium">{formatCurrency(sub.valor)}</td>
+                                                        </tr>
+                                                    ))}
+                                                </React.Fragment>
+                                            );
+                                        })}
                                         {/* Linha Total Geral clicável */}
                                         <tr
                                             className="bg-[#0d1117] border-t-2 border-[#30363d] cursor-pointer hover:bg-slate-800/50 transition-colors"
