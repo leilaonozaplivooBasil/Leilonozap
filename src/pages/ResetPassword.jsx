@@ -164,9 +164,8 @@ export default function ResetPassword() {
                                     Solicitar Novo Link
                                 </Button>
                                 <Button
-                                    variant="outline"
                                     onClick={() => navigate(createPageUrl("Home"))}
-                                    className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 h-12"
+                                    className="w-full bg-gray-700 hover:bg-gray-600 text-white border border-gray-500 h-12"
                                 >
                                     Voltar ao Login
                                 </Button>
