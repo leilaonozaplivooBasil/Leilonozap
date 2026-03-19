@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight } from 'lucide-react';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
@@ -14,6 +14,7 @@ export default function VisualizarLote() {
     const [isLoading, setIsLoading] = useState(true);
     const [parceiro, setParceiro] = useState(null);
     const [investidores, setInvestidores] = useState([]);
+    const [expandedCategories, setExpandedCategories] = useState(new Set());
     const perfilRef = useRef(null);
     const distribuicaoRef = useRef(null);
 
@@ -58,6 +59,20 @@ export default function VisualizarLote() {
         if (!lote?.lot_categories_json) return [];
         try { return JSON.parse(lote.lot_categories_json); } catch { return []; }
     }, [lote]);
+
+    // Parseia o JSON de itens detalhados por categoria
+    const subItemsByCategory = useMemo(() => {
+        if (!lote?.lot_items_json) return {};
+        try { return JSON.parse(lote.lot_items_json); } catch { return {}; }
+    }, [lote]);
+
+    const toggleCategory = (nome) => {
+        setExpandedCategories(prev => {
+            const next = new Set(prev);
+            next.has(nome) ? next.delete(nome) : next.add(nome);
+            return next;
+        });
+    };
 
     const calculations = useMemo(() => {
         if (!lote) return null;
