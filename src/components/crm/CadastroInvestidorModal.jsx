@@ -29,10 +29,23 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
   const [cpf, setCpf] = useState('');
   const [addressCity, setAddressCity] = useState('');
   const [addressState, setAddressState] = useState('');
+  const [arrematanteCommission, setArrematanteCommission] = useState('');
   const [sendEmail, setSendEmail] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [currentArrematante, setCurrentArrematante] = useState(null);
+  const [platformFee, setPlatformFee] = useState(0);
+
+  // Carrega dados do arrematante logado para pegar a % do admin
+  React.useEffect(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      const user = JSON.parse(savedUser);
+      setCurrentArrematante(user);
+      setPlatformFee(user.partner_plan_amount || 0);
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,6 +88,9 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
       const resetExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
       const nameParts = fullName.trim().split(/\s+/);
+      const arrematanteComm = arrematanteCommission ? parseFloat(arrematanteCommission) : 0;
+      const totalFee = platformFee + arrematanteComm;
+
       const newUser = await AppUser.create({
         full_name: fullName.trim(),
         display_first_name: nameParts[0] || null,
@@ -86,6 +102,9 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
         role: 'investidor',
         address_city: addressCity,
         address_state: addressState,
+        referred_by_id: currentArrematante?.id || null,
+        arrematante_commission_percentage: arrematanteComm,
+        total_operation_fee_percentage: totalFee,
         password_reset_token: resetToken,
         password_reset_expires: resetExpires,
       });
@@ -178,6 +197,40 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Estado</label>
                 <input type="text" value={addressState} onChange={e => setAddressState(e.target.value.toUpperCase())} placeholder="UF" maxLength={2}
                   className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 uppercase" />
+              </div>
+
+              {/* Comissão do Arrematante */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  % Sua Comissão (Arrematante) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number" min="0" max="100" step="0.5"
+                    value={arrematanteCommission}
+                    onChange={e => setArrematanteCommission(e.target.value)}
+                    placeholder="Ex: 5"
+                    className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2.5 pr-8 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-bold">%</span>
+                </div>
+              </div>
+
+              {/* Resumo da taxa */}
+              <div className="sm:col-span-2 bg-[#0d1117] border border-[#30363d] rounded-xl p-4 space-y-2">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Resumo da Taxa de Operação</p>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Taxa Plataforma (Admin)</span>
+                  <span className="text-violet-400 font-bold">{platformFee}%</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-400">Sua Comissão (Arrematante)</span>
+                  <span className="text-emerald-400 font-bold">{arrematanteCommission ? parseFloat(arrematanteCommission) : 0}%</span>
+                </div>
+                <div className="border-t border-[#30363d] pt-2 flex justify-between text-sm">
+                  <span className="text-white font-bold">Taxa Total para o Investidor</span>
+                  <span className="text-amber-400 font-black text-base">{(platformFee + (arrematanteCommission ? parseFloat(arrematanteCommission) : 0)).toFixed(1)}%</span>
+                </div>
               </div>
             </div>
 
