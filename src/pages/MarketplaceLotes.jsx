@@ -71,7 +71,7 @@ export default function MarketplaceLotes() {
                     <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
                         Lotes disponíveis para <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Investimento</span>
                     </h1>
-                    <p className="text-slate-400 mt-2 text-sm">Autorize seu lance e participe dos leilões com a equipe do Leilão no Zap.</p>
+                    <p className="text-slate-400 mt-2 text-sm">Veja os lotes disponíveis e compre diretamente com seu saldo.</p>
                 </header>
 
                 {/* Busca + Refresh */}
