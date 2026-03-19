@@ -28,17 +28,26 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
-    if (!user || user.role !== 'admin') {
+
+    // Permite admin e leiloeiro (que cadastra investidores)
+    if (!user || !['admin', 'leiloeiro'].includes(user.role)) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { email, fullName, resetLink } = await req.json();
+    const { email, fullName, resetLink, role } = await req.json();
 
     if (!email || !fullName || !resetLink) {
       return Response.json({ error: 'email, fullName e resetLink são obrigatórios' }, { status: 400 });
     }
 
     const firstName = fullName.trim().split(' ')[0];
+
+    // Determina o rótulo e a cor com base no role recebido
+    const roleConfig = {
+      investidor: { label: 'Investidor', color: '#34d399', colorBg: 'rgba(52,211,153,0.1)', gradient: 'linear-gradient(135deg,#059669 0%,#047857 100%)' },
+      leiloeiro:  { label: 'Arrematante / Leiloeiro', color: '#a78bfa', colorBg: 'rgba(124,58,237,0.1)', gradient: 'linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%)' },
+    };
+    const cfg = roleConfig[role] || roleConfig.leiloeiro;
 
     const html = `
 <!DOCTYPE html>
@@ -49,7 +58,7 @@ Deno.serve(async (req) => {
     <tr><td align="center" style="padding:40px 20px;">
       <table role="presentation" style="width:100%;max-width:600px;border-collapse:collapse;background:linear-gradient(135deg,#1f2937 0%,#111827 100%);border-radius:20px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5);">
         <tr>
-          <td style="background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);padding:40px 40px 30px;text-align:center;">
+          <td style="background:${cfg.gradient};padding:40px 40px 30px;text-align:center;">
             <div style="font-size:42px;margin-bottom:10px;">🔨</div>
             <h1 style="margin:0;color:#fff;font-size:28px;font-weight:700;">Leilão NoZap</h1>
             <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Sistema de Investimento em Lotes</p>
@@ -59,7 +68,7 @@ Deno.serve(async (req) => {
           <td style="padding:40px;">
             <h2 style="margin:0 0 20px;color:#fff;font-size:24px;">Bem-vindo, ${firstName}! 🎉</h2>
             <p style="margin:0 0 20px;color:#9ca3af;font-size:16px;line-height:1.6;">
-              Sua conta de <strong style="color:#a78bfa;">Arrematante</strong> foi criada com sucesso no sistema de lotes do Leilão NoZap.
+              Sua conta de <strong style="color:${cfg.color};">${cfg.label}</strong> foi criada com sucesso no sistema de lotes do Leilão NoZap.
             </p>
             <p style="margin:0 0 30px;color:#9ca3af;font-size:16px;line-height:1.6;">
               Para acessar o sistema, você precisa definir sua senha clicando no botão abaixo:
@@ -67,7 +76,7 @@ Deno.serve(async (req) => {
             <table role="presentation" style="width:100%;border-collapse:collapse;">
               <tr>
                 <td align="center" style="padding:10px 0 30px;">
-                  <a href="${resetLink}" style="display:inline-block;background:linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%);color:#fff;text-decoration:none;padding:18px 50px;font-size:18px;font-weight:700;border-radius:12px;box-shadow:0 10px 25px -5px rgba(124,58,237,0.4);">
+                  <a href="${resetLink}" style="display:inline-block;background:${cfg.gradient};color:#fff;text-decoration:none;padding:18px 50px;font-size:18px;font-weight:700;border-radius:12px;box-shadow:0 10px 25px -5px rgba(0,0,0,0.3);">
                     🔐 Definir Minha Senha
                   </a>
                 </td>
@@ -77,7 +86,7 @@ Deno.serve(async (req) => {
               <p style="margin:0;color:#fbbf24;font-size:14px;">⏰ <strong>Atenção:</strong> Este link expira em <strong>7 dias</strong>.</p>
             </div>
             <p style="margin:0 0 10px;color:#6b7280;font-size:13px;">Se o botão não funcionar, copie e cole este link:</p>
-            <p style="margin:0 0 25px;color:#a78bfa;font-size:12px;word-break:break-all;background:rgba(124,58,237,0.1);padding:12px;border-radius:8px;">${resetLink}</p>
+            <p style="margin:0 0 25px;color:${cfg.color};font-size:12px;word-break:break-all;background:${cfg.colorBg};padding:12px;border-radius:8px;">${resetLink}</p>
             <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:20px;">
               <p style="margin:0;color:#f87171;font-size:14px;">🛡️ <strong>Não esperava este e-mail?</strong> Entre em contato com o administrador do sistema.</p>
             </div>
