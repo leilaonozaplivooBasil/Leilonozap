@@ -26,12 +26,6 @@ async function sendEmailViaBrevo(to, subject, htmlContent) {
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-    if (!user || user.role !== 'admin') {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const { email, fullName, resetLink } = await req.json();
 
     if (!email || !fullName || !resetLink) {
