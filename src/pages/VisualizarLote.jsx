@@ -327,7 +327,7 @@ export default function VisualizarLote() {
                                     <tbody>
                                         {categorias.map((cat, i) => {
                                             if (cat.nome === 'Total Geral') return null;
-                                            const subs = subItemsByCategory[cat.nome] || [];
+                                            const subs = subItemsByCategory[cat.nome?.trim()] || subItemsByCategory[cat.nome] || [];
                                             const isOpen = expandedCategories.has(cat.nome);
                                             return (
                                                 <React.Fragment key={i}>
