@@ -272,27 +272,32 @@ export default function MarketplaceLotes() {
                                     {temSaldo && <CheckCircle2 size={18} className="text-emerald-400 ml-auto" />}
                                 </div>
 
-                                {temSaldo ? (
+                                <div className="space-y-3">
                                     <button
-                                        onClick={() => {
-                                            setLoteModal(null);
-                                            navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(valorLote)}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`);
-                                        }}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                        onClick={() => { setLoteModal(null); navigate(createPageUrl('VisualizarLote') + `?id=${loteModal.id}`); }}
+                                        className="w-full bg-[#0d1117] border border-[#30363d] hover:border-blue-500 text-slate-300 hover:text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                     >
-                                        <ShoppingCart size={16} /> Comprar este Lote
+                                        <Package size={16} /> Ver Análise do Lote
                                     </button>
-                                ) : (
-                                    <div className="space-y-3">
-                                        <p className="text-amber-300 text-sm text-center">Saldo insuficiente para este lote.</p>
+                                    {temSaldo ? (
+                                        <button
+                                            onClick={() => {
+                                                setLoteModal(null);
+                                                navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(valorLote)}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`);
+                                            }}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <ShoppingCart size={16} /> Comprar este Lote
+                                        </button>
+                                    ) : (
                                         <button
                                             onClick={() => { setLoteModal(null); navigate(createPageUrl('AddFunds')); }}
                                             className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                         >
                                             <DollarSign size={16} /> Depositar Saldo
                                         </button>
-                                    </div>
-                                )}
+                                    )}
+                                </div>
                             </motion.div>
                         </motion.div>
                     );
