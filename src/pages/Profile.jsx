@@ -435,7 +435,7 @@ export default function Profile() {
             </div>
             {new URLSearchParams(window.location.search).get('user_id') && (
               <button
-                onClick={() => navigate(-1)}
+                onClick={() => navigate(createPageUrl('CRMInvestidores'))}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isSaiDeBaixo ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-800 border border-gray-700 text-slate-300 hover:text-white'}`}
               >
                 <ArrowLeft className="w-4 h-4" /> Voltar
