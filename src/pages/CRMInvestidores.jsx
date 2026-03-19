@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Users, TrendingUp, Search, Briefcase, DollarSign, Activity, RefreshCw, Eye, UserPlus, ArrowLeft } from 'lucide-react';
+import { Users, TrendingUp, Search, Briefcase, DollarSign, Activity, RefreshCw, Eye, UserPlus, ArrowLeft, FolderOpen, FileSpreadsheet } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
-import CadastroArrematanteModal from '@/components/crm/CadastroArrematanteModal';
+import CadastroInvestidorModal from '@/components/crm/CadastroInvestidorModal';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
@@ -62,15 +62,27 @@ export default function CRMInvestidores() {
                         <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
                             CRM de <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-fuchsia-400">Investidores</span>
                         </h1>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                             <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm border border-[#30363d] rounded-lg px-3 py-2 transition-colors">
                                 <ArrowLeft size={14} /> Voltar
                             </button>
                             <button
-                                onClick={() => setShowCadastro(true)}
-                                className="flex items-center gap-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold rounded-lg px-4 py-2 transition-colors"
+                                onClick={() => navigate(createPageUrl('GestaoLotes'))}
+                                className="flex items-center gap-2 text-slate-300 hover:text-white text-sm font-bold border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg px-4 py-2 transition-colors"
                             >
-                                <UserPlus size={14} /> Cadastrar Arrematante
+                                <FolderOpen size={14} /> Gestão de Lotes
+                            </button>
+                            <button
+                                onClick={() => navigate(createPageUrl('AnaliseDeLotes'))}
+                                className="flex items-center gap-2 text-slate-300 hover:text-white text-sm font-bold border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 rounded-lg px-4 py-2 transition-colors"
+                            >
+                                <FileSpreadsheet size={14} /> Importar & Analisar Planilha
+                            </button>
+                            <button
+                                onClick={() => setShowCadastro(true)}
+                                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-lg px-4 py-2 transition-colors"
+                            >
+                                <UserPlus size={14} /> Cadastrar Investidor
                             </button>
                             <button onClick={loadDados} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors border border-[#30363d] rounded-lg px-3 py-2">
                                 <RefreshCw size={14} /> Atualizar
@@ -227,7 +239,7 @@ export default function CRMInvestidores() {
         </div>
 
         {showCadastro && (
-            <CadastroArrematanteModal
+            <CadastroInvestidorModal
                 onClose={() => setShowCadastro(false)}
                 onSuccess={() => { setShowCadastro(false); loadDados(); }}
             />
