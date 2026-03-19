@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, UserPlus, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import bcrypt from 'bcryptjs';
@@ -38,7 +38,7 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
   const [platformFee, setPlatformFee] = useState(0);
 
   // Carrega dados do arrematante logado para pegar a % do admin
-  React.useEffect(() => {
+  useEffect(() => {
     const savedUser = localStorage.getItem('currentUser');
     if (savedUser) {
       const user = JSON.parse(savedUser);
