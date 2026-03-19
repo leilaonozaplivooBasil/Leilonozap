@@ -21,6 +21,15 @@ export default function MarketplaceLotes() {
 
     useEffect(() => {
         loadLotes();
+        // Carrega dados atualizados do investidor (saldo)
+        const stored = localStorage.getItem('currentUser');
+        if (stored) {
+            const cached = JSON.parse(stored);
+            AppUser.filter({ email: cached.email }).then(users => {
+                if (users?.[0]) setCurrentUser(users[0]);
+                else setCurrentUser(cached);
+            }).catch(() => setCurrentUser(cached));
+        }
     }, []);
 
     const loadLotes = async () => {
