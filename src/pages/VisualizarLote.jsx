@@ -371,10 +371,11 @@ export default function VisualizarLote() {
                         </div>
                     )}
 
-                    {/* Cálculo de Aporte do Investidor em Cascata */}
-                    {(() => {
+                    {/* Cálculo de Aporte do Investidor em Cascata — só para admin/leiloeiro */}
+                    {currentUserRole !== 'investidor' && (() => {
                         const valorLote = lote.current_price || lote.starting_price || 0;
-                        const pctAdmin = parceiro?.partner_plan_amount ?? lote.platform_commission_percentual ?? 0;
+                        // Taxa admin: busca do adminUser (partner_plan_amount) ou do parceiro, ou do lote
+                        const pctAdmin = adminUser?.partner_plan_amount ?? parceiro?.partner_plan_amount ?? lote.platform_commission_percentual ?? 0;
                         const pctArrematante = lote.partner_commission_percentual ?? 0;
                         const pctTotal = pctAdmin + pctArrematante;
                         const valorAdmin = valorLote * (pctAdmin / 100);
