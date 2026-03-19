@@ -287,7 +287,7 @@ export default function GestaoLotes() {
                 </header>
 
                 {/* Métricas */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className={`grid grid-cols-2 gap-4 ${currentUserRole === 'admin' ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
                     {[
                         { label: 'Total de Lotes', value: lotes.length, icon: Package, color: 'text-slate-400' },
                         { label: 'No Marketplace', value: lotesMarketplace, icon: DollarSign, color: 'text-blue-400' },
