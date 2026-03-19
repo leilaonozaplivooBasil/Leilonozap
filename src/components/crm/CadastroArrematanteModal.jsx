@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, UserPlus, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import bcrypt from 'bcryptjs';
+import { sendWelcomeArrematante } from '@/functions/sendWelcomeArrematante';
 
 const AppUser = base44.entities.AppUser;
 
