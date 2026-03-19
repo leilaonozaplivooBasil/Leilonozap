@@ -192,10 +192,10 @@ export default function MarketplaceLotes() {
                                 </div>
 
                                 <button
-                                    onClick={() => { setLoteModal(lote); setValorAutorizado(''); setAutorizado(false); setModeloEscolhido(null); setPercentualCotas(''); }}
-                                    className="w-full text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
+                                    onClick={() => setLoteModal(lote)}
+                                    className="w-full text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
                                 >
-                                    <DollarSign size={12} /> Autorizar Lance
+                                    <ShoppingCart size={12} /> Ver e Comprar Lote
                                 </button>
                             </motion.div>
                         );
