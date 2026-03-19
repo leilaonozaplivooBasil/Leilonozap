@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent } from 'lucide-react';
 
 const Auction = base44.entities.Auction;
+const AppUser = base44.entities.AppUser;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
@@ -11,14 +12,29 @@ export default function VisualizarLote() {
     const navigate = useNavigate();
     const [lote, setLote] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [parceiro, setParceiro] = useState(null);
+    const [investidores, setInvestidores] = useState([]);
+    const perfilRef = useRef(null);
+    const distribuicaoRef = useRef(null);
 
     const urlParams = new URLSearchParams(window.location.search);
     const loteId = urlParams.get('id');
 
     useEffect(() => {
         if (!loteId) { navigate(-1); return; }
-        Auction.filter({ id: loteId }).then(data => {
-            setLote(data?.[0] || null);
+        Auction.filter({ id: loteId }).then(async (data) => {
+            const l = data?.[0] || null;
+            setLote(l);
+            // Carrega dados do parceiro (arrematante/leiloeiro) vinculado ao lote
+            if (l?.partner_id) {
+                const partners = await AppUser.filter({ id: l.partner_id });
+                if (partners?.[0]) {
+                    setParceiro(partners[0]);
+                    // Carrega investidores vinculados a este arrematante
+                    const invs = await AppUser.filter({ role: 'investidor', referred_by_id: l.partner_id });
+                    setInvestidores(invs || []);
+                }
+            }
         }).finally(() => setIsLoading(false));
     }, [loteId]);
 
@@ -148,15 +164,20 @@ export default function VisualizarLote() {
                     {/* KPIs — igual ao AnaliseDeLotes */}
                     <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
                         {[
-                            { label: "Total de Itens (Qtd)", val: calculations?.totalItens || '—', color: "border-l-blue-500" },
+                            { label: "Total de Itens (Qtd)", val: calculations?.totalItens || '—', color: "border-l-blue-500", scrollTo: distribuicaoRef },
                             { label: "Valor de Mercado Total", val: formatCurrency(vm), color: "border-l-emerald-500" },
                             { label: "Ticket Médio (Mercado)", val: calculations?.ticketMedio > 0 ? formatCurrency(calculations.ticketMedio) : '—', color: "border-l-indigo-500" },
-                            { label: "Custo Total do Lote", val: formatCurrency(lote.starting_price), color: "border-l-amber-500" },
+                            { label: "Custo Total do Lote", val: formatCurrency(lote.starting_price), color: "border-l-amber-500", scrollTo: perfilRef },
                             { label: "Custo Médio p/ Unidade", val: calculations?.custoMedio > 0 ? formatCurrency(calculations.custoMedio) : '—', color: "border-l-red-500" },
                         ].map((kpi, i) => (
-                            <div key={i} className={`bg-[#161b22] p-6 rounded-2xl border border-[#30363d] border-l-4 ${kpi.color} shadow-lg`}>
+                            <div
+                                key={i}
+                                onClick={() => kpi.scrollTo?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                                className={`bg-[#161b22] p-6 rounded-2xl border border-[#30363d] border-l-4 ${kpi.color} shadow-lg ${kpi.scrollTo ? 'cursor-pointer hover:bg-[#1c2230] transition-colors' : ''}`}
+                            >
                                 <p className="text-slate-400 text-xs font-bold mb-1 tracking-wider uppercase">{kpi.label}</p>
                                 <p className="text-3xl font-black tracking-tight text-slate-200">{kpi.val}</p>
+                                {kpi.scrollTo && <p className="text-[10px] text-slate-600 mt-1">Clique para ver detalhes ↓</p>}
                             </div>
                         ))}
                     </div>
@@ -261,7 +282,7 @@ export default function VisualizarLote() {
 
                     {/* Distribuição Departamental */}
                     {categorias.length > 0 && (
-                        <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
+                        <div ref={distribuicaoRef} className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden scroll-mt-24">
                             <div className="p-5 border-b border-[#30363d] bg-slate-800/20">
                                 <h3 className="font-bold text-white uppercase tracking-wider text-sm">Distribuição Departamental (Resumo Oficial)</h3>
                                 <p className="text-xs text-slate-400 mt-1">Visão macrostática das categorias do lote.</p>
@@ -283,11 +304,123 @@ export default function VisualizarLote() {
                                                 <td className="px-6 py-4 border-l border-[#30363d]/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
                                             </tr>
                                         ))}
+                                        {/* Linha Total Geral clicável */}
+                                        <tr
+                                            className="bg-[#0d1117] border-t-2 border-[#30363d] cursor-pointer hover:bg-slate-800/50 transition-colors"
+                                            onClick={() => perfilRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                                        >
+                                            <td className="px-6 py-4 font-bold text-white text-base">Total Geral</td>
+                                            <td className="px-6 py-4 border-l border-[#30363d]/50 text-center font-bold text-white">
+                                                {categorias.reduce((sum, c) => sum + (c.qtd || 0), 0)} un
+                                                <span className="block text-[10px] text-slate-500 mt-0.5">Clique → Perfil Comissões ↓</span>
+                                            </td>
+                                            <td className="px-6 py-4 border-l border-[#30363d]/50 text-right font-black text-emerald-400 text-base">
+                                                {formatCurrency(categorias.reduce((sum, c) => sum + (c.valor || 0), 0))}
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     )}
+
+                    {/* Perfil Arrematante e Investidor — Comissões em Cascata */}
+                    <div ref={perfilRef} className="scroll-mt-24 bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
+                        <div className="p-5 border-b border-[#30363d] bg-gradient-to-r from-violet-900/20 to-indigo-900/20">
+                            <h3 className="font-bold text-white uppercase tracking-wider text-sm flex items-center gap-2">
+                                <Users size={16} className="text-violet-400" />
+                                Perfil Arrematante & Investidor — Comissões em Cascata
+                            </h3>
+                            <p className="text-xs text-slate-400 mt-1">Estrutura de taxas aplicadas ao lote de investimento.</p>
+                        </div>
+                        <div className="p-6 space-y-6">
+
+                            {/* Arrematante / Parceiro */}
+                            <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-5">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-violet-500/20 border border-violet-500/30 flex items-center justify-center">
+                                        <Users size={18} className="text-violet-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-white text-base">Arrematante (Leiloeiro)</h4>
+                                        <p className="text-xs text-slate-500">{parceiro?.full_name || lote.partner_name || 'Não vinculado'}</p>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-3">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Taxa Plataforma (Admin)</p>
+                                        <p className="text-xl font-black text-violet-400 flex items-center gap-1">
+                                            <Percent size={14} /> {parceiro?.partner_plan_amount ?? lote.platform_commission_percentual ?? '—'}%
+                                        </p>
+                                    </div>
+                                    <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-3">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">Comissão Arrematante</p>
+                                        <p className="text-xl font-black text-emerald-400 flex items-center gap-1">
+                                            <Percent size={14} /> {lote.partner_commission_percentual ?? '—'}%
+                                        </p>
+                                    </div>
+                                    <div className="bg-[#161b22] border border-[#30363d] rounded-xl p-3">
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">E-mail</p>
+                                        <p className="text-sm font-medium text-slate-300 truncate">{parceiro?.email || '—'}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Investidores vinculados */}
+                            <div className="bg-[#0d1117] border border-[#30363d] rounded-2xl p-5">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center">
+                                        <DollarSign size={18} className="text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-white text-base">Investidores Vinculados</h4>
+                                        <p className="text-xs text-slate-500">{investidores.length} investidor(es) deste arrematante</p>
+                                    </div>
+                                </div>
+
+                                {investidores.length === 0 ? (
+                                    <p className="text-sm text-slate-500 text-center py-4">Nenhum investidor cadastrado por este arrematante.</p>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse text-sm">
+                                            <thead>
+                                                <tr className="bg-[#161b22] text-slate-400 text-xs uppercase tracking-wider">
+                                                    <th className="px-4 py-3">Investidor</th>
+                                                    <th className="px-4 py-3 text-center">Taxa Arrematante</th>
+                                                    <th className="px-4 py-3 text-center">Taxa Admin</th>
+                                                    <th className="px-4 py-3 text-center">Taxa Total</th>
+                                                    <th className="px-4 py-3 text-right">Saldo Livre</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {investidores.map(inv => (
+                                                    <tr key={inv.id} className="border-t border-[#30363d]/50 hover:bg-white/[0.02] transition-colors">
+                                                        <td className="px-4 py-3">
+                                                            <p className="font-semibold text-white">{inv.full_name}</p>
+                                                            <p className="text-[11px] text-slate-500">{inv.email}</p>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center font-bold text-emerald-400">
+                                                            {inv.arrematante_commission_percentage ?? 0}%
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center font-bold text-violet-400">
+                                                            {(parceiro?.partner_plan_amount ?? 0)}%
+                                                        </td>
+                                                        <td className="px-4 py-3 text-center font-black text-amber-400">
+                                                            {inv.total_operation_fee_percentage ?? ((parceiro?.partner_plan_amount ?? 0) + (inv.arrematante_commission_percentage ?? 0))}%
+                                                        </td>
+                                                        <td className="px-4 py-3 text-right font-bold text-slate-300">
+                                                            {formatCurrency(inv.saldo_disponivel)}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+
+                        </div>
+                    </div>
 
                 </div>
             </div>
