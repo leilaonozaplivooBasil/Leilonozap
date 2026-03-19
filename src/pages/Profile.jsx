@@ -428,9 +428,19 @@ export default function Profile() {
         {/* Header moderno */}
         <div className="mb-12">
           <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className={`text-5xl font-black ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>Meu Perfil</h1>
-              <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>Gerencie sua conta e informações</p>
+            <div className="flex items-center gap-4">
+              {new URLSearchParams(window.location.search).get('user_id') && (
+                <button
+                  onClick={() => navigate(-1)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${isSaiDeBaixo ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-800 border border-gray-700 text-slate-300 hover:text-white'}`}
+                >
+                  <ArrowLeft className="w-4 h-4" /> Voltar
+                </button>
+              )}
+              <div>
+                <h1 className={`text-5xl font-black ${isSaiDeBaixo ? 'text-gray-900' : 'text-white'} mb-2`}>{new URLSearchParams(window.location.search).get('user_id') ? 'Perfil do Usuário' : 'Meu Perfil'}</h1>
+                <p className={`text-sm ${isSaiDeBaixo ? 'text-gray-500' : 'text-gray-400'}`}>Gerencie sua conta e informações</p>
+              </div>
             </div>
           </div>
           
