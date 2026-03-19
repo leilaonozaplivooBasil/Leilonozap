@@ -23,6 +23,7 @@ export default function GestaoLotes() {
     const [isSaving, setIsSaving] = useState(null); // id do lote sendo atualizado
     const [showImportModal, setShowImportModal] = useState(false);
     const navigate = useNavigate();
+    const currentUserRole = (() => { try { return JSON.parse(localStorage.getItem('currentUser'))?.role; } catch { return null; } })();
 
     useEffect(() => {
         loadDados();
