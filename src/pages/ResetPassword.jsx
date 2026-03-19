@@ -215,7 +215,7 @@ export default function ResetPassword() {
                                     Sua senha foi redefinida com sucesso. Agora você pode fazer login com a nova senha.
                                 </p>
                                 <Button
-                                    onClick={() => navigate(createPageUrl("Home"))}
+                                    onClick={() => navigate(createPageUrl("AcessoArrematante"))}
                                     className="w-full bg-green-600 hover:bg-green-700 h-12"
                                 >
                                     Fazer Login
