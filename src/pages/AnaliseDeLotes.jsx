@@ -356,7 +356,7 @@ function AnaliseDeLotes() {
             <div className="max-w-7xl mx-auto">
                 <header className="mb-10 text-center flex flex-col items-center">
                     <button
-                        onClick={() => navigate(createPageUrl('SistemaDeArremate'))}
+                        onClick={() => navigate(createPageUrl('CRMInvestidores'))}
                         className="mb-4 flex items-center gap-2 text-slate-500 hover:text-slate-300 text-xs transition-colors"
                     >
                         <ArrowLeft size={14} /> Voltar
