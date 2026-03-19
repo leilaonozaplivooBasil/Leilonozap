@@ -13,8 +13,9 @@ export default function VisualizarLote() {
     const [lote, setLote] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [parceiro, setParceiro] = useState(null);
-    const [investidores, setInvestidores] = useState([]);
+    const [adminUser, setAdminUser] = useState(null);
     const [expandedCategories, setExpandedCategories] = useState(new Set());
+    const [currentUserRole, setCurrentUserRole] = useState(null);
     const perfilRef = useRef(null);
     const distribuicaoRef = useRef(null);
 
@@ -22,20 +23,26 @@ export default function VisualizarLote() {
     const loteId = urlParams.get('id');
 
     useEffect(() => {
+        // Pega role do usuário logado
+        try {
+            const stored = localStorage.getItem('currentUser');
+            if (stored) setCurrentUserRole(JSON.parse(stored)?.role);
+        } catch {}
+
         if (!loteId) { navigate(-1); return; }
         Auction.filter({ id: loteId }).then(async (data) => {
             const l = data?.[0] || null;
             setLote(l);
-            // Carrega dados do parceiro (arrematante/leiloeiro) vinculado ao lote
+            // Carrega parceiro vinculado ao lote
             if (l?.partner_id) {
                 const partners = await AppUser.filter({ id: l.partner_id });
-                if (partners?.[0]) {
-                    setParceiro(partners[0]);
-                    // Carrega investidores vinculados a este arrematante
-                    const invs = await AppUser.filter({ role: 'investidor', referred_by_id: l.partner_id });
-                    setInvestidores(invs || []);
-                }
+                if (partners?.[0]) setParceiro(partners[0]);
             }
+            // Carrega admin para pegar partner_plan_amount (taxa plataforma)
+            try {
+                const admins = await AppUser.filter({ role: 'admin' });
+                if (admins?.[0]) setAdminUser(admins[0]);
+            } catch {}
         }).finally(() => setIsLoading(false));
     }, [loteId]);
 
