@@ -326,7 +326,7 @@ export default function AddFunds() {
 
                   <div className="flex items-center gap-1.5 text-gray-400 text-xs backdrop-blur-sm bg-black/20 p-2 rounded-lg border border-white/5 mt-3">
                     <Shield className="w-3 h-3 flex-shrink-0" />
-                    <span>Mín: R$ 5 | Máx: R$ 10.000</span>
+                    <span>Mín: R$ 5</span>
                   </div>
                 </CardContent>
               </Card>
