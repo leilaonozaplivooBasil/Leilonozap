@@ -39,8 +39,19 @@ export default function ResetPassword() {
             }
 
             try {
-                // Buscar usuário pelo token
-                const users = await AppUser.filter({ password_reset_token: token });
+            // Buscar usuário pelo token via backend (bypass RLS)
+            const result = await base44.functions.invoke('updateUserPassword', {
+                validate_token: token
+            });
+
+            if (result?.data?.user_id) {
+                setUserId(result.data.user_id);
+                setIsValidating(false);
+                return;
+            }
+
+            // Fallback: busca direta
+            const users = await AppUser.filter({ password_reset_token: token });
 
                 if (!users || users.length === 0) {
                     setTokenError('Link inválido ou já utilizado. Solicite um novo link.');
