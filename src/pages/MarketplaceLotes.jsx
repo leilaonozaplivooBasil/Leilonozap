@@ -203,185 +203,100 @@ export default function MarketplaceLotes() {
                 </div>
             </div>
 
-            {/* Modal Autorização de Lance */}
+            {/* Modal Compra de Lote */}
             <AnimatePresence>
-                {loteModal && (
-                    <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                        onClick={() => setLoteModal(null)}
-                    >
+                {loteModal && (() => {
+                    const valorLote = loteModal.current_price || loteModal.starting_price || 0;
+                    const saldoDisponivel = currentUser?.saldo_disponivel ?? 0;
+                    const temSaldo = saldoDisponivel >= valorLote;
+                    const vm = loteModal.market_price || loteModal.manual_market_price || 0;
+                    const roi = (vm > 0 && valorLote > 0) ? (((vm * 0.60) - valorLote) / valorLote * 100) : null;
+
+                    return (
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 w-full max-w-md shadow-2xl"
-                            onClick={e => e.stopPropagation()}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                            onClick={() => setLoteModal(null)}
                         >
-                            {!autorizado ? (
-                                <>
-                                    <div className="flex items-start justify-between mb-5">
-                                        <div>
-                                            <h3 className="font-bold text-white text-lg">Autorizar Lance</h3>
-                                            <p className="text-slate-400 text-xs mt-1 line-clamp-1">{loteModal.title}</p>
-                                        </div>
-                                        <button onClick={() => setLoteModal(null)} className="text-slate-500 hover:text-white transition-colors">
-                                            <X size={20} />
-                                        </button>
+                            <motion.div
+                                initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                                className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 w-full max-w-md shadow-2xl"
+                                onClick={e => e.stopPropagation()}
+                            >
+                                {/* Header */}
+                                <div className="flex items-start justify-between mb-5">
+                                    <div>
+                                        <h3 className="font-bold text-white text-lg">Detalhes do Lote</h3>
+                                        <p className="text-slate-400 text-xs mt-1 line-clamp-2">{loteModal.title}</p>
                                     </div>
-
-                                    <div className="bg-[#0d1117] rounded-xl p-4 mb-5 border border-[#30363d]">
-                                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Lance atual do lote</p>
-                                        <p className="text-2xl font-black text-emerald-400">
-                                            {formatCurrency(loteModal.current_price || loteModal.starting_price)}
-                                        </p>
-                                    </div>
-
-                                    {/* MODELO A / B */}
-                                    <div className="mb-5">
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Modelo de Participação</p>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button
-                                                onClick={() => setModeloEscolhido('A')}
-                                                className={`p-4 rounded-xl border text-left transition-all ${modeloEscolhido === 'A' ? 'border-blue-500 bg-blue-900/20' : 'border-[#30363d] bg-[#0d1117] hover:border-slate-500'}`}
-                                            >
-                                                <p className="font-black text-white text-sm mb-1">Modelo A</p>
-                                                <p className="text-xs text-slate-400 leading-relaxed">Compra o lote inteiro. Capital 100% seu.</p>
-                                            </button>
-                                            <button
-                                                onClick={() => setModeloEscolhido('B')}
-                                                className={`p-4 rounded-xl border text-left transition-all ${modeloEscolhido === 'B' ? 'border-purple-500 bg-purple-900/20' : 'border-[#30363d] bg-[#0d1117] hover:border-slate-500'}`}
-                                            >
-                                                <p className="font-black text-white text-sm mb-1">Modelo B</p>
-                                                <p className="text-xs text-slate-400 leading-relaxed">Divide o capital com outros investidores.</p>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {modeloEscolhido === 'B' && (
-                                        <div className="mb-4">
-                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                                Minha participação (%)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                max="99"
-                                                value={percentualCotas}
-                                                onChange={e => setPercentualCotas(e.target.value)}
-                                                placeholder="Ex: 25"
-                                                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-4 py-2.5 text-white font-bold focus:outline-none focus:border-purple-500"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {modeloEscolhido && (
-                                        <div className="mb-5">
-                                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-                                                Autorizo ir até (R$)
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={valorAutorizado}
-                                                onChange={e => setValorAutorizado(e.target.value)}
-                                                placeholder="Ex: 25000"
-                                                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-4 py-3 text-white text-lg font-bold focus:outline-none focus:border-blue-500"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {modeloEscolhido && valorAutorizado && parseFloat(valorAutorizado) > 0 && (() => {
-                                        const dep = calcDeposito(valorAutorizado);
-                                        const pct = modeloEscolhido === 'B' && percentualCotas ? parseFloat(percentualCotas) / 100 : 1;
-                                        const depositoProporcional = dep.total * pct;
-                                        return (
-                                            <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4 mb-5 space-y-2">
-                                                <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-3">Resumo do Depósito Obrigatório</p>
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-400">Modelo escolhido</span>
-                                                    <span className="text-white font-semibold">Modelo {modeloEscolhido}</span>
-                                                </div>
-                                                {modeloEscolhido === 'B' && percentualCotas && (
-                                                    <div className="flex justify-between text-sm">
-                                                        <span className="text-slate-400">Sua participação</span>
-                                                        <span className="text-purple-300 font-semibold">{percentualCotas}%</span>
-                                                    </div>
-                                                )}
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-400">Valor máximo autorizado</span>
-                                                    <span className="text-white font-semibold">{formatCurrency(dep.valor)}</span>
-                                                </div>
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="text-slate-400">Taxa de operação (10%)</span>
-                                                    <span className="text-amber-400 font-semibold">+ {formatCurrency(dep.taxa)}</span>
-                                                </div>
-                                                <div className="flex justify-between text-base font-black pt-2 border-t border-indigo-500/20">
-                                                    <span className="text-white">
-                                                        {modeloEscolhido === 'B' && percentualCotas ? 'Sua cota a depositar' : 'Total a depositar'}
-                                                    </span>
-                                                    <span className="text-indigo-300">{formatCurrency(depositoProporcional)}</span>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    <button
-                                        disabled={
-                                            !modeloEscolhido ||
-                                            !valorAutorizado ||
-                                            parseFloat(valorAutorizado) <= 0 ||
-                                            (modeloEscolhido === 'B' && (!percentualCotas || parseFloat(percentualCotas) <= 0))
-                                        }
-                                        onClick={async () => {
-                                          try {
-                                            const dep = calcDeposito(valorAutorizado);
-                                            const pct = modeloEscolhido === 'B' && percentualCotas ? parseFloat(percentualCotas) / 100 : 1;
-                                            await base44.functions.invoke('persistBidAuthorization', {
-                                              auction_id: loteModal.id,
-                                              auction_title: loteModal.title,
-                                              modelo: modeloEscolhido === 'A' ? 'individual' : 'compartilhado',
-                                              valor_maximo_autorizado: parseFloat(valorAutorizado),
-                                              percentual_compartilhado: modeloEscolhido === 'B' ? parseFloat(percentualCotas) : 0,
-                                              deposito_confirmado: dep.total * pct
-                                            });
-                                            setAutorizado(true);
-                                          } catch (error) {
-                                            alert('Erro ao registrar autorização: ' + error.message);
-                                          }
-                                        }}
-                                        className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors"
-                                    >
-                                        Confirmar Autorização
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="text-center py-6">
-                                    <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <CheckCircle2 className="text-emerald-400" size={32} />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-white mb-2">Autorização Registrada!</h3>
-                                    <p className="text-slate-400 text-sm mb-1">
-                                        Modelo: <span className="text-white font-bold">Modelo {modeloEscolhido}</span>
-                                        {modeloEscolhido === 'B' && percentualCotas && <span className="text-purple-300"> · {percentualCotas}% do lote</span>}
-                                    </p>
-                                    <p className="text-slate-400 text-sm mb-2">
-                                        Valor máximo autorizado: <span className="text-white font-bold">{formatCurrency(parseFloat(valorAutorizado))}</span>
-                                    </p>
-                                    <p className="text-slate-400 text-sm mb-6">
-                                        Total a depositar: <span className="text-indigo-300 font-bold">
-                                            {formatCurrency(calcDeposito(valorAutorizado).total * (modeloEscolhido === 'B' && percentualCotas ? parseFloat(percentualCotas) / 100 : 1))}
-                                        </span>
-                                    </p>
-                                    <p className="text-slate-500 text-xs mb-6">Nossa equipe entrará em contato via WhatsApp para confirmar o depósito e sua participação no lote.</p>
-                                    <button
-                                        onClick={() => { setLoteModal(null); navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(calcDeposito(valorAutorizado).total * (modeloEscolhido === 'B' && percentualCotas ? parseFloat(percentualCotas) / 100 : 1))}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`); }}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors"
-                                    >
-                                        Ver minha Carteira
+                                    <button onClick={() => setLoteModal(null)} className="text-slate-500 hover:text-white transition-colors ml-3 shrink-0">
+                                        <X size={20} />
                                     </button>
                                 </div>
-                            )}
+
+                                {/* Infos do lote */}
+                                <div className="grid grid-cols-2 gap-3 mb-5">
+                                    <div className="bg-[#0d1117] rounded-xl p-4 border border-[#30363d]">
+                                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Valor do Lote</p>
+                                        <p className="text-xl font-black text-emerald-400">{formatCurrency(valorLote)}</p>
+                                    </div>
+                                    {vm > 0 && (
+                                        <div className="bg-[#0d1117] rounded-xl p-4 border border-[#30363d]">
+                                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Val. Mercado</p>
+                                            <p className="text-xl font-black text-blue-400">{formatCurrency(vm)}</p>
+                                        </div>
+                                    )}
+                                    {roi !== null && (
+                                        <div className="bg-[#0d1117] rounded-xl p-4 border border-[#30363d]">
+                                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">ROI Est. (60%)</p>
+                                            <p className={`text-xl font-black ${roi >= 100 ? 'text-emerald-400' : roi >= 50 ? 'text-blue-400' : 'text-amber-400'}`}>
+                                                {roi >= 0 ? '+' : ''}{roi.toFixed(0)}%
+                                            </p>
+                                        </div>
+                                    )}
+                                    {loteModal.end_time && (
+                                        <div className="bg-[#0d1117] rounded-xl p-4 border border-[#30363d]">
+                                            <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Encerra em</p>
+                                            <p className="text-sm font-bold text-white">{new Date(loteModal.end_time).toLocaleDateString('pt-BR')}</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Saldo do investidor */}
+                                <div className={`rounded-xl p-4 mb-5 border flex items-center gap-3 ${temSaldo ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-amber-900/20 border-amber-500/30'}`}>
+                                    <Wallet size={20} className={temSaldo ? 'text-emerald-400' : 'text-amber-400'} />
+                                    <div>
+                                        <p className="text-xs text-slate-400 uppercase tracking-wider">Seu Saldo Disponível</p>
+                                        <p className={`text-lg font-black ${temSaldo ? 'text-emerald-400' : 'text-amber-400'}`}>{formatCurrency(saldoDisponivel)}</p>
+                                    </div>
+                                    {temSaldo && <CheckCircle2 size={18} className="text-emerald-400 ml-auto" />}
+                                </div>
+
+                                {temSaldo ? (
+                                    <button
+                                        onClick={() => {
+                                            setLoteModal(null);
+                                            navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(valorLote)}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`);
+                                        }}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <ShoppingCart size={16} /> Comprar este Lote
+                                    </button>
+                                ) : (
+                                    <div className="space-y-3">
+                                        <p className="text-amber-300 text-sm text-center">Saldo insuficiente para este lote.</p>
+                                        <button
+                                            onClick={() => { setLoteModal(null); navigate(createPageUrl('AddFunds')); }}
+                                            className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <DollarSign size={16} /> Depositar Saldo
+                                        </button>
+                                    </div>
+                                )}
+                            </motion.div>
                         </motion.div>
-                    </motion.div>
-                )}
+                    );
+                })()}
             </AnimatePresence>
         </div>
     );
