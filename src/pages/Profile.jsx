@@ -32,7 +32,8 @@ import {
   ShoppingBag,
   CheckCircle,
   Clock,
-  Truck
+  Truck,
+  ArrowLeft
 } from "lucide-react";
 import { createPageUrl } from "@/utils";
 import { useNavigate } from "react-router-dom";
