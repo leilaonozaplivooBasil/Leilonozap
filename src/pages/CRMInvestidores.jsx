@@ -25,8 +25,17 @@ export default function CRMInvestidores() {
     const loadDados = async () => {
         setIsLoading(true);
         try {
+            const savedUser = localStorage.getItem('currentUser');
+            const currentUser = savedUser ? JSON.parse(savedUser) : null;
+            const isAdmin = currentUser?.role === 'admin';
+
+            // Admin vê todos os investidores; Leiloeiro vê apenas os seus
+            const investidorFilter = isAdmin
+                ? { role: 'investidor' }
+                : { role: 'investidor', referred_by_id: currentUser?.id };
+
             const [usuarios, leiloesData] = await Promise.all([
-                AppUser.filter({ role: 'investidor' }),
+                AppUser.filter(investidorFilter),
                 Auction.filter({ is_investment_plan: true })
             ]);
             setInvestidores(usuarios || []);
