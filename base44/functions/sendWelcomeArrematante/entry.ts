@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 async function sendEmailViaBrevo(to, subject, htmlContent) {
   const apiKey = Deno.env.get('BREVO_API_KEY');
@@ -26,6 +26,12 @@ async function sendEmailViaBrevo(to, subject, htmlContent) {
 
 Deno.serve(async (req) => {
   try {
+    const base44 = createClientFromRequest(req);
+    const user = await base44.auth.me();
+    if (!user || user.role !== 'admin') {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const { email, fullName, resetLink } = await req.json();
 
     if (!email || !fullName || !resetLink) {
