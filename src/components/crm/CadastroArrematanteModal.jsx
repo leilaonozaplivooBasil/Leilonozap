@@ -95,14 +95,18 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
         password_reset_expires: resetExpires,
       });
 
-      // Envia e-mail de boas-vindas via Brevo (backend function)
+      // Envia e-mail de boas-vindas via Brevo (backend function) — falha silenciosa
       if (sendEmail) {
         const resetLink = `https://leilaonozap.net/ResetPassword?token=${encodeURIComponent(resetToken)}`;
-        await sendWelcomeArrematante({
-          email: normalizedEmail,
-          fullName: fullName.trim(),
-          resetLink
-        });
+        try {
+          await sendWelcomeArrematante({
+            email: normalizedEmail,
+            fullName: fullName.trim(),
+            resetLink
+          });
+        } catch (emailErr) {
+          console.warn('E-mail de boas-vindas não enviado (não crítico):', emailErr.message);
+        }
       }
 
       setSuccess(true);
