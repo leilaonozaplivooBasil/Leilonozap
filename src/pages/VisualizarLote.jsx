@@ -68,9 +68,15 @@ export default function VisualizarLote() {
     }, [lote]);
 
     // Parseia o JSON de itens detalhados por categoria
+    // Normaliza as chaves para match case-insensitive com trim
     const subItemsByCategory = useMemo(() => {
         if (!lote?.lot_items_json) return {};
-        try { return JSON.parse(lote.lot_items_json); } catch { return {}; }
+        try {
+            const raw = JSON.parse(lote.lot_items_json);
+            const normalized = {};
+            Object.entries(raw).forEach(([k, v]) => { normalized[k.trim()] = v; });
+            return normalized;
+        } catch { return {}; }
     }, [lote]);
 
     const toggleCategory = (nome) => {
