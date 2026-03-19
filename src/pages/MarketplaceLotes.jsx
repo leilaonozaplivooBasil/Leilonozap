@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TrendingUp, AlertCircle, Search, ArrowRight, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Package, TrendingUp, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft, Wallet, ShoppingCart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 
 const Auction = base44.entities.Auction;
+const AppUser = base44.entities.AppUser;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
@@ -14,19 +15,9 @@ export default function MarketplaceLotes() {
     const [isLoading, setIsLoading] = useState(true);
     const [erro, setErro] = useState(null);
     const [busca, setBusca] = useState('');
-    const [loteModal, setLoteModal] = useState(null); // lote selecionado para autorizar lance
-    const [valorAutorizado, setValorAutorizado] = useState('');
-    const [autorizado, setAutorizado] = useState(false);
-    const [modeloEscolhido, setModeloEscolhido] = useState(null); // 'A' | 'B' | null
-    const [percentualCotas, setPercentualCotas] = useState('');
+    const [loteModal, setLoteModal] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
     const navigate = useNavigate();
-
-    const TAXA_OPERACAO = 0.10;
-
-    const calcDeposito = (val) => {
-        const v = parseFloat(String(val).replace(',', '.')) || 0;
-        return { valor: v, taxa: v * TAXA_OPERACAO, total: v * (1 + TAXA_OPERACAO) };
-    };
 
     useEffect(() => {
         loadLotes();
