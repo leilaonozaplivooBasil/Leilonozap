@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.20';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 /**
  * dailyReport
@@ -22,51 +22,46 @@ Deno.serve(async (req) => {
 
     const dataLabel = ontem.toLocaleDateString('pt-BR');
 
-    // 1. Pagamentos confirmados ontem (ASAAS)
-    const pagamentos = await base44.asServiceRole.entities.AsaasPayment.filter({ status: 'confirmed' });
-    const pagamentosOntem = pagamentos.filter(p => {
-      const d = new Date(p.payment_date || p.created_date);
+    // Helper: garante que resultado é sempre array
+    const ensureArray = (result) => Array.isArray(result) ? result : [];
+
+    // Helper: filtra por data "ontem"
+    const isOntem = (dateStr) => {
+      if (!dateStr) return false;
+      const d = new Date(dateStr);
       return d >= ontem && d <= ontemFim;
-    });
+    };
+
+    // 1. Pagamentos confirmados (busca limitada, ordena por mais recente)
+    const pagamentos = ensureArray(await base44.asServiceRole.entities.AsaasPayment.filter({ status: 'confirmed' }, '-created_date', 500));
+    const pagamentosOntem = pagamentos.filter(p => isOntem(p.payment_date || p.created_date));
     const faturamentoTotal = pagamentosOntem.reduce((sum, p) => sum + (p.value || 0), 0);
     const depositosCarteira = pagamentosOntem.filter(p => p.is_wallet_deposit && !p.is_investor_capital);
     const depositosInvestidor = pagamentosOntem.filter(p => p.is_investor_capital);
     const pagamentosArremate = pagamentosOntem.filter(p => p.auction_id && !p.is_wallet_deposit);
 
     // 2. Vendas do catálogo ontem
-    const vendasCatalogo = await base44.asServiceRole.entities.CatalogSale.filter({ status: 'paid' });
-    const vendasOntem = vendasCatalogo.filter(v => {
-      const d = new Date(v.payment_confirmed_date || v.created_date);
-      return d >= ontem && d <= ontemFim;
-    });
+    const vendasCatalogo = ensureArray(await base44.asServiceRole.entities.CatalogSale.filter({ status: 'paid' }, '-created_date', 500));
+    const vendasOntem = vendasCatalogo.filter(v => isOntem(v.payment_confirmed_date || v.created_date));
     const faturamentoCatalogo = vendasOntem.reduce((sum, v) => sum + (v.total_amount || 0), 0);
 
     // 3. Leilões ativos e encerrados ontem
-    const leiloesAtivos = await base44.asServiceRole.entities.Auction.filter({ status: 'active' });
-    const leiloesEncerrados = await base44.asServiceRole.entities.Auction.filter({ status: 'ended' });
-    const leiloesEncerradosOntem = leiloesEncerrados.filter(l => {
-      const d = new Date(l.updated_date || l.end_time);
-      return d >= ontem && d <= ontemFim;
-    });
+    const leiloesAtivos = ensureArray(await base44.asServiceRole.entities.Auction.filter({ status: 'active' }));
+    const leiloesEncerrados = ensureArray(await base44.asServiceRole.entities.Auction.filter({ status: 'ended' }, '-updated_date', 200));
+    const leiloesEncerradosOntem = leiloesEncerrados.filter(l => isOntem(l.updated_date || l.end_time));
 
     // 4. Top produtos arrematados ontem (por valor)
     const topLotes = leiloesEncerradosOntem
       .sort((a, b) => (b.current_price || 0) - (a.current_price || 0))
       .slice(0, 5);
 
-    // 5. Erros críticos ontem
-    const erros = await base44.asServiceRole.entities.SystemLog.filter({ status: 'error' });
-    const errosOntem = erros.filter(e => {
-      const d = new Date(e.created_date);
-      return d >= ontem && d <= ontemFim;
-    });
+    // 5. Erros críticos ontem (busca limitada e ordenada — era a causa do crash)
+    const erros = ensureArray(await base44.asServiceRole.entities.SystemLog.filter({ status: 'error' }, '-created_date', 200));
+    const errosOntem = erros.filter(e => isOntem(e.created_date));
 
     // 6. Novos usuários ontem
-    const todosUsuarios = await base44.asServiceRole.entities.AppUser.list('-created_date', 200);
-    const novosUsuarios = todosUsuarios.filter(u => {
-      const d = new Date(u.created_date);
-      return d >= ontem && d <= ontemFim;
-    });
+    const todosUsuarios = ensureArray(await base44.asServiceRole.entities.AppUser.list('-created_date', 200));
+    const novosUsuarios = todosUsuarios.filter(u => isOntem(u.created_date));
 
     // Monta relatório em texto
     const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -76,7 +71,7 @@ Deno.serve(async (req) => {
       : '  Nenhum lote encerrado ontem.';
 
     const errosTexto = errosOntem.length > 0
-      ? errosOntem.slice(0, 5).map(e => `  • [${e.component_name || 'sistema'}] ${e.message?.substring(0, 100)}`).join('\n')
+      ? errosOntem.slice(0, 5).map(e => `  • [${e.component_name || 'sistema'}] ${(e.message || '').substring(0, 100)}`).join('\n')
       : '  ✅ Nenhum erro crítico registrado.';
 
     const relatorio = `
