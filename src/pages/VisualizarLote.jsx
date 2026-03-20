@@ -392,10 +392,9 @@ export default function VisualizarLote() {
                         </div>
                     )}
 
-                    {/* Cálculo de Aporte do Investidor em Cascata */}
+                    {/* Cálculo de Aporte do Investidor */}
                     {(() => {
                         const valorLote = lote.current_price || lote.starting_price || 0;
-                        // Taxa admin: busca do lote, depois adminUser, depois parceiro. Fallback: calcula 10% - parceiro
                         const pctArrematante = lote.partner_commission_percentual ?? 0;
                         const pctAdmin = lote.platform_commission_percentual
                             ?? adminUser?.partner_plan_amount
@@ -406,61 +405,95 @@ export default function VisualizarLote() {
                         const valorArrematante = valorLote * (pctArrematante / 100);
                         const totalAporte = valorLote + valorAdmin + valorArrematante;
 
+                        const isInvestidor = currentUserRole === 'investidor';
+
                         return (
                             <div ref={perfilRef} className="scroll-mt-24 bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
                                 <div className="p-5 border-b border-[#30363d] bg-gradient-to-r from-violet-900/20 to-indigo-900/20">
                                     <h3 className="font-bold text-white uppercase tracking-wider text-sm flex items-center gap-2">
                                         <DollarSign size={16} className="text-amber-400" />
-                                        Cálculo de Aporte do Investidor
+                                        {isInvestidor ? 'Valor de Investimento' : 'Cálculo de Aporte do Investidor'}
                                     </h3>
-                                    <p className="text-xs text-slate-400 mt-1">Valor total necessário para investir neste lote, incluindo comissões em cascata.</p>
+                                    <p className="text-xs text-slate-400 mt-1">
+                                        {isInvestidor
+                                            ? 'Valor total necessário para investir neste lote.'
+                                            : 'Valor total necessário para investir neste lote, incluindo comissões em cascata.'}
+                                    </p>
                                 </div>
                                 <div className="p-6 space-y-3">
 
-                                    {/* Linha: Valor do Lote */}
-                                    <div className="flex items-center justify-between bg-[#0d1117] border border-[#30363d] rounded-xl px-5 py-4">
-                                        <div>
-                                            <p className="text-xs text-slate-500 uppercase tracking-wider">Valor do Lote</p>
-                                            <p className="text-sm text-slate-400 mt-0.5">Lance atual do investimento</p>
-                                        </div>
-                                        <p className="text-xl font-black text-white">{formatCurrency(valorLote)}</p>
-                                    </div>
-
-                                    {/* Linha: Taxa Admin */}
-                                    <div className="flex items-center justify-between bg-[#0d1117] border border-violet-500/20 rounded-xl px-5 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xs font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-lg px-2 py-1">+{pctAdmin}%</span>
-                                            <div>
-                                                <p className="text-xs text-slate-500 uppercase tracking-wider">Taxa Plataforma (Admin)</p>
-                                                <p className="text-sm text-slate-400 mt-0.5">{pctAdmin}% sobre o valor do lote</p>
+                                    {isInvestidor ? (
+                                        /* Visão simplificada para investidor — sem breakdown */
+                                        <>
+                                            <div className="flex items-center justify-between bg-[#0d1117] border border-[#30363d] rounded-xl px-5 py-4">
+                                                <div>
+                                                    <p className="text-xs text-slate-500 uppercase tracking-wider">Valor do Lote</p>
+                                                    <p className="text-sm text-slate-400 mt-0.5">Lance atual do investimento</p>
+                                                </div>
+                                                <p className="text-xl font-black text-white">{formatCurrency(valorLote)}</p>
                                             </div>
-                                        </div>
-                                        <p className="text-lg font-black text-violet-400">+ {formatCurrency(valorAdmin)}</p>
-                                    </div>
 
-                                    {/* Linha: Comissão Arrematante */}
-                                    <div className="flex items-center justify-between bg-[#0d1117] border border-emerald-500/20 rounded-xl px-5 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1">+{pctArrematante}%</span>
-                                            <div>
-                                                <p className="text-xs text-slate-500 uppercase tracking-wider">Comissão Arrematante</p>
-                                                <p className="text-sm text-slate-400 mt-0.5">{parceiro?.full_name || lote.partner_name || 'Não vinculado'}</p>
+                                            <div className="flex items-center justify-between bg-[#0d1117] border border-slate-500/20 rounded-xl px-5 py-4">
+                                                <div>
+                                                    <p className="text-xs text-slate-500 uppercase tracking-wider">Taxa de Operação</p>
+                                                    <p className="text-sm text-slate-400 mt-0.5">{pctTotal}% sobre o valor do lote</p>
+                                                </div>
+                                                <p className="text-lg font-black text-slate-300">+ {formatCurrency(valorAdmin + valorArrematante)}</p>
                                             </div>
-                                        </div>
-                                        <p className="text-lg font-black text-emerald-400">+ {formatCurrency(valorArrematante)}</p>
-                                    </div>
 
-                                    {/* Divisor */}
-                                    <div className="border-t border-[#30363d] pt-3" />
+                                            <div className="border-t border-[#30363d] pt-3" />
 
-                                    {/* Total */}
-                                    <div className="flex items-center justify-between bg-gradient-to-r from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-xl px-5 py-5">
-                                        <div>
-                                            <p className="text-xs text-amber-400 uppercase tracking-wider font-bold">Total de Aporte do Investidor</p>
-                                            <p className="text-sm text-slate-400 mt-1">Lote + {pctTotal}% em comissões</p>
-                                        </div>
-                                        <p className="text-2xl font-black text-amber-300">{formatCurrency(totalAporte)}</p>
-                                    </div>
+                                            <div className="flex items-center justify-between bg-gradient-to-r from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-xl px-5 py-5">
+                                                <div>
+                                                    <p className="text-xs text-amber-400 uppercase tracking-wider font-bold">Total de Investimento</p>
+                                                </div>
+                                                <p className="text-2xl font-black text-amber-300">{formatCurrency(totalAporte)}</p>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        /* Visão detalhada para admin/leiloeiro */
+                                        <>
+                                            <div className="flex items-center justify-between bg-[#0d1117] border border-[#30363d] rounded-xl px-5 py-4">
+                                                <div>
+                                                    <p className="text-xs text-slate-500 uppercase tracking-wider">Valor do Lote</p>
+                                                    <p className="text-sm text-slate-400 mt-0.5">Lance atual do investimento</p>
+                                                </div>
+                                                <p className="text-xl font-black text-white">{formatCurrency(valorLote)}</p>
+                                            </div>
+
+                                            <div className="flex items-center justify-between bg-[#0d1117] border border-violet-500/20 rounded-xl px-5 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-black text-violet-400 bg-violet-500/10 border border-violet-500/20 rounded-lg px-2 py-1">+{pctAdmin}%</span>
+                                                    <div>
+                                                        <p className="text-xs text-slate-500 uppercase tracking-wider">Taxa Plataforma (Admin)</p>
+                                                        <p className="text-sm text-slate-400 mt-0.5">{pctAdmin}% sobre o valor do lote</p>
+                                                    </div>
+                                                </div>
+                                                <p className="text-lg font-black text-violet-400">+ {formatCurrency(valorAdmin)}</p>
+                                            </div>
+
+                                            <div className="flex items-center justify-between bg-[#0d1117] border border-emerald-500/20 rounded-xl px-5 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2 py-1">+{pctArrematante}%</span>
+                                                    <div>
+                                                        <p className="text-xs text-slate-500 uppercase tracking-wider">Comissão Arrematante</p>
+                                                        <p className="text-sm text-slate-400 mt-0.5">{parceiro?.full_name || lote.partner_name || 'Não vinculado'}</p>
+                                                    </div>
+                                                </div>
+                                                <p className="text-lg font-black text-emerald-400">+ {formatCurrency(valorArrematante)}</p>
+                                            </div>
+
+                                            <div className="border-t border-[#30363d] pt-3" />
+
+                                            <div className="flex items-center justify-between bg-gradient-to-r from-amber-900/20 to-orange-900/20 border border-amber-500/30 rounded-xl px-5 py-5">
+                                                <div>
+                                                    <p className="text-xs text-amber-400 uppercase tracking-wider font-bold">Total de Aporte do Investidor</p>
+                                                    <p className="text-sm text-slate-400 mt-1">Lote + {pctTotal}% em comissões</p>
+                                                </div>
+                                                <p className="text-2xl font-black text-amber-300">{formatCurrency(totalAporte)}</p>
+                                            </div>
+                                        </>
+                                    )}
 
                                 </div>
                             </div>
