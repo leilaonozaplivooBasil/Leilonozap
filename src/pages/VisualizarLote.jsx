@@ -145,7 +145,7 @@ export default function VisualizarLote() {
         }
 
         return { custoTotal, valorLoteBruto, vm, totalItens, projCurto, projMedio, projLongo, lucroEstimado, rentabilidade, score, ticketMedio, custoMedio };
-    }, [lote, loteMeta, currentUserRole, currentUserData]);
+    }, [lote, loteMeta, currentUserRole, currentUserData, adminUser]);
 
     if (isLoading) return (
         <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
