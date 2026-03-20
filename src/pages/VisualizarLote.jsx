@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight, ShoppingCart } from 'lucide-react';
+import { createPageUrl } from '@/utils';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
