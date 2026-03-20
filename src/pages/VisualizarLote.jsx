@@ -137,8 +137,14 @@ export default function VisualizarLote() {
     );
 
     if (!lote) return (
-        <div className="min-h-screen bg-[#0d1117] flex items-center justify-center text-slate-400">
-            Lote não encontrado.
+        <div className="min-h-screen bg-[#0d1117] flex flex-col items-center justify-center gap-4 text-slate-400">
+            <p>Lote não encontrado.</p>
+            <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 px-4 py-2 bg-[#161b22] border border-[#30363d] rounded-lg text-sm text-slate-300 hover:text-white hover:border-slate-500 transition-colors"
+            >
+                <ArrowLeft size={14} /> Voltar
+            </button>
         </div>
     );
 
