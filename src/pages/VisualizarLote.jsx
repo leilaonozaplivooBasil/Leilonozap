@@ -114,9 +114,15 @@ export default function VisualizarLote() {
         const totalItens = parseInt(loteMeta?.totalItens) || 0;
 
         // Para investidor, inclui taxa de operação (admin + arrematante) no custo
+        // Prioridade: taxas do lote > taxa do perfil do investidor > fallback 10%
         let custoTotal = valorLoteBruto;
         if (currentUserRole === 'investidor') {
-            const taxaPct = currentUserData?.total_operation_fee_percentage || 10;
+            const pctArrematanteLote = lote.partner_commission_percentual ?? 0;
+            const pctAdminLote = lote.platform_commission_percentual
+                ?? adminUser?.partner_plan_amount
+                ?? 0;
+            const taxaDoLote = pctArrematanteLote + pctAdminLote;
+            const taxaPct = taxaDoLote > 0 ? taxaDoLote : (currentUserData?.total_operation_fee_percentage || 10);
             custoTotal = valorLoteBruto + valorLoteBruto * (taxaPct / 100);
         }
 
