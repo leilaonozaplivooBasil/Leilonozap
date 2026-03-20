@@ -255,8 +255,8 @@ export default function VisualizarLote() {
                                 </div>
                                 <div className="p-5 space-y-4">
                                     {[
-                                        { label: 'Valor Arremato', val: formatCurrency(calculations.custoTotal), highlight: true },
-                                        { label: 'Custo Total do Lote', val: formatCurrency(calculations.custoTotal) },
+                                        { label: currentUserRole === 'investidor' ? 'Investimento Total' : 'Valor Arremato', val: formatCurrency(calculations.custoTotal), highlight: true },
+                                        ...(currentUserRole !== 'investidor' ? [{ label: 'Custo Total do Lote', val: formatCurrency(calculations.custoTotal) }] : []),
                                         { label: 'Valor de Mercado Total', val: formatCurrency(vm) },
                                         { label: 'Lucro Estimado (60%)', val: formatCurrency(calculations.lucroEstimado) },
                                         { label: 'Rentabilidade Estimada', val: `${calculations.rentabilidade.toFixed(1)}%` },
