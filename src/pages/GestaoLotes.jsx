@@ -382,42 +382,34 @@ export default function GestaoLotes() {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                {lote.status === 'sold' ? (
-                                                    <div>
-                                                        <span className="text-slate-400 text-xs">{lote.partner_name || '—'}</span>
-                                                        {lote.partner_commission_percentual > 0 && (
-                                                            <span className="ml-2 text-amber-400 text-xs font-bold">{lote.partner_commission_percentual}%</span>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex flex-col gap-1">
-                                                        <select
-                                                            value={lote.partner_id || ''}
-                                                            onChange={e => atualizarParceiro(lote, e.target.value)}
+                                                <div className="flex flex-col gap-1">
+                                                    <select
+                                                        value={lote.partner_id || ''}
+                                                        onChange={e => atualizarParceiro(lote, e.target.value)}
+                                                        disabled={isSaving === lote.id}
+                                                        className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 max-w-[140px]"
+                                                    >
+                                                        <option value="">Sem parceiro</option>
+                                                        {parceiros.map(p => (
+                                                            <option key={p.id} value={p.id}>{p.full_name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="flex items-center gap-1">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            step="0.5"
+                                                            key={`comm-${lote.id}-${lote.partner_commission_percentual}`}
+                                                            defaultValue={lote.partner_commission_percentual || ''}
+                                                            onBlur={e => atualizarComissaoParceiro(lote, e.target.value)}
+                                                            placeholder="Comissão %"
                                                             disabled={isSaving === lote.id}
-                                                            className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 max-w-[140px]"
-                                                        >
-                                                            <option value="">Sem parceiro</option>
-                                                            {parceiros.map(p => (
-                                                                <option key={p.id} value={p.id}>{p.full_name}</option>
-                                                            ))}
-                                                        </select>
-                                                        <div className="flex items-center gap-1">
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                max="100"
-                                                                step="0.5"
-                                                                defaultValue={lote.partner_commission_percentual || ''}
-                                                                onBlur={e => atualizarComissaoParceiro(lote, e.target.value)}
-                                                                placeholder="Comissão %"
-                                                                disabled={isSaving === lote.id}
-                                                                className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 w-[100px]"
-                                                            />
-                                                            <span className="text-slate-500 text-xs">%</span>
-                                                        </div>
+                                                            className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 w-[100px]"
+                                                        />
+                                                        <span className="text-slate-500 text-xs">%</span>
                                                     </div>
-                                                )}
+                                                </div>
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <button
