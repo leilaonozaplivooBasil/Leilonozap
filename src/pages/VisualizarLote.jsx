@@ -400,8 +400,8 @@ export default function VisualizarLote() {
                         </div>
                     )}
 
-                    {/* Cálculo de Aporte do Investidor */}
-                    {(() => {
+                    {/* Cálculo de Aporte do Investidor — apenas para admin e leiloeiro */}
+                    {currentUserRole !== 'investidor' && (() => {
                         const valorLote = lote.current_price || lote.starting_price || 0;
                         const pctArrematante = lote.partner_commission_percentual ?? 0;
                         const pctAdmin = lote.platform_commission_percentual
