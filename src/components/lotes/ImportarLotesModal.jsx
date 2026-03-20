@@ -383,7 +383,7 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
                                 <p className="text-sm font-bold text-white">Sua Comissão (Arrematante)</p>
                             </div>
                             <p className="text-xs text-slate-400 mb-3">Informe o percentual que você cobra sobre o valor do lote. Será aplicado a todos os lotes.</p>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <input
                                     type="number"
                                     min="0"
@@ -395,11 +395,21 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
                                     className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 w-24"
                                 />
                                 <span className="text-slate-400 text-sm">%</span>
-                                {comissaoGlobal && (
-                                    <span className="text-xs text-amber-400/70 ml-2">
-                                        Taxa total p/ investidor: {comissaoGlobal}% + {currentUser?.partner_plan_amount ?? 3}% (plataforma) = {(parseFloat(comissaoGlobal) || 0) + (currentUser?.partner_plan_amount ?? 3)}%
-                                    </span>
-                                )}
+                            </div>
+                            {/* Resumo da taxa total */}
+                            <div className="mt-3 bg-[#161b22] border border-[#30363d] rounded-lg p-3 space-y-1.5 text-xs">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">Sua Comissão (Arrematante)</span>
+                                    <span className="text-emerald-400 font-bold">{parseFloat(comissaoGlobal) || 0}%</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">Taxa Plataforma (Admin)</span>
+                                    <span className="text-violet-400 font-bold">{currentUser?.partner_plan_amount ?? 0}%</span>
+                                </div>
+                                <div className="border-t border-[#30363d] pt-1.5 flex justify-between">
+                                    <span className="text-white font-bold">Taxa Total p/ Investidor</span>
+                                    <span className="text-amber-400 font-black">{((parseFloat(comissaoGlobal) || 0) + (currentUser?.partner_plan_amount ?? 0)).toFixed(1)}%</span>
+                                </div>
                             </div>
                         </div>
                     )}
