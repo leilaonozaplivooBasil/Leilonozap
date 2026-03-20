@@ -16,6 +16,7 @@ export default function VisualizarLote() {
     const [adminUser, setAdminUser] = useState(null);
     const [expandedCategories, setExpandedCategories] = useState(new Set());
     const [currentUserRole, setCurrentUserRole] = useState(null);
+    const [currentUserData, setCurrentUserData] = useState(null);
     const perfilRef = useRef(null);
     const distribuicaoRef = useRef(null);
 
