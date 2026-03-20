@@ -148,10 +148,12 @@ export default function MarketplaceLotes() {
 
                                 <div className="grid grid-cols-2 gap-3 mb-4">
                                     <div>
-                                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Lance Atual</p>
-                                        <p className="text-lg font-black text-emerald-400">
-                                            {formatCurrency(lote.current_price || lote.starting_price)}
-                                        </p>
+                                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Investimento Total</p>
+                                        {(() => {
+                                            const vl = lote.current_price || lote.starting_price || 0;
+                                            const tp = currentUser?.total_operation_fee_percentage || 10;
+                                            return <p className="text-lg font-black text-emerald-400">{formatCurrency(vl + vl * (tp / 100))}</p>;
+                                        })()}
                                     </div>
                                     <div>
                                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Encerra em</p>
