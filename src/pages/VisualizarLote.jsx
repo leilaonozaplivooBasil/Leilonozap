@@ -521,6 +521,32 @@ export default function VisualizarLote() {
 
                 </div>
             </div>
+
+            {/* Botão fixo de compra para investidores */}
+            {currentUserRole === 'investidor' && lote.status === 'active' && calculations && (
+                <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-[#0d1117]/90 backdrop-blur-lg border-t border-[#30363d]">
+                    <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                        <div>
+                            <p className="text-xs text-slate-400 uppercase tracking-wider">Investimento Total</p>
+                            <p className="text-xl font-black text-amber-400">{formatCurrency(calculations.custoTotal)}</p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                const saldo = currentUserData?.saldo_disponivel ?? 0;
+                                if (saldo >= calculations.custoTotal) {
+                                    navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(calculations.custoTotal)}&lote=${encodeURIComponent(lote.title)}&lote_id=${lote.id}`);
+                                } else {
+                                    navigate(createPageUrl('AddFunds'));
+                                }
+                            }}
+                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-500/20"
+                        >
+                            <ShoppingCart size={18} />
+                            Comprar este Lote
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
