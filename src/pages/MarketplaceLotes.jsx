@@ -212,8 +212,11 @@ export default function MarketplaceLotes() {
             <AnimatePresence>
                 {loteModal && (() => {
                     const valorLote = loteModal.current_price || loteModal.starting_price || 0;
-                    // Calcula taxa total de operação do investidor
-                    const taxaPct = currentUser?.total_operation_fee_percentage || 10;
+                    // Calcula taxa total: prioriza taxas salvas no lote, fallback para perfil do investidor
+                    const pctArrLote = loteModal.partner_commission_percentual ?? 0;
+                    const pctAdmLote = loteModal.platform_commission_percentual ?? 0;
+                    const taxaDoLote = pctArrLote + pctAdmLote;
+                    const taxaPct = taxaDoLote > 0 ? taxaDoLote : (currentUser?.total_operation_fee_percentage || 10);
                     const valorTaxa = valorLote * (taxaPct / 100);
                     const valorTotalInvestimento = valorLote + valorTaxa;
                     const saldoDisponivel = currentUser?.saldo_disponivel ?? 0;
