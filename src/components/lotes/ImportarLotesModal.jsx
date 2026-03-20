@@ -1,10 +1,11 @@
-import React, { useState, useCallback, useRef } from 'react';
-import { X, UploadCloud, FileSpreadsheet, AlertCircle, Trash2, CheckCircle2, Loader2 } from 'lucide-react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { X, UploadCloud, FileSpreadsheet, AlertCircle, Trash2, CheckCircle2, Loader2, Percent } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
 const Auction = base44.entities.Auction;
+const AppUser = base44.entities.AppUser;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
