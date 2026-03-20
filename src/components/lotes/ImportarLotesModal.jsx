@@ -281,7 +281,7 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
             endTime.setDate(endTime.getDate() + 30);
 
             // Determina taxa da plataforma (admin) — pega do partner_plan_amount do arrematante logado
-            const pctAdmin = currentUser?.partner_plan_amount ?? 3;
+            const pctAdmin = currentUser?.partner_plan_amount ?? 0;
 
             await Auction.create({
                 title: lote.nomeLote,
