@@ -108,9 +108,16 @@ export default function VisualizarLote() {
     const calculations = useMemo(() => {
         if (!lote) return null;
 
-        const custoTotal = lote.starting_price || 0;
+        const valorLoteBruto = lote.starting_price || 0;
         const vm = lote.market_price || lote.manual_market_price || 0;
         const totalItens = parseInt(loteMeta?.totalItens) || 0;
+
+        // Para investidor, inclui taxa de operação (admin + arrematante) no custo
+        let custoTotal = valorLoteBruto;
+        if (currentUserRole === 'investidor') {
+            const taxaPct = currentUserData?.total_operation_fee_percentage || 10;
+            custoTotal = valorLoteBruto + valorLoteBruto * (taxaPct / 100);
+        }
 
         const projCurto = vm * 0.50;
         const projMedio = vm * 0.60;
@@ -130,8 +137,8 @@ export default function VisualizarLote() {
             else score = { label: 'ARRISCADO', color: 'bg-red-500/20', border: 'border-red-500', text: 'text-red-400', icon: <AlertTriangle className="text-red-400" /> };
         }
 
-        return { custoTotal, vm, totalItens, projCurto, projMedio, projLongo, lucroEstimado, rentabilidade, score, ticketMedio, custoMedio };
-    }, [lote, loteMeta]);
+        return { custoTotal, valorLoteBruto, vm, totalItens, projCurto, projMedio, projLongo, lucroEstimado, rentabilidade, score, ticketMedio, custoMedio };
+    }, [lote, loteMeta, currentUserRole, currentUserData]);
 
     if (isLoading) return (
         <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
