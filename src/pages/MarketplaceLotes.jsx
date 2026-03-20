@@ -240,9 +240,10 @@ export default function MarketplaceLotes() {
 
                                 {/* Infos do lote */}
                                 <div className="grid grid-cols-2 gap-3 mb-5">
-                                    <div className="bg-[#0d1117] rounded-xl p-4 border border-[#30363d]">
-                                        <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Valor do Lote</p>
-                                        <p className="text-xl font-black text-emerald-400">{formatCurrency(valorLote)}</p>
+                                    <div className="bg-gradient-to-br from-emerald-900/30 to-[#0d1117] rounded-xl p-4 border border-emerald-500/20 col-span-2">
+                                        <p className="text-xs text-emerald-400/70 uppercase tracking-wider mb-1 font-bold">Valor Total de Investimento</p>
+                                        <p className="text-2xl font-black text-emerald-400">{formatCurrency(valorTotalInvestimento)}</p>
+                                        <p className="text-[10px] text-slate-500 mt-1">Inclui taxa de operação de {taxaPct}%</p>
                                     </div>
                                     {vm > 0 && (
                                         <div className="bg-[#0d1117] rounded-xl p-4 border border-[#30363d]">
