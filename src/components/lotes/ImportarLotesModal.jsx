@@ -273,10 +273,15 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
     };
 
     const publicarLote = async (lote) => {
+        const comissaoPct = parseFloat(lote.comissaoPct || comissaoGlobal) || 0;
+        
         setPublishingId(lote.id);
         try {
             const endTime = new Date();
             endTime.setDate(endTime.getDate() + 30);
+
+            // Determina taxa da plataforma (admin) — pega do partner_plan_amount do arrematante logado
+            const pctAdmin = currentUser?.partner_plan_amount ?? 3;
 
             await Auction.create({
                 title: lote.nomeLote,
@@ -293,10 +298,15 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
                 lot_items_json: lote.subItemsByCategory && Object.keys(lote.subItemsByCategory).length > 0
                     ? JSON.stringify(lote.subItemsByCategory)
                     : null,
+                // Associa o arrematante que importou como parceiro do lote
+                partner_id: currentUser?.id || null,
+                partner_name: currentUser?.full_name || null,
+                partner_commission_percentual: comissaoPct,
+                platform_commission_percentual: pctAdmin,
             });
 
             setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, status: 'publicado' } : l));
-            toast.success(`Lote "${lote.nomeLote}" publicado.`);
+            toast.success(`Lote "${lote.nomeLote}" publicado com ${comissaoPct}% de comissão.`);
             onPublished?.();
         } catch (err) {
             toast.error(`Erro ao publicar "${lote.nomeLote}": ${err.message}`);
