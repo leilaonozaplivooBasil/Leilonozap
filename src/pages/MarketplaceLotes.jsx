@@ -207,10 +207,14 @@ export default function MarketplaceLotes() {
             <AnimatePresence>
                 {loteModal && (() => {
                     const valorLote = loteModal.current_price || loteModal.starting_price || 0;
+                    // Calcula taxa total de operação do investidor
+                    const taxaPct = currentUser?.total_operation_fee_percentage || 10;
+                    const valorTaxa = valorLote * (taxaPct / 100);
+                    const valorTotalInvestimento = valorLote + valorTaxa;
                     const saldoDisponivel = currentUser?.saldo_disponivel ?? 0;
-                    const temSaldo = saldoDisponivel >= valorLote;
+                    const temSaldo = saldoDisponivel >= valorTotalInvestimento;
                     const vm = loteModal.market_price || loteModal.manual_market_price || 0;
-                    const roi = (vm > 0 && valorLote > 0) ? (((vm * 0.60) - valorLote) / valorLote * 100) : null;
+                    const roi = (vm > 0 && valorLote > 0) ? (((vm * 0.60) - valorTotalInvestimento) / valorTotalInvestimento * 100) : null;
 
                     return (
                         <motion.div
