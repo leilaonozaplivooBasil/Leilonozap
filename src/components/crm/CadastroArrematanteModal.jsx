@@ -43,6 +43,10 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
       setError('Preencha todos os campos obrigatórios.');
       return;
     }
+    if (!platformCommission || parseFloat(platformCommission) <= 0) {
+      setError('Defina a % da comissão da plataforma (obrigatório).');
+      return;
+    }
     if (!email.includes('@')) {
       setError('E-mail inválido.');
       return;
@@ -229,8 +233,7 @@ export default function CadastroArrematanteModal({ onClose, onSuccess }) {
 
               <div className="sm:col-span-2">
                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                  % Comissão da Plataforma
-                  <span className="ml-2 normal-case font-normal text-slate-600">(opcional)</span>
+                  % Comissão da Plataforma *
                 </label>
                 <div className="relative">
                   <input
