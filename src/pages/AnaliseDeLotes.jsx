@@ -202,15 +202,14 @@ function AnaliseDeLotes() {
             gradesData[classificacao].valorMarket += valor;
         }
 
-        // Extrair sub-itens por categoria — usando wmsSheetData já validado + detecção dinâmica da coluna de categoria
+        // Extrair sub-itens por categoria
         const subItemsByCategory = {};
         if (wmsSheetData && headerRowIndex >= 0) {
-            // Detectar a coluna de categoria procurando qual coluna de dados contém nomes de categoria conhecidos
             const catNamesSet = new Set(resumoCategorias.map(c => String(c.nome).trim().toLowerCase()));
             let detectedCatCol = -1;
             let detectedDescCol = -1;
 
-            // Tentar encontrar nas 2 linhas de header (headerRowIndex e headerRowIndex-1)
+            // 1. Tenta achar nos headers
             const headerRows = [
                 wmsSheetData[headerRowIndex],
                 headerRowIndex > 0 ? wmsSheetData[headerRowIndex - 1] : null
@@ -221,45 +220,59 @@ function AnaliseDeLotes() {
                     if (typeof h !== 'string') return;
                     const hn = h.toUpperCase().trim();
                     if (hn.includes('CATEGOR') && !hn.includes('SUB') && detectedCatCol < 0) detectedCatCol = i;
-                    if ((hn.includes('DESCRI') || hn.includes('ITEM')) && detectedDescCol < 0) detectedDescCol = i;
+                    if ((hn.includes('DESCRI') || hn === 'ITEM' || hn === 'PRODUTO' || hn.includes('NOME DO PRODUTO')) && detectedDescCol < 0) detectedDescCol = i;
                 });
             }
 
-            // Se não achou no header, detectar pela primeira linha de dados (qual coluna tem nome de categoria)
-            if (detectedCatCol < 0 || detectedDescCol < 0) {
-                const firstDataRow = wmsSheetData[headerRowIndex + 1];
-                if (firstDataRow) {
-                    firstDataRow.forEach((cell, i) => {
-                        if (!cell || typeof cell !== 'string') return;
-                        const cellTrim = cell.trim().toLowerCase();
-                        if (detectedCatCol < 0 && catNamesSet.has(cellTrim)) detectedCatCol = i;
+            // 2. Fallback: varre as primeiras 5 linhas de dados para encontrar valores que casam com nomes de categorias
+            if (detectedCatCol < 0) {
+                for (let scanRow = headerRowIndex + 1; scanRow < Math.min(headerRowIndex + 6, wmsSheetData.length); scanRow++) {
+                    const row = wmsSheetData[scanRow];
+                    if (!row) continue;
+                    row.forEach((cell, idx) => {
+                        if (detectedCatCol >= 0) return;
+                        if (cell && typeof cell === 'string' && catNamesSet.has(cell.trim().toLowerCase())) {
+                            detectedCatCol = idx;
+                        }
                     });
+                    if (detectedCatCol >= 0) break;
                 }
             }
 
-            // Fallbacks baseados na estrutura conhecida do arquivo
-            if (detectedCatCol < 0) detectedCatCol = 11;
-            if (detectedDescCol < 0) detectedDescCol = 7;
+            // 3. Fallback para descrição: usa a primeira coluna com texto longo que NÃO é a coluna de categoria
+            if (detectedDescCol < 0 && wmsSheetData[headerRowIndex + 1]) {
+                const sampleRow = wmsSheetData[headerRowIndex + 1];
+                for (let idx = 0; idx < sampleRow.length; idx++) {
+                    if (idx === detectedCatCol || idx === colClass || idx === colValue || idx === colQtd) continue;
+                    const cell = sampleRow[idx];
+                    if (cell && typeof cell === 'string' && cell.trim().length > 5) {
+                        detectedDescCol = idx;
+                        break;
+                    }
+                }
+            }
 
-            for (let i = headerRowIndex + 1; i < wmsSheetData.length; i++) {
-                const row = wmsSheetData[i];
-                if (!row || !row[0]) continue;
-                if (typeof row[0] === 'string' && row[0].toUpperCase().includes('TOTAL')) continue;
+            if (detectedCatCol >= 0 && detectedDescCol >= 0) {
+                for (let i = headerRowIndex + 1; i < wmsSheetData.length; i++) {
+                    const row = wmsSheetData[i];
+                    if (!row || !row[0]) continue;
+                    if (typeof row[0] === 'string' && row[0].toUpperCase().includes('TOTAL')) continue;
 
-                const catRaw = row[detectedCatCol] != null ? String(row[detectedCatCol]).trim() : null;
-                if (!catRaw) continue;
+                    const catRaw = row[detectedCatCol] != null ? String(row[detectedCatCol]).trim() : null;
+                    if (!catRaw) continue;
 
-                const desc = row[detectedDescCol] != null ? String(row[detectedDescCol]).trim() : null;
-                if (!desc) continue;
+                    const desc = row[detectedDescCol] != null ? String(row[detectedDescCol]).trim() : null;
+                    if (!desc) continue;
 
-                const qtdVal = colQtd >= 0 && row[colQtd] != null ? (parseInt(row[colQtd]) || 1) : 1;
-                const rawValor = colValue >= 0 ? row[colValue] : null;
-                const valor = rawValor != null
-                    ? (typeof rawValor === 'number' ? rawValor : parseFloat(String(rawValor).replace(/[R$\s]/g, '').replace(',', '.')) || 0)
-                    : 0;
+                    const qtdVal = colQtd >= 0 && row[colQtd] != null ? (parseInt(row[colQtd]) || 1) : 1;
+                    const rawValor = colValue >= 0 ? row[colValue] : null;
+                    const valor = rawValor != null
+                        ? (typeof rawValor === 'number' ? rawValor : parseFloat(String(rawValor).replace(/[R$\s]/g, '').replace(',', '.')) || 0)
+                        : 0;
 
-                if (!subItemsByCategory[catRaw]) subItemsByCategory[catRaw] = [];
-                subItemsByCategory[catRaw].push({ desc, qtd: qtdVal, valor });
+                    if (!subItemsByCategory[catRaw]) subItemsByCategory[catRaw] = [];
+                    subItemsByCategory[catRaw].push({ desc, qtd: qtdVal, valor });
+                }
             }
         }
 
