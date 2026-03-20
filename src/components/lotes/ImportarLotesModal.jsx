@@ -375,6 +375,35 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
                         </div>
                     )}
 
+                    {/* Comissão do Arrematante */}
+                    {lotes.length > 0 && (
+                        <div className="bg-[#0d1117] border border-amber-500/30 rounded-xl p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Percent size={14} className="text-amber-400" />
+                                <p className="text-sm font-bold text-white">Sua Comissão (Arrematante)</p>
+                            </div>
+                            <p className="text-xs text-slate-400 mb-3">Informe o percentual que você cobra sobre o valor do lote. Será aplicado a todos os lotes.</p>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="50"
+                                    step="0.5"
+                                    value={comissaoGlobal}
+                                    onChange={e => setComissaoGlobal(e.target.value)}
+                                    placeholder="Ex: 7"
+                                    className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 w-24"
+                                />
+                                <span className="text-slate-400 text-sm">%</span>
+                                {comissaoGlobal && (
+                                    <span className="text-xs text-amber-400/70 ml-2">
+                                        Taxa total p/ investidor: {comissaoGlobal}% + {currentUser?.partner_plan_amount ?? 3}% (plataforma) = {(parseFloat(comissaoGlobal) || 0) + (currentUser?.partner_plan_amount ?? 3)}%
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Lotes list */}
                     {lotes.length > 0 && (
                         <div className="space-y-3">
