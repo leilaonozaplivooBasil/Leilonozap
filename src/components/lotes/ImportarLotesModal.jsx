@@ -179,6 +179,24 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
     const [isProcessing, setIsProcessing] = useState(false);
     const [publishingId, setPublishingId] = useState(null);
     const fileInputRef = useRef(null);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [comissaoGlobal, setComissaoGlobal] = useState('');
+
+    // Carrega o usuário logado para associar como parceiro
+    useEffect(() => {
+        if (!isOpen) return;
+        try {
+            const stored = localStorage.getItem('currentUser');
+            if (stored) {
+                const user = JSON.parse(stored);
+                setCurrentUser(user);
+                // Pré-preenche com a comissão padrão do arrematante
+                if (user.arrematante_commission_percentage > 0) {
+                    setComissaoGlobal(String(user.arrematante_commission_percentage));
+                }
+            }
+        } catch {}
+    }, [isOpen]);
 
     const handleFiles = useCallback((e) => {
         const files = Array.from(e.target.files);
