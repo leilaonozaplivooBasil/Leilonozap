@@ -32,7 +32,9 @@ export default function VisualizarLote() {
                 navigate('/Landing', { replace: true });
                 return;
             }
-            setCurrentUserRole(JSON.parse(stored)?.role);
+            const parsed = JSON.parse(stored);
+            setCurrentUserRole(parsed?.role);
+            setCurrentUserData(parsed);
         } catch {
             navigate('/Landing', { replace: true });
             return;
