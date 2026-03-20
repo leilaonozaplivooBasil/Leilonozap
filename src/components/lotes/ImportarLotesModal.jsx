@@ -89,27 +89,44 @@ function parseWorkbook(workbook, filename) {
     let detectedCatCol = -1;
     let detectedDescCol = -1;
 
+    // 1. Tenta achar nos headers
     const headerRows = [headers, headerRowIndex > 0 ? wmsSheetData[headerRowIndex - 1] : null].filter(Boolean);
     for (const hRow of headerRows) {
         hRow.forEach((h, idx) => {
             if (typeof h !== 'string') return;
             const hn = h.toUpperCase().trim();
             if (hn.includes('CATEGOR') && !hn.includes('SUB') && detectedCatCol < 0) detectedCatCol = idx;
-            if ((hn.includes('DESCRI') || hn.includes('ITEM')) && detectedDescCol < 0) detectedDescCol = idx;
+            if ((hn.includes('DESCRI') || hn === 'ITEM' || hn === 'PRODUTO' || hn.includes('NOME DO PRODUTO')) && detectedDescCol < 0) detectedDescCol = idx;
         });
     }
 
-    // Fallback: detecta pela primeira linha de dados
+    // 2. Fallback: varre as primeiras 5 linhas de dados para encontrar valores que casam com nomes de categorias
     if (detectedCatCol < 0) {
-        const firstDataRow = wmsSheetData[headerRowIndex + 1];
-        if (firstDataRow) {
-            firstDataRow.forEach((cell, idx) => {
-                if (cell && typeof cell === 'string' && catNamesSet.has(cell.trim().toLowerCase())) detectedCatCol = idx;
+        for (let scanRow = headerRowIndex + 1; scanRow < Math.min(headerRowIndex + 6, wmsSheetData.length); scanRow++) {
+            const row = wmsSheetData[scanRow];
+            if (!row) continue;
+            row.forEach((cell, idx) => {
+                if (detectedCatCol >= 0) return;
+                if (cell && typeof cell === 'string' && catNamesSet.has(cell.trim().toLowerCase())) {
+                    detectedCatCol = idx;
+                }
             });
+            if (detectedCatCol >= 0) break;
         }
     }
-    if (detectedCatCol < 0) detectedCatCol = 11;
-    if (detectedDescCol < 0) detectedDescCol = 7;
+
+    // 3. Fallback para descrição: usa a primeira coluna com texto longo (>10 chars) que NÃO é a coluna de categoria
+    if (detectedDescCol < 0 && wmsSheetData[headerRowIndex + 1]) {
+        const sampleRow = wmsSheetData[headerRowIndex + 1];
+        for (let idx = 0; idx < sampleRow.length; idx++) {
+            if (idx === detectedCatCol || idx === colClass || idx === colValue || idx === colQtd) continue;
+            const cell = sampleRow[idx];
+            if (cell && typeof cell === 'string' && cell.trim().length > 5) {
+                detectedDescCol = idx;
+                break;
+            }
+        }
+    }
 
     const subItemsByCategory = {};
 
@@ -135,8 +152,8 @@ function parseWorkbook(workbook, filename) {
         totalItemsQtd += qtd;
 
         // Extrai subitens por categoria
-        const catRaw = row[detectedCatCol] != null ? String(row[detectedCatCol]).trim() : null;
-        const desc = row[detectedDescCol] != null ? String(row[detectedDescCol]).trim() : null;
+        const catRaw = detectedCatCol >= 0 && row[detectedCatCol] != null ? String(row[detectedCatCol]).trim() : null;
+        const desc = detectedDescCol >= 0 && row[detectedDescCol] != null ? String(row[detectedDescCol]).trim() : null;
         if (catRaw && desc) {
             if (!subItemsByCategory[catRaw]) subItemsByCategory[catRaw] = [];
             subItemsByCategory[catRaw].push({ desc, qtd, valor });
