@@ -288,7 +288,7 @@ export default function MarketplaceLotes() {
                                         <button
                                             onClick={() => {
                                                 setLoteModal(null);
-                                                navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(valorLote)}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`);
+                                                navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(valorTotalInvestimento)}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`);
                                             }}
                                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                         >
