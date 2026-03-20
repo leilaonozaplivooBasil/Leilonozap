@@ -350,12 +350,14 @@ export default function VisualizarLote() {
                                                         onClick={() => subs.length > 0 && toggleCategory(cat.nome)}
                                                         className={`border-b border-[#30363d]/50 transition-colors ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}
                                                     >
-                                                        <td className="px-6 py-4 font-medium text-slate-300 flex items-center gap-2">
-                                                            {subs.length > 0 && (
-                                                                <ChevronRight size={14} className={`text-slate-500 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-                                                            )}
-                                                            {cat.nome}
-                                                            {subs.length > 0 && <span className="text-xs text-slate-600 ml-1">({subs.length} itens)</span>}
+                                                        <td className="px-6 py-4 font-medium text-slate-300">
+                                                            <div className="flex items-center gap-2">
+                                                                {subs.length > 0 && (
+                                                                    <ChevronRight size={14} className={`text-blue-400 transition-transform flex-shrink-0 ${isOpen ? 'rotate-90' : ''}`} />
+                                                                )}
+                                                                <span>{cat.nome}</span>
+                                                                {subs.length > 0 && <span className="text-xs text-blue-400/60 ml-1">({subs.length} itens)</span>}
+                                                            </div>
                                                         </td>
                                                         <td className="px-6 py-4 border-l border-[#30363d]/50 text-center text-slate-400">{cat.qtd} un</td>
                                                         <td className="px-6 py-4 border-l border-[#30363d]/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
