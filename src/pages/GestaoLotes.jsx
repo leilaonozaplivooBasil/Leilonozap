@@ -69,15 +69,21 @@ export default function GestaoLotes() {
         const parceiro = parceiros.find(p => p.id === parceiroId);
         setIsSaving(lote.id);
         try {
+            // Copia a taxa da plataforma (partner_plan_amount) do arrematante para o lote
+            const platformPct = parceiro?.partner_plan_amount ?? null;
             await Auction.update(lote.id, {
                 partner_id: parceiroId || null,
-                partner_name: parceiro?.full_name || null
+                partner_name: parceiro?.full_name || null,
+                platform_commission_percentual: platformPct
             });
             setLotes(prev => prev.map(l => l.id === lote.id
-                ? { ...l, partner_id: parceiroId || null, partner_name: parceiro?.full_name || null }
+                ? { ...l, partner_id: parceiroId || null, partner_name: parceiro?.full_name || null, platform_commission_percentual: platformPct }
                 : l
             ));
-            toast.success(parceiro ? `Parceiro "${parceiro.full_name}" associado.` : 'Parceiro removido.');
+            const msg = parceiro
+                ? `Parceiro "${parceiro.full_name}" associado.${platformPct != null ? ` Taxa plataforma: ${platformPct}%` : ''}`
+                : 'Parceiro removido.';
+            toast.success(msg);
         } catch (err) {
             console.error('[GestaoLotes] Erro ao associar parceiro:', err);
             toast.error('Erro ao associar parceiro.');
