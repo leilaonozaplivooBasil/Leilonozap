@@ -23,11 +23,19 @@ export default function VisualizarLote() {
     const loteId = urlParams.get('id');
 
     useEffect(() => {
-        // Pega role do usuário logado
+        // Pega role do usuário logado — se não logado, redireciona
         try {
             const stored = localStorage.getItem('currentUser');
-            if (stored) setCurrentUserRole(JSON.parse(stored)?.role);
-        } catch {}
+            const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+            if (!stored || !isLoggedIn) {
+                navigate('/Landing', { replace: true });
+                return;
+            }
+            setCurrentUserRole(JSON.parse(stored)?.role);
+        } catch {
+            navigate('/Landing', { replace: true });
+            return;
+        }
 
         if (!loteId) { navigate(-1); return; }
         Auction.filter({ id: loteId }).then(async (data) => {
@@ -39,9 +47,16 @@ export default function VisualizarLote() {
                 if (partners?.[0]) setParceiro(partners[0]);
             }
             // Carrega admin para pegar partner_plan_amount (taxa plataforma)
+            // Busca pelo email fixo do admin principal para garantir o campo correto
             try {
-                const admins = await AppUser.filter({ role: 'admin' });
-                if (admins?.[0]) setAdminUser(admins[0]);
+                const admins = await AppUser.filter({ email: 'luizsantanna@tttcorporate.com' });
+                if (admins?.[0]) {
+                    setAdminUser(admins[0]);
+                } else {
+                    // Fallback: busca qualquer admin
+                    const adminsFallback = await AppUser.filter({ role: 'admin' });
+                    if (adminsFallback?.[0]) setAdminUser(adminsFallback[0]);
+                }
             } catch {}
         }).finally(() => setIsLoading(false));
     }, [loteId]);
