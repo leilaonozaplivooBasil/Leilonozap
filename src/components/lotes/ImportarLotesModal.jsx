@@ -84,6 +84,35 @@ function parseWorkbook(workbook, filename) {
     const colValue = getColumnIndex(['VALOR TOTAL', 'VALOR DE MERCADO', 'VALOR']);
     const colQtd = getColumnIndex(['QUANTIDADE', 'QTD']);
 
+    // Detecta colunas de categoria e descrição para subitens
+    const catNamesSet = new Set(resumoCategorias.map(c => String(c.nome).trim().toLowerCase()));
+    let detectedCatCol = -1;
+    let detectedDescCol = -1;
+
+    const headerRows = [headers, headerRowIndex > 0 ? wmsSheetData[headerRowIndex - 1] : null].filter(Boolean);
+    for (const hRow of headerRows) {
+        hRow.forEach((h, idx) => {
+            if (typeof h !== 'string') return;
+            const hn = h.toUpperCase().trim();
+            if (hn.includes('CATEGOR') && !hn.includes('SUB') && detectedCatCol < 0) detectedCatCol = idx;
+            if ((hn.includes('DESCRI') || hn.includes('ITEM')) && detectedDescCol < 0) detectedDescCol = idx;
+        });
+    }
+
+    // Fallback: detecta pela primeira linha de dados
+    if (detectedCatCol < 0) {
+        const firstDataRow = wmsSheetData[headerRowIndex + 1];
+        if (firstDataRow) {
+            firstDataRow.forEach((cell, idx) => {
+                if (cell && typeof cell === 'string' && catNamesSet.has(cell.trim().toLowerCase())) detectedCatCol = idx;
+            });
+        }
+    }
+    if (detectedCatCol < 0) detectedCatCol = 11;
+    if (detectedDescCol < 0) detectedDescCol = 7;
+
+    const subItemsByCategory = {};
+
     for (let i = headerRowIndex + 1; i < wmsSheetData.length; i++) {
         const row = wmsSheetData[i];
         if (!row || row.length === 0) continue;
@@ -104,6 +133,14 @@ function parseWorkbook(workbook, filename) {
 
         valorMercadoTotal += valor;
         totalItemsQtd += qtd;
+
+        // Extrai subitens por categoria
+        const catRaw = row[detectedCatCol] != null ? String(row[detectedCatCol]).trim() : null;
+        const desc = row[detectedDescCol] != null ? String(row[detectedDescCol]).trim() : null;
+        if (catRaw && desc) {
+            if (!subItemsByCategory[catRaw]) subItemsByCategory[catRaw] = [];
+            subItemsByCategory[catRaw].push({ desc, qtd, valor });
+        }
     }
 
     return {
@@ -112,6 +149,7 @@ function parseWorkbook(workbook, filename) {
         nomeLote: filename.replace(/\.xlsx?$/i, ''),
         localColeta,
         resumoCategorias,
+        subItemsByCategory,
         quantidadeTotal: totalItemsQtd,
         valorMercadoTotal: referenceMarketValue > 0 ? referenceMarketValue : valorMercadoTotal,
         status: 'pendente', // pendente | publicando | publicado | erro
@@ -216,6 +254,9 @@ export default function ImportarLotesModal({ isOpen, onClose, onPublished }) {
                 market_price: lote.valorMercadoTotal,
                 manual_market_price: lote.valorMercadoTotal,
                 lot_categories_json: lote.resumoCategorias?.length > 0 ? JSON.stringify(lote.resumoCategorias) : null,
+                lot_items_json: lote.subItemsByCategory && Object.keys(lote.subItemsByCategory).length > 0
+                    ? JSON.stringify(lote.subItemsByCategory)
+                    : null,
             });
 
             setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, status: 'publicado' } : l));
