@@ -97,8 +97,17 @@ export default function GestaoLotes() {
         if (isNaN(valor) || valor < 0 || valor > 100) return;
         setIsSaving(lote.id);
         try {
-            await Auction.update(lote.id, { partner_commission_percentual: valor });
-            setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, partner_commission_percentual: valor } : l));
+            // Garante que platform_commission_percentual também esteja persistido no lote
+            const updateData = { partner_commission_percentual: valor };
+            if (lote.platform_commission_percentual == null) {
+                // Busca taxa do admin para persistir no lote
+                const parceiro = parceiros.find(p => p.id === lote.partner_id);
+                const pctAdmin = parceiro?.partner_plan_amount ?? 3;
+                updateData.platform_commission_percentual = pctAdmin;
+            }
+            await Auction.update(lote.id, updateData);
+            setLotes(prev => prev.map(l => l.id === lote.id ? { ...l, ...updateData } : l));
+            toast.success(`Comissão atualizada: ${valor}%`);
         } catch (err) {
             console.error('[GestaoLotes] Erro ao atualizar comissão:', err);
             toast.error('Erro ao atualizar comissão.');
