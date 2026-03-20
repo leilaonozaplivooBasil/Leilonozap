@@ -151,7 +151,10 @@ export default function MarketplaceLotes() {
                                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Investimento Total</p>
                                         {(() => {
                                             const vl = lote.current_price || lote.starting_price || 0;
-                                            const tp = currentUser?.total_operation_fee_percentage || 10;
+                                            const pctArr = lote.partner_commission_percentual ?? 0;
+                                            const pctAdm = lote.platform_commission_percentual ?? 0;
+                                            const taxaDoLote = pctArr + pctAdm;
+                                            const tp = taxaDoLote > 0 ? taxaDoLote : (currentUser?.total_operation_fee_percentage || 10);
                                             return <p className="text-lg font-black text-emerald-400">{formatCurrency(vl + vl * (tp / 100))}</p>;
                                         })()}
                                     </div>
