@@ -220,13 +220,13 @@ export default function VisualizarLote() {
                         </div>
                     )}
 
-                    {/* KPIs — igual ao AnaliseDeLotes */}
+                    {/* KPIs */}
                     <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
                         {[
                             { label: "Total de Itens (Qtd)", val: calculations?.totalItens || '—', color: "border-l-blue-500", scrollTo: distribuicaoRef },
                             { label: "Valor de Mercado Total", val: formatCurrency(vm), color: "border-l-emerald-500" },
                             { label: "Ticket Médio (Mercado)", val: calculations?.ticketMedio > 0 ? formatCurrency(calculations.ticketMedio) : '—', color: "border-l-indigo-500" },
-                            { label: "Custo Total do Lote", val: formatCurrency(lote.starting_price), color: "border-l-amber-500", scrollTo: perfilRef },
+                            { label: currentUserRole === 'investidor' ? "Investimento Total" : "Custo Total do Lote", val: formatCurrency(calculations?.custoTotal), color: "border-l-amber-500", scrollTo: currentUserRole !== 'investidor' ? perfilRef : null },
                             { label: "Custo Médio p/ Unidade", val: calculations?.custoMedio > 0 ? formatCurrency(calculations.custoMedio) : '—', color: "border-l-red-500" },
                         ].map((kpi, i) => (
                             <div
