@@ -63,9 +63,9 @@ const AuthenticatedApp = () => {
     <Routes>
     <Route path="/" element={
       (() => {
-        const hasVisited = localStorage.getItem('hasVisitedBefore');
+        const hasVisited = sessionStorage.getItem('hasVisitedBefore');
         if (!hasVisited) {
-          localStorage.setItem('hasVisitedBefore', 'true');
+          sessionStorage.setItem('hasVisitedBefore', 'true');
           return <Navigate to="/Landing" replace />;
         }
         return (
