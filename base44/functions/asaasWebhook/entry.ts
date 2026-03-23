@@ -102,7 +102,14 @@ Deno.serve(async (req) => {
 
             if (!asaasPayments || asaasPayments.length === 0) {
                 console.error('❌ AsaasPayment não encontrado:', paymentId);
-                return;
+                // Marca o webhookLog como processado para evitar retentativas infinitas
+                if (webhookLog && webhookLog.id) {
+                    await base44.asServiceRole.entities.WebhookLog.update(webhookLog.id, {
+                        processed: true
+                    });
+                    console.log('⚠️ WebhookLog marcado como processed (AsaasPayment não encontrado)');
+                }
+                return Response.json({ received: true });
             }
 
             const asaasPayment = asaasPayments[0];
