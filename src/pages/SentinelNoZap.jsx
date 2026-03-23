@@ -231,13 +231,24 @@ export default function SentinelNoZap() {
                 </div>
               ) : (
                 <>
-                  {messages.map((msg, idx) => (
+                  {messages.filter(msg => msg.role === 'user' || (msg.role === 'assistant' && msg.content)).map((msg, idx) => (
                     <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[85%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white' : 'bg-gray-800 border border-emerald-500/20 text-gray-100'}`}>
                         {msg.role === 'user' ? (
                           <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                         ) : (
                           <div className="relative group">
+                            {/* Indicador de tool_calls (consultas a entidades) */}
+                            {msg.tool_calls && msg.tool_calls.length > 0 && (
+                              <div className="mb-2 space-y-1">
+                                {msg.tool_calls.map((tc, tIdx) => (
+                                  <div key={tIdx} className="flex items-center gap-2 text-xs text-slate-500 bg-slate-800/50 px-2 py-1 rounded">
+                                    <div className={`w-1.5 h-1.5 rounded-full ${tc.status === 'completed' || tc.status === 'success' ? 'bg-emerald-500' : tc.status === 'running' || tc.status === 'in_progress' ? 'bg-amber-500 animate-pulse' : 'bg-slate-500'}`} />
+                                    <span>{tc.name?.split('.').pop() || 'consultando...'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             <ReactMarkdown
                               className="text-sm prose prose-invert prose-emerald max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
                               components={{
