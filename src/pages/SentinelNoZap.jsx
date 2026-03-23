@@ -16,20 +16,32 @@ export default function SentinelNoZap() {
   const [copiedId, setCopiedId] = useState(null);
   const chatEndRef = useRef(null);
 
+  const [initError, setInitError] = useState(null);
+
   useEffect(() => {
     const loadUser = async () => {
       try {
+        // Verifica se é admin via localStorage
         const savedUser = localStorage.getItem('currentUser');
-        if (savedUser) {
-          const user = JSON.parse(savedUser);
-          if (user.role === 'admin') {
-            setCurrentUser(user);
-          } else {
-            window.location.href = '/';
+        if (!savedUser) { window.location.href = '/'; return; }
+        const user = JSON.parse(savedUser);
+        if (user.role !== 'admin') { window.location.href = '/'; return; }
+
+        // Verifica se está autenticado na plataforma Base44 (necessário para agents API)
+        try {
+          const isAuth = await base44.auth.isAuthenticated();
+          if (!isAuth) {
+            // Tenta redirecionar para login da plataforma
+            setInitError('Você precisa estar logado na plataforma Base44 para usar o Sentinel. Clique no botão abaixo.');
+            setCurrentUser(user); // mantém para mostrar a UI com o erro
+            return;
           }
-        } else {
-          window.location.href = '/';
+        } catch (authErr) {
+          console.warn('⚠️ Verificação de auth Base44 falhou:', authErr.message);
+          // Continua mesmo assim — a createConversation vai falhar se realmente não estiver autenticado
         }
+
+        setCurrentUser(user);
       } catch (error) {
         window.location.href = '/';
       }
