@@ -144,6 +144,33 @@ export default function SentinelNoZap() {
     );
   }
 
+  if (initError && !conversationId) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-gray-800 border border-red-500/30 rounded-2xl p-8 max-w-md text-center">
+          <Shield className="w-12 h-12 text-red-400 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-white mb-3">Sentinel — Erro de Inicialização</h2>
+          <p className="text-gray-400 text-sm mb-6">{initError}</p>
+          <div className="space-y-3">
+            <Button
+              onClick={() => base44.auth.redirectToLogin(window.location.href)}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
+            >
+              Fazer Login na Plataforma
+            </Button>
+            <Button
+              onClick={() => { setInitError(null); initConversation(); }}
+              variant="outline"
+              className="w-full border-gray-600 text-gray-300 hover:text-white"
+            >
+              Tentar Novamente
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const quickActions = [
     { emoji: "🩺", title: "Relatório de Saúde", color: "from-emerald-900/30 to-emerald-900/10 border-emerald-500/30", prompt: "Gere um relatório completo de saúde do sistema agora:\n1. PIX pendentes há mais de 30 minutos\n2. Vendas do catálogo sem confirmação de pagamento\n3. Erros críticos no SystemLog (últimas 24h)\n4. Webhooks Asaas não processados\n5. Leilões ativos com problemas\n\nClassifique como: 🔴 CRÍTICO / 🟡 ATENÇÃO / ✅ OK" },
     { emoji: "💰", title: "Monitor de Pagamentos", color: "from-blue-900/30 to-blue-900/10 border-blue-500/30", prompt: "Analise todos os pagamentos suspeitos:\n1. AsaasPayment com status pendente há mais de 1h\n2. MercadoPagoPayment sem confirmação\n3. WalletTransaction com status 'pending'\n4. CatalogSale sem payment_confirmed_date\n\nListe os casos críticos com IDs e valores." },
