@@ -153,10 +153,10 @@ Gerado automaticamente em ${now.toLocaleString('pt-BR')}
 
     // Salva log do relatório
     await base44.asServiceRole.entities.SystemLog.create({
-      step: 'DAILY_REPORT_GENERATED',
+      step: mode === 'weekly' ? 'WEEKLY_REPORT_GENERATED' : 'DAILY_REPORT_GENERATED',
       status: 'success',
       component_name: 'dailyReport',
-      message: `Relatório diário gerado para ${dataLabel}. Faturamento: ${fmt(faturamentoTotal + faturamentoCatalogo)}. Erros: ${errosOntem.length}. Novos usuários: ${novosUsuarios.length}.`,
+      message: `Relatório ${tipoRelatorio.toLowerCase()} gerado para ${dataLabel}. Faturamento: ${fmt(faturamentoTotal + faturamentoCatalogo)}. Erros: ${errosOntem.length}. Novos usuários: ${novosUsuarios.length}.`,
       payload: {
         data: dataLabel,
         faturamento_total: faturamentoTotal + faturamentoCatalogo,
