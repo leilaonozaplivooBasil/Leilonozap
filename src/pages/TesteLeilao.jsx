@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { AppUser } from '@/entities/AppUser';
 import { Auction } from '@/entities/Auction';
@@ -38,16 +37,25 @@ export default function TesteLeilaoPage() {
     const [isCreating, setIsCreating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const navigate = useNavigate();
+    const [authorized, setAuthorized] = useState(false);
 
     // NEW STATES FOR AUCTION MANAGEMENT
     const [auctions, setAuctions] = useState([]);
     const [selectedAuction, setSelectedAuction] = useState(null);
     const [isClearingMessages, setIsClearingMessages] = useState(false);
 
+    useEffect(() => {
+        const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+        if (!user || user.role !== 'admin') {
+            navigate('/');
+        } else {
+            setAuthorized(true);
+        }
+    }, []);
 
     useEffect(() => {
-        loadCurrentUser();
-    }, []);
+        if (authorized) loadCurrentUser();
+    }, [authorized]);
 
     const loadCurrentUser = async () => {
         try {
@@ -354,6 +362,8 @@ export default function TesteLeilaoPage() {
             setIsDeleting(false);
         }
     };
+
+    if (!authorized) return null;
 
     if (isLoading) {
         return (

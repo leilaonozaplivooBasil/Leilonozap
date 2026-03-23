@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Shield,
   Download,
@@ -467,6 +467,18 @@ const getAllFiles = () => {
 };
 
 export default function MemoryBackup() {
+  const navigate = useNavigate();
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (!user || user.role !== 'admin') {
+      navigate('/');
+    } else {
+      setAuthorized(true);
+    }
+  }, []);
+
   const [activeTab, setActiveTab] = useState('historico');
   const [snapshots, setSnapshots] = useState([]);
   const [isCreatingSnapshot, setIsCreatingSnapshot] = useState(false);
@@ -627,6 +639,8 @@ export default function MemoryBackup() {
     optimization: 'bg-green-900/20 border-green-500/30 text-green-400',
     enhancement: 'bg-yellow-900/20 border-yellow-500/30 text-yellow-400'
   };
+
+  if (!authorized) return null;
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">

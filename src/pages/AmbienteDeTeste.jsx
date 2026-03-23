@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +10,18 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Loader2, RefreshCw, CheckCircle2, AlertTriangle, Plus, X } from "lucide-react";
 
 export default function AmbienteDeTeste() {
+  const navigate = useNavigate();
+  const [authorized, setAuthorized] = useState(false);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (!user || user.role !== 'admin') {
+      navigate('/');
+    } else {
+      setAuthorized(true);
+    }
+  }, []);
+
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [users, setUsers] = useState([]);
   const [anchorId, setAnchorId] = useState("");
@@ -206,6 +219,8 @@ export default function AmbienteDeTeste() {
     usuario: "Usuário",
     site_official_rollup: "Site Oficial (Sobra)"
   }[role] || role);
+
+  if (!authorized) return null;
 
   return (
     <div className="ambiente-teste min-h-screen bg-gray-900 text-white px-4 py-8">
