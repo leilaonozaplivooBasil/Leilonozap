@@ -54,8 +54,12 @@ Deno.serve(async (req) => {
                 );
 
                 if (existingLogs && existingLogs.length > 0) {
-                    console.log('⏭️ Evento já processado (idempotência):', eventId);
-                    return responsePromise;
+                    if (existingLogs[0].processed) {
+                        console.log('⏭️ Evento já processado com sucesso (idempotência):', eventId);
+                        return responsePromise;
+                    } else {
+                        console.log('🔄 Evento encontrado mas falhou anteriormente. Retentando processamento:', eventId);
+                    }
                 }
             } catch (e) {
                 console.warn('⚠️ Erro ao verificar idempotência:', e.message);
@@ -81,7 +85,7 @@ Deno.serve(async (req) => {
         // 🔄 PROCESSAR ANTES DE RESPONDER (garantir que tudo seja creditado ou revertido)
         try {
             // Registrar evento
-            await base44.asServiceRole.entities.WebhookLog.create({
+            const webhookLog = await base44.asServiceRole.entities.WebhookLog.create({
                 provider: 'ASAAS',
                 event_type: data.event,
                 resource_id: paymentId || eventId,
@@ -156,6 +160,13 @@ Deno.serve(async (req) => {
                     entity_id: asaasPayment.catalog_sale_id || asaasPayment.auction_id,
                     payload: { payment_id: paymentId, event: data.event }
                 });
+
+                if (webhookLog && webhookLog.id) {
+                    await base44.asServiceRole.entities.WebhookLog.update(webhookLog.id, {
+                        processed: true
+                    });
+                    console.log('✅ WebhookLog (reversão) atualizado para processed: true');
+                }
 
                 return Response.json({ received: true });
             }
@@ -524,6 +535,13 @@ Deno.serve(async (req) => {
                     amount: asaasPayment.value
                 }
             });
+
+            if (webhookLog && webhookLog.id) {
+                await base44.asServiceRole.entities.WebhookLog.update(webhookLog.id, {
+                    processed: true
+                });
+                console.log('✅ WebhookLog atualizado para processed: true');
+            }
 
             console.log('🎉 WEBHOOK ASAAS PROCESSADO COM SUCESSO ✅');
         } catch (processErr) {
