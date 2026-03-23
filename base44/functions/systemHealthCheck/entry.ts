@@ -1,26 +1,106 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.7.1';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 
 /**
  * SISTEMA DE AUTO-DIAGNÓSTICO E CORREÇÃO
  * 
- * Testa:
- * 1. Rate Limits
- * 2. Sincronização de dados
- * 3. Lógica de lances
- * 4. IA funcionando
- * 5. Performance
+ * Modo automação (sem action): executa health check completo autônomo
+ * Modo manual (com action): executa teste específico (requer admin)
  */
 
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
+
+        // Tenta parsear o body (pode estar vazio em automações)
+        let action = null;
+        let auctionId = null;
+        try {
+            const body = await req.json();
+            action = body?.action || null;
+            auctionId = body?.auctionId || null;
+        } catch {
+            // Body vazio — modo automação
+        }
+
+        // ============= MODO AUTOMAÇÃO (sem action) =============
+        if (!action) {
+            const results = [];
+            const startTime = Date.now();
+
+            // 1. Teste de conectividade com banco
+            try {
+                const t0 = Date.now();
+                const auctions = await base44.asServiceRole.entities.Auction.list("-created_date", 1);
+                results.push({ test: 'db_connectivity', passed: true, time: Date.now() - t0, records: auctions.length });
+            } catch (error) {
+                results.push({ test: 'db_connectivity', passed: false, error: error.message });
+            }
+
+            // 2. Erros críticos nas últimas 24h
+            try {
+                const t0 = Date.now();
+                const errors = await base44.asServiceRole.entities.SystemLog.filter({ status: 'error' }, '-created_date', 50);
+                const ontem = new Date(Date.now() - 24 * 60 * 60 * 1000);
+                const recentes = errors.filter(e => new Date(e.created_date) >= ontem);
+                results.push({ test: 'recent_errors', passed: recentes.length < 20, time: Date.now() - t0, count: recentes.length });
+            } catch (error) {
+                results.push({ test: 'recent_errors', passed: false, error: error.message });
+            }
+
+            // 3. Leilões ativos
+            try {
+                const t0 = Date.now();
+                const ativos = await base44.asServiceRole.entities.Auction.filter({ status: 'active' });
+                results.push({ test: 'active_auctions', passed: true, time: Date.now() - t0, count: ativos.length });
+            } catch (error) {
+                results.push({ test: 'active_auctions', passed: false, error: error.message });
+            }
+
+            // 4. Pagamentos pendentes (possíveis travados)
+            try {
+                const t0 = Date.now();
+                const pending = await base44.asServiceRole.entities.AsaasPayment.filter({ status: 'pending' }, '-created_date', 50);
+                const velhos = pending.filter(p => {
+                    const created = new Date(p.created_date);
+                    return (Date.now() - created.getTime()) > 48 * 60 * 60 * 1000;
+                });
+                results.push({ test: 'stale_payments', passed: velhos.length < 5, time: Date.now() - t0, pending_total: pending.length, stale_48h: velhos.length });
+            } catch (error) {
+                results.push({ test: 'stale_payments', passed: false, error: error.message });
+            }
+
+            const totalTime = Date.now() - startTime;
+            const allPassed = results.every(r => r.passed);
+
+            // Loga resultado no SystemLog
+            try {
+                await base44.asServiceRole.entities.SystemLog.create({
+                    step: 'HEALTH_CHECK_AUTO',
+                    status: allPassed ? 'success' : 'warning',
+                    component_name: 'systemHealthCheck',
+                    message: `Health check: ${results.filter(r => r.passed).length}/${results.length} OK em ${totalTime}ms`,
+                    payload: { results, totalTime }
+                });
+            } catch {}
+
+            return Response.json({
+                status: allPassed ? 'healthy' : 'degraded',
+                timestamp: new Date().toISOString(),
+                totalTime,
+                summary: {
+                    total: results.length,
+                    passed: results.filter(r => r.passed).length,
+                    failed: results.filter(r => !r.passed).length
+                },
+                results
+            });
+        }
+
+        // ============= MODO MANUAL (com action) — requer admin =============
         const user = await base44.auth.me();
-        
         if (!user || user.email !== 'luizsantanna@tttcorporate.com') {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
-
-        const { action, auctionId } = await req.json();
 
         // ============= TESTE 1: RATE LIMIT =============
         if (action === 'test_rate_limit') {
