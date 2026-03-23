@@ -95,16 +95,17 @@ export default function SentinelNoZap() {
     }
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || !conversationId || isSending) return;
+  const sendMessage = async (overrideMessage) => {
+    const messageText = overrideMessage || input.trim();
+    if (!messageText || !conversationId || isSending) return;
     setIsSending(true);
-    const userMessage = input.trim();
-    setInput("");
+    if (!overrideMessage) setInput("");
     try {
       const conversation = await base44.agents.getConversation(conversationId);
-      await base44.agents.addMessage(conversation, { role: "user", content: userMessage });
+      await base44.agents.addMessage(conversation, { role: "user", content: messageText });
     } catch (error) {
-      toast.error("Erro ao enviar mensagem");
+      console.error('❌ Sentinel send error:', error);
+      toast.error("Erro ao enviar: " + (error.message || 'Tente novamente'));
     } finally {
       setIsSending(false);
     }
