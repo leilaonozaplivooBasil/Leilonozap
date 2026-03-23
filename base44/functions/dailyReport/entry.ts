@@ -55,9 +55,16 @@ Deno.serve(async (req) => {
       .sort((a, b) => (b.current_price || 0) - (a.current_price || 0))
       .slice(0, 5);
 
-    // 5. Erros críticos ontem (busca limitada e ordenada — era a causa do crash)
-    const erros = ensureArray(await base44.asServiceRole.entities.SystemLog.filter({ status: 'error' }, '-created_date', 200));
-    const errosOntem = erros.filter(e => isOntem(e.created_date));
+    // 5. Erros críticos ontem (busca limitada e ordenada)
+    let errosOntem = [];
+    try {
+      const errosRaw = await base44.asServiceRole.entities.SystemLog.filter({ status: 'error' }, '-created_date', 200);
+      const erros = Array.isArray(errosRaw) ? errosRaw : [];
+      errosOntem = erros.filter(e => isOntem(e.created_date));
+    } catch (erroErr) {
+      console.warn('Falha ao buscar erros do SystemLog:', erroErr.message);
+      errosOntem = [];
+    }
 
     // 6. Novos usuários ontem
     const todosUsuarios = ensureArray(await base44.asServiceRole.entities.AppUser.list('-created_date', 200));
