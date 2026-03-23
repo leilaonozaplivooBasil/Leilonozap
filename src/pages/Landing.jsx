@@ -48,36 +48,31 @@ export default function LandingPage() {
   }, []);
 
   // --- BOTÃO DE ENTRADA INTELIGENTE ---
-  const handleEnterAsGuest = useCallback(async () => { // Renamed from handleLoginRedirect
+  const handleEnterAsGuest = useCallback(async () => {
     console.log("🚀 BOTÃO PRESSIONADO - NAVEGANDO PARA HOME!");
+    
+    // Marca imediatamente como visitante (não depende de áudio)
+    sessionStorage.setItem('hasEnteredAsGuest', 'true');
+
+    // Tenta efeitos sonoros (não-bloqueante, falha silenciosa)
     try {
-      // 1. Prepara o áudio
       if (!audioContextRef.current) {
         audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
       }
       if (audioContextRef.current.state === 'suspended') {
-        await audioContextRef.current.resume(); // Added await here, was missing in original and outline
+        await audioContextRef.current.resume();
       }
-      
-      // 2. Efeitos sonoros e de vibração
       triggerVibration();
-      setTimeout(() => playHammerSound(), 200);
-      setTimeout(() => playHammerSound(), 700);
-      setTimeout(() => playHammerSound(), 1200);
-
-      // 🔒 AÇÃO PRINCIPAL: Marca o visitante e Navega para a Home
-      setTimeout(() => {
-        // ✅ A SOLUÇÃO: "Etiqueta" o visitante antes de navegar.
-        sessionStorage.setItem('hasEnteredAsGuest', 'true');
-        window.location.href = createPageUrl('Home');
-      }, 1500);
-
-    } catch (error) {
-      console.error("Erro na sequência do botão:", error);
-      // Fallback: vai para Home mesmo se o som falhar
-      sessionStorage.setItem('hasEnteredAsGuest', 'true'); // Ensure guest status is set even on error
-      window.location.href = createPageUrl('Home');
+      playHammerSound();
+      setTimeout(() => playHammerSound(), 500);
+    } catch (e) {
+      // iOS pode bloquear AudioContext — não impede navegação
     }
+
+    // Navega para Home após breve delay para feedback visual
+    setTimeout(() => {
+      window.location.href = createPageUrl('Home');
+    }, 600);
   }, [playHammerSound, triggerVibration]);
   
   // Limpeza do AudioContext ao sair da página
