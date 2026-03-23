@@ -290,7 +290,7 @@ export default function SentinelNoZap() {
           </h3>
           <div className="grid md:grid-cols-2 gap-3">
             {quickActions.map((action) => (
-              <Card key={action.title} className={`bg-gradient-to-br ${action.color} hover:scale-105 transition-all cursor-pointer`} onClick={() => setInput(action.prompt)}>
+              <Card key={action.title} className={`bg-gradient-to-br ${action.color} hover:scale-105 transition-all cursor-pointer`} onClick={() => sendMessage(action.prompt)}>
                 <CardContent className="p-4">
                   <div className="text-3xl mb-2">{action.emoji}</div>
                   <h4 className="font-bold text-white text-sm mb-1">{action.title}</h4>
