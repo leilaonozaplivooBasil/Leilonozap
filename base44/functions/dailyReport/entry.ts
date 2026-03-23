@@ -145,7 +145,7 @@ Gerado automaticamente em ${now.toLocaleString('pt-BR')}
         body: JSON.stringify({
           sender: { name: 'Sentinel NoZap', email: 'noreply@leilaonozap.net' },
           to: [{ email: 'luizsantanna@tttcorporate.com', name: 'Luiz' }],
-          subject: `📊 Relatório Diário NoZap — ${dataLabel}`,
+          subject: `📊 Relatório ${tipoRelatorio} NoZap — ${dataLabel}`,
           textContent: relatorio
         })
       });
