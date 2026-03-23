@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
       : '  ✅ Nenhum erro crítico registrado.';
 
     const relatorio = `
-📊 RELATÓRIO DIÁRIO — ${dataLabel}
+📊 RELATÓRIO ${tipoRelatorio} — ${dataLabel}
 ═══════════════════════════════════════
 
 💰 FATURAMENTO
