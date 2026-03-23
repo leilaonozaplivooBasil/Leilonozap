@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
 
     const topProdutosTexto = topLotes.length > 0
       ? topLotes.map((l, i) => `  ${i + 1}. ${l.title} — ${fmt(l.current_price || 0)} (${l.winner_name || 'sem vencedor'})`).join('\n')
-      : '  Nenhum lote encerrado ontem.';
+      : '  Nenhum lote encerrado no período.';
 
     const errosTexto = errosOntem.length > 0
       ? errosOntem.slice(0, 5).map(e => `  • [${e.component_name || 'sistema'}] ${(e.message || '').substring(0, 100)}`).join('\n')
