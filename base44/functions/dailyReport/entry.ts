@@ -118,9 +118,9 @@ Deno.serve(async (req) => {
 
 🏷️ LEILÕES
   Ativos agora:     ${leiloesAtivos.length}
-  Encerrados ontem: ${leiloesEncerradosOntem.length}
+  Encerrados no período: ${leiloesEncerradosOntem.length}
 
-🥇 TOP LOTES ONTEM
+🥇 TOP LOTES DO PERÍODO
 ${topProdutosTexto}
 
 👥 NOVOS USUÁRIOS
