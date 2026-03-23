@@ -132,12 +132,10 @@ import StoreRegistration from './pages/StoreRegistration';
 import StressTest from './pages/StressTest';
 import SystemChecklist from './pages/SystemChecklist';
 import SystemDiagnostics from './pages/SystemDiagnostics';
-import SystemTest from './pages/SystemTest';
 import TesteLeilao from './pages/TesteLeilao';
 import TransactionHistory from './pages/TransactionHistory';
 import UserManagement from './pages/UserManagement';
 import WalletHistory from './pages/WalletHistory';
-import SchemaBackup from './pages/SchemaBackup';
 import { RequireRole } from '@/components/common';
 import __Layout from './Layout.jsx';
 
@@ -240,12 +238,10 @@ export const PAGES = {
     "StressTest": StressTest,
     "SystemChecklist": SystemChecklist,
     "SystemDiagnostics": SystemDiagnostics,
-    "SystemTest": SystemTest,
     "TesteLeilao": TesteLeilao,
     "TransactionHistory": TransactionHistory,
     "UserManagement": UserManagement,
     "WalletHistory": WalletHistory,
-    "SchemaBackup": SchemaBackup,
 }
 
 export const pagesConfig = {
