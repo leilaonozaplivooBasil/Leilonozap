@@ -270,6 +270,15 @@ export default function SentinelNoZap() {
                       </div>
                     </div>
                   ))}
+                  {/* Indicador de processamento do agente */}
+                  {isSending && (
+                    <div className="flex justify-start">
+                      <div className="bg-gray-800 border border-emerald-500/20 rounded-2xl px-4 py-3 flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                        <span className="text-sm text-gray-400">Sentinel analisando...</span>
+                      </div>
+                    </div>
+                  )}
                   <div ref={chatEndRef} />
                 </>
               )}
