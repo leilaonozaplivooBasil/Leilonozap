@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
 ${topProdutosTexto}
 
 👥 NOVOS USUÁRIOS
-  Cadastros ontem: ${novosUsuarios.length}
+  Cadastros no período: ${novosUsuarios.length}
 
 ⚠️ ERROS CRÍTICOS (${errosOntem.length} total)
 ${errosTexto}
