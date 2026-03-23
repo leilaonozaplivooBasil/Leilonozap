@@ -460,6 +460,7 @@ export default function LandingPage() {
           align-items: center;
           justify-content: center;
           animation: fadeOutEpic 2.5s ease-out forwards;
+          pointer-events: none;
         }
 
         .hammer-impact-indicator {
