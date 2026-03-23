@@ -69,13 +69,29 @@ export default function SentinelNoZap() {
 
   const initConversation = async () => {
     try {
+      // Tenta buscar conversas existentes para reaproveitar
+      const existing = await base44.agents.listConversations({ agent_name: "arquiteto_base44" });
+      if (existing && existing.length > 0) {
+        // Usa a conversa mais recente
+        const latest = existing[0];
+        setConversationId(latest.id);
+        if (latest.messages && latest.messages.length > 0) {
+          setMessages(latest.messages);
+        }
+        console.log('✅ Sentinel: conversa existente carregada:', latest.id);
+        return;
+      }
+
       const conversation = await base44.agents.createConversation({
         agent_name: "arquiteto_base44",
         metadata: { name: "Sessão Sentinel", description: "Monitoramento do sistema NoZap" }
       });
       setConversationId(conversation.id);
+      console.log('✅ Sentinel: nova conversa criada:', conversation.id);
     } catch (error) {
-      toast.error("Erro ao inicializar Sentinel");
+      console.error('❌ Sentinel init error:', error);
+      setInitError(`Erro ao inicializar o Sentinel: ${error.message || 'Verifique se está autenticado na plataforma.'}`);
+      toast.error("Erro ao inicializar Sentinel: " + (error.message || 'Falha de autenticação'));
     }
   };
 
