@@ -13,14 +13,37 @@ Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
 
-    const now = new Date();
-    const ontem = new Date(now);
-    ontem.setDate(ontem.getDate() - 1);
-    ontem.setHours(0, 0, 0, 0);
-    const ontemFim = new Date(ontem);
-    ontemFim.setHours(23, 59, 59, 999);
+    // Determina modo: daily (padrão) ou weekly (últimos 7 dias)
+    let mode = 'daily';
+    try {
+      const body = await req.clone().json();
+      if (body && body.mode === 'weekly') mode = 'weekly';
+    } catch (_) { /* sem body = daily */ }
 
-    const dataLabel = ontem.toLocaleDateString('pt-BR');
+    const now = new Date();
+    const periodoInicio = new Date(now);
+    const periodoFim = new Date(now);
+
+    if (mode === 'weekly') {
+      periodoInicio.setDate(periodoInicio.getDate() - 7);
+      periodoInicio.setHours(0, 0, 0, 0);
+      periodoFim.setDate(periodoFim.getDate() - 1);
+      periodoFim.setHours(23, 59, 59, 999);
+    } else {
+      periodoInicio.setDate(periodoInicio.getDate() - 1);
+      periodoInicio.setHours(0, 0, 0, 0);
+      periodoFim.setDate(periodoFim.getDate() - 1);
+      periodoFim.setHours(23, 59, 59, 999);
+    }
+
+    // Aliases para manter compatibilidade com o restante do código
+    const ontem = periodoInicio;
+    const ontemFim = periodoFim;
+
+    const dataLabel = mode === 'weekly'
+      ? `${periodoInicio.toLocaleDateString('pt-BR')} a ${periodoFim.toLocaleDateString('pt-BR')}`
+      : periodoFim.toLocaleDateString('pt-BR');
+    const tipoRelatorio = mode === 'weekly' ? 'SEMANAL' : 'DIÁRIO';
 
     // Helper: garante que resultado é sempre array
     const ensureArray = (result) => Array.isArray(result) ? result : [];
