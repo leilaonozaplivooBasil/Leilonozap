@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone } from "lucide-react";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { toast } from "sonner";
+import { convertToWebP } from "@/lib/convertToWebP";
 
 export default function LuxuryBannerManagement() {
   const [banners, setBanners] = useState([]);
@@ -32,7 +33,9 @@ export default function LuxuryBannerManagement() {
     if (!file) return null;
     if (!file.type.startsWith("image/")) { toast.error("Envie apenas imagens"); return null; }
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      // Converte para WebP antes do upload (reduz ~25-35% sem perda visível)
+      const webpFile = await convertToWebP(file, 0.90);
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
       return file_url;
     } catch (e) {
       toast.error("Erro ao enviar imagem");

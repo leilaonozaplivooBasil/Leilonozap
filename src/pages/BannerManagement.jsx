@@ -19,6 +19,7 @@ export default function BannerManagement() {
   const [editingBanner, setEditingBanner] = useState(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [activeTab, setActiveTab] = useState('banners');
+  const [isOptimizing, setIsOptimizing] = useState(false);
 
   const loadBanners = async () => {
     try {
@@ -175,6 +176,58 @@ export default function BannerManagement() {
     }
   };
 
+  const handleOptimizeOldImages = async () => {
+    const optimizeItems = async (items, updateApi) => {
+      const itemsToOptimize = items.filter(
+        item => item.image_url && !item.image_url.toLowerCase().endsWith('.webp')
+      );
+      
+      if (itemsToOptimize.length === 0) return 0;
+
+      let count = 0;
+      for (const item of itemsToOptimize) {
+        try {
+          const res = await fetch(item.image_url);
+          const blob = await res.blob();
+          const file = new File([blob], `image_${item.id}.png`, { type: blob.type });
+          
+          const webpFile = await convertToWebP(file, 0.90);
+          
+          // Considera sucesso mesmo se for do mesmo tamanho (pode ser conversão trivial) se for para garantir WebP
+          // Mas vamos garantir que ele upa menor
+          if (webpFile.size < file.size) {
+            const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
+            await updateApi(item.id, { image_url: file_url });
+            count++;
+          }
+        } catch (e) {
+          console.error("Erro ao otimizar imagem do item:", item.id, e);
+        }
+      }
+      return count;
+    };
+
+    setIsOptimizing(true);
+    toast.info("Iniciando otimização de imagens (isso pode demorar)..");
+    
+    try {
+      const bCount = await optimizeItems(banners, (id, data) => base44.entities.BannerImage.update(id, data));
+      const pCount = await optimizeItems(featuredProducts, (id, data) => base44.entities.FeaturedProduct.update(id, data));
+      
+      const luxuryBanners = await base44.entities.BannerImage.filter({ context: 'luxurycollection' });
+      const lCount = luxuryBanners ? await optimizeItems(luxuryBanners, (id, data) => base44.entities.BannerImage.update(id, data)) : 0;
+
+      toast.success(`Otimização concluída! Convertidos: ${bCount} banners home, ${pCount} produtos destaque, ${lCount} banners luxury.`);
+      loadBanners();
+      loadFeaturedProducts();
+    } catch (error) {
+      console.error('Erro na otimização:', error);
+      toast.error('Erro durante a otimização das imagens');
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
   const handleBannerDragEnd = async (result) => {
     if (!result.destination) return;
 
@@ -232,7 +285,16 @@ export default function BannerManagement() {
   return (
     <div className="min-h-screen bg-gray-900 p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-white mb-6">Gerenciamento de Conteúdo</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-white">Gerenciamento de Conteúdo</h1>
+          <Button
+            onClick={handleOptimizeOldImages}
+            disabled={isOptimizing}
+            className="bg-purple-600 hover:bg-purple-700"
+          >
+            {isOptimizing ? 'Otimizando Imagens...' : '🌟 Converter Imagens Antigas para WebP'}
+          </Button>
+        </div>
         
         {/* Tabs */}
         <div className="flex gap-2 mb-8">
