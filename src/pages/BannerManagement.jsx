@@ -20,6 +20,7 @@ export default function BannerManagement() {
   const [editingProduct, setEditingProduct] = useState(null);
   const [activeTab, setActiveTab] = useState('banners');
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [optimizationProgress, setOptimizationProgress] = useState({ current: 0, total: 0, statusText: '' });
 
   const loadBanners = async () => {
     try {
@@ -177,54 +178,80 @@ export default function BannerManagement() {
   };
 
   const handleOptimizeOldImages = async () => {
-    const optimizeItems = async (items, updateApi) => {
-      const itemsToOptimize = items.filter(
-        item => item.image_url && !item.image_url.toLowerCase().endsWith('.webp')
-      );
+    setIsOptimizing(true);
+    setOptimizationProgress({ current: 0, total: 0, statusText: 'Buscando registros no sistema...' });
+
+    try {
+      // Definimos as fontes de dados para otimização com seus nomes e chave da imagem
+      const sources = [
+        { name: 'Banners Home', data: await base44.entities.BannerImage.list() || [], updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
+        { name: 'Produtos em Destaque', data: await base44.entities.FeaturedProduct.list() || [], updateApi: (id, data) => base44.entities.FeaturedProduct.update(id, data), fields: ['image_url'] },
+        { name: 'Banners Luxury', data: await base44.entities.BannerImage.filter({ context: 'luxurycollection' }) || [], updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
+        { name: 'Produtos do Catálogo', data: await base44.entities.CatalogProduct.list() || [], updateApi: (id, data) => base44.entities.CatalogProduct.update(id, data), fields: ['image_url'] },
+        { name: 'Leilões', data: await base44.entities.Auction.list() || [], updateApi: (id, data) => base44.entities.Auction.update(id, data), fields: ['cover_url', 'image_url'] },
+      ];
+
+      // Reunir tudo que precisa ser otimizado
+      let allItemsToOptimize = [];
       
-      if (itemsToOptimize.length === 0) return 0;
+      for (const source of sources) {
+        if (!source.data || !Array.isArray(source.data)) continue;
+        source.data.forEach(item => {
+            source.fields.forEach(field => {
+              const url = item[field];
+              if (url && typeof url === 'string') {
+                  const lowerUrl = url.toLowerCase();
+                  if (!lowerUrl.endsWith('.webp') && (lowerUrl.endsWith('.png') || lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.jpeg'))) {
+                    allItemsToOptimize.push({ item, sourceName: source.name, field, updateApi: source.updateApi });
+                  }
+              }
+            });
+        });
+      }
+
+      if (allItemsToOptimize.length === 0) {
+        toast.info("Nenhuma imagem para otimizar no momento. Todas já estão em WebP!");
+        setIsOptimizing(false);
+        return;
+      }
 
       let count = 0;
-      for (const item of itemsToOptimize) {
+      for (let i = 0; i < allItemsToOptimize.length; i++) {
+        const { item, sourceName, field, updateApi } = allItemsToOptimize[i];
+        
+        setOptimizationProgress({ 
+          current: i + 1, 
+          total: allItemsToOptimize.length, 
+          statusText: `Otimizando ${sourceName}: Item ${i+1} de ${allItemsToOptimize.length}...` 
+        });
+        
         try {
-          const res = await fetch(item.image_url);
+          const res = await fetch(item[field]);
           const blob = await res.blob();
-          const file = new File([blob], `image_${item.id}.png`, { type: blob.type });
+          if (!blob.type.startsWith('image/')) continue;
           
+          const file = new File([blob], `img_${item.id}.png`, { type: blob.type });
           const webpFile = await convertToWebP(file, 0.90);
           
-          // Considera sucesso mesmo se for do mesmo tamanho (pode ser conversão trivial) se for para garantir WebP
-          // Mas vamos garantir que ele upa menor
           if (webpFile.size < file.size) {
             const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
-            await updateApi(item.id, { image_url: file_url });
+            await updateApi(item.id, { [field]: file_url });
             count++;
           }
         } catch (e) {
-          console.error("Erro ao otimizar imagem do item:", item.id, e);
+          console.error("Erro ao otimizar imagem:", item.id, e);
         }
       }
-      return count;
-    };
 
-    setIsOptimizing(true);
-    toast.info("Iniciando otimização de imagens (isso pode demorar)..");
-    
-    try {
-      const bCount = await optimizeItems(banners, (id, data) => base44.entities.BannerImage.update(id, data));
-      const pCount = await optimizeItems(featuredProducts, (id, data) => base44.entities.FeaturedProduct.update(id, data));
-      
-      const luxuryBanners = await base44.entities.BannerImage.filter({ context: 'luxurycollection' });
-      const lCount = luxuryBanners ? await optimizeItems(luxuryBanners, (id, data) => base44.entities.BannerImage.update(id, data)) : 0;
-
-      toast.success(`Otimização concluída! Convertidos: ${bCount} banners home, ${pCount} produtos destaque, ${lCount} banners luxury.`);
+      toast.success(`Otimização global concluída! ${count} imagens foram convertidas rigorosamente para WebP.`);
       loadBanners();
       loadFeaturedProducts();
     } catch (error) {
       console.error('Erro na otimização:', error);
-      toast.error('Erro durante a otimização das imagens');
+      toast.error('Erro durante a varredura e otimização das imagens');
     } finally {
       setIsOptimizing(false);
+      setOptimizationProgress({ current: 0, total: 0, statusText: '' });
     }
   };
 
@@ -290,11 +317,27 @@ export default function BannerManagement() {
           <Button
             onClick={handleOptimizeOldImages}
             disabled={isOptimizing}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-900/40"
           >
-            {isOptimizing ? 'Otimizando Imagens...' : '🌟 Converter Imagens Antigas para WebP'}
+            {isOptimizing ? 'Carregando Otimização...' : '🌟 Converter Todas as Imagens do Sistema (WebP)'}
           </Button>
         </div>
+
+        {/* Barra de Progresso Visível */}
+        {isOptimizing && optimizationProgress.total > 0 && (
+          <div className="mb-6 bg-gray-800 rounded-lg p-4 border border-purple-500/30 w-full animate-pulse transition-all">
+            <div className="flex justify-between text-sm text-gray-300 font-semibold mb-2">
+              <span>{optimizationProgress.statusText}</span>
+              <span>{Math.round((optimizationProgress.current / optimizationProgress.total) * 100)}%</span>
+            </div>
+            <div className="w-full bg-gray-700 rounded-full h-3">
+              <div 
+                className="bg-gradient-to-r from-purple-500 to-green-500 h-3 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
+                style={{ width: `${(optimizationProgress.current / optimizationProgress.total) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
         
         {/* Tabs */}
         <div className="flex gap-2 mb-8">
