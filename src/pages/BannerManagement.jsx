@@ -181,15 +181,26 @@ export default function BannerManagement() {
     setIsOptimizing(true);
     setOptimizationProgress({ current: 0, total: 0, statusText: 'Buscando registros no sistema...' });
 
+    // Função utilitária para carregar de forma segura sem quebrar o resto
+    const safeData = async (promise, name) => {
+      try {
+         const data = await promise;
+         return data || [];
+      } catch (error) {
+         console.warn(`Erro ao carregar os itens de ${name}:`, error);
+         return [];
+      }
+    };
+
     try {
       // Definimos as fontes de dados para otimização com seus nomes e chave da imagem
       const sources = [
-        { name: 'Banners Home', data: await base44.entities.BannerImage.list() || [], updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
-        { name: 'Produtos em Destaque', data: await base44.entities.FeaturedProduct.list() || [], updateApi: (id, data) => base44.entities.FeaturedProduct.update(id, data), fields: ['image_url'] },
-        { name: 'Banners Luxury', data: await base44.entities.BannerImage.filter({ context: 'luxurycollection' }) || [], updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
-        { name: 'Produtos do Catálogo', data: await base44.entities.CatalogProduct.list() || [], updateApi: (id, data) => base44.entities.CatalogProduct.update(id, data), fields: ['image_url'] },
-        { name: 'Leilões (Produtos)', data: await base44.entities.Auction.list() || [], updateApi: (id, data) => base44.entities.Auction.update(id, data), fields: ['cover_url', 'image_url', 'image_urls'] },
-        { name: 'Lojistas (Logos)', data: await base44.entities.Store.list() || [], updateApi: (id, data) => base44.entities.Store.update(id, data), fields: ['logo_url'] },
+        { name: 'Banners Home', data: await safeData(base44.entities.BannerImage.list(), 'Banners Home'), updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
+        { name: 'Produtos em Destaque', data: await safeData(base44.entities.FeaturedProduct.list(), 'Produtos em Destaque'), updateApi: (id, data) => base44.entities.FeaturedProduct.update(id, data), fields: ['image_url'] },
+        { name: 'Banners Luxury', data: await safeData(base44.entities.BannerImage.filter({ context: 'luxurycollection' }), 'Banners Luxury'), updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
+        { name: 'Produtos do Catálogo', data: await safeData(base44.entities.CatalogProduct.list(), 'Catálogo'), updateApi: (id, data) => base44.entities.CatalogProduct.update(id, data), fields: ['image_url'] },
+        { name: 'Leilões (Produtos)', data: await safeData(base44.entities.Auction.list(), 'Leilões'), updateApi: (id, data) => base44.entities.Auction.update(id, data), fields: ['cover_url', 'image_url', 'image_urls'] },
+        { name: 'Lojistas (Logos)', data: await safeData(base44.entities.Store.list(), 'Lojistas'), updateApi: (id, data) => base44.entities.Store.update(id, data), fields: ['logo_url'] },
       ];
 
       // Reunir tudo que precisa ser otimizado
@@ -280,9 +291,13 @@ export default function BannerManagement() {
       }, 4000);
     } catch (error) {
       console.error('Erro na otimização:', error);
-      toast.error('Erro durante a varredura e otimização das imagens');
-      setIsOptimizing(false);
-      setOptimizationProgress({ current: 0, total: 0, statusText: '' });
+      toast.error('O sistema detectou um erro ou negação de permissão ao varrer tabelas.');
+      setOptimizationProgress({ current: 100, total: 100, statusText: '❌ Erro de conexão ou permissão ao buscar os dados.' });
+      
+      setTimeout(() => {
+         setIsOptimizing(false);
+         setOptimizationProgress({ current: 0, total: 0, statusText: '' });
+      }, 5000);
     }
   };
 
