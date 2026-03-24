@@ -379,11 +379,11 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     // Atualiza imediatamente
     setTimeRemaining(getTimeRemaining());
 
-    // Atualiza a cada segundo
+    // PERF: Update every 10s on card grid (precise countdown only needed inside AuctionRoom)
     const interval = setInterval(() => {
       const newTime = getTimeRemaining();
       setTimeRemaining(newTime);
-    }, 1000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [auction.status, auction.end_time]);
