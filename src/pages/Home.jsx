@@ -30,6 +30,8 @@ import RecommendedSection from '../components/recommendations/RecommendedSection
 import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
+import PrivacyPolicyModal from '../components/common/PrivacyPolicyModal';
+import LegalTermsModal from '../components/common/LegalTermsModal';
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -88,6 +90,8 @@ export default function Home() {
   const [userRegion, setUserRegion] = useState(null);
   const [productStockMap, setProductStockMap] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showLegalTerms, setShowLegalTerms] = useState(false);
   const ITEMS_PER_PAGE = 12;
 
   const { refresh: refreshAuctions } = useRealtimeSync({
@@ -902,6 +906,32 @@ export default function Home() {
 
       <ComparaiFloatingButton auctions={filteredAuctions} mode="home" />
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
+
+      {/* Rodapé Legal */}
+      <footer
+        className="mt-8 py-5 text-center"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      >
+        <p className="text-gray-600 text-xs">
+          © {new Date().getFullYear()} Leilão NoZap.{' '}
+          <button
+            onClick={() => setShowPrivacyPolicy(true)}
+            className="text-gray-500 hover:text-emerald-400 transition-colors underline underline-offset-2 mx-1"
+          >
+            Política de Privacidade
+          </button>
+          ·
+          <button
+            onClick={() => setShowLegalTerms(true)}
+            className="text-gray-500 hover:text-emerald-400 transition-colors underline underline-offset-2 mx-1"
+          >
+            Termos de Uso
+          </button>
+        </p>
+      </footer>
+
+      {showPrivacyPolicy && <PrivacyPolicyModal onClose={() => setShowPrivacyPolicy(false)} />}
+      {showLegalTerms && <LegalTermsModal onClose={() => setShowLegalTerms(false)} />}
     </div>);
 
 }

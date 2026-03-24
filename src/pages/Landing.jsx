@@ -1,13 +1,17 @@
-import React, { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback, useState } from "react";
 // import { User } from "@/entities/User"; // Removed as per instructions (no login flow)
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, ArrowRight } from "lucide-react";
+import PrivacyPolicyModal from '../components/common/PrivacyPolicyModal';
+import LegalTermsModal from '../components/common/LegalTermsModal';
 
 export default function LandingPage() {
   const audioContextRef = useRef(null);
+  const [showPrivacyPolicy, setShowPrivacyPolicy] = useState(false);
+  const [showLegalTerms, setShowLegalTerms] = useState(false);
 
   // --- FUNÇÕES DE SOM E VIBRAÇÃO (COM SOM DE MARTELO MELHORADO) ---
   const playHammerSound = useCallback(() => {
@@ -271,6 +275,29 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+
+      {/* Rodapé Legal */}
+      <footer className="py-6 text-center" style={{ background: 'rgba(0,0,0,0.4)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <p className="text-gray-600 text-xs">
+          © {new Date().getFullYear()} Leilão NoZap.
+          <button
+            onClick={() => setShowPrivacyPolicy(true)}
+            className="text-gray-500 hover:text-emerald-400 transition-colors underline underline-offset-2 mx-2"
+          >
+            Política de Privacidade
+          </button>
+          ·
+          <button
+            onClick={() => setShowLegalTerms(true)}
+            className="text-gray-500 hover:text-emerald-400 transition-colors underline underline-offset-2 mx-2"
+          >
+            Termos de Uso
+          </button>
+        </p>
+      </footer>
+
+      {showPrivacyPolicy && <PrivacyPolicyModal onClose={() => setShowPrivacyPolicy(false)} />}
+      {showLegalTerms && <LegalTermsModal onClose={() => setShowLegalTerms(false)} />}
 
       <style>{`
         /* --- GERAL & BACKGROUND --- */
