@@ -4,7 +4,7 @@
  * DESCRIÇÃO: Estado definitivo da página Home.
  * ========================================================================
  */
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { base44 } from "@/api/base44Client";
@@ -25,9 +25,8 @@ import { checkLocation } from "@/functions/checkLocation";
 import AuctionCard from "../components/auction/AuctionCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import { useRealtimeSync } from '../components/system/RealtimeSync';
-import React from "react";
-const ComparaiFloatingButton = React.lazy(() => import('../components/comparai/ComparaiFloatingButton'));
-import RecommendedSection from '../components/recommendations/RecommendedSection';
+const ComparaiFloatingButton = lazy(() => import('../components/comparai/ComparaiFloatingButton'));
+const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
@@ -740,7 +739,9 @@ export default function Home() {
 
         {/* CONTEÚDO PRINCIPAL */}
         <div className="w-full">
-            <RecommendedSection currentUser={currentUser} isAdmin={currentUser?.role === 'admin'} partnerStore="nozap" />
+            <Suspense fallback={null}>
+              <RecommendedSection currentUser={currentUser} isAdmin={currentUser?.role === 'admin'} partnerStore="nozap" />
+            </Suspense>
 
             <div ref={scrollerRef} className="mb-8 category-scroller">
               <div className="category-scroller__inner">
@@ -902,9 +903,9 @@ export default function Home() {
         </div>
       </div>
 
-      <React.Suspense fallback={null}>
+      <Suspense fallback={null}>
         <ComparaiFloatingButton auctions={filteredAuctions} mode="home" />
-      </React.Suspense>
+      </Suspense>
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
       <ConsentBanner />
     </div>);
