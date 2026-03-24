@@ -828,10 +828,6 @@ export default function CreateAuction() {
     alert("✅ Dados aplicados com sucesso no formulário!");
   };
 
-  const handleClearAllImages = () => {
-    setImageUrls(["", "", "", "", "", ""]); // Clear all image URLs
-  };
-
   // HANDLER PARA UPLOAD DE LOGO
   const handleSupplierLogoUpload = async (file) => {
     if (!file) return;
