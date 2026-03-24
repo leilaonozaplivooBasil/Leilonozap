@@ -188,7 +188,8 @@ export default function BannerManagement() {
         { name: 'Produtos em Destaque', data: await base44.entities.FeaturedProduct.list() || [], updateApi: (id, data) => base44.entities.FeaturedProduct.update(id, data), fields: ['image_url'] },
         { name: 'Banners Luxury', data: await base44.entities.BannerImage.filter({ context: 'luxurycollection' }) || [], updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
         { name: 'Produtos do Catálogo', data: await base44.entities.CatalogProduct.list() || [], updateApi: (id, data) => base44.entities.CatalogProduct.update(id, data), fields: ['image_url'] },
-        { name: 'Leilões', data: await base44.entities.Auction.list() || [], updateApi: (id, data) => base44.entities.Auction.update(id, data), fields: ['cover_url', 'image_url'] },
+        { name: 'Leilões (Produtos)', data: await base44.entities.Auction.list() || [], updateApi: (id, data) => base44.entities.Auction.update(id, data), fields: ['cover_url', 'image_url', 'image_urls'] },
+        { name: 'Lojistas (Logos)', data: await base44.entities.Store.list() || [], updateApi: (id, data) => base44.entities.Store.update(id, data), fields: ['logo_url'] },
       ];
 
       // Reunir tudo que precisa ser otimizado
@@ -198,11 +199,21 @@ export default function BannerManagement() {
         if (!source.data || !Array.isArray(source.data)) continue;
         source.data.forEach(item => {
             source.fields.forEach(field => {
-              const url = item[field];
-              if (url && typeof url === 'string') {
-                  const lowerUrl = url.toLowerCase();
+              const urlOrArray = item[field];
+              
+              if (Array.isArray(urlOrArray)) {
+                urlOrArray.forEach((url, idx) => {
+                  if (url && typeof url === 'string') {
+                    const lowerUrl = url.toLowerCase();
+                    if (!lowerUrl.endsWith('.webp') && (lowerUrl.endsWith('.png') || lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.jpeg'))) {
+                      allItemsToOptimize.push({ item, sourceName: source.name, field, url, isArray: true, arrayIndex: idx, updateApi: source.updateApi });
+                    }
+                  }
+                });
+              } else if (urlOrArray && typeof urlOrArray === 'string') {
+                  const lowerUrl = urlOrArray.toLowerCase();
                   if (!lowerUrl.endsWith('.webp') && (lowerUrl.endsWith('.png') || lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.jpeg'))) {
-                    allItemsToOptimize.push({ item, sourceName: source.name, field, updateApi: source.updateApi });
+                    allItemsToOptimize.push({ item, sourceName: source.name, field, url: urlOrArray, isArray: false, updateApi: source.updateApi });
                   }
               }
             });
@@ -221,7 +232,7 @@ export default function BannerManagement() {
 
       let count = 0;
       for (let i = 0; i < allItemsToOptimize.length; i++) {
-        const { item, sourceName, field, updateApi } = allItemsToOptimize[i];
+        const { item, sourceName, field, url, isArray, arrayIndex, updateApi } = allItemsToOptimize[i];
         
         setOptimizationProgress({ 
           current: i + 1, 
@@ -230,16 +241,23 @@ export default function BannerManagement() {
         });
         
         try {
-          const res = await fetch(item[field]);
+          const res = await fetch(url);
           const blob = await res.blob();
           if (!blob.type.startsWith('image/')) continue;
           
           const file = new File([blob], `img_${item.id}.png`, { type: blob.type });
           const webpFile = await convertToWebP(file, 0.90);
           
-          if (webpFile.size < file.size) {
+          if (webpFile.size < file.size || url.toLowerCase().endsWith('.png')) { // Se for PNG, converte pra webp independente de tamanho pra melhorar web vitals
             const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
-            await updateApi(item.id, { [field]: file_url });
+            
+            if (isArray) {
+              item[field][arrayIndex] = file_url;
+              await updateApi(item.id, { [field]: item[field] });
+            } else {
+              item[field] = file_url; // para os próximos processamentos do mesmo array se houvesse, embora este seja false
+              await updateApi(item.id, { [field]: file_url });
+            }
             count++;
           }
         } catch (e) {
