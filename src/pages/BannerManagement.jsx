@@ -212,6 +212,7 @@ export default function BannerManagement() {
       if (allItemsToOptimize.length === 0) {
         toast.info("Nenhuma imagem para otimizar no momento. Todas já estão em WebP!");
         setIsOptimizing(false);
+        setOptimizationProgress({ current: 0, total: 0, statusText: '' });
         return;
       }
 
@@ -324,16 +325,22 @@ export default function BannerManagement() {
         </div>
 
         {/* Barra de Progresso Visível */}
-        {isOptimizing && optimizationProgress.total > 0 && (
+        {isOptimizing && (
           <div className="mb-6 bg-gray-800 rounded-lg p-4 border border-purple-500/30 w-full animate-pulse transition-all">
             <div className="flex justify-between text-sm text-gray-300 font-semibold mb-2">
               <span>{optimizationProgress.statusText}</span>
-              <span>{Math.round((optimizationProgress.current / optimizationProgress.total) * 100)}%</span>
+              <span>
+                {optimizationProgress.total > 0 
+                  ? Math.round((optimizationProgress.current / optimizationProgress.total) * 100) 
+                  : 0}%
+              </span>
             </div>
             <div className="w-full bg-gray-700 rounded-full h-3">
               <div 
                 className="bg-gradient-to-r from-purple-500 to-green-500 h-3 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(168,85,247,0.5)]"
-                style={{ width: `${(optimizationProgress.current / optimizationProgress.total) * 100}%` }}
+                style={{ 
+                  width: `${optimizationProgress.total > 0 ? (optimizationProgress.current / optimizationProgress.total) * 100 : 5}%` 
+                }}
               ></div>
             </div>
           </div>
