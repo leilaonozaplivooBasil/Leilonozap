@@ -851,57 +851,6 @@ export default function CreateAuction() {
     }
   };
 
-  const handleSmartImport = async () => {
-    if (!imageUrlInput) {
-      toast.error('Cole a URL da imagem');
-      return;
-    }
-
-    setIsImporting(true);
-
-    try {
-      const { data } = await base44.functions.invoke('analyzeImageUrlAndImport', {
-        imageUrl: imageUrlInput
-      });
-
-      if (data.success) {
-        setImportedData(data.productData);
-        setSuggestedProducts(data.suggestedProducts || []);
-
-        // PREENCHE FORMULÁRIO AUTOMATICAMENTE
-        setFormData(prev => ({
-          ...prev,
-          title: data.productData.name,
-          description: data.productData.description,
-          category: data.productData.category || 'outros',
-          image_urls: data.productData.images || ["", "", "", "", ""]
-        }));
-
-        toast.success('✅ Produto importado! Revise os dados antes de criar.');
-      } else {
-        toast.error(data.message || 'Erro ao importar produto');
-      }
-    } catch (error) {
-      console.error('Erro:', error);
-      toast.error('Erro ao processar importação');
-    } finally {
-      setIsImporting(false);
-    }
-  };
-
-  const handleUseSuggested = (product) => {
-    if (product.latest_auction) {
-      setFormData(prev => ({
-        ...prev,
-        title: product.latest_auction.title,
-        starting_price: (product.latest_auction.price * 0.9).toFixed(2),
-        image_urls: [product.latest_auction.image || "", "", "", "", ""]
-      }));
-      toast.success(`Dados de "${product.name}" carregados!`);
-    }
-    setSuggestedProducts([]);
-  };
-
   const handleConfirmDuplication = async ({ includeAuction, includeCatalog }) => {
     setIsSubmittingBid(true);
 
