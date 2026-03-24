@@ -25,7 +25,8 @@ import { checkLocation } from "@/functions/checkLocation";
 import AuctionCard from "../components/auction/AuctionCard";
 import WelcomeModal from "../components/common/WelcomeModal";
 import { useRealtimeSync } from '../components/system/RealtimeSync';
-import ComparaiFloatingButton from '../components/comparai/ComparaiFloatingButton';
+import React from "react";
+const ComparaiFloatingButton = React.lazy(() => import('../components/comparai/ComparaiFloatingButton'));
 import RecommendedSection from '../components/recommendations/RecommendedSection';
 import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
@@ -448,9 +449,12 @@ export default function Home() {
       if (urlParams.get('filter') === 'ativos') setActiveCategory('ativos');
       if (urlParams.get('favorites') === 'true') setShowFavoritesOnly(true);
 
-      checkLocation().then((locationData) => {
-        if (locationData?.location?.region) setUserRegion(locationData.location.region);
-      }).catch(() => {});
+      // PERF: defer geolocation to avoid blocking initial render
+      setTimeout(() => {
+        checkLocation().then((locationData) => {
+          if (locationData?.location?.region) setUserRegion(locationData.location.region);
+        }).catch(() => {});
+      }, 15000);
 
       // Uma única carga inicial — o RealtimeSync cuida das atualizações
       loadAuctions();
@@ -529,13 +533,10 @@ export default function Home() {
     <div className="bg-gray-900 text-white min-h-screen relative overflow-hidden">
       <LiquidGlassStyles />
       
-      {/* Background Orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] orb-1" />
-        <div className="absolute top-1/3 -left-40 w-[400px] h-[400px] bg-green-400/8 rounded-full blur-[100px] orb-2" />
-        <div className="absolute bottom-20 right-1/4 w-[300px] h-[300px] bg-emerald-600/6 rounded-full blur-[80px] orb-3" />
-        <div className="grid-overlay absolute inset-0 opacity-40" />
-      </div>
+      {/* Background — PERF: static gradients instead of animated blurred orbs */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0" style={{
+        background: 'radial-gradient(ellipse at 80% 10%, rgba(16,185,129,0.08) 0%, transparent 50%), radial-gradient(ellipse at 10% 60%, rgba(16,185,129,0.05) 0%, transparent 50%)'
+      }} />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 relative z-10">
         {/* Hero Section - Glass */}
@@ -901,7 +902,9 @@ export default function Home() {
         </div>
       </div>
 
-      <ComparaiFloatingButton auctions={filteredAuctions} mode="home" />
+      <React.Suspense fallback={null}>
+        <ComparaiFloatingButton auctions={filteredAuctions} mode="home" />
+      </React.Suspense>
       {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
       <ConsentBanner />
     </div>);
