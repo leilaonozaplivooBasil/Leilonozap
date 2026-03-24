@@ -796,50 +796,6 @@ export default function CreateAuction() {
 
 
 
-  const visualizeImages = async () => {
-    const validUrls = imageUrls.filter(url => url && url.trim().startsWith('http'));
-
-    if (validUrls.length === 0) {
-      toast.error("Nenhuma URL válida para processar. Tente extrair novamente.");
-      return;
-    }
-
-    setIsProcessing(true);
-    setManualStep(4);
-
-    console.log(`📸 Processando ${validUrls.length} imagens...`);
-
-    // Usa as URLs originais diretamente (mais confiável)
-    console.log(`📥 Usando ${validUrls.length} URLs originais diretamente`);
-    const uploadedImages = [...validUrls];
-
-    validUrls.forEach((url, idx) => {
-      console.log(`✅ Imagem ${idx + 1}: ${url.substring(0, 80)}...`);
-    });
-
-    setIsProcessing(false);
-
-    // Mostra resultado
-    if (uploadedImages.length === 0) {
-      toast.error("❌ Nenhuma imagem foi processada. Use o upload manual de imagens.");
-      setManualStep(3);
-      return;
-    }
-
-    toast.success(`✅ Todas as ${uploadedImages.length} imagens processadas!`);
-
-    setDownloadedImages(uploadedImages);
-    setCoverIndex(0);
-    setManualStep(5);
-  };
-
-  // ETAPA 3: ESCOLHER CAPA (UI step 5)
-  const selectCover = (index) => {
-    setCoverIndex(index);
-    setManualStep(6);
-  };
-
-  // ETAPA 4: APLICAR TUDO NO FORMULÁRIO (UI step 6)
   const applyToForm = () => {
     let finalImages = [];
     if (downloadedImages.length > 0) {
