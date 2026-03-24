@@ -512,19 +512,7 @@ export default function Home() {
     setShowWelcomeModal(false);
   }, []);
 
-  // 🔥 LOG DE DEBUG - EXECUTADO APÓS TODOS OS HOOKS
-  useEffect(() => {
-    if (currentUser) {
-      console.log("🔍 [HOME] Usuário atual:", {
-        name: currentUser.full_name,
-        email: currentUser.email,
-        role: currentUser.role,
-        isLicensee: currentUser.role === 'licensee'
-      });
-    } else {
-      console.log("🔍 [HOME] Nenhum usuário logado");
-    }
-  }, [currentUser]);
+  // Debug removido para performance
 
   const activeCount = auctions.filter(a => a.status === 'active').length;
 

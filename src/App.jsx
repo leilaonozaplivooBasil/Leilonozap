@@ -15,6 +15,7 @@ import GestaoLotes from '@/pages/GestaoLotes';
 import SistemaDeArremate from '@/pages/SistemaDeArremate';
 import AdminDepositosConfirmados from '@/pages/AdminDepositosConfirmados';
 import AdminLancesAutorizados from '@/pages/AdminLancesAutorizados';
+import ImageOptimizer from '@/pages/ImageOptimizer';
 import VisualizarLote from '@/pages/VisualizarLote';
 import SentinelNoZap from '@/pages/SentinelNoZap';
 import ParceiroLotes from '@/pages/ParceiroLotes';
@@ -146,6 +147,13 @@ const AuthenticatedApp = () => {
       } />
       <Route path="/AcessoArrematante" element={<AcessoArrematante />} />
       <Route path="/VisualizarLote" element={<LayoutWrapper currentPageName="VisualizarLote"><VisualizarLote /></LayoutWrapper>} />
+      <Route path="/ImageOptimizer" element={
+        <LayoutWrapper currentPageName="ImageOptimizer">
+          <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
+            <ImageOptimizer />
+          </RequireRole>
+        </LayoutWrapper>
+      } />
       <Route path="/AdminLancesAutorizados" element={
         <LayoutWrapper currentPageName="AdminLancesAutorizados">
           <RequireRole allowedRoles={['admin']} fallbackRoute="Home" noAuthRoute="Landing">
