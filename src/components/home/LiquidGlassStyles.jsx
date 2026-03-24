@@ -7,30 +7,22 @@ export default function LiquidGlassStyles() {
          LIQUID GLASS DESIGN SYSTEM
          ============================================ */
 
-      /* Glass Card Base */
+      /* Glass Card Base — PERF: removed backdrop-filter (GPU-heavy) */
       .glass-card {
         background: linear-gradient(
           135deg,
-          rgba(255, 255, 255, 0.05) 0%,
-          rgba(255, 255, 255, 0.02) 50%,
-          rgba(255, 255, 255, 0.05) 100%
+          rgba(20, 30, 48, 0.85) 0%,
+          rgba(17, 24, 39, 0.9) 50%,
+          rgba(20, 30, 48, 0.85) 100%
         );
-        backdrop-filter: blur(20px) saturate(180%);
-        -webkit-backdrop-filter: blur(20px) saturate(180%);
         border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow:
-          0 8px 32px rgba(0, 0, 0, 0.3),
-          inset 0 1px 0 rgba(255, 255, 255, 0.1),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.02);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
       }
 
       .glass-card:hover {
         border-color: rgba(255, 255, 255, 0.15);
-        box-shadow:
-          0 12px 48px rgba(0, 0, 0, 0.4),
-          inset 0 1px 0 rgba(255, 255, 255, 0.15),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.03);
+        box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
         transform: translateY(-2px);
       }
 
@@ -38,133 +30,75 @@ export default function LiquidGlassStyles() {
       .glass-card-elevated {
         background: linear-gradient(
           145deg,
-          rgba(255, 255, 255, 0.08) 0%,
-          rgba(255, 255, 255, 0.03) 40%,
-          rgba(16, 185, 129, 0.04) 100%
+          rgba(20, 30, 48, 0.9) 0%,
+          rgba(17, 24, 39, 0.92) 40%,
+          rgba(16, 40, 50, 0.9) 100%
         );
-        backdrop-filter: blur(24px) saturate(200%);
-        -webkit-backdrop-filter: blur(24px) saturate(200%);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow:
-          0 12px 40px rgba(0, 0, 0, 0.35),
-          inset 0 1px 0 rgba(255, 255, 255, 0.12),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.02),
-          0 0 80px rgba(16, 185, 129, 0.03);
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
       }
 
-      /* Glass Hero */
+      /* Glass Hero — PERF: keep blur only on hero (single element) */
       .glass-hero {
         background: linear-gradient(
           160deg,
           rgba(16, 185, 129, 0.08) 0%,
-          rgba(255, 255, 255, 0.04) 30%,
-          rgba(255, 255, 255, 0.02) 60%,
+          rgba(17, 24, 39, 0.92) 30%,
+          rgba(17, 24, 39, 0.95) 60%,
           rgba(16, 185, 129, 0.05) 100%
         );
-        backdrop-filter: blur(30px) saturate(200%);
-        -webkit-backdrop-filter: blur(30px) saturate(200%);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
         border: 1px solid rgba(16, 185, 129, 0.15);
-        box-shadow:
-          0 16px 64px rgba(0, 0, 0, 0.4),
-          inset 0 1px 0 rgba(255, 255, 255, 0.12),
-          inset 0 -1px 0 rgba(255, 255, 255, 0.02),
-          0 0 120px rgba(16, 185, 129, 0.05);
+        box-shadow: 0 16px 64px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
       }
 
-      /* Glass Button */
+      /* Glass Button — PERF: no backdrop-filter */
       .glass-btn {
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.08) 0%,
-          rgba(255, 255, 255, 0.03) 100%
-        );
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.9) 0%, rgba(30, 41, 59, 0.7) 100%);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow:
-          0 4px 16px rgba(0, 0, 0, 0.2),
-          inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        transition: background 0.3s, border-color 0.3s, transform 0.3s;
       }
 
       .glass-btn:hover {
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.12) 0%,
-          rgba(255, 255, 255, 0.06) 100%
-        );
+        background: linear-gradient(135deg, rgba(40, 51, 69, 0.95) 0%, rgba(40, 51, 69, 0.8) 100%);
         border-color: rgba(255, 255, 255, 0.2);
-        box-shadow:
-          0 8px 24px rgba(0, 0, 0, 0.3),
-          inset 0 1px 0 rgba(255, 255, 255, 0.15);
         transform: translateY(-1px);
       }
 
-      /* Glass Button Green Accent */
+      /* Glass Button Green Accent — PERF: no backdrop-filter */
       .glass-btn-green {
-        background: linear-gradient(
-          135deg,
-          rgba(16, 185, 129, 0.35) 0%,
-          rgba(16, 185, 129, 0.18) 100%
-        );
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, rgba(5, 80, 60, 0.5) 100%);
         border: 1px solid rgba(16, 185, 129, 0.5);
-        box-shadow:
-          0 4px 20px rgba(16, 185, 129, 0.25),
-          inset 0 1px 0 rgba(255, 255, 255, 0.12);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        transition: background 0.3s, border-color 0.3s, transform 0.3s;
       }
 
       .glass-btn-green:hover {
-        background: linear-gradient(
-          135deg,
-          rgba(16, 185, 129, 0.45) 0%,
-          rgba(16, 185, 129, 0.25) 100%
-        );
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.45) 0%, rgba(5, 100, 70, 0.6) 100%);
         border-color: rgba(16, 185, 129, 0.65);
-        box-shadow:
-          0 8px 32px rgba(16, 185, 129, 0.35),
-          inset 0 1px 0 rgba(255, 255, 255, 0.15);
         transform: translateY(-1px);
       }
 
-      /* Category Pill Glass */
+      /* Category Pill — PERF: no backdrop-filter */
       .glass-pill {
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.06) 0%,
-          rgba(255, 255, 255, 0.02) 100%
-        );
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        background: rgba(30, 41, 59, 0.8);
         border: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: background 0.3s, border-color 0.3s, transform 0.3s;
       }
 
       .glass-pill:hover {
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.1) 0%,
-          rgba(255, 255, 255, 0.04) 100%
-        );
+        background: rgba(40, 51, 69, 0.9);
         border-color: rgba(255, 255, 255, 0.15);
         transform: translateY(-1px);
       }
 
       .glass-pill-active {
-        background: linear-gradient(
-          135deg,
-          rgba(16, 185, 129, 0.15) 0%,
-          rgba(16, 185, 129, 0.05) 100%
-        );
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.05) 100%);
         border: 1px solid rgba(16, 185, 129, 0.3);
-        box-shadow:
-          0 2px 12px rgba(16, 185, 129, 0.2),
-          inset 0 1px 0 rgba(255, 255, 255, 0.08);
+        box-shadow: 0 2px 12px rgba(16, 185, 129, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
       }
 
       /* Orb Animations */
@@ -189,12 +123,9 @@ export default function LiquidGlassStyles() {
       .orb-2 { animation: orb-float-2 15s ease-in-out infinite; }
       .orb-3 { animation: orb-float-3 10s ease-in-out infinite; }
 
-      /* Grid Overlay */
+      /* Grid Overlay — PERF: disabled (imperceptible but GPU-costly on mobile) */
       .grid-overlay {
-        background-image: 
-          linear-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(16, 185, 129, 0.03) 1px, transparent 1px);
-        background-size: 60px 60px;
+        display: none;
       }
 
       /* Glow Line */
@@ -276,14 +207,9 @@ export default function LiquidGlassStyles() {
       }
       .animate-fire { animation: fire 1.8s ease-in-out infinite; }
 
-      /* Skeleton Loading Glass */
+      /* Skeleton Loading — PERF: no backdrop-filter */
       .skeleton-glass {
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.04) 0%,
-          rgba(255, 255, 255, 0.02) 100%
-        );
-        backdrop-filter: blur(12px);
+        background: rgba(20, 30, 48, 0.8);
         border: 1px solid rgba(255, 255, 255, 0.06);
       }
 
