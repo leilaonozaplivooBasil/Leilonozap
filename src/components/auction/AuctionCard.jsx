@@ -421,7 +421,8 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
         }}
       >
         <div
-          className={`relative overflow-hidden w-full aspect-square ${variant === "sai_de_baixo" ? "bg-white" : "bg-gray-900/40"}`}
+          className={`relative overflow-hidden w-full ${variant === "sai_de_baixo" ? "bg-white" : "bg-gray-900/40"}`}
+          style={{ aspectRatio: '1/1', contain: 'layout' }}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={handleImageClick}
