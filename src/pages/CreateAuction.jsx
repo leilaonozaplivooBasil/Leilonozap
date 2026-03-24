@@ -24,7 +24,7 @@ import { fastForwardTestAuction } from "@/functions/fastForwardTestAuction";
 import { deleteTestAuctions } from "@/functions/deleteTestAuctions";
 import { resetTestData } from "@/functions/resetTestData";
 import { resetTestValora } from "@/functions/resetTestValora";
-import { toast } from "sonner";
+import { toast } from "sonner"; import { convertToWebP } from "@/lib/convertToWebP";
 import { addSeconds } from 'date-fns';
 import ProductImagePreview from "../components/admin/ProductImagePreview";
 import ConfirmProductDuplicationModal from "../components/admin/ConfirmProductDuplicationModal";
@@ -1989,13 +1989,7 @@ export default function CreateAuction() {
                               const uploadedUrls = [];
 
                               try {
-                                for (const file of files) {
-                                  const result = await base44.integrations.Core.UploadFile({ file });
-
-                                  if (result?.file_url) {
-                                    uploadedUrls.push(result.file_url);
-                                  }
-                                }
+                                for (const f of files) { const wf = await convertToWebP(f); const result = await base44.integrations.Core.UploadFile({ file: wf }); if (result?.file_url) uploadedUrls.push(result.file_url); }
 
                                 if (uploadedUrls.length > 0) {
                                   setManualUploadImages(uploadedUrls);
@@ -2038,13 +2032,7 @@ export default function CreateAuction() {
                               const uploadedUrls = [];
 
                               try {
-                                for (const file of files) {
-                                  const result = await base44.integrations.Core.UploadFile({ file });
-
-                                  if (result?.file_url) {
-                                    uploadedUrls.push(result.file_url);
-                                  }
-                                }
+                                for (const f of files) { const wf = await convertToWebP(f); const result = await base44.integrations.Core.UploadFile({ file: wf }); if (result?.file_url) uploadedUrls.push(result.file_url); }
 
                                 if (uploadedUrls.length > 0) {
                                   setManualUploadImages(uploadedUrls);
