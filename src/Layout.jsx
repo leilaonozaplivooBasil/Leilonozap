@@ -641,7 +641,7 @@ export default function Layout({ children, currentPageName }) {
                 <img
                   src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
                   alt="Leilão NoZap"
-                  className="h-14 w-auto cursor-pointer hover:scale-105 transition-transform"
+                  className="h-10 w-auto cursor-pointer hover:scale-105 transition-transform"
                   onClick={() => navigate(createPageUrl(isCatalogPage ? "Catalog" : "Home"))}
                 />
               </div>
