@@ -23,14 +23,14 @@ import {
 import { checkLocation } from "@/functions/checkLocation";
 
 import AuctionCard from "../components/auction/AuctionCard";
-import WelcomeModal from "../components/common/WelcomeModal";
+const WelcomeModal = lazy(() => import("../components/common/WelcomeModal"));
 import { useRealtimeSync } from '../components/system/RealtimeSync';
 const ComparaiFloatingButton = lazy(() => import('../components/comparai/ComparaiFloatingButton'));
 const RecommendedSection = lazy(() => import('../components/recommendations/RecommendedSection'));
 import RotatingBanner from '../components/banner/RotatingBanner';
 import LiveStats from '../components/home/LiveStats';
 import LiquidGlassStyles from '../components/home/LiquidGlassStyles';
-import ConsentBanner from '../components/common/ConsentBanner';
+const ConsentBanner = lazy(() => import('../components/common/ConsentBanner'));
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -906,8 +906,10 @@ export default function Home() {
       <Suspense fallback={null}>
         <ComparaiFloatingButton auctions={filteredAuctions} mode="home" />
       </Suspense>
-      {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
-      <ConsentBanner />
+      <Suspense fallback={null}>
+        {showWelcomeModal && <WelcomeModal onAccept={handleAcceptWelcome} />}
+        <ConsentBanner />
+      </Suspense>
     </div>);
 
 }
