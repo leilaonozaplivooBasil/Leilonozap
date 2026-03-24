@@ -101,7 +101,7 @@ export default function LandingPage() {
     <>
       <div className="page-entry-animation">
         <div className="hammer-impact-indicator">
-          <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/917b16eb6_image.png" alt="Martelo de Leilão" className="w-20 h-20" />
+          <img src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/917b16eb6_image.png" alt="Martelo de Leilão" className="w-20 h-20" decoding="async" width={80} height={80} />
         </div>
       </div>
 
@@ -112,6 +112,10 @@ export default function LandingPage() {
             src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/58892a1ef_leilao_nozap_logo_transparent.png"
             alt="Leilão NoZap"
             className="h-12 w-auto"
+            fetchpriority="high"
+            decoding="async"
+            width={192}
+            height={48}
           />
           <button
             onClick={() => window.location.href = '/AcessoArrematante'}
@@ -136,6 +140,9 @@ export default function LandingPage() {
               src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/fadb71d8a_3097A240-8136-4C1B-9127-A8020978248D.PNG"
               alt="Leilão NoZap"
               className="w-28 h-28 md:w-32 md:h-32 mx-auto mb-6 rounded-full shadow-2xl border-2 border-green-500/50 logo-entrance"
+              decoding="async"
+              width={128}
+              height={128}
             />
             <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tighter title-entrance">
               Leilão NoZap
@@ -192,6 +199,10 @@ export default function LandingPage() {
                       <img 
                         src={src} 
                         alt={`Produto ${index + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        width={220}
+                        height={120}
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     </div>
@@ -201,6 +212,10 @@ export default function LandingPage() {
                       <img 
                         src={src} 
                         alt={`Produto ${index + 1}`}
+                        loading="lazy"
+                        decoding="async"
+                        width={220}
+                        height={120}
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />
                     </div>
