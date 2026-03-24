@@ -820,7 +820,7 @@ export default function Layout({ children, currentPageName }) {
               )}
             </div>
           </div>
-        </nav>
+        </nav>}
 
         {/* MENU MOBILE - SLIDE LATERAL */}
         {mobileMenuOpen && (
@@ -1014,7 +1014,7 @@ export default function Layout({ children, currentPageName }) {
           </>
         )}
 
-        <main className="pt-16">{children}</main>
+        <main className={isLandingPage ? "" : "pt-16"}>{children}</main>
         <Footer />
 
         {/* 🆕 BOTÃO FLUTUANTE WHATSAPP - SÓ NA SALA DE LEILÃO (AuctionRoom) */}
