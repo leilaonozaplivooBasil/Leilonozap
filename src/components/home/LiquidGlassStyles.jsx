@@ -101,27 +101,7 @@ export default function LiquidGlassStyles() {
         box-shadow: 0 2px 12px rgba(16, 185, 129, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
       }
 
-      /* Orb Animations */
-      @keyframes orb-float-1 {
-        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
-        33% { transform: translate(30px, -40px) scale(1.1); opacity: 0.6; }
-        66% { transform: translate(-20px, 20px) scale(0.9); opacity: 0.3; }
-      }
-
-      @keyframes orb-float-2 {
-        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
-        33% { transform: translate(-40px, 30px) scale(1.15); opacity: 0.5; }
-        66% { transform: translate(25px, -15px) scale(0.85); opacity: 0.25; }
-      }
-
-      @keyframes orb-float-3 {
-        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.2; }
-        50% { transform: translate(15px, -25px) scale(1.08); opacity: 0.35; }
-      }
-
-      .orb-1 { animation: orb-float-1 12s ease-in-out infinite; }
-      .orb-2 { animation: orb-float-2 15s ease-in-out infinite; }
-      .orb-3 { animation: orb-float-3 10s ease-in-out infinite; }
+      /* Orb Animations — PERF: removed (orbs replaced with static radial gradients) */
 
       /* Grid Overlay — PERF: disabled (imperceptible but GPU-costly on mobile) */
       .grid-overlay {
@@ -142,34 +122,10 @@ export default function LiquidGlassStyles() {
         box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
       }
 
-      /* Shimmer Effect */
-      @keyframes shimmer {
-        0% { transform: translateX(-100%); }
-        100% { transform: translateX(100%); }
-      }
-
+      /* Shimmer Effect — PERF: disabled (continuous GPU animation on large element) */
       .glass-shimmer {
         position: relative;
         overflow: hidden;
-      }
-
-      .glass-shimmer::after {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-          105deg,
-          transparent 40%,
-          rgba(255, 255, 255, 0.03) 45%,
-          rgba(255, 255, 255, 0.06) 50%,
-          rgba(255, 255, 255, 0.03) 55%,
-          transparent 60%
-        );
-        animation: shimmer 8s ease-in-out infinite;
-        pointer-events: none;
       }
 
       /* Category Scroller */
