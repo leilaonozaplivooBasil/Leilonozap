@@ -834,7 +834,7 @@ export default function CreateAuction() {
 
     setIsUploading(true);
     try {
-      const result = await base44.integrations.Core.UploadFile({ file });
+      const wfLogo = await convertToWebP(file); const result = await base44.integrations.Core.UploadFile({ file: wfLogo });
 
       if (result?.file_url) {
         setFormData(prev => ({ ...prev, supplier_logo_url: result.file_url }));
