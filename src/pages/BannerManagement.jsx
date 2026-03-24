@@ -9,6 +9,7 @@ import { Trash2, Upload, GripVertical, Eye, Monitor, Smartphone } from 'lucide-r
 import { toast } from 'sonner';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import ImageCropEditor from '../components/admin/ImageCropEditor';
+import { convertToWebP } from '@/lib/convertToWebP';
 
 export default function BannerManagement() {
   const [banners, setBanners] = useState([]);
@@ -56,8 +57,9 @@ export default function BannerManagement() {
     }
     
     try {
-      // Upload direto sem compressão para manter qualidade máxima
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
+      // Converte para WebP antes do upload (reduz ~25-35% sem perda visível)
+      const webpFile = await convertToWebP(file, 0.90);
+      const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
       return file_url;
     } catch (error) {
       console.error('Erro ao fazer upload:', error);
