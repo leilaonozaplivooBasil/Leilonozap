@@ -210,9 +210,12 @@ export default function BannerManagement() {
       }
 
       if (allItemsToOptimize.length === 0) {
-        toast.info("Nenhuma imagem para otimizar no momento. Todas já estão em WebP!");
-        setIsOptimizing(false);
-        setOptimizationProgress({ current: 0, total: 0, statusText: '' });
+        setOptimizationProgress({ current: 100, total: 100, statusText: '✨ Sistema 100% Otimizado! Nenhuma imagem JPG/PNG encontrada.' });
+        toast.success("Todas as imagens do sistema já estão no formato WebP!");
+        setTimeout(() => {
+          setIsOptimizing(false);
+          setOptimizationProgress({ current: 0, total: 0, statusText: '' });
+        }, 4000);
         return;
       }
 
@@ -244,13 +247,22 @@ export default function BannerManagement() {
         }
       }
 
-      toast.success(`Otimização global concluída! ${count} imagens foram convertidas rigorosamente para WebP.`);
+      setOptimizationProgress({ 
+        current: allItemsToOptimize.length, 
+        total: allItemsToOptimize.length, 
+        statusText: `✨ Concluído! ${count} imagens foram convertidas para WebP.` 
+      });
+      toast.success(`Otimização global concluída com sucesso!`);
       loadBanners();
       loadFeaturedProducts();
+
+      setTimeout(() => {
+        setIsOptimizing(false);
+        setOptimizationProgress({ current: 0, total: 0, statusText: '' });
+      }, 4000);
     } catch (error) {
       console.error('Erro na otimização:', error);
       toast.error('Erro durante a varredura e otimização das imagens');
-    } finally {
       setIsOptimizing(false);
       setOptimizationProgress({ current: 0, total: 0, statusText: '' });
     }
