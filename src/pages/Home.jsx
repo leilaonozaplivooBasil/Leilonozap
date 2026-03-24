@@ -541,8 +541,8 @@ export default function Home() {
         {/* Hero Section - Glass */}
         <div className="mb-8">
           <div className="relative glass-hero rounded-3xl p-6 sm:p-8 text-white glass-shimmer overflow-hidden">
-            <div className="absolute -top-16 -right-16 w-48 h-48 bg-emerald-400/15 rounded-full blur-[60px] orb-1" />
-            <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-green-300/10 rounded-full blur-[50px] orb-2" />
+            <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full orb-1" style={{ background: 'radial-gradient(circle, rgba(52,211,153,0.15) 0%, transparent 70%)' }} />
+            <div className="absolute -bottom-12 -left-12 w-40 h-40 rounded-full orb-2" style={{ background: 'radial-gradient(circle, rgba(134,239,172,0.10) 0%, transparent 70%)' }} />
 
             <div className="relative lg:pr-80">
               <div className="flex items-center gap-2 mb-3">

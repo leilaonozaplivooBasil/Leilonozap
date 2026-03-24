@@ -53,11 +53,15 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
     <div className={`relative w-full ${heightClass} ${rounded ? 'rounded-2xl' : ''} overflow-hidden group`}>
       {/* Imagem do Banner */}
       <div className="relative w-full h-full">
-        {filteredBanners.map((banner, index) => (
+        {filteredBanners.map((banner, index) => {
+          const isActive = index === currentIndex;
+          const isNext = index === (currentIndex + 1) % filteredBanners.length;
+          const shouldEagerLoad = index === 0 || isActive;
+          return (
           <div
             key={banner.id}
             className={`absolute inset-0 transition-opacity duration-1000 ${
-              index === currentIndex ? 'opacity-100' : 'opacity-0'
+              isActive ? 'opacity-100' : 'opacity-0'
             }`}
           >
             {banner.link_url ? (
@@ -66,11 +70,10 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
                   className={`w-full h-full cursor-pointer ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="sync"
+                  loading={shouldEagerLoad ? "eager" : "lazy"}
+                  fetchPriority={isActive ? "high" : "low"}
+                  decoding={shouldEagerLoad ? "sync" : "async"}
                   style={{
-                    imageRendering: '-webkit-optimize-contrast',
                     objectFit: fit,
                     backgroundColor: fit === 'contain' ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
@@ -86,11 +89,10 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
                   src={banner.image_url}
                   alt={banner.title || 'Banner'}
                   className={`w-full h-full ${fit === 'contain' ? 'object-contain bg-gray-900' : ''}`}
-                  loading="eager"
-                  fetchPriority="high"
-                  decoding="sync"
+                  loading={shouldEagerLoad ? "eager" : "lazy"}
+                  fetchPriority={isActive ? "high" : "low"}
+                  decoding={shouldEagerLoad ? "sync" : "async"}
                   style={{
-                    imageRendering: '-webkit-optimize-contrast',
                     objectFit: fit,
                     backgroundColor: fit === 'contain' ? '#0f172a' : undefined,
                     ...(banner.image_adjustments ? {
@@ -102,7 +104,8 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Botões de Navegação */}

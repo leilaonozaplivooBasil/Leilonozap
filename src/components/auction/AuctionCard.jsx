@@ -395,9 +395,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
     : "group relative overflow-hidden rounded-2xl transition-all duration-300 cursor-pointer hover:scale-[1.02] hover:-translate-y-1 border-0 shadow-none";
 
   const glassStyle = variant !== "sai_de_baixo" ? {
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 50%, rgba(16,185,129,0.04) 100%)',
-    backdropFilter: 'blur(20px) saturate(1.3)',
-    WebkitBackdropFilter: 'blur(20px) saturate(1.3)',
+    background: 'linear-gradient(135deg, rgba(20,30,48,0.92) 0%, rgba(17,24,39,0.95) 50%, rgba(16,40,50,0.92) 100%)',
     border: '1px solid rgba(255,255,255,0.08)',
     boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
   } : {};
@@ -506,8 +504,7 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
               onTouchStart={(e) => e.stopPropagation()}
               className="w-10 h-10 shadow-lg text-white rounded-full transition-all duration-300 flex items-center justify-center cursor-pointer active:scale-95"
               style={{
-                background: 'rgba(59,130,246,0.5)',
-                backdropFilter: 'blur(12px)',
+                background: 'rgba(59,130,246,0.65)',
                 border: '1px solid rgba(59,130,246,0.3)',
               }}
             >
@@ -593,7 +590,6 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
             <div className="rounded-xl p-3 mb-4 text-center" style={{
               background: 'linear-gradient(135deg, rgba(16,185,129,0.08), rgba(16,185,129,0.03))',
               border: '1px solid rgba(16,185,129,0.15)',
-              backdropFilter: 'blur(8px)',
             }}>
               <div className="flex items-center justify-center gap-2 mb-2">
                 <img

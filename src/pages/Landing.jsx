@@ -331,11 +331,9 @@ export default function LandingPage() {
         
         /* Removed PRODUTOS FLUTUANTES CSS based on the outline */
 
-        /* --- CARDS DE VIDRO (GLASSMORPHISM) --- */
+        /* --- CARDS DE VIDRO — PERF: removed backdrop-filter (GPU-heavy on mobile) --- */
         .glass-card, .benefit-card {
-          background: rgba(17, 24, 39, 0.5);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background: linear-gradient(135deg, rgba(17, 24, 39, 0.88) 0%, rgba(17, 24, 39, 0.92) 100%);
           border: 1px solid rgba(255, 255, 255, 0.1);
           box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
           transition: transform 0.3s ease, box-shadow 0.3s ease;
