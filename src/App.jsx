@@ -21,6 +21,8 @@ import SentinelNoZap from '@/pages/SentinelNoZap';
 import ParceiroLotes from '@/pages/ParceiroLotes';
 import AcessoArrematante from '@/pages/AcessoArrematante';
 import RequireRole from '@/components/common/RequireRole';
+import PrivacyPolicy from '@/pages/PrivacyPolicy';
+import TermsOfUse from '@/pages/TermsOfUse';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
@@ -146,6 +148,8 @@ const AuthenticatedApp = () => {
         </LayoutWrapper>
       } />
       <Route path="/AcessoArrematante" element={<AcessoArrematante />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/terms" element={<TermsOfUse />} />
       <Route path="/VisualizarLote" element={<LayoutWrapper currentPageName="VisualizarLote"><VisualizarLote /></LayoutWrapper>} />
       <Route path="/ImageOptimizer" element={
         <LayoutWrapper currentPageName="ImageOptimizer">
