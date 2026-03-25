@@ -709,6 +709,34 @@ export default function Layout({ children, currentPageName }) {
                     </Link>
                   )}
 
+                  {/* MENU INVESTIDOR - DROPDOWN */}
+                  {isInvestidor && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="flex items-center gap-2 text-sm font-semibold text-emerald-300 hover:text-emerald-200 px-3 py-1.5 rounded-lg transition-all duration-300 hover:bg-emerald-500/10">
+                          <UserIcon className="h-4 w-4" />
+                          Minha Conta
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="text-white border-0" style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(24px) saturate(1.5)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
+                        <DropdownMenuLabel className="text-emerald-400">Investidor</DropdownMenuLabel>
+                        <DropdownMenuSeparator className="bg-gray-700" />
+                        <DropdownMenuItem onClick={() => navigate(createPageUrl("MarketplaceLotes"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
+                          Marketplace de Lotes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(createPageUrl("CarteiraInvestidor"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
+                          Carteira Investidor
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(createPageUrl("AddFunds"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
+                          💰 Carteira Leilões
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(createPageUrl("Profile"))} className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700">
+                          Perfil
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
                   {/* PAINEL DE CONTROLE - SÓ ADMIN */}
                   {isAdmin && (
                     <DropdownMenu>
