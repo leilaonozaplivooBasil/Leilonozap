@@ -777,7 +777,7 @@ function AnaliseDeLotes() {
                                                     <tr className="bg-[#0d1117] border-b border-[#30363d] text-slate-400 uppercase tracking-wider">
                                                         <th className="px-6 py-4 font-semibold text-xs">Categoria / Departamento</th>
                                                         <th className="px-6 py-4 font-semibold text-xs border-l border-[#30363d] w-32 text-center">Quantidade</th>
-                                                        <th className="px-6 py-4 font-semibold text-xs border-l border-[#30363d] w-48 text-right">Valor de Avaliação</th>
+                                                        <th className="px-6 py-4 font-semibold text-xs border-l border-[#30363d] w-48 text-right">Valor de Mercado</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
