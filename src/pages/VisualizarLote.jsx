@@ -663,7 +663,7 @@ export default function VisualizarLote() {
                                     disabled={valorInvalido}
                                     className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 shrink-0"
                                 >
-                                    <DollarSign size={16} /> Depositar Saldo
+                                    <DollarSign size={16} /> Competir este Lote
                                 </button>
                             </div>
                         </div>
