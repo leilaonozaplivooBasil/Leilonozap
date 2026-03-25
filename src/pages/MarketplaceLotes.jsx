@@ -311,53 +311,75 @@ export default function MarketplaceLotes() {
                                     {temSaldo && <CheckCircle2 size={18} className="text-emerald-400 ml-auto" />}
                                 </div>
 
-                                <div className="space-y-3">
-                                    <button
-                                        onClick={() => { setLoteModal(null); navigate(createPageUrl('VisualizarLote') + `?id=${loteModal.id}`); }}
-                                        className="w-full bg-[#0d1117] border border-[#30363d] hover:border-blue-500 text-slate-300 hover:text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <Package size={16} /> Ver Análise do Lote
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            const maxVal = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
-                                            if (valorMaxAutorizado && maxVal < valorTotalInvestimento) return;
-                                            setLoteModal(null);
-                                            navigate(createPageUrl('AuctionCheckoutModern'), {
-                                                state: {
-                                                    amount: maxVal,
-                                                    depositType: 'investor_capital',
-                                                    auctionId: loteModal.id,
-                                                    auctionTitle: loteModal.title,
-                                                    autoSubmitPix: true
-                                                }
-                                            });
-                                        }}
-                                        disabled={valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <ShoppingCart size={16} /> Disputar este Lote
-                                    </button>
-                                    {!temSaldo && (
-                                        <button
-                                            onClick={() => {
-                                                setLoteModal(null);
-                                                navigate(createPageUrl('AuctionCheckoutModern'), {
-                                                    state: {
-                                                        amount: valorTotalInvestimento,
-                                                        depositType: 'investor_capital',
-                                                        auctionId: loteModal.id,
-                                                        auctionTitle: loteModal.title,
-                                                        autoSubmitPix: true
+                                {/* Valor faltante para PIX */}
+                                {(() => {
+                                    const valorDesejado = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
+                                    const valorFaltante = Math.max(0, valorDesejado - saldoDisponivel);
+                                    const saldoSuficiente = valorFaltante <= 0;
+                                    return (
+                                        <>
+                                            {valorDesejado >= valorTotalInvestimento && (
+                                                <div className={`rounded-xl p-4 mb-4 border ${saldoSuficiente ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-blue-900/20 border-blue-500/30'}`}>
+                                                    {saldoSuficiente ? (
+                                                        <div className="flex items-center gap-3">
+                                                            <CheckCircle2 size={20} className="text-emerald-400 shrink-0" />
+                                                            <div>
+                                                                <p className="text-sm font-bold text-emerald-400">Saldo suficiente!</p>
+                                                                <p className="text-[10px] text-slate-400 mt-0.5">Você já possui saldo para cobrir este investimento.</p>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-xs text-blue-400 uppercase tracking-wider font-bold mb-1">Valor do PIX a gerar</p>
+                                                                <p className="text-[10px] text-slate-500">{formatCurrency(valorDesejado)} − {formatCurrency(saldoDisponivel)} de saldo</p>
+                                                            </div>
+                                                            <p className="text-2xl font-black text-blue-400">{formatCurrency(valorFaltante)}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-3">
+                                                <button
+                                                    onClick={() => { setLoteModal(null); navigate(createPageUrl('VisualizarLote') + `?id=${loteModal.id}`); }}
+                                                    className="w-full bg-[#0d1117] border border-[#30363d] hover:border-blue-500 text-slate-300 hover:text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <Package size={16} /> Ver Análise do Lote
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        const maxVal = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
+                                                        if (maxVal < valorTotalInvestimento) return;
+                                                        const faltante = Math.max(0, maxVal - saldoDisponivel);
+                                                        if (faltante <= 0) {
+                                                            // Saldo suficiente — não precisa gerar PIX
+                                                            // Poderia autorizar direto, mas por enquanto avisa
+                                                            return;
+                                                        }
+                                                        setLoteModal(null);
+                                                        navigate(createPageUrl('AuctionCheckoutModern'), {
+                                                            state: {
+                                                                amount: faltante,
+                                                                depositType: 'investor_capital',
+                                                                auctionId: loteModal.id,
+                                                                auctionTitle: loteModal.title,
+                                                                autoSubmitPix: true
+                                                            }
+                                                        });
+                                                    }}
+                                                    disabled={
+                                                        (valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento)
+                                                        || (parseFloat(valorMaxAutorizado) || valorTotalInvestimento) - saldoDisponivel <= 0
                                                     }
-                                                });
-                                            }}
-                                            className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <DollarSign size={16} /> Depositar Saldo
-                                        </button>
-                                    )}
-                                </div>
+                                                    className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                                >
+                                                    <DollarSign size={16} /> Depositar Saldo
+                                                </button>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </motion.div>
                         </motion.div>
                     );
