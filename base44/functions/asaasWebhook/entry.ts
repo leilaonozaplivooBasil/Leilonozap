@@ -491,6 +491,31 @@ Deno.serve(async (req) => {
                                 description: `Depósito de capital - PIX - ${paymentId}`
                             });
                             console.log('✅ WalletTransaction de investidor registrada');
+
+                            // 🆕 MARCAR LOTE COMO ARREMATADO (se é depósito vinculado a um lote específico)
+                            if (asaasPayment.auction_id && asaasPayment.auction_id !== 'investor-deposit') {
+                                try {
+                                    const lots = await base44.asServiceRole.entities.Auction.filter(
+                                        { id: asaasPayment.auction_id }, null, 1
+                                    );
+                                    if (lots && lots.length > 0) {
+                                        const lot = lots[0];
+                                        // Só marca como arrematado se o lote ainda está ativo
+                                        if (lot.status === 'active') {
+                                            await base44.asServiceRole.entities.Auction.update(lot.id, {
+                                                status: 'sold',
+                                                lot_status: 'pagamento_confirmado',
+                                                winner_id: investor.id,
+                                                winner_name: investor.full_name,
+                                                order_status: 'paid'
+                                            });
+                                            console.log(`✅ Lote ${lot.id} marcado como ARREMATADO pelo investidor ${investor.full_name}`);
+                                        }
+                                    }
+                                } catch (lotErr) {
+                                    console.warn('⚠️ Erro ao marcar lote como arrematado:', lotErr.message);
+                                }
+                            }
                         } else {
                             console.warn('⚠️ Investidor não encontrado para creditar saldo:', asaasPayment.wallet_deposit_user_id);
                         }

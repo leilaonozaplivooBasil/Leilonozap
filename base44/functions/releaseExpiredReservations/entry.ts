@@ -9,13 +9,42 @@ Deno.serve(async (req) => {
     
     const now = new Date();
     let released = 0;
+    let keptPaid = 0;
 
     for (const lot of allLots) {
       if (!lot.reserved_by || !lot.reserved_until) continue;
       
       const expiresAt = new Date(lot.reserved_until);
       if (expiresAt < now) {
-        // Reserva expirada — libera
+        // Antes de liberar, verifica se já existe pagamento confirmado para este lote
+        try {
+          const payments = await base44.asServiceRole.entities.AsaasPayment.filter(
+            { auction_id: lot.id, is_investor_capital: true }
+          );
+          const hasPaidPayment = payments && payments.some(p => 
+            p.status === 'confirmed' || p.status === 'received'
+          );
+
+          if (hasPaidPayment) {
+            // Pagamento já confirmado — marca como arrematado em vez de liberar
+            if (lot.status === 'active') {
+              await base44.asServiceRole.entities.Auction.update(lot.id, {
+                status: 'sold',
+                lot_status: 'pagamento_confirmado',
+                reserved_by: null,
+                reserved_until: null
+              });
+              console.log(`✅ Lote ${lot.id} já foi PAGO — marcado como arrematado (não liberado)`);
+            }
+            keptPaid++;
+            continue;
+          }
+        } catch (checkErr) {
+          console.warn(`⚠️ Erro ao verificar pagamento do lote ${lot.id}:`, checkErr.message);
+          // Em caso de erro, libera normalmente (segurança)
+        }
+
+        // Reserva expirada sem pagamento — libera
         await base44.asServiceRole.entities.Auction.update(lot.id, {
           reserved_by: null,
           reserved_until: null,
@@ -26,8 +55,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`✅ releaseExpiredReservations: ${released} reservas liberadas de ${allLots.length} lotes verificados`);
-    return Response.json({ success: true, released, checked: allLots.length });
+    console.log(`✅ releaseExpiredReservations: ${released} liberadas, ${keptPaid} mantidas (pagas), ${allLots.length} verificadas`);
+    return Response.json({ success: true, released, kept_paid: keptPaid, checked: allLots.length });
   } catch (error) {
     console.error('❌ Erro em releaseExpiredReservations:', error.message);
     return Response.json({ error: error.message }, { status: 500 });

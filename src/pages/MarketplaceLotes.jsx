@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, TrendingUp, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft, Wallet, ShoppingCart, Lock } from 'lucide-react';
 import LoteReservadoOverlay from '../components/lotes/LoteReservadoOverlay';
+import LoteArrematadoOverlay from '../components/lotes/LoteArrematadoOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
@@ -61,6 +62,7 @@ export default function MarketplaceLotes() {
 
     const getStatusLabel = (status) => {
         if (status === 'active') return { label: 'Captação Aberta', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+        if (status === 'sold') return { label: 'Arrematado', color: 'bg-purple-500/10 text-purple-400 border-purple-500/20' };
         if (status === 'ended') return { label: 'Encerrado', color: 'bg-slate-500/10 text-slate-400 border-slate-500/20' };
         return { label: status, color: 'bg-blue-500/10 text-blue-400 border-blue-500/20' };
     };
@@ -144,7 +146,10 @@ export default function MarketplaceLotes() {
                                 transition={{ delay: idx * 0.05 }}
                                 className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 hover:border-blue-500/40 transition-all group relative overflow-hidden"
                             >
-                                {isReservedByOther && (
+                                {lote.status === 'sold' && (
+                                    <LoteArrematadoOverlay winnerName={lote.winner_name} />
+                                )}
+                                {lote.status !== 'sold' && isReservedByOther && (
                                     <LoteReservadoOverlay
                                         reservedUntil={lote.reserved_until}
                                         onExpired={loadLotes}
@@ -211,10 +216,11 @@ export default function MarketplaceLotes() {
                                 </div>
 
                                 <button
-                                    onClick={() => setLoteModal(lote)}
-                                    className="w-full text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg py-2 transition-colors flex items-center justify-center gap-1"
+                                    onClick={() => lote.status !== 'sold' && setLoteModal(lote)}
+                                    disabled={lote.status === 'sold'}
+                                    className={`w-full text-xs font-bold rounded-lg py-2 transition-colors flex items-center justify-center gap-1 ${lote.status === 'sold' ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'text-white bg-emerald-600 hover:bg-emerald-500'}`}
                                 >
-                                    <ShoppingCart size={12} /> Ver e Comprar Lote
+                                    <ShoppingCart size={12} /> {lote.status === 'sold' ? 'Arrematado' : 'Ver e Comprar Lote'}
                                 </button>
                             </motion.div>
                         );
