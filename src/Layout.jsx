@@ -998,6 +998,29 @@ export default function Layout({ children, currentPageName }) {
                     </div>
                   )}
 
+                  {/* PAINEL MOBILE - LEILOEIRO/ARREMATANTE */}
+                  {isLeiloeiro && (
+                    <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-emerald-400/70">Minha Conta</p>
+                      {[
+                        { title: "CRM de Investidores", pageName: "CRMInvestidores" },
+                        { title: "Controle de Leilões", pageName: "AuctionControl" },
+                        { title: "💰 Minha Carteira", pageName: "AddFunds" },
+                        { title: "Perfil", pageName: "Profile" },
+                      ].map((item) => (
+                        <Link
+                          key={item.pageName}
+                          to={createPageUrl(item.pageName)}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 ${currentPageName === item.pageName ? "text-emerald-300" : "text-gray-400 hover:text-white"}`}
+                          style={currentPageName === item.pageName ? { background: 'rgba(16,185,129,0.1)', borderLeft: '3px solid rgba(16,185,129,0.5)' } : {}}
+                        >
+                          {item.title}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+
                   {/* PAINEL MOBILE - SÓ ADMIN */}
                   {isAdmin && (
                     <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
