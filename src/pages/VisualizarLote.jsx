@@ -5,6 +5,7 @@ import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, Aler
 import GradeTicketSection from '../components/lotes/GradeTicketSection';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import GradeDistributionChart from '../components/lotes/GradeDistributionChart';
+import ReservaLoteModal from '../components/lotes/ReservaLoteModal';
 import { createPageUrl } from '@/utils';
 
 const Auction = base44.entities.Auction;
@@ -25,6 +26,8 @@ export default function VisualizarLote() {
     const distribuicaoRef = useRef(null);
     const [gradeModal, setGradeModal] = useState(null);
     const [valorMaxAutorizado, setValorMaxAutorizado] = useState('');
+    const [showReservaModal, setShowReservaModal] = useState(false);
+    const [pendingCheckoutData, setPendingCheckoutData] = useState(null);
 
     const urlParams = new URLSearchParams(window.location.search);
     const loteId = urlParams.get('id');
@@ -573,6 +576,30 @@ export default function VisualizarLote() {
                 </div>
             </div>
 
+            {/* Modal de Reserva Temporária */}
+            <ReservaLoteModal
+                isOpen={showReservaModal}
+                loteTitle={pendingCheckoutData?.auctionTitle}
+                onClose={(reason) => {
+                    setShowReservaModal(false);
+                    setPendingCheckoutData(null);
+                }}
+                onConfirm={() => {
+                    setShowReservaModal(false);
+                    if (pendingCheckoutData) {
+                        navigate(createPageUrl('AuctionCheckoutModern'), {
+                            state: {
+                                amount: pendingCheckoutData.amount,
+                                depositType: 'investor_capital',
+                                auctionId: pendingCheckoutData.auctionId,
+                                auctionTitle: pendingCheckoutData.auctionTitle,
+                                autoSubmitPix: true
+                            }
+                        });
+                    }
+                }}
+            />
+
             {/* Modal de Grade Items */}
             {gradeModal && (
                 <GradeItemsModal
@@ -647,19 +674,16 @@ export default function VisualizarLote() {
                                     onClick={() => {
                                         if (valorInvalido) return;
                                         if (saldoSuficiente) {
-                                            // Saldo suficiente — navega direto para carteira
                                             navigate(createPageUrl('CarteiraInvestidor'));
                                             return;
                                         }
-                                        navigate(createPageUrl('AuctionCheckoutModern'), {
-                                            state: {
-                                                amount: valorFaltante,
-                                                depositType: 'investor_capital',
-                                                auctionId: lote.id,
-                                                auctionTitle: lote.title,
-                                                autoSubmitPix: true
-                                            }
+                                        // Abre modal de reserva antes do checkout
+                                        setPendingCheckoutData({
+                                            amount: valorFaltante,
+                                            auctionId: lote.id,
+                                            auctionTitle: lote.title
                                         });
+                                        setShowReservaModal(true);
                                     }}
                                     disabled={valorInvalido}
                                     className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 shrink-0"

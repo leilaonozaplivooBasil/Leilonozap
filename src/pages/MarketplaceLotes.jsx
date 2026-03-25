@@ -4,6 +4,7 @@ import { Package, TrendingUp, AlertCircle, Search, Star, RefreshCw, X, DollarSig
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
+import ReservaLoteModal from '../components/lotes/ReservaLoteModal';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
@@ -18,6 +19,8 @@ export default function MarketplaceLotes() {
     const [loteModal, setLoteModal] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [valorMaxAutorizado, setValorMaxAutorizado] = useState('');
+    const [showReservaModal, setShowReservaModal] = useState(false);
+    const [pendingCheckoutData, setPendingCheckoutData] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -352,21 +355,15 @@ export default function MarketplaceLotes() {
                                                         const maxVal = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
                                                         if (maxVal < valorTotalInvestimento) return;
                                                         const faltante = Math.max(0, maxVal - saldoDisponivel);
-                                                        if (faltante <= 0) {
-                                                            // Saldo suficiente — não precisa gerar PIX
-                                                            // Poderia autorizar direto, mas por enquanto avisa
-                                                            return;
-                                                        }
-                                                        setLoteModal(null);
-                                                        navigate(createPageUrl('AuctionCheckoutModern'), {
-                                                            state: {
-                                                                amount: faltante,
-                                                                depositType: 'investor_capital',
-                                                                auctionId: loteModal.id,
-                                                                auctionTitle: loteModal.title,
-                                                                autoSubmitPix: true
-                                                            }
+                                                        if (faltante <= 0) return;
+                                                        // Abre modal de reserva antes do checkout
+                                                        setPendingCheckoutData({
+                                                            amount: faltante,
+                                                            auctionId: loteModal.id,
+                                                            auctionTitle: loteModal.title
                                                         });
+                                                        setLoteModal(null);
+                                                        setShowReservaModal(true);
                                                     }}
                                                     disabled={
                                                         (valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento)
@@ -385,6 +382,30 @@ export default function MarketplaceLotes() {
                     );
                 })()}
             </AnimatePresence>
+
+            {/* Modal de Reserva Temporária */}
+            <ReservaLoteModal
+                isOpen={showReservaModal}
+                loteTitle={pendingCheckoutData?.auctionTitle}
+                onClose={(reason) => {
+                    setShowReservaModal(false);
+                    setPendingCheckoutData(null);
+                }}
+                onConfirm={() => {
+                    setShowReservaModal(false);
+                    if (pendingCheckoutData) {
+                        navigate(createPageUrl('AuctionCheckoutModern'), {
+                            state: {
+                                amount: pendingCheckoutData.amount,
+                                depositType: 'investor_capital',
+                                auctionId: pendingCheckoutData.auctionId,
+                                auctionTitle: pendingCheckoutData.auctionTitle,
+                                autoSubmitPix: true
+                            }
+                        });
+                    }
+                }}
+            />
         </div>
     );
 }
