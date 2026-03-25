@@ -13,12 +13,6 @@ Deno.serve(async (req) => {
 
     const base44 = createClientFromRequest(req);
 
-    // Valida autenticação
-    const user = await base44.auth.me();
-    if (!user) {
-      return Response.json({ error: 'Não autenticado' }, { status: 401 });
-    }
-
     // === AÇÃO: LIBERAR RESERVA ===
     if (action === 'release') {
       const auctions = await base44.asServiceRole.entities.Auction.filter({ id: auction_id });
