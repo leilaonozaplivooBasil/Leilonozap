@@ -21,9 +21,11 @@ export default function GestaoLotes() {
     const [isLoading, setIsLoading] = useState(true);
     const [busca, setBusca] = useState('');
     const [filtroStatus, setFiltroStatus] = useState('todos');
-    const [isSaving, setIsSaving] = useState(null); // id do lote sendo atualizado
+    const [isSaving, setIsSaving] = useState(null);
     const [showImportModal, setShowImportModal] = useState(false);
     const [gradeUpdateLote, setGradeUpdateLote] = useState(null);
+    const [showArrematantesModal, setShowArrematantesModal] = useState(false);
+    const [showInvestidoresModal, setShowInvestidoresModal] = useState(false);
     const navigate = useNavigate();
     const currentUserRole = (() => { try { return JSON.parse(localStorage.getItem('currentUser'))?.role; } catch { return null; } })();
 
@@ -306,17 +308,22 @@ export default function GestaoLotes() {
                 {/* Métricas */}
                 <div className={`grid grid-cols-2 gap-4 ${currentUserRole === 'admin' ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
                     {[
-                        { label: 'Total de Lotes', value: lotes.length, icon: Package, color: 'text-slate-400' },
-                        { label: 'No Marketplace', value: lotesMarketplace, icon: DollarSign, color: 'text-blue-400' },
-                        { label: 'Arrematados', value: lotesSold, icon: CheckCircle2, color: 'text-emerald-400' },
-                        ...(currentUserRole === 'admin' ? [{ label: 'Arrematantes', value: arrematantes.length, icon: Users, color: 'text-rose-400' }] : []),
-                        { label: 'Investidores', value: statsInvestidores, icon: Users, color: 'text-violet-400' },
+                        { label: 'Total de Lotes', value: lotes.length, icon: Package, color: 'text-slate-400', clickable: false },
+                        { label: 'No Marketplace', value: lotesMarketplace, icon: DollarSign, color: 'text-blue-400', clickable: false },
+                        { label: 'Arrematados', value: lotesSold, icon: CheckCircle2, color: 'text-emerald-400', clickable: false },
+                        ...(currentUserRole === 'admin' ? [{ label: 'Arrematantes', value: arrematantes.length, icon: Users, color: 'text-rose-400', clickable: true, action: () => setShowArrematantesModal(true) }] : []),
+                        { label: 'Investidores', value: statsInvestidores, icon: Users, color: 'text-violet-400', clickable: true, action: () => setShowInvestidoresModal(true) },
                     ].map((m, i) => (
-                        <div key={i} className="bg-[#161b22] border border-[#30363d] rounded-2xl p-5">
+                        <button
+                            key={i}
+                            onClick={m.action}
+                            disabled={!m.clickable}
+                            className={`bg-[#161b22] border border-[#30363d] rounded-2xl p-5 text-left transition-all ${m.clickable ? 'hover:border-amber-500 hover:bg-[#1c2230] cursor-pointer' : ''}`}
+                        >
                             <m.icon className={`${m.color} mb-3`} size={22} />
                             <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">{m.label}</p>
                             <p className="text-2xl font-black text-white">{m.value}</p>
-                        </div>
+                        </button>
                     ))}
                 </div>
 
@@ -372,7 +379,12 @@ export default function GestaoLotes() {
                                     {lotesFiltrados.map(lote => (
                                         <tr key={lote.id} className="border-b border-[#30363d]/50 hover:bg-white/[0.02] transition-colors">
                                             <td className="px-6 py-4 max-w-xs">
-                                                <p className="font-semibold text-white truncate">{lote.title}</p>
+                                                <button
+                                                    onClick={() => navigate(createPageUrl('VisualizarLote') + `?id=${lote.id}`)}
+                                                    className="font-semibold text-amber-400 hover:text-amber-300 truncate text-left transition-colors"
+                                                >
+                                                    {lote.title}
+                                                </button>
                                                 <p className="text-xs text-slate-500">
                                                     {lote.end_time ? new Date(lote.end_time).toLocaleDateString('pt-BR') : '—'}
                                                 </p>
@@ -505,6 +517,81 @@ export default function GestaoLotes() {
                     lote={gradeUpdateLote}
                     onSuccess={loadDados}
                 />
+            )}
+
+            {/* Modal Arrematantes */}
+            {showArrematantesModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Users size={20} className="text-rose-400" />
+                                Arrematantes ({arrematantes.length})
+                            </h2>
+                            <button onClick={() => setShowArrematantesModal(false)} className="text-slate-500 hover:text-white">
+                                <XCircle size={20} />
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {arrematantes.length === 0 ? (
+                                <p className="text-slate-500 text-center py-4">Nenhum arrematante cadastrado.</p>
+                            ) : (
+                                arrematantes.map(user => (
+                                    <div key={user.id} className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3 flex items-start justify-between hover:border-rose-500/50 transition-colors">
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-white">{user.full_name}</p>
+                                            <p className="text-xs text-slate-500">{user.email}</p>
+                                            {user.phone && <p className="text-xs text-slate-500">{user.phone}</p>}
+                                        </div>
+                                        {user.partner_plan_amount != null && (
+                                            <div className="text-right">
+                                                <p className="text-xs text-slate-500">Taxa</p>
+                                                <p className="font-bold text-rose-400">{user.partner_plan_amount}%</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Investidores */}
+            {showInvestidoresModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                <Users size={20} className="text-violet-400" />
+                                Investidores ({investidores.length})
+                            </h2>
+                            <button onClick={() => setShowInvestidoresModal(false)} className="text-slate-500 hover:text-white">
+                                <XCircle size={20} />
+                            </button>
+                        </div>
+                        <div className="space-y-2">
+                            {investidores.length === 0 ? (
+                                <p className="text-slate-500 text-center py-4">Nenhum investidor cadastrado.</p>
+                            ) : (
+                                investidores.map(user => (
+                                    <div key={user.id} className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3 flex items-start justify-between hover:border-violet-500/50 transition-colors">
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-white">{user.full_name}</p>
+                                            <p className="text-xs text-slate-500">{user.email}</p>
+                                            {user.phone && <p className="text-xs text-slate-500">{user.phone}</p>}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-slate-500">Saldo Disponível</p>
+                                            <p className="font-bold text-violet-400">{formatCurrency(user.saldo_disponivel || 0)}</p>
+                                            <p className="text-xs text-slate-600 mt-1">Alocado: {formatCurrency(user.saldo_alocado || 0)}</p>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
