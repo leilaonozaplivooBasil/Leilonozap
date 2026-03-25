@@ -17,6 +17,7 @@ export default function MarketplaceLotes() {
     const [busca, setBusca] = useState('');
     const [loteModal, setLoteModal] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
+    const [valorMaxAutorizado, setValorMaxAutorizado] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -241,7 +242,7 @@ export default function MarketplaceLotes() {
                                         <h3 className="font-bold text-white text-lg">Detalhes do Lote</h3>
                                         <p className="text-slate-400 text-xs mt-1 line-clamp-2">{loteModal.title}</p>
                                     </div>
-                                    <button onClick={() => setLoteModal(null)} className="text-slate-500 hover:text-white transition-colors ml-3 shrink-0">
+                                    <button onClick={() => { setLoteModal(null); setValorMaxAutorizado(''); }} className="text-slate-500 hover:text-white transition-colors ml-3 shrink-0">
                                         <X size={20} />
                                     </button>
                                 </div>
@@ -275,6 +276,31 @@ export default function MarketplaceLotes() {
                                     )}
                                 </div>
 
+                                {/* Valor máximo autorizado pelo investidor */}
+                                <div className="bg-[#0d1117] rounded-xl p-4 mb-4 border border-indigo-500/30">
+                                    <label className="block text-xs text-indigo-400 uppercase tracking-wider font-bold mb-2">
+                                        Até quanto o arrematante pode ir?
+                                    </label>
+                                    <p className="text-[10px] text-slate-500 mb-3">
+                                        Valor mínimo: {formatCurrency(valorTotalInvestimento)} (investimento base). Informe o teto máximo que você autoriza.
+                                    </p>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-sm">R$</span>
+                                        <input
+                                            type="number"
+                                            min={valorTotalInvestimento}
+                                            step="100"
+                                            value={valorMaxAutorizado}
+                                            onChange={e => setValorMaxAutorizado(e.target.value)}
+                                            placeholder={valorTotalInvestimento.toFixed(2)}
+                                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-2.5 pl-10 pr-3 text-white text-lg font-bold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-shadow placeholder:text-slate-600"
+                                        />
+                                    </div>
+                                    {valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento && (
+                                        <p className="text-[10px] text-red-400 mt-1.5">O valor não pode ser menor que o investimento base.</p>
+                                    )}
+                                </div>
+
                                 {/* Saldo do investidor */}
                                 <div className={`rounded-xl p-4 mb-5 border flex items-center gap-3 ${temSaldo ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-amber-900/20 border-amber-500/30'}`}>
                                     <Wallet size={20} className={temSaldo ? 'text-emerald-400' : 'text-amber-400'} />
@@ -295,10 +321,13 @@ export default function MarketplaceLotes() {
                                     {temSaldo ? (
                                         <button
                                             onClick={() => {
+                                                const maxVal = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
+                                                if (maxVal < valorTotalInvestimento) return;
                                                 setLoteModal(null);
-                                                navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(valorTotalInvestimento)}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`);
+                                                navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(maxVal)}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`);
                                             }}
-                                            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                            disabled={valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                         >
                                             <ShoppingCart size={16} /> Comprar este Lote
                                         </button>
