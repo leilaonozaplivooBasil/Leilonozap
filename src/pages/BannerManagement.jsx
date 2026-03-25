@@ -278,7 +278,8 @@ export default function BannerManagement() {
             if (!blob.type.startsWith('image/')) continue;
             
             const file = new File([blob], `img_${item.id}.png`, { type: blob.type });
-            const webpFile = await convertToWebP(file, 0.90);
+            // Força a conversão para WebP passando o 4º parâmetro (force = true)
+            const webpFile = await convertToWebP(file, 0.90, 1920, true);
             
             // Força a conversão e upload de qualquer imagem que não seja WebP, a pedido do usuário
             const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });

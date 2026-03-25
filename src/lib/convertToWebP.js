@@ -7,8 +7,9 @@
  * @param {number} quality - Qualidade WebP (0.0 a 1.0), padrão 0.85
  * @param {number} maxWidth - Largura máxima (redimensiona se maior), padrão 1920
  * @returns {Promise<File>} - Arquivo convertido para WebP (ou original se falhar)
+ * @param {boolean} force - Força a conversão mesmo se o arquivo WebP ficar maior
  */
-export async function convertToWebP(file, quality = 0.85, maxWidth = 1920) {
+export async function convertToWebP(file, quality = 0.85, maxWidth = 1920, force = false) {
   // Se já é WebP, retorna sem converter
   if (file.type === 'image/webp') {
     return file;
@@ -38,8 +39,8 @@ export async function convertToWebP(file, quality = 0.85, maxWidth = 1920) {
 
     const blob = await canvas.convertToBlob({ type: 'image/webp', quality });
 
-    // Só usa WebP se for menor que o original
-    if (blob.size >= file.size) {
+    // Só usa WebP se for menor que o original, ou se force for true
+    if (!force && blob.size >= file.size) {
       return file;
     }
 
@@ -48,7 +49,7 @@ export async function convertToWebP(file, quality = 0.85, maxWidth = 1920) {
   } catch (e) {
     // OffscreenCanvas não suportado (Safari antigo) — fallback com canvas normal
     try {
-      return await convertToWebPFallback(file, quality, maxWidth);
+      return await convertToWebPFallback(file, quality, maxWidth, force);
     } catch {
       // Se tudo falhar, retorna original — sem quebrar nada
       console.debug('WebP conversion not supported, using original');
@@ -57,7 +58,7 @@ export async function convertToWebP(file, quality = 0.85, maxWidth = 1920) {
   }
 }
 
-function convertToWebPFallback(file, quality, maxWidth) {
+function convertToWebPFallback(file, quality, maxWidth, force = false) {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -77,7 +78,7 @@ function convertToWebPFallback(file, quality, maxWidth) {
 
       canvas.toBlob(
         (blob) => {
-          if (!blob || blob.size >= file.size) {
+          if (!blob || (!force && blob.size >= file.size)) {
             resolve(file);
             return;
           }
