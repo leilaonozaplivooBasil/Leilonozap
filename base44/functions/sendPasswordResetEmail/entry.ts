@@ -1,6 +1,6 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-const APP_URL = 'https://leilaonozap.base44apps.com';
+const APP_URL = 'https://leilaonozap.net';
 
 // Last deploy check: 2026-02-06 - API REST BREVO
 
