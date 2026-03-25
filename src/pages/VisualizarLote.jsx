@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight, ShoppingCart } from 'lucide-react';
 import GradeTicketSection from '../components/lotes/GradeTicketSection';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
+import GradeDistributionChart from '../components/lotes/GradeDistributionChart';
 import { createPageUrl } from '@/utils';
 
 const Auction = base44.entities.Auction;
