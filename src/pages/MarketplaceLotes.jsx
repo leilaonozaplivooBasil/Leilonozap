@@ -362,7 +362,12 @@ export default function MarketplaceLotes() {
                                                         const maxVal = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
                                                         if (maxVal < valorTotalInvestimento) return;
                                                         const faltante = Math.max(0, maxVal - saldoDisponivel);
-                                                        if (faltante <= 0) return;
+                                                        if (faltante <= 0) {
+                                                            // Saldo suficiente — vai direto para a carteira do investidor
+                                                            setLoteModal(null);
+                                                            navigate(createPageUrl('CarteiraInvestidor'));
+                                                            return;
+                                                        }
                                                         // Salva dados e fecha modal do lote primeiro
                                                         const checkoutData = {
                                                             amount: faltante,
@@ -376,13 +381,10 @@ export default function MarketplaceLotes() {
                                                             setShowReservaModal(true);
                                                         }, 100);
                                                     }}
-                                                    disabled={
-                                                        (valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento)
-                                                        || (parseFloat(valorMaxAutorizado) || valorTotalInvestimento) - saldoDisponivel <= 0
-                                                    }
+                                                    disabled={valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento}
                                                     className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                                 >
-                                                    <DollarSign size={16} /> Competir este Lote
+                                                    <DollarSign size={16} /> {saldoSuficiente ? 'Ver Carteira' : 'Competir este Lote'}
                                                 </button>
                                             </div>
                                         </>
