@@ -318,22 +318,38 @@ export default function MarketplaceLotes() {
                                     >
                                         <Package size={16} /> Ver Análise do Lote
                                     </button>
-                                    {temSaldo ? (
+                                    <button
+                                        onClick={() => {
+                                            const maxVal = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
+                                            if (valorMaxAutorizado && maxVal < valorTotalInvestimento) return;
+                                            setLoteModal(null);
+                                            navigate(createPageUrl('AuctionCheckoutModern'), {
+                                                state: {
+                                                    amount: maxVal,
+                                                    depositType: 'investor_capital',
+                                                    auctionId: loteModal.id,
+                                                    auctionTitle: loteModal.title
+                                                }
+                                            });
+                                        }}
+                                        disabled={valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento}
+                                        className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <ShoppingCart size={16} /> Disputar este Lote
+                                    </button>
+                                    {!temSaldo && (
                                         <button
                                             onClick={() => {
-                                                const maxVal = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
-                                                if (maxVal < valorTotalInvestimento) return;
                                                 setLoteModal(null);
-                                                navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(maxVal)}&lote=${encodeURIComponent(loteModal.title)}&lote_id=${loteModal.id}`);
+                                                navigate(createPageUrl('AuctionCheckoutModern'), {
+                                                    state: {
+                                                        amount: valorTotalInvestimento,
+                                                        depositType: 'investor_capital',
+                                                        auctionId: loteModal.id,
+                                                        auctionTitle: loteModal.title
+                                                    }
+                                                });
                                             }}
-                                            disabled={valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento}
-                                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
-                                        >
-                                            <ShoppingCart size={16} /> Disputar este Lote
-                                        </button>
-                                    ) : (
-                                        <button
-                                            onClick={() => { setLoteModal(null); navigate(createPageUrl('AddFunds')); }}
                                             className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                         >
                                             <DollarSign size={16} /> Depositar Saldo
