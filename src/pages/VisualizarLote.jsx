@@ -656,7 +656,8 @@ export default function VisualizarLote() {
                                                 amount: valorFaltante,
                                                 depositType: 'investor_capital',
                                                 auctionId: lote.id,
-                                                auctionTitle: lote.title
+                                                auctionTitle: lote.title,
+                                                autoSubmitPix: true
                                             }
                                         });
                                     }}

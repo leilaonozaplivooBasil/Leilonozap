@@ -363,7 +363,8 @@ export default function MarketplaceLotes() {
                                                                 amount: faltante,
                                                                 depositType: 'investor_capital',
                                                                 auctionId: loteModal.id,
-                                                                auctionTitle: loteModal.title
+                                                                auctionTitle: loteModal.title,
+                                                                autoSubmitPix: true
                                                             }
                                                         });
                                                     }}
