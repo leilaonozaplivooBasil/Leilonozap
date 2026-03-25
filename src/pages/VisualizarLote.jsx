@@ -6,6 +6,8 @@ import GradeTicketSection from '../components/lotes/GradeTicketSection';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import GradeDistributionChart from '../components/lotes/GradeDistributionChart';
 import ReservaLoteModal from '../components/lotes/ReservaLoteModal';
+import LoteReservadoOverlay from '../components/lotes/LoteReservadoOverlay';
+import VisualizarLoteReservedBanner from '../components/lotes/VisualizarLoteReservedBanner';
 import { createPageUrl } from '@/utils';
 
 const Auction = base44.entities.Auction;
@@ -624,17 +626,9 @@ export default function VisualizarLote() {
                 // Verifica se lote está reservado por OUTRO investidor
                 const isReservedByOther = lote.reserved_by && lote.reserved_by !== currentUserData?.id && lote.reserved_until && new Date(lote.reserved_until) > new Date();
                 if (isReservedByOther) {
-                    return (
-                        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0d1117]/95 backdrop-blur-lg border-t border-amber-500/30">
-                            <div className="max-w-7xl mx-auto p-4 text-center">
-                                <div className="flex items-center justify-center gap-3 text-amber-400">
-                                    <Lock size={20} />
-                                    <p className="font-bold">Este lote está temporariamente reservado por outro investidor</p>
-                                </div>
-                                <p className="text-slate-400 text-sm mt-1">Ele ficará disponível novamente caso a reserva expire.</p>
-                            </div>
-                        </div>
-                    );
+                    const reservedUntil = lote.reserved_until;
+                    const calcSecs = () => Math.max(0, Math.floor((new Date(reservedUntil) - new Date()) / 1000));
+                    return <VisualizarLoteReservedBanner reservedUntil={reservedUntil} onExpired={() => window.location.reload()} />;
                 }
                 const saldoDisponivel = currentUserData?.saldo_disponivel ?? 0;
                 const valorDesejado = parseFloat(valorMaxAutorizado) || calculations.custoTotal;

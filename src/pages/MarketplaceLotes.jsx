@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TrendingUp, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft, Wallet, ShoppingCart } from 'lucide-react';
+import { Package, TrendingUp, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft, Wallet, ShoppingCart, Lock } from 'lucide-react';
+import LoteReservadoOverlay from '../components/lotes/LoteReservadoOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
@@ -55,11 +56,6 @@ export default function MarketplaceLotes() {
     const lotesFiltrados = lotes.filter(l => {
         // Filtro de busca
         if (busca && !l.title?.toLowerCase().includes(busca.toLowerCase())) return false;
-        // Filtra lotes reservados por OUTROS investidores (reserva ainda ativa)
-        if (l.reserved_by && l.reserved_by !== currentUser?.id) {
-            const reservedUntil = l.reserved_until ? new Date(l.reserved_until) : null;
-            if (reservedUntil && reservedUntil > new Date()) return false;
-        }
         return true;
     });
 
@@ -139,14 +135,21 @@ export default function MarketplaceLotes() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     {lotesFiltrados.map((lote, idx) => {
                         const st = getStatusLabel(lote.status);
+                        const isReservedByOther = lote.reserved_by && lote.reserved_by !== currentUser?.id && lote.reserved_until && new Date(lote.reserved_until) > new Date();
                         return (
                             <motion.div
                                 key={lote.id}
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: idx * 0.05 }}
-                                className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 hover:border-blue-500/40 transition-all group"
+                                className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 hover:border-blue-500/40 transition-all group relative overflow-hidden"
                             >
+                                {isReservedByOther && (
+                                    <LoteReservadoOverlay
+                                        reservedUntil={lote.reserved_until}
+                                        onExpired={loadLotes}
+                                    />
+                                )}
                                 <div className="flex items-start justify-between mb-4">
                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase border ${st.color}`}>
                                         {st.label}
