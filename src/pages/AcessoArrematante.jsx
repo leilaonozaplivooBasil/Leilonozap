@@ -71,11 +71,13 @@ export default function AcessoArrematante() {
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
 
-      const dest = user.role === 'investidor'
-        ? createPageUrl('MarketplaceLotes')
-        : user.role === 'leiloeiro'
-          ? createPageUrl('CRMInvestidores')
-          : createPageUrl('Home');
+      const dest = user.role === 'admin'
+        ? createPageUrl('SistemaDeArremate')
+        : user.role === 'investidor'
+          ? createPageUrl('MarketplaceLotes')
+          : user.role === 'leiloeiro'
+            ? createPageUrl('CRMInvestidores')
+            : createPageUrl('Home');
 
       window.location.href = dest;
 
