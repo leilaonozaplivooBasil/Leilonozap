@@ -1,22 +1,81 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Clock, ShieldCheck, AlertTriangle, Lock } from 'lucide-react';
+import { X, Clock, ShieldCheck, AlertTriangle, Lock, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { reserveLot } from '@/functions/reserveLot';
 
 const RESERVATION_SECONDS = 300; // 5 minutos
 
-export default function ReservaLoteModal({ isOpen, onClose, onConfirm, loteTitle }) {
+export default function ReservaLoteModal({ isOpen, onClose, onConfirm, loteTitle, auctionId, investorId, investorName }) {
     const [secondsLeft, setSecondsLeft] = useState(RESERVATION_SECONDS);
+    const [isReserving, setIsReserving] = useState(false);
+    const [reserveError, setReserveError] = useState(null);
+    const [reserveSuccess, setReserveSuccess] = useState(false);
     const intervalRef = useRef(null);
     const hasExpired = useRef(false);
 
+    // Reserva o lote no backend ao abrir a modal
     useEffect(() => {
         if (!isOpen) {
             setSecondsLeft(RESERVATION_SECONDS);
             hasExpired.current = false;
+            setReserveError(null);
+            setReserveSuccess(false);
+            setIsReserving(false);
             if (intervalRef.current) clearInterval(intervalRef.current);
             return;
         }
 
+        // Tenta reservar o lote no backend
+        const doReserve = async () => {
+            if (!auctionId || !investorId) {
+                // Sem dados para reservar — funciona em modo legado (sem reserva real)
+                setReserveSuccess(true);
+                startTimer();
+                return;
+            }
+
+            setIsReserving(true);
+            setReserveError(null);
+
+            try {
+                const result = await reserveLot({
+                    auction_id: auctionId,
+                    investor_id: investorId,
+                    investor_name: investorName || 'Investidor'
+                });
+
+                const data = result?.data || result;
+
+                if (data?.success) {
+                    setReserveSuccess(true);
+                    startTimer();
+                } else if (data?.code === 'ALREADY_RESERVED') {
+                    setReserveError('Este lote já foi reservado por outro investidor. Tente novamente mais tarde.');
+                } else if (data?.code === 'NOT_ACTIVE') {
+                    setReserveError('Este lote não está mais disponível.');
+                } else {
+                    setReserveError(data?.error || 'Erro ao reservar o lote.');
+                }
+            } catch (err) {
+                const errData = err?.response?.data || err?.data;
+                if (errData?.code === 'ALREADY_RESERVED') {
+                    setReserveError('Este lote já foi reservado por outro investidor. Tente novamente mais tarde.');
+                } else {
+                    setReserveError('Erro ao reservar: ' + (errData?.error || err.message));
+                }
+            } finally {
+                setIsReserving(false);
+            }
+        };
+
+        doReserve();
+
+        return () => {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        };
+    }, [isOpen, auctionId, investorId]);
+
+    const startTimer = () => {
         hasExpired.current = false;
         setSecondsLeft(RESERVATION_SECONDS);
 
@@ -26,7 +85,10 @@ export default function ReservaLoteModal({ isOpen, onClose, onConfirm, loteTitle
                     clearInterval(intervalRef.current);
                     if (!hasExpired.current) {
                         hasExpired.current = true;
-                        // Timer expirou — fecha modal e libera lote
+                        // Timer expirou — libera reserva e fecha
+                        if (auctionId && investorId) {
+                            reserveLot({ auction_id: auctionId, investor_id: investorId, action: 'release' }).catch(() => {});
+                        }
                         setTimeout(() => onClose('expired'), 0);
                     }
                     return 0;
@@ -34,13 +96,48 @@ export default function ReservaLoteModal({ isOpen, onClose, onConfirm, loteTitle
                 return prev - 1;
             });
         }, 1000);
+    };
 
-        return () => {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-        };
-    }, [isOpen]);
+    // Libera reserva ao fechar/cancelar
+    const handleClose = (reason) => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (auctionId && investorId && reserveSuccess && reason !== 'confirmed') {
+            reserveLot({ auction_id: auctionId, investor_id: investorId, action: 'release' }).catch(() => {});
+        }
+        onClose(reason);
+    };
 
     if (!isOpen) return null;
+
+    // Estado de carregamento ou erro
+    if (isReserving) {
+        return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-8 text-center">
+                    <Loader2 className="w-10 h-10 text-emerald-400 animate-spin mx-auto mb-4" />
+                    <p className="text-white font-bold">Reservando lote...</p>
+                    <p className="text-slate-400 text-sm mt-1">Verificando disponibilidade</p>
+                </div>
+            </motion.div>
+        );
+    }
+
+    if (reserveError) {
+        return (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => handleClose('error')}>
+                <div className="bg-[#161b22] border border-red-500/40 rounded-2xl p-8 text-center max-w-md" onClick={e => e.stopPropagation()}>
+                    <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <AlertTriangle className="text-red-400" size={28} />
+                    </div>
+                    <h3 className="text-white font-bold text-lg mb-2">Lote Indisponível</h3>
+                    <p className="text-slate-300 text-sm mb-6">{reserveError}</p>
+                    <button onClick={() => handleClose('error')} className="bg-[#0d1117] border border-[#30363d] text-slate-300 hover:text-white font-semibold py-2.5 px-6 rounded-xl transition-colors">
+                        Entendi
+                    </button>
+                </div>
+            </motion.div>
+        );
+    }
 
     const minutes = Math.floor(secondsLeft / 60);
     const seconds = secondsLeft % 60;
@@ -52,7 +149,7 @@ export default function ReservaLoteModal({ isOpen, onClose, onConfirm, loteTitle
         <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-            onClick={() => onClose('cancelled')}
+            onClick={() => handleClose('cancelled')}
         >
             <motion.div
                 initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
@@ -78,7 +175,7 @@ export default function ReservaLoteModal({ isOpen, onClose, onConfirm, loteTitle
                                 <h3 className="font-bold text-white text-lg leading-tight">Garanta seu pagamento para reservar este lote</h3>
                             </div>
                         </div>
-                        <button onClick={() => onClose('cancelled')} className="text-slate-500 hover:text-white transition-colors p-1">
+                        <button onClick={() => handleClose('cancelled')} className="text-slate-500 hover:text-white transition-colors p-1">
                             <X size={20} />
                         </button>
                     </div>
@@ -147,13 +244,16 @@ export default function ReservaLoteModal({ isOpen, onClose, onConfirm, loteTitle
                     {/* Botões */}
                     <div className="flex gap-3">
                         <button
-                            onClick={() => onClose('cancelled')}
+                            onClick={() => handleClose('cancelled')}
                             className="flex-1 bg-[#0d1117] border border-[#30363d] text-slate-400 hover:text-white hover:border-slate-500 font-semibold py-3 rounded-xl transition-colors text-sm"
                         >
                             Voltar
                         </button>
                         <button
-                            onClick={onConfirm}
+                            onClick={() => {
+                                if (intervalRef.current) clearInterval(intervalRef.current);
+                                onConfirm();
+                            }}
                             className="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-500/20"
                         >
                             <ShieldCheck size={18} />

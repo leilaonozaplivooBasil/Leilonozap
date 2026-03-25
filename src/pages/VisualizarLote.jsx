@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight, ShoppingCart, Wallet } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight, ShoppingCart, Wallet, Lock } from 'lucide-react';
 import GradeTicketSection from '../components/lotes/GradeTicketSection';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import GradeDistributionChart from '../components/lotes/GradeDistributionChart';
@@ -580,6 +580,9 @@ export default function VisualizarLote() {
             <ReservaLoteModal
                 isOpen={showReservaModal}
                 loteTitle={pendingCheckoutData?.auctionTitle}
+                auctionId={pendingCheckoutData?.auctionId}
+                investorId={currentUserData?.id}
+                investorName={currentUserData?.full_name}
                 onClose={(reason) => {
                     setShowReservaModal(false);
                     setPendingCheckoutData(null);
@@ -618,6 +621,21 @@ export default function VisualizarLote() {
 
             {/* Painel fixo de depósito para investidores */}
             {currentUserRole === 'investidor' && lote.status === 'active' && calculations && (() => {
+                // Verifica se lote está reservado por OUTRO investidor
+                const isReservedByOther = lote.reserved_by && lote.reserved_by !== currentUserData?.id && lote.reserved_until && new Date(lote.reserved_until) > new Date();
+                if (isReservedByOther) {
+                    return (
+                        <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0d1117]/95 backdrop-blur-lg border-t border-amber-500/30">
+                            <div className="max-w-7xl mx-auto p-4 text-center">
+                                <div className="flex items-center justify-center gap-3 text-amber-400">
+                                    <Lock size={20} />
+                                    <p className="font-bold">Este lote está temporariamente reservado por outro investidor</p>
+                                </div>
+                                <p className="text-slate-400 text-sm mt-1">Ele ficará disponível novamente caso a reserva expire.</p>
+                            </div>
+                        </div>
+                    );
+                }
                 const saldoDisponivel = currentUserData?.saldo_disponivel ?? 0;
                 const valorDesejado = parseFloat(valorMaxAutorizado) || calculations.custoTotal;
                 const valorFaltante = Math.max(0, valorDesejado - saldoDisponivel);

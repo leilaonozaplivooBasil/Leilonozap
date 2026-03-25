@@ -52,9 +52,16 @@ export default function MarketplaceLotes() {
         }
     };
 
-    const lotesFiltrados = lotes.filter(l =>
-        !busca || l.title?.toLowerCase().includes(busca.toLowerCase())
-    );
+    const lotesFiltrados = lotes.filter(l => {
+        // Filtro de busca
+        if (busca && !l.title?.toLowerCase().includes(busca.toLowerCase())) return false;
+        // Filtra lotes reservados por OUTROS investidores (reserva ainda ativa)
+        if (l.reserved_by && l.reserved_by !== currentUser?.id) {
+            const reservedUntil = l.reserved_until ? new Date(l.reserved_until) : null;
+            if (reservedUntil && reservedUntil > new Date()) return false;
+        }
+        return true;
+    });
 
     const getStatusLabel = (status) => {
         if (status === 'active') return { label: 'Captação Aberta', color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
@@ -391,9 +398,14 @@ export default function MarketplaceLotes() {
             <ReservaLoteModal
                 isOpen={showReservaModal}
                 loteTitle={pendingCheckoutData?.auctionTitle}
+                auctionId={pendingCheckoutData?.auctionId}
+                investorId={currentUser?.id}
+                investorName={currentUser?.full_name}
                 onClose={(reason) => {
                     setShowReservaModal(false);
                     setPendingCheckoutData(null);
+                    // Recarrega lotes para refletir reservas
+                    if (reason === 'expired' || reason === 'error') loadLotes();
                 }}
                 onConfirm={() => {
                     setShowReservaModal(false);
