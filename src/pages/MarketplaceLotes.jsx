@@ -373,7 +373,7 @@ export default function MarketplaceLotes() {
                                                     }
                                                     className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                                 >
-                                                    <DollarSign size={16} /> Depositar Saldo
+                                                    <DollarSign size={16} /> Competir este Lote
                                                 </button>
                                             </div>
                                         </>
