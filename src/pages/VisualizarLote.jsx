@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight, ShoppingCart } from 'lucide-react';
+import GradeTicketSection from '../components/lotes/GradeTicketSection';
+import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import { createPageUrl } from '@/utils';
 
 const Auction = base44.entities.Auction;
@@ -20,6 +22,7 @@ export default function VisualizarLote() {
     const [currentUserData, setCurrentUserData] = useState(null);
     const perfilRef = useRef(null);
     const distribuicaoRef = useRef(null);
+    const [gradeModal, setGradeModal] = useState(null);
 
     const urlParams = new URLSearchParams(window.location.search);
     const loteId = urlParams.get('id');
@@ -96,6 +99,12 @@ export default function VisualizarLote() {
             Object.entries(raw).forEach(([k, v]) => { normalized[k.trim()] = v; });
             return normalized;
         } catch { return {}; }
+    }, [lote]);
+
+    // Parseia o JSON de grades salvo na publicação
+    const gradesData = useMemo(() => {
+        if (!lote?.lot_grades_json) return null;
+        try { return JSON.parse(lote.lot_grades_json); } catch { return null; }
     }, [lote]);
 
     const toggleCategory = (nome) => {
@@ -355,6 +364,14 @@ export default function VisualizarLote() {
                         </div>
                     )}
 
+                    {/* Ticket Médio por Grade */}
+                    {gradesData && (
+                        <GradeTicketSection
+                            gradesData={gradesData}
+                            onGradeClick={(data) => setGradeModal(data)}
+                        />
+                    )}
+
                     {/* Distribuição Departamental */}
                     {categorias.length > 0 && (
                         <div ref={distribuicaoRef} className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden scroll-mt-24">
@@ -536,6 +553,22 @@ export default function VisualizarLote() {
 
                 </div>
             </div>
+
+            {/* Modal de Grade Items */}
+            {gradeModal && (
+                <GradeItemsModal
+                    isOpen={true}
+                    onClose={() => setGradeModal(null)}
+                    title={gradeModal.title}
+                    grades={gradeModal.grades}
+                    items={(() => {
+                        if (lote?.lot_raw_items_json) {
+                            try { return JSON.parse(lote.lot_raw_items_json); } catch { return []; }
+                        }
+                        return [];
+                    })()}
+                />
+            )}
 
             {/* Botão fixo de compra para investidores */}
             {currentUserRole === 'investidor' && lote.status === 'active' && calculations && (

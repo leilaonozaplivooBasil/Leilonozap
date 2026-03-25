@@ -552,6 +552,12 @@ function AnaliseDeLotes() {
                                             lot_items_json: loteAtual.subItemsByCategory && Object.keys(loteAtual.subItemsByCategory).length > 0
                                                 ? JSON.stringify(loteAtual.subItemsByCategory)
                                                 : null,
+                                            lot_grades_json: loteAtual.gradesData
+                                                ? JSON.stringify(loteAtual.gradesData)
+                                                : null,
+                                            lot_raw_items_json: loteAtual.rawItemsByGrade && loteAtual.rawItemsByGrade.length > 0
+                                                ? JSON.stringify(loteAtual.rawItemsByGrade)
+                                                : null,
                                         });
                                         const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
                                         setLotesImportados(newLotes);
