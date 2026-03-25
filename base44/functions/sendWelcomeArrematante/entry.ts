@@ -1,8 +1,10 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 async function sendEmailViaBrevo(to, subject, htmlContent) {
   const apiKey = Deno.env.get('BREVO_API_KEY');
   if (!apiKey) throw new Error('BREVO_API_KEY não configurada');
+
+  console.log(`📧 [Brevo] Enviando para: ${to} | Assunto: ${subject}`);
 
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
@@ -12,7 +14,7 @@ async function sendEmailViaBrevo(to, subject, htmlContent) {
       'api-key': apiKey
     },
     body: JSON.stringify({
-      sender: { name: 'Leilão NoZap', email: 'no-reply@leilaonozap.com' },
+      sender: { name: 'Leilão no Zap', email: 'no-reply@leilaonozap.com' },
       to: [{ email: to }],
       subject,
       htmlContent
@@ -20,21 +22,18 @@ async function sendEmailViaBrevo(to, subject, htmlContent) {
   });
 
   const data = await response.json();
+  console.log(`📧 [Brevo] Status: ${response.status}`, JSON.stringify(data));
   if (!response.ok) throw new Error(`Brevo error: ${response.status} - ${JSON.stringify(data)}`);
   return data;
 }
 
 Deno.serve(async (req) => {
   try {
-    const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    // Permite admin e leiloeiro (que cadastra investidores)
-    if (!user || !['admin', 'leiloeiro'].includes(user.role)) {
-      return Response.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const { email, fullName, resetLink, role } = await req.json();
+    // Lê o body antes de qualquer outra operação
+    const body = await req.json();
+    const { email, fullName, resetLink, role } = body;
+    
+    console.log('📨 sendWelcomeArrematante chamado:', { email, fullName, role });
 
     if (!email || !fullName || !resetLink) {
       return Response.json({ error: 'email, fullName e resetLink são obrigatórios' }, { status: 400 });
@@ -105,7 +104,7 @@ Deno.serve(async (req) => {
 </html>`;
 
     await sendEmailViaBrevo(email, '🎉 Bem-vindo ao Leilão NoZap — Defina sua senha', html);
-
+    console.log(`✅ E-mail de boas-vindas enviado para ${email}`);
     return Response.json({ success: true });
   } catch (error) {
     console.error('Erro sendWelcomeArrematante:', error.message);
