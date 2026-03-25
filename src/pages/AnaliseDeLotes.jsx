@@ -167,6 +167,18 @@ function AnaliseDeLotes() {
         const colValue = getColumnIndex(['VALOR TOTAL', 'VALOR DE MERCADO', 'VALOR']);
         const colQtd = getColumnIndex(['QUANTIDADE', 'QTD']);
 
+        // Pré-calcula coluna de descrição uma vez fora do loop
+        const colDesc = normalizedHeaders.findIndex(h => h.includes('DESCRI') || h === 'ITEM' || h === 'PRODUTO' || h.includes('NOME DO PRODUTO'));
+
+        const extractGradeLetter = (raw) => {
+            const str = String(raw).toUpperCase().trim();
+            // Se é exatamente uma letra de grade, retorna direto
+            if (['A', 'B', 'C', 'D', 'E', 'U'].includes(str)) return str;
+            // Se contém "CLASSE X" ou "GRADE X", extrai a última letra maiúscula relevante
+            const match = str.match(/\b([ABCDEU])\b/);
+            return match ? match[1] : 'U';
+        };
+
         for (let i = headerRowIndex + 1; i < wmsSheetData.length; i++) {
             const row = wmsSheetData[i];
             if (!row || row.length === 0) continue;
@@ -176,10 +188,7 @@ function AnaliseDeLotes() {
             const classificacaoRaw = colClass >= 0 ? row[colClass] : null;
             if (!classificacaoRaw) continue;
 
-            let classificacao = String(classificacaoRaw).toUpperCase().trim();
-            if (!['A', 'B', 'C', 'D', 'E', 'U'].includes(classificacao)) {
-                classificacao = 'U';
-            }
+            const classificacao = extractGradeLetter(classificacaoRaw);
 
             let qtd = 1;
             if (colQtd >= 0 && row[colQtd] != null) {
@@ -204,9 +213,7 @@ function AnaliseDeLotes() {
             gradesData[classificacao].qtd += qtd;
             gradesData[classificacao].valorMarket += valor;
 
-            // Captura descrição do item para o modal de detalhes por grade
-            const descColIdx = normalizedHeaders.findIndex(h => h.includes('DESCRI') || h === 'ITEM' || h === 'PRODUTO' || h.includes('NOME DO PRODUTO'));
-            const descRaw = descColIdx >= 0 ? row[descColIdx] : null;
+            const descRaw = colDesc >= 0 ? row[colDesc] : null;
             rawItemsByGrade.push({
                 grade: classificacao,
                 desc: descRaw ? String(descRaw).trim() : `Item linha ${i + 1}`,
