@@ -4,7 +4,8 @@ import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 
 const Auction = base44.entities.Auction;
-import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, BarChart3, Package, CheckCircle2, ShoppingBag, ArrowLeft } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, BarChart3, Package, CheckCircle2, ShoppingBag, ArrowLeft, Eye } from 'lucide-react';
+import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
 
@@ -16,6 +17,7 @@ function AnaliseDeLotes() {
     const [isPublishing, setIsPublishing] = useState(null);
     const [error, setError] = useState('');
     const [expandedCategories, setExpandedCategories] = useState(new Set());
+    const [gradeModal, setGradeModal] = useState(null);
 
     const toggleCategory = (nome) => {
         setExpandedCategories(prev => {
@@ -145,6 +147,7 @@ function AnaliseDeLotes() {
         const classCount = { A: 0, B: 0, C: 0, D: 0, E: 0, U: 0 };
         let valorMercadoTotal = 0;
         let totalItemsQtd = 0;
+        const rawItemsByGrade = [];
 
         // Arrays for tracking grouped values
         const gradesData = {
@@ -200,6 +203,16 @@ function AnaliseDeLotes() {
 
             gradesData[classificacao].qtd += qtd;
             gradesData[classificacao].valorMarket += valor;
+
+            // Captura descrição do item para o modal de detalhes por grade
+            const descColIdx = normalizedHeaders.findIndex(h => h.includes('DESCRI') || h === 'ITEM' || h === 'PRODUTO' || h.includes('NOME DO PRODUTO'));
+            const descRaw = descColIdx >= 0 ? row[descColIdx] : null;
+            rawItemsByGrade.push({
+                grade: classificacao,
+                desc: descRaw ? String(descRaw).trim() : `Item linha ${i + 1}`,
+                qtd,
+                valor
+            });
         }
 
         // Extrair sub-itens por categoria
@@ -286,7 +299,8 @@ function AnaliseDeLotes() {
             quantidadeTotal: totalItemsQtd,
             valorMercadoTotal: referenceMarketValue !== null && referenceMarketValue > 0 ? referenceMarketValue : valorMercadoTotal,
             classCount,
-            gradesData
+            gradesData,
+            rawItemsByGrade
         };
         setLotesImportados(prev => [...prev, novoLote]);
         setLoteAtual(novoLote);
@@ -694,15 +708,22 @@ function AnaliseDeLotes() {
 
                                         <div className="space-y-3 flex-1 flex flex-col justify-center">
                                             {[
-                                                { label: "Somente Grupo A", desc: `Equivale a ${calculations.qtdA} produtos originais/intactos`, tm: calculations.tmA, val: calculations.valA, color: "border-l-blue-400" },
-                                                { label: "Grupo A + B", desc: `Equivale a ${calculations.qtdAB} produtos vitrine`, tm: calculations.tmAB, val: calculations.valAB, color: "border-l-[#10b981]" },
-                                                { label: "Grupo A + B + C", desc: `Equivale a ${calculations.qtdABC} produtos úteis`, tm: calculations.tmABC, val: calculations.valABC, color: "border-l-[#eab308]" },
-                                                { label: "Grupo A + B + C + D", desc: `Equivale a ${calculations.qtdABCD} produtos escoáveis`, tm: calculations.tmABCD, val: calculations.valABCD, color: "border-l-[#f97316]" },
-                                                { label: "Todos os Grupos (A+B+C+D+E+U)", desc: `Equivale ao lote inteiro (${calculations.qtdALL} produtos)`, tm: calculations.tmALL, val: calculations.valALL, color: "border-l-slate-400" },
+                                                { label: "Somente Grupo A", desc: `Equivale a ${calculations.qtdA} produtos originais/intactos`, tm: calculations.tmA, val: calculations.valA, color: "border-l-blue-400", grades: ['A'] },
+                                                { label: "Grupo A + B", desc: `Equivale a ${calculations.qtdAB} produtos vitrine`, tm: calculations.tmAB, val: calculations.valAB, color: "border-l-[#10b981]", grades: ['A', 'B'] },
+                                                { label: "Grupo A + B + C", desc: `Equivale a ${calculations.qtdABC} produtos úteis`, tm: calculations.tmABC, val: calculations.valABC, color: "border-l-[#eab308]", grades: ['A', 'B', 'C'] },
+                                                { label: "Grupo A + B + C + D", desc: `Equivale a ${calculations.qtdABCD} produtos escoáveis`, tm: calculations.tmABCD, val: calculations.valABCD, color: "border-l-[#f97316]", grades: ['A', 'B', 'C', 'D'] },
+                                                { label: "Todos os Grupos (A+B+C+D+E+U)", desc: `Equivale ao lote inteiro (${calculations.qtdALL} produtos)`, tm: calculations.tmALL, val: calculations.valALL, color: "border-l-slate-400", grades: ['A', 'B', 'C', 'D', 'E', 'U'] },
                                             ].map((tmData, idx) => (
-                                                <div key={idx} className={`bg-[#0d1117] border border-[#30363d] border-l-4 ${tmData.color} rounded-lg p-3 flex justify-between items-center`}>
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => setGradeModal({ title: tmData.label, grades: tmData.grades })}
+                                                    className={`bg-[#0d1117] border border-[#30363d] border-l-4 ${tmData.color} rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-white/[0.04] hover:border-blue-500/30 transition-all group`}
+                                                >
                                                     <div>
-                                                        <p className="font-bold text-sm text-slate-200">{tmData.label}</p>
+                                                        <p className="font-bold text-sm text-slate-200 flex items-center gap-1.5">
+                                                            {tmData.label}
+                                                            <Eye size={12} className="text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        </p>
                                                         <p className="text-xs text-slate-500">{tmData.desc}</p>
                                                     </div>
                                                     <div className="text-right">
@@ -823,6 +844,15 @@ function AnaliseDeLotes() {
                     )}
                 </div>
             </div>
+            {gradeModal && loteAtual && (
+                <GradeItemsModal
+                    isOpen={true}
+                    onClose={() => setGradeModal(null)}
+                    title={gradeModal.title}
+                    grades={gradeModal.grades}
+                    items={loteAtual.rawItemsByGrade || []}
+                />
+            )}
         </div>
     );
 }
