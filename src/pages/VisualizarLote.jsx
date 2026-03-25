@@ -267,7 +267,7 @@ export default function VisualizarLote() {
                         ))}
                     </div>
 
-                    {/* Cenário Financeiro (READ-ONLY) + Projeções — igual ao AnaliseDeLotes */}
+                    {/* Cenário Financeiro + Projeções + Grade — layout 3 colunas */}
                     {calculations && (
                         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
@@ -292,7 +292,6 @@ export default function VisualizarLote() {
                                             <span className={`font-bold ${item.highlight ? 'text-amber-400 text-xl' : item.positive ? 'text-emerald-400' : 'text-white'}`}>{item.val}</span>
                                         </div>
                                     ))}
-                                    {/* Status e Vencedor */}
                                     <div className="pt-3 border-t border-[#30363d] space-y-2">
                                         <div className="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
                                             <span className="text-sm text-slate-400">Status</span>
@@ -314,8 +313,8 @@ export default function VisualizarLote() {
                                 </div>
                             </div>
 
-                            {/* Col 2-3: Projeções */}
-                            <div className="xl:col-span-2 bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl p-6">
+                            {/* Col 2: Projeções */}
+                            <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl p-6">
                                 <h3 className="font-bold text-white mb-5 uppercase tracking-wider text-sm flex items-center gap-2">
                                     <TrendingUp size={16} className="text-indigo-400" />
                                     Cenários de Venda da Grade Útil
@@ -326,20 +325,20 @@ export default function VisualizarLote() {
                                         { title: "Venda (60% do Valor Mercado)", val: calculations.projMedio, color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
                                         { title: "Venda (70% do Valor Mercado)", val: calculations.projLongo, color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
                                     ].map((item, idx) => (
-                                        <div key={idx} className={`flex justify-between items-center p-4 rounded-xl border ${item.color}`}>
-                                            <p className="font-semibold text-sm sm:text-base">{item.title}</p>
+                                        <div key={idx} className={`flex justify-between items-center p-3 sm:p-4 rounded-xl border ${item.color}`}>
+                                            <div>
+                                                <p className="font-semibold text-sm">{item.title}</p>
+                                            </div>
                                             <div className="text-right">
-                                                <p className="font-bold text-lg sm:text-xl">{formatCurrency(item.val)}</p>
-                                                <p className="text-xs mt-0.5 font-medium flex items-center justify-end gap-1">
-                                                    <span>Lucro Bruto:</span>
-                                                    <span className="text-emerald-400">{formatCurrency(Math.max(0, item.val - calculations.custoTotal))}</span>
+                                                <p className="font-bold text-lg">{formatCurrency(item.val)}</p>
+                                                <p className="text-xs mt-0.5 font-medium">
+                                                    Lucro Bruto: <span className="text-emerald-400">{formatCurrency(Math.max(0, item.val - calculations.custoTotal))}</span>
                                                 </p>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
 
-                                {/* Ticket Médio por Grade (se tiver totalItens) */}
                                 {calculations.totalItens > 0 && vm > 0 && (
                                     <div className="mt-6 pt-5 border-t border-[#30363d]">
                                         <h4 className="font-bold text-white mb-3 uppercase tracking-wider text-xs flex items-center gap-2">
@@ -362,15 +361,24 @@ export default function VisualizarLote() {
                                     </div>
                                 )}
                             </div>
+
+                            {/* Col 3: Ticket Médio por Grade */}
+                            {gradesData ? (
+                                <GradeTicketSection
+                                    gradesData={gradesData}
+                                    onGradeClick={(data) => setGradeModal(data)}
+                                />
+                            ) : (
+                                <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl p-6 flex items-center justify-center">
+                                    <p className="text-slate-500 text-sm text-center">Dados de grade não disponíveis.<br/>Use "⚡ Grades" na Gestão de Lotes para importar.</p>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {/* Ticket Médio por Grade */}
+                    {/* Gráfico de Distribuição de Qualidade */}
                     {gradesData && (
-                        <GradeTicketSection
-                            gradesData={gradesData}
-                            onGradeClick={(data) => setGradeModal(data)}
-                        />
+                        <GradeDistributionChart gradesData={gradesData} />
                     )}
 
                     {/* Distribuição Departamental */}
