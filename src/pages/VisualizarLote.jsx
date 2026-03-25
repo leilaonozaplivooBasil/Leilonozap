@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
-import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Package, CheckCircle2, BarChart3, TrendingUp, Activity, AlertCircle, AlertTriangle, DollarSign, MapPin, Users, Percent, ChevronRight, ShoppingCart, Wallet } from 'lucide-react';
 import GradeTicketSection from '../components/lotes/GradeTicketSection';
 import GradeItemsModal from '../components/lotes/GradeItemsModal';
 import GradeDistributionChart from '../components/lotes/GradeDistributionChart';
@@ -24,6 +24,7 @@ export default function VisualizarLote() {
     const perfilRef = useRef(null);
     const distribuicaoRef = useRef(null);
     const [gradeModal, setGradeModal] = useState(null);
+    const [valorMaxAutorizado, setValorMaxAutorizado] = useState('');
 
     const urlParams = new URLSearchParams(window.location.search);
     const loteId = urlParams.get('id');
@@ -579,31 +580,83 @@ export default function VisualizarLote() {
                 />
             )}
 
-            {/* Botão fixo de compra para investidores */}
-            {currentUserRole === 'investidor' && lote.status === 'active' && calculations && (
-                <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-[#0d1117]/90 backdrop-blur-lg border-t border-[#30363d]">
-                    <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-                        <div>
-                            <p className="text-xs text-slate-400 uppercase tracking-wider">Investimento Total</p>
-                            <p className="text-xl font-black text-amber-400">{formatCurrency(calculations.custoTotal)}</p>
+            {/* Painel fixo de depósito para investidores */}
+            {currentUserRole === 'investidor' && lote.status === 'active' && calculations && (() => {
+                const saldoDisponivel = currentUserData?.saldo_disponivel ?? 0;
+                const valorDesejado = parseFloat(valorMaxAutorizado) || calculations.custoTotal;
+                const valorFaltante = Math.max(0, valorDesejado - saldoDisponivel);
+                const saldoSuficiente = valorFaltante <= 0;
+                const valorInvalido = valorMaxAutorizado && parseFloat(valorMaxAutorizado) < calculations.custoTotal;
+
+                return (
+                    <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0d1117]/95 backdrop-blur-lg border-t border-[#30363d]">
+                        <div className="max-w-7xl mx-auto p-4 space-y-3">
+                            {/* Linha 1: Saldo + Investimento */}
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <Wallet size={18} className={saldoDisponivel > 0 ? 'text-emerald-400' : 'text-amber-400'} />
+                                    <div>
+                                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Saldo Disponível</p>
+                                        <p className={`text-sm font-black ${saldoDisponivel > 0 ? 'text-emerald-400' : 'text-amber-400'}`}>{formatCurrency(saldoDisponivel)}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Investimento Mín.</p>
+                                    <p className="text-sm font-black text-amber-400">{formatCurrency(calculations.custoTotal)}</p>
+                                </div>
+                            </div>
+
+                            {/* Linha 2: Campo valor + Botão */}
+                            <div className="flex gap-3 items-end">
+                                <div className="flex-1">
+                                    <label className="block text-[10px] text-indigo-400 uppercase tracking-wider font-bold mb-1">
+                                        Até quanto pode ir?
+                                    </label>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-xs">R$</span>
+                                        <input
+                                            type="number"
+                                            min={calculations.custoTotal}
+                                            step="100"
+                                            value={valorMaxAutorizado}
+                                            onChange={e => setValorMaxAutorizado(e.target.value)}
+                                            placeholder={calculations.custoTotal.toFixed(2)}
+                                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-2.5 pl-9 pr-3 text-white text-base font-bold focus:outline-none focus:border-indigo-500 transition-shadow placeholder:text-slate-600"
+                                        />
+                                    </div>
+                                    {valorInvalido && (
+                                        <p className="text-[9px] text-red-400 mt-0.5">Mínimo: {formatCurrency(calculations.custoTotal)}</p>
+                                    )}
+                                    {!valorInvalido && !saldoSuficiente && valorDesejado >= calculations.custoTotal && (
+                                        <p className="text-[9px] text-blue-400 mt-0.5">PIX a gerar: {formatCurrency(valorFaltante)}</p>
+                                    )}
+                                    {saldoSuficiente && !valorInvalido && (
+                                        <p className="text-[9px] text-emerald-400 mt-0.5">Saldo suficiente!</p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        if (valorInvalido || saldoSuficiente) return;
+                                        navigate(createPageUrl('AuctionCheckoutModern'), {
+                                            state: {
+                                                amount: valorFaltante,
+                                                depositType: 'investor_capital',
+                                                auctionId: lote.id,
+                                                auctionTitle: lote.title,
+                                                autoSubmitPix: true
+                                            }
+                                        });
+                                    }}
+                                    disabled={valorInvalido || saldoSuficiente}
+                                    className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 shrink-0"
+                                >
+                                    <DollarSign size={16} /> Depositar
+                                </button>
+                            </div>
                         </div>
-                        <button
-                            onClick={() => {
-                                const saldo = currentUserData?.saldo_disponivel ?? 0;
-                                if (saldo >= calculations.custoTotal) {
-                                    navigate(createPageUrl('CarteiraInvestidor') + `?action=deposit&amount=${encodeURIComponent(calculations.custoTotal)}&lote=${encodeURIComponent(lote.title)}&lote_id=${lote.id}`);
-                                } else {
-                                    navigate(createPageUrl('AddFunds'));
-                                }
-                            }}
-                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-6 py-3 rounded-xl transition-colors shadow-lg shadow-emerald-500/20"
-                        >
-                            <ShoppingCart size={18} />
-                            Comprar este Lote
-                        </button>
                     </div>
-                </div>
-            )}
+                );
+            })()}
         </div>
     );
 }
