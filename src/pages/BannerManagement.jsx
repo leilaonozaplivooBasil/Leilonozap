@@ -280,20 +280,19 @@ export default function BannerManagement() {
             const file = new File([blob], `img_${item.id}.png`, { type: blob.type });
             const webpFile = await convertToWebP(file, 0.90);
             
-            if (webpFile.size < file.size || pathLowerCheck.endsWith('.png')) { // Se for PNG, converte pra webp independente de tamanho pra melhorar web vitals
-              const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
-              
-              if (isArray) {
-                const newArray = [...item[field]];
-                newArray[arrayIndex] = file_url;
-                item[field] = newArray;
-                await updateApi(item.id, { [field]: newArray });
-              } else {
-                item[field] = file_url;
-                await updateApi(item.id, { [field]: file_url });
-              }
-              count++;
+            // Força a conversão e upload de qualquer imagem que não seja WebP, a pedido do usuário
+            const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
+            
+            if (isArray) {
+              const newArray = [...item[field]];
+              newArray[arrayIndex] = file_url;
+              item[field] = newArray;
+              await updateApi(item.id, { [field]: newArray });
+            } else {
+              item[field] = file_url;
+              await updateApi(item.id, { [field]: file_url });
             }
+            count++;
           }
         } catch (e) {
           console.error("Erro ao otimizar imagem:", item.id, e);
