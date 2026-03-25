@@ -6,6 +6,7 @@ import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import { distributeAuctionCommissions } from '@/functions/distributeAuctionCommissions';
 import ImportarLotesModal from '@/components/lotes/ImportarLotesModal';
+import AtualizarGradesModal from '@/components/lotes/AtualizarGradesModal';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
@@ -22,6 +23,7 @@ export default function GestaoLotes() {
     const [filtroStatus, setFiltroStatus] = useState('todos');
     const [isSaving, setIsSaving] = useState(null); // id do lote sendo atualizado
     const [showImportModal, setShowImportModal] = useState(false);
+    const [gradeUpdateLote, setGradeUpdateLote] = useState(null);
     const navigate = useNavigate();
     const currentUserRole = (() => { try { return JSON.parse(localStorage.getItem('currentUser'))?.role; } catch { return null; } })();
 
@@ -461,7 +463,17 @@ export default function GestaoLotes() {
                                                     </button>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+                                            <td className="px-6 py-4 text-center flex items-center gap-2 justify-center">
+                                                {!lote.lot_grades_json && (
+                                                    <button
+                                                        onClick={() => setGradeUpdateLote(lote)}
+                                                        disabled={isSaving === lote.id}
+                                                        title="Atualizar grades (reimportar planilha)"
+                                                        className="text-amber-500/60 hover:text-amber-400 transition-colors disabled:opacity-40 text-xs font-bold"
+                                                    >
+                                                        ⚡ Grades
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => excluirLote(lote)}
                                                     disabled={isSaving === lote.id}
@@ -485,6 +497,15 @@ export default function GestaoLotes() {
                 onClose={() => setShowImportModal(false)}
                 onPublished={() => loadDados()}
             />
+
+            {gradeUpdateLote && (
+                <AtualizarGradesModal
+                    isOpen={true}
+                    onClose={() => setGradeUpdateLote(null)}
+                    lote={gradeUpdateLote}
+                    onSuccess={loadDados}
+                />
+            )}
         </div>
     );
 }
