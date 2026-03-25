@@ -41,6 +41,15 @@ export default function VisualizarLote() {
             const parsed = JSON.parse(stored);
             setCurrentUserRole(parsed?.role);
             setCurrentUserData(parsed);
+            // Busca dados atualizados do banco (saldo_disponivel pode estar stale no cache)
+            if (parsed?.email) {
+                AppUser.filter({ email: parsed.email }).then(users => {
+                    if (users?.[0]) {
+                        setCurrentUserData(users[0]);
+                        setCurrentUserRole(users[0].role);
+                    }
+                }).catch(() => {});
+            }
         } catch {
             navigate('/Landing', { replace: true });
             return;
@@ -610,7 +619,7 @@ export default function VisualizarLote() {
                             <div className="flex gap-3 items-end">
                                 <div className="flex-1">
                                     <label className="block text-[10px] text-indigo-400 uppercase tracking-wider font-bold mb-1">
-                                        Até quanto pode ir?
+                                        Até quanto o arrematante pode ir?
                                     </label>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-xs">R$</span>
@@ -636,7 +645,12 @@ export default function VisualizarLote() {
                                 </div>
                                 <button
                                     onClick={() => {
-                                        if (valorInvalido || saldoSuficiente) return;
+                                        if (valorInvalido) return;
+                                        if (saldoSuficiente) {
+                                            // Saldo suficiente — navega direto para carteira
+                                            navigate(createPageUrl('CarteiraInvestidor'));
+                                            return;
+                                        }
                                         navigate(createPageUrl('AuctionCheckoutModern'), {
                                             state: {
                                                 amount: valorFaltante,
@@ -647,10 +661,10 @@ export default function VisualizarLote() {
                                             }
                                         });
                                     }}
-                                    disabled={valorInvalido || saldoSuficiente}
+                                    disabled={valorInvalido}
                                     className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold px-5 py-2.5 rounded-xl transition-colors flex items-center gap-2 shrink-0"
                                 >
-                                    <DollarSign size={16} /> Depositar
+                                    <DollarSign size={16} /> Depositar Saldo
                                 </button>
                             </div>
                         </div>
