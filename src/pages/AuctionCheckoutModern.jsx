@@ -65,6 +65,7 @@ export default function AuctionCheckoutModern() {
   const [paymentConfirmed, setPaymentConfirmed] = useState(false);
   const initialTimeoutRef = useRef(null);
   const intervalRef = useRef(null);
+  const autoSubmitTriggered = useRef(false);
 
   // Cartão de crédito
   const [cardHolder, setCardHolder] = useState('');
@@ -414,6 +415,39 @@ export default function AuctionCheckoutModern() {
 
     loadData();
   }, [location.state]);
+
+  // Auto-submit PIX para investidores vindos do MarketplaceLotes (pula formulário)
+  const [autoSubmitReady, setAutoSubmitReady] = useState(false);
+
+  useEffect(() => {
+    if (autoSubmitTriggered.current) return;
+    if (isLoading || !auction || !currentUser) return;
+    if (!location.state?.autoSubmitPix) return;
+    if (step !== 'info') return;
+
+    const hasName = firstName?.trim();
+    const hasEmail = email?.trim();
+    const hasCpf = cpf?.trim();
+    const hasPhone = phone?.trim();
+
+    if (hasName && hasEmail && hasCpf && hasPhone) {
+      autoSubmitTriggered.current = true;
+      // Preenche endereço padrão se vazio para não travar validação
+      if (!addressStreet?.trim()) setAddressStreet('A definir');
+      if (!addressNumber?.trim()) setAddressNumber('0');
+      if (!addressCity?.trim()) setAddressCity('A definir');
+      if (!addressState?.trim()) setAddressState('SP');
+      if (!addressZip?.trim()) setAddressZip('00000-000');
+      setAutoSubmitReady(true);
+    }
+  }, [isLoading, auction, currentUser, step, firstName, email, cpf, phone]);
+
+  useEffect(() => {
+    if (autoSubmitReady && step === 'info' && !isProcessing) {
+      setAutoSubmitReady(false);
+      handleCreatePayment();
+    }
+  }, [autoSubmitReady, addressStreet, addressNumber, addressCity, addressState, addressZip]);
 
   // Polling para verificar confirmação do pagamento PIX (via backend para contornar RLS)
   useEffect(() => {

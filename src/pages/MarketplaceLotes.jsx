@@ -328,7 +328,8 @@ export default function MarketplaceLotes() {
                                                     amount: maxVal,
                                                     depositType: 'investor_capital',
                                                     auctionId: loteModal.id,
-                                                    auctionTitle: loteModal.title
+                                                    auctionTitle: loteModal.title,
+                                                    autoSubmitPix: true
                                                 }
                                             });
                                         }}
@@ -346,7 +347,8 @@ export default function MarketplaceLotes() {
                                                         amount: valorTotalInvestimento,
                                                         depositType: 'investor_capital',
                                                         auctionId: loteModal.id,
-                                                        auctionTitle: loteModal.title
+                                                        auctionTitle: loteModal.title,
+                                                        autoSubmitPix: true
                                                     }
                                                 });
                                             }}
