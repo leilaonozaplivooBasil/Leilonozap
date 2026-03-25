@@ -72,14 +72,23 @@ export default function AcessoArrematante() {
       sessionStorage.setItem('isLoggedIn', 'true');
 
       const isAdmin = user.role === 'admin' || user.email === 'luizsantanna@tttcorporate.com';
+      
+      // Marca origem do login para o Layout não sobrescrever
+      sessionStorage.setItem('loginSource', 'arrematante');
+      
       const dest = isAdmin
-        ? createPageUrl('SistemaDeArremate')
+        ? '/SistemaDeArremate'
         : user.role === 'investidor'
-          ? createPageUrl('MarketplaceLotes')
+          ? '/MarketplaceLotes'
           : user.role === 'leiloeiro'
-            ? createPageUrl('CRMInvestidores')
-            : createPageUrl('Home');
+            ? '/CRMInvestidores'
+            : '/Home';
 
+      console.log('🔑 AcessoArrematante: redirecionando para', dest, 'role:', user.role, 'email:', user.email, 'isAdmin:', isAdmin);
+      
+      // DEBUG TEMPORÁRIO - remover depois
+      alert('DEBUG: role=' + user.role + ' | email=' + user.email + ' | isAdmin=' + isAdmin + ' | dest=' + dest);
+      
       window.location.href = dest;
 
     } catch (err) {
