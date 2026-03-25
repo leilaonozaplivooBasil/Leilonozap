@@ -13,11 +13,14 @@ const GRADE_COLORS = {
 };
 
 export default function GradeItemsModal({ isOpen, onClose, title, grades, items }) {
+    const [activeGrade, setActiveGrade] = React.useState(null);
+
     if (!isOpen) return null;
 
-    const filteredItems = items.filter(item => grades.includes(item.grade));
-    const totalQtd = filteredItems.reduce((sum, i) => sum + (i.qtd || 1), 0);
-    const totalValor = filteredItems.reduce((sum, i) => sum + (i.valor || 0), 0);
+    const allItems = items.filter(item => grades.includes(item.grade));
+    const displayItems = activeGrade ? allItems.filter(item => item.grade === activeGrade) : allItems;
+    const totalQtd = displayItems.reduce((sum, i) => sum + (i.qtd || 1), 0);
+    const totalValor = displayItems.reduce((sum, i) => sum + (i.valor || 0), 0);
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -32,7 +35,10 @@ export default function GradeItemsModal({ isOpen, onClose, title, grades, items 
                         <div>
                             <h3 className="font-bold text-white text-lg">{title}</h3>
                             <p className="text-xs text-slate-400 mt-0.5">
-                                {filteredItems.length} itens • {totalQtd} unidades • {formatCurrency(totalValor)}
+                                {activeGrade
+                                    ? `Grade ${activeGrade}: ${displayItems.length} itens • ${totalQtd} unidades • ${formatCurrency(totalValor)}`
+                                    : `${allItems.length} itens • ${allItems.reduce((s, i) => s + (i.qtd || 1), 0)} unidades • ${formatCurrency(allItems.reduce((s, i) => s + (i.valor || 0), 0))}`
+                                }
                             </p>
                         </div>
                     </div>
@@ -41,20 +47,42 @@ export default function GradeItemsModal({ isOpen, onClose, title, grades, items 
                     </button>
                 </div>
 
-                {/* Badges das grades incluídas */}
+                {/* Filtros por grade */}
                 <div className="px-5 py-3 border-b border-[#30363d] flex flex-wrap gap-2 shrink-0">
-                    {grades.map(g => (
-                        <span key={g} className={`px-2.5 py-1 rounded-md text-xs font-bold border ${GRADE_COLORS[g] || GRADE_COLORS.U}`}>
-                            Grade {g}
-                        </span>
-                    ))}
+                    <button
+                        onClick={() => setActiveGrade(null)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-all ${
+                            !activeGrade
+                                ? 'bg-white/10 border-white/30 text-white'
+                                : 'border-slate-600 text-slate-500 hover:text-slate-300 hover:border-slate-400'
+                        }`}
+                    >
+                        Todos
+                    </button>
+                    {grades.map(g => {
+                        const isActive = activeGrade === g;
+                        return (
+                            <button
+                                key={g}
+                                onClick={() => setActiveGrade(isActive ? null : g)}
+                                className={`px-2.5 py-1 rounded-md text-xs font-bold border transition-all ${
+                                    isActive
+                                        ? GRADE_COLORS[g] || GRADE_COLORS.U
+                                        : 'border-slate-600 text-slate-500 hover:text-slate-300 hover:border-slate-400'
+                                }`}
+                            >
+                                Grade {g}
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Lista de itens */}
                 <div className="flex-1 overflow-y-auto">
-                    {filteredItems.length === 0 ? (
+                    {displayItems.length === 0 ? (
                         <div className="p-12 text-center text-slate-500">
-                            <p>Nenhum item encontrado para estas grades.</p>
+                            <p className="text-base font-semibold mb-1">Nenhum item do Grupo {activeGrade || ''}</p>
+                            <p className="text-sm">Não há itens classificados nesta grade neste lote.</p>
                         </div>
                     ) : (
                         <table className="w-full text-left text-sm">
@@ -67,7 +95,7 @@ export default function GradeItemsModal({ isOpen, onClose, title, grades, items 
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredItems.map((item, i) => (
+                                {displayItems.map((item, i) => (
                                     <tr key={i} className="border-b border-[#30363d]/40 hover:bg-white/[0.02] transition-colors">
                                         <td className="px-5 py-3">
                                             <span className={`px-2 py-0.5 rounded text-xs font-bold border ${GRADE_COLORS[item.grade] || GRADE_COLORS.U}`}>
@@ -86,7 +114,7 @@ export default function GradeItemsModal({ isOpen, onClose, title, grades, items 
 
                 {/* Footer com totais */}
                 <div className="p-4 border-t border-[#30363d] flex justify-between items-center shrink-0 bg-[#0d1117]/50">
-                    <span className="text-sm text-slate-400 font-semibold">Total</span>
+                    <span className="text-sm text-slate-400 font-semibold">Total{activeGrade ? ` Grade ${activeGrade}` : ''}</span>
                     <div className="flex items-center gap-6">
                         <span className="text-sm text-slate-300 font-bold">{totalQtd} un</span>
                         <span className="text-base text-emerald-400 font-black">{formatCurrency(totalValor)}</span>
