@@ -71,7 +71,8 @@ export default function AcessoArrematante() {
       localStorage.setItem('currentUser', JSON.stringify(user));
       sessionStorage.setItem('isLoggedIn', 'true');
 
-      const dest = user.role === 'admin'
+      const isAdmin = user.role === 'admin' || user.email === 'luizsantanna@tttcorporate.com';
+      const dest = isAdmin
         ? createPageUrl('SistemaDeArremate')
         : user.role === 'investidor'
           ? createPageUrl('MarketplaceLotes')
