@@ -356,14 +356,18 @@ export default function MarketplaceLotes() {
                                                         if (maxVal < valorTotalInvestimento) return;
                                                         const faltante = Math.max(0, maxVal - saldoDisponivel);
                                                         if (faltante <= 0) return;
-                                                        // Abre modal de reserva antes do checkout
-                                                        setPendingCheckoutData({
+                                                        // Salva dados e fecha modal do lote primeiro
+                                                        const checkoutData = {
                                                             amount: faltante,
                                                             auctionId: loteModal.id,
                                                             auctionTitle: loteModal.title
-                                                        });
+                                                        };
                                                         setLoteModal(null);
-                                                        setShowReservaModal(true);
+                                                        // Abre modal de reserva no próximo tick para evitar conflito de renderização
+                                                        setTimeout(() => {
+                                                            setPendingCheckoutData(checkoutData);
+                                                            setShowReservaModal(true);
+                                                        }, 100);
                                                     }}
                                                     disabled={
                                                         (valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento)
