@@ -329,7 +329,7 @@ export default function MarketplaceLotes() {
                                             disabled={valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento}
                                             className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                         >
-                                            <ShoppingCart size={16} /> Comprar este Lote
+                                            <ShoppingCart size={16} /> Disputar este Lote
                                         </button>
                                     ) : (
                                         <button
