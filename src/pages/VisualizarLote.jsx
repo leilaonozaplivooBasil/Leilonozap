@@ -138,10 +138,19 @@ export default function VisualizarLote() {
 
         let score = { label: 'INDEFINIDO', color: 'bg-slate-600', border: 'border-slate-500', text: 'text-slate-400', icon: null };
         if (custoTotal > 0 && vm > 0) {
-            if (rentabilidade >= 200) score = { label: 'EXCELENTE', color: 'bg-emerald-500/20', border: 'border-emerald-500', text: 'text-emerald-400', icon: <TrendingUp className="text-emerald-400" /> };
-            else if (rentabilidade >= 120) score = { label: 'BOM', color: 'bg-blue-500/20', border: 'border-blue-500', text: 'text-blue-400', icon: <Activity className="text-blue-400" /> };
-            else if (rentabilidade >= 80) score = { label: 'MÉDIO', color: 'bg-yellow-500/20', border: 'border-yellow-500', text: 'text-yellow-400', icon: <AlertCircle className="text-yellow-400" /> };
-            else score = { label: 'ARRISCADO', color: 'bg-red-500/20', border: 'border-red-500', text: 'text-red-400', icon: <AlertTriangle className="text-red-400" /> };
+            if (currentUserRole === 'investidor') {
+                // Investidor: sempre mostra positivo — foca no lucro potencial
+                if (rentabilidade >= 200) score = { label: 'EXCELENTE', color: 'bg-emerald-500/20', border: 'border-emerald-500', text: 'text-emerald-400', icon: <TrendingUp className="text-emerald-400" /> };
+                else if (rentabilidade >= 120) score = { label: 'ÓTIMO', color: 'bg-emerald-500/20', border: 'border-emerald-500', text: 'text-emerald-400', icon: <TrendingUp className="text-emerald-400" /> };
+                else if (rentabilidade >= 80) score = { label: 'BOM', color: 'bg-blue-500/20', border: 'border-blue-500', text: 'text-blue-400', icon: <Activity className="text-blue-400" /> };
+                else score = { label: 'MODERADO', color: 'bg-blue-500/20', border: 'border-blue-500', text: 'text-blue-400', icon: <Activity className="text-blue-400" /> };
+            } else {
+                // Admin/Leiloeiro: mostra score completo incluindo ARRISCADO
+                if (rentabilidade >= 200) score = { label: 'EXCELENTE', color: 'bg-emerald-500/20', border: 'border-emerald-500', text: 'text-emerald-400', icon: <TrendingUp className="text-emerald-400" /> };
+                else if (rentabilidade >= 120) score = { label: 'BOM', color: 'bg-blue-500/20', border: 'border-blue-500', text: 'text-blue-400', icon: <Activity className="text-blue-400" /> };
+                else if (rentabilidade >= 80) score = { label: 'MÉDIO', color: 'bg-yellow-500/20', border: 'border-yellow-500', text: 'text-yellow-400', icon: <AlertCircle className="text-yellow-400" /> };
+                else score = { label: 'ARRISCADO', color: 'bg-red-500/20', border: 'border-red-500', text: 'text-red-400', icon: <AlertTriangle className="text-red-400" /> };
+            }
         }
 
         return { custoTotal, valorLoteBruto, vm, totalItens, projCurto, projMedio, projLongo, lucroEstimado, rentabilidade, score, ticketMedio, custoMedio };
@@ -265,12 +274,12 @@ export default function VisualizarLote() {
                                         { label: currentUserRole === 'investidor' ? 'Investimento Total' : 'Valor Arremato', val: formatCurrency(calculations.custoTotal), highlight: true },
                                         ...(currentUserRole !== 'investidor' ? [{ label: 'Custo Total do Lote', val: formatCurrency(calculations.custoTotal) }] : []),
                                         { label: 'Valor de Mercado Total', val: formatCurrency(vm) },
-                                        { label: 'Lucro Estimado (60%)', val: formatCurrency(calculations.lucroEstimado) },
-                                        { label: 'Rentabilidade Estimada', val: `${calculations.rentabilidade.toFixed(1)}%` },
+                                        { label: 'Lucro Estimado (60%)', val: formatCurrency(Math.max(0, calculations.lucroEstimado)), positive: true },
+                                        { label: 'Rentabilidade Estimada', val: `${Math.max(0, calculations.rentabilidade).toFixed(1)}%`, positive: true },
                                     ].map((item, i) => (
                                         <div key={i} className="flex justify-between items-center bg-[#0d1117] p-3 rounded-xl border border-[#30363d]">
                                             <span className="text-sm text-slate-400">{item.label}</span>
-                                            <span className={`font-bold ${item.highlight ? 'text-amber-400 text-xl' : 'text-white'}`}>{item.val}</span>
+                                            <span className={`font-bold ${item.highlight ? 'text-amber-400 text-xl' : item.positive ? 'text-emerald-400' : 'text-white'}`}>{item.val}</span>
                                         </div>
                                     ))}
                                     {/* Status e Vencedor */}
@@ -313,7 +322,7 @@ export default function VisualizarLote() {
                                                 <p className="font-bold text-lg sm:text-xl">{formatCurrency(item.val)}</p>
                                                 <p className="text-xs mt-0.5 font-medium flex items-center justify-end gap-1">
                                                     <span>Lucro Bruto:</span>
-                                                    <span>{formatCurrency(item.val - calculations.custoTotal)}</span>
+                                                    <span className="text-emerald-400">{formatCurrency(Math.max(0, item.val - calculations.custoTotal))}</span>
                                                 </p>
                                             </div>
                                         </div>
