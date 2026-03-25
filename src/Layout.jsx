@@ -453,12 +453,7 @@ export default function Layout({ children, currentPageName }) {
 
   const investorMenuItems = [];
 
-  const leiloeiroMenuItems = [
-    { title: "CRM de Investidores", pageName: "CRMInvestidores" },
-    { title: "Controle de Leilões", pageName: "AuctionControl" },
-    { title: "💰 Minha Carteira", pageName: "AddFunds" },
-    { title: "Perfil", pageName: "Profile" },
-  ];
+  const leiloeiroMenuItems = [];
 
   const adminMenuItems = [
     {
