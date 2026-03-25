@@ -229,7 +229,7 @@ export default function BannerManagement() {
                     if (url && typeof url === 'string' && url.trim().startsWith('http')) {
                       const parsedUrl = new URL(url);
                       const pathLower = parsedUrl.pathname.toLowerCase();
-                      if (!pathLower.endsWith('.webp') && (pathLower.endsWith('.png') || pathLower.endsWith('.jpg') || pathLower.endsWith('.jpeg'))) {
+                      if (!pathLower.endsWith('.webp') && !pathLower.endsWith('.svg') && !pathLower.endsWith('.mp4')) {
                         allItemsToOptimize.push({ item, sourceName: source.name, field, url, isArray: true, arrayIndex: idx, updateApi: source.updateApi });
                       }
                     }
@@ -237,7 +237,7 @@ export default function BannerManagement() {
                 } else if (urlOrArray && typeof urlOrArray === 'string' && urlOrArray.trim().startsWith('http')) {
                     const parsedUrl = new URL(urlOrArray);
                     const pathLower = parsedUrl.pathname.toLowerCase();
-                    if (!pathLower.endsWith('.webp') && (pathLower.endsWith('.png') || pathLower.endsWith('.jpg') || pathLower.endsWith('.jpeg'))) {
+                    if (!pathLower.endsWith('.webp') && !pathLower.endsWith('.svg') && !pathLower.endsWith('.mp4')) {
                       allItemsToOptimize.push({ item, sourceName: source.name, field, url: urlOrArray, isArray: false, updateApi: source.updateApi });
                     }
                 }
@@ -272,10 +272,11 @@ export default function BannerManagement() {
           const parsedCheckUrl = new URL(url);
           const pathLowerCheck = parsedCheckUrl.pathname.toLowerCase();
 
-          if (!pathLowerCheck.endsWith('.webp') || pathLowerCheck.endsWith('.png')) {
+          if (!pathLowerCheck.endsWith('.webp')) {
             const res = await fetch(url);
             const blob = await res.blob();
-            if (!blob.type.startsWith('image/')) continue;
+            // Pula se for vídeo, json ou já for de fato um WebP no Content-Type
+            if (!blob.type.startsWith('image/') || blob.type === 'image/webp' || blob.type.includes('svg')) continue;
             
             const file = new File([blob], `img_${item.id}.png`, { type: blob.type });
             // Força a conversão para WebP passando o 4º parâmetro (force = true)
