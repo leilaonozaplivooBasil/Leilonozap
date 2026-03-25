@@ -179,12 +179,12 @@ export default function BannerManagement() {
 
   const handleOptimizeOldImages = async () => {
     setIsOptimizing(true);
-    setOptimizationProgress({ current: 0, total: 0, statusText: 'Buscando registros no sistema...' });
+    setOptimizationProgress({ current: 0, total: 0, statusText: 'Iniciando extração do banco de dados...' });
 
     // Função utilitária para carregar de forma segura sem quebrar o resto
-    const safeData = async (promise, name) => {
+    const safeData = async (fetcherFunc, name) => {
       try {
-         const data = await promise;
+         const data = await fetcherFunc();
          return data || [];
       } catch (error) {
          console.warn(`Erro ao carregar os itens de ${name}:`, error);
@@ -193,15 +193,26 @@ export default function BannerManagement() {
     };
 
     try {
-      // Definimos as fontes de dados para otimização com seus nomes e chave da imagem
-      const sources = [
-        { name: 'Banners Home', data: await safeData(base44.entities.BannerImage.list(), 'Banners Home'), updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
-        { name: 'Produtos em Destaque', data: await safeData(base44.entities.FeaturedProduct.list(), 'Produtos em Destaque'), updateApi: (id, data) => base44.entities.FeaturedProduct.update(id, data), fields: ['image_url'] },
-        { name: 'Banners Luxury', data: await safeData(base44.entities.BannerImage.filter({ context: 'luxurycollection' }), 'Banners Luxury'), updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
-        { name: 'Produtos do Catálogo', data: await safeData(base44.entities.CatalogProduct.list(), 'Catálogo'), updateApi: (id, data) => base44.entities.CatalogProduct.update(id, data), fields: ['image_url'] },
-        { name: 'Leilões (Produtos)', data: await safeData(base44.entities.Auction.list(), 'Leilões'), updateApi: (id, data) => base44.entities.Auction.update(id, data), fields: ['cover_url', 'image_url', 'image_urls'] },
-        { name: 'Lojistas (Logos)', data: await safeData(base44.entities.Store.list(), 'Lojistas'), updateApi: (id, data) => base44.entities.Store.update(id, data), fields: ['logo_url'] },
+      // Definimos as fontes de dados
+      const sourcesDef = [
+        { name: 'Banners Home', fetcher: () => base44.entities.BannerImage.list(), updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
+        { name: 'Produtos em Destaque', fetcher: () => base44.entities.FeaturedProduct.list(), updateApi: (id, data) => base44.entities.FeaturedProduct.update(id, data), fields: ['image_url'] },
+        { name: 'Banners Luxury', fetcher: () => base44.entities.BannerImage.filter({ context: 'luxurycollection' }), updateApi: (id, data) => base44.entities.BannerImage.update(id, data), fields: ['image_url'] },
+        { name: 'Produtos do Catálogo', fetcher: () => base44.entities.CatalogProduct.list(), updateApi: (id, data) => base44.entities.CatalogProduct.update(id, data), fields: ['image_url'] },
+        { name: 'Leilões (Produtos)', fetcher: () => base44.entities.Auction.list(), updateApi: (id, data) => base44.entities.Auction.update(id, data), fields: ['cover_url', 'image_url', 'image_urls'] },
+        { name: 'Lojistas (Logos)', fetcher: () => base44.entities.Store ? base44.entities.Store.list() : Promise.resolve([]), updateApi: (id, data) => base44.entities.Store.update(id, data), fields: ['logo_url'] },
       ];
+
+      const sources = [];
+      for (let i = 0; i < sourcesDef.length; i++) {
+        const def = sourcesDef[i];
+        setOptimizationProgress({ current: i, total: sourcesDef.length, statusText: `Coletando tabela: ${def.name}...` });
+        
+        const data = await safeData(def.fetcher, def.name);
+        sources.push({ ...def, data });
+      }
+
+      setOptimizationProgress({ current: 0, total: 0, statusText: 'Analisando arquivos que precisam de conversão...' });
 
       // Reunir tudo que precisa ser otimizado
       let allItemsToOptimize = [];
@@ -212,20 +223,26 @@ export default function BannerManagement() {
             source.fields.forEach(field => {
               const urlOrArray = item[field];
               
-              if (Array.isArray(urlOrArray)) {
-                urlOrArray.forEach((url, idx) => {
-                  if (url && typeof url === 'string') {
-                    const lowerUrl = url.toLowerCase();
-                    if (!lowerUrl.endsWith('.webp') && (lowerUrl.endsWith('.png') || lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.jpeg'))) {
-                      allItemsToOptimize.push({ item, sourceName: source.name, field, url, isArray: true, arrayIndex: idx, updateApi: source.updateApi });
+              try {
+                if (Array.isArray(urlOrArray)) {
+                  urlOrArray.forEach((url, idx) => {
+                    if (url && typeof url === 'string' && url.trim().startsWith('http')) {
+                      const parsedUrl = new URL(url);
+                      const pathLower = parsedUrl.pathname.toLowerCase();
+                      if (!pathLower.endsWith('.webp') && (pathLower.endsWith('.png') || pathLower.endsWith('.jpg') || pathLower.endsWith('.jpeg'))) {
+                        allItemsToOptimize.push({ item, sourceName: source.name, field, url, isArray: true, arrayIndex: idx, updateApi: source.updateApi });
+                      }
                     }
-                  }
-                });
-              } else if (urlOrArray && typeof urlOrArray === 'string') {
-                  const lowerUrl = urlOrArray.toLowerCase();
-                  if (!lowerUrl.endsWith('.webp') && (lowerUrl.endsWith('.png') || lowerUrl.endsWith('.jpg') || lowerUrl.endsWith('.jpeg'))) {
-                    allItemsToOptimize.push({ item, sourceName: source.name, field, url: urlOrArray, isArray: false, updateApi: source.updateApi });
-                  }
+                  });
+                } else if (urlOrArray && typeof urlOrArray === 'string' && urlOrArray.trim().startsWith('http')) {
+                    const parsedUrl = new URL(urlOrArray);
+                    const pathLower = parsedUrl.pathname.toLowerCase();
+                    if (!pathLower.endsWith('.webp') && (pathLower.endsWith('.png') || pathLower.endsWith('.jpg') || pathLower.endsWith('.jpeg'))) {
+                      allItemsToOptimize.push({ item, sourceName: source.name, field, url: urlOrArray, isArray: false, updateApi: source.updateApi });
+                    }
+                }
+              } catch (err) {
+                // Ignore malformed URLs
               }
             });
         });
@@ -252,24 +269,31 @@ export default function BannerManagement() {
         });
         
         try {
-          const res = await fetch(url);
-          const blob = await res.blob();
-          if (!blob.type.startsWith('image/')) continue;
-          
-          const file = new File([blob], `img_${item.id}.png`, { type: blob.type });
-          const webpFile = await convertToWebP(file, 0.90);
-          
-          if (webpFile.size < file.size || url.toLowerCase().endsWith('.png')) { // Se for PNG, converte pra webp independente de tamanho pra melhorar web vitals
-            const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
+          const parsedCheckUrl = new URL(url);
+          const pathLowerCheck = parsedCheckUrl.pathname.toLowerCase();
+
+          if (!pathLowerCheck.endsWith('.webp') || pathLowerCheck.endsWith('.png')) {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            if (!blob.type.startsWith('image/')) continue;
             
-            if (isArray) {
-              item[field][arrayIndex] = file_url;
-              await updateApi(item.id, { [field]: item[field] });
-            } else {
-              item[field] = file_url; // para os próximos processamentos do mesmo array se houvesse, embora este seja false
-              await updateApi(item.id, { [field]: file_url });
+            const file = new File([blob], `img_${item.id}.png`, { type: blob.type });
+            const webpFile = await convertToWebP(file, 0.90);
+            
+            if (webpFile.size < file.size || pathLowerCheck.endsWith('.png')) { // Se for PNG, converte pra webp independente de tamanho pra melhorar web vitals
+              const { file_url } = await base44.integrations.Core.UploadFile({ file: webpFile });
+              
+              if (isArray) {
+                const newArray = [...item[field]];
+                newArray[arrayIndex] = file_url;
+                item[field] = newArray;
+                await updateApi(item.id, { [field]: newArray });
+              } else {
+                item[field] = file_url;
+                await updateApi(item.id, { [field]: file_url });
+              }
+              count++;
             }
-            count++;
           }
         } catch (e) {
           console.error("Erro ao otimizar imagem:", item.id, e);
