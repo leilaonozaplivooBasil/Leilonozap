@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 /**
  * dailyReport
@@ -14,10 +14,12 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
 
     // Determina modo: daily (padrão) ou weekly (últimos 7 dias)
+    // Suporta tanto chamada direta (body.mode) quanto automação agendada (function_args via body.args)
     let mode = 'daily';
     try {
       const body = await req.clone().json();
       if (body && body.mode === 'weekly') mode = 'weekly';
+      else if (body && body.args && body.args.mode === 'weekly') mode = 'weekly';
     } catch (_) { /* sem body = daily */ }
 
     const now = new Date();
