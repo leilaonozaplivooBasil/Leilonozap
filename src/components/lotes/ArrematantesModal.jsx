@@ -94,6 +94,7 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
     };
 
     const handleEnviarAcesso = async () => {
+        alert('Enviando para: ' + selected?.email);
         if (!selected?.email) { 
             toast.error('Arrematante sem e-mail cadastrado.'); 
             return; 
