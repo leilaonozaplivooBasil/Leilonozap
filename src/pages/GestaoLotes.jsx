@@ -11,9 +11,11 @@ import { useNavigate } from 'react-router-dom';
 import { distributeAuctionCommissions } from '@/functions/distributeAuctionCommissions';
 import ImportarLotesModal from '@/components/lotes/ImportarLotesModal';
 import AtualizarGradesModal from '@/components/lotes/AtualizarGradesModal';
+import ArrematantesModal from '@/components/lotes/ArrematantesModal';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
+const Arrematante = base44.entities.Arrematante;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
@@ -133,6 +135,8 @@ export default function GestaoLotes() {
     const [investidores, setInvestidores] = useState([]);
     const [parceiros, setParceiros] = useState([]);
     const [arrematantes, setArrematantes] = useState([]);
+    const [arrematantesCadastro, setArrematantesCadastro] = useState([]);
+    const [showArremModal, setShowArremModal] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [busca, setBusca] = useState('');
     const [filtroStatus, setFiltroStatus] = useState('todos');
@@ -154,15 +158,17 @@ export default function GestaoLotes() {
     const loadDados = async () => {
         setIsLoading(true);
         try {
-            const [loteData, invData, parcData] = await Promise.all([
+            const [loteData, invData, parcData, arremData] = await Promise.all([
                 Auction.filter({ is_investment_plan: true }),
                 AppUser.filter({ role: 'investidor' }),
-                AppUser.filter({ role: 'leiloeiro' })
+                AppUser.filter({ role: 'leiloeiro' }),
+                Arrematante.list('-created_date', 200)
             ]);
             setLotes(loteData || []);
             setInvestidores(invData || []);
             setParceiros(parcData || []);
             setArrematantes(invData || []);
+            setArrematantesCadastro(arremData || []);
         } catch (err) {
             console.error('[GestaoLotes] Erro:', err);
         } finally {
@@ -418,6 +424,7 @@ export default function GestaoLotes() {
     const lotesMarketplace = lotes.filter(l => l.is_investment_plan).length;
     const lotesSold = lotes.filter(l => l.status === 'sold').length;
     const statsInvestidores = investidores.length;
+    const statsArrematantes = arrematantesCadastro.length;
 
     // Cards clicáveis mapeados para filtros
     const cards = [
@@ -513,7 +520,17 @@ export default function GestaoLotes() {
                 </div>
 
                 {/* Cards de Arrematantes e Investidores (modais) */}
-                <div className={`grid gap-4 ${currentUserRole === 'admin' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <div className={`grid gap-4 ${currentUserRole === 'admin' ? 'grid-cols-3' : 'grid-cols-2'}`}>
+                    <button
+                        onClick={() => setShowArremModal(true)}
+                        className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 text-left hover:border-rose-500 hover:bg-[#1c2230] transition-all cursor-pointer flex items-center gap-4"
+                    >
+                        <Users className="text-rose-400" size={22} />
+                        <div>
+                            <p className="text-xs text-slate-500 uppercase tracking-wider">Arrematantes</p>
+                            <p className="text-xl font-black text-white">{statsArrematantes}</p>
+                        </div>
+                    </button>
                     {currentUserRole === 'admin' && (
                         <button
                             onClick={() => setShowArrematantesModal(true)}
@@ -521,7 +538,7 @@ export default function GestaoLotes() {
                         >
                             <Users className="text-rose-400" size={22} />
                             <div>
-                                <p className="text-xs text-slate-500 uppercase tracking-wider">Arrematantes</p>
+                                <p className="text-xs text-slate-500 uppercase tracking-wider">App Users Leiloeiros</p>
                                 <p className="text-xl font-black text-white">{arrematantes.length}</p>
                             </div>
                         </button>
@@ -824,6 +841,15 @@ export default function GestaoLotes() {
                 isOpen={showImportModal}
                 onClose={() => setShowImportModal(false)}
                 onPublished={() => loadDados()}
+            />
+
+            <ArrematantesModal
+                isOpen={showArremModal}
+                onClose={() => setShowArremModal(false)}
+                arrematantes={arrematantesCadastro}
+                onRefresh={() => {
+                    Arrematante.list('-created_date', 200).then(data => setArrematantesCadastro(data || []));
+                }}
             />
 
             {gradeUpdateLote && (
