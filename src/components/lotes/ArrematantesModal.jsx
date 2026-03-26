@@ -87,13 +87,22 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
     };
 
     const handleEnviarAcesso = async () => {
-        if (!selected?.email) { toast.error('Arrematante sem e-mail cadastrado.'); return; }
+        if (!selected?.email) { 
+            toast.error('Arrematante sem e-mail cadastrado.'); 
+            return; 
+        }
+        if (!window.confirm(`Enviar acesso para ${selected.full_name} (${selected.email})?`)) return;
         setSendingAccess(true);
         try {
-            await base44.functions.sendPasswordResetEmail({ email: selected.email });
-            toast.success('E-mail de acesso enviado para ' + selected.email);
+            const senhaTemp = 'Acesso@' + Math.floor(1000 + Math.random() * 9000);
+            await base44.integrations.Core.SendEmail({
+                to: selected.email,
+                subject: 'Seu acesso ao Leilão NoZap',
+                body: `Olá, ${selected.full_name}!\n\nSeu acesso foi criado:\n\nE-mail: ${selected.email}\nSenha temporária: ${senhaTemp}\n\nAo entrar, troque sua senha imediatamente.\n\nAcesse: https://leilaonozap.net\n\nEquipe Leilão NoZap`,
+            });
+            toast.success(`✅ E-mail de acesso enviado para ${selected.email}!`);
         } catch (err) {
-            toast.error('Erro ao enviar acesso: ' + err.message);
+            toast.error('Erro ao enviar acesso: ' + (err.message || 'Erro desconhecido'));
         } finally {
             setSendingAccess(false);
         }
