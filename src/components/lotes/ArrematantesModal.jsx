@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Search, ArrowLeft, Pencil, Mail, CheckCircle2, AlertCircle, Loader2, ChevronRight } from 'lucide-react';
+import { X, UserPlus, Search, ArrowLeft, Pencil, Mail, CheckCircle2, AlertCircle, Loader2, ChevronRight, KeyRound } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { toast } from 'sonner';
 
@@ -27,6 +27,7 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
     const [showEmailModal, setShowEmailModal] = useState(false);
     const [emailData, setEmailData] = useState({ subject: '', body: '' });
     const [sendingEmail, setSendingEmail] = useState(false);
+    const [sendingAccess, setSendingAccess] = useState(false);
 
     if (!isOpen) return null;
 
@@ -82,6 +83,19 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
             toast.error('Erro ao enviar e-mail: ' + err.message);
         } finally {
             setSendingEmail(false);
+        }
+    };
+
+    const handleEnviarAcesso = async () => {
+        if (!selected?.email) { toast.error('Arrematante sem e-mail cadastrado.'); return; }
+        setSendingAccess(true);
+        try {
+            await base44.functions.sendPasswordResetEmail({ email: selected.email });
+            toast.success('E-mail de acesso enviado para ' + selected.email);
+        } catch (err) {
+            toast.error('Erro ao enviar acesso: ' + err.message);
+        } finally {
+            setSendingAccess(false);
         }
     };
 
@@ -207,6 +221,9 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
                                 </button>
                                 <button onClick={() => setShowEmailModal(true)} className="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
                                     <Mail size={14} /> Enviar E-mail
+                                </button>
+                                <button onClick={handleEnviarAcesso} disabled={sendingAccess} className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
+                                    {sendingAccess ? <><Loader2 size={14} className="animate-spin" /> Enviando...</> : <><KeyRound size={14} /> Enviar Acesso</>}
                                 </button>
                             </div>
                         </div>
