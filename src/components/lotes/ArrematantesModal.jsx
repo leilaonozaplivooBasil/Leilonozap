@@ -93,6 +93,19 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
         }
     };
 
+    const handleExcluirArrematante = async () => {
+        if (!selected?.id) return;
+        if (!window.confirm(`Tem certeza que deseja excluir "${selected.full_name}" da lista de arrematantes?\n\nIsso NÃO afeta o usuário administrador do sistema.`)) return;
+        try {
+            await Arrematante.delete(selected.id);
+            toast.success('Arrematante excluído com sucesso.');
+            onRefresh();
+            voltarLista();
+        } catch (err) {
+            toast.error('Erro ao excluir: ' + err.message);
+        }
+    };
+
     const handleEnviarAcesso = async () => {
         alert('Enviando para: ' + selected?.email);
         if (!selected?.email) { 
@@ -252,7 +265,7 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
                             </div>
 
                             {/* Ações */}
-                            <div className="flex gap-3">
+                            <div className="flex gap-3 flex-wrap">
                                 <button onClick={() => openEditar(selected)} className="flex-1 bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
                                     <Pencil size={14} /> Editar
                                 </button>
@@ -265,6 +278,11 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
                                     disabled={sendingAccess} 
                                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
                                     {sendingAccess ? <><Loader2 size={14} className="animate-spin" /> Enviando...</> : <><KeyRound size={14} /> Enviar Acesso</>}
+                                </button>
+                            </div>
+                            <div className="mt-3">
+                                <button onClick={handleExcluirArrematante} className="w-full bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 font-bold py-2.5 rounded-xl text-sm flex items-center justify-center gap-2 transition-colors">
+                                    🗑️ Excluir este Arrematante
                                 </button>
                             </div>
                         </div>
