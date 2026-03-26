@@ -393,7 +393,7 @@ export default function MarketplaceLotes() {
                                                     disabled={valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento}
                                                     className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                                 >
-                                                    <DollarSign size={16} /> {saldoSuficiente ? 'Ver Carteira' : 'Competir este Lote'}
+                                                    <DollarSign size={16} /> {saldoSuficiente ? 'Acessar Central' : 'Competir este Lote'}
                                                 </button>
                                             </div>
                                         </>
