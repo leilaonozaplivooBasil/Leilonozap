@@ -59,7 +59,13 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
                 toast.success('Arrematante cadastrado.');
             }
             onRefresh();
-            voltarLista();
+            if (selected?.id) {
+                const updated = { ...selected, ...payload };
+                setSelected(updated);
+                setScreen('perfil');
+            } else {
+                voltarLista();
+            }
         } catch (err) {
             toast.error('Erro ao salvar: ' + err.message);
         } finally {
