@@ -30,7 +30,7 @@ export default function EditAuction() {
     const location = useLocation();
     const auctionId = new URLSearchParams(location.search).get('id');
     const isTestMode = new URLSearchParams(location.search).get('test') === 'true';
-    const fromPage = location.state?.from || 'Home';
+    const fromPage = location.state?.from || sessionStorage.getItem('editAuctionFrom') || 'Home';
 
     const [auction, setAuction] = useState(null);
     const [formData, setFormData] = useState({
@@ -318,9 +318,11 @@ export default function EditAuction() {
             
             if (isReactivating) {
                 alert("✅ Leilão REATIVADO com sucesso! Status: ATIVO. (Você será redirecionado para a sala do leilão)");
+                sessionStorage.removeItem('editAuctionFrom');
                 navigate(createPageUrl("AuctionRoom") + `?id=${auctionId}`, { replace: true });
             } else {
                 alert("✅ Leilão atualizado com sucesso!");
+                sessionStorage.removeItem('editAuctionFrom');
                 navigate(createPageUrl(fromPage), { replace: true });
             }
             
