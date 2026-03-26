@@ -793,7 +793,7 @@ export default function GestaoLotes() {
                                                             <Eye size={14} />
                                                         </button>
                                                         <button
-                                                            onClick={() => navigate(createPageUrl('EditAuction') + `?id=${lote.id}`)}
+                                                            onClick={() => navigate(createPageUrl('EditAuction') + `?id=${lote.id}`, { state: { from: 'GestaoLotes' } })}
                                                             title="Editar lote"
                                                             className="p-1.5 rounded-lg text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
                                                         >

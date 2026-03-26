@@ -30,6 +30,7 @@ export default function EditAuction() {
     const location = useLocation();
     const auctionId = new URLSearchParams(location.search).get('id');
     const isTestMode = new URLSearchParams(location.search).get('test') === 'true';
+    const fromPage = location.state?.from || 'Home';
 
     const [auction, setAuction] = useState(null);
     const [formData, setFormData] = useState({
@@ -320,7 +321,7 @@ export default function EditAuction() {
                 navigate(createPageUrl("AuctionRoom") + `?id=${auctionId}`, { replace: true });
             } else {
                 alert("✅ Leilão atualizado com sucesso!");
-                navigate(createPageUrl("Home"), { replace: true });
+                navigate(createPageUrl(fromPage), { replace: true });
             }
             
         } catch (error) {
@@ -453,7 +454,7 @@ export default function EditAuction() {
         <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
             <div className="max-w-4xl mx-auto space-y-6">
                 <div className="flex items-center justify-between">
-                    <Button variant="outline" onClick={() => navigate(createPageUrl("Home"))}>
+                    <Button variant="outline" onClick={() => navigate(createPageUrl(fromPage))}>
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Voltar
                     </Button>
