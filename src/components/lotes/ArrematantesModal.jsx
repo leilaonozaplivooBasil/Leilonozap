@@ -228,7 +228,7 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
                                 </button>
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                        <div className="flex-1 overflow-y-auto p-5 space-y-4 pb-20">
                             {/* Avatar + Nome */}
                             <div className="flex items-center gap-4">
                                 <div className={`w-16 h-16 rounded-full ${avatarColor(selected.full_name)} flex items-center justify-center text-white text-2xl font-black shrink-0`}>
