@@ -52,6 +52,7 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
             };
             if (selected?.id) {
                 await Arrematante.update(selected.id, payload);
+                setSelected({ ...selected, ...payload });
                 toast.success('Arrematante atualizado.');
             } else {
                 await Arrematante.create(payload);
