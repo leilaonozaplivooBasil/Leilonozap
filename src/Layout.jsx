@@ -104,10 +104,6 @@ export default function Layout({ children, currentPageName }) {
       if (usersInDB && usersInDB.length > 0) {
         const freshUser = usersInDB[0];
 
-        if (freshUser.email === 'luizsantanna@tttcorporate.com') {
-          freshUser.role = 'admin';
-        }
-
         localStorage.setItem('currentUser', JSON.stringify(freshUser));
         setCurrentUser(freshUser);
       }
@@ -290,9 +286,7 @@ export default function Layout({ children, currentPageName }) {
               if (usersInDB && Array.isArray(usersInDB) && usersInDB.length > 0) {
                 const freshUser = usersInDB[0];
 
-                if (freshUser && freshUser.email === 'luizsantanna@tttcorporate.com') {
-                  freshUser.role = 'admin';
-                }
+                // role vem do banco — não precisa forçar por email
 
                 localStorage.setItem('currentUser', JSON.stringify(freshUser));
                 setCurrentUser(freshUser);
@@ -315,18 +309,12 @@ export default function Layout({ children, currentPageName }) {
               } else {
                 // Usuário não encontrado no banco, usa localStorage
                 console.log("⚠️ Usuário não encontrado no banco, usando localStorage");
-                if (userFromStorage.email === 'luizsantanna@tttcorporate.com') {
-                  userFromStorage.role = 'admin';
-                }
                 setCurrentUser(userFromStorage);
                 userFound = true;
               }
             } catch (dbError) {
               // Erro ao buscar no banco, usa localStorage
               console.log("⚠️ Erro ao buscar no banco, usando localStorage");
-              if (userFromStorage.email === 'luizsantanna@tttcorporate.com') {
-                userFromStorage.role = 'admin';
-              }
               setCurrentUser(userFromStorage);
               userFound = true;
             }
@@ -353,9 +341,6 @@ export default function Layout({ children, currentPageName }) {
                   finalUser = usersInDB[0];
                 }
 
-                if (finalUser.email === 'luizsantanna@tttcorporate.com') {
-                  finalUser.role = 'admin';
-                }
                 localStorage.setItem('currentUser', JSON.stringify(finalUser));
                 sessionStorage.setItem('isLoggedIn', 'true');
                 setCurrentUser(finalUser);
@@ -364,9 +349,6 @@ export default function Layout({ children, currentPageName }) {
               } catch (dbError) {
                 // Erro ao buscar no banco, usa dados da plataforma
                 console.log("⚠️ Erro ao buscar AppUser, usando dados da plataforma");
-                if (platformUser.email === 'luizsantanna@tttcorporate.com') {
-                  platformUser.role = 'admin';
-                }
                 localStorage.setItem('currentUser', JSON.stringify(platformUser));
                 sessionStorage.setItem('isLoggedIn', 'true');
                 setCurrentUser(platformUser);

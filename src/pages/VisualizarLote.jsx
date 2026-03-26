@@ -70,16 +70,10 @@ export default function VisualizarLote() {
                 if (partners?.[0]) setParceiro(partners[0]);
             }
             // Carrega admin para pegar partner_plan_amount (taxa plataforma)
-            // Busca pelo email fixo do admin principal para garantir o campo correto
+            // Busca dinamicamente por role: 'admin' — sem hardcode de email
             try {
-                const admins = await AppUser.filter({ email: 'luizsantanna@tttcorporate.com' });
-                if (admins?.[0]) {
-                    setAdminUser(admins[0]);
-                } else {
-                    // Fallback: busca qualquer admin
-                    const adminsFallback = await AppUser.filter({ role: 'admin' });
-                    if (adminsFallback?.[0]) setAdminUser(adminsFallback[0]);
-                }
+                const admins = await AppUser.filter({ role: 'admin' });
+                if (admins?.[0]) setAdminUser(admins[0]);
             } catch {}
         }).finally(() => setIsLoading(false));
     }, [loteId]);
