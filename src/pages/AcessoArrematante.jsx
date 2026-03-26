@@ -86,9 +86,6 @@ export default function AcessoArrematante() {
 
       console.log('🔑 AcessoArrematante: redirecionando para', dest, 'role:', user.role, 'email:', user.email, 'isAdmin:', isAdmin);
       
-      // DEBUG TEMPORÁRIO - remover depois
-      alert('DEBUG: role=' + user.role + ' | email=' + user.email + ' | isAdmin=' + isAdmin + ' | dest=' + dest);
-      
       window.location.href = dest;
 
     } catch (err) {
