@@ -103,6 +103,8 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
         setSendingAccess(true);
         try {
             const senhaTemp = 'Acesso@' + Math.floor(1000 + Math.random() * 9000);
+            console.log('DEBUG handleEnviarAcesso - selected objeto:', selected);
+            console.log('DEBUG handleEnviarAcesso - email que será enviado:', selected?.email);
             await base44.integrations.Core.SendEmail({
                 to: selected.email,
                 subject: 'Seu acesso ao Leilão NoZap',
