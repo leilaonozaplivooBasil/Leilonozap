@@ -98,7 +98,25 @@ export default function ArrematantesModal({ isOpen, onClose, arrematantes, onRef
             await base44.integrations.Core.SendEmail({
                 to: selected.email,
                 subject: 'Seu acesso ao Leilão NoZap',
-                body: `Olá, ${selected.full_name}!\n\nSeu acesso foi criado:\n\nE-mail: ${selected.email}\nSenha temporária: ${senhaTemp}\n\nAo entrar, troque sua senha imediatamente.\n\nAcesse: https://leilaonozap.net\n\nEquipe Leilão NoZap`,
+                body: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;background:#0d1117;color:#e6edf3;padding:32px;border-radius:12px;">
+  <div style="text-align:center;margin-bottom:24px;">
+    <h1 style="color:#f59e0b;font-size:22px;margin:0;">🏷️ Leilão NoZap</h1>
+    <p style="color:#8b949e;font-size:13px;margin:4px 0 0;">Plataforma Oficial de Leilões</p>
+  </div>
+  <h2 style="font-size:18px;margin-bottom:8px;">Olá, ${selected.full_name}! 👋</h2>
+  <p style="color:#8b949e;margin-bottom:24px;">Seu acesso à plataforma foi criado. Use as credenciais abaixo para entrar:</p>
+  <div style="background:#161b22;border:1px solid #30363d;border-radius:8px;padding:20px;margin-bottom:24px;">
+    <p style="margin:0 0 12px;"><span style="color:#8b949e;">📧 E-mail:</span><br><strong style="color:#f59e0b;">${selected.email}</strong></p>
+    <p style="margin:0;"><span style="color:#8b949e;">🔑 Senha temporária:</span><br><strong style="color:#f59e0b;font-size:20px;">${senhaTemp}</strong></p>
+  </div>
+  <div style="background:#1c2a1c;border:1px solid #2ea043;border-radius:8px;padding:16px;margin-bottom:24px;">
+    <p style="margin:0;color:#3fb950;">⚠️ <strong>Troque sua senha imediatamente após o primeiro acesso!</strong></p>
+  </div>
+  <div style="text-align:center;">
+    <a href="https://leilaonozap.net" style="background:#f59e0b;color:#0d1117;font-weight:bold;padding:14px 32px;border-radius:8px;text-decoration:none;font-size:15px;">🚀 Acessar Plataforma</a>
+  </div>
+  <p style="text-align:center;color:#8b949e;font-size:12px;margin-top:24px;">Equipe Leilão NoZap • leilaonozap.net</p>
+</div>`,
             });
             toast.success(`✅ E-mail de acesso enviado para ${selected.email}!`);
         } catch (err) {
