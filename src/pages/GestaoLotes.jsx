@@ -357,7 +357,7 @@ export default function GestaoLotes() {
         let resultado = lotes.filter(l => {
             if (busca && !l.title?.toLowerCase().includes(busca.toLowerCase())) return false;
             if (filtroStatus === 'marketplace' && !l.is_investment_plan) return false;
-            if (filtroStatus === 'active' && l.status !== 'active') return false;
+            if (filtroStatus === 'active' && ['sold','cancelled','finalizado','arrematado'].includes(l.status)) return false;
             if (filtroStatus === 'sold' && l.status !== 'sold') return false;
 
             const lance = l.current_price || l.starting_price || 0;
