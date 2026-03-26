@@ -19,7 +19,6 @@ const Arrematante = base44.entities.Arrematante;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
-// Modal de confirmação de arremate
 function ConfirmarArrematModal({ lote, vencedor, onConfirm, onCancel }) {
     if (!lote || !vencedor) return null;
     const valor = lote.current_price || lote.starting_price;
@@ -57,7 +56,6 @@ function ConfirmarArrematModal({ lote, vencedor, onConfirm, onCancel }) {
     );
 }
 
-// Modal de detalhes do lote
 function LoteDetalheModal({ lote, onClose }) {
     if (!lote) return null;
     const categorias = useMemo(() => {
@@ -79,11 +77,9 @@ function LoteDetalheModal({ lote, onClose }) {
                     <h3 className="text-lg font-bold text-white leading-tight pr-4">{lote.title}</h3>
                     <button onClick={onClose} className="text-slate-500 hover:text-white shrink-0"><XCircle size={20} /></button>
                 </div>
-
                 {lote.image_urls?.[0] && (
                     <img src={lote.image_urls[0]} alt={lote.title} className="w-full h-40 object-cover rounded-xl mb-4 border border-[#30363d]" />
                 )}
-
                 <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="bg-[#0d1117] rounded-xl p-3 border border-[#30363d]">
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Lance Atual</p>
@@ -97,13 +93,11 @@ function LoteDetalheModal({ lote, onClose }) {
                         </div>
                     )}
                 </div>
-
                 {localRetirada && (
                     <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg px-4 py-2 mb-4 text-sm text-blue-300">
                         📍 Local de retirada: <strong>{localRetirada}</strong>
                     </div>
                 )}
-
                 {categorias.length > 0 && (
                     <div>
                         <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Categorias</p>
@@ -120,7 +114,6 @@ function LoteDetalheModal({ lote, onClose }) {
                         </div>
                     </div>
                 )}
-
                 <div className="mt-4 pt-4 border-t border-[#30363d] flex items-center justify-between text-xs text-slate-500">
                     <span>Encerra: {lote.end_time ? new Date(lote.end_time).toLocaleString('pt-BR') : '—'}</span>
                     {lote.winner_name && <span className="text-blue-300 font-semibold">Vencedor: {lote.winner_name}</span>}
@@ -148,7 +141,7 @@ export default function GestaoLotes() {
     const [showArrematantesModal, setShowArrematantesModal] = useState(false);
     const [showInvestidoresModal, setShowInvestidoresModal] = useState(false);
     const [loteDetalhe, setLoteDetalhe] = useState(null);
-    const [confirmarArremate, setConfirmarArremate] = useState(null); // {lote, vencedor}
+    const [confirmarArremate, setConfirmarArremate] = useState(null);
     const [sortConfig, setSortConfig] = useState({ key: null, dir: 'asc' });
     const navigate = useNavigate();
     const currentUserRole = (() => { try { return JSON.parse(localStorage.getItem('currentUser'))?.role; } catch { return null; } })();
@@ -175,8 +168,6 @@ export default function GestaoLotes() {
             setIsLoading(false);
         }
     };
-
-    // ── LÓGICA DE NEGÓCIO PRESERVADA ──
 
     const toggleInvestmentPlan = async (lote) => {
         if (!lote.is_investment_plan && !lote.partner_id) {
@@ -242,7 +233,6 @@ export default function GestaoLotes() {
         }
     };
 
-    // Registrar arremate — agora via modal de confirmação
     const iniciarRegistrarArremate = (lote, vencedorId) => {
         if (!vencedorId) return;
         const vencedor = investidores.find(i => i.id === vencedorId);
@@ -356,8 +346,6 @@ export default function GestaoLotes() {
         navigator.clipboard.writeText(url).then(() => toast.success('Link do marketplace copiado!'));
     };
 
-    // ── FILTROS E ORDENAÇÃO ──
-
     const handleSort = (key) => {
         setSortConfig(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
     };
@@ -371,7 +359,6 @@ export default function GestaoLotes() {
             if (filtroStatus === 'marketplace' && !l.is_investment_plan) return false;
             if (filtroStatus === 'active' && l.status !== 'active') return false;
             if (filtroStatus === 'sold' && l.status !== 'sold') return false;
-            if (filtroStatus === 'todos') { /* sem filtro */ }
 
             const lance = l.current_price || l.starting_price || 0;
             if (filtroValor === 'ate10k' && lance > 10000) return false;
@@ -402,31 +389,17 @@ export default function GestaoLotes() {
         return resultado;
     }, [lotes, busca, filtroStatus, filtroValor, filtroData, sortConfig]);
 
-    // ── INDICADORES DO HEADER ──
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-    const fimDia = new Date(hoje); fimDia.setHours(23, 59, 59, 999);
 
-    const valorCarteiraAtiva = lotes
-        .filter(l => l.status === 'active')
-        .reduce((sum, l) => sum + (l.current_price || l.starting_price || 0), 0);
-
-    const valorArrematadoMes = lotes
-        .filter(l => l.status === 'sold' && l.updated_date && new Date(l.updated_date) >= inicioMes)
-        .reduce((sum, l) => sum + (l.current_price || l.starting_price || 0), 0);
-
-    const lotesVencendoHoje = lotes.filter(l => {
-        if (!l.end_time || l.status !== 'active') return false;
-        const d = new Date(l.end_time); d.setHours(0, 0, 0, 0);
-        return d.getTime() === hoje.getTime();
-    }).length;
-
+    const valorCarteiraAtiva = lotes.filter(l => l.status === 'active').reduce((sum, l) => sum + (l.current_price || l.starting_price || 0), 0);
+    const valorArrematadoMes = lotes.filter(l => l.status === 'sold' && l.updated_date && new Date(l.updated_date) >= inicioMes).reduce((sum, l) => sum + (l.current_price || l.starting_price || 0), 0);
+    const lotesVencendoHoje = lotes.filter(l => { if (!l.end_time || l.status !== 'active') return false; const d = new Date(l.end_time); d.setHours(0, 0, 0, 0); return d.getTime() === hoje.getTime(); }).length;
     const lotesMarketplace = lotes.filter(l => l.is_investment_plan).length;
     const lotesSold = lotes.filter(l => l.status === 'sold').length;
     const statsInvestidores = investidores.length;
     const statsArrematantes = arrematantesCadastro.length;
 
-    // Cards clicáveis mapeados para filtros
     const cards = [
         { label: 'Total de Lotes', value: lotes.length, icon: Package, color: 'text-slate-400', filtro: 'todos', borderActive: 'border-slate-500' },
         { label: 'No Marketplace', value: lotesMarketplace, icon: DollarSign, color: 'text-blue-400', filtro: 'marketplace', borderActive: 'border-blue-500' },
@@ -438,11 +411,15 @@ export default function GestaoLotes() {
         <ArrowUpDown size={12} className={`inline ml-1 ${sortConfig.key === col ? 'text-amber-400' : 'text-slate-600'}`} />
     );
 
+    const handleEditarLote = (loteId) => {
+        sessionStorage.setItem('editAuctionFrom', 'GestaoLotes');
+        navigate(createPageUrl('EditAuction') + `?id=${loteId}`);
+    };
+
     return (
         <div className="min-h-screen bg-[#0d1117] text-slate-200 font-sans p-4 xl:p-8">
             <div className="max-w-7xl mx-auto space-y-6">
 
-                {/* Header */}
                 <header className="mb-2">
                     <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold tracking-widest uppercase">
                         <Gavel size={14} />
@@ -459,16 +436,12 @@ export default function GestaoLotes() {
                             <button onClick={loadDados} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm border border-[#30363d] rounded-lg px-3 py-2 transition-colors">
                                 <RefreshCw size={14} />
                             </button>
-                            <button
-                                onClick={() => setShowImportModal(true)}
-                                className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold rounded-lg px-4 py-2 transition-colors"
-                            >
+                            <button onClick={() => setShowImportModal(true)} className="flex items-center gap-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-bold rounded-lg px-4 py-2 transition-colors">
                                 <Plus size={14} /> Novo Lote
                             </button>
                         </div>
                     </div>
 
-                    {/* Indicadores do header */}
                     <div className="flex flex-wrap gap-4 mt-4">
                         <div className="bg-[#161b22] border border-[#30363d] rounded-xl px-4 py-2 flex items-center gap-3">
                             <DollarSign size={16} className="text-emerald-400" />
@@ -496,17 +469,12 @@ export default function GestaoLotes() {
                     </div>
                 </header>
 
-                {/* Cards clicáveis (filtram tabela) */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {cards.map((card, i) => {
                         const isActive = filtroStatus === card.filtro;
                         return (
-                            <button
-                                key={i}
-                                onClick={() => setFiltroStatus(card.filtro)}
-                                className={`bg-[#161b22] border-2 rounded-2xl p-5 text-left transition-all cursor-pointer hover:bg-[#1c2230] ${
-                                    isActive ? `${card.borderActive} shadow-lg` : 'border-[#30363d] hover:border-slate-500'
-                                }`}
+                            <button key={i} onClick={() => setFiltroStatus(card.filtro)}
+                                className={`bg-[#161b22] border-2 rounded-2xl p-5 text-left transition-all cursor-pointer hover:bg-[#1c2230] ${isActive ? `${card.borderActive} shadow-lg` : 'border-[#30363d] hover:border-slate-500'}`}
                             >
                                 <div className="flex items-center justify-between mb-3">
                                     <card.icon className={card.color} size={22} />
@@ -519,12 +487,8 @@ export default function GestaoLotes() {
                     })}
                 </div>
 
-                {/* Cards de Arrematantes e Investidores (modais) */}
                 <div className={`grid gap-4 ${currentUserRole === 'admin' ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                    <button
-                        onClick={() => setShowArremModal(true)}
-                        className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 text-left hover:border-rose-500 hover:bg-[#1c2230] transition-all cursor-pointer flex items-center gap-4"
-                    >
+                    <button onClick={() => setShowArremModal(true)} className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 text-left hover:border-rose-500 hover:bg-[#1c2230] transition-all cursor-pointer flex items-center gap-4">
                         <Users className="text-rose-400" size={22} />
                         <div>
                             <p className="text-xs text-slate-500 uppercase tracking-wider">Arrematantes</p>
@@ -532,10 +496,7 @@ export default function GestaoLotes() {
                         </div>
                     </button>
                     {currentUserRole === 'admin' && (
-                        <button
-                            onClick={() => setShowArrematantesModal(true)}
-                            className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 text-left hover:border-rose-500 hover:bg-[#1c2230] transition-all cursor-pointer flex items-center gap-4"
-                        >
+                        <button onClick={() => setShowArrematantesModal(true)} className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 text-left hover:border-rose-500 hover:bg-[#1c2230] transition-all cursor-pointer flex items-center gap-4">
                             <Users className="text-rose-400" size={22} />
                             <div>
                                 <p className="text-xs text-slate-500 uppercase tracking-wider">App Users Leiloeiros</p>
@@ -543,10 +504,7 @@ export default function GestaoLotes() {
                             </div>
                         </button>
                     )}
-                    <button
-                        onClick={() => setShowInvestidoresModal(true)}
-                        className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 text-left hover:border-violet-500 hover:bg-[#1c2230] transition-all cursor-pointer flex items-center gap-4"
-                    >
+                    <button onClick={() => setShowInvestidoresModal(true)} className="bg-[#161b22] border border-[#30363d] rounded-2xl p-4 text-left hover:border-violet-500 hover:bg-[#1c2230] transition-all cursor-pointer flex items-center gap-4">
                         <Users className="text-violet-400" size={22} />
                         <div>
                             <p className="text-xs text-slate-500 uppercase tracking-wider">Investidores</p>
@@ -555,54 +513,36 @@ export default function GestaoLotes() {
                     </button>
                 </div>
 
-                {/* Filtros avançados */}
                 <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
                     <div className="relative flex-1 min-w-[200px]">
                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                            type="text"
-                            placeholder="Buscar lote por título..."
-                            value={busca}
-                            onChange={e => setBusca(e.target.value)}
-                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-9 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500"
-                        />
+                        <input type="text" placeholder="Buscar lote por título..." value={busca} onChange={e => setBusca(e.target.value)}
+                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-9 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-amber-500" />
                     </div>
-                    <select
-                        value={filtroValor}
-                        onChange={e => setFiltroValor(e.target.value)}
-                        className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-amber-500"
-                    >
+                    <select value={filtroValor} onChange={e => setFiltroValor(e.target.value)} className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-amber-500">
                         <option value="todos">Todos os valores</option>
                         <option value="ate10k">Até R$ 10k</option>
                         <option value="10k50k">R$ 10k – R$ 50k</option>
                         <option value="acima50k">Acima de R$ 50k</option>
                     </select>
-                    <select
-                        value={filtroData}
-                        onChange={e => setFiltroData(e.target.value)}
-                        className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-amber-500"
-                    >
+                    <select value={filtroData} onChange={e => setFiltroData(e.target.value)} className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2.5 text-sm text-slate-300 focus:outline-none focus:border-amber-500">
                         <option value="todos">Qualquer data</option>
                         <option value="hoje">Vence hoje</option>
                         <option value="semana">Próximos 7 dias</option>
                         <option value="vencidos">Vencidos</option>
                     </select>
                     {(filtroStatus !== 'todos' || filtroValor !== 'todos' || filtroData !== 'todos' || busca) && (
-                        <button
-                            onClick={() => { setFiltroStatus('todos'); setFiltroValor('todos'); setFiltroData('todos'); setBusca(''); }}
-                            className="px-3 py-2 rounded-lg text-xs font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors"
-                        >
+                        <button onClick={() => { setFiltroStatus('todos'); setFiltroValor('todos'); setFiltroData('todos'); setBusca(''); }}
+                            className="px-3 py-2 rounded-lg text-xs font-bold text-red-400 border border-red-500/30 hover:bg-red-500/10 transition-colors">
                             Limpar filtros
                         </button>
                     )}
                 </div>
 
-                {/* Contagem de resultados */}
                 <p className="text-xs text-slate-500">
                     Exibindo <span className="text-slate-300 font-semibold">{lotesFiltrados.length}</span> de {lotes.length} lotes
                 </p>
 
-                {/* Tabela */}
                 <div className="bg-[#161b22] border border-[#30363d] rounded-2xl shadow-xl overflow-hidden">
                     {isLoading ? (
                         <div className="flex justify-center py-16">
@@ -615,16 +555,10 @@ export default function GestaoLotes() {
                             <table className="w-full text-left border-collapse text-sm">
                                 <thead>
                                     <tr className="bg-[#0d1117] text-slate-400 text-xs font-semibold uppercase tracking-wider">
-                                        <th className="px-4 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('title')}>
-                                            Lote <SortIcon col="title" />
-                                        </th>
-                                        <th className="px-4 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('valor')}>
-                                            Lance <SortIcon col="valor" />
-                                        </th>
+                                        <th className="px-4 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('title')}>Lote <SortIcon col="title" /></th>
+                                        <th className="px-4 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('valor')}>Lance <SortIcon col="valor" /></th>
                                         <th className="px-4 py-4">Val. Mercado</th>
-                                        <th className="px-4 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('status')}>
-                                            Status <SortIcon col="status" />
-                                        </th>
+                                        <th className="px-4 py-4 cursor-pointer hover:text-white" onClick={() => handleSort('status')}>Status <SortIcon col="status" /></th>
                                         <th className="px-4 py-4">Parceiro</th>
                                         <th className="px-4 py-4 text-center">Marketplace</th>
                                         <th className="px-4 py-4">Vencedor / Registrar</th>
@@ -638,10 +572,8 @@ export default function GestaoLotes() {
                                         const lance = lote.current_price || lote.starting_price || 0;
                                         const margem = vm > 0 && lance > 0 ? (((vm - lance) / lance) * 100).toFixed(0) : null;
                                         const thumb = lote.image_urls?.[0];
-
                                         return (
                                             <tr key={lote.id} className="border-b border-[#30363d]/50 hover:bg-white/[0.02] transition-colors">
-                                                {/* Lote + Thumbnail */}
                                                 <td className="px-4 py-3 max-w-[220px]">
                                                     <div className="flex items-center gap-3">
                                                         {thumb ? (
@@ -652,179 +584,92 @@ export default function GestaoLotes() {
                                                             </div>
                                                         )}
                                                         <div className="min-w-0">
-                                                            <button
-                                                                onClick={() => navigate(createPageUrl('VisualizarLote') + `?id=${lote.id}`)}
-                                                                className="font-semibold text-amber-400 hover:text-amber-300 truncate text-left transition-colors block max-w-[150px]"
-                                                                title={lote.title}
-                                                            >
+                                                            <button onClick={() => navigate(createPageUrl('VisualizarLote') + `?id=${lote.id}`)}
+                                                                className="font-semibold text-amber-400 hover:text-amber-300 truncate text-left transition-colors block max-w-[150px]" title={lote.title}>
                                                                 {lote.title}
                                                             </button>
-                                                            <p className="text-[10px] text-slate-500">
-                                                                {lote.end_time ? new Date(lote.end_time).toLocaleDateString('pt-BR') : '—'}
-                                                            </p>
+                                                            <p className="text-[10px] text-slate-500">{lote.end_time ? new Date(lote.end_time).toLocaleDateString('pt-BR') : '—'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
-
-                                                {/* Lance */}
-                                                <td className="px-4 py-3 font-bold text-emerald-400 whitespace-nowrap">
-                                                    {formatCurrency(lance)}
-                                                </td>
-
-                                                {/* Valor de Mercado + Margem */}
+                                                <td className="px-4 py-3 font-bold text-emerald-400 whitespace-nowrap">{formatCurrency(lance)}</td>
                                                 <td className="px-4 py-3">
                                                     {vm > 0 ? (
                                                         <div>
                                                             <p className="text-blue-400 font-semibold text-xs">{formatCurrency(vm)}</p>
-                                                            {margem && (
-                                                                <p className={`text-[10px] font-bold ${parseInt(margem) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                                    {parseInt(margem) >= 0 ? '+' : ''}{margem}%
-                                                                </p>
-                                                            )}
+                                                            {margem && <p className={`text-[10px] font-bold ${parseInt(margem) >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{parseInt(margem) >= 0 ? '+' : ''}{margem}%</p>}
                                                         </div>
-                                                    ) : (
-                                                        <span className="text-slate-600 text-xs">—</span>
-                                                    )}
+                                                    ) : <span className="text-slate-600 text-xs">—</span>}
                                                 </td>
-
-                                                {/* Status */}
                                                 <td className="px-4 py-3">
-                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider ${
-                                                        lote.status === 'active' ? 'bg-emerald-500/10 text-emerald-400'
-                                                        : lote.status === 'sold' ? 'bg-blue-500/10 text-blue-400'
-                                                        : lote.status === 'ended' ? 'bg-slate-500/10 text-slate-400'
-                                                        : 'bg-orange-500/10 text-orange-400'
-                                                    }`}>
-                                                        {lote.status === 'active' ? 'ATIVO'
-                                                        : lote.status === 'sold' ? 'ARREMATADO'
-                                                        : lote.status === 'ended' ? 'ENCERRADO'
-                                                        : lote.status?.toUpperCase() || 'IMPORTADO'}
+                                                    <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider ${lote.status === 'active' ? 'bg-emerald-500/10 text-emerald-400' : lote.status === 'sold' ? 'bg-blue-500/10 text-blue-400' : lote.status === 'ended' ? 'bg-slate-500/10 text-slate-400' : 'bg-orange-500/10 text-orange-400'}`}>
+                                                        {lote.status === 'active' ? 'ATIVO' : lote.status === 'sold' ? 'ARREMATADO' : lote.status === 'ended' ? 'ENCERRADO' : lote.status?.toUpperCase() || 'IMPORTADO'}
                                                     </span>
-                                                    {lote.lot_status && (
-                                                        <p className="text-[9px] text-slate-500 mt-0.5 uppercase tracking-wider">{lote.lot_status.replace(/_/g, ' ')}</p>
-                                                    )}
+                                                    {lote.lot_status && <p className="text-[9px] text-slate-500 mt-0.5 uppercase tracking-wider">{lote.lot_status.replace(/_/g, ' ')}</p>}
                                                 </td>
-
-                                                {/* Parceiro */}
                                                 <td className="px-4 py-3">
                                                     <div className="flex flex-col gap-1">
-                                                        <select
-                                                            value={lote.partner_id || ''}
-                                                            onChange={e => atualizarParceiro(lote, e.target.value)}
-                                                            disabled={isSaving === lote.id}
-                                                            className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 max-w-[140px]"
-                                                        >
+                                                        <select value={lote.partner_id || ''} onChange={e => atualizarParceiro(lote, e.target.value)} disabled={isSaving === lote.id}
+                                                            className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 max-w-[140px]">
                                                             <option value="">Sem parceiro</option>
-                                                            {parceiros.map(p => (
-                                                                <option key={p.id} value={p.id}>{p.full_name}</option>
-                                                            ))}
+                                                            {parceiros.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
                                                         </select>
                                                         <div className="flex items-center gap-1">
-                                                            <input
-                                                                type="number"
-                                                                min="0" max="100" step="0.5"
+                                                            <input type="number" min="0" max="100" step="0.5"
                                                                 key={`comm-${lote.id}-${lote.partner_commission_percentual}`}
                                                                 defaultValue={lote.partner_commission_percentual || ''}
                                                                 onBlur={e => atualizarComissaoParceiro(lote, e.target.value)}
-                                                                placeholder="Comissão %"
-                                                                disabled={isSaving === lote.id}
-                                                                className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 w-[90px]"
-                                                            />
+                                                                placeholder="Comissão %" disabled={isSaving === lote.id}
+                                                                className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500 w-[90px]" />
                                                             <span className="text-slate-500 text-xs">%</span>
                                                         </div>
                                                     </div>
                                                 </td>
-
-                                                {/* Marketplace toggle */}
                                                 <td className="px-4 py-3 text-center">
-                                                    <button
-                                                        onClick={() => toggleInvestmentPlan(lote)}
-                                                        disabled={isSaving === lote.id}
-                                                        className="transition-colors"
-                                                        title={lote.is_investment_plan ? 'Remover do marketplace' : 'Publicar no marketplace'}
-                                                    >
-                                                        {lote.is_investment_plan
-                                                            ? <CheckCircle2 size={20} className="text-emerald-400" />
-                                                            : <XCircle size={20} className="text-slate-600 hover:text-slate-400" />
-                                                        }
+                                                    <button onClick={() => toggleInvestmentPlan(lote)} disabled={isSaving === lote.id} className="transition-colors"
+                                                        title={lote.is_investment_plan ? 'Remover do marketplace' : 'Publicar no marketplace'}>
+                                                        {lote.is_investment_plan ? <CheckCircle2 size={20} className="text-emerald-400" /> : <XCircle size={20} className="text-slate-600 hover:text-slate-400" />}
                                                     </button>
                                                 </td>
-
-                                                {/* Vencedor / Registrar arremate */}
                                                 <td className="px-4 py-3">
                                                     {lote.winner_name ? (
                                                         <span className="text-blue-300 text-xs font-semibold">{lote.winner_name}</span>
                                                     ) : lote.status === 'active' ? (
-                                                        <select
-                                                            onChange={e => e.target.value && iniciarRegistrarArremate(lote, e.target.value)}
-                                                            defaultValue=""
-                                                            className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500"
-                                                        >
+                                                        <select onChange={e => e.target.value && iniciarRegistrarArremate(lote, e.target.value)} defaultValue=""
+                                                            className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-amber-500">
                                                             <option value="">Registrar arremate...</option>
-                                                            {investidores.map(inv => (
-                                                                <option key={inv.id} value={inv.id}>{inv.full_name}</option>
-                                                            ))}
+                                                            {investidores.map(inv => <option key={inv.id} value={inv.id}>{inv.full_name}</option>)}
                                                         </select>
                                                     ) : <span className="text-slate-600 text-xs">—</span>}
                                                 </td>
-
-                                                {/* Distribuir comissão */}
                                                 <td className="px-4 py-3 text-center">
                                                     {lote.status === 'sold' && (
-                                                        <button
-                                                            onClick={() => distribuirComissao(lote)}
-                                                            disabled={isSaving === lote.id || lote.commissions_distributed}
+                                                        <button onClick={() => distribuirComissao(lote)} disabled={isSaving === lote.id || lote.commissions_distributed}
                                                             title={lote.commissions_distributed ? 'Comissão já distribuída' : 'Distribuir comissão ao parceiro'}
-                                                            className={`transition-colors ${lote.commissions_distributed ? 'text-emerald-400 cursor-default' : 'text-slate-500 hover:text-amber-400'}`}
-                                                        >
+                                                            className={`transition-colors ${lote.commissions_distributed ? 'text-emerald-400 cursor-default' : 'text-slate-500 hover:text-amber-400'}`}>
                                                             <DollarSign size={16} />
                                                         </button>
                                                     )}
                                                 </td>
-
-                                                {/* Ações rápidas */}
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center gap-1.5 justify-center">
-                                                        <button
-                                                            onClick={() => setLoteDetalhe(lote)}
-                                                            title="Ver detalhes"
-                                                            className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
-                                                        >
+                                                        <button onClick={() => setLoteDetalhe(lote)} title="Ver detalhes" className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors">
                                                             <Eye size={14} />
                                                         </button>
-                                                        <button
-                                                            onClick={() => {
-                                                                sessionStorage.setItem('editAuctionFrom', 'GestaoLotes');
-                                                                navigate(createPageUrl('EditAuction') + `?id=${lote.id}`);
-                                                            }}
-                                                            title="Editar lote"
-                                                            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
-                                                        >
+                                                        <button onClick={() => handleEditarLote(lote.id)} title="Editar lote" className="p-1.5 rounded-lg text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors">
                                                             <Pencil size={14} />
                                                         </button>
-                                                        <button
-                                                            onClick={() => compartilharLote(lote)}
-                                                            title="Copiar link do marketplace"
-                                                            className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                                                        >
+                                                        <button onClick={() => compartilharLote(lote)} title="Copiar link do marketplace" className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors">
                                                             <Copy size={14} />
                                                         </button>
                                                         {!lote.lot_grades_json && (
-                                                            <button
-                                                                onClick={() => setGradeUpdateLote(lote)}
-                                                                disabled={isSaving === lote.id}
-                                                                title="Atualizar grades"
-                                                                className="text-amber-500/60 hover:text-amber-400 transition-colors disabled:opacity-40 text-xs font-bold px-1"
-                                                            >
+                                                            <button onClick={() => setGradeUpdateLote(lote)} disabled={isSaving === lote.id} title="Atualizar grades"
+                                                                className="text-amber-500/60 hover:text-amber-400 transition-colors disabled:opacity-40 text-xs font-bold px-1">
                                                                 ⚡
                                                             </button>
                                                         )}
-                                                        <button
-                                                            onClick={() => excluirLote(lote)}
-                                                            disabled={isSaving === lote.id}
-                                                            title="Excluir lote"
-                                                            className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40"
-                                                        >
+                                                        <button onClick={() => excluirLote(lote)} disabled={isSaving === lote.id} title="Excluir lote"
+                                                            className="p-1.5 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-40">
                                                             <Trash2 size={14} />
                                                         </button>
                                                     </div>
@@ -839,108 +684,69 @@ export default function GestaoLotes() {
                 </div>
             </div>
 
-            {/* Modais */}
-            <ImportarLotesModal
-                isOpen={showImportModal}
-                onClose={() => setShowImportModal(false)}
-                onPublished={() => loadDados()}
-            />
+            <ImportarLotesModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} onPublished={() => loadDados()} />
+            <ArrematantesModal isOpen={showArremModal} onClose={() => setShowArremModal(false)} arrematantes={arrematantesCadastro}
+                onRefresh={() => { Arrematante.list('-created_date', 200).then(data => setArrematantesCadastro(data || [])); }} />
 
-            <ArrematantesModal
-                isOpen={showArremModal}
-                onClose={() => setShowArremModal(false)}
-                arrematantes={arrematantesCadastro}
-                onRefresh={() => {
-                    Arrematante.list('-created_date', 200).then(data => setArrematantesCadastro(data || []));
-                }}
-            />
-
-            {gradeUpdateLote && (
-                <AtualizarGradesModal
-                    isOpen={true}
-                    onClose={() => setGradeUpdateLote(null)}
-                    lote={gradeUpdateLote}
-                    onSuccess={loadDados}
-                />
-            )}
-
-            {loteDetalhe && (
-                <LoteDetalheModal lote={loteDetalhe} onClose={() => setLoteDetalhe(null)} />
-            )}
-
+            {gradeUpdateLote && <AtualizarGradesModal isOpen={true} onClose={() => setGradeUpdateLote(null)} lote={gradeUpdateLote} onSuccess={loadDados} />}
+            {loteDetalhe && <LoteDetalheModal lote={loteDetalhe} onClose={() => setLoteDetalhe(null)} />}
             {confirmarArremate && (
-                <ConfirmarArrematModal
-                    lote={confirmarArremate.lote}
-                    vencedor={confirmarArremate.vencedor}
-                    onConfirm={confirmarRegistrarArremate}
-                    onCancel={() => setConfirmarArremate(null)}
-                />
+                <ConfirmarArrematModal lote={confirmarArremate.lote} vencedor={confirmarArremate.vencedor}
+                    onConfirm={confirmarRegistrarArremate} onCancel={() => setConfirmarArremate(null)} />
             )}
 
-            {/* Modal Arrematantes */}
             {showArrematantesModal && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Users size={20} className="text-rose-400" /> Arrematantes ({arrematantes.length})
-                            </h2>
-                            <button onClick={() => setShowArrematantesModal(false)} className="text-slate-500 hover:text-white">
-                                <XCircle size={20} />
-                            </button>
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2"><Users size={20} className="text-rose-400" /> Arrematantes ({arrematantes.length})</h2>
+                            <button onClick={() => setShowArrematantesModal(false)} className="text-slate-500 hover:text-white"><XCircle size={20} /></button>
                         </div>
                         <div className="space-y-2">
-                            {arrematantes.length === 0 ? (
-                                <p className="text-slate-500 text-center py-4">Nenhum arrematante cadastrado.</p>
-                            ) : arrematantes.map(user => (
-                                <div key={user.id} className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3 flex items-start justify-between hover:border-rose-500/50 transition-colors">
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-white">{user.full_name}</p>
-                                        <p className="text-xs text-slate-500">{user.email}</p>
-                                        {user.phone && <p className="text-xs text-slate-500">{user.phone}</p>}
-                                    </div>
-                                    {user.partner_plan_amount != null && (
-                                        <div className="text-right">
-                                            <p className="text-xs text-slate-500">Taxa</p>
-                                            <p className="font-bold text-rose-400">{user.partner_plan_amount}%</p>
+                            {arrematantes.length === 0 ? <p className="text-slate-500 text-center py-4">Nenhum arrematante cadastrado.</p>
+                                : arrematantes.map(user => (
+                                    <div key={user.id} className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3 flex items-start justify-between hover:border-rose-500/50 transition-colors">
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-white">{user.full_name}</p>
+                                            <p className="text-xs text-slate-500">{user.email}</p>
+                                            {user.phone && <p className="text-xs text-slate-500">{user.phone}</p>}
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                        {user.partner_plan_amount != null && (
+                                            <div className="text-right">
+                                                <p className="text-xs text-slate-500">Taxa</p>
+                                                <p className="font-bold text-rose-400">{user.partner_plan_amount}%</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal Investidores */}
             {showInvestidoresModal && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-[#161b22] border border-[#30363d] rounded-2xl p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                <Users size={20} className="text-violet-400" /> Investidores ({investidores.length})
-                            </h2>
-                            <button onClick={() => setShowInvestidoresModal(false)} className="text-slate-500 hover:text-white">
-                                <XCircle size={20} />
-                            </button>
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2"><Users size={20} className="text-violet-400" /> Investidores ({investidores.length})</h2>
+                            <button onClick={() => setShowInvestidoresModal(false)} className="text-slate-500 hover:text-white"><XCircle size={20} /></button>
                         </div>
                         <div className="space-y-2">
-                            {investidores.length === 0 ? (
-                                <p className="text-slate-500 text-center py-4">Nenhum investidor cadastrado.</p>
-                            ) : investidores.map(user => (
-                                <div key={user.id} className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3 flex items-start justify-between hover:border-violet-500/50 transition-colors">
-                                    <div className="flex-1">
-                                        <p className="font-semibold text-white">{user.full_name}</p>
-                                        <p className="text-xs text-slate-500">{user.email}</p>
-                                        {user.phone && <p className="text-xs text-slate-500">{user.phone}</p>}
+                            {investidores.length === 0 ? <p className="text-slate-500 text-center py-4">Nenhum investidor cadastrado.</p>
+                                : investidores.map(user => (
+                                    <div key={user.id} className="bg-[#0d1117] border border-[#30363d] rounded-lg p-3 flex items-start justify-between hover:border-violet-500/50 transition-colors">
+                                        <div className="flex-1">
+                                            <p className="font-semibold text-white">{user.full_name}</p>
+                                            <p className="text-xs text-slate-500">{user.email}</p>
+                                            {user.phone && <p className="text-xs text-slate-500">{user.phone}</p>}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-xs text-slate-500">Saldo Disponível</p>
+                                            <p className="font-bold text-violet-400">{formatCurrency(user.saldo_disponivel || 0)}</p>
+                                            <p className="text-xs text-slate-600 mt-1">Alocado: {formatCurrency(user.saldo_alocado || 0)}</p>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-xs text-slate-500">Saldo Disponível</p>
-                                        <p className="font-bold text-violet-400">{formatCurrency(user.saldo_disponivel || 0)}</p>
-                                        <p className="text-xs text-slate-600 mt-1">Alocado: {formatCurrency(user.saldo_alocado || 0)}</p>
-                                    </div>
-                                </div>
-            ))}
+                                ))}
                         </div>
                     </div>
                 </div>
