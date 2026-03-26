@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import {
     Plus, RefreshCw, Search, Eye, CheckCircle2, XCircle, Package, Users,
     DollarSign, Gavel, ArrowLeft, Trash2, Copy, ChevronDown, ChevronUp,
-    TrendingUp, Calendar, Filter, ArrowUpDown
+    TrendingUp, Calendar, Filter, ArrowUpDown, Pencil
 } from 'lucide-react';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
@@ -774,6 +774,13 @@ export default function GestaoLotes() {
                                                             className="p-1.5 rounded-lg text-slate-500 hover:text-blue-400 hover:bg-blue-500/10 transition-colors"
                                                         >
                                                             <Eye size={14} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => navigate(createPageUrl('EditAuction') + `?id=${lote.id}`)}
+                                                            title="Editar lote"
+                                                            className="p-1.5 rounded-lg text-slate-500 hover:text-amber-400 hover:bg-amber-500/10 transition-colors"
+                                                        >
+                                                            <Pencil size={14} />
                                                         </button>
                                                         <button
                                                             onClick={() => compartilharLote(lote)}
