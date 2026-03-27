@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Package, TrendingUp, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft, Wallet, ShoppingCart, Lock } from 'lucide-react';
+import { Package, TrendingUp, AlertCircle, Search, Star, RefreshCw, X, DollarSign, CheckCircle2, ArrowLeft, Wallet, ShoppingCart, Users, User } from 'lucide-react';
 import LoteReservadoOverlay from '../components/lotes/LoteReservadoOverlay';
 import LoteArrematadoOverlay from '../components/lotes/LoteArrematadoOverlay';
 import { motion, AnimatePresence } from 'framer-motion';
 import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import ReservaLoteModal from '../components/lotes/ReservaLoteModal';
+import ModeloBModal from '../components/lotes/ModeloBModal';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
+const LoteCota = base44.entities.LoteCota;
+const SystemLog = base44.entities.SystemLog;
 
 const formatCurrency = (val) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val ?? 0);
 
@@ -23,6 +26,8 @@ export default function MarketplaceLotes() {
     const [valorMaxAutorizado, setValorMaxAutorizado] = useState('');
     const [showReservaModal, setShowReservaModal] = useState(false);
     const [pendingCheckoutData, setPendingCheckoutData] = useState(null);
+    const [modeloSelecionado, setModeloSelecionado] = useState(null); // 'A' | 'B' | null
+    const [showModeloBModal, setShowModeloBModal] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -261,7 +266,7 @@ export default function MarketplaceLotes() {
                                         <h3 className="font-bold text-white text-lg">Detalhes do Lote</h3>
                                         <p className="text-slate-400 text-xs mt-1 line-clamp-2">{loteModal.title}</p>
                                     </div>
-                                    <button onClick={() => { setLoteModal(null); setValorMaxAutorizado(''); }} className="text-slate-500 hover:text-white transition-colors ml-3 shrink-0">
+                                    <button onClick={() => { setLoteModal(null); setValorMaxAutorizado(''); setModeloSelecionado(null); }} className="text-slate-500 hover:text-white transition-colors ml-3 shrink-0">
                                         <X size={20} />
                                     </button>
                                 </div>
@@ -295,13 +300,58 @@ export default function MarketplaceLotes() {
                                     )}
                                 </div>
 
-                                {/* Valor máximo autorizado pelo investidor */}
-                                <div className="bg-[#0d1117] rounded-xl p-4 mb-4 border border-indigo-500/30">
-                                    <label className="block text-xs text-indigo-400 uppercase tracking-wider font-bold mb-2">
+                                {/* ── ESCOLHA DO MODELO ── */}
+                                <div className="mb-4">
+                                    <p className="text-xs text-slate-400 uppercase tracking-wider font-bold mb-3">Como deseja participar?</p>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {/* Modelo A */}
+                                        <button
+                                            onClick={() => setModeloSelecionado('A')}
+                                            className={`rounded-xl p-4 border-2 text-left transition-all ${
+                                                modeloSelecionado === 'A'
+                                                    ? 'border-blue-500 bg-blue-900/20'
+                                                    : 'border-[#30363d] bg-[#0d1117] hover:border-blue-500/50'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <User size={16} className="text-blue-400" />
+                                                <span className="text-sm font-black text-blue-400">MODELO A</span>
+                                                {modeloSelecionado === 'A' && <CheckCircle2 size={14} className="text-blue-400 ml-auto" />}
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 leading-snug">Compra Individual — Você financia 100% · Lance vai no seu nome</p>
+                                        </button>
+
+                                        {/* Modelo B */}
+                                        <button
+                                            onClick={() => setModeloSelecionado('B')}
+                                            className={`rounded-xl p-4 border-2 text-left transition-all ${
+                                                modeloSelecionado === 'B'
+                                                    ? 'border-violet-500 bg-violet-900/20'
+                                                    : 'border-[#30363d] bg-[#0d1117] hover:border-violet-500/50'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Users size={16} className="text-violet-400" />
+                                                <span className="text-sm font-black text-violet-400">MODELO B</span>
+                                                {modeloSelecionado === 'B' && <CheckCircle2 size={14} className="text-violet-400 ml-auto" />}
+                                            </div>
+                                            <p className="text-[10px] text-slate-400 leading-snug">Dividir este Lote — Divida o risco · Mais investidores podem entrar</p>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Modelo A: campo de valor máximo */}
+                                {modeloSelecionado === 'A' && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="bg-[#0d1117] rounded-xl p-4 mb-4 border border-blue-500/20"
+                                >
+                                    <label className="block text-xs text-blue-400 uppercase tracking-wider font-bold mb-2">
                                         Até quanto o arrematante pode ir?
                                     </label>
                                     <p className="text-[10px] text-slate-500 mb-3">
-                                        Valor mínimo: {formatCurrency(valorTotalInvestimento)} (investimento base). Informe o teto máximo que você autoriza.
+                                        Valor mínimo: {formatCurrency(valorTotalInvestimento)}. Informe o teto máximo que você autoriza.
                                     </p>
                                     <div className="relative">
                                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 font-medium text-sm">R$</span>
@@ -312,15 +362,17 @@ export default function MarketplaceLotes() {
                                             value={valorMaxAutorizado}
                                             onChange={e => setValorMaxAutorizado(e.target.value)}
                                             placeholder={valorTotalInvestimento.toFixed(2)}
-                                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-2.5 pl-10 pr-3 text-white text-lg font-bold focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-shadow placeholder:text-slate-600"
+                                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg py-2.5 pl-10 pr-3 text-white text-lg font-bold focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-shadow placeholder:text-slate-600"
                                         />
                                     </div>
                                     {valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento && (
                                         <p className="text-[10px] text-red-400 mt-1.5">O valor não pode ser menor que o investimento base.</p>
                                     )}
-                                </div>
+                                </motion.div>
+                                )}
 
-                                {/* Saldo do investidor */}
+                                {/* Saldo do investidor — só mostra se Modelo A selecionado */}
+                                {modeloSelecionado === 'A' && (
                                 <div className={`rounded-xl p-4 mb-5 border flex items-center gap-3 ${temSaldo ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-amber-900/20 border-amber-500/30'}`}>
                                     <Wallet size={20} className={temSaldo ? 'text-emerald-400' : 'text-amber-400'} />
                                     <div>
@@ -329,9 +381,10 @@ export default function MarketplaceLotes() {
                                     </div>
                                     {temSaldo && <CheckCircle2 size={18} className="text-emerald-400 ml-auto" />}
                                 </div>
+                                )}
 
-                                {/* Valor faltante para PIX */}
-                                {(() => {
+                                {/* Modelo A — fluxo original + registro LoteCota */}
+                                {modeloSelecionado === 'A' && (() => {
                                     const valorDesejado = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
                                     const valorFaltante = Math.max(0, valorDesejado - saldoDisponivel);
                                     const saldoSuficiente = valorFaltante <= 0;
@@ -367,31 +420,50 @@ export default function MarketplaceLotes() {
                                                     <Package size={16} /> Ver Análise do Lote
                                                 </button>
                                                 <button
-                                                    onClick={() => {
+                                                    onClick={async () => {
                                                         const maxVal = parseFloat(valorMaxAutorizado) || valorTotalInvestimento;
                                                         if (maxVal < valorTotalInvestimento) return;
+                                                        // Registra LoteCota Modelo A
+                                                        try {
+                                                            await LoteCota.create({
+                                                                lote_id: loteModal.id,
+                                                                lote_titulo: loteModal.title,
+                                                                investidor_id: currentUser?.id,
+                                                                investidor_nome: currentUser?.full_name,
+                                                                modelo: 'A',
+                                                                percentual_cota: 100,
+                                                                valor_autorizado: maxVal,
+                                                                taxa_operacao: taxaPct,
+                                                                total_deposito: maxVal,
+                                                                status: 'reservado',
+                                                            });
+                                                            // Notifica SystemLog
+                                                            SystemLog.create({
+                                                                tipo: 'nova_reserva',
+                                                                mensagem: `Investidor ${currentUser?.full_name} reservou 100% do lote "${loteModal.title}" — Modelo A`,
+                                                                valor: maxVal,
+                                                                user_id: currentUser?.id,
+                                                                auction_id: loteModal.id,
+                                                            }).catch(() => {});
+                                                        } catch (_) { /* não bloqueia o fluxo */ }
+
                                                         const faltante = Math.max(0, maxVal - saldoDisponivel);
                                                         if (faltante <= 0) {
-                                                            // Saldo suficiente — vai direto para a carteira do investidor
                                                             setLoteModal(null);
+                                                            setModeloSelecionado(null);
                                                             navigate(createPageUrl('CarteiraInvestidor'));
                                                             return;
                                                         }
-                                                        // Salva dados e fecha modal do lote primeiro
-                                                        const checkoutData = {
-                                                            amount: faltante,
-                                                            auctionId: loteModal.id,
-                                                            auctionTitle: loteModal.title
-                                                        };
+                                                        const checkoutData = { amount: faltante, auctionId: loteModal.id, auctionTitle: loteModal.title };
                                                         setLoteModal(null);
-                                                        // Abre modal de reserva no próximo tick para evitar conflito de renderização
+                                                        setModeloSelecionado(null);
                                                         setTimeout(() => {
                                                             setPendingCheckoutData(checkoutData);
                                                             setShowReservaModal(true);
                                                         }, 100);
                                                     }}
                                                     disabled={valorMaxAutorizado && parseFloat(valorMaxAutorizado) < valorTotalInvestimento}
-                                                    className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                                    className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
                                                 >
                                                     <DollarSign size={16} /> {saldoSuficiente ? 'Acessar Central' : 'Competir este Lote'}
                                                 </button>
@@ -399,13 +471,46 @@ export default function MarketplaceLotes() {
                                         </>
                                     );
                                 })()}
+
+                                {/* Modelo B — botão que abre ModeloBModal */}
+                                {modeloSelecionado === 'B' && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="space-y-3"
+                                >
+                                    <div className="bg-violet-900/10 border border-violet-500/20 rounded-xl p-4 text-sm text-violet-200/80">
+                                        <p className="font-bold text-violet-300 mb-1">👥 Divisão de Capital</p>
+                                        <p className="text-xs text-slate-400">Você define qual percentual do lote quer financiar. Outros investidores podem completar o restante.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const capturedLote = loteModal;
+                                            setLoteModal(null);
+                                            setModeloSelecionado(null);
+                                            setTimeout(() => {
+                                                setPendingCheckoutData({ auctionId: capturedLote.id, auctionTitle: capturedLote.title, loteObj: capturedLote, valorTotalLote: valorTotalInvestimento, taxaPct });
+                                                setShowModeloBModal(true);
+                                            }, 100);
+                                        }}
+                                        className="w-full bg-violet-600 hover:bg-violet-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Users size={16} /> Definir minha cota neste lote
+                                    </button>
+                                </motion.div>
+                                )}
+
+                                {/* Sem modelo selecionado — nenhuma ação disponível ainda */}
+                                {!modeloSelecionado && (
+                                    <p className="text-center text-xs text-slate-500 py-2">Selecione um modelo para continuar.</p>
+                                )}
                             </motion.div>
                         </motion.div>
                     );
                 })()}
             </AnimatePresence>
 
-            {/* Modal de Reserva Temporária */}
+            {/* Modal de Reserva Temporária (Modelo A) */}
             <ReservaLoteModal
                 isOpen={showReservaModal}
                 loteTitle={pendingCheckoutData?.auctionTitle}
@@ -415,7 +520,6 @@ export default function MarketplaceLotes() {
                 onClose={(reason) => {
                     setShowReservaModal(false);
                     setPendingCheckoutData(null);
-                    // Recarrega lotes para refletir reservas
                     if (reason === 'expired' || reason === 'error') loadLotes();
                 }}
                 onConfirm={() => {
@@ -433,6 +537,28 @@ export default function MarketplaceLotes() {
                     }
                 }}
             />
+
+            {/* Modal Modelo B */}
+            <AnimatePresence>
+                {showModeloBModal && pendingCheckoutData?.loteObj && (
+                    <ModeloBModal
+                        lote={pendingCheckoutData.loteObj}
+                        currentUser={currentUser}
+                        valorTotalLote={pendingCheckoutData.valorTotalLote}
+                        taxaPct={pendingCheckoutData.taxaPct}
+                        onClose={() => {
+                            setShowModeloBModal(false);
+                            setPendingCheckoutData(null);
+                            loadLotes();
+                        }}
+                        onConfirm={(cotaId, valorFaltante) => {
+                            setShowModeloBModal(false);
+                            setPendingCheckoutData(null);
+                            loadLotes();
+                        }}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }
