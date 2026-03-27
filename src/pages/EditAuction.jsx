@@ -89,7 +89,7 @@ export default function EditAuction() {
             const auctionData = await Auction.filter({ id: auctionId });
             if (auctionData.length === 0) {
                 alert("Leilão não encontrado.");
-                navigate(createPageUrl("Home"));
+                navigate(createPageUrl("Home"), { replace: true });
                 return;
             }
             
@@ -134,7 +134,7 @@ export default function EditAuction() {
         } catch (error) {
             console.error("Erro ao carregar dados:", error);
             alert("Erro ao carregar dados. Verifique o console.");
-            navigate(createPageUrl("Home"));
+            navigate(createPageUrl("Home"), { replace: true });
         } finally {
             setIsLoading(false);
         }
@@ -323,7 +323,9 @@ export default function EditAuction() {
             } else {
                 alert("✅ Leilão atualizado com sucesso!");
                 sessionStorage.removeItem('editAuctionFrom');
-                navigate(createPageUrl(fromPage), { replace: true });
+                // 🔧 FIX: Usar navigate(-1) garante que voltamos para a página anterior 
+                // sem sujar o histórico com duplicatas, resolvendo o loop de navegação.
+                navigate(-1);
             }
             
         } catch (error) {
