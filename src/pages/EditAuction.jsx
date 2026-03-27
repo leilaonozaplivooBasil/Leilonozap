@@ -461,7 +461,7 @@ export default function EditAuction() {
                     <Button 
                         variant="outline" 
                         onClick={() => navigate(-1)}
-                        className="bg-[#161b22] border-[#30363d] text-slate-300 hover:text-white"
+                        className="bg-[#161b22] border-[#30363d] text-slate-300 hover:bg-[#30363d] hover:text-white"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Voltar
