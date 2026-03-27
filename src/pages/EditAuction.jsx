@@ -446,37 +446,45 @@ export default function EditAuction() {
 
     if (isLoading) {
         return (
-          <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-            <Loader2 className="w-12 h-12 animate-spin text-gray-500" />
+          <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+            <Loader2 className="w-12 h-12 animate-spin text-amber-500" />
           </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-100 p-4 sm:p-6 lg:p-8">
+        <div className="min-h-screen bg-[#0d1117] p-4 sm:p-6 lg:p-8 text-slate-200">
             <div className="max-w-4xl mx-auto space-y-6">
                 <div className="flex items-center justify-between">
-                    <Button variant="outline" onClick={() => navigate(createPageUrl(fromPage))}>
+                    <Button 
+                        variant="outline" 
+                        onClick={() => navigate(-1)}
+                        className="bg-[#161b22] border-[#30363d] text-slate-300 hover:text-white"
+                    >
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Voltar
                     </Button>
-                    <h1 className="text-2xl font-bold text-gray-800 hidden sm:block">
+                    <h1 className="text-2xl font-bold text-white hidden sm:block">
                         {isTestMode && <span className="text-orange-500">[MODO TESTE] </span>}
                         Editar Leilão
                     </h1>
-                     <Button onClick={handleSaveChanges} disabled={isSaving || isUploading || isDeleting}>
+                     <Button 
+                        onClick={handleSaveChanges} 
+                        disabled={isSaving || isUploading || isDeleting}
+                        className="bg-amber-600 hover:bg-amber-500 text-white font-bold"
+                    >
                         {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                         Salvar Alterações
                     </Button>
                 </div>
 
-                <Card>
+                <Card className="bg-[#161b22] border-[#30363d]">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                           <Image className="w-5 h-5 text-gray-600" />
+                        <CardTitle className="flex items-center gap-2 text-white">
+                           <Image className="w-5 h-5 text-amber-400" />
                            Fotos do Leilão
                         </CardTitle>
-                        <p className="text-sm text-gray-500">Arraste as fotos para reordenar. A primeira foto será a capa.</p>
+                        <p className="text-sm text-slate-400">Arraste as fotos para reordenar. A primeira foto será a capa.</p>
                     </CardHeader>
                     <CardContent>
                         <DragDropContext onDragEnd={onDragEnd}>
@@ -493,10 +501,10 @@ export default function EditAuction() {
                                                     <div
                                                         ref={provided.innerRef}
                                                         {...provided.draggableProps}
-                                                        className={`relative group border-2 rounded-lg aspect-square overflow-hidden shadow-sm ${snapshot.isDragging ? 'border-blue-500 ring-2 ring-blue-200' : 'border-transparent'}`}
+                                                        className={`relative group border-2 rounded-lg aspect-square overflow-hidden shadow-sm ${snapshot.isDragging ? 'border-amber-500 ring-2 ring-amber-500/20' : 'border-[#30363d]'}`}
                                                     >
                                                         <img src={url} alt={`Foto ${index + 1}`} className="w-full h-full object-cover" />
-                                                        <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full">
+                                                        <div className="absolute top-1 left-1 bg-black/70 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                                                             {index === 0 ? 'Capa' : index + 1}
                                                         </div>
                                                         <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -504,8 +512,8 @@ export default function EditAuction() {
                                                                 <Trash2 className="w-4 h-4" />
                                                             </Button>
                                                         </div>
-                                                        <div {...provided.dragHandleProps} className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-move bg-white/80 p-1 rounded">
-                                                            <GripVertical className="w-4 h-4 text-gray-600" />
+                                                        <div {...provided.dragHandleProps} className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity cursor-move bg-black/50 p-1 rounded">
+                                                            <GripVertical className="w-4 h-4 text-white" />
                                                         </div>
                                                     </div>
                                                 )}
@@ -528,7 +536,7 @@ export default function EditAuction() {
                             />
                             <Button 
                                 variant="outline" 
-                                className="w-full md:w-auto"
+                                className="w-full md:w-auto bg-transparent border-[#30363d] text-slate-300 hover:text-white"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading || isSaving || isDeleting}
                             >
@@ -542,31 +550,43 @@ export default function EditAuction() {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="bg-[#161b22] border-[#30363d]">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Edit className="w-5 h-5 text-gray-600" />
+                    <CardTitle className="flex items-center gap-2 text-white">
+                      <Edit className="w-5 h-5 text-amber-400" />
                       Detalhes do Leilão
                     </CardTitle>
-                    <p className="text-sm text-gray-500">Ajuste as informações e valores do leilão.</p>
+                    <p className="text-sm text-slate-400">Ajuste as informações e valores do leilão.</p>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div>
-                      <Label htmlFor="title">Título do Produto</Label>
-                      <Input id="title" value={formData.title} onChange={(e) => handleInputChange('title', e.target.value)} className="mt-1" />
+                      <Label htmlFor="title" className="text-slate-300">Título do Produto</Label>
+                      <Input 
+                        id="title" 
+                        value={formData.title} 
+                        onChange={(e) => handleInputChange('title', e.target.value)} 
+                        className="mt-1 bg-[#0d1117] border-[#30363d] text-white focus:border-amber-500/50" 
+                      />
                     </div>
                     
                     <div>
-                      <Label htmlFor="description">Descrição</Label>
-                      <Textarea id="description" value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} className="mt-1 min-h-[120px]" />
+                      <Label htmlFor="description" className="text-slate-300">Descrição</Label>
+                      <Textarea 
+                        id="description" 
+                        value={formData.description} 
+                        onChange={(e) => handleInputChange('description', e.target.value)} 
+                        className="mt-1 min-h-[120px] bg-[#0d1117] border-[#30363d] text-white focus:border-amber-500/50" 
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <Label htmlFor="category">Categoria</Label>
+                            <Label htmlFor="category" className="text-slate-300">Categoria</Label>
                              <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                              <SelectContent>
+                              <SelectTrigger className="mt-1 bg-[#0d1117] border-[#30363d] text-white">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-[#161b22] border-[#30363d] text-white">
                                 <SelectItem value="eletronicos">📱 Eletrônicos & Celulares</SelectItem>
                                 <SelectItem value="eletrodomesticos">🔌 Eletrodomésticos</SelectItem>
                                 <SelectItem value="moveis_decoracao">🛋️ Móveis & Decoração</SelectItem>
@@ -584,130 +604,104 @@ export default function EditAuction() {
                             </Select>
                         </div>
 
-                        {/* 🆕 NOVO: ORIGEM DO PRODUTO */}
                         <div>
-                            <Label htmlFor="product_source">Origem do Produto</Label>
+                            <Label htmlFor="product_source" className="text-slate-300">Origem do Produto</Label>
                             <Select value={formData.product_source} onValueChange={(value) => {
                               handleInputChange("product_source", value);
-                              // Clear supplier logo if product source is not factory new
                               if (value === 'return_resale') {
                                 setFormData(prev => ({ ...prev, supplier_logo_url: "", comparai_mode: "google_shopping" }));
                                 setSupplierLogoPreview("");
                               }
                             }}>
-                              <SelectTrigger className="mt-1">
+                              <SelectTrigger className="mt-1 bg-[#0d1117] border-[#30363d] text-white">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-[#161b22] border-[#30363d] text-white">
                                 <SelectItem value="factory_new">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                    <div className="w-2 h-2 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
                                     <span>✨ Novo de Fábrica</span>
                                   </div>
                                 </SelectItem>
                                 <SelectItem value="return_resale">
                                   <div className="flex items-center gap-2">
-                                    <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
+                                    <div className="w-2 h-2 bg-orange-500 rounded-full shadow-[0_0_8px_rgba(249,115,22,0.5)]"></div>
                                     <span>🔥 Arremate/Devolução</span>
                                   </div>
                                 </SelectItem>
                               </SelectContent>
                             </Select>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">
                               {formData.product_source === 'factory_new' 
-                                ? '✅ Produto novo com garantia do fabricante' 
-                                : '📦 Produto de arremate/devolução, sem garantia'}
+                                ? '✨ Produto novo com garantia' 
+                                : '📦 Item de arremate, sem garantia'}
                             </p>
                         </div>
                     </div>
 
-                    {/* 🆕 MODO COMPARAI */}
                     <div className="mt-4">
-                        <Label htmlFor="comparai_mode">🔍 Onde a Comparai vai buscar o preço?</Label>
+                        <Label htmlFor="comparai_mode" className="text-slate-300">🔍 Onde a Comparai vai buscar o preço?</Label>
                         <Select value={formData.comparai_mode} onValueChange={(value) => handleInputChange("comparai_mode", value)}>
-                          <SelectTrigger className="mt-1">
+                          <SelectTrigger className="mt-1 bg-[#0d1117] border-[#30363d] text-white">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-[#161b22] border-[#30363d] text-white">
                             <SelectItem value="supplier">
-                              <div className="flex items-center gap-2">
-                                <span>🏭 Site do Fornecedor (preço exato)</span>
-                              </div>
+                                <span>🏭 Site do Fornecedor (exato)</span>
                             </SelectItem>
                             <SelectItem value="google_shopping">
-                              <div className="flex items-center gap-2">
-                                <span>🔎 Usar Comparai (página de arremate)</span>
-                              </div>
+                                <span>🔎 Usar Comparai (padrão)</span>
                             </SelectItem>
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formData.comparai_mode === 'supplier' 
-                            ? '🏭 A Comparai buscará o preço diretamente no site do fornecedor (precisa inserir URL abaixo)' 
-                            : '🔎 Mesma comparação usada nos produtos de arremate'}
-                        </p>
                     </div>
 
-                    {/* 🆕 URL DO FORNECEDOR + LOGO (APENAS SE comparai_mode FOR 'supplier') */}
                     {formData.comparai_mode === 'supplier' && (
-                        <div className="bg-green-900/20 border-2 border-green-500/50 rounded-xl p-4 space-y-4">
+                        <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-5 space-y-4">
                             <div>
-                                <Label htmlFor="supplier_url" className="text-sm font-bold text-green-300 flex items-center gap-2 mb-2">
-                                    <LinkIcon className="w-4 h-4" />
-                                    🏭 URL do Fornecedor (para Comparai) *
+                                <Label htmlFor="supplier_url" className="text-xs font-bold text-emerald-400 flex items-center gap-2 mb-2 uppercase tracking-widest">
+                                    <LinkIcon size={14} />
+                                    URL do Fornecedor *
                                 </Label>
                                 <Input
                                     id="supplier_url"
                                     value={formData.supplier_url}
                                     onChange={(e) => handleInputChange("supplier_url", e.target.value)}
-                                    placeholder="https://www.fornecedor.com.br/produto/123"
-                                    className="bg-gray-100 border-green-600 text-gray-900 placeholder-gray-500 focus:border-green-400"
-                                    required={formData.product_source === 'factory_new'}
+                                    placeholder="https://www.fornecedor.com.br/..."
+                                    className="bg-[#0d1117] border-[#30363d] text-white focus:border-emerald-500/50"
                                 />
-                                <p className="text-xs text-green-700 mt-2 flex items-center gap-1">
-                                    <img 
-                                        src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/68d536db3c26ff51f79c4137/d36767bcd_image.png"
-                                        alt="Comparai"
-                                        className="w-4 h-4 rounded-full"
-                                    />
-                                    <span>A Comparai usará esta URL para buscar o preço oficial!</span>
-                                </p>
                             </div>
 
-                            {/* 🆕 UPLOAD DE LOGO DO FABRICANTE */}
                             <div>
-                                <Label className="text-sm font-bold text-green-700 flex items-center gap-2 mb-2">
-                                    <Upload className="w-4 h-4" />
-                                    🎨 Logo do Fabricante (opcional)
+                                <Label className="text-xs font-bold text-slate-400 flex items-center gap-2 mb-2 uppercase tracking-widest">
+                                    <Upload size={14} />
+                                    Logo do Fabricante (opcional)
                                 </Label>
                                 
                                 {supplierLogoPreview ? (
-                                  <div className="relative w-32 h-32 mx-auto mb-2">
+                                  <div className="relative w-24 h-24 mx-auto mb-2">
                                     <img 
                                       src={supplierLogoPreview} 
                                       alt="Logo Preview"
-                                      className="w-full h-full object-contain rounded-lg border-2 border-green-500 bg-white p-2"
+                                      className="w-full h-full object-contain rounded-xl border border-[#30363d] bg-white p-2"
                                     />
-                                    <Button
-                                      type="button"
-                                      variant="destructive"
-                                      size="icon"
-                                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full"
+                                    <button
                                       onClick={() => {
                                         setFormData(prev => ({ ...prev, supplier_logo_url: "" }));
                                         setSupplierLogoPreview("");
                                       }}
+                                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-rose-600 flex items-center justify-center text-white"
                                     >
-                                      <Trash2 className="w-3 h-3" />
-                                    </Button>
+                                      <Trash2 size={12} />
+                                    </button>
                                   </div>
                                 ) : (
-                                  <div className="border-2 border-dashed border-green-600 rounded-lg p-4 text-center hover:bg-green-50 transition-colors cursor-pointer"
+                                  <div className="border border-dashed border-[#30363d] rounded-xl p-6 text-center hover:bg-white/5 transition-colors cursor-pointer"
                                     onClick={() => document.getElementById('supplier-logo-input').click()}
                                   >
-                                    <UploadCloud className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                                    <p className="text-xs text-green-700">
-                                      Clique para fazer upload da logo do fabricante
+                                    <UploadCloud className="w-6 h-6 mx-auto mb-2 text-slate-500" />
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                                      Upload da Logo
                                     </p>
                                   </div>
                                 )}
@@ -717,23 +711,17 @@ export default function EditAuction() {
                                   type="file"
                                   accept="image/*"
                                   className="hidden"
-                                  disabled={isUploading || isSaving || isDeleting}
                                   onChange={(e) => {
                                     if (e.target.files[0]) {
                                       handleSupplierLogoUpload(e.target.files[0]);
                                     }
                                   }}
                                 />
-                                
-                                <p className="text-xs text-green-700 mt-2">
-                                  Esta logo aparecerá no card "Preço no Fabricante" da Comparai
-                                </p>
                             </div>
 
-                            {/* 🆕 PREÇO MANUAL */}
-                            <div className="border-t border-green-500/30 pt-4 mt-4">
-                                <Label htmlFor="manual_market_price" className="text-sm font-bold text-orange-600 flex items-center gap-2 mb-2">
-                                    ✏️ Preço Manual (quando Comparai não encontrar)
+                            <div className="border-t border-[#30363d] pt-4 mt-4">
+                                <Label htmlFor="manual_market_price" className="text-xs font-bold text-orange-400 flex items-center gap-2 mb-2 uppercase tracking-widest">
+                                    ✏️ Preço Manual (Backup)
                                 </Label>
                                 <Input
                                     id="manual_market_price"
@@ -741,112 +729,100 @@ export default function EditAuction() {
                                     step="0.01"
                                     value={formData.manual_market_price}
                                     onChange={(e) => handleInputChange("manual_market_price", e.target.value)}
-                                    placeholder="Ex: 499.90"
-                                    className="bg-gray-100 border-orange-400 text-gray-900 placeholder-gray-500 focus:border-orange-500"
+                                    className="bg-[#0d1117] border-[#30363d] text-white focus:border-orange-500/50"
                                 />
-                                <p className="text-xs text-orange-600 mt-2">
-                                    ⚠️ Se preenchido, a Comparai usará este valor ao invés de buscar automaticamente
-                                </p>
                             </div>
                         </div>
                     )}
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
-                        <Label htmlFor="starting_price">Preço Inicial (R$)</Label>
-                        <Input id="starting_price" type="number" step="0.01" value={formData.starting_price} onChange={(e) => handleInputChange('starting_price', e.target.value)} className="mt-1" />
+                        <Label htmlFor="starting_price" className="text-slate-300">Preço Inicial (R$)</Label>
+                        <Input id="starting_price" type="number" step="0.01" value={formData.starting_price} onChange={(e) => handleInputChange('starting_price', e.target.value)} className="mt-1 bg-[#0d1117] border-[#30363d] text-white" />
                       </div>
                       <div>
-                        <Label htmlFor="current_price">Preço Atual (R$)</Label>
-                        <Input id="current_price" type="number" step="0.01" value={formData.current_price} onChange={(e) => handleInputChange('current_price', e.target.value)} className="mt-1" />
+                        <Label htmlFor="current_price" className="text-slate-300">Preço Atual (R$)</Label>
+                        <Input id="current_price" type="number" step="0.01" value={formData.current_price} onChange={(e) => handleInputChange('current_price', e.target.value)} className="mt-1 bg-[#0d1117] border-[#30363d] text-white font-bold text-emerald-400" />
                       </div>
                       <div>
-                        <Label htmlFor="increment">Incremento (R$)</Label>
-                        <Input id="increment" type="number" step="0.01" value={formData.increment} onChange={(e) => handleInputChange('increment', e.target.value)} className="mt-1" />
+                        <Label htmlFor="increment" className="text-slate-300">Incremento (R$)</Label>
+                        <Input id="increment" type="number" step="0.01" value={formData.increment} onChange={(e) => handleInputChange('increment', e.target.value)} className="mt-1 bg-[#0d1117] border-[#30363d] text-white" />
                       </div>
                     </div>
                     
                     <div className="pt-4">
-                      <Label htmlFor="end_time" className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-gray-500" />
-                        Data e Hora de Término
+                      <Label htmlFor="end_time" className="flex items-center gap-2 text-slate-300">
+                        <Clock className="w-4 h-4 text-amber-500" />
+                        Data e Hora de Término (Brasília)
                       </Label>
                       <Input
                         id="end_time"
                         type="datetime-local"
                         value={formData.end_time}
                         onChange={(e) => handleInputChange('end_time', e.target.value)}
-                        className="mt-1"
+                        className="mt-1 bg-[#0d1117] border-[#30363d] text-white"
                       />
-                      <p className="text-xs text-gray-500 mt-1">
-                        O horário acima é exibido no fuso horário de Brasília (UTC-3). Se a data for futura, o leilão será ativado. Se for passada, será encerrado.
-                      </p>
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* 🆕 CARD DE REATIVAR LEILÃO */}
                 {auction && (auction.status === 'ended' || auction.status === 'sold') && (
-                    <Card className="border-orange-400 bg-orange-50/50">
+                    <Card className="border-orange-500/50 bg-orange-500/5">
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-orange-700">
-                                <RefreshCw className="w-5 h-5" />
+                            <CardTitle className="flex items-center gap-2 text-orange-400">
+                                <RefreshCw className="w-5 h-5 text-orange-500" />
                                 Reativar Leilão
                             </CardTitle>
-                            <p className="text-sm text-orange-600">
-                                Este leilão já terminou. Você pode reativá-lo para uma nova rodada, mas o vencedor anterior será removido. O horário acima é exibido no fuso horário de Brasília (UTC-3).
+                            <p className="text-sm text-slate-400">
+                                Este leilão já terminou. Você pode reativá-lo para uma nova rodada, mas o vencedor anterior será removido.
                             </p>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div>
-                                <Label htmlFor="reactivate_time">Nova Data e Hora de Término</Label>
+                                <Label htmlFor="reactivate_time" className="text-slate-300">Nova Data de Término</Label>
                                 <Input
                                     id="reactivate_time"
                                     type="datetime-local"
                                     value={reactivateTime}
                                     onChange={(e) => setReactivateTime(e.target.value)}
-                                    className="mt-1"
+                                    className="mt-1 bg-[#0d1117] border-[#30363d] text-white"
                                 />
                             </div>
                             <Button
+                                className="w-full bg-orange-600 hover:bg-orange-500 text-white font-bold"
                                 onClick={handleReactivate}
                                 disabled={isReactivating || isSaving || isUploading || isDeleting}
-                                className="w-full bg-orange-600 hover:bg-orange-700"
                             >
                                 {isReactivating ? (
                                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Reativando...</>
                                 ) : (
-                                    <><RefreshCw className="w-4 h-4 mr-2" /> Reativar e Salvar</>
+                                    <><RefreshCw className="w-4 h-4 mr-2" /> Reativar Agora</>
                                 )}
                             </Button>
                         </CardContent>
                     </Card>
                 )}
 
-                <Card className="border-red-400 bg-red-50/50">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-red-700">
-                            <Trash2 className="w-5 h-5" />
-                            Excluir Leilão
-                        </CardTitle>
-                        <p className="text-sm text-red-600">
-                            Esta ação excluirá permanentemente o leilão e todos os dados associados. Esta ação é irreversível.
-                        </p>
-                    </CardHeader>
-                    <CardContent>
-                        <Button
-                            variant="destructive"
-                            onClick={handleDeleteAuction}
-                            disabled={isDeleting || isSaving || isUploading}
-                            className="w-full"
-                        >
-                            {isDeleting ? (
-                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Excluindo...</>
-                            ) : (
-                                <><Trash2 className="w-4 h-4 mr-2" /> Excluir Leilão Permanentemente</>
-                            )}
-                        </Button>
-                    </CardContent>
+                <Card className="border-rose-500/30 bg-rose-500/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-rose-500">
+                      <Trash2 className="w-5 h-5" />
+                      Zona de Perigo
+                    </CardTitle>
+                    <p className="text-sm text-slate-400">Ações irreversíveis.</p>
+                  </CardHeader>
+                  <CardContent>
+                    <Button 
+                        variant="destructive" 
+                        className="w-full bg-rose-600 hover:bg-rose-700"
+                        onClick={handleDeleteAuction}
+                        disabled={isSaving || isUploading || isDeleting}
+                    >
+                        {isDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                        Deletar Leilão Definitivamente
+                    </Button>
+                  </CardContent>
                 </Card>
             </div>
         </div>
