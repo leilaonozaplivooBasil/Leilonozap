@@ -100,18 +100,20 @@ export default function CarteiraInvestidor() {
                     </div>
 
                     {/* Bloco Arrematante */}
-                    <div className={`mt-2 mb-4 inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border ${arrematante ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-[#161b22] border-[#30363d]'}`}>
-                        <User size={16} className={arrematante ? 'text-emerald-400' : 'text-slate-500'} />
-                        <div>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Seu Arrematante</p>
-                            <p className={`text-sm font-bold ${arrematante ? 'text-white' : 'text-slate-500'}`}>
-                                {arrematante ? arrematante.full_name : 'Arrematante não definido'}
-                            </p>
+                    {usuario?.role !== 'admin' && (
+                        <div className={`mt-2 mb-4 inline-flex items-center gap-3 px-4 py-2.5 rounded-xl border ${arrematante ? 'bg-emerald-900/20 border-emerald-500/30' : 'bg-[#161b22] border-[#30363d]'}`}>
+                            <User size={16} className={arrematante ? 'text-emerald-400' : 'text-slate-500'} />
+                            <div>
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Seu Arrematante</p>
+                                <p className={`text-sm font-bold ${arrematante ? 'text-white' : 'text-slate-500'}`}>
+                                    {arrematante ? arrematante.full_name : 'Arrematante não definido'}
+                                </p>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider ${arrematante ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'}`}>
+                                {arrematante ? 'ATIVO' : 'N/D'}
+                            </span>
                         </div>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider ${arrematante ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-500'}`}>
-                            {arrematante ? 'ATIVO' : 'N/D'}
-                        </span>
-                    </div>
+                    )}
 
                     <div className="flex items-center gap-3">
                         <button onClick={() => navigate(-1)} className="flex items-center gap-2 bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2 text-slate-400 hover:text-white hover:border-slate-500 transition-colors">
