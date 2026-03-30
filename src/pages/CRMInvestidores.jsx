@@ -90,7 +90,7 @@ export default function CRMInvestidores() {
             const arr = arrematantes.find(a => a.id === arrId);
             let arrNome = 'Sem Vínculo/Desconhecido';
             if (arr) {
-               arrNome = arr.role === 'admin' ? `Admin: ${arr.full_name || 'Sem Nome'}` : (arr.full_name || 'Desconhecido');
+                arrNome = arr.role === 'admin' ? `Admin: ${arr.full_name || 'Sem Nome'}` : (arr.full_name || 'Desconhecido');
             }
             const capitalTotal = invs.reduce((s, i) => s + (i.saldo_disponivel ?? 0) + (i.saldo_alocado ?? 0), 0);
             return { arrId, arrNome, invs, capitalTotal };
@@ -205,8 +205,8 @@ export default function CRMInvestidores() {
                         {(userRole === 'admin' || userRole === 'leiloeiro') && (
                             <div className="flex items-center gap-3 w-full sm:w-auto bg-[#161b22] border border-[#30363d] px-4 py-2.5 rounded-lg">
                                 <label className="flex items-center gap-2 cursor-pointer text-sm font-medium transition-colors hover:text-white text-slate-300">
-                                    <input 
-                                        type="checkbox" 
+                                    <input
+                                        type="checkbox"
                                         checked={filtroCard === 'comCapital'}
                                         onChange={(e) => setFiltroCard(e.target.checked ? 'comCapital' : null)}
                                         className="w-4 h-4 rounded border-[#30363d] bg-[#0d1117] text-violet-500 focus:ring-violet-500/30 accent-violet-500 cursor-pointer"
@@ -233,10 +233,10 @@ export default function CRMInvestidores() {
                             </div>
                         ) : investidoresFiltrados.length === 0 ? (
                             <div className="py-12 text-center text-slate-500 text-sm">
-                                {busca 
-                                    ? 'Nenhum investidor encontrado para essa busca.' 
-                                    : filtroCard 
-                                        ? 'Nenhum investidor corresponde ao filtro atual. Tente desativar "Ocultar investidores sem saldo".' 
+                                {busca
+                                    ? 'Nenhum investidor encontrado para essa busca.'
+                                    : filtroCard
+                                        ? 'Nenhum investidor corresponde ao filtro atual. Tente desativar "Ocultar investidores sem saldo".'
                                         : 'Nenhum investidor cadastrado ainda.'}
                             </div>
                         ) : (
@@ -408,12 +408,12 @@ export default function CRMInvestidores() {
             </div>
         </div>
 
-        {showCadastro && (
-            <CadastroInvestidorModal
-                onClose={() => setShowCadastro(false)}
-                onSuccess={() => { setShowCadastro(false); loadDados(); }}
-            />
-        )}
+            {showCadastro && (
+                <CadastroInvestidorModal
+                    onClose={() => setShowCadastro(false)}
+                    onSuccess={() => { setShowCadastro(false); loadDados(); }}
+                />
+            )}
         </>
     );
 }
