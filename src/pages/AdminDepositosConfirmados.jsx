@@ -5,14 +5,20 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Download, Filter, Search } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { Download, Filter, Search, Trash2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+
+// Tempo máximo (ms) para um PIX ser considerado pendente válido — 30 minutos
+const PIX_EXPIRY_MS = 30 * 60 * 1000;
 
 export default function AdminDepositosConfirmados() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchEmail, setSearchEmail] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
   const [filterDateTo, setFilterDateTo] = useState('');
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const queryClient = useQueryClient();
 
   const { data: transactions = [], isLoading, error } = useQuery({
     queryKey: ['wallet-deposits'],
@@ -41,12 +47,52 @@ export default function AdminDepositosConfirmados() {
     return matchStatus && matchEmail && matchDate;
   });
 
+  // PIX expirados: pendentes há mais de 30 minutos
+  const expiredPix = transactions.filter(t => {
+    if (t.status !== 'pending') return false;
+    const age = Date.now() - new Date(t.created_date).getTime();
+    return age > PIX_EXPIRY_MS;
+  });
+
   const stats = {
     total: filteredTransactions.length,
     confirmed: filteredTransactions.filter(t => t.status === 'confirmed').length,
     pending: filteredTransactions.filter(t => t.status === 'pending').length,
+    expired: expiredPix.length,
     totalAmount: filteredTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
   };
+
+  const handleCleanupExpired = async () => {
+    if (expiredPix.length === 0) {
+      toast.info('Nenhum PIX expirado encontrado.');
+      return;
+    }
+    if (!window.confirm(`Deletar ${expiredPix.length} PIX pendentes há mais de 30 minutos? Esta ação não pode ser desfeita.`)) return;
+
+    setIsCleaningUp(true);
+    let deleted = 0;
+    let errors = 0;
+
+    for (const tx of expiredPix) {
+      try {
+        await base44.asServiceRole.entities.WalletTransaction.delete(tx.id);
+        deleted++;
+      } catch (err) {
+        console.error('[CleanupPix] Falha ao deletar tx:', tx.id, err);
+        errors++;
+      }
+    }
+
+    setIsCleaningUp(false);
+    queryClient.invalidateQueries({ queryKey: ['wallet-deposits'] });
+
+    if (errors === 0) {
+      toast.success(`✅ ${deleted} PIX expirado(s) removido(s) com sucesso.`);
+    } else {
+      toast.warning(`Removidos ${deleted}, mas ${errors} falhou(aram). Verifique o console.`);
+    }
+  };
+
 
   const handleExportCSV = () => {
     const headers = ['Email', 'Valor (R$)', 'Status', 'Data'];
@@ -76,6 +122,31 @@ export default function AdminDepositosConfirmados() {
           <h1 className="text-4xl font-bold text-white mb-2">💰 Depósitos Confirmados</h1>
           <p className="text-slate-400">Acompanhamento de todas as transações de depósito dos investidores</p>
         </div>
+
+        {/* Banner de alerta — PIX expirados */}
+        {stats.expired > 0 && (
+          <div className="mb-6 flex items-center justify-between gap-4 bg-red-900/40 border border-red-500/50 rounded-xl px-5 py-4">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="text-red-400 shrink-0" size={20} />
+              <div>
+                <p className="font-bold text-red-300 text-sm">
+                  {stats.expired} PIX pendente{stats.expired > 1 ? 's' : ''} expirado{stats.expired > 1 ? 's' : ''} (mais de 30 min)
+                </p>
+                <p className="text-red-400/70 text-xs">Estes registros não serão pagos. Remova-os para limpar o sistema.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleCleanupExpired}
+              disabled={isCleaningUp}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-500 disabled:opacity-60 disabled:cursor-wait text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shrink-0"
+            >
+              {isCleaningUp
+                ? <><RefreshCw size={14} className="animate-spin" /> Removendo...</>
+                : <><Trash2 size={14} /> Remover expirados</>
+              }
+            </button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
