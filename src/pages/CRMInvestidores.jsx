@@ -47,14 +47,15 @@ export default function CRMInvestidores() {
                 ? { role: 'investidor' }
                 : { role: 'investidor', referred_by_id: currentUser?.id };
 
-            const [usuarios, leiloesData, arrData] = await Promise.all([
+            const [usuarios, leiloesData, arrData, admData] = await Promise.all([
                 AppUser.filter(investidorFilter),
                 Auction.filter({ is_investment_plan: true }),
-                AppUser.filter({ role: 'leiloeiro' })
+                AppUser.filter({ role: 'leiloeiro' }),
+                AppUser.filter({ role: 'admin' })
             ]);
             setInvestidores(usuarios || []);
             setLotes(leiloesData || []);
-            setArrematantes(arrData || []);
+            setArrematantes([...(arrData || []), ...(admData || [])]);
         } catch (error) {
             console.error('[CRMInvestidores] Erro ao carregar dados:', error);
         } finally {
@@ -81,20 +82,27 @@ export default function CRMInvestidores() {
     const gruposPorArrematante = useMemo(() => {
         const mapa = {};
         investidores.forEach(inv => {
-            const key = inv.arrematante_responsavel_id || '__sem_arrematante__';
+            const key = inv.arrematante_responsavel_id || inv.referred_by_id || '__sem_arrematante__';
             if (!mapa[key]) mapa[key] = [];
             mapa[key].push(inv);
         });
         return Object.entries(mapa).map(([arrId, invs]) => {
             const arr = arrematantes.find(a => a.id === arrId);
+            let arrNome = 'Sem Vínculo/Desconhecido';
+            if (arr) {
+               arrNome = arr.role === 'admin' ? `Admin: ${arr.full_name || 'Sem Nome'}` : (arr.full_name || 'Desconhecido');
+            }
             const capitalTotal = invs.reduce((s, i) => s + (i.saldo_disponivel ?? 0) + (i.saldo_alocado ?? 0), 0);
-            return { arrId, arrNome: arr?.full_name || (arrId === '__sem_arrematante__' ? 'Sem Arrematante' : 'Desconhecido'), invs, capitalTotal };
+            return { arrId, arrNome, invs, capitalTotal };
         }).sort((a, b) => b.capitalTotal - a.capitalTotal);
     }, [investidores, arrematantes]);
 
-    const getNomeArrematante = (id) => {
+    const getNomeArrematante = (inv) => {
+        const id = inv.arrematante_responsavel_id || inv.referred_by_id;
         if (!id) return '—';
-        return arrematantes.find(a => a.id === id)?.full_name || '—';
+        const arr = arrematantes.find(a => a.id === id);
+        if (!arr) return '—';
+        return arr.role === 'admin' ? `Admin: ${arr.full_name || 'Sem Nome'}` : arr.full_name;
     };
 
     const metricas = [
@@ -269,8 +277,8 @@ export default function CRMInvestidores() {
                                                     </td>
                                                     <td className="px-6 py-4 text-slate-400 text-xs">{inv.phone || '—'}</td>
                                                     <td className="px-6 py-4 text-xs">
-                                                        {inv.arrematante_responsavel_id ? (
-                                                            <span className="text-emerald-400 font-semibold">{getNomeArrematante(inv.arrematante_responsavel_id)}</span>
+                                                        {(inv.arrematante_responsavel_id || inv.referred_by_id) ? (
+                                                            <span className="text-emerald-400 font-semibold">{getNomeArrematante(inv)}</span>
                                                         ) : (
                                                             <span className="text-slate-600">—</span>
                                                         )}

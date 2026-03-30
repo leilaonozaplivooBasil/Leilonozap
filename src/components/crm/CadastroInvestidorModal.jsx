@@ -103,6 +103,7 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
         address_city: addressCity,
         address_state: addressState,
         referred_by_id: currentArrematante?.id || null,
+        arrematante_responsavel_id: currentArrematante?.id || null,
         arrematante_commission_percentage: arrematanteComm,
         total_operation_fee_percentage: totalFee,
         password_reset_token: resetToken,
