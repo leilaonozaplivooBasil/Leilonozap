@@ -186,17 +186,25 @@ export default function Home() {
 
     // Removido: filtro específico 'sai_de_baixo' (desativado permanentemente)
 
-    // NOZAP - FILTRO BASE + ESTOQUE
+    // NOZAP - FILTRO BASE + ESTOQUE + DATA
     filtered = deduped.filter((a) => {
       if (a?.partner_store === 'sai_de_baixo' || a.is_investment_plan) return false;
-      
+
+      // 🔒 FILTRO DE DATA: Leilões com end_time expirado saem da listagem pública
+      // O status no banco pode não ser atualizado automaticamente pelo backend
+      if (a.end_time && a.status === 'active') {
+        const endDate = new Date(a.end_time);
+        if (!isNaN(endDate.getTime()) && endDate < new Date()) return false;
+      }
+
       // 🆕 FILTRO DE ESTOQUE: Verifica se produto vinculado tem estoque > 0
       if (a.product_id && productStockMap[a.product_id] !== undefined) {
         if (productStockMap[a.product_id] <= 0) return false;
       }
-      
+
       return true;
     });
+
 
     // REGIÃO
     if (userRegion) {
