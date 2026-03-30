@@ -178,17 +178,30 @@ export default function CRMInvestidores() {
                     )}
                 </div>
 
-                {/* Busca — apenas na lista */}
+                {/* Busca e Filtros — apenas na lista */}
                 {viewMode === 'lista' && (
-                    <div className="relative">
-                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <input
-                            type="text"
-                            placeholder="Buscar investidor por nome ou email..."
-                            value={busca}
-                            onChange={e => setBusca(e.target.value)}
-                            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-9 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500"
-                        />
+                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-4">
+                        <div className="relative w-full sm:w-auto flex-1">
+                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                            <input
+                                type="text"
+                                placeholder="Buscar investidor por nome ou email..."
+                                value={busca}
+                                onChange={e => setBusca(e.target.value)}
+                                className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-9 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                            />
+                        </div>
+                        <div className="flex items-center gap-3 w-full sm:w-auto bg-[#161b22] border border-[#30363d] px-4 py-2.5 rounded-lg">
+                            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium transition-colors hover:text-white text-slate-300">
+                                <input 
+                                    type="checkbox" 
+                                    checked={filtroCard === 'comCapital'}
+                                    onChange={(e) => setFiltroCard(e.target.checked ? 'comCapital' : null)}
+                                    className="w-4 h-4 rounded border-[#30363d] bg-[#0d1117] text-violet-500 focus:ring-violet-500/30 accent-violet-500 cursor-pointer"
+                                />
+                                Ocultar investidores sem saldo
+                            </label>
+                        </div>
                     </div>
                 )}
 
@@ -207,7 +220,11 @@ export default function CRMInvestidores() {
                             </div>
                         ) : investidoresFiltrados.length === 0 ? (
                             <div className="py-12 text-center text-slate-500 text-sm">
-                                {busca ? 'Nenhum investidor encontrado para essa busca.' : 'Nenhum investidor cadastrado ainda.'}
+                                {busca 
+                                    ? 'Nenhum investidor encontrado para essa busca.' 
+                                    : filtroCard 
+                                        ? 'Nenhum investidor corresponde ao filtro atual. Tente desativar "Ocultar investidores sem saldo".' 
+                                        : 'Nenhum investidor cadastrado ainda.'}
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
