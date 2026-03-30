@@ -4,6 +4,7 @@ import { base44 } from '@/api/base44Client';
 import { createPageUrl } from '@/utils';
 import { useNavigate } from 'react-router-dom';
 import CadastroInvestidorModal from '@/components/crm/CadastroInvestidorModal';
+import { useSecureRole } from '@/components/hooks/useSecureRole';
 
 const AppUser = base44.entities.AppUser;
 const Auction = base44.entities.Auction;
@@ -22,6 +23,9 @@ function Avatar({ name }) {
 }
 
 export default function CRMInvestidores() {
+    // SEGURANÇA: Valida role 'admin' ou 'leiloeiro' diretamente no banco de dados
+    const { status: authStatus } = useSecureRole(['admin', 'leiloeiro'], 'Home');
+
     const [investidores, setInvestidores] = useState([]);
     const [arrematantes, setArrematantes] = useState([]);
     const [lotes, setLotes] = useState([]);
@@ -33,7 +37,20 @@ export default function CRMInvestidores() {
     const [userRole, setUserRole] = useState(null);
     const navigate = useNavigate();
 
-    useEffect(() => { loadDados(); }, []);
+    useEffect(() => {
+        // Só carrega dados após a verificação de autorização ser concluída
+        if (authStatus === 'authorized') loadDados();
+    }, [authStatus]);
+
+    // Mostra spinner enquanto verifica autorização
+    if (authStatus === 'loading') {
+        return (
+            <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-slate-700 border-t-violet-500 rounded-full animate-spin" />
+            </div>
+        );
+    }
+    if (authStatus !== 'authorized') return null;
 
     const loadDados = async () => {
         setIsLoading(true);

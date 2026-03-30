@@ -12,6 +12,7 @@ import { distributeAuctionCommissions } from '@/functions/distributeAuctionCommi
 import ImportarLotesModal from '@/components/lotes/ImportarLotesModal';
 import AtualizarGradesModal from '@/components/lotes/AtualizarGradesModal';
 import ArrematantesModal from '@/components/lotes/ArrematantesModal';
+import { useSecureRole } from '@/components/hooks/useSecureRole';
 
 const Auction = base44.entities.Auction;
 const AppUser = base44.entities.AppUser;
@@ -124,6 +125,9 @@ function LoteDetalheModal({ lote, onClose }) {
 }
 
 export default function GestaoLotes() {
+    // SEGURANÇA: Valida role 'admin' diretamente no banco de dados
+    const { status: authStatus } = useSecureRole(['admin'], 'SistemaDeArremate');
+
     const [lotes, setLotes] = useState([]);
     const [investidores, setInvestidores] = useState([]);
     const [parceiros, setParceiros] = useState([]);
@@ -146,7 +150,20 @@ export default function GestaoLotes() {
     const navigate = useNavigate();
     const currentUserRole = (() => { try { return JSON.parse(localStorage.getItem('currentUser'))?.role; } catch { return null; } })();
 
-    useEffect(() => { loadDados(); }, []);
+    useEffect(() => {
+        // Só carrega dados após a verificação de autorização ser concluída
+        if (authStatus === 'authorized') loadDados();
+    }, [authStatus]);
+
+    // Mostra spinner enquanto verifica autorização
+    if (authStatus === 'loading') {
+        return (
+            <div className="min-h-screen bg-[#0d1117] flex items-center justify-center">
+                <div className="w-10 h-10 border-4 border-slate-700 border-t-amber-500 rounded-full animate-spin" />
+            </div>
+        );
+    }
+    if (authStatus !== 'authorized') return null;
 
     const loadDados = async () => {
         setIsLoading(true);

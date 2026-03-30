@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, UserPlus, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import bcrypt from 'bcryptjs';
@@ -36,6 +36,8 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
   const [success, setSuccess] = useState(false);
   const [currentArrematante, setCurrentArrematante] = useState(null);
   const [platformFee, setPlatformFee] = useState(0);
+  // SEGURANÇA: Ref para bloquear submits duplicados mesmo se o estado async ainda não atualizou
+  const isSubmittingRef = useRef(false);
 
   // Carrega dados do arrematante logado para pegar a % do admin
   useEffect(() => {
@@ -49,6 +51,9 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // SEGURANÇA: Bloqueia segundo submit enquanto o primeiro ainda está processando
+    if (isSubmittingRef.current || isLoading) return;
+    isSubmittingRef.current = true;
     setError('');
 
     if (!fullName || !email || !phone || !cpf) {
@@ -134,6 +139,7 @@ export default function CadastroInvestidorModal({ onClose, onSuccess }) {
       setError('Erro ao cadastrar: ' + (err.message || 'Tente novamente.'));
     } finally {
       setIsLoading(false);
+      isSubmittingRef.current = false; // SEGURANÇA: Libera para novas tentativas após erro
     }
   };
 
