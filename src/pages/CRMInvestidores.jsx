@@ -30,6 +30,7 @@ export default function CRMInvestidores() {
     const [showCadastro, setShowCadastro] = useState(false);
     const [viewMode, setViewMode] = useState('lista'); // 'lista' | 'arrematante'
     const [filtroCard, setFiltroCard] = useState(null); // null | 'comCapital' | 'alocado' | 'lotes'
+    const [userRole, setUserRole] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => { loadDados(); }, []);
@@ -39,6 +40,7 @@ export default function CRMInvestidores() {
         try {
             const savedUser = localStorage.getItem('currentUser');
             const currentUser = savedUser ? JSON.parse(savedUser) : null;
+            setUserRole(currentUser?.role || null);
             const isAdmin = currentUser?.role === 'admin';
 
             const investidorFilter = isAdmin
@@ -136,20 +138,21 @@ export default function CRMInvestidores() {
                     </div>
                 </header>
 
-                {/* Cards de Métricas — clicáveis para filtrar */}
+                {/* Cards de Métricas — clicáveis para filtrar apenas para admin/leiloeiro */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {metricas.map((m, i) => {
                         const isActive = filtroCard === m.filtro && m.filtro !== null;
+                        const canFilter = (userRole === 'admin' || userRole === 'leiloeiro') && m.filtro;
                         return (
                             <button
                                 key={i}
-                                onClick={() => m.filtro ? setFiltroCard(filtroCard === m.filtro ? null : m.filtro) : null}
-                                className={`bg-[#161b22] border-2 rounded-2xl p-5 text-left transition-all ${m.filtro ? 'cursor-pointer hover:bg-[#1c2230]' : 'cursor-default'} ${isActive ? 'border-violet-500 shadow-lg shadow-violet-500/10' : 'border-[#30363d]'}`}
+                                onClick={() => canFilter ? setFiltroCard(filtroCard === m.filtro ? null : m.filtro) : null}
+                                className={`bg-[#161b22] border-2 rounded-2xl p-5 text-left transition-all ${canFilter ? 'cursor-pointer hover:bg-[#1c2230]' : 'cursor-default'} ${isActive ? 'border-violet-500 shadow-lg shadow-violet-500/10' : 'border-[#30363d]'}`}
                             >
                                 <m.icon className={`${m.color} mb-3`} size={22} />
                                 <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">{m.label}</p>
                                 <p className="text-2xl font-black text-white">{m.value}</p>
-                                {m.filtro && <p className="text-[10px] text-slate-600 mt-1">{isActive ? 'Clique para limpar' : 'Clique para filtrar'}</p>}
+                                {canFilter && <p className="text-[10px] text-slate-600 mt-1">{isActive ? 'Clique para limpar' : 'Clique para filtrar'}</p>}
                             </button>
                         );
                     })}
@@ -191,17 +194,19 @@ export default function CRMInvestidores() {
                                 className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-9 pr-4 py-2.5 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-violet-500"
                             />
                         </div>
-                        <div className="flex items-center gap-3 w-full sm:w-auto bg-[#161b22] border border-[#30363d] px-4 py-2.5 rounded-lg">
-                            <label className="flex items-center gap-2 cursor-pointer text-sm font-medium transition-colors hover:text-white text-slate-300">
-                                <input 
-                                    type="checkbox" 
-                                    checked={filtroCard === 'comCapital'}
-                                    onChange={(e) => setFiltroCard(e.target.checked ? 'comCapital' : null)}
-                                    className="w-4 h-4 rounded border-[#30363d] bg-[#0d1117] text-violet-500 focus:ring-violet-500/30 accent-violet-500 cursor-pointer"
-                                />
-                                Ocultar investidores sem saldo
-                            </label>
-                        </div>
+                        {(userRole === 'admin' || userRole === 'leiloeiro') && (
+                            <div className="flex items-center gap-3 w-full sm:w-auto bg-[#161b22] border border-[#30363d] px-4 py-2.5 rounded-lg">
+                                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium transition-colors hover:text-white text-slate-300">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={filtroCard === 'comCapital'}
+                                        onChange={(e) => setFiltroCard(e.target.checked ? 'comCapital' : null)}
+                                        className="w-4 h-4 rounded border-[#30363d] bg-[#0d1117] text-violet-500 focus:ring-violet-500/30 accent-violet-500 cursor-pointer"
+                                    />
+                                    Ocultar investidores sem saldo
+                                </label>
+                            </div>
+                        )}
                     </div>
                 )}
 
