@@ -53,9 +53,25 @@ export default function CRMInvestidores() {
                 AppUser.filter({ role: 'leiloeiro' }),
                 AppUser.filter({ role: 'admin' })
             ]);
+
+            let todosArrematantes = [...(arrData || []), ...(admData || [])];
+
+            // Busca os responsáveis cuja role pode não ser nem leiloeiro nem strict 'admin'
+            const missingIds = [...new Set(
+                (usuarios || []).map(u => u.arrematante_responsavel_id || u.referred_by_id)
+                .filter(id => id && !todosArrematantes.some(a => a.id === id))
+            )];
+
+            if (missingIds.length > 0) {
+                const missingUsers = await Promise.all(missingIds.map(id => AppUser.filter({ id })));
+                missingUsers.forEach(res => {
+                    if (res && res[0]) todosArrematantes.push(res[0]);
+                });
+            }
+
             setInvestidores(usuarios || []);
             setLotes(leiloesData || []);
-            setArrematantes([...(arrData || []), ...(admData || [])]);
+            setArrematantes(todosArrematantes);
         } catch (error) {
             console.error('[CRMInvestidores] Erro ao carregar dados:', error);
         } finally {
