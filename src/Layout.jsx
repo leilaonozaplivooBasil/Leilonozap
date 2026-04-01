@@ -473,7 +473,6 @@ export default function Layout({ children, currentPageName }) {
         { title: "💳 Transações", pageName: "TransactionHistory" },
         { title: "🎯 Ativar Planos de Parceiros", pageName: "PartnerPlanActivation" },
         { title: "🧮 Auditoria de Comissões", pageName: "CommissionPilot" },
-        { title: "🩺 Diagnóstico do Sistema", pageName: "SystemDiagnostics" },
       ]
     },
     { title: "💰 PDV", pageName: "PDV" },
@@ -484,6 +483,7 @@ export default function Layout({ children, currentPageName }) {
     { title: "💼 Parceiros Ativos", pageName: "ActivePartners" },
     { title: "💲 Financeiro", pageName: "Financial" },
     { title: "Painel de Controle", pageName: "NetworkOverview" },
+    { title: "🩺 Diagnóstico do Sistema", pageName: "SystemDiagnostics" },
     { title: "Gerenciar Senhas", pageName: "AdminUsers" },
     { title: "💰 Carteira Leilões", pageName: "AddFunds" },
     { title: "💼 Carteira Investidor", pageName: "CarteiraInvestidor" },
