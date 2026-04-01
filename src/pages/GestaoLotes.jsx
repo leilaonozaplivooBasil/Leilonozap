@@ -150,6 +150,45 @@ export default function GestaoLotes() {
     const navigate = useNavigate();
     const currentUserRole = (() => { try { return JSON.parse(localStorage.getItem('currentUser'))?.role; } catch { return null; } })();
 
+    const lotesFiltrados = useMemo(() => {
+        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+        const semanaFim = new Date(hoje); semanaFim.setDate(semanaFim.getDate() + 7);
+
+        let resultado = lotes.filter(l => {
+            if (busca && !l.title?.toLowerCase().includes(busca.toLowerCase())) return false;
+            if (filtroStatus === 'marketplace' && !l.is_investment_plan) return false;
+            if (filtroStatus === 'active' && ['sold','cancelled','finalizado','arrematado'].includes(l.status)) return false;
+            if (filtroStatus === 'sold' && l.status !== 'sold') return false;
+
+            const lance = l.current_price || l.starting_price || 0;
+            if (filtroValor === 'ate10k' && lance > 10000) return false;
+            if (filtroValor === '10k50k' && (lance < 10000 || lance > 50000)) return false;
+            if (filtroValor === 'acima50k' && lance < 50000) return false;
+
+            if (filtroData !== 'todos' && l.end_time) {
+                const endDate = new Date(l.end_time); endDate.setHours(0, 0, 0, 0);
+                if (filtroData === 'hoje' && endDate.getTime() !== hoje.getTime()) return false;
+                if (filtroData === 'semana' && (endDate < hoje || endDate > semanaFim)) return false;
+                if (filtroData === 'vencidos' && endDate >= hoje) return false;
+            }
+            return true;
+        });
+
+        if (sortConfig.key) {
+            resultado = [...resultado].sort((a, b) => {
+                let va, vb;
+                if (sortConfig.key === 'title') { va = a.title || ''; vb = b.title || ''; }
+                else if (sortConfig.key === 'valor') { va = a.current_price || a.starting_price || 0; vb = b.current_price || b.starting_price || 0; }
+                else if (sortConfig.key === 'status') { va = a.status || ''; vb = b.status || ''; }
+                else if (sortConfig.key === 'data') { va = a.end_time || ''; vb = b.end_time || ''; }
+                if (va < vb) return sortConfig.dir === 'asc' ? -1 : 1;
+                if (va > vb) return sortConfig.dir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+        return resultado;
+    }, [lotes, busca, filtroStatus, filtroValor, filtroData, sortConfig]);
+
     useEffect(() => {
         // Só carrega dados após a verificação de autorização ser concluída
         if (authStatus === 'authorized') loadDados();
@@ -366,45 +405,6 @@ export default function GestaoLotes() {
     const handleSort = (key) => {
         setSortConfig(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
     };
-
-    const lotesFiltrados = useMemo(() => {
-        const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-        const semanaFim = new Date(hoje); semanaFim.setDate(semanaFim.getDate() + 7);
-
-        let resultado = lotes.filter(l => {
-            if (busca && !l.title?.toLowerCase().includes(busca.toLowerCase())) return false;
-            if (filtroStatus === 'marketplace' && !l.is_investment_plan) return false;
-            if (filtroStatus === 'active' && ['sold','cancelled','finalizado','arrematado'].includes(l.status)) return false;
-            if (filtroStatus === 'sold' && l.status !== 'sold') return false;
-
-            const lance = l.current_price || l.starting_price || 0;
-            if (filtroValor === 'ate10k' && lance > 10000) return false;
-            if (filtroValor === '10k50k' && (lance < 10000 || lance > 50000)) return false;
-            if (filtroValor === 'acima50k' && lance < 50000) return false;
-
-            if (filtroData !== 'todos' && l.end_time) {
-                const endDate = new Date(l.end_time); endDate.setHours(0, 0, 0, 0);
-                if (filtroData === 'hoje' && endDate.getTime() !== hoje.getTime()) return false;
-                if (filtroData === 'semana' && (endDate < hoje || endDate > semanaFim)) return false;
-                if (filtroData === 'vencidos' && endDate >= hoje) return false;
-            }
-            return true;
-        });
-
-        if (sortConfig.key) {
-            resultado = [...resultado].sort((a, b) => {
-                let va, vb;
-                if (sortConfig.key === 'title') { va = a.title || ''; vb = b.title || ''; }
-                else if (sortConfig.key === 'valor') { va = a.current_price || a.starting_price || 0; vb = b.current_price || b.starting_price || 0; }
-                else if (sortConfig.key === 'status') { va = a.status || ''; vb = b.status || ''; }
-                else if (sortConfig.key === 'data') { va = a.end_time || ''; vb = b.end_time || ''; }
-                if (va < vb) return sortConfig.dir === 'asc' ? -1 : 1;
-                if (va > vb) return sortConfig.dir === 'asc' ? 1 : -1;
-                return 0;
-            });
-        }
-        return resultado;
-    }, [lotes, busca, filtroStatus, filtroValor, filtroData, sortConfig]);
 
     const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
     const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
