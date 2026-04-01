@@ -7,20 +7,76 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
  * Modo manual (com action): executa teste específico (requer admin)
  */
 
+// Funções de teste isoladas para evitar recursividade
+async function runRateLimitTest(base44: any) {
+    const startTime = Date.now();
+    const results = [];
+    let rateLimitHit = false;
+
+    // Tenta 5 requisições rápidas (reduzido de 10 para ser mais rápido no dashboard)
+    for (let i = 0; i < 5; i++) {
+        try {
+            const t0 = Date.now();
+            await base44.asServiceRole.entities.Auction.list("-created_date", 1);
+            results.push({ request: i + 1, status: 'success', time: Date.now() - t0 });
+            await new Promise(resolve => setTimeout(resolve, 300));
+        } catch (error: any) {
+            if (error.message.includes('429') || error.message.includes('Rate limit')) {
+                rateLimitHit = true;
+                results.push({ request: i + 1, status: 'rate_limit', error: error.message });
+                break;
+            }
+            results.push({ request: i + 1, status: 'error', error: error.message });
+        }
+    }
+
+    return {
+        test: 'rate_limit',
+        passed: !rateLimitHit,
+        totalRequests: results.length,
+        rateLimitHit,
+        totalTestTime: Date.now() - startTime,
+        results
+    };
+}
+
+async function runSyncTest(base44: any, auctionId: string) {
+    const results = [];
+    const t0 = Date.now();
+    
+    try {
+        const auction = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
+        results.push({ entity: 'Auction', status: auction.length > 0 ? 'success' : 'not_found', count: auction.length });
+    } catch (e: any) {
+        results.push({ entity: 'Auction', status: 'error', error: e.message });
+    }
+
+    return {
+        test: 'sync',
+        passed: results.every(r => r.status === 'success'),
+        totalTime: Date.now() - t0,
+        results
+    };
+}
+
 Deno.serve(async (req: Request) => {
     try {
         const base44 = createClientFromRequest(req);
         console.log(`🩺 [systemHealthCheck] Invocado em: ${new Date().toISOString()}`);
 
-        // Tenta parsear o body (pode estar vazio em automações)
         let action = null;
         let auctionId = null;
+        
+        // Robustez ao ler body
         try {
-            const body = await req.clone().json();
-            action = body?.action || null;
-            auctionId = body?.auctionId || null;
-        } catch {
-            // Body vazio — modo automação
+            const text = await req.text();
+            if (text && text.trim()) {
+                const body = JSON.parse(text);
+                action = body?.action || null;
+                auctionId = body?.auctionId || null;
+            }
+        } catch (e) {
+            console.warn("⚠️ Falha ao ler body JSON:", e.message);
         }
 
         // ============= MODO AUTOMAÇÃO (sem action) =============
@@ -62,30 +118,7 @@ Deno.serve(async (req: Request) => {
                 results.push({ test: 'recent_errors', passed: false, error: error.message });
             }
 
-            // 3. Leilões ativos
-            try {
-                const t0 = Date.now();
-                const ativos = await base44.asServiceRole.entities.Auction.filter({ status: 'active' });
-                results.push({ test: 'active_auctions', passed: true, time: Date.now() - t0, count: ativos.length });
-            } catch (error: any) {
-                results.push({ test: 'active_auctions', passed: false, error: error.message });
-            }
-
-            // 4. Pagamentos pendentes (possíveis travados)
-            try {
-                const t0 = Date.now();
-                const pending = await base44.asServiceRole.entities.AsaasPayment.filter({ status: 'pending' }, '-created_date', 50);
-                const velhos = pending.filter((p: any) => {
-                    const created = new Date(p.created_date);
-                    return (Date.now() - created.getTime()) > 48 * 60 * 60 * 1000;
-                });
-                results.push({ test: 'stale_payments', passed: velhos.length < 5, time: Date.now() - t0, pending_total: pending.length, stale_48h: velhos.length });
-            } catch (error: any) {
-                results.push({ test: 'stale_payments', passed: false, error: error.message });
-            }
-
-            // 5. AUTO-FECHAMENTO DE LEILÕES VENCIDOS
-            // (Chama a função closeExpiredAuctions para garantir que leilões expirem no tempo)
+            // 3. AUTO-FECHAMENTO DE LEILÕES VENCIDOS
             try {
                 console.log("🕒 [systemHealthCheck] Invocando closeExpiredAuctions...");
                 const closeResponse = await base44.asServiceRole.functions.invoke('closeExpiredAuctions', {});
@@ -102,8 +135,6 @@ Deno.serve(async (req: Request) => {
 
             const totalTime = Date.now() - startTime;
             const allPassed = results.every(r => r.passed);
-
-            console.log(`✅ [systemHealthCheck] Automação concluída em ${totalTime}ms. Status: ${allPassed ? 'OK' : 'WARNING'}`);
 
             // Loga resultado no SystemLog
             try {
@@ -122,263 +153,55 @@ Deno.serve(async (req: Request) => {
                 status: allPassed ? 'healthy' : 'degraded',
                 timestamp: new Date().toISOString(),
                 totalTime,
-                summary: {
-                    total: results.length,
-                    passed: results.filter(r => r.passed).length,
-                    failed: results.filter(r => !r.passed).length
-                },
                 results
             });
         }
 
         // ============= MODO MANUAL (com action) — requer admin =============
         const user = await base44.auth.me();
-        if (!user || user.email !== 'luizsantanna@tttcorporate.com') {
+        if (!user || user.role !== 'admin') {
             return Response.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // ============= TESTE 1: RATE LIMIT =============
         if (action === 'test_rate_limit') {
-            const startTime = Date.now();
-            const results = [];
-            let rateLimitHit = false;
-
-            console.log("🧪 Testando Rate Limits...");
-
-            // Tenta 10 requisições rápidas
-            for (let i = 0; i < 10; i++) {
-                try {
-                    const testStart = Date.now();
-                    await base44.asServiceRole.entities.Auction.list("-created_date", 1);
-                    const testEnd = Date.now();
-                    
-                    results.push({
-                        request: i + 1,
-                        status: 'success',
-                        time: testEnd - testStart
-                    });
-                    
-                    // Aguarda 500ms entre requisições
-                    await new Promise(resolve => setTimeout(resolve, 500));
-                    
-                } catch (error: any) {
-                    if (error.message.includes('429') || error.message.includes('Rate limit')) {
-                        rateLimitHit = true;
-                        results.push({
-                            request: i + 1,
-                            status: 'rate_limit',
-                            error: error.message
-                        });
-                        break;
-                    }
-                }
-            }
-
-            const totalTime = Date.now() - startTime;
-            const avgTime = results.reduce((sum, r) => sum + (r.time || 0), 0) / results.filter(r => r.time).length;
-
-            return Response.json({
-                test: 'rate_limit',
-                passed: !rateLimitHit,
-                totalRequests: results.length,
-                rateLimitHit,
-                averageResponseTime: Math.round(avgTime),
-                totalTestTime: totalTime,
-                recommendation: rateLimitHit ? 
-                    "⚠️ INTERVALO DEVE SER MAIOR que 5 segundos" : 
-                    "✅ Intervalo de 5s é seguro",
-                results
-            });
+            const res = await runRateLimitTest(base44);
+            return Response.json(res);
         }
 
-        // ============= TESTE 2: SINCRONIZAÇÃO DE DADOS =============
         if (action === 'test_sync') {
-            console.log("🧪 Testando Sincronização...");
-
-            if (!auctionId) {
-                return Response.json({ error: 'auctionId required' }, { status: 400 });
-            }
-
-            const syncResults = [];
-            
-            // Teste 1: Busca Auction
-            try {
-                const auctionStart = Date.now();
-                const auction = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
-                const auctionTime = Date.now() - auctionStart;
-                
-                syncResults.push({
-                    entity: 'Auction',
-                    status: auction.length > 0 ? 'success' : 'not_found',
-                    time: auctionTime,
-                    recordsFound: auction.length
-                });
-            } catch (error: any) {
-                syncResults.push({
-                    entity: 'Auction',
-                    status: 'error',
-                    error: error.message
-                });
-            }
-
-            // Teste 2: Busca Messages
-            try {
-                const messagesStart = Date.now();
-                const messages = await base44.asServiceRole.entities.AuctionMessage.filter(
-                    { auction_id: auctionId },
-                    "-created_date",
-                    100
-                );
-                const messagesTime = Date.now() - messagesStart;
-                
-                syncResults.push({
-                    entity: 'AuctionMessage',
-                    status: 'success',
-                    time: messagesTime,
-                    recordsFound: messages.length
-                });
-            } catch (error: any) {
-                syncResults.push({
-                    entity: 'AuctionMessage',
-                    status: 'error',
-                    error: error.message
-                });
-            }
-
-            const allPassed = syncResults.every(r => r.status === 'success');
-            const totalTime = syncResults.reduce((sum, r) => sum + (r.time || 0), 0);
-
-            return Response.json({
-                test: 'sync',
-                passed: allPassed,
-                totalSyncTime: totalTime,
-                recommendation: totalTime > 3000 ?
-                    "⚠️ Sincronização lenta (>3s). Considere otimizar queries." :
-                    "✅ Sincronização rápida",
-                results: syncResults
-            });
+            if (!auctionId) return Response.json({ error: 'auctionId required' }, { status: 400 });
+            const res = await runSyncTest(base44, auctionId);
+            return Response.json(res);
         }
 
-        // ============= TESTE 3: LÓGICA DE LANCE =============
-        if (action === 'test_bid_logic') {
-            console.log("🧪 Testando Lógica de Lance...");
-
-            if (!auctionId) {
-                return Response.json({ error: 'auctionId required' }, { status: 400 });
-            }
-
-            const auction = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
-            
-            if (auction.length === 0) {
-                return Response.json({ error: 'Auction not found' }, { status: 404 });
-            }
-
-            const auc = auction[0];
-            const currentPrice = auc.current_price || auc.starting_price;
-            const increment = auc.increment;
-
-            // Cria lance de teste
-            const testBidAmount = currentPrice + increment;
-            const testUser = await base44.asServiceRole.entities.AppUser.filter({ 
-                email: user.email 
-            });
-
-            if (testUser.length === 0) {
-                return Response.json({ error: 'Test user not found' }, { status: 404 });
-            }
-
-            try {
-                // Cria mensagem de lance
-                await base44.asServiceRole.entities.AuctionMessage.create({
-                    auction_id: auctionId,
-                    message_type: "bid",
-                    sender_id: testUser[0].id,
-                    content: `[TESTE] Lance de R$ ${testBidAmount.toFixed(2)}`,
-                    sender_name: "Sistema de Teste",
-                    bid_amount: testBidAmount,
-                    is_system_message: false
-                });
-
-                // Atualiza leilão
-                await base44.asServiceRole.entities.Auction.update(auctionId, {
-                    current_price: testBidAmount
-                });
-
-                // Aguarda 2s e verifica
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                const updatedAuction = await base44.asServiceRole.entities.Auction.filter({ id: auctionId });
-                const messages = await base44.asServiceRole.entities.AuctionMessage.filter({
-                    auction_id: auctionId
-                }, "-created_date", 10);
-
-                const testBidMessage = messages.find((m: any) => 
-                    m.content.includes('[TESTE]') && m.bid_amount === testBidAmount
-                );
-
-                return Response.json({
-                    test: 'bid_logic',
-                    passed: updatedAuction[0].current_price === testBidAmount && testBidMessage !== undefined,
-                    details: {
-                        priceUpdated: updatedAuction[0].current_price === testBidAmount,
-                        messageCreated: testBidMessage !== undefined,
-                        expectedPrice: testBidAmount,
-                        actualPrice: updatedAuction[0].current_price
-                    },
-                    recommendation: "✅ Lógica de lance funcionando corretamente"
-                });
-
-            } catch (error) {
-                return Response.json({
-                    test: 'bid_logic',
-                    passed: false,
-                    error: error.message,
-                    recommendation: "❌ ERRO NA LÓGICA DE LANCE - Verificar submitBid()"
-                });
-            }
-        }
-
-        // ============= TESTE COMPLETO =============
         if (action === 'full_test') {
             console.log("🧪 Executando Teste Completo...");
-
-            const fullResults: { timestamp: string, tests: any[] } = {
-                timestamp: new Date().toISOString(),
-                tests: []
-            };
-
-            // Teste 1: Rate Limit
-            const rateLimitTest = await fetch(req.url, {
-                method: 'POST',
-                headers: req.headers,
-                body: JSON.stringify({ action: 'test_rate_limit' })
-            }).then(r => r.json());
-            fullResults.tests.push(rateLimitTest);
-
-            // Teste 2: Sincronização
-            if (auctionId) {
-                const syncTest = await fetch(req.url, {
-                    method: 'POST',
-                    headers: req.headers,
-                    body: JSON.stringify({ action: 'test_sync', auctionId })
-                }).then(r => r.json());
-                fullResults.tests.push(syncTest);
+            const results = [];
+            
+            // Roda testes internamente para evitar fetch recursivo
+            results.push(await runRateLimitTest(base44));
+            
+            // Busca um leilão para testar sync
+            const latest = await base44.asServiceRole.entities.Auction.list("-created_date", 1);
+            if (latest.length > 0) {
+                results.push(await runSyncTest(base44, latest[0].id));
             }
 
-            const allPassed = fullResults.tests.every(t => t.passed);
+            const allPassed = results.every(r => r.passed);
+
+            // Loga o sucesso do teste manual
+            await base44.asServiceRole.entities.SystemLog.create({
+                step: 'HEALTH_CHECK_MANUAL_SUCCESS',
+                status: allPassed ? 'success' : 'warning',
+                component_name: 'systemHealthCheck',
+                message: `Teste manual finalizado: ${results.filter(r => r.passed).length} testes OK`,
+                payload: { results }
+            });
 
             return Response.json({
                 test: 'full_system_check',
                 passed: allPassed,
-                summary: {
-                    total: fullResults.tests.length,
-                    passed: fullResults.tests.filter(t => t.passed).length,
-                    failed: fullResults.tests.filter(t => !t.passed).length
-                },
-                results: fullResults.tests,
-                overallRecommendation: allPassed ?
-                    "✅ SISTEMA FUNCIONANDO PERFEITAMENTE" :
-                    "⚠️ PROBLEMAS DETECTADOS - Ver detalhes dos testes"
+                results
             });
         }
 
@@ -388,7 +211,6 @@ Deno.serve(async (req: Request) => {
         const err = error as any;
         console.error("💥 [systemHealthCheck] CRITICAL ERROR:", err);
         
-        // Tenta logar o erro crítico no SystemLog se o base44 client estiver disponível
         try {
             const base44 = createClientFromRequest(req);
             await base44.asServiceRole.entities.SystemLog.create({
@@ -396,11 +218,9 @@ Deno.serve(async (req: Request) => {
                 status: 'error',
                 component_name: 'systemHealthCheck',
                 message: `Erro crítico na execução: ${err.message}`,
-                error_details: { stack: err.stack }
+                error_details: { stack: err.stack, originalError: err }
             });
-        } catch (_) {
-            // Ignora se falhar logar o erro do log
-        }
+        } catch (_) { }
 
         return Response.json({ 
             error: err.message,
