@@ -7,7 +7,7 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
  * Modo manual (com action): executa teste específico (requer admin)
  */
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
     try {
         const base44 = createClientFromRequest(req);
         console.log(`🩺 [systemHealthCheck] Invocado em: ${new Date().toISOString()}`);
@@ -35,11 +35,11 @@ Deno.serve(async (req) => {
                     component_name: 'systemHealthCheck',
                     message: 'Iniciando verificação automática periódica...'
                 });
-            } catch (logErr) {
+            } catch (logErr: any) {
                 console.error("❌ Falha ao criar log inicial:", logErr.message);
             }
 
-            const results = [];
+            const results: any[] = [];
             const startTime = Date.now();
 
             // 1. Teste de conectividade com banco
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
                 const t0 = Date.now();
                 const auctions = await base44.asServiceRole.entities.Auction.list("-created_date", 1);
                 results.push({ test: 'db_connectivity', passed: true, time: Date.now() - t0, records: auctions.length });
-            } catch (error) {
+            } catch (error: any) {
                 results.push({ test: 'db_connectivity', passed: false, error: error.message });
             }
 
@@ -56,9 +56,9 @@ Deno.serve(async (req) => {
                 const t0 = Date.now();
                 const errors = await base44.asServiceRole.entities.SystemLog.filter({ status: 'error' }, '-created_date', 50);
                 const ontem = new Date(Date.now() - 24 * 60 * 60 * 1000);
-                const recentes = errors.filter(e => new Date(e.created_date) >= ontem);
+                const recentes = errors.filter((e: any) => new Date(e.created_date) >= ontem);
                 results.push({ test: 'recent_errors', passed: recentes.length < 20, time: Date.now() - t0, count: recentes.length });
-            } catch (error) {
+            } catch (error: any) {
                 results.push({ test: 'recent_errors', passed: false, error: error.message });
             }
 
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
                 const t0 = Date.now();
                 const ativos = await base44.asServiceRole.entities.Auction.filter({ status: 'active' });
                 results.push({ test: 'active_auctions', passed: true, time: Date.now() - t0, count: ativos.length });
-            } catch (error) {
+            } catch (error: any) {
                 results.push({ test: 'active_auctions', passed: false, error: error.message });
             }
 
@@ -75,13 +75,29 @@ Deno.serve(async (req) => {
             try {
                 const t0 = Date.now();
                 const pending = await base44.asServiceRole.entities.AsaasPayment.filter({ status: 'pending' }, '-created_date', 50);
-                const velhos = pending.filter(p => {
+                const velhos = pending.filter((p: any) => {
                     const created = new Date(p.created_date);
                     return (Date.now() - created.getTime()) > 48 * 60 * 60 * 1000;
                 });
                 results.push({ test: 'stale_payments', passed: velhos.length < 5, time: Date.now() - t0, pending_total: pending.length, stale_48h: velhos.length });
-            } catch (error) {
+            } catch (error: any) {
                 results.push({ test: 'stale_payments', passed: false, error: error.message });
+            }
+
+            // 5. AUTO-FECHAMENTO DE LEILÕES VENCIDOS
+            // (Chama a função closeExpiredAuctions para garantir que leilões expirem no tempo)
+            try {
+                console.log("🕒 [systemHealthCheck] Invocando closeExpiredAuctions...");
+                const closeResponse = await base44.asServiceRole.functions.invoke('closeExpiredAuctions', {});
+                results.push({ 
+                    test: 'close_expired_auctions', 
+                    passed: true, 
+                    closed_count: closeResponse?.data?.closed || 0,
+                    error_count: closeResponse?.data?.errors || 0
+                });
+            } catch (closeErr: any) {
+                console.warn("⚠️ [systemHealthCheck] Falha ao invocar auto-fechamento:", closeErr.message);
+                results.push({ test: 'close_expired_auctions', passed: false, error: closeErr.message });
             }
 
             const totalTime = Date.now() - startTime;
@@ -98,7 +114,7 @@ Deno.serve(async (req) => {
                     message: `Health check: ${results.filter(r => r.passed).length}/${results.length} OK em ${totalTime}ms`,
                     payload: { results, totalTime }
                 });
-            } catch (logErr) {
+            } catch (logErr: any) {
                 console.error("❌ Falha ao logar resultado final no SystemLog:", logErr.message);
             }
 
@@ -145,7 +161,7 @@ Deno.serve(async (req) => {
                     // Aguarda 500ms entre requisições
                     await new Promise(resolve => setTimeout(resolve, 500));
                     
-                } catch (error) {
+                } catch (error: any) {
                     if (error.message.includes('429') || error.message.includes('Rate limit')) {
                         rateLimitHit = true;
                         results.push({
@@ -197,7 +213,7 @@ Deno.serve(async (req) => {
                     time: auctionTime,
                     recordsFound: auction.length
                 });
-            } catch (error) {
+            } catch (error: any) {
                 syncResults.push({
                     entity: 'Auction',
                     status: 'error',
@@ -221,7 +237,7 @@ Deno.serve(async (req) => {
                     time: messagesTime,
                     recordsFound: messages.length
                 });
-            } catch (error) {
+            } catch (error: any) {
                 syncResults.push({
                     entity: 'AuctionMessage',
                     status: 'error',
@@ -296,7 +312,7 @@ Deno.serve(async (req) => {
                     auction_id: auctionId
                 }, "-created_date", 10);
 
-                const testBidMessage = messages.find(m => 
+                const testBidMessage = messages.find((m: any) => 
                     m.content.includes('[TESTE]') && m.bid_amount === testBidAmount
                 );
 
@@ -326,7 +342,7 @@ Deno.serve(async (req) => {
         if (action === 'full_test') {
             console.log("🧪 Executando Teste Completo...");
 
-            const fullResults = {
+            const fullResults: { timestamp: string, tests: any[] } = {
                 timestamp: new Date().toISOString(),
                 tests: []
             };
