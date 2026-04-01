@@ -5,7 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, Download, Trash2, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { RefreshCw, Download, Trash2, AlertTriangle, CheckCircle, Info, Hammer, Play, Zap } from 'lucide-react';
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 
 /**
  * 🩺 PÁGINA DE DIAGNÓSTICO DO SISTEMA
@@ -20,6 +22,7 @@ export default function SystemDiagnostics() {
   const [frontendLogs, setFrontendLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [isRepairing, setIsRepairing] = useState(false);
 
   const loadLogs = async () => {
     setIsLoading(true);
@@ -67,6 +70,42 @@ export default function SystemDiagnostics() {
   const clearFrontendLogs = () => {
     localStorage.removeItem('diagnosticLogs');
     setFrontendLogs([]);
+  };
+
+  const runRepair = async (action) => {
+    if (isRepairing) return;
+    
+    const confirmMsg = action === 'close_expired' 
+      ? "Deseja forçar o encerramento de todos os leilões confirmados como expirados?" 
+      : "Deseja executar um Health Check completo agora?";
+      
+    if (!confirm(confirmMsg)) return;
+
+    setIsRepairing(true);
+    const loadingToast = toast.loading("Executando reparo...");
+
+    try {
+      if (action === 'close_expired') {
+        const response = await base44.functions.invoke('closeExpiredAuctions', {});
+        if (response.error) throw new Error(response.error);
+        
+        toast.success(`Sucesso! ${response.data?.closed || 0} leilões foram encerrados.`, { id: loadingToast });
+      } else if (action === 'health_check') {
+        const response = await base44.functions.invoke('systemHealthCheck', { action: 'full_test' });
+        if (response.error) throw new Error(response.error);
+        
+        toast.success("Health Check concluído! Verifique os novos logs.", { id: loadingToast });
+      }
+      
+      // Pequeno delay para dar tempo do backend salvar o log
+      setTimeout(loadLogs, 2000);
+      
+    } catch (error) {
+      console.error('Erro no reparo:', error);
+      toast.error("Falha na execução: " + error.message, { id: loadingToast });
+    } finally {
+      setIsRepairing(false);
+    }
   };
 
   const getStatusIcon = (status) => {
@@ -139,6 +178,45 @@ export default function SystemDiagnostics() {
             </Button>
           </div>
         </div>
+
+        {/* 🛠️ SEÇÃO DE AÇÕES DE REPARO */}
+        <Card className="bg-emerald-900/10 border-emerald-500/30 mb-6">
+          <CardContent className="p-4 flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center">
+                <Hammer className="w-6 h-6 text-emerald-400" />
+              </div>
+              <div>
+                <h3 className="text-white font-bold">Ações de Reparo</h3>
+                <p className="text-gray-400 text-xs">Intervenções manuais para correção do sistema</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap gap-2">
+              <Button 
+                onClick={() => runRepair('close_expired')} 
+                disabled={isRepairing}
+                variant="outline"
+                className="border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/20"
+                size="sm"
+              >
+                <Zap className="w-4 h-4 mr-2" />
+                Encerrar Leilões Expirados
+              </Button>
+              
+              <Button 
+                onClick={() => runRepair('health_check')} 
+                disabled={isRepairing}
+                variant="outline"
+                className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+                size="sm"
+              >
+                <Play className="w-4 h-4 mr-2" />
+                Rodar Health Check Completo
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="system" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-gray-800">
