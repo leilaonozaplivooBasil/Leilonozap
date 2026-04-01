@@ -1,4 +1,4 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
 /**
  * SISTEMA DE AUTO-DIAGNÓSTICO E CORREÇÃO
@@ -10,12 +10,13 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.21';
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
+        console.log(`🩺 [systemHealthCheck] Invocado em: ${new Date().toISOString()}`);
 
         // Tenta parsear o body (pode estar vazio em automações)
         let action = null;
         let auctionId = null;
         try {
-            const body = await req.json();
+            const body = await req.clone().json();
             action = body?.action || null;
             auctionId = body?.auctionId || null;
         } catch {
@@ -24,6 +25,20 @@ Deno.serve(async (req) => {
 
         // ============= MODO AUTOMAÇÃO (sem action) =============
         if (!action) {
+            console.log("🤖 [systemHealthCheck] Iniciando modo automação...");
+            
+            // Log inicial para confirmar que a função foi atingida pelo scheduler
+            try {
+                await base44.asServiceRole.entities.SystemLog.create({
+                    step: 'HEALTH_CHECK_START',
+                    status: 'info',
+                    component_name: 'systemHealthCheck',
+                    message: 'Iniciando verificação automática periódica...'
+                });
+            } catch (logErr) {
+                console.error("❌ Falha ao criar log inicial:", logErr.message);
+            }
+
             const results = [];
             const startTime = Date.now();
 
@@ -72,6 +87,8 @@ Deno.serve(async (req) => {
             const totalTime = Date.now() - startTime;
             const allPassed = results.every(r => r.passed);
 
+            console.log(`✅ [systemHealthCheck] Automação concluída em ${totalTime}ms. Status: ${allPassed ? 'OK' : 'WARNING'}`);
+
             // Loga resultado no SystemLog
             try {
                 await base44.asServiceRole.entities.SystemLog.create({
@@ -81,7 +98,9 @@ Deno.serve(async (req) => {
                     message: `Health check: ${results.filter(r => r.passed).length}/${results.length} OK em ${totalTime}ms`,
                     payload: { results, totalTime }
                 });
-            } catch {}
+            } catch (logErr) {
+                console.error("❌ Falha ao logar resultado final no SystemLog:", logErr.message);
+            }
 
             return Response.json({
                 status: allPassed ? 'healthy' : 'degraded',
@@ -350,10 +369,26 @@ Deno.serve(async (req) => {
         return Response.json({ error: 'Invalid action' }, { status: 400 });
 
     } catch (error) {
-        console.error("Health check error:", error);
+        const err = error as any;
+        console.error("💥 [systemHealthCheck] CRITICAL ERROR:", err);
+        
+        // Tenta logar o erro crítico no SystemLog se o base44 client estiver disponível
+        try {
+            const base44 = createClientFromRequest(req);
+            await base44.asServiceRole.entities.SystemLog.create({
+                step: 'HEALTH_CHECK_CRITICAL_FAILURE',
+                status: 'error',
+                component_name: 'systemHealthCheck',
+                message: `Erro crítico na execução: ${err.message}`,
+                error_details: { stack: err.stack }
+            });
+        } catch (_) {
+            // Ignora se falhar logar o erro do log
+        }
+
         return Response.json({ 
-            error: error.message,
-            stack: error.stack
+            error: err.message,
+            stack: err.stack
         }, { status: 500 });
     }
 });
