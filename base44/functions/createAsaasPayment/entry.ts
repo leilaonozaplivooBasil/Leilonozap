@@ -72,7 +72,28 @@ Deno.serve(async (req) => {
 
         if (searchData.data && searchData.data.length > 0) {
             customerId = searchData.data[0].id;
-            console.log('✅ Cliente existente encontrado:', customerId);
+            console.log('✅ Cliente existente encontrado:', customerId, '| Nome atual:', searchData.data[0].name);
+
+            // 🔒 ATUALIZAR NOME DO CLIENTE se for diferente (evita nome errado de transações anteriores)
+            if (buyer_name && searchData.data[0].name !== buyer_name) {
+                try {
+                    const updateController = new AbortController();
+                    const updateTimeout = setTimeout(() => updateController.abort(), 8000);
+                    await fetch(`https://api.asaas.com/v3/customers/${customerId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'access_token': apiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ name: buyer_name, email: buyer_email }),
+                        signal: updateController.signal
+                    });
+                    clearTimeout(updateTimeout);
+                    console.log('✅ Nome do cliente ASAAS atualizado:', buyer_name);
+                } catch (updateErr) {
+                    console.warn('⚠️ Erro ao atualizar nome do cliente ASAAS (não-bloqueante):', updateErr.message);
+                }
+            }
         } else {
             // Criar novo cliente
             const createController = new AbortController();

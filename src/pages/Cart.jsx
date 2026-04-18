@@ -44,6 +44,7 @@ export default function Cart() {
   const [pollingInterval, setPollingInterval] = useState(null);
   const [pixConfirmed, setPixConfirmed] = useState(false);
   const [createdSales, setCreatedSales] = useState([]);
+  const [checkoutItems, setCheckoutItems] = useState([]); // Snapshot dos itens ao gerar PIX
 
   // Form data
   const [formData, setFormData] = useState({
@@ -438,6 +439,9 @@ export default function Cart() {
           return;
         }
 
+        // 🔒 Salvar snapshot dos itens ANTES de limpar o carrinho
+        setCheckoutItems([...cartItems]);
+
         setPixData({ ...paymentResponse, billing_type: paymentType });
         toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
 
@@ -739,12 +743,12 @@ export default function Cart() {
                 Seu pedido
               </h2>
 
-              {cartItems.length === 0 ? (
+              {(pixData ? checkoutItems : cartItems).length === 0 ? (
                 <p className="text-gray-400 text-center py-8">Seu carrinho está vazio</p>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-4">
-                    {cartItems.map((item) => {
+                    {(pixData ? checkoutItems : cartItems).map((item) => {
                       const price = item.price_catalog || item.selling_price_wholesale || 0;
                       const imageUrl = item.image_urls?.[0] || 'https://via.placeholder.com/80';
 
@@ -795,7 +799,7 @@ export default function Cart() {
 
                   <div className="border-t border-gray-600 pt-6 mt-6 space-y-3">
                     <div className="flex justify-between text-base">
-                      <span className="text-gray-400">Total de itens ({cartItems.reduce((sum, item) => sum + (item.quantity || 1), 0)} itens)</span>
+                      <span className="text-gray-400">Total de itens ({(pixData ? checkoutItems : cartItems).reduce((sum, item) => sum + (item.quantity || 1), 0)} itens)</span>
                       <span className="text-white font-medium">R$ {calculateSubtotal().toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-base">
