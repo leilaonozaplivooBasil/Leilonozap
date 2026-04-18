@@ -27,18 +27,25 @@ export default function CatalogOrderTracking() {
 
         // Busca venda do catálogo
         const saleData = await base44.entities.CatalogSale.filter({ id: saleId });
-        if (saleData.length > 0) {
+        if (saleData && saleData.length > 0) {
           setOrder(saleData[0]);
+          console.log('✅ Pedido carregado:', saleData[0].id);
+        } else {
+          console.warn('⚠️ Nenhum pedido encontrado para ID:', saleId);
         }
       } catch (error) {
-        console.error('Erro ao carregar dados do pedido:', error);
+        console.error('❌ Erro ao carregar dados do pedido:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
     if (saleId) {
+      console.log('🔍 Buscando pedido com ID:', saleId);
       loadOrderData();
+    } else {
+      console.warn('⚠️ Nenhum sale_id na URL');
+      setIsLoading(false);
     }
   }, [saleId]);
 
