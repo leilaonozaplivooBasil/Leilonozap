@@ -402,6 +402,33 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                         </div>
                     </div>
 
+                    {/* Ticket Médio por Grade */}
+                    <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
+                        <h3 className="font-bold text-white mb-2 text-sm uppercase tracking-wider flex items-center gap-2"><Activity size={16} className="text-blue-400" />Análise de Ticket Médio por Grade</h3>
+                        <p className="text-xs text-gray-500 mb-4">Valor médio dos produtos agrupados por qualidade superior.</p>
+                        <div className="space-y-2">
+                            {[
+                                { label: "Somente Grupo A", desc: `${calculations.qtdA} produtos`, tm: calculations.tmA, val: calculations.valA, color: "border-l-blue-400", grades: ['A'] },
+                                { label: "Grupo A + B", desc: `${calculations.qtdAB} produtos vitrine`, tm: calculations.tmAB, val: calculations.valAB, color: "border-l-emerald-400", grades: ['A','B'] },
+                                { label: "Grupo A + B + C", desc: `${calculations.qtdABC} produtos úteis`, tm: calculations.tmABC, val: calculations.valABC, color: "border-l-yellow-400", grades: ['A','B','C'] },
+                                { label: "Grupo A + B + C + D", desc: `${calculations.qtdABCD} produtos escoáveis`, tm: calculations.tmABCD, val: calculations.valABCD, color: "border-l-orange-400", grades: ['A','B','C','D'] },
+                                { label: "Todos os Grupos", desc: `${calculations.qtdALL} produtos (lote inteiro)`, tm: calculations.tmALL, val: calculations.valALL, color: "border-l-gray-400", grades: ['A','B','C','D','E','U'] },
+                            ].map((row, i) => (
+                                <div key={i} onClick={() => setGradeModal({ title: row.label, grades: row.grades })}
+                                    className={`bg-gray-900 border border-gray-700 border-l-4 ${row.color} rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-white/[0.03] transition-colors group`}>
+                                    <div>
+                                        <p className="font-bold text-sm text-gray-200 flex items-center gap-1.5">{row.label} <Eye size={11} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" /></p>
+                                        <p className="text-xs text-gray-500">{row.desc}</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="font-bold text-emerald-400">{formatCurrency(row.tm)} <span className="text-xs text-gray-500 font-normal">médio</span></p>
+                                        <p className="text-[10px] text-gray-500 mt-0.5">Apurado: {formatCurrency(row.val)}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Categorias */}
                     {loteAtual.resumoCategorias?.length > 0 && (
                         <div className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden">
