@@ -41,14 +41,25 @@ Deno.serve(async (req) => {
     const pricedProducts = [];
     for (const product of productsToPrice) {
       try {
-        // Chama searchGoogleShopping (já existe no projeto)
+        // Chama searchGoogleShopping com o parâmetro correto
         const priceResult = await base44.functions.invoke('searchGoogleShopping', {
-          query: product.description
+          productName: product.description
         });
 
-        if (priceResult?.data?.price) {
-          const marketPrice = priceResult.data.price;
-          const calculatedPrice = marketPrice * 0.80; // 20% desconto
+        const shoppingProducts = priceResult?.data?.products || [];
+        // Filtra preços válidos e calcula a mediana
+        const validPrices = shoppingProducts
+          .map(p => p.price)
+          .filter(p => p && p > 0);
+
+        if (validPrices.length > 0) {
+          validPrices.sort((a, b) => a - b);
+          const mid = Math.floor(validPrices.length / 2);
+          const marketPrice = validPrices.length % 2 !== 0
+            ? validPrices[mid]
+            : (validPrices[mid - 1] + validPrices[mid]) / 2;
+
+          const calculatedPrice = parseFloat((marketPrice * 0.80).toFixed(2));
 
           pricedProducts.push({
             id: product.id,
@@ -56,6 +67,7 @@ Deno.serve(async (req) => {
             lot: product.lot,
             market_price: marketPrice,
             calculated_price: calculatedPrice,
+            selling_price_retail: calculatedPrice,
             status: 'success'
           });
         } else {
