@@ -504,25 +504,25 @@ export default function ProductManagement() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="text-sm" style={{minWidth: '1200px', width: '100%'}}>
               <thead>
-                <tr className="bg-gray-800/70 border-b border-gray-700/60">
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Data</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Produto</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Depósito</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-emerald-600 uppercase tracking-wider">Perfeito</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-yellow-600 uppercase tracking-wider">Bom</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-orange-600 uppercase tracking-wider">Oficina</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Obs.</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">C. Total</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">C. Unit.</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Preço Venda</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estoque</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Vendidos</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Valor Venda</th>
-                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lucro</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                <tr className="bg-gray-800/80 border-b border-gray-700">
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Data</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'110px'}}>SKU</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider" style={{width:'220px'}}>Produto</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Depósito</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-emerald-500 uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>✅ Perf.</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-yellow-500 uppercase tracking-wider whitespace-nowrap" style={{width:'60px'}}>🟡 Bom</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-orange-500 uppercase tracking-wider whitespace-nowrap" style={{width:'70px'}}>🔧 Ofic.</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wider" style={{width:'130px'}}>Obs.</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>C. Total</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'80px'}}>C. Unit.</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-sky-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>P. Venda</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-white uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>Estoque</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>Vendidos</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-blue-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Vl. Venda</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-emerald-500 uppercase tracking-wider whitespace-nowrap" style={{width:'80px'}}>Lucro</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800/60">
@@ -532,10 +532,12 @@ export default function ProductManagement() {
                     className={`hover:bg-gray-800/50 transition-colors cursor-pointer group ${index % 2 === 0 ? 'bg-transparent' : 'bg-gray-900/40'}`}
                   >
                     <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>{product.date || '—'}</td>
-                    <td className="px-3 py-2.5" onClick={() => handleEdit(product)}>
-                      <span className="font-mono text-xs bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded">{product.lot || 'N/A'}</span>
+                    <td className="px-3 py-2.5 whitespace-nowrap" onClick={() => handleEdit(product)}>
+                      <span className="font-mono text-xs bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded whitespace-nowrap">{product.lot || 'N/A'}</span>
                     </td>
-                    <td className="px-3 py-2.5 text-gray-200 font-medium max-w-[200px] truncate" onClick={() => handleEdit(product)} title={product.description}>{product.description}</td>
+                    <td className="px-3 py-2.5 text-gray-200 font-medium whitespace-nowrap overflow-hidden" style={{maxWidth: '220px'}} onClick={() => handleEdit(product)} title={product.description}>
+                      <div className="truncate">{product.description}</div>
+                    </td>
                     <td className="px-3 py-2.5" onClick={() => handleEdit(product)}>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${depositBadge(product.deposit_name || 'Bangu')}`}>{product.deposit_name || 'Bangu'}</span>
                     </td>
@@ -555,12 +557,15 @@ export default function ProductManagement() {
                         : <span className="text-gray-700">—</span>}
                     </td>
                     <td
-                      className="px-3 py-2.5 text-gray-500 text-xs max-w-[120px] cursor-pointer"
+                      className="px-3 py-2.5 text-gray-500 text-xs cursor-pointer"
+                      style={{maxWidth: '140px'}}
                       onClick={(e) => { e.stopPropagation(); setExpandedNotes(prev => ({ ...prev, [product.id]: !prev[product.id] })); }}
                     >
-                      <div className={expandedNotes[product.id] ? '' : 'truncate'}>{product.notes || '—'}</div>
-                      {product.notes && product.notes.length > 40 && (
-                        <span className="text-blue-500 text-xs">{expandedNotes[product.id] ? '▲' : '▼'}</span>
+                      {product.notes ? (
+                        <div className={expandedNotes[product.id] ? 'text-gray-400' : 'truncate text-gray-600'}>{product.notes}</div>
+                      ) : <span className="text-gray-800">—</span>}
+                      {product.notes && product.notes.length > 30 && (
+                        <span className="text-blue-600 text-xs ml-1">{expandedNotes[product.id] ? '▲' : '▼'}</span>
                       )}
                     </td>
                     <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
