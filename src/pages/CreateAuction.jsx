@@ -293,9 +293,43 @@ export default function CreateAuction() {
           return;
         }
 
-        // 3. Se tem source_url do ML → preenche o input e dispara extração automática
+        // 3. Se tem source_url do ML → tenta extrair imagens
         const sourceUrl = product.source_url || '';
         const isMlUrl = sourceUrl.includes('mercadolivre.com') || sourceUrl.includes('mercadolibre.com');
+
+        const autoSearchByGoogleShopping = async (productDescription) => {
+          toast.info('🔎 Buscando imagens no Google Shopping automaticamente...');
+          setIsProcessing(true);
+          setManualStep(1);
+          try {
+            const gsResponse = await base44.functions.invoke('extractGoogleShoppingImages', {
+              productName: productDescription
+            });
+            const gsData = gsResponse?.data?.data;
+            if (gsData?.products?.length > 0) {
+              const imgs = gsData.products.slice(0, 5).map(p => p.imageUrl).filter(Boolean);
+              if (imgs.length > 0) {
+                const finalImgs = [...imgs];
+                while (finalImgs.length < 5) finalImgs.push("");
+                setFormData(prev => ({ ...prev, image_urls: finalImgs }));
+                setDownloadedImages(imgs);
+                setCoverIndex(0);
+                setManualStep(5);
+                toast.success(`✅ ${imgs.length} imagens encontradas no Google Shopping!`);
+                return;
+              }
+            }
+            // Sem resultado
+            setManualStep(0);
+            toast.warning('⚠️ Nenhuma imagem encontrada automaticamente. Use o importador manual.');
+          } catch (err) {
+            console.error('❌ Erro Google Shopping automático:', err);
+            setManualStep(0);
+            toast.warning('⚠️ Não foi possível buscar imagens. Use o importador manual.');
+          } finally {
+            setIsProcessing(false);
+          }
+        };
 
         if (isMlUrl) {
           setProductUrl(sourceUrl);
@@ -326,20 +360,23 @@ export default function CreateAuction() {
                 setManualStep(5);
                 toast.success(`✅ ${imgs.length} imagens extraídas do Mercado Livre!`);
               } else {
-                // ML não retornou imagens — mostra o link no input para o usuário clicar manualmente
-                setProductUrl(sourceUrl);
+                // ML bloqueou → fallback automático Google Shopping
+                setIsProcessing(false);
                 setManualStep(0);
-                toast.warning('⚠️ Não foi possível extrair automaticamente. Clique em "Importar do Mercado Livre".');
+                await autoSearchByGoogleShopping(product.description);
               }
             } catch (err) {
               console.error('❌ Erro ao extrair ML automático:', err);
-              setProductUrl(sourceUrl);
+              setIsProcessing(false);
               setManualStep(0);
-              toast.warning('⚠️ Erro na extração automática. O link está preenchido — clique em Importar.');
+              await autoSearchByGoogleShopping(product.description);
             } finally {
               setIsProcessing(false);
             }
           }, 1000);
+        } else {
+          // Sem URL do ML → busca automática direta no Google Shopping
+          setTimeout(() => autoSearchByGoogleShopping(product.description), 800);
         }
       }
     } catch (error) {
