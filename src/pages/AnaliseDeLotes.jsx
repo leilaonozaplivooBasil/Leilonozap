@@ -415,15 +415,15 @@ function AnaliseDeLotes() {
                             </div>
                             <h3 className="text-2xl font-bold mb-3 text-white">Importar Lotes</h3>
                             <p className="text-slate-400 mb-8 max-w-[280px] mx-auto text-sm leading-relaxed">
-                                Carregue uma ou mais planilhas Excel para análise. Elas aparecerão na lista abaixo.
+                                Carregue uma ou mais planilhas Excel ou CSV para análise. Elas aparecerão na lista abaixo.
                             </p>
 
                             <label className="relative overflow-hidden cursor-pointer flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-indigo-600 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 w-full hover:-translate-y-0.5">
                                 <FileSpreadsheet size={20} />
-                                <span>Selecionar Arquivo Excel</span>
+                                <span>Selecionar Arquivo (Excel ou CSV)</span>
                                 <input
                                     type="file"
-                                    accept=".xlsx, .xls"
+                                    accept=".xlsx, .xls, .csv"
                                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                                     onChange={handleFileUpload}
                                     disabled={isProcessing}
