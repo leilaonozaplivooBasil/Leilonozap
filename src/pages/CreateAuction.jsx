@@ -267,13 +267,79 @@ export default function CreateAuction() {
 
       if (products.length > 0) {
         const product = products[0];
+
+        // 1. Aplica dados básicos do produto
+        const productImages = (product.image_urls || []).filter(u => u && u.trim());
+        const finalImages = [...productImages.slice(0, 5)];
+        while (finalImages.length < 5) finalImages.push("");
+
         setFormData(prev => ({
           ...prev,
           title: product.description,
           description: product.description + (product.notes ? `\n\n${product.notes}` : ''),
-          starting_price: (product.selling_price_retail || product.cost_price * 1.5).toFixed(2),
-          product_id: product.id
+          starting_price: (product.selling_price_retail || product.cost_price * 1.5 || 0).toFixed(2),
+          product_id: product.id,
+          source_url: product.source_url || '',
+          image_urls: productImages.length > 0 ? finalImages : prev.image_urls
         }));
+
+        // 2. Se já tem imagens no estoque → aplica direto
+        if (productImages.length > 0) {
+          setDownloadedImages(productImages);
+          setCoverIndex(0);
+          setManualStep(5);
+          toast.success(`✅ ${productImages.length} imagens carregadas do estoque!`);
+          return;
+        }
+
+        // 3. Se tem source_url do ML → preenche o input e dispara extração automática
+        const sourceUrl = product.source_url || '';
+        const isMlUrl = sourceUrl.includes('mercadolivre.com') || sourceUrl.includes('mercadolibre.com');
+
+        if (isMlUrl) {
+          setProductUrl(sourceUrl);
+          toast.info('🔗 Produto tem link do ML! Extraindo imagens automaticamente...');
+          setTimeout(async () => {
+            setIsProcessing(true);
+            setManualStep(1);
+            try {
+              const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', {
+                productUrl: sourceUrl
+              }));
+
+              if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
+                const imgs = mlResponse.data.images;
+                const finalImgs = imgs.slice(0, 5);
+                while (finalImgs.length < 5) finalImgs.push("");
+
+                setFormData(prev => ({
+                  ...prev,
+                  image_urls: finalImgs,
+                  title: mlResponse.data.title?.trim() || prev.title,
+                  description: mlResponse.data.description || prev.description,
+                  source_url: sourceUrl
+                }));
+                setDownloadedImages(imgs);
+                setCoverIndex(0);
+                setExtractedData({ title: mlResponse.data.title || '', description: mlResponse.data.description || '' });
+                setManualStep(5);
+                toast.success(`✅ ${imgs.length} imagens extraídas do Mercado Livre!`);
+              } else {
+                // ML não retornou imagens — mostra o link no input para o usuário clicar manualmente
+                setProductUrl(sourceUrl);
+                setManualStep(0);
+                toast.warning('⚠️ Não foi possível extrair automaticamente. Clique em "Importar do Mercado Livre".');
+              }
+            } catch (err) {
+              console.error('❌ Erro ao extrair ML automático:', err);
+              setProductUrl(sourceUrl);
+              setManualStep(0);
+              toast.warning('⚠️ Erro na extração automática. O link está preenchido — clique em Importar.');
+            } finally {
+              setIsProcessing(false);
+            }
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar produto:", error);
