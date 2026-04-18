@@ -145,9 +145,9 @@ export default function ProductManagement() {
     setIsPricingLoading(true);
     try {
       for (const item of toUpdate) {
-        await base44.entities.Product.update(item.id, {
-          selling_price_retail: item.selling_price_retail
-        });
+        const updateData = { selling_price_retail: item.selling_price_retail };
+        if (item.source_url) updateData.source_url = item.source_url;
+        await base44.entities.Product.update(item.id, updateData);
       }
       alert(`✅ ${toUpdate.length} produto(s) precificado(s)!`);
       setShowPricingPreview(false);

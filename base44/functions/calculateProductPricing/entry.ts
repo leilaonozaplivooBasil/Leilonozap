@@ -55,6 +55,10 @@ Deno.serve(async (req) => {
           .map(p => p.price)
           .filter(p => p && p > 0);
 
+        // Captura link do Mercado Livre (primeiro resultado que tiver)
+        const mlProduct = shoppingProducts.find(p => p.mercadolivre_url);
+        const mlUrl = mlProduct?.mercadolivre_url || null;
+
         if (validPrices.length > 0) {
           validPrices.sort((a, b) => a - b);
           const mid = Math.floor(validPrices.length / 2);
@@ -71,6 +75,7 @@ Deno.serve(async (req) => {
             market_price: marketPrice,
             calculated_price: calculatedPrice,
             selling_price_retail: calculatedPrice,
+            source_url: mlUrl,
             status: 'success'
           });
         } else {

@@ -23,7 +23,8 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
       const product = products.find(p => p.id === id && p.status === 'success');
       return {
         id: product.id,
-        selling_price_retail: product.calculated_price
+        selling_price_retail: product.calculated_price,
+        source_url: product.source_url || null
       };
     });
     onConfirm(toUpdate);
@@ -95,6 +96,17 @@ export default function PricingPreviewModal({ isOpen, onClose, products, onConfi
                       <p className="font-bold text-emerald-400">R$ {product.market_price.toFixed(2)}</p>
                       <p className="text-xs text-gray-400 mt-0.5">Venda (-20%)</p>
                       <p className="font-bold text-sky-400">R$ {product.calculated_price.toFixed(2)}</p>
+                      {product.source_url && (
+                        <a
+                          href={product.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-yellow-400 hover:text-yellow-300 mt-1 flex items-center gap-1 justify-end"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          🛒 Ver no ML
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
