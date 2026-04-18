@@ -138,17 +138,22 @@ export default function MyCatalogOrders() {
   };
 
   useEffect(() => {
-    const loadData = async () => {
+    // IDs já pagos no carregamento inicial — para nunca disparar popup em pedidos históricos
+    const initialPaidIds = new Set();
+    // Snapshot mutável dos pedidos atuais para comparação no polling
+    let currentOrdersSnapshot = [];
+
+    const loadDataAndStartPolling = async () => {
       try {
         const savedUser = localStorage.getItem('currentUser');
-        if (!savedUser) {
-          setIsLoading(false);
-          return;
-        }
+        if (!savedUser) { setIsLoading(false); return; }
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
 
         const orders = await fetchOrders(user.id);
+        // Popula o set com todos os IDs que JÁ estão pagos antes do polling começar
+        orders.forEach(o => { if (o.status === 'paid') initialPaidIds.add(o.id); });
+        currentOrdersSnapshot = orders;
         setOrders(orders);
       } catch (error) {
         console.error("Failed to load catalog orders:", error);
@@ -158,9 +163,9 @@ export default function MyCatalogOrders() {
       }
     };
 
-    loadData();
+    loadDataAndStartPolling();
 
-    // 🔄 Polling simples: recarrega a cada 5 segundos enquanto espera pagamento
+    // 🔄 Polling: só dispara popup se um pedido mudou de não-pago para pago NESTA sessão
     const pollingTimer = setInterval(async () => {
       const savedUser = localStorage.getItem('currentUser');
       if (!savedUser) return;
@@ -169,20 +174,23 @@ export default function MyCatalogOrders() {
       try {
         const newOrders = await fetchOrders(user.id);
 
-        // Verificar se algum pedido foi pago
         newOrders.forEach(order => {
-          const oldOrder = orders.find(o => o.id === order.id);
-          if (oldOrder?.status !== 'paid' && order.status === 'paid') {
-            window.dispatchEvent(new CustomEvent('paymentConfirmed', {
-              detail: {
-                sale_id: order.id,
-                product_title: order.product_title,
-                amount: order.total_amount
-              }
-            }));
+          if (order.status === 'paid' && !initialPaidIds.has(order.id)) {
+            const oldOrder = currentOrdersSnapshot.find(o => o.id === order.id);
+            if (oldOrder && oldOrder.status !== 'paid') {
+              initialPaidIds.add(order.id); // Evita disparar de novo
+              window.dispatchEvent(new CustomEvent('paymentConfirmed', {
+                detail: {
+                  sale_id: order.id,
+                  product_title: order.product_title,
+                  amount: order.total_amount
+                }
+              }));
+            }
           }
         });
 
+        currentOrdersSnapshot = newOrders;
         setOrders(newOrders);
       } catch (error) {
         console.debug('Polling error:', error);
