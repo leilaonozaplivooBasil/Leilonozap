@@ -27,6 +27,9 @@ function AnaliseDeLotes() {
         });
     };
 
+    // Modelo de planilha selecionado
+    const [modeloPlanilha, setModeloPlanilha] = useState('mercadolivre'); // 'mercadolivre' | 'casaevideo'
+
     // Campos manuais de data/hora do leilão (quando não detectados na planilha)
     const [dataLeilao, setDataLeilao] = useState('');
     const [horarioLeilao, setHorarioLeilao] = useState('');
@@ -43,6 +46,88 @@ function AnaliseDeLotes() {
         return isNaN(numeric) ? 0 : numeric;
     };
 
+    // Parser Casa e Vídeo: colunas fixas ENDEREÇO, MATERIAL_SAP, DESCRIÇÃO, QTD_ESTOQUE, valor venda, CATEGORIA
+    const processSheetDataCasaEVideo = (workbook, filename) => {
+        const sheetName = workbook.SheetNames[0];
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
+
+        if (rows.length < 2) {
+            setError('Planilha Casa e Vídeo vazia ou sem dados.');
+            return;
+        }
+
+        // Linha 0 = cabeçalho
+        const headers = rows[0].map(h => String(h).toUpperCase().trim());
+        const colDesc = headers.findIndex(h => h.includes('DESCRI'));
+        const colQtd = headers.findIndex(h => h.includes('QTD'));
+        const colValor = headers.findIndex(h => h.includes('VALOR') || h.includes('VENDA'));
+        const colCat = headers.findIndex(h => h.includes('CATEGOR'));
+
+        if (colDesc === -1 || colValor === -1) {
+            setError('Planilha Casa e Vídeo: colunas DESCRIÇÃO e/ou VALOR não encontradas.');
+            return;
+        }
+
+        const resumoCategorias = {};
+        const subItemsByCategory = {};
+        const rawItemsByGrade = [];
+        let valorMercadoTotal = 0;
+        let totalItemsQtd = 0;
+
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.every(c => c === '' || c == null)) continue;
+
+            const desc = colDesc >= 0 ? String(row[colDesc] || '').trim() : '';
+            if (!desc) continue;
+
+            const qtd = colQtd >= 0 ? (parseInt(row[colQtd]) || 1) : 1;
+            const valor = colValor >= 0
+                ? (typeof row[colValor] === 'number' ? row[colValor] : parseFloat(String(row[colValor]).replace(/[R$\s]/g, '').replace(',', '.')) || 0)
+                : 0;
+            const cat = colCat >= 0 ? String(row[colCat] || 'SEM CATEGORIA').trim() : 'SEM CATEGORIA';
+
+            valorMercadoTotal += valor;
+            totalItemsQtd += qtd;
+
+            // Sem grade — todos vão como 'A' (itens novos de estoque)
+            rawItemsByGrade.push({ grade: 'A', desc, qtd, valor });
+
+            if (!resumoCategorias[cat]) resumoCategorias[cat] = { nome: cat, qtd: 0, valor: 0 };
+            resumoCategorias[cat].qtd += qtd;
+            resumoCategorias[cat].valor += valor;
+
+            if (!subItemsByCategory[cat]) subItemsByCategory[cat] = [];
+            subItemsByCategory[cat].push({ desc, qtd, valor });
+        }
+
+        const gradesData = {
+            A: { qtd: totalItemsQtd, valorMarket: valorMercadoTotal },
+            B: { qtd: 0, valorMarket: 0 },
+            C: { qtd: 0, valorMarket: 0 },
+            D: { qtd: 0, valorMarket: 0 },
+            E: { qtd: 0, valorMarket: 0 },
+            U: { qtd: 0, valorMarket: 0 },
+        };
+
+        const novoLote = {
+            id: Date.now(),
+            nomePlanilha: filename,
+            nomeLote: filename.replace(/\.xlsx?$|\.csv$/i, ''),
+            localColeta: 'Será informado após Arremate',
+            resumoCategorias: Object.values(resumoCategorias),
+            subItemsByCategory,
+            quantidadeTotal: totalItemsQtd,
+            valorMercadoTotal,
+            classCount: { A: totalItemsQtd, B: 0, C: 0, D: 0, E: 0, U: 0 },
+            gradesData,
+            rawItemsByGrade
+        };
+
+        setLotesImportados(prev => [...prev, novoLote]);
+        setLoteAtual(novoLote);
+    };
+
     const handleFileUpload = useCallback((e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -57,7 +142,11 @@ function AnaliseDeLotes() {
                 const bstr = evt.target.result;
                 const workbook = XLSX.read(bstr, { type: 'binary' });
 
-                processSheetData(workbook, file.name);
+                if (modeloPlanilha === 'casaevideo') {
+                    processSheetDataCasaEVideo(workbook, file.name);
+                } else {
+                    processSheetData(workbook, file.name);
+                }
             } catch (err) {
                 console.error(err);
                 setError('Erro ao processar a planilha. Verifique se é um arquivo Excel válido.');
@@ -67,7 +156,7 @@ function AnaliseDeLotes() {
         };
 
         reader.readAsBinaryString(file);
-    }, []);
+    }, [modeloPlanilha]);
 
     const processSheetData = (rawWorkbookData, filename) => {
         let wmsSheetData = null;
@@ -414,9 +503,25 @@ function AnaliseDeLotes() {
                                 <UploadCloud size={40} className="drop-shadow-lg" />
                             </div>
                             <h3 className="text-2xl font-bold mb-3 text-white">Importar Lotes</h3>
-                            <p className="text-slate-400 mb-8 max-w-[280px] mx-auto text-sm leading-relaxed">
+                            <p className="text-slate-400 mb-6 max-w-[280px] mx-auto text-sm leading-relaxed">
                                 Carregue uma ou mais planilhas Excel ou CSV para análise. Elas aparecerão na lista abaixo.
                             </p>
+
+                            {/* SELETOR DE MODELO */}
+                            <div className="flex gap-2 mb-6 p-1 bg-[#0d1117] border border-[#30363d] rounded-xl">
+                                <button
+                                    onClick={() => setModeloPlanilha('mercadolivre')}
+                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${modeloPlanilha === 'mercadolivre' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    🛒 Mercado Livre
+                                </button>
+                                <button
+                                    onClick={() => setModeloPlanilha('casaevideo')}
+                                    className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${modeloPlanilha === 'casaevideo' ? 'bg-orange-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                >
+                                    🏪 Casa & Vídeo
+                                </button>
+                            </div>
 
                             <label className="relative overflow-hidden cursor-pointer flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-blue-600 hover:from-blue-500 to-indigo-600 hover:to-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-blue-500/25 w-full hover:-translate-y-0.5">
                                 <FileSpreadsheet size={20} />
