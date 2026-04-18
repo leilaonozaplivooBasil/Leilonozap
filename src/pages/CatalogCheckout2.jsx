@@ -202,6 +202,7 @@ export default function CatalogCheckout2() {
 
             const paymentPayload = {
                 catalog_sale_id: sale.id,
+                buyer_id: savedUser.id,
                 buyer_name: firstName.trim(),
                 buyer_email: email.trim(),
                 buyer_cpf: cpf.trim(),
@@ -230,17 +231,9 @@ export default function CatalogCheckout2() {
 
             console.log('📤 Payload enviado:', paymentPayload);
 
-            // Chamar function diretamente via fetch (não depende de auth do SDK)
-            const functionUrl = `${window.location.origin}/api/apps/${import.meta.env.VITE_BASE44_APP_ID}/functions/createAsaasPayment`;
-            const response = await fetch(functionUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(paymentPayload)
-            });
-
-            const paymentResponse = await response.json();
+            // ✅ Chamar via SDK (passa token de auth automaticamente, igual ao AuctionCheckoutModern)
+            const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
             console.log('📥 Resposta COMPLETA ASAAS:', paymentResponse);
-            console.log('📥 Status HTTP:', response.status);
 
             setIsProcessing(false);
             toast.dismiss('checkout-loading');
