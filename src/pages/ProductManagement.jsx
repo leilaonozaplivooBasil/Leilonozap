@@ -89,21 +89,28 @@ export default function ProductManagement() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // 🆕 Precificar em lote (com controle de quantidade)
+  // Precificar em lote — divide em lotes de 5 para evitar timeout 504
   const handleBatchPrice = async (idsOverride) => {
     const ids = idsOverride || Array.from(selectedIds);
     if (ids.length === 0) {
       alert('Selecione produtos para precificar');
       return;
     }
-    if (!confirm(`Buscar preço de mercado para ${ids.length} produto(s)?`)) return;
+    if (!confirm(`Buscar preço de mercado para ${ids.length} produto(s)?\n\nSerão processados em lotes de 5.`)) return;
     
     setIsPricingLoading(true);
     try {
-      const response = await calculateProductPricing({
-        product_ids: ids
-      });
-      setPricingPreviewData(response.data?.products || []);
+      const BATCH_SIZE = 5;
+      const allResults = [];
+
+      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        const batch = ids.slice(i, i + BATCH_SIZE);
+        const response = await calculateProductPricing({ product_ids: batch });
+        const batchProducts = response.data?.products || [];
+        allResults.push(...batchProducts);
+      }
+
+      setPricingPreviewData(allResults);
       setShowPricingPreview(true);
     } catch (error) {
       alert('❌ Erro ao buscar preços: ' + error.message);
