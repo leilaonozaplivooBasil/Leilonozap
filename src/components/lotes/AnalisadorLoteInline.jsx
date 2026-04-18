@@ -417,27 +417,27 @@ export default function AnalisadorLoteInline({ onEnviado }) {
 
                         {/* Projeções */}
                         <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-                            <h3 className="font-bold text-white mb-4 text-sm uppercase tracking-wider flex items-center gap-2"><TrendingUp size={16} className="text-indigo-400" />Cenários de Venda</h3>
-                            <div className="space-y-3 mb-5">
+                            <h3 className="font-bold text-white mb-4 text-sm uppercase tracking-wider flex items-center gap-2"><TrendingUp size={16} className="text-indigo-400" />Cenários de Venda da Grade Útil</h3>
+                            <div className="space-y-3">
                                 {[
-                                    { title: "50% do Valor Mercado", val: calculations.projCurto, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-                                    { title: "60% do Valor Mercado", val: calculations.projMedio, color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
-                                    { title: "70% do Valor Mercado", val: calculations.projLongo, color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+                                    { title: "Venda (50% do Valor Mercado)", val: calculations.projCurto, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+                                    { title: "Venda (60% do Valor Mercado)", val: calculations.projMedio, color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
+                                    { title: "Venda (70% do Valor Mercado)", val: calculations.projLongo, color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
                                 ].map((item, idx) => (
                                     <div key={idx} className={`flex justify-between items-center p-3 rounded-xl border ${item.color}`}>
                                         <p className="font-semibold text-sm">{item.title}</p>
                                         <div className="text-right">
                                             <p className="font-bold text-base">{formatCurrency(item.val)}</p>
-                                            <p className="text-xs">Lucro: {formatCurrency(item.val - calculations.custoTotal)}</p>
+                                            <p className="text-xs mt-0.5">Lucro Bruto: {formatCurrency(item.val - calculations.custoTotal)}</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Gráfico grades */}
+                            {/* Distribuição de Qualidade (gráfico + legenda) */}
                             {calculations.chartData.length > 0 && (
-                                <div className="mt-4">
-                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Distribuição de Qualidade</h4>
+                                <div className="mt-5 pt-4 border-t border-gray-700">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Distribuição de Qualidade (QTD Itens x Grade)</h4>
                                     <div className="flex gap-4 items-center">
                                         <div className="w-28 h-28 flex-shrink-0">
                                             <ResponsiveContainer width="100%" height="100%">
