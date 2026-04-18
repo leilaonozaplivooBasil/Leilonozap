@@ -504,9 +504,9 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                         </div>
                     </div>
 
-                    {/* Categorias — idêntico ao AnaliseDeLotes */}
+                    {/* Categorias */}
                     {loteAtual.resumoCategorias?.length > 0 && (
-                        <div className="xl:col-span-3" id="distribuicao-departamental">
+                        <div id="distribuicao-departamental">
                             <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden">
                                 <div className="p-5 border-b border-gray-700 bg-gray-900/20">
                                     <h3 className="font-bold text-white uppercase tracking-wider text-sm">Distribuição Departamental (Resumo Oficial)</h3>
