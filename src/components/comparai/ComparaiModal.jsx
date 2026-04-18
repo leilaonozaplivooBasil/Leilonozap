@@ -8,7 +8,25 @@ import { motion } from 'framer-motion';
 import { comparaiPrices } from '@/functions/comparaiPrices';
 
 export default function ComparaiModal({ auction, isProduct = false, onClose }) {
-  // 🔥 VALIDAÇÃO CRÍTICA: Verifica se auction existe
+  const [comparisonData, setComparisonData] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [isCached, setIsCached] = useState(false);
+  const [cacheAge, setCacheAge] = useState(null);
+  
+  const [localAuction, setLocalAuction] = useState(auction);
+  
+  console.log('✅ ComparaiModal inicializado com:', { auctionId: auction.id, title: auction.title });
+  
+  const [showLogoEditor, setShowLogoEditor] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [tempLogoUrl, setTempLogoUrl] = useState(localAuction?.supplier_logo_url || '');
+
+  const [isSharing, setIsSharing] = useState(false);
+
+  const screenshotRef = useRef(null);
+
+  // 🔥 VALIDAÇÃO CRÍTICA: Verifica se auction existe (após os hooks)
   if (!auction || !auction.id) {
     console.error('❌ ComparaiModal: auction inválido!', auction);
     return (
@@ -27,24 +45,6 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
       </Dialog>
     );
   }
-
-  const [comparisonData, setComparisonData] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [isCached, setIsCached] = useState(false);
-  const [cacheAge, setCacheAge] = useState(null);
-  
-  const [localAuction, setLocalAuction] = useState(auction);
-  
-  console.log('✅ ComparaiModal inicializado com:', { auctionId: auction.id, title: auction.title });
-  
-  const [showLogoEditor, setShowLogoEditor] = useState(false);
-  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [tempLogoUrl, setTempLogoUrl] = useState(localAuction?.supplier_logo_url || '');
-
-  const [isSharing, setIsSharing] = useState(false);
-
-  const screenshotRef = useRef(null);
 
   const isFactoryProduct = localAuction.product_source === 'factory_new';
   const isSupplierWithoutUrl = localAuction.comparai_mode === 'supplier' && (!localAuction.source_url || !localAuction.source_url.trim());

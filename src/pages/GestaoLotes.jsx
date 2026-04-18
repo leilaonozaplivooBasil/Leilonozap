@@ -58,11 +58,11 @@ function ConfirmarArrematModal({ lote, vencedor, onConfirm, onCancel }) {
 }
 
 function LoteDetalheModal({ lote, onClose }) {
-    if (!lote) return null;
     const categorias = useMemo(() => {
-        if (!lote.lot_categories_json) return [];
+        if (!lote?.lot_categories_json) return [];
         try { return JSON.parse(lote.lot_categories_json); } catch { return []; }
     }, [lote]);
+    if (!lote) return null;
     const vm = lote.market_price || lote.manual_market_price || 0;
     const lance = lote.current_price || lote.starting_price || 0;
     const margem = (vm > 0 && lance > 0) ? (((vm - lance) / lance) * 100).toFixed(0) : null;

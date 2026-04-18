@@ -42,6 +42,39 @@ export default function CRMInvestidores() {
         if (authStatus === 'authorized') loadDados();
     }, [authStatus]);
 
+    const totalSaldoGeral = investidores.reduce((acc, inv) => acc + (inv.saldo_disponivel ?? 0) + (inv.saldo_alocado ?? 0), 0);
+    const totalAlocado = investidores.reduce((acc, inv) => acc + (inv.saldo_alocado ?? 0), 0);
+    const lotesAtivos = lotes.filter(l => l.status === 'active');
+
+    const investidoresFiltrados = useMemo(() => {
+        let lista = investidores.filter(inv =>
+            !busca ||
+            inv.full_name?.toLowerCase().includes(busca.toLowerCase()) ||
+            inv.email?.toLowerCase().includes(busca.toLowerCase())
+        );
+        if (filtroCard === 'comCapital') lista = lista.filter(inv => (inv.saldo_disponivel ?? 0) + (inv.saldo_alocado ?? 0) > 0);
+        if (filtroCard === 'alocado') lista = lista.filter(inv => (inv.saldo_alocado ?? 0) > 0);
+        return lista;
+    }, [investidores, busca, filtroCard]);
+
+    const gruposPorArrematante = useMemo(() => {
+        const mapa = {};
+        investidores.forEach(inv => {
+            const key = inv.arrematante_responsavel_id || inv.referred_by_id || '__sem_arrematante__';
+            if (!mapa[key]) mapa[key] = [];
+            mapa[key].push(inv);
+        });
+        return Object.entries(mapa).map(([arrId, invs]) => {
+            const arr = arrematantes.find(a => a.id === arrId);
+            let arrNome = 'Sem Vínculo/Desconhecido';
+            if (arr) {
+                arrNome = arr.role === 'admin' ? `Admin: ${arr.full_name || 'Sem Nome'}` : (arr.full_name || 'Desconhecido');
+            }
+            const capitalTotal = invs.reduce((s, i) => s + (i.saldo_disponivel ?? 0) + (i.saldo_alocado ?? 0), 0);
+            return { arrId, arrNome, invs, capitalTotal };
+        }).sort((a, b) => b.capitalTotal - a.capitalTotal);
+    }, [investidores, arrematantes]);
+
     // Mostra spinner enquanto verifica autorização
     if (authStatus === 'loading') {
         return (
@@ -95,40 +128,6 @@ export default function CRMInvestidores() {
             setIsLoading(false);
         }
     };
-
-    const totalSaldoGeral = investidores.reduce((acc, inv) => acc + (inv.saldo_disponivel ?? 0) + (inv.saldo_alocado ?? 0), 0);
-    const totalAlocado = investidores.reduce((acc, inv) => acc + (inv.saldo_alocado ?? 0), 0);
-    const lotesAtivos = lotes.filter(l => l.status === 'active');
-
-    const investidoresFiltrados = useMemo(() => {
-        let lista = investidores.filter(inv =>
-            !busca ||
-            inv.full_name?.toLowerCase().includes(busca.toLowerCase()) ||
-            inv.email?.toLowerCase().includes(busca.toLowerCase())
-        );
-        if (filtroCard === 'comCapital') lista = lista.filter(inv => (inv.saldo_disponivel ?? 0) + (inv.saldo_alocado ?? 0) > 0);
-        if (filtroCard === 'alocado') lista = lista.filter(inv => (inv.saldo_alocado ?? 0) > 0);
-        return lista;
-    }, [investidores, busca, filtroCard]);
-
-    // Agrupamento por arrematante
-    const gruposPorArrematante = useMemo(() => {
-        const mapa = {};
-        investidores.forEach(inv => {
-            const key = inv.arrematante_responsavel_id || inv.referred_by_id || '__sem_arrematante__';
-            if (!mapa[key]) mapa[key] = [];
-            mapa[key].push(inv);
-        });
-        return Object.entries(mapa).map(([arrId, invs]) => {
-            const arr = arrematantes.find(a => a.id === arrId);
-            let arrNome = 'Sem Vínculo/Desconhecido';
-            if (arr) {
-                arrNome = arr.role === 'admin' ? `Admin: ${arr.full_name || 'Sem Nome'}` : (arr.full_name || 'Desconhecido');
-            }
-            const capitalTotal = invs.reduce((s, i) => s + (i.saldo_disponivel ?? 0) + (i.saldo_alocado ?? 0), 0);
-            return { arrId, arrNome, invs, capitalTotal };
-        }).sort((a, b) => b.capitalTotal - a.capitalTotal);
-    }, [investidores, arrematantes]);
 
     const getNomeArrematante = (inv) => {
         const id = inv.arrematante_responsavel_id || inv.referred_by_id;

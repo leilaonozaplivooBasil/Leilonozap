@@ -11,6 +11,7 @@ export default function PromoVideoGenerator({ product }) {
   const [compositeImage, setCompositeImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [error, setError] = useState(null);
 
   if (!product) return null;
 
@@ -136,8 +137,6 @@ export default function PromoVideoGenerator({ product }) {
       aiImg.src = aiImageUrl;
     });
   };
-
-  const [error, setError] = useState(null);
 
   const generatePromoImage = async () => {
     setLoading(true);
