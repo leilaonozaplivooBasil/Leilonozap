@@ -176,12 +176,43 @@ export default function CreateAuction() {
     loadCurrentUser();
     loadStores();
 
-    // 🆕 DETECTA PRODUTO VIA URL PARAMETER
     const urlParams = new URLSearchParams(window.location.search);
-    const productId = urlParams.get('product_id');
 
-    if (productId) {
-      loadProductData(productId);
+    // DETECTA PRODUTO VIA URL PARAMETER
+    const productId = urlParams.get('product_id');
+    if (productId) loadProductData(productId);
+
+    // 🆕 DETECTA URL DO MERCADO LIVRE (vindo do GoogleShoppingModal via ?ml_url=)
+    const mlUrl = urlParams.get('ml_url');
+    if (mlUrl) {
+      const decodedUrl = decodeURIComponent(mlUrl);
+      setProductUrl(decodedUrl);
+      setSelectedMarketplace({ id: 'mercadolivre', name: 'Mercado Livre', placeholder: '' });
+      toast.info('🔗 URL do ML detectada! Extraindo dados...');
+      setTimeout(async () => {
+        setIsProcessing(true);
+        setManualStep(1);
+        try {
+          const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', { productUrl: decodedUrl }));
+          if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
+            const data = { title: mlResponse.data.title || '', description: mlResponse.data.description || mlResponse.data.title || '', price: mlResponse.data.price || null, imageUrls: mlResponse.data.images };
+            setExtractedData({ title: data.title, description: data.description });
+            setFormData(prev => ({ ...prev, title: data.title.trim(), description: data.description, starting_price: data.price ? data.price.toString() : prev.starting_price, source_url: decodedUrl }));
+            setDownloadedImages(data.imageUrls);
+            setCoverIndex(0);
+            setManualStep(5);
+            toast.success(`✅ ${data.imageUrls.length} imagens importadas do ML!`);
+          } else {
+            toast.warning('⚠️ Não foi possível extrair imagens deste anúncio do ML.');
+            setManualStep(0);
+          }
+        } catch (err) {
+          toast.error('Erro ao extrair dados do ML: ' + err.message);
+          setManualStep(0);
+        } finally {
+          setIsProcessing(false);
+        }
+      }, 1500);
     }
   }, [loadCurrentUser]);
 
@@ -1528,107 +1559,7 @@ export default function CreateAuction() {
                       </div>
                     )}
 
-                    {/* 🆕 ETAPA 3: ESCOLHER CAPA DAS IMAGENS BAIXADAS */}
-                    {manualStep === 3 && downloadedImages.length > 0 && (
-                      <div className="bg-blue-900/30 p-4 rounded-lg border border-blue-700">
-                        <h4 className="font-bold text-blue-300 mb-3 flex items-center gap-2">
-                          <ImageIcon className="w-4 h-4" />
-                          ✅ {downloadedImages.length} Imagem{downloadedImages.length > 1 ? 'ns' : ''} Pronta{downloadedImages.length > 1 ? 's' : ''}! Escolha a Capa
-                        </h4>
-                        <p className="text-xs text-blue-400 mb-4">Clique na imagem que será a CAPA do leilão (primeira posição)</p>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                          {downloadedImages.map((imgUrl, index) => (
-                            <div
-                              key={index}
-                              className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 ${coverIndex === index
-                                ? 'border-blue-500 ring-4 ring-blue-500/50 scale-105'
-                                : 'border-gray-700 hover:border-blue-600'
-                                }`}
-                              onClick={() => setCoverIndex(index)}
-                            >
-                              <div className="w-full h-32 bg-gray-900 flex items-center justify-center p-2">
-                                <img
-                                  src={imgUrl}
-                                  alt={`Produto ${index + 1}`}
-                                  className="max-w-full max-h-full object-contain"
-                                  loading="eager"
-                                  onError={(e) => {
-                                    console.error(`❌ Erro ao carregar imagem ${index + 1}:`, imgUrl);
-                                    e.target.style.display = 'none';
-                                    if (e.target.parentElement) {
-                                      e.target.parentElement.innerHTML = `<div class="text-red-400 text-xs">❌ Erro</div>`;
-                                    }
-                                  }}
-                                />
-                              </div>
-
-                              <div className="absolute top-1 left-1 bg-black/90 text-white text-xs px-2 py-1 rounded-full font-bold">
-                                {index + 1}
-                              </div>
-
-                              {coverIndex === index && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-blue-600/60 backdrop-blur-[2px] text-white font-bold text-base">
-                                  ✅ CAPA
-                                </div>
-                              )}
-
-                              {coverIndex !== index && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-medium">
-                                  Clique para capa
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <Button
-                          onClick={() => {
-                            // Reorganiza com capa primeiro
-                            let finalImages = [];
-                            finalImages.push(downloadedImages[coverIndex]);
-                            downloadedImages.forEach((img, i) => {
-                              if (i !== coverIndex) finalImages.push(img);
-                            });
-
-                            // Aplica no formulário (até 5 imagens)
-                            finalImages = finalImages.slice(0, 5);
-                            while (finalImages.length < 5) {
-                              finalImages.push("");
-                            }
-
-                            setFormData(prev => ({
-                              ...prev,
-                              title: importedData?.title || prev.title,
-                              description: importedData?.description || prev.description,
-                              starting_price: importedData?.price ? importedData.price.toString() : prev.starting_price,
-                              image_urls: finalImages,
-                              source_url: productUrl
-                            }));
-
-                            // Reseta estados
-                            setManualStep(0);
-                            setImportedData(null);
-                            setExtractedImageUrls(['', '', '', '', '', '']);
-                            setDownloadedImages([]);
-                            setProductUrl("");
-                            setCoverIndex(0);
-
-                            toast.success("✅ Todos os dados aplicados no formulário!");
-                          }}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-base py-3"
-                        >
-                          <CheckCircle className="w-5 h-5 mr-2" />
-                          🚀 Aplicar no Formulário
-                        </Button>
-
-                        <p className="text-xs text-center text-gray-400 mt-3">
-                          💡 A imagem {coverIndex + 1} será a capa do leilão
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Etapas legadas removidas (996-999) */}
+                                    {/* Etapa 3 legada removida */}
 
 
 
