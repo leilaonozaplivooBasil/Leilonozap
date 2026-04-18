@@ -136,29 +136,30 @@ export default function EstoqueLotes() {
   };
 
   const handleGerarProdutos = async (lote) => {
-    if (lote.produtos_gerados) {
-      alert(`✅ Produtos já foram gerados para este lote em ${new Date(lote.produtos_gerados_em).toLocaleString('pt-BR')} (${lote.produtos_gerados_count} produtos criados).`);
-      return;
-    }
     if (!lote.itens_json) {
       alert('❌ Este lote não possui itens detalhados salvos. Só é possível gerar produtos em lotes importados via planilha.');
       return;
     }
     const qtd = lote.quantidade_total || 0;
+    const jaGerados = lote.produtos_gerados_count || 0;
+    const msgRetomada = jaGerados > 0 && !lote.produtos_gerados
+      ? `\n\n⚠️ ATENÇÃO: Este lote já tem ${jaGerados} produtos criados anteriormente. Esta ação vai retomar e criar apenas os que faltam (não duplica).`
+      : '';
     const confirmacao = confirm(
       `Gerar produtos no estoque para o lote "${lote.nome_lote}"?\n\n` +
       `• Quantidade total: ${qtd} unidades\n` +
       `• Custo total do lote: R$ ${(lote.valor_lote || 0).toFixed(2)}\n` +
       `• Custo unitário médio: R$ ${qtd > 0 ? ((lote.valor_lote || 0) / qtd).toFixed(2) : '0.00'}\n` +
-      `• Depósito destino: ${lote.deposito_destino || 'Bangu'}\n\n` +
-      `Esta ação cria os produtos na "Posição de Estoque" e não pode ser desfeita.`
+      `• Depósito destino: ${lote.deposito_destino || 'Bangu'}${msgRetomada}\n\n` +
+      `Esta ação cria os produtos na "Posição de Estoque".`
     );
     if (!confirmacao) return;
     try {
       const res = await gerarProdutosDoLote({ lote_id: lote.id });
       const data = res?.data || res;
-      if (data?.status === 'success') {
-        alert(`✅ ${data.produtos_criados} produtos gerados no estoque!\n\nCusto unitário médio: R$ ${data.custo_unitario_medio?.toFixed(2)}\nDepósito: ${data.deposito}`);
+      if (data?.status === 'success' || data?.status === 'partial') {
+        const msg = data.mensagem || `${data.produtos_criados} produtos criados.`;
+        alert(`${data.status === 'success' ? '✅' : '⚠️'} ${msg}\n\nCriados agora: ${data.produtos_criados}\nJá existiam: ${data.ja_existentes || 0}\nTotal no lote: ${data.total_acumulado || data.produtos_criados}\nCusto unitário: R$ ${data.custo_unitario_medio?.toFixed(2)}`);
         await loadLotes();
       } else {
         alert(`❌ Erro: ${data?.error || 'Resposta inesperada'}`);
@@ -325,19 +326,20 @@ export default function EstoqueLotes() {
                           </Button>
                         )}
 
-                        {/* Gerar Produtos no Estoque — só para lotes 'enviado_ao_estoque' com itens salvos */}
+                        {/* Gerar Produtos no Estoque — só para lotes 'enviado_ao_estoque' com itens salvos e ainda não completos */}
                         {lote.status === 'enviado_ao_estoque' && lote.itens_json && !lote.produtos_gerados && (
                           <Button
                             size="sm"
                             onClick={() => handleGerarProdutos(lote)}
                             className="bg-emerald-600 hover:bg-emerald-500 font-bold"
-                            title="Gera os produtos individuais na Posição de Estoque"
+                            title={lote.produtos_gerados_count > 0 ? `Retomar geração (${lote.produtos_gerados_count} já criados)` : 'Gera os produtos individuais na Posição de Estoque'}
                           >
-                            <PackagePlus className="w-4 h-4 mr-1" /> Gerar Produtos no Estoque
+                            <PackagePlus className="w-4 h-4 mr-1" />
+                            {lote.produtos_gerados_count > 0 ? 'Retomar Geração' : 'Gerar Produtos no Estoque'}
                           </Button>
                         )}
 
-                        {/* Badge: já gerou produtos */}
+                        {/* Badge: já gerou produtos completo */}
                         {lote.produtos_gerados && (
                           <Badge className="bg-emerald-700 text-white">
                             ✓ {lote.produtos_gerados_count} produtos no estoque

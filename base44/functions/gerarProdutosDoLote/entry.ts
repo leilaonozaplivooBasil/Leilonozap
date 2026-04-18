@@ -46,13 +46,8 @@ Deno.serve(async (req) => {
         error: `Lote precisa estar com status 'enviado_ao_estoque'. Status atual: '${lote.status}'`
       }, { status: 400 });
     }
-    if (lote.produtos_gerados === true) {
-      return Response.json({
-        error: 'Produtos já foram gerados para este lote anteriormente',
-        ja_gerado_em: lote.produtos_gerados_em,
-        count: lote.produtos_gerados_count
-      }, { status: 409 });
-    }
+    // NÃO bloqueia se produtos_gerados=true — ao invés disso, detecta o que falta e completa
+    // Isso permite retomar uma geração interrompida sem duplicar produtos
     if (!lote.itens_json) {
       return Response.json({
         error: 'Lote não possui itens_json salvos. Reimporte a planilha.'
@@ -89,8 +84,58 @@ Deno.serve(async (req) => {
     const hoje = new Date().toISOString().split('T')[0];
     const depositoDestino = lote.deposito_destino || 'Bangu';
 
-    // Monta registros Product
-    const produtos = itens.map((item) => {
+    // Busca produtos JÁ criados deste lote para detectar o que falta
+    // (evita duplicar em caso de re-execução após falha parcial)
+    const produtosExistentes = await base44.asServiceRole.entities.Product.filter({
+      lot: lote.nome_lote
+    }, '-created_date', 5000);
+
+    // Cria um mapa de "já existe" por chave descricao+grade
+    const chavesExistentes = new Map();
+    for (const p of (produtosExistentes || [])) {
+      // reconstitui a "grade" a partir dos qty_* pra fazer match com o item da planilha
+      let grade = 'A';
+      if ((p.qty_bom || 0) > 0) grade = 'B';
+      else if ((p.qty_ruim || 0) > 0) grade = 'D';
+      else if ((p.qty_oficina || 0) > 0) grade = 'U';
+      const chave = `${String(p.description || '').trim().toLowerCase()}|${grade}`;
+      chavesExistentes.set(chave, (chavesExistentes.get(chave) || 0) + 1);
+    }
+
+    // Monta registros Product, pulando os que já existem
+    const produtos = [];
+    let puladosJaExistentes = 0;
+    for (const item of itens) {
+      const grade = String(item.grade || 'A').toUpperCase();
+      // Normaliza grade pra casar com a reconstituição (B/C -> B, D/E -> D)
+      let gradeNormalizada = grade;
+      if (grade === 'C') gradeNormalizada = 'B';
+      if (grade === 'E') gradeNormalizada = 'D';
+      const chave = `${String(item.desc || '').trim().toLowerCase()}|${gradeNormalizada}`;
+      if (chavesExistentes.has(chave) && chavesExistentes.get(chave) > 0) {
+        chavesExistentes.set(chave, chavesExistentes.get(chave) - 1);
+        puladosJaExistentes++;
+        continue;
+      }
+      produtos.push(item);
+    }
+
+    // Se nada pra criar, retorna sucesso informando que já está completo
+    if (produtos.length === 0) {
+      return Response.json({
+        status: 'success',
+        lote_id: lote.id,
+        lote_nome: lote.nome_lote,
+        produtos_criados: 0,
+        ja_existentes: puladosJaExistentes,
+        mensagem: 'Todos os produtos deste lote já estão no estoque. Nada a criar.',
+        custo_unitario_medio: Number(custoUnitarioMedio.toFixed(2)),
+        deposito: depositoDestino
+      });
+    }
+
+    // Converte os itens pendentes em registros Product
+    const produtosParaCriar = produtos.map((item) => {
       const qtd = item.qtd || 1;
       const campo = mapGradeToField(item.grade);
       const base = {
@@ -114,13 +159,13 @@ Deno.serve(async (req) => {
       return base;
     });
 
-    // Cria em chunks de 50 pra não estourar limites
-    const CHUNK_SIZE = 50;
+    // Cria em chunks menores (25) pra reduzir risco de timeout
+    const CHUNK_SIZE = 25;
     let criados = 0;
     const erros = [];
 
-    for (let i = 0; i < produtos.length; i += CHUNK_SIZE) {
-      const chunk = produtos.slice(i, i + CHUNK_SIZE);
+    for (let i = 0; i < produtosParaCriar.length; i += CHUNK_SIZE) {
+      const chunk = produtosParaCriar.slice(i, i + CHUNK_SIZE);
       try {
         await base44.asServiceRole.entities.Product.bulkCreate(chunk);
         criados += chunk.length;
@@ -138,23 +183,31 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Marca o lote como produtos_gerados
+    // Marca o lote como produtos_gerados SOMENTE se criou tudo com sucesso
+    const totalCriadoAcumulado = (lote.produtos_gerados_count || 0) + criados;
+    const completoAgora = erros.length === 0 && criados === produtosParaCriar.length;
+
     await base44.asServiceRole.entities.LoteRecebido.update(lote.id, {
-      produtos_gerados: true,
+      produtos_gerados: completoAgora,
       produtos_gerados_em: new Date().toISOString(),
-      produtos_gerados_count: criados
+      produtos_gerados_count: totalCriadoAcumulado
     });
 
     return Response.json({
-      status: 'success',
+      status: completoAgora ? 'success' : 'partial',
       lote_id: lote.id,
       lote_nome: lote.nome_lote,
       produtos_criados: criados,
+      ja_existentes: puladosJaExistentes,
+      total_acumulado: totalCriadoAcumulado,
       custo_unitario_medio: Number(custoUnitarioMedio.toFixed(2)),
       custo_total: custoTotal,
       quantidade_total: quantidadeTotal,
       deposito: depositoDestino,
-      erros: erros.length > 0 ? erros : undefined
+      erros: erros.length > 0 ? erros : undefined,
+      mensagem: completoAgora
+        ? 'Todos os produtos foram criados com sucesso.'
+        : `Criados ${criados}/${produtosParaCriar.length}. Restam ${produtosParaCriar.length - criados} itens. Clique novamente em "Gerar Produtos no Estoque" para retomar.`
     });
   } catch (error) {
     return Response.json({
