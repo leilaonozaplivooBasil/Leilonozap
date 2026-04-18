@@ -5,9 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
-  Upload, Loader2, FileText, Package, X, ArrowLeft, Plus,
-  Eye, Trash2, ShoppingCart, CheckCircle, Store, BarChart3, Gavel, DollarSign
+  Package, X, ArrowLeft, Plus,
+  Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel
 } from 'lucide-react';
+import AnalisadorLoteInline from '@/components/lotes/AnalisadorLoteInline';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -41,9 +42,6 @@ export default function EstoqueLotes() {
   const [lotes, setLotes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [previewFile, setPreviewFile] = useState(null);
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroMarketplace, setFiltroMarketplace] = useState('todos');
   const [arrematarLote, setArrematarLote] = useState(null); // lote em processo de arremate
@@ -71,29 +69,6 @@ export default function EstoqueLotes() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleFileSelect = async (file) => {
-    if (!file) return;
-    setIsUploading(true);
-    try {
-      const result = await base44.integrations.Core.UploadFile({ file });
-      if (!result?.file_url) throw new Error('Falha no upload');
-      const ext = file.name.split('.').pop().toLowerCase();
-      setPreviewFile({ url: result.file_url, nome: file.name, tipo: ext });
-      setForm(f => ({ ...f, nome_lote: f.nome_lote || file.name.replace(/\.[^/.]+$/, '') }));
-    } catch (e) {
-      alert('❌ Erro ao enviar arquivo: ' + e.message);
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFileSelect(file);
   };
 
   const handleSave = async () => {
@@ -192,17 +167,14 @@ export default function EstoqueLotes() {
             </Button>
             <h1 className="text-3xl font-bold text-white">🗂️ Estoque de Lotes Recebidos</h1>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate(createPageUrl('AnaliseLoteEstoque'))} className="bg-emerald-700 hover:bg-emerald-600">
-              <BarChart3 className="w-4 h-4 mr-2" />
-              Analisar Planilha
-            </Button>
-            <Button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar Lote
-            </Button>
-          </div>
+          <Button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Adicionar Lote Manual
+          </Button>
         </div>
+
+        {/* ANALISADOR INLINE */}
+        <AnalisadorLoteInline onEnviado={loadLotes} />
 
         {/* CARDS DE STATUS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -416,58 +388,12 @@ export default function EstoqueLotes() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-white">📥 Adicionar Lote Recebido</CardTitle>
-                <Button size="sm" variant="outline" onClick={() => { setShowModal(false); setPreviewFile(null); }} className="border-gray-600 text-gray-400">
+                <Button size="sm" variant="outline" onClick={() => setShowModal(false)} className="border-gray-600 text-gray-400">
                   <X className="w-4 h-4" />
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-
-              {/* UPLOAD */}
-              <div
-                className={`border-2 border-dashed rounded-lg p-6 text-center transition-all ${isDragging ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 hover:border-blue-500'}`}
-                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-              >
-                {previewFile ? (
-                  <div>
-                    <FileText className="w-8 h-8 mx-auto mb-2 text-green-400" />
-                    <p className="text-green-400 font-semibold text-sm">{previewFile.nome}</p>
-                    <button
-                      onClick={() => window.open(previewFile.url, '_blank')}
-                      className="text-blue-400 text-xs underline mt-1 block"
-                    >
-                      👁️ Visualizar arquivo
-                    </button>
-                    <button onClick={() => setPreviewFile(null)} className="text-red-400 text-xs mt-1 block mx-auto">
-                      Remover
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <Upload className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="text-gray-400 text-sm mb-2">Arraste ou selecione o arquivo</p>
-                    <p className="text-gray-600 text-xs mb-3">PDF, Excel (.xlsx, .xls), CSV, Word (.doc, .docx), XML</p>
-                    <label htmlFor="lote-file-input" className="cursor-pointer">
-                      <input
-                        id="lote-file-input"
-                        type="file"
-                        accept=".pdf,.xlsx,.xls,.csv,.doc,.docx,.xml,.png,.jpg,.jpeg"
-                        className="hidden"
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) { handleFileSelect(f); e.target.value = ''; }
-                        }}
-                      />
-                      <Button type="button" disabled={isUploading} className="bg-blue-600 hover:bg-blue-700"
-                        onClick={() => document.getElementById('lote-file-input')?.click()}>
-                        {isUploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Enviando...</> : 'Selecionar Arquivo'}
-                      </Button>
-                    </label>
-                  </>
-                )}
-              </div>
 
               {/* FORMULÁRIO */}
               <div>
@@ -525,7 +451,7 @@ export default function EstoqueLotes() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => { setShowModal(false); setPreviewFile(null); setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' }); }}
+                  onClick={() => { setShowModal(false); setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' }); }}
                   className="border-gray-600 text-gray-300"
                 >
                   <X className="w-4 h-4 mr-2" />
