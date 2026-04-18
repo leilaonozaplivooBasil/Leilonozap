@@ -648,7 +648,10 @@ export default function ProductManagement() {
                 onClick={() => {
                   const ids = Array.from(selectedIds);
                   if (ids.length === 1) {
-                    navigate(createPageUrl("CreateAuction") + `?product_id=${ids[0]}`);
+                    const prod = products.find(p => p.id === ids[0]);
+                    const sourceUrl = prod?.source_url || '';
+                    const mlParam = sourceUrl ? `&ml_url=${encodeURIComponent(sourceUrl)}` : '';
+                    navigate(createPageUrl("CreateAuction") + `?product_id=${ids[0]}${mlParam}`);
                   } else {
                     navigate(createPageUrl("CreateAuction") + `?product_ids=${ids.join(',')}`);
                   }
@@ -1061,7 +1064,9 @@ export default function ProductManagement() {
                           <Button
                             type="button"
                             onClick={() => {
-                              navigate(createPageUrl("CreateAuction") + `?product_id=${editingProduct.id}`);
+                              const sourceUrl = editingProduct?.source_url || '';
+                              const mlParam = sourceUrl ? `&ml_url=${encodeURIComponent(sourceUrl)}` : '';
+                              navigate(createPageUrl("CreateAuction") + `?product_id=${editingProduct.id}${mlParam}`);
                             }}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
