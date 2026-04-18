@@ -346,7 +346,7 @@ ${categoryEmoji} ${product.description}
         <div className="mb-2 sm:mb-4">
           <p className="text-gray-400 text-[10px] sm:text-xs mb-0.5">Preço</p>
           <p className="text-lg sm:text-2xl font-black text-green-400">
-            R$ {product.price_catalog?.toFixed(2) || "0.00"}
+            R$ {product.price_catalog ? product.price_catalog.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00"}
           </p>
           {product.quantity && (
             <p className="text-[10px] sm:text-xs text-gray-400 mt-1">Estoque: {product.quantity}</p>

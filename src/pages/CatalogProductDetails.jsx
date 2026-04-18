@@ -316,7 +316,7 @@ export default function CatalogProductDetails() {
 
             {/* PREÇO */}
             <div className="text-3xl lg:text-4xl font-black text-green-400">
-              R${product.price_catalog?.toFixed(2) || "0.00"}
+              R$ {product.price_catalog ? product.price_catalog.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00"}
             </div>
 
             {/* BOTÕES DE AÇÃO */}
@@ -360,12 +360,15 @@ export default function CatalogProductDetails() {
             {/* DESCRIÇÃO */}
             <div className="border-t border-gray-700 pt-6">
               <h3 className="text-lg font-bold text-white mb-4">Descrição</h3>
-              <div className="text-gray-300 text-sm leading-relaxed space-y-3">
-                <p>{product.description}</p>
-                {product.notes && (
-                  <p className="text-gray-400">{product.notes}</p>
-                )}
-              </div>
+              {product.notes ? (
+                <div
+                  className="text-gray-300 text-sm leading-relaxed prose prose-invert prose-sm max-w-none
+                    prose-p:my-2 prose-strong:text-white prose-ul:pl-4 prose-li:my-1"
+                  dangerouslySetInnerHTML={{ __html: product.notes }}
+                />
+              ) : (
+                <p className="text-gray-400 text-sm">{product.description}</p>
+              )}
             </div>
 
             {/* CARACTERÍSTICAS (se houver) */}
