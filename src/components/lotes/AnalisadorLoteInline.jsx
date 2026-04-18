@@ -504,48 +504,54 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                         </div>
                     </div>
 
-                    {/* Categorias */}
+                    {/* Categorias — idêntico ao AnaliseDeLotes */}
                     {loteAtual.resumoCategorias?.length > 0 && (
-                        <div className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden">
-                            <div className="p-4 border-b border-gray-700 bg-gray-900/30">
-                                <h3 className="font-bold text-white text-sm uppercase tracking-wider">Distribuição Departamental (Resumo Oficial)</h3>
-                                <p className="text-xs text-gray-500 mt-0.5">Visão macrostática informada pela aba raiz do leilão.</p>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead>
-                                        <tr className="bg-gray-900 border-b border-gray-700 text-gray-400 uppercase text-xs">
-                                            <th className="px-5 py-3">Categoria</th>
-                                            <th className="px-5 py-3 border-l border-gray-700 text-center">Qtd</th>
-                                            <th className="px-5 py-3 border-l border-gray-700 text-right">Valor Mercado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {loteAtual.resumoCategorias.map((cat, i) => {
-                                            const subs = loteAtual.subItemsByCategory?.[cat.nome] || [];
-                                            const isOpen = expandedCategories.has(cat.nome);
-                                            return (
-                                                <React.Fragment key={i}>
-                                                    <tr onClick={() => subs.length > 0 && toggleCategory(cat.nome)} className={`border-b border-gray-700/50 ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.03]' : ''}`}>
-                                                        <td className="px-5 py-3 text-gray-300 font-medium flex items-center gap-2">
-                                                            {subs.length > 0 && <span className={`text-gray-500 transition-transform inline-block ${isOpen ? 'rotate-90' : ''}`}>▶</span>}
-                                                            {cat.nome}
-                                                        </td>
-                                                        <td className="px-5 py-3 border-l border-gray-700/50 text-center text-gray-400">{cat.qtd} un</td>
-                                                        <td className="px-5 py-3 border-l border-gray-700/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
-                                                    </tr>
-                                                    {isOpen && subs.map((sub, si) => (
-                                                        <tr key={si} className="border-b border-gray-700/30 bg-gray-900/40">
-                                                            <td className="pl-10 pr-5 py-2 text-gray-400 text-xs"><span className="text-gray-600 mr-2">└</span>{sub.desc}</td>
-                                                            <td className="px-5 py-2 border-l border-gray-700/30 text-center text-gray-500 text-xs">{sub.qtd} un</td>
-                                                            <td className="px-5 py-2 border-l border-gray-700/30 text-right text-emerald-600 text-xs font-medium">{formatCurrency(sub.valor)}</td>
+                        <div className="xl:col-span-3" id="distribuicao-departamental">
+                            <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden">
+                                <div className="p-5 border-b border-gray-700 bg-gray-900/20">
+                                    <h3 className="font-bold text-white uppercase tracking-wider text-sm">Distribuição Departamental (Resumo Oficial)</h3>
+                                    <p className="text-xs text-gray-400 mt-1">Visão macrostática informada pela aba raiz do leilão.</p>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse text-sm">
+                                        <thead>
+                                            <tr className="bg-gray-900 border-b border-gray-700 text-gray-400 uppercase tracking-wider">
+                                                <th className="px-6 py-4 font-semibold text-xs">Categoria / Departamento</th>
+                                                <th className="px-6 py-4 font-semibold text-xs border-l border-gray-700 w-32 text-center">Quantidade</th>
+                                                <th className="px-6 py-4 font-semibold text-xs border-l border-gray-700 w-48 text-right">Valor de Mercado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {loteAtual.resumoCategorias.map((cat, i) => {
+                                                const subs = loteAtual.subItemsByCategory?.[cat.nome] || [];
+                                                const isOpen = expandedCategories.has(cat.nome);
+                                                return (
+                                                    <React.Fragment key={i}>
+                                                        <tr onClick={() => subs.length > 0 && toggleCategory(cat.nome)}
+                                                            className={`border-b border-gray-700/50 transition-colors ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}>
+                                                            <td className="px-6 py-4 font-medium text-gray-300 flex items-center gap-2">
+                                                                {subs.length > 0 && <span className={`text-gray-500 transition-transform inline-block ${isOpen ? 'rotate-90' : ''}`}>▶</span>}
+                                                                {cat.nome}
+                                                                {subs.length > 0 && <span className="text-xs text-gray-600 ml-1">({subs.length} itens)</span>}
+                                                            </td>
+                                                            <td className="px-6 py-4 border-l border-gray-700/50 text-center text-gray-400">{cat.qtd} un</td>
+                                                            <td className="px-6 py-4 border-l border-gray-700/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
                                                         </tr>
-                                                    ))}
-                                                </React.Fragment>
-                                            );
-                                        })}
-                                    </tbody>
-                                </table>
+                                                        {isOpen && subs.map((sub, si) => (
+                                                            <tr key={`sub-${i}-${si}`} className="border-b border-gray-700/30 bg-gray-900/60">
+                                                                <td className="pl-12 pr-6 py-2.5 text-gray-400 text-sm">
+                                                                    <span className="text-gray-600 mr-2">└</span>{sub.desc}
+                                                                </td>
+                                                                <td className="px-6 py-2.5 border-l border-gray-700/30 text-center text-gray-500 text-sm">{sub.qtd} un</td>
+                                                                <td className="px-6 py-2.5 border-l border-gray-700/30 text-right text-emerald-600 text-sm font-medium">{formatCurrency(sub.valor)}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </React.Fragment>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
