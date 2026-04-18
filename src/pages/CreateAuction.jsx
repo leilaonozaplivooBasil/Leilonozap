@@ -1398,100 +1398,69 @@ export default function CreateAuction() {
                                     e.preventDefault();
                                     if (isProcessing) return;
 
-                                    // Para qualquer site (inclui Mercado Livre), usar Midia como primária
-                                    if (selectedMarketplace && productUrl.trim()) {
-                                      setIsProcessing(true);
-                                      setManualStep(1);
-                                      try {
+                                    setIsProcessing(true);
+                                    setManualStep(1);
+                                    try {
+                                      const isMl = productUrl.trim().includes('mercadolivre.com.br') || productUrl.trim().includes('mercadolibre.com');
+                                      let data = null;
+
+                                      if (isMl) {
+                                        // Para Mercado Livre: chama extractMLImages diretamente (testado e funciona)
+                                        const mlResponse = await base44.functions.invoke('extractMLImages', {
+                                          productUrl: productUrl.trim()
+                                        });
+                                        if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
+                                          data = {
+                                            title: mlResponse.data.title || '',
+                                            description: mlResponse.data.description || mlResponse.data.title || '',
+                                            price: mlResponse.data.price || null,
+                                            imageUrls: mlResponse.data.images
+                                          };
+                                        } else {
+                                          throw new Error('Não foi possível extrair imagens do Mercado Livre. Tente upload manual.');
+                                        }
+                                      } else {
+                                        // Outros sites: scrapeWithFallback
                                         const response = await base44.functions.invoke('scrapeWithFallback', {
                                           productUrl: productUrl.trim()
                                         });
                                         if (!response || response.status !== 200) {
                                           throw new Error(response?.data?.error || 'Erro ao importar');
                                         }
-                                        const data = response.data;
-                                        console.log('✅ Dados scrapeWithFallback:', data);
-                                        const attrs = data.attributes && typeof data.attributes === 'object' ? Object.entries(data.attributes) : [];
+                                        const attrs = response.data.attributes && typeof response.data.attributes === 'object' ? Object.entries(response.data.attributes) : [];
                                         const attrsText = attrs.length ? '\n\nCaracterísticas:\n' + attrs.map(([k, v]) => `- ${k}: ${v}`).join('\n') : '';
-                                        const fullDescription = ((data.description || '').trim() + attrsText);
-                                        if (!data.imageUrls || data.imageUrls.length === 0) {
-                                          toast.warning('⚠️ Nenhuma imagem encontrada');
-                                          setManualStep(0);
-                                          return;
-                                        }
-                                        setExtractedData({
-                                          title: data.title || '',
-                                          description: fullDescription
-                                        });
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          title: (data.title || '').trim(),
-                                          description: fullDescription,
-                                          starting_price: data.price ? data.price.toString() : prev.starting_price,
-                                          source_url: productUrl
-                                        }));
-                                        setDownloadedImages(data.imageUrls);
-                                        setCoverIndex(0);
-                                        setManualStep(5);
-                                        toast.success(`✅ ${data.imageUrls.length} imagens importadas!`);
-                                      } catch (error) {
-                                        console.error('❌ Erro Midia:', error);
-                                        toast.error(error.message || 'Erro ao importar');
-                                        setManualStep(0);
-                                      } finally {
-                                        setIsProcessing(false);
+                                        data = {
+                                          title: response.data.title || '',
+                                          description: ((response.data.description || '').trim() + attrsText),
+                                          price: response.data.price || null,
+                                          imageUrls: response.data.imageUrls || []
+                                        };
                                       }
-                                    } else {
-                                      // Outros sites usam scrapeWithFallback
-                                      setIsProcessing(true);
-                                      setManualStep(1);
 
-                                      try {
-                                        const response = await base44.functions.invoke('scrapeWithFallback', {
-                                          productUrl: productUrl.trim()
-                                        });
-
-                                        if (!response || response.status !== 200) {
-                                          throw new Error(response?.data?.error || 'Erro ao importar');
-                                        }
-
-                                        const data = response.data;
-                                        console.log('✅ Dados scrapeWithFallback:', data);
-                                        const attrs = data.attributes && typeof data.attributes === 'object' ? Object.entries(data.attributes) : [];
-                                        const attrsText = attrs.length ? '\n\nCaracterísticas:\n' + attrs.map(([k, v]) => `- ${k}: ${v}`).join('\n') : '';
-                                        const fullDescription = ((data.description || '').trim() + attrsText);
-
-                                        if (!data.imageUrls || data.imageUrls.length === 0) {
-                                          toast.warning('⚠️ Nenhuma imagem encontrada');
-                                          setManualStep(0);
-                                          return;
-                                        }
-
-                                        setExtractedData({
-                                          title: data.title || '',
-                                          description: fullDescription
-                                        });
-
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          title: (data.title || '').trim(),
-                                          description: fullDescription,
-                                          starting_price: data.price ? data.price.toString() : prev.starting_price,
-                                          source_url: productUrl
-                                        }));
-
-                                        setDownloadedImages(data.imageUrls);
-                                        setCoverIndex(0);
-                                        setManualStep(5);
-
-                                        toast.success(`✅ ${data.imageUrls.length} imagens importadas!`);
-                                      } catch (error) {
-                                        console.error('❌ Erro:', error);
-                                        toast.error(error.message || 'Erro ao importar');
+                                      if (!data.imageUrls || data.imageUrls.length === 0) {
+                                        toast.warning('⚠️ Nenhuma imagem encontrada. Use upload manual.');
                                         setManualStep(0);
-                                      } finally {
-                                        setIsProcessing(false);
+                                        return;
                                       }
+
+                                      setExtractedData({ title: data.title, description: data.description });
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        title: data.title.trim(),
+                                        description: data.description,
+                                        starting_price: data.price ? data.price.toString() : prev.starting_price,
+                                        source_url: productUrl
+                                      }));
+                                      setDownloadedImages(data.imageUrls);
+                                      setCoverIndex(0);
+                                      setManualStep(5);
+                                      toast.success(`✅ ${data.imageUrls.length} imagens importadas!`);
+                                    } catch (error) {
+                                      console.error('❌ Erro importação:', error);
+                                      toast.error(error.message || 'Erro ao importar');
+                                      setManualStep(0);
+                                    } finally {
+                                      setIsProcessing(false);
                                     }
                                   }}
                                   disabled={isProcessing || !productUrl.trim()}
