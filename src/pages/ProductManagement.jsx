@@ -13,6 +13,8 @@ import {
 
 import PriceCalculatorModal from '@/components/pricing/PriceCalculatorModal';
 import GoogleShoppingModal from '@/components/pricing/GoogleShoppingModal';
+import PricingPreviewModal from '@/components/pricing/PricingPreviewModal';
+import { calculateProductPricing } from '@/functions/calculateProductPricing';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,6 +67,9 @@ export default function ProductManagement() {
   const [operationData, setOperationData] = useState({ operatorName: '', reason: '' });
   const [expandedNotes, setExpandedNotes] = useState({});
   const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showPricingPreview, setShowPricingPreview] = useState(false);
+  const [pricingPreviewData, setPricingPreviewData] = useState(null);
+  const [isPricingLoading, setIsPricingLoading] = useState(false);
 
   const toggleSelect = (id) => {
     setSelectedIds(prev => {
@@ -83,6 +88,72 @@ export default function ProductManagement() {
   };
 
   const clearSelection = () => setSelectedIds(new Set());
+
+  // 🆕 Precificar em lote
+  const handleBatchPrice = async () => {
+    if (selectedIds.size === 0) {
+      alert('Selecione produtos para precificar');
+      return;
+    }
+    if (!confirm(`Buscar preço de mercado para ${selectedIds.size} produto(s)?`)) return;
+    
+    setIsPricingLoading(true);
+    try {
+      const response = await calculateProductPricing({
+        product_ids: Array.from(selectedIds)
+      });
+      setPricingPreviewData(response.data?.products || []);
+      setShowPricingPreview(true);
+    } catch (error) {
+      alert('❌ Erro ao buscar preços: ' + error.message);
+    } finally {
+      setIsPricingLoading(false);
+    }
+  };
+
+  // 🆕 Precificar por item
+  const handleSinglePrice = async (product) => {
+    setIsPricingLoading(true);
+    try {
+      const response = await calculateProductPricing({
+        product_ids: [product.id]
+      });
+      const data = response.data?.products || [];
+      if (data.length > 0 && data[0].status === 'success') {
+        setPricingPreviewData(data);
+        setShowPricingPreview(true);
+      } else {
+        alert('⚠️ Preço de mercado não encontrado');
+      }
+    } catch (error) {
+      alert('❌ Erro: ' + error.message);
+    } finally {
+      setIsPricingLoading(false);
+    }
+  };
+
+  // 🆕 Confirmar precificação e salvar
+  const handleConfirmPricing = async (toUpdate) => {
+    setIsPricingLoading(true);
+    try {
+      for (const item of toUpdate) {
+        await base44.entities.Product.update(item.id, {
+          selling_price_retail: item.selling_price_retail
+        });
+      }
+      alert(`✅ ${toUpdate.length} produto(s) precificado(s)!`);
+      setShowPricingPreview(false);
+      setPricingPreviewData(null);
+      clearSelection();
+      sessionStorage.removeItem('products_cache_v3');
+      sessionStorage.removeItem('products_cache_time_v3');
+      setTimeout(() => loadData(), 500);
+    } catch (error) {
+      alert('❌ Erro ao salvar: ' + error.message);
+    } finally {
+      setIsPricingLoading(false);
+    }
+  };
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     lot: '',
@@ -562,7 +633,7 @@ export default function ProductManagement() {
 
           {/* BARRA DE AÇÕES EM LOTE */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-950/60 border-b border-blue-800/50">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-950/60 border-b border-blue-800/50 flex-wrap">
               <span className="text-sm font-semibold text-blue-300">{selectedIds.size} selecionado(s)</span>
               <Button
                 size="sm"
@@ -578,6 +649,18 @@ export default function ProductManagement() {
               >
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Colocar em Leilão
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleBatchPrice}
+                disabled={isPricingLoading}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 h-7 text-xs px-3"
+              >
+                {isPricingLoading ? (
+                  <><span className="w-3.5 h-3.5 mr-1.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />Buscando...</>
+                ) : (
+                  <>⚡ Precificar Auto</>
+                )}
               </Button>
               <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-gray-300 ml-1">
                 <X className="w-3.5 h-3.5" />
@@ -698,6 +781,14 @@ export default function ProductManagement() {
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSinglePrice(product); }}
+                          disabled={isPricingLoading}
+                          className="w-7 h-7 rounded-lg bg-yellow-600/20 hover:bg-yellow-600 text-yellow-400 hover:text-white flex items-center justify-center transition-all disabled:opacity-50"
+                          title="Precificar automaticamente (Google Shopping)"
+                        >
+                          ⚡
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setShowCalculator(true); }}
                           className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all"
@@ -1013,6 +1104,17 @@ export default function ProductManagement() {
           setGoogleShoppingProduct(null);
         }}
         productName={googleShoppingProduct}
+      />
+
+      <PricingPreviewModal
+        isOpen={showPricingPreview}
+        onClose={() => {
+          setShowPricingPreview(false);
+          setPricingPreviewData(null);
+        }}
+        products={pricingPreviewData}
+        onConfirm={handleConfirmPricing}
+        isLoading={isPricingLoading}
       />
 
       {/* MODAL DE CONFIRMAÇÃO DE OPERAÇÃO */}
