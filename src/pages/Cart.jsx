@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -45,6 +45,7 @@ export default function Cart() {
   const [pixConfirmed, setPixConfirmed] = useState(false);
   const [createdSales, setCreatedSales] = useState([]);
   const [checkoutItems, setCheckoutItems] = useState([]); // Snapshot dos itens ao gerar PIX
+  const isSubmittingRef = useRef(false); // Guard atômico contra duplo clique
 
   // Form data
   const [formData, setFormData] = useState({
@@ -277,7 +278,12 @@ export default function Cart() {
   };
 
   const handleCheckout = async () => {
+    // Guard atômico: bloqueia duplo clique mesmo durante async
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+
     if (cartItems.length === 0) {
+      isSubmittingRef.current = false;
       toast.error('Seu carrinho está vazio');
       return;
     }
@@ -446,6 +452,7 @@ export default function Cart() {
 
         // Limpa carrinho apenas se o pagamento foi criado E não foi rejeitado
         updateCart([]);
+        isSubmittingRef.current = false;
       } else {
         const errorMsg = paymentResponse?.error || 'Erro na transação. Verifique seus dados.';
         const errorDetails = paymentResponse?.details;
@@ -471,6 +478,7 @@ export default function Cart() {
           }
         }
         setCreatedSales([]); // Limpar estado
+        isSubmittingRef.current = false;
       }
     } catch (error) {
       console.error('Erro no checkout:', error);
@@ -487,6 +495,7 @@ export default function Cart() {
         }
       }
       setCreatedSales([]); // Limpar estado
+      isSubmittingRef.current = false;
     }
   };
 
@@ -943,11 +952,17 @@ export default function Cart() {
                 </div>
 
                 <div className="bg-white rounded-lg p-4 mb-4">
-                  <img
-                    src={pixData.pix_qr_code}
-                    alt="QR Code PIX"
-                    className="w-full max-w-[280px] mx-auto"
-                  />
+                  {pixData.pix_qr_code ? (
+                    <img
+                      src={pixData.pix_qr_code}
+                      alt="QR Code PIX"
+                      className="w-full max-w-[280px] mx-auto"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+                      Carregando QR Code...
+                    </div>
+                  )}
                 </div>
 
                 {/* Aviso de expiração */}
