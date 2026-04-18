@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ShoppingCart, Copy } from 'lucide-react';
+import { Loader2, ShoppingCart, Copy, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 const Product = base44.entities.Product;
@@ -34,6 +34,10 @@ export default function CatalogCheckout2() {
     const [cardName, setCardName] = useState('');
     const [cardExpiry, setCardExpiry] = useState('');
     const [cardCvv, setCardCvv] = useState('');
+    const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+    const [currentSaleId, setCurrentSaleId] = useState(null);
+    const pollingIntervalRef = useRef(null);
+    const pollingTimeoutRef = useRef(null);
     const navigate = useNavigate();
 
     const searchCep = async (cep) => {
@@ -168,6 +172,7 @@ export default function CatalogCheckout2() {
             });
 
             console.log(`🛍️ CatalogSale criada com ID: ${sale.id} | Licensee: ${licenseeId}`);
+            setCurrentSaleId(sale.id);
 
             // 📊 Registrar rastreamento inicial (via fetch direto)
             try {
@@ -311,6 +316,36 @@ export default function CatalogCheckout2() {
             }
         }
     };
+
+    // Polling: detecta confirmação do PIX via webhook (checkPaymentStatus)
+    useEffect(() => {
+        if (!pixData?.payment_id || paymentConfirmed) return;
+
+        const checkStatus = async () => {
+            try {
+                const result = await base44.functions.invoke('checkPaymentStatus', {
+                    payment_id: pixData.payment_id
+                });
+                const data = result?.data || result;
+                if (data?.found && data?.status === 'confirmed') {
+                    setPaymentConfirmed(true);
+                    clearInterval(pollingIntervalRef.current);
+                    clearTimeout(pollingTimeoutRef.current);
+                    toast.success('✅ Pagamento confirmado! Seu pedido foi registrado.');
+                }
+            } catch (e) {
+                // silencioso — não travar a UX
+            }
+        };
+
+        pollingTimeoutRef.current = setTimeout(checkStatus, 4000);
+        pollingIntervalRef.current = setInterval(checkStatus, 6000);
+
+        return () => {
+            clearInterval(pollingIntervalRef.current);
+            clearTimeout(pollingTimeoutRef.current);
+        };
+    }, [pixData, paymentConfirmed]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -830,43 +865,75 @@ export default function CatalogCheckout2() {
                             {/* QR Code PIX */}
                             {pixData && pixData.billing_type === 'PIX' && (
                                 <div className="space-y-4 pt-4 border-t border-gray-700">
-                                    <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
-                                    <div className="bg-white rounded-lg p-4">
-                                        <img
-                                            src={pixData.pix_qr_code}
-                                            alt="QR Code PIX"
-                                            className="w-full max-w-[280px] mx-auto"
-                                        />
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            navigator.clipboard.writeText(pixData.pix_payload);
-                                            toast.success('Código PIX copiado!');
-                                        }}
-                                        className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
-                                    >
-                                        <Copy className="w-5 h-5" />
-                                        Copiar Código PIX
-                                    </button>
-                                    <div className="bg-gray-700/50 rounded-lg p-3">
-                                        <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
-                                        <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            setPixData(null);
-                                            setPaymentType('PIX');
-                                        }}
-                                        className="w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 rounded-lg border border-gray-500"
-                                    >
-                                        Alterar Forma de Pagamento
-                                    </button>
-                                    <button
-                                        onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
-                                        className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg"
-                                    >
-                                        Ver Meus Pedidos
-                                    </button>
+                                    {paymentConfirmed ? (
+                                        // TELA DE CONFIRMAÇÃO
+                                        <div className="text-center space-y-4">
+                                            <div className="flex items-center justify-center w-20 h-20 rounded-full bg-green-500/20 border-2 border-green-500/50 mx-auto">
+                                                <CheckCircle className="w-10 h-10 text-green-400" />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-green-400">✅ Pagamento Confirmado!</h3>
+                                            <p className="text-gray-300">
+                                                Seu pedido foi registrado com sucesso. Entraremos em contato em breve!
+                                            </p>
+                                            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                                                <p className="text-green-300 text-sm font-semibold">🎉 Compra concluída!</p>
+                                                <p className="text-gray-400 text-xs mt-1">Valor: R$ {product?.price_catalog?.toFixed(2)}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg"
+                                            >
+                                                Ver Meus Pedidos
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        // QR CODE PIX (aguardando pagamento)
+                                        <>
+                                            <h3 className="text-lg font-bold text-green-400 text-center">💚 Pague com PIX</h3>
+                                            <div className="bg-white rounded-lg p-4">
+                                                <img
+                                                    src={pixData.pix_qr_code}
+                                                    alt="QR Code PIX"
+                                                    className="w-full max-w-[280px] mx-auto"
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-center gap-2 text-blue-400 text-sm">
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Monitorando pagamento em tempo real...
+                                            </div>
+                                            <p className="text-xs text-orange-400 text-center">⏱️ Este código expira em 15 minutos</p>
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(pixData.pix_payload);
+                                                    toast.success('Código PIX copiado!');
+                                                }}
+                                                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2"
+                                            >
+                                                <Copy className="w-5 h-5" />
+                                                Copiar Código PIX
+                                            </button>
+                                            <div className="bg-gray-700/50 rounded-lg p-3">
+                                                <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
+                                                <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    setPixData(null);
+                                                    setPaymentType('PIX');
+                                                    setPaymentConfirmed(false);
+                                                }}
+                                                className="w-full bg-gray-600 hover:bg-gray-500 text-white font-semibold py-3 rounded-lg border border-gray-500"
+                                            >
+                                                Alterar Forma de Pagamento
+                                            </button>
+                                            <button
+                                                onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                                                className="w-full bg-gray-700 hover:bg-gray-600 text-white font-semibold py-3 rounded-lg"
+                                            >
+                                                Ver Meus Pedidos
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
 
