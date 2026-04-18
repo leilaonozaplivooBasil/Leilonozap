@@ -1773,7 +1773,7 @@ export default function CreateAuction() {
 
                               const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).slice(0, 6);
                               if (files.length === 0) {
-                                alert("Nenhuma imagem válida encontrada");
+                                toast.error("Nenhuma imagem válida encontrada");
                                 return;
                               }
 
@@ -1786,7 +1786,7 @@ export default function CreateAuction() {
                                 if (uploadedUrls.length > 0) {
                                   setManualUploadImages(uploadedUrls);
                                   setManualCoverIndex(0);
-                                  alert(`✅ ${uploadedUrls.length} imagem(ns) enviada(s)!`);
+                                  toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada!`);
                                 }
                               } catch (error) {
                                 alert("❌ Erro ao enviar imagens: " + error.message);
@@ -1829,7 +1829,7 @@ export default function CreateAuction() {
                                 if (uploadedUrls.length > 0) {
                                   setManualUploadImages(uploadedUrls);
                                   setManualCoverIndex(0);
-                                  alert(`✅ ${uploadedUrls.length} imagem(ns) enviada(s)!`);
+                                  toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada!`);
                                 }
                               } catch (error) {
                                 alert("❌ Erro ao enviar imagens: " + error.message);
@@ -1944,7 +1944,7 @@ export default function CreateAuction() {
                                 setManualCoverIndex(0);
                                 setShowManualUpload(false);
 
-                                alert("✅ Imagens aplicadas no formulário!");
+                                toast.success("✅ Imagens aplicadas!");
                               }}
                               className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
                             >
