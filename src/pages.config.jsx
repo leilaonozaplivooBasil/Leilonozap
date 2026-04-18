@@ -70,7 +70,6 @@ import CRMInvestidores from './pages/CRMInvestidores';
 import CareerLevelsReport from './pages/CareerLevelsReport';
 import Cart from './pages/Cart';
 import Catalog from './pages/Catalog';
-import CatalogCheckout from './pages/CatalogCheckout';
 import CatalogCheckout2 from './pages/CatalogCheckout2';
 import CatalogManagement from './pages/CatalogManagement';
 import CatalogOrderTracking from './pages/CatalogOrderTracking';
@@ -172,7 +171,6 @@ export const PAGES = {
     "CareerLevelsReport": CareerLevelsReport,
     "Cart": Cart,
     "Catalog": Catalog,
-    "CatalogCheckout": CatalogCheckout,
     "CatalogCheckout2": CatalogCheckout2,
     "CatalogManagement": CatalogManagement,
     "CatalogOrderTracking": CatalogOrderTracking,
