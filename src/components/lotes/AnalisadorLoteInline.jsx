@@ -360,135 +360,146 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                     </div>
 
                     {/* KPIs */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-4">
                         {[
-                            { label: "Total de Itens", val: loteAtual.quantidadeTotal, color: "border-l-blue-500" },
-                            { label: "Valor de Mercado", val: formatCurrency(loteAtual.valorMercadoTotal), color: "border-l-emerald-500" },
-                            { label: "Ticket Médio", val: formatCurrency(loteAtual.quantidadeTotal ? loteAtual.valorMercadoTotal/loteAtual.quantidadeTotal : 0), color: "border-l-indigo-500" },
+                            { label: "Total de Itens (Qtd)", val: loteAtual.quantidadeTotal, color: "border-l-blue-500" },
+                            { label: "Valor de Mercado Total", val: formatCurrency(loteAtual.valorMercadoTotal), color: "border-l-emerald-500" },
+                            { label: "Ticket Avaliado (Mercado)", val: formatCurrency(loteAtual.quantidadeTotal ? loteAtual.valorMercadoTotal/loteAtual.quantidadeTotal : 0), color: "border-l-indigo-500" },
                             { label: "Custo Total Lote", val: formatCurrency(calculations.custoTotal), color: "border-l-amber-500" },
-                            { label: "Custo/Unidade", val: formatCurrency(loteAtual.quantidadeTotal ? calculations.custoTotal/loteAtual.quantidadeTotal : 0), color: "border-l-red-500" },
+                            { label: "Custo Médio p/ Unidade", val: formatCurrency(loteAtual.quantidadeTotal ? calculations.custoTotal/loteAtual.quantidadeTotal : 0), color: "border-l-red-500", highlight: true },
                         ].map((kpi, i) => (
-                            <div key={i} className={`bg-gray-800 p-4 rounded-xl border border-gray-700 border-l-4 ${kpi.color}`}>
-                                <p className="text-gray-400 text-xs font-bold mb-1 uppercase tracking-wider">{kpi.label}</p>
-                                <p className="text-xl font-black text-gray-200">{kpi.val}</p>
+                            <div key={i} className={`bg-gray-800 p-6 rounded-2xl border border-gray-700 border-l-4 ${kpi.color} shadow-lg`}>
+                                <p className="text-gray-400 text-xs font-bold mb-1 tracking-wider uppercase">{kpi.label}</p>
+                                <p className={`text-3xl font-black tracking-tight ${kpi.highlight ? 'text-white' : 'text-gray-200'}`}>{kpi.val}</p>
                             </div>
                         ))}
                     </div>
 
-                    {/* Financeiro + Projeções + Ticket Médio */}
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-                        {/* Financeiro */}
-                        <div className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden">
-                            <div className="p-4 border-b border-gray-700 bg-gray-900/30">
-                                <h3 className="font-bold text-white flex items-center gap-2 text-sm"><DollarSign size={16} className="text-amber-400" />Cenário Financeiro</h3>
-                            </div>
-                            <div className="p-5 space-y-4">
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Valor Arremato</label>
-                                    <div className="relative mt-1">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
-                                        <input type="number" value={arremateInputValue} onChange={(e) => setArremateInputValue(e.target.value)} className="w-full bg-gray-900 border border-gray-600 rounded-lg py-2.5 pl-10 pr-3 text-white focus:outline-none focus:border-emerald-500" placeholder="0.00" />
-                                    </div>
+                    {/* Grid principal: 1 col Financeiro + 2 cols (Projeções + Ticket Médio) */}
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+                        {/* COL 1: Financeiro */}
+                        <div className="xl:col-span-1">
+                            <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden">
+                                <div className="p-5 border-b border-gray-700 bg-gray-900/20">
+                                    <h3 className="font-bold text-white flex items-center gap-2"><DollarSign size={18} className="text-amber-400" />Cenário Financeiro e Custos</h3>
                                 </div>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Taxa Leilão</label>
-                                        <div className="relative mt-1">
-                                            <input type="number" value={taxaPct} onChange={(e) => setTaxaPct(Number(e.target.value))} className="w-full bg-gray-900 border border-gray-600 rounded-lg py-2.5 px-3 pr-8 text-white focus:outline-none focus:border-emerald-500" />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">%</span>
+                                <div className="p-5 space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Valor Arremato</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">R$</span>
+                                            <input type="number" value={arremateInputValue} onChange={(e) => setArremateInputValue(e.target.value)} className="w-full bg-gray-900 border border-gray-700 rounded-lg py-2.5 pl-10 pr-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-medium" placeholder="0.00" />
                                         </div>
-                                        <p className="text-xs text-gray-500 mt-1">= {formatCurrency(calculations.taxaValor)}</p>
                                     </div>
-                                    <div>
-                                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Frete (R$)</label>
-                                        <input type="number" value={frete || ''} onChange={(e) => setFrete(Number(e.target.value))} className="w-full bg-gray-900 border border-gray-600 rounded-lg py-2.5 px-3 text-white focus:outline-none focus:border-emerald-500 mt-1" />
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Taxa de Leilão</label>
+                                            <div className="relative">
+                                                <input type="number" value={taxaPct} onChange={(e) => setTaxaPct(Number(e.target.value))} className="w-full bg-gray-900 border border-gray-700 rounded-lg py-2.5 px-3 pr-8 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" />
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">%</span>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1">= {formatCurrency(calculations.taxaValor)}</p>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Frete (BRL)</label>
+                                            <input type="number" value={frete || ''} onChange={(e) => setFrete(Number(e.target.value))} className="w-full bg-gray-900 border border-gray-700 rounded-lg py-2.5 px-3 text-white focus:outline-none focus:border-blue-500" />
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Outros Custos</label>
-                                    <input type="number" value={outros || ''} onChange={(e) => setOutros(Number(e.target.value))} className="w-full bg-gray-900 border border-gray-600 rounded-lg py-2.5 px-3 text-white focus:outline-none focus:border-emerald-500 mt-1" />
-                                </div>
-                                <div className="pt-3 border-t border-gray-700 flex justify-between items-center bg-gray-900 p-4 rounded-xl border border-gray-700">
-                                    <span className="font-semibold text-gray-300">CUSTO DO LOTE:</span>
-                                    <span className="text-xl font-bold text-amber-400">{formatCurrency(calculations.custoTotal)}</span>
+                                    <div className="space-y-1.5">
+                                        <label className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Outros Custos Opcionais</label>
+                                        <input type="number" value={outros || ''} onChange={(e) => setOutros(Number(e.target.value))} className="w-full bg-gray-900 border border-gray-700 rounded-lg py-2.5 px-3 text-white focus:outline-none focus:border-blue-500" />
+                                    </div>
+                                    <div className="pt-4 mt-2 border-t border-gray-700">
+                                        <div className="flex justify-between items-center bg-gray-900 p-4 rounded-xl border border-gray-700">
+                                            <span className="font-semibold text-gray-300">CUSTO DO LOTE:</span>
+                                            <span className="text-xl font-bold text-amber-400">{formatCurrency(calculations.custoTotal)}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Projeções */}
-                        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-                            <h3 className="font-bold text-white mb-4 text-sm uppercase tracking-wider flex items-center gap-2"><TrendingUp size={16} className="text-indigo-400" />Cenários de Venda da Grade Útil</h3>
-                            <div className="space-y-3">
-                                {[
-                                    { title: "Venda (50% do Valor Mercado)", val: calculations.projCurto, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
-                                    { title: "Venda (60% do Valor Mercado)", val: calculations.projMedio, color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
-                                    { title: "Venda (70% do Valor Mercado)", val: calculations.projLongo, color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
-                                ].map((item, idx) => (
-                                    <div key={idx} className={`flex justify-between items-center p-3 rounded-xl border ${item.color}`}>
-                                        <p className="font-semibold text-sm">{item.title}</p>
-                                        <div className="text-right">
-                                            <p className="font-bold text-base">{formatCurrency(item.val)}</p>
-                                            <p className="text-xs mt-0.5">Lucro Bruto: {formatCurrency(item.val - calculations.custoTotal)}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                        {/* COL 2+3: Projeções + Ticket Médio lado a lado, depois gráfico embaixo */}
+                        <div className="space-y-6 col-span-1 xl:col-span-2">
+                            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
-                            {/* Distribuição de Qualidade (gráfico + legenda) */}
-                            {calculations.chartData.length > 0 && (
-                                <div className="mt-5 pt-4 border-t border-gray-700">
-                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Distribuição de Qualidade (QTD Itens x Grade)</h4>
-                                    <div className="flex gap-4 items-center">
-                                        <div className="w-28 h-28 flex-shrink-0">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <Pie data={calculations.chartData} cx="50%" cy="50%" innerRadius={35} outerRadius={50} paddingAngle={4} dataKey="value" stroke="none">
-                                                        {calculations.chartData.map((entry, i) => <Cell key={i} fill={calculations.COLORS[entry.name]} />)}
-                                                    </Pie>
-                                                    <RechartsTooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} formatter={(v) => [`${v} itens`, 'Qtd']} />
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-1.5 flex-1">
-                                            {calculations.chartData.map((d, i) => (
-                                                <div key={i} className="flex items-center justify-between bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: calculations.COLORS[d.name] }}></div>
-                                                        <span className="text-xs font-bold text-gray-300">Grade {d.name}</span>
-                                                    </div>
-                                                    <span className="font-black text-white text-xs">{d.value}</span>
+                                {/* Projeções */}
+                                <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl p-6">
+                                    <h3 className="font-bold text-white mb-5 uppercase tracking-wider text-sm flex items-center gap-2"><TrendingUp size={16} className="text-indigo-400" />Cenários de Venda da Grade Útil</h3>
+                                    <div className="space-y-3">
+                                        {[
+                                            { title: "Venda (50% do Valor Mercado)", val: calculations.projCurto, color: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
+                                            { title: "Venda (60% do Valor Mercado)", val: calculations.projMedio, color: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
+                                            { title: "Venda (70% do Valor Mercado)", val: calculations.projLongo, color: "bg-purple-500/10 text-purple-400 border-purple-500/20" },
+                                        ].map((item, idx) => (
+                                            <div key={idx} className={`flex justify-between items-center p-3 sm:p-4 rounded-xl border ${item.color}`}>
+                                                <div><p className="font-semibold text-sm sm:text-base">{item.title}</p></div>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-lg sm:text-xl">{formatCurrency(item.val)}</p>
+                                                    <p className="text-xs mt-0.5 font-medium flex items-center justify-end gap-1"><span>Lucro Bruto:</span><span>{formatCurrency(item.val - calculations.custoTotal)}</span></p>
                                                 </div>
-                                            ))}
-                                        </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                            )}
-                        </div>
 
-                        {/* Ticket Médio por Grade */}
-                        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-                            <h3 className="font-bold text-white mb-2 text-sm uppercase tracking-wider flex items-center gap-2"><Activity size={16} className="text-blue-400" />Análise de Ticket Médio por Grade</h3>
-                            <p className="text-xs text-gray-500 mb-3">Valor médio dos produtos agrupados por qualidade superior.</p>
-                            <div className="space-y-2">
-                                {[
-                                    { label: "Somente Grupo A", desc: `${calculations.qtdA} produtos originais/intactos`, tm: calculations.tmA, val: calculations.valA, color: "border-l-blue-400", grades: ['A'] },
-                                    { label: "Grupo A + B", desc: `${calculations.qtdAB} produtos vitrine`, tm: calculations.tmAB, val: calculations.valAB, color: "border-l-emerald-400", grades: ['A','B'] },
-                                    { label: "Grupo A + B + C", desc: `${calculations.qtdABC} produtos úteis`, tm: calculations.tmABC, val: calculations.valABC, color: "border-l-yellow-400", grades: ['A','B','C'] },
-                                    { label: "Grupo A + B + C + D", desc: `${calculations.qtdABCD} produtos escoáveis`, tm: calculations.tmABCD, val: calculations.valABCD, color: "border-l-orange-400", grades: ['A','B','C','D'] },
-                                    { label: "Todos os Grupos (A+B+C+D+E+U)", desc: `Lote inteiro (${calculations.qtdALL} produtos)`, tm: calculations.tmALL, val: calculations.valALL, color: "border-l-gray-400", grades: ['A','B','C','D','E','U'] },
-                                ].map((row, i) => (
-                                    <div key={i} onClick={() => setGradeModal({ title: row.label, grades: row.grades })}
-                                        className={`bg-gray-900 border border-gray-700 border-l-4 ${row.color} rounded-lg p-2.5 flex justify-between items-center cursor-pointer hover:bg-white/[0.03] transition-colors group`}>
-                                        <div>
-                                            <p className="font-bold text-xs text-gray-200 flex items-center gap-1">{row.label} <Eye size={10} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" /></p>
-                                            <p className="text-[10px] text-gray-500">{row.desc}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-emerald-400 text-sm">{formatCurrency(row.tm)} <span className="text-[10px] text-gray-500 font-normal">médio</span></p>
-                                            <p className="text-[10px] text-gray-500">Apurado: {formatCurrency(row.val)}</p>
-                                        </div>
+                                {/* Ticket Médio por Grade */}
+                                <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl p-6 flex flex-col">
+                                    <h3 className="font-bold text-white mb-2 uppercase tracking-wider text-sm flex items-center gap-2"><Activity size={16} className="text-blue-400" />Análise de Ticket Médio por Grade</h3>
+                                    <p className="text-xs text-gray-400 mb-5">Valor médio dos produtos agrupados por qualidade superior.</p>
+                                    <div className="space-y-3 flex-1 flex flex-col justify-center">
+                                        {[
+                                            { label: "Somente Grupo A", desc: `Equivale a ${calculations.qtdA} produtos originais/intactos`, tm: calculations.tmA, val: calculations.valA, color: "border-l-blue-400", grades: ['A'] },
+                                            { label: "Grupo A + B", desc: `Equivale a ${calculations.qtdAB} produtos vitrine`, tm: calculations.tmAB, val: calculations.valAB, color: "border-l-[#10b981]", grades: ['A','B'] },
+                                            { label: "Grupo A + B + C", desc: `Equivale a ${calculations.qtdABC} produtos úteis`, tm: calculations.tmABC, val: calculations.valABC, color: "border-l-[#eab308]", grades: ['A','B','C'] },
+                                            { label: "Grupo A + B + C + D", desc: `Equivale a ${calculations.qtdABCD} produtos escoáveis`, tm: calculations.tmABCD, val: calculations.valABCD, color: "border-l-[#f97316]", grades: ['A','B','C','D'] },
+                                            { label: "Todos os Grupos (A+B+C+D+E+U)", desc: `Equivale ao lote inteiro (${calculations.qtdALL} produtos)`, tm: calculations.tmALL, val: calculations.valALL, color: "border-l-slate-400", grades: ['A','B','C','D','E','U'] },
+                                        ].map((row, i) => (
+                                            <div key={i} onClick={() => setGradeModal({ title: row.label, grades: row.grades })}
+                                                className={`bg-gray-900 border border-gray-700 border-l-4 ${row.color} rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-white/[0.04] hover:border-blue-500/30 transition-all group`}>
+                                                <div>
+                                                    <p className="font-bold text-sm text-gray-200 flex items-center gap-1.5">{row.label}<Eye size={12} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" /></p>
+                                                    <p className="text-xs text-gray-500">{row.desc}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="font-bold text-emerald-400">{formatCurrency(row.tm)} <span className="text-xs text-gray-500 font-normal">médio</span></p>
+                                                    <p className="text-[10px] text-gray-400 mt-1 uppercase">Apurado: {formatCurrency(row.val)}</p>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                ))}
+                                </div>
+                            </div>
+
+                            {/* Gráfico de qualidade grande — abaixo dos dois cards */}
+                            <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl p-6">
+                                <h3 className="font-bold text-white mb-5 uppercase tracking-wider text-sm">Distribuição de Qualidade (QTD Itens x Grade)</h3>
+                                <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
+                                    <div className="w-56 h-56 flex-shrink-0">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie data={calculations.chartData} cx="50%" cy="50%" innerRadius={70} outerRadius={95} paddingAngle={5} dataKey="value" stroke="none">
+                                                    {calculations.chartData.map((entry, i) => <Cell key={i} fill={calculations.COLORS[entry.name]} />)}
+                                                </Pie>
+                                                <RechartsTooltip contentStyle={{ backgroundColor: '#0d1117', border: '1px solid #374151', borderRadius: '8px', color: '#fff' }} itemStyle={{ color: '#fff' }} formatter={(v) => [`${v} itens`, 'Quantidade']} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 w-full">
+                                        {calculations.chartData.map((d, i) => (
+                                            <div key={i} className="bg-gray-900 border border-gray-700 rounded-xl p-3 flex flex-col justify-center">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: calculations.COLORS[d.name] }}></div>
+                                                        <span className="text-sm font-bold text-gray-300">Grade {d.name}</span>
+                                                    </div>
+                                                    <span className="font-black text-white">{d.value}</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
