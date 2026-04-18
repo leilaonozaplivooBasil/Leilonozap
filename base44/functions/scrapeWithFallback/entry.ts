@@ -100,7 +100,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2) Fallback path: try our existing importFromUrl first to get any structured data
+    // 2) Se for Mercado Livre, tenta extractMLImages (API oficial ML + SerpAPI)
+    const isMercadoLivre = productUrl.includes('mercadolivre.com.br') || productUrl.includes('mercadolibre.com');
+    if (isMercadoLivre) {
+      try {
+        const mlRes = await base44.asServiceRole.functions.invoke('extractMLImages', { productUrl });
+        const mlData = mlRes?.data ?? mlRes;
+        if (mlData?.found && mlData?.images?.length > 0) {
+          return Response.json({
+            success: true,
+            source: 'mercadolivre',
+            title: mlData.title || '',
+            description: mlData.description || mlData.title || '',
+            price: mlData.price ?? null,
+            imageUrls: mlData.images,
+            original_url: productUrl,
+          });
+        }
+      } catch (_) {
+        // se extractMLImages falhar, continua para fallback
+      }
+    }
+
+    // 3) Fallback path: try our existing importFromUrl first to get any structured data
     let fallbackTitle = '';
     try {
       const imp = await base44.asServiceRole.functions.invoke('importFromUrl', { productUrl });
@@ -124,7 +146,7 @@ Deno.serve(async (req) => {
       // ignore and continue
     }
 
-    // 3) Fallback to Google Shopping via our searchProductByName function
+    // 4) Fallback to Google Shopping via our searchProductByName function
     const inferredTitle = fallbackTitle || parseTitleFromUrl(productUrl);
     if (inferredTitle && inferredTitle.length >= 3) {
       try {
