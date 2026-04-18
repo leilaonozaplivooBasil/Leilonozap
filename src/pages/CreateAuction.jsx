@@ -24,6 +24,16 @@ import RegioesSelect from "../components/admin/RegioesSelect"; import { toast } 
 import { addSeconds } from 'date-fns';
 import ProductImagePreview from "../components/admin/ProductImagePreview";
 import ConfirmProductDuplicationModal from "../components/admin/ConfirmProductDuplicationModal";
+import ManualImageUpload from "../components/admin/ManualImageUpload";
+import ValidationReportModal from "../components/admin/ValidationReportModal";
+
+const withRetry = async (fn, max = 3) => {
+  let err;
+  for (let i = 1; i <= max; i++) {
+    try { return await fn(); } catch (e) { err = e; if (i < max) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i - 1))); }
+  }
+  throw err;
+};
 
 const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
 
@@ -244,11 +254,9 @@ export default function CreateAuction() {
     try {
       console.log('🔍 Buscando produto:', productName);
 
-      const response = await base44.functions.invoke('searchProductByName', {
+      const response = await withRetry(() => base44.functions.invoke('searchProductByName', {
         productName: productName.trim()
-      });
-
-      console.log('📦 Resposta completa:', response);
+      }));
 
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro na busca');
@@ -495,13 +503,9 @@ export default function CreateAuction() {
 
     try {
       console.log('🚀 [GTIN] Iniciando busca para:', gtinCode);
-      const response = await base44.functions.invoke('searchProductByGTIN', {
+      const response = await withRetry(() => base44.functions.invoke('searchProductByGTIN', {
         gtin: gtinCode.trim()
-      });
-
-      console.log('📦 [GTIN] Resposta RAW:', response);
-      console.log('📦 [GTIN] Status:', response?.status);
-      console.log('📦 [GTIN] Data:', response?.data);
+      }));
 
       if (!response || response.status !== 200) {
         throw new Error(response?.data?.error || 'Erro GTIN');
@@ -812,102 +816,9 @@ export default function CreateAuction() {
 
 
 
-  // Modal de relatório de validação
-  const ValidationReportModal = () => {
-    if (!validationReport) return null;
-
-    const validCount = validationReport.filter(r => r.isImage === '✅ É imagem').length;
-    const reportText = `🔍 RELATÓRIO DE VALIDAÇÃO DE IMAGENS\n` +
-      `Data: ${new Date().toLocaleString('pt-BR')}\n` +
-      `Total: ${validationReport.length} imagens\n` +
-      `Válidas: ${validCount}/${validationReport.length}\n\n` +
-      validationReport.map(r =>
-        `🖼️ Imagem ${r.index}:\n` +
-        `   Status: ${r.status}\n` +
-        `   Tipo: ${r.contentType}\n` +
-        `   Validação: ${r.isImage}\n` +
-        `   URL: ${r.url}` +
-        (r.error ? `\n   ⚠️ Erro: ${r.error}` : '') + '\n'
-      ).join('\n');
-
-    return (
-      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-        <Card className="w-full max-w-2xl max-h-[80vh] bg-gray-800 border-gray-700">
-          <CardHeader className="border-b border-gray-700">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl text-white flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-yellow-400" />
-                Relatório de Validação
-              </CardTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setValidationReport(null)}
-                className="text-gray-400 hover:text-white"
-              >
-                ✕
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6 overflow-y-auto max-h-[60vh]">
-            <div className="mb-4 p-3 bg-gray-900 rounded-lg border border-gray-700">
-              <div className="text-sm text-gray-300">
-                <strong className="text-white">Total:</strong> {validationReport.length} imagens
-              </div>
-              <div className="text-sm text-gray-300">
-                <strong className="text-green-400">Válidas:</strong> {validCount}
-              </div>
-              <div className="text-sm text-gray-300">
-                <strong className="text-red-400">Inválidas:</strong> {validationReport.length - validCount}
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {validationReport.map((r, idx) => (
-                <div key={idx} className={`p-3 rounded-lg border ${r.isImage === '✅ É imagem'
-                  ? 'bg-green-900/20 border-green-700/50'
-                  : 'bg-red-900/20 border-red-700/50'
-                  }`}>
-                  <div className="font-bold text-white mb-2">🖼️ Imagem {r.index}</div>
-                  <div className="text-xs space-y-1 text-gray-300">
-                    <div><strong>Status:</strong> {r.status}</div>
-                    <div><strong>Tipo:</strong> {r.contentType}</div>
-                    <div><strong>Validação:</strong> {r.isImage}</div>
-                    <div className="break-all"><strong>URL:</strong> {r.url}</div>
-                    {r.error && (
-                      <div className="text-red-400"><strong>⚠️ Erro:</strong> {r.error}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-          <div className="border-t border-gray-700 p-4 flex gap-3">
-            <Button
-              onClick={() => {
-                navigator.clipboard.writeText(reportText);
-                toast.success("📋 Relatório copiado!");
-              }}
-              className="flex-1 bg-blue-600 hover:bg-blue-700"
-            >
-              📋 Copiar Relatório Completo
-            </Button>
-            <Button
-              onClick={() => setValidationReport(null)}
-              variant="outline"
-              className="border-gray-600 text-gray-300 hover:bg-gray-700"
-            >
-              Fechar
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-900 py-8 px-4 text-gray-300">
-      {validationReport && <ValidationReportModal />}
+      <ValidationReportModal validationReport={validationReport} onClose={() => setValidationReport(null)} />
 
       {showConfirmModal && (
         <ConfirmProductDuplicationModal
@@ -1229,9 +1140,9 @@ export default function CreateAuction() {
 
                                       if (isMl) {
                                         // Para Mercado Livre: chama extractMLImages diretamente (testado e funciona)
-                                        const mlResponse = await base44.functions.invoke('extractMLImages', {
+                                        const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', {
                                           productUrl: productUrl.trim()
-                                        });
+                                        }));
                                         if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
                                           data = {
                                             title: mlResponse.data.title || '',
@@ -1244,9 +1155,9 @@ export default function CreateAuction() {
                                         }
                                       } else {
                                         // Outros sites: scrapeWithFallback
-                                        const response = await base44.functions.invoke('scrapeWithFallback', {
+                                        const response = await withRetry(() => base44.functions.invoke('scrapeWithFallback', {
                                           productUrl: productUrl.trim()
-                                        });
+                                        }));
                                         if (!response || response.status !== 200) {
                                           throw new Error(response?.data?.error || 'Erro ao importar');
                                         }
@@ -1724,239 +1635,7 @@ export default function CreateAuction() {
                   </CardContent>
                 </Card>
 
-                {/* 🆕 SEÇÃO DE UPLOAD MANUAL - ALTERNATIVA AO IMPORTADOR */}
-                <Card className="bg-gray-800 border border-gray-700">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center justify-between text-purple-400">
-                      <div className="flex items-center gap-2">
-                        <UploadCloud className="w-5 h-5" />
-                        Upload Manual de Imagens
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowManualUpload(!showManualUpload)}
-                        className="text-purple-300 hover:text-purple-100"
-                      >
-                        {showManualUpload ? "Ocultar" : "Mostrar"}
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-
-                  {showManualUpload && (
-                    <CardContent className="space-y-4">
-                      {manualUploadImages.length === 0 ? (
-                        <div>
-                          <div
-                            className={`border-2 border-dashed rounded-lg p-8 text-center transition-all cursor-pointer ${isDragging
-                              ? 'border-purple-400 bg-purple-900/30 scale-105'
-                              : 'border-purple-600 hover:bg-purple-900/10'
-                              }`}
-                            onClick={() => !isUploading && document.getElementById('manual-upload-input').click()}
-                            onDragOver={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDragging(true);
-                            }}
-                            onDragLeave={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDragging(false);
-                            }}
-                            onDrop={async (e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsDragging(false);
-
-                              if (isUploading) return;
-
-                              const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).slice(0, 6);
-                              if (files.length === 0) {
-                                toast.error("Nenhuma imagem válida encontrada");
-                                return;
-                              }
-
-                              setIsUploading(true);
-                              const uploadedUrls = [];
-
-                              try {
-                                for (const f of files) { const wf = await convertToWebP(f); const result = await base44.integrations.Core.UploadFile({ file: wf }); if (result?.file_url) uploadedUrls.push(result.file_url); }
-
-                                if (uploadedUrls.length > 0) {
-                                  setManualUploadImages(uploadedUrls);
-                                  setManualCoverIndex(0);
-                                  toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada!`);
-                                }
-                              } catch (error) {
-                                toast.error("❌ Erro ao enviar imagens: " + error.message);
-                              } finally {
-                                setIsUploading(false);
-                              }
-                            }}
-                          >
-                            {isUploading ? (
-                              <Loader2 className="w-12 h-12 mx-auto mb-4 text-purple-400 animate-spin" />
-                            ) : (
-                              <UploadCloud className={`w-12 h-12 mx-auto mb-4 transition-all ${isDragging ? 'text-purple-300 scale-110' : 'text-purple-400'
-                                }`} />
-                            )}
-
-                            <h4 className="text-lg font-semibold text-purple-300 mb-2">
-                              {isUploading ? "Enviando imagens..." : isDragging ? "✨ Solte as imagens aqui" : "📸 Clique ou arraste imagens"}
-                            </h4>
-                            <p className="text-sm text-gray-400">
-                              {isDragging ? "Solte para fazer upload" : "Selecione até 6 imagens do seu computador"}
-                            </p>
-                          </div>
-
-                          <input
-                            id="manual-upload-input"
-                            type="file"
-                            accept="image/*"
-                            multiple
-                            className="hidden"
-                            onChange={async (e) => {
-                              if (!e.target.files || e.target.files.length === 0) return;
-
-                              setIsUploading(true);
-                              const files = Array.from(e.target.files).slice(0, 6);
-                              const uploadedUrls = [];
-
-                              try {
-                                for (const f of files) { const wf = await convertToWebP(f); const result = await base44.integrations.Core.UploadFile({ file: wf }); if (result?.file_url) uploadedUrls.push(result.file_url); }
-
-                                if (uploadedUrls.length > 0) {
-                                  setManualUploadImages(uploadedUrls);
-                                  setManualCoverIndex(0);
-                                  toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada!`);
-                                }
-                              } catch (error) {
-                                toast.error("❌ Erro ao enviar imagens: " + error.message);
-                              } finally {
-                                setIsUploading(false);
-                                e.target.value = '';
-                              }
-                            }}
-                            disabled={isUploading}
-                          />
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div className="bg-purple-900/30 p-4 rounded-lg border border-purple-700">
-                            <h4 className="font-bold text-purple-300 mb-4 flex items-center gap-2">
-                              <ImageIcon className="w-4 h-4" />
-                              Escolha a imagem de capa:
-                            </h4>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                              {manualUploadImages.map((img, index) => (
-                                <div
-                                  key={index}
-                                  className={`relative group cursor-pointer border-2 rounded-lg overflow-hidden transition-all duration-200 ${manualCoverIndex === index ? 'border-purple-500 ring-2 ring-purple-500/30' : 'border-gray-700 hover:border-purple-600'
-                                    }`}
-                                  onClick={() => setManualCoverIndex(index)}
-                                >
-                                  <div className="w-full h-24 bg-gray-900 flex items-center justify-center">
-                                    <img
-                                      src={img}
-                                      alt={`Imagem ${index + 1}`}
-                                      className="max-w-full max-h-full object-contain"
-                                      crossOrigin="anonymous"
-                                      loading="eager"
-                                      onError={(e) => {
-                                        e.target.style.display = 'none';
-                                        if (e.target.parentElement) {
-                                          e.target.parentElement.innerHTML = '<div class="text-xs text-red-400">❌ Erro</div>';
-                                        }
-                                      }}
-                                    />
-                                  </div>
-
-                                  <Button
-                                    variant="destructive"
-                                    size="icon"
-                                    className="absolute top-1 right-1 h-6 w-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const newImages = manualUploadImages.filter((_, i) => i !== index);
-                                      setManualUploadImages(newImages);
-
-                                      if (newImages.length === 0) {
-                                        return;
-                                      }
-
-                                      if (manualCoverIndex === index) {
-                                        setManualCoverIndex(0);
-                                      } else if (manualCoverIndex > index) {
-                                        setManualCoverIndex(prev => prev - 1);
-                                      }
-                                    }}
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </Button>
-
-                                  <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded-full pointer-events-none">
-                                    {index + 1}
-                                  </div>
-                                  {manualCoverIndex === index && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-purple-500/30 text-white font-bold pointer-events-none">
-                                      CAPA
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => {
-                                setManualUploadImages([]);
-                                setManualCoverIndex(0);
-                              }}
-                              className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Limpar Tudo
-                            </Button>
-                            <Button
-                              type="button"
-                              onClick={() => {
-                                let finalImages = [];
-                                finalImages.push(manualUploadImages[manualCoverIndex]);
-                                manualUploadImages.forEach((img, i) => {
-                                  if (i !== manualCoverIndex) finalImages.push(img);
-                                });
-                                finalImages = finalImages.slice(0, 5);
-
-                                while (finalImages.length < 5) {
-                                  finalImages.push("");
-                                }
-
-                                setFormData(prev => ({
-                                  ...prev,
-                                  image_urls: finalImages
-                                }));
-
-                                setManualUploadImages([]);
-                                setManualCoverIndex(0);
-                                setShowManualUpload(false);
-
-                                toast.success("✅ Imagens aplicadas!");
-                              }}
-                              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                            >
-                              <Upload className="w-4 h-4 mr-2" />
-                              🚀 Aplicar no Formulário
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-                    </CardContent>
-                  )}
-                </Card>
+                <ManualImageUpload onApply={(urls) => setFormData(prev => ({ ...prev, image_urls: urls }))} />
 
                 <form onSubmit={handleSubmit} className="space-y-6 pt-4">
                   <div className="grid md:grid-cols-2 gap-6">
