@@ -136,9 +136,8 @@ export default function Cart() {
 
   // 🔄 Polling para detectar confirmação de pagamento PIX
   useEffect(() => {
-    // ⚠️ NÃO disparar se já confirmou ou se não há PIX
-    if (!pixData || pixData.billing_type !== 'PIX' || !createdSales || createdSales.length === 0 || pixConfirmed) {
-      // Cleanup: parar polling se foi ativado
+    // ⚠️ NÃO disparar se já confirmou, se não há PIX ou se não tem payment_id
+    if (!pixData || pixData.billing_type !== 'PIX' || !pixData.payment_id || pixConfirmed) {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
@@ -146,41 +145,28 @@ export default function Cart() {
       return;
     }
 
-    const saleId = createdSales[0].id;
-    const startTime = Date.now();
-    const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos (expiração do PIX)
+    const paymentId = pixData?.payment_id;
+    if (!paymentId) return; // sem payment_id não tem como fazer polling
 
-    // ✅ Polling: buscar status do pagamento a cada 3 segundos
-    const interval = setInterval(async () => {
-      // Verificar timeout (15 min)
-      if (Date.now() - startTime > TIMEOUT_MS) {
-        clearInterval(interval);
-        pollingIntervalRef.current = null;
-        toast.warning('⏰ PIX expirado. Gere um novo código.', { duration: 5000 });
-        return;
-      }
-
+    // ✅ Igual ao AuctionCheckoutModern: usa checkPaymentStatus com payment_id
+    const checkPaymentStatus = async () => {
       try {
-        const currentUser = localStorage.getItem('currentUser');
-        if (!currentUser) return;
-        const user = JSON.parse(currentUser);
-
-        // ✅ Buscar pedidos via função backend
-        const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: user.id });
-        const orders = result.orders || [];
-        const sale = orders.find(o => o.id === saleId);
-
-        if (sale?.status === 'paid') {
-          clearInterval(interval);
+        const result = await base44.functions.invoke('checkPaymentStatus', {
+          payment_id: paymentId
+        });
+        const data = result?.data || result;
+        if (data?.found && data?.status === 'confirmed') {
+          clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
-          console.log('✅ PIX confirmado:', saleId);
           toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
           setPixConfirmed(true);
         }
       } catch (error) {
         console.debug('Polling error:', error.message);
       }
-    }, 3000); // Polling a cada 3 segundos
+    };
+
+    const interval = setInterval(checkPaymentStatus, 5000); // a cada 5s, igual ao AuctionCheckoutModern
 
     pollingIntervalRef.current = interval;
 
@@ -191,7 +177,7 @@ export default function Cart() {
         pollingIntervalRef.current = null;
       }
     };
-  }, [pixData, createdSales]); // ✅ REMOVIDO pixConfirmed das dependências
+  }, [pixData]); // ✅ Depende apenas de pixData (payment_id dentro dele)
 
   const updateCart = (newCart) => {
     setCartItems(newCart);
@@ -425,8 +411,9 @@ export default function Cart() {
         };
       }
 
-      // ✅ CORREÇÃO CRÍTICA: base44.functions.invoke retorna o objeto direto, sem wrapper .data
-      const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
+      const paymentRaw = await base44.functions.invoke('createAsaasPayment', paymentPayload);
+      // ✅ Normaliza resposta igual ao AuctionCheckoutModern (garante que pix_qr_code está acessível)
+      const paymentResponse = paymentRaw?.data || paymentRaw;
 
       setIsProcessing(false);
       toast.dismiss('checkout-loading');
