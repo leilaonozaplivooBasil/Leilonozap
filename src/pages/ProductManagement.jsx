@@ -662,6 +662,22 @@ export default function ProductManagement() {
                 Colocar em Leilão
               </Button>
 
+              <Button
+                size="sm"
+                onClick={() => {
+                  const ids = Array.from(selectedIds);
+                  if (ids.length === 1) {
+                    navigate(createPageUrl("AddCatalogProduct"), { state: { sourceProduct: products.find(p => p.id === ids[0]) } });
+                  } else {
+                    alert('⚠️ Selecione apenas 1 produto para colocar no Catálogo');
+                  }
+                }}
+                className="bg-violet-600 hover:bg-violet-500 text-white border-0 h-7 text-xs px-3"
+              >
+                <BookOpen className="w-3.5 h-3.5 mr-1.5" />
+                Loja Virtual
+              </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
