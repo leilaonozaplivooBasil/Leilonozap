@@ -132,7 +132,57 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             classCount[g] += qtd; gradesData[g].qtd += qtd; gradesData[g].valorMarket += valor;
             rawItemsByGrade.push({ grade: g, desc: colDesc >= 0 && row[colDesc] ? String(row[colDesc]).trim() : `Item ${i+1}`, qtd, valor });
         }
+        // Extrai sub-itens por categoria (igual ao AnaliseDeLotes original)
         const subItemsByCategory = {};
+        if (wmsSheetData && headerRowIndex >= 0) {
+            const catNamesSet = new Set(resumoCategorias.map(c => String(c.nome).trim().toLowerCase()));
+            let detectedCatCol = -1, detectedDescCol = -1;
+            const headerRows = [wmsSheetData[headerRowIndex], headerRowIndex > 0 ? wmsSheetData[headerRowIndex - 1] : null].filter(Boolean);
+            for (const hRow of headerRows) {
+                hRow.forEach((h, i) => {
+                    if (typeof h !== 'string') return;
+                    const hn = h.toUpperCase().trim();
+                    if (hn.includes('CATEGOR') && !hn.includes('SUB') && detectedCatCol < 0) detectedCatCol = i;
+                    if ((hn.includes('DESCRI') || hn === 'ITEM' || hn === 'PRODUTO' || hn.includes('NOME DO PRODUTO')) && detectedDescCol < 0) detectedDescCol = i;
+                });
+            }
+            if (detectedCatCol < 0) {
+                for (let scanRow = headerRowIndex + 1; scanRow < Math.min(headerRowIndex + 6, wmsSheetData.length); scanRow++) {
+                    const row = wmsSheetData[scanRow];
+                    if (!row) continue;
+                    row.forEach((cell, idx) => {
+                        if (detectedCatCol >= 0) return;
+                        if (cell && typeof cell === 'string' && catNamesSet.has(cell.trim().toLowerCase())) detectedCatCol = idx;
+                    });
+                    if (detectedCatCol >= 0) break;
+                }
+            }
+            if (detectedDescCol < 0 && wmsSheetData[headerRowIndex + 1]) {
+                const sampleRow = wmsSheetData[headerRowIndex + 1];
+                for (let idx = 0; idx < sampleRow.length; idx++) {
+                    if (idx === detectedCatCol || idx === colClass || idx === colValue || idx === colQtd) continue;
+                    const cell = sampleRow[idx];
+                    if (cell && typeof cell === 'string' && cell.trim().length > 5) { detectedDescCol = idx; break; }
+                }
+            }
+            if (detectedCatCol >= 0 && detectedDescCol >= 0) {
+                for (let i = headerRowIndex + 1; i < wmsSheetData.length; i++) {
+                    const row = wmsSheetData[i];
+                    if (!row || !row[0]) continue;
+                    if (typeof row[0] === 'string' && row[0].toUpperCase().includes('TOTAL')) continue;
+                    const catRaw = row[detectedCatCol] != null ? String(row[detectedCatCol]).trim() : null;
+                    if (!catRaw) continue;
+                    const desc = row[detectedDescCol] != null ? String(row[detectedDescCol]).trim() : null;
+                    if (!desc) continue;
+                    const qtdVal = colQtd >= 0 && row[colQtd] != null ? (parseInt(row[colQtd]) || 1) : 1;
+                    const rawValor = colValue >= 0 ? row[colValue] : null;
+                    const valor = rawValor != null ? (typeof rawValor === 'number' ? rawValor : parseFloat(String(rawValor).replace(/[R$\s]/g, '').replace(',', '.')) || 0) : 0;
+                    if (!subItemsByCategory[catRaw]) subItemsByCategory[catRaw] = [];
+                    subItemsByCategory[catRaw].push({ desc, qtd: qtdVal, valor });
+                }
+            }
+        }
+
         const novoLote = { id: Date.now(), nomePlanilha: filename, nomeLote: filename.replace(/\.xlsx?$/, ''), localColeta, resumoCategorias, subItemsByCategory, quantidadeTotal: totalItemsQtd, valorMercadoTotal: referenceMarketValue > 0 ? referenceMarketValue : valorMercadoTotal, classCount, gradesData, rawItemsByGrade, origem: 'Mercado Livre' };
         setLotesImportados(prev => [...prev, novoLote]);
         setLoteAtual(novoLote);
