@@ -64,6 +64,25 @@ export default function ProductManagement() {
   const [operationType, setOperationType] = useState(null);
   const [operationData, setOperationData] = useState({ operatorName: '', reason: '' });
   const [expandedNotes, setExpandedNotes] = useState({});
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  const toggleSelect = (id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === currentProducts.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(currentProducts.map(p => p.id)));
+    }
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     lot: '',
@@ -541,10 +560,43 @@ export default function ProductManagement() {
             <span className="text-xs text-gray-600 bg-gray-800 px-2 py-1 rounded-full">{filteredProducts.length} produto(s)</span>
           </div>
 
+          {/* BARRA DE AÇÕES EM LOTE */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-blue-950/60 border-b border-blue-800/50">
+              <span className="text-sm font-semibold text-blue-300">{selectedIds.size} selecionado(s)</span>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const ids = Array.from(selectedIds);
+                  if (ids.length === 1) {
+                    navigate(createPageUrl("CreateAuction") + `?product_id=${ids[0]}`);
+                  } else {
+                    navigate(createPageUrl("CreateAuction") + `?product_ids=${ids.join(',')}`);
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-500 text-white border-0 h-7 text-xs px-3"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Colocar em Leilão
+              </Button>
+              <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-gray-300 ml-1">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="text-sm" style={{minWidth: '1200px', width: '100%'}}>
               <thead>
                 <tr className="bg-gray-800/80 border-b border-gray-700">
+                  <th className="px-3 py-2.5 text-center" style={{width:'36px'}}>
+                    <input
+                      type="checkbox"
+                      checked={currentProducts.length > 0 && selectedIds.size === currentProducts.length}
+                      onChange={toggleSelectAll}
+                      className="accent-blue-500 w-3.5 h-3.5 cursor-pointer"
+                    />
+                  </th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Data</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'110px'}}>SKU</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider" style={{width:'220px'}}>Produto</th>
@@ -567,8 +619,16 @@ export default function ProductManagement() {
                 {currentProducts.map((product, index) => (
                   <tr
                     key={product.id}
-                    className={`hover:bg-gray-800/50 transition-colors cursor-pointer group ${index % 2 === 0 ? 'bg-transparent' : 'bg-gray-900/40'}`}
+                    className={`hover:bg-gray-800/50 transition-colors cursor-pointer group ${selectedIds.has(product.id) ? 'bg-blue-950/30' : index % 2 === 0 ? 'bg-transparent' : 'bg-gray-900/40'}`}
                   >
+                    <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(product.id)}
+                        onChange={() => toggleSelect(product.id)}
+                        className="accent-blue-500 w-3.5 h-3.5 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>{product.date || '—'}</td>
                     <td className="px-3 py-2.5 whitespace-nowrap" onClick={() => handleEdit(product)}>
                       <span className="font-mono text-xs bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded whitespace-nowrap">{product.lot || 'N/A'}</span>
