@@ -89,18 +89,19 @@ export default function ProductManagement() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  // 🆕 Precificar em lote
-  const handleBatchPrice = async () => {
-    if (selectedIds.size === 0) {
+  // 🆕 Precificar em lote (com controle de quantidade)
+  const handleBatchPrice = async (idsOverride) => {
+    const ids = idsOverride || Array.from(selectedIds);
+    if (ids.length === 0) {
       alert('Selecione produtos para precificar');
       return;
     }
-    if (!confirm(`Buscar preço de mercado para ${selectedIds.size} produto(s)?`)) return;
+    if (!confirm(`Buscar preço de mercado para ${ids.length} produto(s)?`)) return;
     
     setIsPricingLoading(true);
     try {
       const response = await calculateProductPricing({
-        product_ids: Array.from(selectedIds)
+        product_ids: ids
       });
       setPricingPreviewData(response.data?.products || []);
       setShowPricingPreview(true);
@@ -650,18 +651,41 @@ export default function ProductManagement() {
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Colocar em Leilão
               </Button>
-              <Button
-                size="sm"
-                onClick={handleBatchPrice}
-                disabled={isPricingLoading}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 h-7 text-xs px-3"
-              >
-                {isPricingLoading ? (
-                  <><span className="w-3.5 h-3.5 mr-1.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />Buscando...</>
-                ) : (
-                  <>⚡ Precificar Auto</>
-                )}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    disabled={isPricingLoading}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 h-7 text-xs px-3"
+                  >
+                    {isPricingLoading ? (
+                      <><span className="w-3.5 h-3.5 mr-1.5 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />Buscando...</>
+                    ) : (
+                      <>⚡ Precificar Auto ▾</>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="bg-gray-900 border-gray-700 text-white shadow-xl">
+                  <DropdownMenuItem
+                    onClick={() => handleBatchPrice(Array.from(selectedIds).slice(0, 1))}
+                    className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white text-xs"
+                  >
+                    ⚡ Precificar 1 produto
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleBatchPrice(Array.from(selectedIds).slice(0, 10))}
+                    className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white text-xs"
+                  >
+                    ⚡ Precificar 10 produtos
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleBatchPrice(Array.from(selectedIds))}
+                    className="cursor-pointer hover:bg-gray-800 text-emerald-400 hover:text-emerald-300 text-xs font-semibold"
+                  >
+                    ⚡ Precificar todos ({selectedIds.size})
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button onClick={clearSelection} className="text-xs text-gray-500 hover:text-gray-300 ml-1">
                 <X className="w-3.5 h-3.5" />
               </button>
