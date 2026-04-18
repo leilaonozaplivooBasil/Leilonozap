@@ -314,521 +314,332 @@ export default function ProductManagement() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-white">Carregando...</div>
+      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto" />
+          <p className="text-gray-400 text-sm font-medium">Carregando estoque...</p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-900 p-6">
-      <div className="max-w-[1800px] mx-auto">
+  const depositBadge = (dep) => {
+    const map = { Bangu: 'bg-blue-500/15 text-blue-300 border border-blue-500/30', Oficina: 'bg-orange-500/15 text-orange-300 border border-orange-500/30', Recreio: 'bg-purple-500/15 text-purple-300 border border-purple-500/30' };
+    return map[dep] || 'bg-gray-700 text-gray-300';
+  };
 
-        {/* HEADER */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-white">Posição de estoque</h1>
-          <div className="flex gap-3">
+  return (
+    <div className="min-h-screen bg-gray-950 text-white">
+
+      {/* ═══ HEADER FAIXA ═══ */}
+      <div className="bg-gradient-to-r from-gray-900 via-gray-900 to-gray-800 border-b border-gray-800 px-6 py-4 sticky top-16 z-30 backdrop-blur-sm">
+        <div className="max-w-[1800px] mx-auto flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+              <Package className="w-5 h-5 text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-white leading-none">Gestão de Estoque</h1>
+              <p className="text-xs text-gray-500 mt-0.5">{filteredProducts.length} produto(s) exibido(s)</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700">
-                  <Filter className="w-4 h-4 mr-2" />
+                <Button variant="outline" size="sm" className="bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700 hover:text-white">
+                  <Filter className="w-3.5 h-3.5 mr-1.5" />
                   Mais Ações
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="bg-gray-800 border-gray-700 text-white">
-                <DropdownMenuItem
-                  onClick={() => navigate(createPageUrl("RegisterBatches"))}
-                  className="cursor-pointer hover:bg-gray-700 text-white"
-                >
-                  <PackagePlus className="w-4 h-4 mr-2" />
-                  Registrar Lotes
+              <DropdownMenuContent className="bg-gray-900 border-gray-700 text-white shadow-xl">
+                <DropdownMenuItem onClick={() => navigate(createPageUrl("RegisterBatches"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                  <PackagePlus className="w-4 h-4 mr-2 text-blue-400" /> Registrar Lotes
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigate(createPageUrl("PDV"))}
-                  className="cursor-pointer hover:bg-gray-700 text-white"
-                >
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  PDV
+                <DropdownMenuItem onClick={() => navigate(createPageUrl("PDV"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                  <DollarSign className="w-4 h-4 mr-2 text-green-400" /> PDV
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => navigate(createPageUrl("ProductOperationHistory"))}
-                  className="cursor-pointer hover:bg-gray-700 text-white"
-                >
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Histórico de Operação
+                <DropdownMenuItem onClick={() => navigate(createPageUrl("ProductOperationHistory"))} className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white">
+                  <BookOpen className="w-4 h-4 mr-2 text-purple-400" /> Histórico de Operação
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
-                    if (products.length === 0) {
-                      alert('Nenhum produto para exportar');
-                      return;
-                    }
-
+                    if (products.length === 0) { alert('Nenhum produto para exportar'); return; }
                     const headers = ['SKU', 'Produto', 'Depósito Empresa', 'Nome Depósito', 'Perfeito', 'Bom', 'Oficina', 'Custo Unit.', 'Preço Venda', 'Estoque Atual', 'Qtd Vendidos', 'Lucro'];
-                    const rows = filteredProducts.map(p => [
-                      p.lot || 'N/A',
-                      p.description || '',
-                      p.purchase_order || 'Empresa 3',
-                      p.deposit_name || 'Bangu',
-                      (p.qty_perfeito || 0).toString(),
-                      (p.qty_bom || 0).toString(),
-                      ((p.qty_oficina || 0) + (p.qty_ruim || 0)).toString(),
-                      (p.cost_price || 0).toFixed(2),
-                      (p.selling_price_retail || 0).toFixed(2),
-                      (p.quantity || 0).toString(),
-                      (p.quantity_sold || 0).toString(),
-                      (p.profit || 0).toFixed(2)
-                    ]);
-
-                    const csvContent = [
-                      headers.join(';'),
-                      ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
-                    ].join('\n');
-
+                    const rows = filteredProducts.map(p => [p.lot || 'N/A', p.description || '', p.purchase_order || 'Empresa 3', p.deposit_name || 'Bangu', (p.qty_perfeito || 0).toString(), (p.qty_bom || 0).toString(), ((p.qty_oficina || 0) + (p.qty_ruim || 0)).toString(), (p.cost_price || 0).toFixed(2), (p.selling_price_retail || 0).toFixed(2), (p.quantity || 0).toString(), (p.quantity_sold || 0).toString(), (p.profit || 0).toFixed(2)]);
+                    const csvContent = [headers.join(';'), ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))].join('\n');
                     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
                     const link = document.createElement('a');
-                    const url = URL.createObjectURL(blob);
-                    const timestamp = new Date().toISOString().split('T')[0];
-
-                    link.setAttribute('href', url);
-                    link.setAttribute('download', `posicao_estoque_${timestamp}.csv`);
+                    link.setAttribute('href', URL.createObjectURL(blob));
+                    link.setAttribute('download', `posicao_estoque_${new Date().toISOString().split('T')[0]}.csv`);
                     link.style.visibility = 'hidden';
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
-
                     alert(`✅ ${filteredProducts.length} produtos exportados!`);
                   }}
-                  className="cursor-pointer hover:bg-gray-700 text-white"
+                  className="cursor-pointer hover:bg-gray-800 text-gray-300 hover:text-white"
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Exportar Dados
+                  <Download className="w-4 h-4 mr-2 text-yellow-400" /> Exportar CSV
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              onClick={async () => {
-                if (!confirm('Agrupar produtos duplicados? Isso irá somar quantidades de produtos com o mesmo nome.')) return;
-                try {
-                  setIsLoading(true);
-                  const result = await base44.functions.invoke('groupDuplicateProducts', {});
-                  alert(`✅ Agrupamento concluído!\n\n${result.data.grupos_processados} grupos processados\n${result.data.produtos_atualizados} produtos atualizados\n${result.data.produtos_deletados} duplicados removidos`);
-                  sessionStorage.removeItem('products_cache_v3');
-                  sessionStorage.removeItem('products_cache_time_v3');
-                  await loadData();
-                } catch (error) {
-                  console.error('Erro:', error);
-                  alert('❌ Erro ao agrupar produtos');
-                } finally {
-                  setIsLoading(false);
-                }
-              }}
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-            >
-              <Package className="w-4 h-4 mr-2" />
-              Agrupar Duplicados
+
+            <Button size="sm" onClick={async () => {
+              if (!confirm('Agrupar produtos duplicados?')) return;
+              try {
+                setIsLoading(true);
+                const result = await base44.functions.invoke('groupDuplicateProducts', {});
+                alert(`✅ ${result.data.grupos_processados} grupos | ${result.data.produtos_deletados} removidos`);
+                sessionStorage.removeItem('products_cache_v3');
+                sessionStorage.removeItem('products_cache_time_v3');
+                await loadData();
+              } catch { alert('❌ Erro ao agrupar'); } finally { setIsLoading(false); }
+            }} className="bg-orange-600/90 hover:bg-orange-600 text-white border-0">
+              <Package className="w-3.5 h-3.5 mr-1.5" /> Agrupar Duplicados
             </Button>
-            <Button
-              onClick={() => navigate(createPageUrl("AddCatalogProduct"))}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              <BookOpen className="w-4 h-4 mr-2" />
-              Novo Produto Catálogo
+            <Button size="sm" onClick={() => navigate(createPageUrl("AddCatalogProduct"))} className="bg-violet-600/90 hover:bg-violet-600 text-white border-0">
+              <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Catálogo
             </Button>
-            <Button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="bg-green-700 hover:bg-green-600 text-white"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Produto
+            <Button size="sm" onClick={() => setShowAddForm(!showAddForm)} className="bg-emerald-600 hover:bg-emerald-500 text-white border-0 shadow-lg shadow-emerald-900/40">
+              <Plus className="w-3.5 h-3.5 mr-1.5" /> Novo Produto
             </Button>
           </div>
         </div>
+      </div>
 
-        {/* FILTROS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="max-w-[1800px] mx-auto px-6 py-6 space-y-6">
+
+        {/* ═══ FILTROS ═══ */}
+        <div className="flex flex-wrap gap-3 items-center bg-gray-900/60 border border-gray-800 rounded-2xl px-4 py-3">
+          <Search className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          <Input
+            placeholder="Buscar por SKU ou nome do produto..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="bg-transparent border-0 text-white placeholder:text-gray-600 focus-visible:ring-0 flex-1 min-w-[200px] p-0 h-auto text-sm"
+          />
+          {searchTerm && (
+            <button onClick={() => setSearchTerm('')} className="text-gray-500 hover:text-gray-300 transition-colors">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+          <div className="w-px h-5 bg-gray-700 flex-shrink-0" />
           <select
             value={depositNameFilter}
             onChange={(e) => setDepositNameFilter(e.target.value)}
-            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-gray-300 text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           >
             <option value="all">Todos os depósitos</option>
-            <option value="Bangu">Bangu</option>
-            <option value="Oficina">Oficina</option>
-            <option value="Recreio">Recreio</option>
+            <option value="Bangu">🔵 Bangu</option>
+            <option value="Oficina">🟠 Oficina</option>
+            <option value="Recreio">🟣 Recreio</option>
           </select>
-
           <select
             value={classFilter}
             onChange={(e) => setClassFilter(e.target.value)}
-            className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-800 text-gray-300 text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           >
-            <option value="all">Total</option>
-            <option value="perfeito">
-              Perfeito ({products.reduce((sum, p) => sum + (p.qty_perfeito || 0), 0)})
-            </option>
-            <option value="bom">
-              Bom ({products.reduce((sum, p) => sum + (p.qty_bom || 0), 0)})
-            </option>
-            <option value="oficina">
-              Oficina ({products.reduce((sum, p) => sum + (p.qty_oficina || 0) + (p.qty_ruim || 0), 0)})
-            </option>
+            <option value="all">Todas as classes</option>
+            <option value="perfeito">✅ Perfeito ({products.reduce((s, p) => s + (p.qty_perfeito || 0), 0)})</option>
+            <option value="bom">🟡 Bom ({products.reduce((s, p) => s + (p.qty_bom || 0), 0)})</option>
+            <option value="oficina">🔧 Oficina ({products.reduce((s, p) => s + (p.qty_oficina || 0) + (p.qty_ruim || 0), 0)})</option>
           </select>
-
-          <div className="flex items-center gap-2">
-            <Input
-              placeholder="SKU"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="bg-gray-800 text-white border-gray-700"
-            />
-            <Button onClick={() => setSearchTerm('')} className="bg-red-600 hover:bg-red-700 text-white whitespace-nowrap">
-              Apagar
-            </Button>
-          </div>
         </div>
 
-        {/* CARDS PEQUENOS DE ESTATÍSTICAS */}
+        {/* ═══ CARDS TOPO — 4 KPIs ═══ */}
         <TooltipProvider>
-          <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-gray-400 text-xs">Total de produtos</p>
-                      <Package className="w-5 h-5 text-blue-400" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total de Unidades', value: filteredProducts.reduce((s, p) => s + (p.quantity || 0) + (p.quantity_sold || 0), 0).toLocaleString(), icon: Package, color: 'text-blue-400', bg: 'from-blue-500/10 to-transparent', border: 'border-blue-500/20', tooltip: 'Soma de todas as unidades (em estoque + vendidas).' },
+              { label: 'Testados & Aprovados', value: filteredProducts.reduce((s, p) => s + (p.qty_perfeito || 0) + (p.qty_bom || 0), 0).toLocaleString(), icon: TrendingUp, color: 'text-emerald-400', bg: 'from-emerald-500/10 to-transparent', border: 'border-emerald-500/20', tooltip: 'Perfeito + Bom — prontos para venda.' },
+              { label: 'Qtd Vendidos', value: stats.totalSold.toLocaleString(), icon: ShoppingCart, color: 'text-violet-400', bg: 'from-violet-500/10 to-transparent', border: 'border-violet-500/20', tooltip: 'Total de unidades que já saíram do estoque via vendas.' },
+              { label: 'Saldo em Estoque', value: stats.inStock.toLocaleString(), icon: Package, color: 'text-amber-400', bg: 'from-amber-500/10 to-transparent', border: 'border-amber-500/20', tooltip: 'Unidades disponíveis no estoque atual.' },
+            ].map(({ label, value, icon: Icon, color, bg, border, tooltip }) => (
+              <Tooltip key={label}>
+                <TooltipTrigger asChild>
+                  <div className={`rounded-2xl border ${border} bg-gradient-to-br ${bg} bg-gray-900 p-4 cursor-help hover:border-opacity-50 transition-all`}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</p>
+                      <Icon className={`w-4 h-4 ${color}`} />
                     </div>
-                    <p className="text-2xl font-bold text-white">
-                      {filteredProducts.reduce((sum, p) => sum + (p.quantity || 0) + (p.quantity_sold || 0), 0).toLocaleString()}
-                    </p>
-                    <p className="text-gray-500 text-xs mt-1">Unidades totais</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-blue-500/50">
-                <p className="font-semibold text-blue-400 mb-2">📦 Total de Produtos</p>
-                <p className="text-sm text-gray-300">Soma de todas as unidades (em estoque + já vendidas).</p>
-                <p className="text-xs text-gray-400 mt-2">Mostra o volume total de produtos que passaram pelo sistema.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-gray-400 text-xs">Testados e aprovados</p>
-                      <DollarSign className="w-5 h-5 text-orange-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-white">
-                      {filteredProducts.reduce((sum, p) => sum + (p.qty_perfeito || 0) + (p.qty_bom || 0), 0).toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-orange-500/50">
-                <p className="font-semibold text-orange-400 mb-2">✅ Testados e Aprovados</p>
-                <p className="text-sm text-gray-300">Produtos classificados como "Perfeito" ou "Bom".</p>
-                <p className="text-xs text-gray-400 mt-2">Prontos para venda sem necessidade de reparos.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-gray-400 text-xs">Vendidos</p>
-                      <TrendingUp className="w-5 h-5 text-green-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-white">{stats.totalSold.toLocaleString()}</p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-green-500/50">
-                <p className="font-semibold text-green-400 mb-2">📈 Vendidos</p>
-                <p className="text-sm text-gray-300">Total de unidades vendidas.</p>
-                <p className="text-xs text-gray-400 mt-2">Representa o volume de produtos que já saíram do estoque via vendas.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-gray-400 text-xs">Produtos em Estoque</p>
-                      <Package className="w-5 h-5 text-purple-400" />
-                    </div>
-                    <p className="text-2xl font-bold text-white">
-                      {stats.inStock.toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-purple-500/50">
-                <p className="font-semibold text-purple-400 mb-2">📦 Produtos em Estoque</p>
-                <p className="text-sm text-gray-300">Unidades disponíveis no estoque atual.</p>
-                <p className="text-xs text-gray-400 mt-2">Quantidade de produtos prontos para venda no momento.</p>
-              </TooltipContent>
-            </Tooltip>
+                    <p className={`text-3xl font-bold ${color}`}>{value}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="bg-gray-900 border-gray-700 text-gray-300 text-xs max-w-[200px]">{tooltip}</TooltipContent>
+              </Tooltip>
+            ))}
           </div>
         </TooltipProvider>
 
-        {/* CARDS GRANDES DE ESTATÍSTICAS */}
+        {/* ═══ CARDS FINANCEIROS — 5 KPIs ═══ */}
         <TooltipProvider>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-6">
-                    <p className="text-gray-400 text-sm mb-1">Ticket Médio (Funcionais)</p>
-                    <p className="text-2xl font-bold text-orange-400">
-                      R$ {stats.averageTicketFunctional.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-orange-500/50">
-                <p className="font-semibold text-orange-400 mb-2">🏷️ Ticket Médio (Produtos Funcionando)</p>
-                <p className="text-sm text-gray-300">Valor médio de venda dos produtos em estado "Perfeito" ou "Bom".</p>
-                <p className="text-xs text-gray-400 mt-2">Ajuda a entender o preço de mercado por unidade dos itens que podem ser vendidos imediatamente.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-6">
-                    <p className="text-gray-400 text-sm mb-1">Valor de mercadoria em estoque</p>
-                    <p className="text-2xl font-bold text-white">
-                      R$ {stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-gray-500/50">
-                <p className="font-semibold text-gray-300 mb-2">💰 Valor de Mercadoria em Estoque</p>
-                <p className="text-sm text-gray-300">Soma do custo de todos os produtos em estoque.</p>
-                <p className="text-xs text-gray-400 mt-2">Capital investido em mercadoria atualmente disponível.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-6">
-                    <p className="text-gray-400 text-sm mb-1">Receita potencial em estoque</p>
-                    <p className="text-2xl font-bold text-white">
-                      R$ {stats.potentialRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-gray-500/50">
-                <p className="font-semibold text-gray-300 mb-2">💵 Receita Potencial em Estoque</p>
-                <p className="text-sm text-gray-300">Valor total se vender todos produtos "Perfeito" e "Bom" pelo preço de varejo.</p>
-                <p className="text-xs text-gray-400 mt-2">Receita máxima esperada do estoque aprovado.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-6">
-                    <p className="text-gray-400 text-sm mb-1">Faturado</p>
-                    <p className="text-2xl font-bold text-green-400">
-                      R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-green-500/50">
-                <p className="font-semibold text-green-400 mb-2">💸 Faturado</p>
-                <p className="text-sm text-gray-300">Total arrecadado com vendas realizadas.</p>
-                <p className="text-xs text-gray-400 mt-2">Soma de todos os valores de venda concretizados.</p>
-              </TooltipContent>
-            </Tooltip>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card className="bg-gray-800 border-gray-700 cursor-help">
-                  <CardContent className="p-6">
-                    <p className="text-gray-400 text-sm mb-1">Lucro</p>
-                    <p className="text-2xl font-bold text-green-400">
-                      R$ {stats.totalProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs bg-gray-900 border-green-500/50">
-                <p className="font-semibold text-green-400 mb-2">💎 Lucro</p>
-                <p className="text-sm text-gray-300">Diferença entre valor faturado e custo dos produtos vendidos.</p>
-                <p className="text-xs text-gray-400 mt-2">Lucro líquido obtido com as vendas (Faturado - Custos).</p>
-              </TooltipContent>
-            </Tooltip>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            {[
+              { label: 'Ticket Médio', value: `R$ ${stats.averageTicketFunctional.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-orange-300', border: 'border-orange-500/25', accent: 'bg-orange-500', tooltip: 'Valor médio por unidade dos produtos Perfeito ou Bom.' },
+              { label: 'Capital em Estoque', value: `R$ ${stats.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-sky-300', border: 'border-sky-500/25', accent: 'bg-sky-500', tooltip: 'Soma do custo de todos os produtos em estoque.' },
+              { label: 'Receita Potencial', value: `R$ ${stats.potentialRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-indigo-300', border: 'border-indigo-500/25', accent: 'bg-indigo-500', tooltip: 'Receita máxima vendendo todos os Perfeito + Bom.' },
+              { label: 'Faturado', value: `R$ ${stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-emerald-300', border: 'border-emerald-500/25', accent: 'bg-emerald-500', tooltip: 'Total arrecadado com vendas realizadas.' },
+              { label: 'Lucro Líquido', value: `R$ ${stats.totalProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'text-green-300', border: 'border-green-500/25', accent: 'bg-green-500', tooltip: 'Diferença entre valor faturado e custo dos produtos.' },
+            ].map(({ label, value, color, border, accent, tooltip }) => (
+              <Tooltip key={label}>
+                <TooltipTrigger asChild>
+                  <div className={`rounded-2xl border ${border} bg-gray-900 p-4 cursor-help hover:bg-gray-800/60 transition-all group relative overflow-hidden`}>
+                    <div className={`absolute top-0 left-0 right-0 h-0.5 ${accent} opacity-60`} />
+                    <p className="text-xs text-gray-500 font-medium mb-2 uppercase tracking-wider">{label}</p>
+                    <p className={`text-xl font-bold ${color}`}>{value}</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="bg-gray-900 border-gray-700 text-gray-300 text-xs max-w-[200px]">{tooltip}</TooltipContent>
+              </Tooltip>
+            ))}
           </div>
         </TooltipProvider>
 
-        {/* TABELA SIMPLIFICADA */}
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-white">Posição de estoque</CardTitle>
-              <span className="text-sm text-gray-400">{filteredProducts.length} produto(s) encontrado(s)</span>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-700 bg-gray-800">
-                    <th className="text-left p-3 font-semibold text-white">Data</th>
-                    <th className="text-left p-3 font-semibold text-white">SKU</th>
-                    <th className="text-left p-3 font-semibold text-white">Produto</th>
-                    <th className="text-left p-3 font-semibold text-white">Nome Depósito</th>
-                    <th className="text-center p-3 font-semibold text-white">Perfeito</th>
-                    <th className="text-center p-3 font-semibold text-white">Bom</th>
-                    <th className="text-center p-3 font-semibold text-white">Oficina</th>
-                    <th className="text-left p-3 font-semibold text-white">Observação</th>
-                    <th className="text-right p-3 font-semibold text-white">Custo Total</th>
-                    <th className="text-right p-3 font-semibold text-white">Custo Unit.</th>
-                    <th className="text-right p-3 font-semibold text-white">Preço Venda</th>
-                    <th className="text-right p-3 font-semibold text-white">Estoque Atual</th>
-                    <th className="text-right p-3 font-semibold text-white">Qtd Vendidos</th>
-                    <th className="text-right p-3 font-semibold text-white">Valor Venda</th>
-                    <th className="text-right p-3 font-semibold text-white">Lucro</th>
-                    <th className="text-center p-3 font-semibold text-white">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentProducts.map((product, index) => (
-                    <tr
-                      key={product.id}
-                      className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'}`}
+        {/* ═══ TABELA ═══ */}
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 overflow-hidden">
+          {/* Table Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800">
+            <h2 className="text-sm font-semibold text-gray-300">Posição de Estoque</h2>
+            <span className="text-xs text-gray-600 bg-gray-800 px-2 py-1 rounded-full">{filteredProducts.length} produto(s)</span>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-800/70 border-b border-gray-700/60">
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Data</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">SKU</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Produto</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Depósito</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-emerald-600 uppercase tracking-wider">Perfeito</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-yellow-600 uppercase tracking-wider">Bom</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-orange-600 uppercase tracking-wider">Oficina</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Obs.</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">C. Total</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">C. Unit.</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Preço Venda</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Estoque</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Vendidos</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Valor Venda</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Lucro</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-800/60">
+                {currentProducts.map((product, index) => (
+                  <tr
+                    key={product.id}
+                    className={`hover:bg-gray-800/50 transition-colors cursor-pointer group ${index % 2 === 0 ? 'bg-transparent' : 'bg-gray-900/40'}`}
+                  >
+                    <td className="px-3 py-2.5 text-gray-500 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>{product.date || '—'}</td>
+                    <td className="px-3 py-2.5" onClick={() => handleEdit(product)}>
+                      <span className="font-mono text-xs bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded">{product.lot || 'N/A'}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-gray-200 font-medium max-w-[200px] truncate" onClick={() => handleEdit(product)} title={product.description}>{product.description}</td>
+                    <td className="px-3 py-2.5" onClick={() => handleEdit(product)}>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${depositBadge(product.deposit_name || 'Bangu')}`}>{product.deposit_name || 'Bangu'}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center" onClick={() => handleEdit(product)}>
+                      {(product.qty_perfeito || 0) > 0
+                        ? <span className="text-emerald-400 font-bold text-sm">{product.qty_perfeito}</span>
+                        : <span className="text-gray-700">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-center" onClick={() => handleEdit(product)}>
+                      {(product.qty_bom || 0) > 0
+                        ? <span className="text-yellow-400 font-bold text-sm">{product.qty_bom}</span>
+                        : <span className="text-gray-700">—</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-center" onClick={() => handleEdit(product)}>
+                      {((product.qty_oficina || 0) + (product.qty_ruim || 0)) > 0
+                        ? <span className="text-orange-400 font-bold text-sm">{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</span>
+                        : <span className="text-gray-700">—</span>}
+                    </td>
+                    <td
+                      className="px-3 py-2.5 text-gray-500 text-xs max-w-[120px] cursor-pointer"
+                      onClick={(e) => { e.stopPropagation(); setExpandedNotes(prev => ({ ...prev, [product.id]: !prev[product.id] })); }}
                     >
-                      <td className="p-3 text-gray-400 text-xs cursor-pointer" onClick={() => handleEdit(product)}>{product.date || '-'}</td>
-                      <td className="p-3 text-gray-300 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.lot || 'N/A'}</td>
-                      <td className="p-3 text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.description}</td>
-                      <td className="p-3 text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.deposit_name || 'Bangu'}</td>
-                      <td className="p-3 text-center text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_perfeito || 0}</td>
-                      <td className="p-3 text-center text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.qty_bom || 0}</td>
-                      <td className="p-3 text-center text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{(product.qty_oficina || 0) + (product.qty_ruim || 0)}</td>
-                      <td
-                        className="p-3 text-gray-300 text-sm cursor-pointer hover:bg-gray-700 transition-colors max-w-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setExpandedNotes(prev => ({ ...prev, [product.id]: !prev[product.id] }));
-                        }}
-                      >
-                        <div className={expandedNotes[product.id] ? '' : 'truncate'}>
-                          {product.notes || '-'}
-                        </div>
-                        {product.notes && product.notes.length > 50 && (
-                          <span className="text-blue-400 text-xs">
-                            {expandedNotes[product.id] ? '▲ minimizar' : '▼ ver mais'}
-                          </span>
-                        )}
-                      </td>
-                      <td className="p-3 text-right text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>
-                        R$ {(() => {
-                          const totalQty = (product.quantity || 0) + (product.quantity_sold || 0);
-                          const unitCost = totalQty > 0 ? (product.cost_price || 0) / totalQty : (product.cost_price || 0);
-                          return unitCost.toFixed(2);
-                        })()}
-                      </td>
-                      <td className="p-3 text-right text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.selling_price_retail || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-white font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-white font-semibold cursor-pointer" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
-                      <td className="p-3 text-right text-blue-400 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
-                      <td className="p-3 text-right text-green-400 font-bold cursor-pointer" onClick={() => handleEdit(product)}>R$ {(product.profit || 0).toFixed(2)}</td>
-                      <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedProduct(product);
-                              setShowCalculator(true);
-                            }}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                            title="Calculadora de Preço"
-                          >
-                            <Calculator className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setGoogleShoppingProduct(product.description);
-                              setShowGoogleShopping(true);
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            title="Pesquisar Google Shopping"
-                          >
-                            <ShoppingCart className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(createPageUrl("AddCatalogProduct"), {
-                                state: { sourceProduct: product }
-                              });
-                            }}
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
-                            title="Novo Produto Catálogo"
-                          >
-                            <BookOpen className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      <div className={expandedNotes[product.id] ? '' : 'truncate'}>{product.notes || '—'}</div>
+                      {product.notes && product.notes.length > 40 && (
+                        <span className="text-blue-500 text-xs">{expandedNotes[product.id] ? '▲' : '▼'}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {(product.cost_price || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
+                      R$ {(() => { const tq = (product.quantity || 0) + (product.quantity_sold || 0); return tq > 0 ? ((product.cost_price || 0) / tq).toFixed(2) : (product.cost_price || 0).toFixed(2); })()}
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
+                      {(product.selling_price_retail || 0) > 0
+                        ? <span className="text-gray-300">R$ {product.selling_price_retail.toFixed(2)}</span>
+                        : <span className="text-yellow-500 text-xs">⚠ S/ preço</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-right whitespace-nowrap" onClick={() => handleEdit(product)}>
+                      <span className="font-bold text-white">{(product.quantity || 0).toLocaleString()}</span>
+                    </td>
+                    <td className="px-3 py-2.5 text-right text-gray-400 text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>{(product.quantity_sold || 0).toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right text-sky-400 font-semibold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>R$ {(product.sold_amount || 0).toFixed(2)}</td>
+                    <td className="px-3 py-2.5 text-right font-bold text-xs whitespace-nowrap" onClick={() => handleEdit(product)}>
+                      <span className={(product.profit || 0) >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                        R$ {(product.profit || 0).toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 text-center">
+                      <div className="flex items-center justify-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedProduct(product); setShowCalculator(true); }}
+                          className="w-7 h-7 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white flex items-center justify-center transition-all"
+                          title="Calculadora"
+                        >
+                          <Calculator className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setGoogleShoppingProduct(product.description); setShowGoogleShopping(true); }}
+                          className="w-7 h-7 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white flex items-center justify-center transition-all"
+                          title="Google Shopping"
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigate(createPageUrl("AddCatalogProduct"), { state: { sourceProduct: product } }); }}
+                          className="w-7 h-7 rounded-lg bg-violet-600/20 hover:bg-violet-600 text-violet-400 hover:text-white flex items-center justify-center transition-all"
+                          title="Catálogo"
+                        >
+                          <BookOpen className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-              {filteredProducts.length === 0 && (
-                <div className="text-center py-12 text-gray-400">
-                  <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Nenhum produto encontrado</p>
-                </div>
-              )}
-            </div>
-
-            {/* PAGINAÇÃO */}
-            <div className="flex items-center justify-between p-4 border-t border-gray-700 bg-gray-800">
-              <span className="text-sm text-gray-400">
-                {startIndex + 1} - {Math.min(endIndex, filteredProducts.length)} / {filteredProducts.length}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400 mr-2">
-                  Página {currentPage} de {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-400 border-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handlePreviousPage}
-                  disabled={currentPage === 1}
-                >
-                  &lt;
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-gray-400 border-gray-600 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages}
-                >
-                  &gt;
-                </Button>
+            {filteredProducts.length === 0 && (
+              <div className="text-center py-16 text-gray-600">
+                <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Nenhum produto encontrado</p>
               </div>
+            )}
+          </div>
+
+          {/* PAGINAÇÃO */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-800 bg-gray-900/60">
+            <span className="text-xs text-gray-600">
+              {startIndex + 1}–{Math.min(endIndex, filteredProducts.length)} de {filteredProducts.length}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-gray-600 mr-2">Pág. {currentPage}/{totalPages}</span>
+              <button
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                className="w-7 h-7 rounded-lg bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
+              >‹</button>
+              <button
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                className="w-7 h-7 rounded-lg bg-gray-800 border border-gray-700 text-gray-400 hover:bg-gray-700 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-all flex items-center justify-center text-xs font-bold"
+              >›</button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* MODAL DE EDIÇÃO/CRIAÇÃO */}
         {showAddForm && (
