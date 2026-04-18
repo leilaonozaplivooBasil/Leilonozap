@@ -1260,9 +1260,12 @@ ${boletoInfo}================================
                                   {product.quantity}
                                 </Badge>
                               </td>
-                              <td className="p-3 text-right text-green-400 font-bold">
-                                R$ {product.selling_price_retail?.toFixed(2)}
-                              </td>
+                              <td className="p-3 text-right font-bold">
+                                 {product.selling_price_retail > 0
+                                   ? <span className="text-green-400">R$ {product.selling_price_retail.toFixed(2)}</span>
+                                   : <span className="text-yellow-400 text-xs">⚠️ Sem preço</span>
+                                 }
+                               </td>
                               <td className="p-3 text-center">
                                 <Button
                                   size="sm"
