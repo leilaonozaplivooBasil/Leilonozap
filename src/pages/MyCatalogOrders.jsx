@@ -130,25 +130,12 @@ export default function MyCatalogOrders() {
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
 
-        // Buscar pedidos do catálogo pelo buyer_id ou buyer_email
-        console.log('🔍 Buscando pedidos para user:', { id: user.id, email: user.email });
-
-        const allOrders = await CatalogSale.list("-created_date", 500);
-        console.log('📦 Total de pedidos no sistema:', allOrders?.length || 0);
-
-        // Filtrar pedidos do usuário (por ID, email ou created_by)
-        const userOrders = allOrders.filter(order =>
-          order.buyer_id === user.id ||
-          order.buyer_email === user.email ||
-          order.created_by === user.email
-        );
-
-        console.log('🔍 Pedidos encontrados:', userOrders.length, 'Filtros - buyer_id:', user.id, 'email:', user.email);
-
-        console.log('✅ Pedidos do usuário:', userOrders.length, userOrders);
-        setOrders(userOrders);
+        // ✅ Buscar pedidos via backend function (sem RLS)
+        const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: user.id });
+        setOrders(result.orders || []);
       } catch (error) {
         console.error("Failed to load catalog orders:", error);
+        setOrders([]);
       } finally {
         setIsLoading(false);
       }
@@ -156,40 +143,37 @@ export default function MyCatalogOrders() {
 
     loadData();
 
-    // 🔄 Subscrever a atualizações em tempo real de CatalogSale
-    const unsubscribe = CatalogSale.subscribe((event) => {
-      if (event.type === 'update') {
-        const savedUser = localStorage.getItem('currentUser');
-        if (!savedUser) return;
+    // 🔄 Polling simples: recarrega a cada 5 segundos enquanto espera pagamento
+    const pollingTimer = setInterval(async () => {
+      const savedUser = localStorage.getItem('currentUser');
+      if (!savedUser) return;
 
-        const user = JSON.parse(savedUser);
+      const user = JSON.parse(savedUser);
+      try {
+        const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: user.id });
+        const newOrders = result.orders || [];
 
-        // Se atualização é para um pedido desse usuário, recarregar
-        if (event.data?.buyer_id === user.id || event.data?.buyer_email === user.email) {
-          console.log('📢 Pedido atualizado em tempo real:', event.id);
-
-          setOrders(prev =>
-            prev.map(order => order.id === event.id ? event.data : order)
-          );
-
-          // Se o pagamento foi confirmado, mostrar notificação
-          if (event.data?.status === 'paid') {
-            console.log('✅ Pagamento confirmado para pedido:', event.id);
-
-            // Dispara evento global para mostrar popup
+        // Verificar se algum pedido foi pago
+        newOrders.forEach(order => {
+          const oldOrder = orders.find(o => o.id === order.id);
+          if (oldOrder?.status !== 'paid' && order.status === 'paid') {
             window.dispatchEvent(new CustomEvent('paymentConfirmed', {
               detail: {
-                sale_id: event.id,
-                product_title: event.data.product_title,
-                amount: event.data.total_amount
+                sale_id: order.id,
+                product_title: order.product_title,
+                amount: order.total_amount
               }
             }));
           }
-        }
-      }
-    });
+        });
 
-    return unsubscribe;
+        setOrders(newOrders);
+      } catch (error) {
+        console.debug('Polling error:', error);
+      }
+    }, 5000);
+
+    return () => clearInterval(pollingTimer);
   }, []);
 
   const handleTrackClick = (order) => {

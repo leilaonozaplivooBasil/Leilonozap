@@ -133,7 +133,7 @@ export default function Cart() {
     loadUserData();
   }, []);
 
-  // 🔄 Real-time + Polling para detectar confirmação de pagamento PIX
+  // 🔄 Polling para detectar confirmação de pagamento PIX
   useEffect(() => {
     if (!pixData || pixData.billing_type !== 'PIX' || !createdSales || createdSales.length === 0 || pixConfirmed) return;
 
@@ -142,17 +142,7 @@ export default function Cart() {
     const startTime = Date.now();
     const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos (expiração do PIX)
 
-    // 1️⃣ Real-time subscription
-    const unsubscribe = base44.entities.CatalogSale.subscribe((event) => {
-      if (event.type === 'update' && event.id === saleId && event.data?.status === 'paid' && !hasConfirmed) {
-        hasConfirmed = true;
-        console.log('✅ PIX confirmado via real-time:', saleId);
-        toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
-        setPixConfirmed(true);
-      }
-    });
-
-    // 2️⃣ Polling de fallback com timeout
+    // ✅ Polling: buscar status do pagamento a cada 3 segundos
     const interval = setInterval(async () => {
       if (hasConfirmed) {
         clearInterval(interval);
@@ -167,23 +157,30 @@ export default function Cart() {
       }
 
       try {
-        const sales = await base44.entities.CatalogSale.filter({ id: saleId });
-        if (sales && sales[0]?.status === 'paid') {
+        const currentUser = localStorage.getItem('currentUser');
+        if (!currentUser) return;
+        const user = JSON.parse(currentUser);
+
+        // ✅ Buscar pedidos via função backend
+        const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: user.id });
+        const orders = result.orders || [];
+        const sale = orders.find(o => o.id === saleId);
+
+        if (sale?.status === 'paid') {
           hasConfirmed = true;
           clearInterval(interval);
-          console.log('✅ PIX confirmado via polling:', saleId);
+          console.log('✅ PIX confirmado:', saleId);
           toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
           setPixConfirmed(true);
         }
       } catch (error) {
         console.debug('Polling error:', error.message);
       }
-    }, 5000); // Aumentado para 5s (menos requisições)
+    }, 3000); // Polling a cada 3 segundos
 
     setPollingInterval(interval);
 
     return () => {
-      unsubscribe();
       if (interval) clearInterval(interval);
     };
   }, [pixData, createdSales, pixConfirmed]);
