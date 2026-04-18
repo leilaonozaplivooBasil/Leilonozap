@@ -623,43 +623,38 @@ export default function RegisterBatches() {
               <p className="text-xs text-gray-500 mb-4">
                 Aceita: PDF, Excel (.xlsx, .xls), CSV, Word (.doc, .docx), XML, Imagens
               </p>
-              <label htmlFor="batch-file-input" className="cursor-pointer">
-                <input
-                  id="batch-file-input"
-                  type="file"
-                  accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv,.doc,.docx,.xml"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      handleFileSelect(file);
-                      e.target.value = '';
-                    }
-                  }}
-                  disabled={isProcessing}
-                  className="hidden"
-                />
-                <Button 
-                  disabled={isProcessing} 
-                  className="bg-blue-600 hover:bg-blue-700"
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    document.getElementById('batch-file-input')?.click();
-                  }}
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="w-4 h-4 mr-2" />
-                      Selecionar Arquivo
-                    </>
-                  )}
-                </Button>
-              </label>
+              <input
+                id="batch-file-input"
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv,.doc,.docx,.xml"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    handleFileSelect(file);
+                    e.target.value = '';
+                  }
+                }}
+                disabled={isProcessing}
+                className="hidden"
+              />
+              <Button 
+                disabled={isProcessing} 
+                className="bg-blue-600 hover:bg-blue-700"
+                type="button"
+                onClick={() => document.getElementById('batch-file-input')?.click()}
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Processando...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    Selecionar Arquivo
+                  </>
+                )}
+              </Button>
 
               {isProcessing && progress && (
                 <div className="mt-4 text-blue-300 text-sm">{progress}</div>
