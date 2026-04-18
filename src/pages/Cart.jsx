@@ -391,6 +391,7 @@ export default function Cart() {
       // 🔒 Envia TODOS os IDs separados por vírgula no campo existente (sem mudar schema)
       const paymentPayload = {
         catalog_sale_id: salesBatch.map(s => s.id).join(','),
+        buyer_id: currentUser.id, // ✅ CRÍTICO: necessário para vincular o pedido ao usuário
         buyer_name: formData.name.trim(),
         buyer_email: formData.email.trim(),
         buyer_cpf: formData.cpf.replace(/\D/g, ''),
@@ -411,7 +412,8 @@ export default function Cart() {
         };
       }
 
-      const { data: paymentResponse } = await base44.functions.invoke('createAsaasPayment', paymentPayload);
+      // ✅ CORREÇÃO CRÍTICA: base44.functions.invoke retorna o objeto direto, sem wrapper .data
+      const paymentResponse = await base44.functions.invoke('createAsaasPayment', paymentPayload);
 
       setIsProcessing(false);
       toast.dismiss('checkout-loading');
