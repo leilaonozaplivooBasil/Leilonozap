@@ -66,12 +66,17 @@ Deno.serve(async (req) => {
 
       console.log('💰 Produto:', result.title, '- Preço:', price);
 
+      // 🆕 Detecta e extrai link do Mercado Livre
+      const isMercadoLivre = result.source && result.source.toLowerCase().includes('mercado livre');
+      const mercadolivre_url = isMercadoLivre && result.product_link ? result.product_link : null;
+
       return {
         title: result.title || 'Produto sem título',
         price: price,
         store: result.source || 'Loja não informada',
         url: result.product_link || result.link || googleShoppingUrl,
-        image: result.thumbnail || null
+        image: result.thumbnail || null,
+        mercadolivre_url: mercadolivre_url  // 🆕 Campo novo
       };
     });
 

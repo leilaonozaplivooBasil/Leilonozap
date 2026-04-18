@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, Loader2, Store } from 'lucide-react';
+import { ExternalLink, Loader2, Store, Zap } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
+import { useNavigate } from 'react-router-dom';
+import { createPageUrl } from '@/utils';
 
 export default function GoogleShoppingModal({ isOpen, onClose, productName }) {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
   const googleShoppingUrl = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(productName)}`;
 
   useEffect(() => {
@@ -102,21 +105,32 @@ export default function GoogleShoppingModal({ isOpen, onClose, productName }) {
                       </div>
 
                       <div className="flex items-end justify-between mt-auto">
-                        <div>
-                          <p className="text-3xl font-bold text-green-600">
-                            R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                        <a
-                          href={product.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-                        >
-                          Ver Oferta
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      </div>
+                         <div>
+                           <p className="text-3xl font-bold text-green-600">
+                             R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                           </p>
+                         </div>
+                         <div className="flex gap-2">
+                           {product.mercadolivre_url && (
+                             <Button
+                               onClick={() => navigate(createPageUrl('CreateAuction') + `?ml_url=${encodeURIComponent(product.mercadolivre_url)}`)}
+                               className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                             >
+                               🚀 Importar ML
+                               <Zap className="w-4 h-4" />
+                             </Button>
+                           )}
+                           <a
+                             href={product.url}
+                             target="_blank"
+                             rel="noopener noreferrer"
+                             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+                           >
+                             Ver Oferta
+                             <ExternalLink className="w-4 h-4" />
+                           </a>
+                         </div>
+                       </div>
                     </div>
                   </div>
                 ))}
