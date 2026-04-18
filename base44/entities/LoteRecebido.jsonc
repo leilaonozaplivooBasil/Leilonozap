@@ -1,0 +1,80 @@
+{
+  "name": "LoteRecebido",
+  "type": "object",
+  "properties": {
+    "nome_lote": {
+      "type": "string",
+      "description": "Nome ou identifica\u00e7\u00e3o do lote"
+    },
+    "marketplace": {
+      "type": "string",
+      "enum": [
+        "Mercado Livre",
+        "Shopee",
+        "Magazine Luiza",
+        "Casas Bahia",
+        "Extra",
+        "Amazon",
+        "Americanas",
+        "Submarino",
+        "Netshoes",
+        "Dafiti",
+        "OLX",
+        "Outros"
+      ],
+      "description": "Marketplace de origem do lote"
+    },
+    "arquivo_url": {
+      "type": "string",
+      "description": "URL do arquivo enviado (planilha, PDF, Word, XML)"
+    },
+    "arquivo_nome": {
+      "type": "string",
+      "description": "Nome original do arquivo"
+    },
+    "arquivo_tipo": {
+      "type": "string",
+      "description": "Tipo/extens\u00e3o do arquivo"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "recebido",
+        "comprado",
+        "enviado_ao_estoque"
+      ],
+      "default": "recebido",
+      "description": "Status do lote"
+    },
+    "valor_lote": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor do lote"
+    },
+    "observacoes": {
+      "type": "string",
+      "description": "Observa\u00e7\u00f5es sobre o lote"
+    },
+    "data_recebimento": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data de recebimento do lote"
+    }
+  },
+  "required": [
+    "nome_lote",
+    "marketplace"
+  ],
+  "rls": {
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "write": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

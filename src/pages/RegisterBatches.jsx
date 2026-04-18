@@ -583,13 +583,22 @@ export default function RegisterBatches() {
             </Button>
             <h1 className="text-3xl font-bold text-white">📦 Registrar Leilões</h1>
           </div>
-          <Button
-            onClick={() => setShowManualModal(true)}
-            className="bg-green-600 hover:bg-green-700"
-          >
-            <Edit className="w-4 h-4 mr-2" />
-            Registrar Manualmente
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => navigate(createPageUrl('EstoqueLotes'))}
+              className="bg-blue-700 hover:bg-blue-800"
+            >
+              <Package className="w-4 h-4 mr-2" />
+              Estoque de Lotes
+            </Button>
+            <Button
+              onClick={() => setShowManualModal(true)}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Registrar Manualmente
+            </Button>
+          </div>
         </div>
 
         {/* UPLOAD AREA */}
@@ -605,16 +614,19 @@ export default function RegisterBatches() {
             >
               <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-blue-400'}`} />
               <h3 className="text-lg font-bold text-white mb-2">
-                {isDragging ? '📂 Solte o arquivo aqui' : 'Envie a Nota Fiscal'}
+                {isDragging ? '📂 Solte o arquivo aqui' : 'Envie o Documento'}
               </h3>
-              <p className="text-sm text-gray-400 mb-4">
+              <p className="text-sm text-gray-400 mb-1">
                 Arraste e solte ou clique para selecionar
+              </p>
+              <p className="text-xs text-gray-500 mb-4">
+                Aceita: PDF, Excel (.xlsx, .xls), CSV, Word (.doc, .docx), XML, Imagens
               </p>
               <label htmlFor="batch-file-input" className="cursor-pointer">
                 <input
                   id="batch-file-input"
                   type="file"
-                  accept=".pdf,.png,.jpg,.jpeg"
+                  accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv,.doc,.docx,.xml"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
