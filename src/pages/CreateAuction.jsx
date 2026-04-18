@@ -114,6 +114,7 @@ export default function CreateAuction() {
 
   // 🆕 ESTADOS PARA URLs DE IMAGENS EXTRAÍDAS
   const [extractedImageUrls, setExtractedImageUrls] = useState(['', '', '', '', '', '']);
+  const [importerActiveTab, setImporterActiveTab] = useState("nome"); // 🆕 controla qual aba do importador está ativa
 
   const [validationReport, setValidationReport] = useState(null);
 
@@ -187,7 +188,8 @@ export default function CreateAuction() {
     if (mlUrl) {
       const decodedUrl = decodeURIComponent(mlUrl);
       setProductUrl(decodedUrl);
-      setSelectedMarketplace({ id: 'mercadolivre', name: 'Mercado Livre', placeholder: '' });
+      setSelectedMarketplace({ id: 'mercadolivre', name: 'Mercado Livre', placeholder: 'https://produto.mercadolivre.com.br/...' });
+      setImporterActiveTab("url"); // 🆕 força aba "Por URL"
       toast.info('🔗 URL do ML detectada! Extraindo dados...');
       setTimeout(async () => {
         setIsProcessing(true);
@@ -983,7 +985,7 @@ export default function CreateAuction() {
 
                     {/* ETAPA 0: TABS PARA ESCOLHER MÉTODO */}
                     {manualStep === 0 && (
-                      <Tabs defaultValue="nome" className="w-full">
+                      <Tabs value={importerActiveTab} onValueChange={setImporterActiveTab} className="w-full">
                         <TabsList className="grid w-full grid-cols-3 bg-gray-700/50">
                           <TabsTrigger value="nome" className="data-[state=active]:bg-purple-600">
                             🌐 Por Nome
