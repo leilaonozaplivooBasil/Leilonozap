@@ -671,7 +671,7 @@ export default function CreateAuction() {
     setExtractedData({ title: "", description: "" });
     setCoverIndex(0);
 
-    alert("✅ Dados aplicados com sucesso no formulário!");
+    toast.success("✅ Dados aplicados!");
   };
 
   // HANDLER PARA UPLOAD DE LOGO
@@ -685,13 +685,13 @@ export default function CreateAuction() {
       if (result?.file_url) {
         setFormData(prev => ({ ...prev, supplier_logo_url: result.file_url }));
         setSupplierLogoPreview(result.file_url);
-        alert("✅ Logo enviada com sucesso!");
+        toast.success("✅ Logo enviada!");
       } else {
         throw new Error("Falha ao receber URL da logo.");
       }
     } catch (error) {
       console.error("Erro ao enviar logo:", error);
-      alert("❌ Erro ao enviar logo. Tente novamente: " + (error.message || "Erro desconhecido."));
+      toast.error("❌ Erro ao enviar logo: " + (error.message || "Erro desconhecido."));
     } finally {
       setIsUploading(false);
     }
@@ -1789,7 +1789,7 @@ export default function CreateAuction() {
                                   toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada!`);
                                 }
                               } catch (error) {
-                                alert("❌ Erro ao enviar imagens: " + error.message);
+                                toast.error("❌ Erro ao enviar imagens: " + error.message);
                               } finally {
                                 setIsUploading(false);
                               }
@@ -1832,7 +1832,7 @@ export default function CreateAuction() {
                                   toast.success(`✅ ${uploadedUrls.length} imagem(ns) enviada!`);
                                 }
                               } catch (error) {
-                                alert("❌ Erro ao enviar imagens: " + error.message);
+                                toast.error("❌ Erro ao enviar imagens: " + error.message);
                               } finally {
                                 setIsUploading(false);
                                 e.target.value = '';
