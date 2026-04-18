@@ -437,9 +437,10 @@ export default function ProductManagement() {
             </Button>
             <Button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="bg-gray-800 hover:bg-gray-700 text-white"
+              className="bg-green-700 hover:bg-green-600 text-white"
             >
-              Clique aqui para usar seus próprios dados
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Produto
             </Button>
           </div>
         </div>
@@ -451,7 +452,7 @@ export default function ProductManagement() {
             onChange={(e) => setDepositNameFilter(e.target.value)}
             className="bg-gray-800 text-white rounded-md px-4 py-2 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">Nome do depósito</option>
+            <option value="all">Todos os depósitos</option>
             <option value="Bangu">Bangu</option>
             <option value="Oficina">Oficina</option>
             <option value="Recreio">Recreio</option>
@@ -675,15 +676,7 @@ export default function ProductManagement() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-white">Posição de estoque</CardTitle>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="Buscar valor"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-gray-900 text-white border-gray-700 w-64"
-                />
-              </div>
+              <span className="text-sm text-gray-400">{filteredProducts.length} produto(s) encontrado(s)</span>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -691,7 +684,7 @@ export default function ProductManagement() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-700 bg-gray-800">
-                    <th className="text-left p-3 font-semibold text-white">Código</th>
+                    <th className="text-left p-3 font-semibold text-white">Data</th>
                     <th className="text-left p-3 font-semibold text-white">SKU</th>
                     <th className="text-left p-3 font-semibold text-white">Produto</th>
                     <th className="text-left p-3 font-semibold text-white">Nome Depósito</th>
@@ -715,7 +708,7 @@ export default function ProductManagement() {
                       key={product.id}
                       className={`border-b border-gray-700 hover:bg-gray-700/50 transition-colors ${index % 2 === 0 ? 'bg-gray-800' : 'bg-gray-800/50'}`}
                     >
-                      <td className="p-3 text-gray-300 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.product_code || product.codigo || product.code || '-'}</td>
+                      <td className="p-3 text-gray-400 text-xs cursor-pointer" onClick={() => handleEdit(product)}>{product.date || '-'}</td>
                       <td className="p-3 text-gray-300 font-medium cursor-pointer" onClick={() => handleEdit(product)}>{product.lot || 'N/A'}</td>
                       <td className="p-3 text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.description}</td>
                       <td className="p-3 text-gray-300 cursor-pointer" onClick={() => handleEdit(product)}>{product.deposit_name || 'Bangu'}</td>
