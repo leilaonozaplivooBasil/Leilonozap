@@ -139,7 +139,7 @@ export default function ProductManagement() {
         }
       }
 
-      const allProducts = await base44.entities.Product.list('-created_date', 1000);
+      const allProducts = await base44.entities.Product.list('-created_date', 5000);
       setProducts(allProducts);
       setFilteredProducts(allProducts);
 
@@ -197,13 +197,18 @@ export default function ProductManagement() {
       filtered = filtered.filter(p => getProductClass(p) === classFilter);
     }
 
+    // Filtro por depósito: "all" mostra TODOS (incluindo os sem deposit_name)
+    if (depositNameFilter !== 'all') {
+      filtered = filtered.filter(p => p.deposit_name === depositNameFilter);
+    }
+
     setFilteredProducts(filtered);
-  }, [searchTerm, products, classFilter]);
+  }, [searchTerm, products, classFilter, depositNameFilter]);
 
   // Reset page only when filters change (not when products reload)
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, classFilter]);
+  }, [searchTerm, classFilter, depositNameFilter]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
