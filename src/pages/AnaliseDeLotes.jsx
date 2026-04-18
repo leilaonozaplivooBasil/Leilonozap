@@ -46,32 +46,45 @@ function AnaliseDeLotes() {
         return isNaN(numeric) ? 0 : numeric;
     };
 
-    // Parser Casa e Vídeo: colunas ENDEREÇO, MATERIAL_SAP, DESCRIÇÃO, QTD_ESTOQUE, valor venda, CATEGORIA
+    // Parser Casa e Vídeo: lê com header:1 (array), varre até achar a linha de cabeçalho real
     const processSheetDataCasaEVideo = (workbook, filename) => {
         const sheetName = workbook.SheetNames[0];
-        // Lê como objeto usando a primeira linha como chave
-        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: '' });
+        const allRows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1, defval: '' });
 
-        if (rows.length === 0) {
+        if (allRows.length === 0) {
             setError('Planilha Casa e Vídeo vazia ou sem dados.');
             return;
         }
 
-        // Descobre as chaves reais do objeto (independente de acentuação/case)
-        const firstRow = rows[0];
-        const keys = Object.keys(firstRow);
+        // Varre as primeiras 10 linhas para achar o cabeçalho real
+        const normalize = (s) => String(s || '').toUpperCase().trim()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-        const findKey = (keywords) => keys.find(k =>
-            keywords.some(kw => k.toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(kw))
-        );
+        let headerIdx = -1;
+        let headers = [];
+        for (let i = 0; i < Math.min(10, allRows.length); i++) {
+            const row = allRows[i];
+            const normed = row.map(normalize);
+            // Considera cabeçalho se encontrar DESCRI ou QTD ou MATERIAL
+            if (normed.some(h => h.includes('DESCRI') || h.includes('QTD') || h.includes('MATERIAL'))) {
+                headerIdx = i;
+                headers = normed;
+                break;
+            }
+        }
 
-        const keyDesc  = findKey(['DESCRI']);
-        const keyQtd   = findKey(['QTD', 'QUANTIDADE']);
-        const keyValor = findKey(['VALOR', 'VENDA']);
-        const keyCat   = findKey(['CATEGOR']);
+        if (headerIdx === -1) {
+            setError('Planilha Casa e Vídeo: cabeçalho não encontrado nas primeiras 10 linhas.');
+            return;
+        }
 
-        if (!keyDesc || !keyValor) {
-            setError(`Planilha Casa e Vídeo: colunas não encontradas. Colunas detectadas: ${keys.join(', ')}`);
+        const colDesc  = headers.findIndex(h => h.includes('DESCRI'));
+        const colQtd   = headers.findIndex(h => h.includes('QTD') || h.includes('QUANTIDADE'));
+        const colValor = headers.findIndex(h => h.includes('VALOR') || h.includes('VENDA'));
+        const colCat   = headers.findIndex(h => h.includes('CATEGOR'));
+
+        if (colDesc === -1 || colValor === -1) {
+            setError(`Planilha Casa e Vídeo: coluna DESCRIÇÃO ou VALOR não encontrada. Cabeçalhos: ${headers.join(', ')}`);
             return;
         }
 
@@ -81,16 +94,19 @@ function AnaliseDeLotes() {
         let valorMercadoTotal = 0;
         let totalItemsQtd = 0;
 
-        for (const row of rows) {
-            const desc = String(row[keyDesc] || '').trim();
+        for (let i = headerIdx + 1; i < allRows.length; i++) {
+            const row = allRows[i];
+            if (!row || row.every(c => c === '' || c == null)) continue;
+
+            const desc = String(row[colDesc] || '').trim();
             if (!desc) continue;
 
-            const qtd = keyQtd ? (parseInt(row[keyQtd]) || 1) : 1;
-            const rawVal = row[keyValor];
+            const qtd = colQtd >= 0 ? (parseInt(row[colQtd]) || 1) : 1;
+            const rawVal = colValor >= 0 ? row[colValor] : 0;
             const valor = typeof rawVal === 'number'
                 ? rawVal
-                : parseFloat(String(rawVal).replace(/[R$\s.]/g, '').replace(',', '.')) || 0;
-            const cat = keyCat ? String(row[keyCat] || 'SEM CATEGORIA').trim() : 'SEM CATEGORIA';
+                : parseFloat(String(rawVal).replace(/[R$\s]/g, '').replace(',', '.')) || 0;
+            const cat = colCat >= 0 ? String(row[colCat] || 'SEM CATEGORIA').trim() : 'SEM CATEGORIA';
 
             valorMercadoTotal += valor;
             totalItemsQtd += qtd;
