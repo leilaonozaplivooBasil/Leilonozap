@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
-import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, Eye, Warehouse } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, AlertCircle, TrendingUp, AlertTriangle, Activity, DollarSign, Package, CheckCircle2, Eye, Warehouse, ShoppingBag, MapPin } from 'lucide-react';
 import GradeItemsModal from './GradeItemsModal';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import * as XLSX from 'xlsx';
@@ -24,6 +24,8 @@ export default function AnalisadorLoteInline({ onEnviado }) {
     const [taxaPct, setTaxaPct] = useState(7);
     const [frete, setFrete] = useState(1000);
     const [outros, setOutros] = useState(0);
+    const [dataLeilao, setDataLeilao] = useState('');
+    const [horarioLeilao, setHorarioLeilao] = useState('');
 
     const toggleCategory = (nome) => {
         setExpandedCategories(prev => {
@@ -179,6 +181,44 @@ export default function AnalisadorLoteInline({ onEnviado }) {
         return { valorArrematado, taxaValor, custoTotal, projCurto, projMedio, projLongo, rentabilidade, score, chartData, COLORS, tmA, tmAB, tmABC, tmABCD, tmALL, valA, valAB, valABC, valABCD, valALL, qtdA, qtdAB, qtdABC, qtdABCD, qtdALL };
     }, [loteAtual, arremateInputValue, taxaPct, frete, outros]);
 
+    const handlePublicarMarketplace = async () => {
+        if (!loteAtual || !calculations) return;
+        setIsSaving(true);
+        try {
+            let endTime;
+            if (dataLeilao && horarioLeilao) endTime = new Date(`${dataLeilao}T${horarioLeilao}:00`);
+            else if (dataLeilao) endTime = new Date(`${dataLeilao}T12:00:00`);
+            else { endTime = new Date(); endTime.setDate(endTime.getDate() + 30); }
+
+            await base44.entities.Auction.create({
+                title: loteAtual.nomeLote,
+                description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${loteAtual.valorMercadoTotal.toFixed(2)}`,
+                starting_price: calculations.custoTotal,
+                current_price: calculations.custoTotal,
+                increment: 100,
+                end_time: endTime.toISOString(),
+                status: 'active',
+                is_investment_plan: true,
+                market_price: loteAtual.valorMercadoTotal,
+                manual_market_price: loteAtual.valorMercadoTotal,
+                lot_categories_json: loteAtual.resumoCategorias?.length > 0 ? JSON.stringify(loteAtual.resumoCategorias) : null,
+                lot_items_json: loteAtual.subItemsByCategory && Object.keys(loteAtual.subItemsByCategory).length > 0 ? JSON.stringify(loteAtual.subItemsByCategory) : null,
+                lot_grades_json: loteAtual.gradesData ? JSON.stringify(loteAtual.gradesData) : null,
+                lot_raw_items_json: loteAtual.rawItemsByGrade?.length > 0 ? JSON.stringify(loteAtual.rawItemsByGrade) : null,
+            });
+            const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
+            setLotesImportados(newLotes);
+            setLoteAtual(newLotes[0] || null);
+            setDataLeilao(''); setHorarioLeilao('');
+            if (onEnviado) onEnviado();
+            alert('✅ Lote publicado no Marketplace!');
+        } catch (e) {
+            alert('Erro ao publicar: ' + e.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handleEnviarParaEstoque = async () => {
         if (!loteAtual) return;
         setIsSaving(true);
@@ -277,16 +317,37 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                                     {loteAtual.origem === 'Casa e Vídeo' ? '🏪 Casa & Vídeo' : '🛒 Mercado Livre'}
                                 </span>
                                 <p className="text-gray-400 text-xs flex items-center gap-1"><CheckCircle2 size={12} className="text-emerald-500" /> Processado com sucesso</p>
+                                {loteAtual.localColeta && loteAtual.localColeta !== 'Será informado após Arremate' && (
+                                    <span className="px-2 py-0.5 bg-blue-900/30 border border-blue-700/40 rounded text-xs text-blue-300 flex items-center gap-1">
+                                        <MapPin size={10} /> {loteAtual.localColeta}
+                                    </span>
+                                )}
                             </div>
                         </div>
-                        <button
-                            disabled={isSaving}
-                            onClick={handleEnviarParaEstoque}
-                            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow"
-                        >
-                            <Warehouse size={16} />
-                            {isSaving ? 'Enviando...' : 'Enviar para Estoque de Lotes'}
-                        </button>
+                        <div className="flex flex-col gap-2">
+                            <div className="flex gap-2 flex-wrap">
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Data do Leilão</label>
+                                    <input type="date" value={dataLeilao} onChange={e => setDataLeilao(e.target.value)} className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-emerald-500" />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <label className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Horário do Leilão</label>
+                                    <input type="time" value={horarioLeilao} onChange={e => setHorarioLeilao(e.target.value)} className="bg-gray-900 border border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-200 focus:outline-none focus:border-emerald-500" />
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button disabled={isSaving} onClick={handleEnviarParaEstoque}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
+                                    <Warehouse size={15} />
+                                    {isSaving ? 'Enviando...' : 'Enviar para Estoque'}
+                                </button>
+                                <button disabled={isSaving} onClick={handlePublicarMarketplace}
+                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
+                                    <ShoppingBag size={15} />
+                                    {isSaving ? 'Publicando...' : 'Publicar no Marketplace'}
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Score */}
@@ -314,8 +375,8 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                         ))}
                     </div>
 
-                    {/* Financeiro + Projeções */}
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    {/* Financeiro + Projeções + Ticket Médio */}
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
                         {/* Financeiro */}
                         <div className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden">
                             <div className="p-4 border-b border-gray-700 bg-gray-900/30">
@@ -375,57 +436,60 @@ export default function AnalisadorLoteInline({ onEnviado }) {
 
                             {/* Gráfico grades */}
                             {calculations.chartData.length > 0 && (
-                                <div className="flex gap-4 items-center">
-                                    <div className="w-32 h-32 flex-shrink-0">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie data={calculations.chartData} cx="50%" cy="50%" innerRadius={40} outerRadius={55} paddingAngle={4} dataKey="value" stroke="none">
-                                                    {calculations.chartData.map((entry, i) => <Cell key={i} fill={calculations.COLORS[entry.name]} />)}
-                                                </Pie>
-                                                <RechartsTooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} formatter={(v) => [`${v} itens`, 'Qtd']} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 flex-1">
-                                        {calculations.chartData.map((d, i) => (
-                                            <div key={i} className="flex items-center justify-between bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5">
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: calculations.COLORS[d.name] }}></div>
-                                                    <span className="text-xs font-bold text-gray-300">Grade {d.name}</span>
+                                <div className="mt-4">
+                                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Distribuição de Qualidade</h4>
+                                    <div className="flex gap-4 items-center">
+                                        <div className="w-28 h-28 flex-shrink-0">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie data={calculations.chartData} cx="50%" cy="50%" innerRadius={35} outerRadius={50} paddingAngle={4} dataKey="value" stroke="none">
+                                                        {calculations.chartData.map((entry, i) => <Cell key={i} fill={calculations.COLORS[entry.name]} />)}
+                                                    </Pie>
+                                                    <RechartsTooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333', borderRadius: '8px', color: '#fff' }} formatter={(v) => [`${v} itens`, 'Qtd']} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-1.5 flex-1">
+                                            {calculations.chartData.map((d, i) => (
+                                                <div key={i} className="flex items-center justify-between bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: calculations.COLORS[d.name] }}></div>
+                                                        <span className="text-xs font-bold text-gray-300">Grade {d.name}</span>
+                                                    </div>
+                                                    <span className="font-black text-white text-xs">{d.value}</span>
                                                 </div>
-                                                <span className="font-black text-white text-xs">{d.value}</span>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
                             )}
                         </div>
-                    </div>
 
-                    {/* Ticket Médio por Grade */}
-                    <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
-                        <h3 className="font-bold text-white mb-2 text-sm uppercase tracking-wider flex items-center gap-2"><Activity size={16} className="text-blue-400" />Análise de Ticket Médio por Grade</h3>
-                        <p className="text-xs text-gray-500 mb-4">Valor médio dos produtos agrupados por qualidade superior.</p>
-                        <div className="space-y-2">
-                            {[
-                                { label: "Somente Grupo A", desc: `${calculations.qtdA} produtos`, tm: calculations.tmA, val: calculations.valA, color: "border-l-blue-400", grades: ['A'] },
-                                { label: "Grupo A + B", desc: `${calculations.qtdAB} produtos vitrine`, tm: calculations.tmAB, val: calculations.valAB, color: "border-l-emerald-400", grades: ['A','B'] },
-                                { label: "Grupo A + B + C", desc: `${calculations.qtdABC} produtos úteis`, tm: calculations.tmABC, val: calculations.valABC, color: "border-l-yellow-400", grades: ['A','B','C'] },
-                                { label: "Grupo A + B + C + D", desc: `${calculations.qtdABCD} produtos escoáveis`, tm: calculations.tmABCD, val: calculations.valABCD, color: "border-l-orange-400", grades: ['A','B','C','D'] },
-                                { label: "Todos os Grupos", desc: `${calculations.qtdALL} produtos (lote inteiro)`, tm: calculations.tmALL, val: calculations.valALL, color: "border-l-gray-400", grades: ['A','B','C','D','E','U'] },
-                            ].map((row, i) => (
-                                <div key={i} onClick={() => setGradeModal({ title: row.label, grades: row.grades })}
-                                    className={`bg-gray-900 border border-gray-700 border-l-4 ${row.color} rounded-lg p-3 flex justify-between items-center cursor-pointer hover:bg-white/[0.03] transition-colors group`}>
-                                    <div>
-                                        <p className="font-bold text-sm text-gray-200 flex items-center gap-1.5">{row.label} <Eye size={11} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" /></p>
-                                        <p className="text-xs text-gray-500">{row.desc}</p>
+                        {/* Ticket Médio por Grade */}
+                        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-5">
+                            <h3 className="font-bold text-white mb-2 text-sm uppercase tracking-wider flex items-center gap-2"><Activity size={16} className="text-blue-400" />Análise de Ticket Médio por Grade</h3>
+                            <p className="text-xs text-gray-500 mb-3">Valor médio dos produtos agrupados por qualidade superior.</p>
+                            <div className="space-y-2">
+                                {[
+                                    { label: "Somente Grupo A", desc: `${calculations.qtdA} produtos originais/intactos`, tm: calculations.tmA, val: calculations.valA, color: "border-l-blue-400", grades: ['A'] },
+                                    { label: "Grupo A + B", desc: `${calculations.qtdAB} produtos vitrine`, tm: calculations.tmAB, val: calculations.valAB, color: "border-l-emerald-400", grades: ['A','B'] },
+                                    { label: "Grupo A + B + C", desc: `${calculations.qtdABC} produtos úteis`, tm: calculations.tmABC, val: calculations.valABC, color: "border-l-yellow-400", grades: ['A','B','C'] },
+                                    { label: "Grupo A + B + C + D", desc: `${calculations.qtdABCD} produtos escoáveis`, tm: calculations.tmABCD, val: calculations.valABCD, color: "border-l-orange-400", grades: ['A','B','C','D'] },
+                                    { label: "Todos os Grupos (A+B+C+D+E+U)", desc: `Lote inteiro (${calculations.qtdALL} produtos)`, tm: calculations.tmALL, val: calculations.valALL, color: "border-l-gray-400", grades: ['A','B','C','D','E','U'] },
+                                ].map((row, i) => (
+                                    <div key={i} onClick={() => setGradeModal({ title: row.label, grades: row.grades })}
+                                        className={`bg-gray-900 border border-gray-700 border-l-4 ${row.color} rounded-lg p-2.5 flex justify-between items-center cursor-pointer hover:bg-white/[0.03] transition-colors group`}>
+                                        <div>
+                                            <p className="font-bold text-xs text-gray-200 flex items-center gap-1">{row.label} <Eye size={10} className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity" /></p>
+                                            <p className="text-[10px] text-gray-500">{row.desc}</p>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-bold text-emerald-400 text-sm">{formatCurrency(row.tm)} <span className="text-[10px] text-gray-500 font-normal">médio</span></p>
+                                            <p className="text-[10px] text-gray-500">Apurado: {formatCurrency(row.val)}</p>
+                                        </div>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="font-bold text-emerald-400">{formatCurrency(row.tm)} <span className="text-xs text-gray-500 font-normal">médio</span></p>
-                                        <p className="text-[10px] text-gray-500 mt-0.5">Apurado: {formatCurrency(row.val)}</p>
-                                    </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
 
@@ -433,7 +497,8 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                     {loteAtual.resumoCategorias?.length > 0 && (
                         <div className="bg-gray-800 border border-gray-700 rounded-2xl overflow-hidden">
                             <div className="p-4 border-b border-gray-700 bg-gray-900/30">
-                                <h3 className="font-bold text-white text-sm uppercase tracking-wider">Distribuição por Categoria</h3>
+                                <h3 className="font-bold text-white text-sm uppercase tracking-wider">Distribuição Departamental (Resumo Oficial)</h3>
+                                <p className="text-xs text-gray-500 mt-0.5">Visão macrostática informada pela aba raiz do leilão.</p>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
