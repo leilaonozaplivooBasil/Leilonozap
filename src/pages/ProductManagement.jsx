@@ -37,6 +37,7 @@ export default function ProductManagement() {
   const [depositCompanyFilter, setDepositCompanyFilter] = useState('all');
   const [classFilter, setClassFilter] = useState('all');
   const [ignoreDepositFilter, setIgnoreDepositFilter] = useState('all');
+  const [alertFilter, setAlertFilter] = useState('all');
   const [viewMode, setViewMode] = useState('currentStock');
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -176,11 +177,28 @@ export default function ProductManagement() {
     const perfeito = product.qty_perfeito || 0;
     const bom = product.qty_bom || 0;
     const ruim = product.qty_ruim || 0;
-    const oficina = (product.qty_oficina || 0) + ruim; // Ruim agora conta como oficina
+    const oficina = (product.qty_oficina || 0) + ruim;
 
     if (perfeito >= bom && perfeito >= oficina) return 'perfeito';
     if (bom >= oficina) return 'bom';
     return 'oficina';
+  };
+
+  const getProductAlerts = (product) => {
+    const alerts = [];
+    if (!product.selling_price_retail || product.selling_price_retail === 0) {
+      alerts.push({ label: '🔴 Sem Preço', cls: 'bg-red-900/40 text-red-400 border border-red-700/40' });
+    }
+    if ((product.quantity || 0) < 0) {
+      alerts.push({ label: '💥 ERRO', cls: 'bg-red-900/60 text-red-300 border border-red-500/60' });
+    }
+    if (product.created_date) {
+      const daysSince = Math.floor((Date.now() - new Date(product.created_date)) / 86400000);
+      if (daysSince > 60 && (!product.quantity_sold || product.quantity_sold === 0)) {
+        alerts.push({ label: '🐌 Parado', cls: 'bg-orange-900/40 text-orange-400 border border-orange-700/40' });
+      }
+    }
+    return alerts;
   };
 
   useEffect(() => {
@@ -197,18 +215,28 @@ export default function ProductManagement() {
       filtered = filtered.filter(p => getProductClass(p) === classFilter);
     }
 
-    // Filtro por depósito: "all" mostra TODOS (incluindo os sem deposit_name)
     if (depositNameFilter !== 'all') {
       filtered = filtered.filter(p => p.deposit_name === depositNameFilter);
     }
 
+    if (alertFilter === 'no_price') {
+      filtered = filtered.filter(p => !p.selling_price_retail || p.selling_price_retail === 0);
+    } else if (alertFilter === 'stopped') {
+      filtered = filtered.filter(p => {
+        const days = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0;
+        return days > 60 && (!p.quantity_sold || p.quantity_sold === 0);
+      });
+    } else if (alertFilter === 'error') {
+      filtered = filtered.filter(p => (p.quantity || 0) < 0);
+    }
+
     setFilteredProducts(filtered);
-  }, [searchTerm, products, classFilter, depositNameFilter]);
+  }, [searchTerm, products, classFilter, depositNameFilter, alertFilter]);
 
   // Reset page only when filters change (not when products reload)
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, classFilter, depositNameFilter]);
+  }, [searchTerm, classFilter, depositNameFilter, alertFilter]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -444,6 +472,16 @@ export default function ProductManagement() {
             <option value="bom">🟡 Bom ({products.reduce((s, p) => s + (p.qty_bom || 0), 0)})</option>
             <option value="oficina">🔧 Oficina ({products.reduce((s, p) => s + (p.qty_oficina || 0) + (p.qty_ruim || 0), 0)})</option>
           </select>
+          <select
+            value={alertFilter}
+            onChange={(e) => setAlertFilter(e.target.value)}
+            className="bg-gray-800 text-gray-300 text-sm rounded-lg px-3 py-1.5 border border-gray-700 focus:outline-none focus:ring-1 focus:ring-red-500"
+          >
+            <option value="all">Todos os alertas</option>
+            <option value="no_price">🔴 Sem Preço ({products.filter(p => !p.selling_price_retail || p.selling_price_retail === 0).length})</option>
+            <option value="stopped">🐌 Parados 60d+ ({products.filter(p => { const d = p.created_date ? Math.floor((Date.now() - new Date(p.created_date)) / 86400000) : 0; return d > 60 && (!p.quantity_sold || p.quantity_sold === 0); }).length})</option>
+            <option value="error">💥 Erro de Estoque ({products.filter(p => (p.quantity || 0) < 0).length})</option>
+          </select>
         </div>
 
         {/* ═══ CARDS TOPO — 4 KPIs ═══ */}
@@ -535,8 +573,19 @@ export default function ProductManagement() {
                     <td className="px-3 py-2.5 whitespace-nowrap" onClick={() => handleEdit(product)}>
                       <span className="font-mono text-xs bg-gray-800 text-gray-300 px-1.5 py-0.5 rounded whitespace-nowrap">{product.lot || 'N/A'}</span>
                     </td>
-                    <td className="px-3 py-2.5 text-gray-200 font-medium whitespace-nowrap overflow-hidden" style={{maxWidth: '220px'}} onClick={() => handleEdit(product)} title={product.description}>
-                      <div className="truncate">{product.description}</div>
+                    <td className="px-3 py-2.5 overflow-hidden" style={{maxWidth: '220px'}} onClick={() => handleEdit(product)} title={product.description}>
+                      <div className="truncate text-gray-200 font-medium text-sm">{product.description}</div>
+                      {(() => {
+                        const alerts = getProductAlerts(product);
+                        if (alerts.length === 0) return null;
+                        return (
+                          <div className="flex flex-wrap gap-1 mt-0.5">
+                            {alerts.map((a, i) => (
+                              <span key={i} className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${a.cls}`}>{a.label}</span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2.5" onClick={() => handleEdit(product)}>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${depositBadge(product.deposit_name || 'Bangu')}`}>{product.deposit_name || 'Bangu'}</span>
