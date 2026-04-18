@@ -1026,281 +1026,118 @@ export default function CreateAuction() {
                   </CardHeader>
                   <CardContent className="space-y-4">
 
-                    {/* ETAPA 0: TABS PARA ESCOLHER MÉTODO */}
+                    {/* IMPORTADOR ÚNICO: MERCADO LIVRE */}
                     {manualStep === 0 && (
-                      <Tabs value={importerActiveTab} onValueChange={setImporterActiveTab} className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 bg-gray-700/50">
-                          <TabsTrigger value="nome" className="data-[state=active]:bg-purple-600">
-                            🌐 Por Nome
-                          </TabsTrigger>
-                          <TabsTrigger value="gtin" className="data-[state=active]:bg-green-600">
-                            📷 Código Barras
-                          </TabsTrigger>
-                          <TabsTrigger value="url" className="data-[state=active]:bg-blue-600">
-                            🔗 Por URL
-                          </TabsTrigger>
-                        </TabsList>
-
-                        {/* ABA: BUSCA POR NOME */}
-                        <TabsContent value="nome" className="mt-4">
-                          <div className="bg-purple-900/20 border-2 border-purple-500/50 rounded-xl p-4">
-                            <Label htmlFor="productName" className="text-sm font-bold text-purple-300 flex items-center gap-2 mb-2">
-                              <Zap className="w-4 h-4" />
-                              🌐 Buscar na Internet (Apenas o Nome)
-                            </Label>
-
-                            <Input
-                              id="productName"
-                              value={productName}
-                              onChange={(e) => setProductName(e.target.value)}
-                              onKeyPress={(e) => {
-                                if (e.key === 'Enter' && !isSearchingName && productName.trim()) {
-                                  searchByName();
-                                }
-                              }}
-                              placeholder="Ex: iPhone 15 Pro, Geladeira Samsung 500L..."
-                              className="mb-3 bg-gray-900 border-purple-600 text-gray-100 placeholder-gray-500 focus:border-purple-400"
-                              disabled={isSearchingName}
-                            />
-
-                            <Button
-                              onClick={searchByName}
-                              disabled={isSearchingName || !productName.trim()}
-                              className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                            >
-                              {isSearchingName ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Buscando produto...
-                                </>
-                              ) : (
-                                <>
-                                  <Zap className="w-4 h-4 mr-2" />
-                                  🔍 Buscar e Importar
-                                </>
-                              )}
-                            </Button>
-
-                            <div className="mt-3 p-2 bg-purple-900/30 rounded-lg border border-purple-700/50">
-                              <p className="text-xs text-purple-300 flex items-center gap-2">
-                                <span className="text-base">✨</span>
-                                <span>IA busca o produto na internet e importa automaticamente!</span>
-                              </p>
-                            </div>
-                          </div>
-                        </TabsContent>
-
-                        {/* ABA: BUSCA POR GTIN */}
-                        <TabsContent value="gtin" className="mt-4">
-                          <div className="bg-green-900/20 border-2 border-green-500/50 rounded-xl p-4">
-                            <Label htmlFor="gtinCode" className="text-sm font-bold text-green-300 flex items-center gap-2 mb-2">
-                              <ImageIcon className="w-4 h-4" />
-                              🔍 Buscar por Código de Barras (GTIN/EAN)
-                            </Label>
-
-                            <div className="relative">
-                              <Input
-                                id="gtinCode"
-                                value={gtinCode}
-                                onChange={(e) => setGtinCode(e.target.value)}
-                                onKeyPress={(e) => {
-                                  if (e.key === 'Enter' && !isSearchingGtin && gtinCode.trim()) {
-                                    searchByGtin();
-                                  }
-                                }}
-                                placeholder="Digite ou use o leitor de código de barras"
-                                className="mb-3 bg-gray-900 border-green-600 text-gray-100 placeholder-gray-500 focus:border-green-400 pr-10"
-                                disabled={isSearchingGtin}
-                                maxLength={14}
-                                autoComplete="off"
-                              />
-                              <div className="absolute right-3 top-3 text-green-400">
-                                📷
-                              </div>
-                            </div>
-
-                            <Button
-                              onClick={searchByGtin}
-                              disabled={isSearchingGtin || !gtinCode.trim()}
-                              className="w-full bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              {isSearchingGtin ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Buscando...
-                                </>
-                              ) : (
-                                <>
-                                  <Zap className="w-4 h-4 mr-2" />
-                                  🔍 Buscar Produto
-                                </>
-                              )}
-                            </Button>
-
-                            <div className="mt-3 p-2 bg-green-900/30 rounded-lg border border-green-700/50">
-                              <p className="text-xs text-green-300 flex items-center gap-2">
-                                <span className="text-base">✨</span>
-                                <span><strong>Leitor de código de barras:</strong> Clique no campo acima e use seu leitor - ele buscará automaticamente!</span>
-                              </p>
-                              <p className="text-xs text-green-200 mt-1 ml-6">
-                                Ou digite manualmente: EAN-13, UPC, GTIN, etc.
-                              </p>
-                            </div>
-                          </div>
-                        </TabsContent>
-
-                        {/* ABA: BUSCA POR URL */}
-                        <TabsContent value="url" className="mt-4">
+                      <div className="space-y-3">
+                        {/* HEADER COM LOGO ML */}
+                        <div className="flex items-center gap-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-xl">
+                          <img
+                            src="https://http2.mlstatic.com/frontend-assets/ml-web-navigation/ui-navigation/5.21.22/mercadolibre/logo__small.png"
+                            alt="Mercado Livre"
+                            className="w-8 h-8 rounded"
+                          />
                           <div>
-                            <Label htmlFor="marketplace" className="text-sm font-bold text-blue-300 mb-2 block">
-                              🔗 Selecione de qual site você vai importar:
-                            </Label>
-
-                            <Select
-                              value={selectedMarketplace?.id || ""}
-                              onValueChange={(value) => {
-                                const sites = [
-                                  { id: 'mercadolivre', name: 'Mercado Livre', placeholder: 'https://produto.mercadolivre.com.br/...' },
-                                  { id: 'amazon', name: 'Amazon', placeholder: 'https://www.amazon.com.br/produto/...' },
-                                  { id: 'shopee', name: 'Shopee', placeholder: 'https://shopee.com.br/produto...' },
-                                  { id: 'magazineluiza', name: 'Magazine Luiza', placeholder: 'https://www.magazineluiza.com.br/...' },
-                                  { id: 'casasbahia', name: 'Casas Bahia', placeholder: 'https://www.casasbahia.com.br/...' },
-                                  { id: 'pontofrio', name: 'Ponto Frio', placeholder: 'https://www.pontofrio.com.br/...' },
-                                  { id: 'carrefour', name: 'Carrefour', placeholder: 'https://www.carrefour.com.br/...' },
-                                  { id: 'aliexpress', name: 'AliExpress', placeholder: 'https://pt.aliexpress.com/...' }
-                                ];
-                                const selected = sites.find(s => s.id === value);
-                                setSelectedMarketplace(selected || null);
-                              }}
-                            >
-                              <SelectTrigger className="bg-gray-900 border-blue-600 text-gray-100 mb-4">
-                                <SelectValue placeholder="Escolha o site..." />
-                              </SelectTrigger>
-                              <SelectContent className="bg-gray-800 border-gray-700 text-gray-200">
-                                <SelectItem value="mercadolivre">• Mercado Livre</SelectItem>
-                                <SelectItem value="amazon">• Amazon</SelectItem>
-                                <SelectItem value="shopee">• Shopee</SelectItem>
-                                <SelectItem value="magazineluiza">• Magazine Luiza</SelectItem>
-                                <SelectItem value="casasbahia">• Casas Bahia</SelectItem>
-                                <SelectItem value="pontofrio">• Ponto Frio</SelectItem>
-                                <SelectItem value="carrefour">• Carrefour</SelectItem>
-                                <SelectItem value="aliexpress">• AliExpress</SelectItem>
-                              </SelectContent>
-                            </Select>
-
-                            {selectedMarketplace && (
-                              <div>
-                                <Label htmlFor="productUrl" className="text-sm font-medium text-gray-400 mb-2 block">
-                                  🔗 Cole o link do produto:
-                                </Label>
-
-                                <Input
-                                  id="productUrl"
-                                  value={productUrl}
-                                  onChange={(e) => setProductUrl(e.target.value)}
-                                  placeholder={selectedMarketplace.placeholder}
-                                  className="mb-4 bg-gray-900 border-blue-600 text-gray-100 placeholder-gray-500 focus:border-blue-400"
-                                  disabled={isProcessing}
-                                />
-
-                                <Button
-                                  onClick={async (e) => {
-                                    e.preventDefault();
-                                    if (isProcessing) return;
-
-                                    setIsProcessing(true);
-                                    setManualStep(1);
-                                    try {
-                                      const isMl = productUrl.trim().includes('mercadolivre.com.br') || productUrl.trim().includes('mercadolibre.com');
-                                      let data = null;
-
-                                      if (isMl) {
-                                        // Para Mercado Livre: chama extractMLImages diretamente (testado e funciona)
-                                        const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', {
-                                          productUrl: productUrl.trim()
-                                        }));
-                                        if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
-                                          data = {
-                                            title: mlResponse.data.title || '',
-                                            description: mlResponse.data.description || mlResponse.data.title || '',
-                                            price: mlResponse.data.price || null,
-                                            imageUrls: mlResponse.data.images
-                                          };
-                                        } else {
-                                          throw new Error('Não foi possível extrair imagens do Mercado Livre. Tente upload manual.');
-                                        }
-                                      } else {
-                                        // Outros sites: scrapeWithFallback
-                                        const response = await withRetry(() => base44.functions.invoke('scrapeWithFallback', {
-                                          productUrl: productUrl.trim()
-                                        }));
-                                        if (!response || response.status !== 200) {
-                                          throw new Error(response?.data?.error || 'Erro ao importar');
-                                        }
-                                        const attrs = response.data.attributes && typeof response.data.attributes === 'object' ? Object.entries(response.data.attributes) : [];
-                                        const attrsText = attrs.length ? '\n\nCaracterísticas:\n' + attrs.map(([k, v]) => `- ${k}: ${v}`).join('\n') : '';
-                                        data = {
-                                          title: response.data.title || '',
-                                          description: ((response.data.description || '').trim() + attrsText),
-                                          price: response.data.price || null,
-                                          imageUrls: response.data.imageUrls || []
-                                        };
-                                      }
-
-                                      if (!data.imageUrls || data.imageUrls.length === 0) {
-                                        toast.warning('⚠️ Nenhuma imagem encontrada. Use upload manual.');
-                                        setManualStep(0);
-                                        return;
-                                      }
-
-                                      setExtractedData({ title: data.title, description: data.description });
-                                      setFormData(prev => ({
-                                        ...prev,
-                                        title: data.title.trim(),
-                                        description: data.description,
-                                        starting_price: data.price ? data.price.toString() : prev.starting_price,
-                                        source_url: productUrl
-                                      }));
-                                      setDownloadedImages(data.imageUrls);
-                                      setCoverIndex(0);
-                                      setManualStep(5);
-                                      toast.success(`✅ ${data.imageUrls.length} imagens importadas!`);
-                                    } catch (error) {
-                                      console.error('❌ Erro importação:', error);
-                                      toast.error(error.message || 'Erro ao importar');
-                                      setManualStep(0);
-                                    } finally {
-                                      setIsProcessing(false);
-                                    }
-                                  }}
-                                  disabled={isProcessing || !productUrl.trim()}
-                                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold"
-                                >
-                                  {isProcessing ? (
-                                    <>
-                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                      Extraindo de {selectedMarketplace.name}...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Zap className="w-4 h-4 mr-2" />
-                                      🤖 Extrair de {selectedMarketplace.name}
-                                    </>
-                                  )}
-                                </Button>
-
-                                <div className="mt-3 p-2 bg-blue-900/30 rounded-lg border border-blue-500/30">
-                                  <p className="text-xs text-blue-300">
-                                    ✨ {selectedMarketplace.id === 'mercadolivre'
-                                      ? 'Extração direta de imagens WebP em alta resolução!'
-                                      : `A IA buscará dados específicos de ${selectedMarketplace.name}`}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
+                            <p className="text-sm font-bold text-yellow-300">Importar do Mercado Livre</p>
+                            <p className="text-xs text-gray-400">Cole o link do produto e extraímos tudo automaticamente</p>
                           </div>
-                        </TabsContent>
-                      </Tabs>
+                        </div>
+
+                        <Input
+                          value={productUrl}
+                          onChange={(e) => setProductUrl(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter' && productUrl.trim()) {
+                              const isML = productUrl.trim().includes('mercadolivre.com') || productUrl.trim().includes('mercadolibre.com');
+                              if (!isML) {
+                                toast.error('⚠️ Cole um link válido do Mercado Livre');
+                                return;
+                              }
+                              document.getElementById('btn-importar-ml')?.click();
+                            }
+                          }}
+                          placeholder="https://www.mercadolivre.com.br/produto/..."
+                          className="bg-gray-900 border-yellow-600 text-gray-100 placeholder-gray-500 focus:border-yellow-400 text-sm"
+                          disabled={isProcessing}
+                        />
+
+                        <Button
+                          id="btn-importar-ml"
+                          onClick={async (e) => {
+                            e.preventDefault();
+                            if (isProcessing) return;
+
+                            const url = productUrl.trim();
+                            const isML = url.includes('mercadolivre.com') || url.includes('mercadolibre.com');
+                            if (!isML) {
+                              toast.error('⚠️ Cole um link válido do Mercado Livre');
+                              return;
+                            }
+
+                            setIsProcessing(true);
+                            setManualStep(1);
+                            try {
+                              const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', {
+                                productUrl: url
+                              }));
+
+                              if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
+                                const data = {
+                                  title: mlResponse.data.title || '',
+                                  description: mlResponse.data.description || mlResponse.data.title || '',
+                                  price: mlResponse.data.price || null,
+                                  imageUrls: mlResponse.data.images
+                                };
+
+                                // Aplica TUDO de uma vez no formData
+                                const finalImages = data.imageUrls.slice(0, 5);
+                                while (finalImages.length < 5) finalImages.push("");
+
+                                setFormData(prev => ({
+                                  ...prev,
+                                  title: data.title.trim(),
+                                  description: data.description,
+                                  starting_price: data.price ? data.price.toString() : prev.starting_price,
+                                  source_url: url,
+                                  image_urls: finalImages
+                                }));
+                                setDownloadedImages(data.imageUrls);
+                                setCoverIndex(0);
+                                setExtractedData({ title: data.title, description: data.description });
+                                setManualStep(5);
+                                toast.success(`✅ ${data.imageUrls.length} imagens importadas do ML!`);
+                              } else {
+                                throw new Error('Nenhuma imagem encontrada. Verifique o link ou use Upload Manual.');
+                              }
+                            } catch (error) {
+                              console.error('❌ Erro importação ML:', error);
+                              toast.error(error.message || 'Erro ao importar. Tente novamente.');
+                              setManualStep(0);
+                              setSelectedMarketplace(null);
+                              setProductUrl('');
+                            } finally {
+                              setIsProcessing(false);
+                            }
+                          }}
+                          disabled={isProcessing || !productUrl.trim()}
+                          className="w-full bg-gradient-to-r from-yellow-600 to-yellow-700 hover:from-yellow-500 hover:to-yellow-600 text-white font-bold text-sm h-11"
+                        >
+                          {isProcessing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Extraindo dados e imagens...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-4 h-4 mr-2" />
+                              🤖 Importar do Mercado Livre
+                            </>
+                          )}
+                        </Button>
+
+                        <p className="text-xs text-gray-500 text-center">
+                          ✨ Extrai título, descrição, preço e imagens em alta resolução (WebP)
+                        </p>
+                      </div>
                     )}
 
                     {/* ETAPA 1: PROCESSANDO DADOS */}
