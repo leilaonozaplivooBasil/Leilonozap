@@ -1,0 +1,80 @@
+import React, { useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Loader2, Sparkles } from "lucide-react";
+import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
+
+export default function DescriptionWithAI({ value, onChange }) {
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerate = async () => {
+    const title = document.getElementById('title')?.value?.trim();
+    if (!title) {
+      toast.error("Preencha o Nome do Produto antes de gerar a descrição.");
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const result = await base44.integrations.Core.InvokeLLM({
+        prompt: `Você é um especialista em vendas online no Brasil. Crie uma descrição de produto atraente e completa para um leilão online, com base no nome do produto abaixo.
+
+Produto: "${title}"
+
+Regras:
+- Escreva em português brasileiro
+- Tom persuasivo e direto
+- Destaque os principais benefícios e características
+- Máximo de 5 linhas curtas (use • para bullet points)
+- Não mencione preço
+- Não use exageros como "melhor do mundo"
+- Foque no que o comprador precisa saber
+
+Retorne apenas a descrição, sem introdução ou explicação.`,
+      });
+
+      if (result && typeof result === 'string' && result.trim()) {
+        onChange(result.trim());
+        toast.success("✅ Descrição gerada com IA!");
+      } else {
+        toast.error("IA não retornou descrição. Tente novamente.");
+      }
+    } catch (error) {
+      toast.error("Erro ao gerar descrição: " + error.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <Label htmlFor="description" className="text-sm font-medium text-gray-400">
+          Descrição Detalhada * (Revise)
+        </Label>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          className="bg-purple-600 hover:bg-purple-700 text-white h-7 text-xs px-2"
+        >
+          {isGenerating ? (
+            <><Loader2 className="w-3 h-3 mr-1 animate-spin" /> Gerando...</>
+          ) : (
+            <><Sparkles className="w-3 h-3 mr-1" /> Gerar com IA</>
+          )}
+        </Button>
+      </div>
+      <Textarea
+        id="description"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="min-h-[100px] bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500"
+        required
+      />
+    </div>
+  );
+}
