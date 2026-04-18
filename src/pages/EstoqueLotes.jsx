@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Package, X, ArrowLeft, Plus,
-  Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel
+  Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel, Loader2
 } from 'lucide-react';
 import AnalisadorLoteInline from '@/components/lotes/AnalisadorLoteInline';
 import { useNavigate } from 'react-router-dom';
@@ -79,15 +79,11 @@ export default function EstoqueLotes() {
     try {
       await base44.entities.LoteRecebido.create({
         ...form,
-        arquivo_url: previewFile?.url || null,
-        arquivo_nome: previewFile?.nome || null,
-        arquivo_tipo: previewFile?.tipo || null,
         data_recebimento: new Date().toISOString(),
         status: 'recebido',
       });
       setShowModal(false);
       setForm({ nome_lote: '', marketplace: '', valor_lote: 0, observacoes: '' });
-      setPreviewFile(null);
       await loadLotes();
     } catch (e) {
       alert('❌ Erro ao salvar: ' + e.message);
