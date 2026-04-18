@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Upload, Loader2, FileText, Package, X, ArrowLeft, Plus,
-  Eye, Trash2, ShoppingCart, CheckCircle, Store
+  Eye, Trash2, ShoppingCart, CheckCircle, Store, BarChart3, Gavel, DollarSign
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -43,9 +43,12 @@ export default function EstoqueLotes() {
   const [showModal, setShowModal] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [previewFile, setPreviewFile] = useState(null); // { url, nome, tipo }
+  const [previewFile, setPreviewFile] = useState(null);
   const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroMarketplace, setFiltroMarketplace] = useState('todos');
+  const [arrematarLote, setArrematarLote] = useState(null); // lote em processo de arremate
+  const [arrematarForm, setArrematarForm] = useState({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
+  const [isSavingArremate, setIsSavingArremate] = useState(false);
 
   const [form, setForm] = useState({
     nome_lote: '',
@@ -127,6 +130,29 @@ export default function EstoqueLotes() {
     }
   };
 
+  const handleConfirmarArremate = async () => {
+    if (!arrematarLote) return;
+    const valorArremate = parseFloat(arrematarForm.valorArremate) || 0;
+    if (!valorArremate) { alert('Informe o valor de arremate.'); return; }
+    const taxaValor = valorArremate * (arrematarForm.taxaPct / 100);
+    const custoTotal = valorArremate + taxaValor + arrematarForm.frete + arrematarForm.outros;
+    setIsSavingArremate(true);
+    try {
+      await base44.entities.LoteRecebido.update(arrematarLote.id, {
+        status: 'comprado',
+        valor_lote: custoTotal,
+        observacoes: `Arremate: R$ ${valorArremate.toFixed(2)} | Taxa: ${arrematarForm.taxaPct}% (R$ ${taxaValor.toFixed(2)}) | Frete: R$ ${arrematarForm.frete} | Outros: R$ ${arrematarForm.outros} | Custo Total: R$ ${custoTotal.toFixed(2)}\n${arrematarLote.observacoes || ''}`,
+      });
+      setArrematarLote(null);
+      setArrematarForm({ valorArremate: '', taxaPct: 7, frete: 1000, outros: 0 });
+      await loadLotes();
+    } catch (e) {
+      alert('Erro: ' + e.message);
+    } finally {
+      setIsSavingArremate(false);
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!confirm('Excluir este lote?')) return;
     try {
@@ -166,10 +192,16 @@ export default function EstoqueLotes() {
             </Button>
             <h1 className="text-3xl font-bold text-white">🗂️ Estoque de Lotes Recebidos</h1>
           </div>
-          <Button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Adicionar Lote
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate(createPageUrl('AnaliseLoteEstoque'))} className="bg-emerald-700 hover:bg-emerald-600">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analisar Planilha
+            </Button>
+            <Button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar Lote
+            </Button>
+          </div>
         </div>
 
         {/* CARDS DE STATUS */}
@@ -269,12 +301,23 @@ export default function EstoqueLotes() {
                           </Button>
                         )}
 
+                        {/* Botão Arrematamos — apenas para lotes recebidos */}
+                        {lote.status === 'recebido' && (
+                          <Button
+                            size="sm"
+                            onClick={() => { setArrematarLote(lote); setArrematarForm({ valorArremate: lote.valor_lote ? String(lote.valor_lote) : '', taxaPct: 7, frete: 1000, outros: 0 }); }}
+                            className="bg-amber-600 hover:bg-amber-500 font-bold"
+                          >
+                            <Gavel className="w-4 h-4 mr-1" /> Arrematamos
+                          </Button>
+                        )}
+
                         {/* Avançar status */}
-                        {cfg.next && (
+                        {lote.status === 'comprado' && cfg.next && (
                           <Button
                             size="sm"
                             onClick={() => handleAvançarStatus(lote)}
-                            className={lote.status === 'recebido' ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-green-600 hover:bg-green-700'}
+                            className="bg-green-600 hover:bg-green-700"
                           >
                             {cfg.nextLabel}
                           </Button>
@@ -298,6 +341,73 @@ export default function EstoqueLotes() {
           </div>
         )}
       </div>
+
+      {/* MODAL ARREMATAMOS */}
+      {arrematarLote && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <Card className="bg-gray-800 border-amber-700/50 max-w-md w-full">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-white flex items-center gap-2"><Gavel className="text-amber-400 w-5 h-5" /> Registrar Arremate</CardTitle>
+                <Button size="sm" variant="outline" onClick={() => setArrematarLote(null)} className="border-gray-600 text-gray-400"><X className="w-4 h-4" /></Button>
+              </div>
+              <p className="text-gray-400 text-sm mt-1">{arrematarLote.nome_lote}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-gray-300 text-sm font-semibold block mb-1">Valor de Arremate (R$) *</label>
+                <Input type="number" step="0.01" value={arrematarForm.valorArremate}
+                  onChange={(e) => setArrematarForm(f => ({ ...f, valorArremate: e.target.value }))}
+                  className="bg-gray-700 text-white border-gray-600" placeholder="0.00" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-300 text-sm font-semibold block mb-1">Taxa de Leilão (%)</label>
+                  <Input type="number" value={arrematarForm.taxaPct}
+                    onChange={(e) => setArrematarForm(f => ({ ...f, taxaPct: Number(e.target.value) }))}
+                    className="bg-gray-700 text-white border-gray-600" />
+                </div>
+                <div>
+                  <label className="text-gray-300 text-sm font-semibold block mb-1">Frete (R$)</label>
+                  <Input type="number" value={arrematarForm.frete}
+                    onChange={(e) => setArrematarForm(f => ({ ...f, frete: Number(e.target.value) }))}
+                    className="bg-gray-700 text-white border-gray-600" />
+                </div>
+              </div>
+              <div>
+                <label className="text-gray-300 text-sm font-semibold block mb-1">Outros Custos (R$)</label>
+                <Input type="number" value={arrematarForm.outros}
+                  onChange={(e) => setArrematarForm(f => ({ ...f, outros: Number(e.target.value) }))}
+                  className="bg-gray-700 text-white border-gray-600" />
+              </div>
+              {arrematarForm.valorArremate && (
+                <div className="bg-amber-900/20 border border-amber-700/40 rounded-lg p-3">
+                  <div className="flex justify-between text-sm text-gray-300 mb-1">
+                    <span>Arremate</span><span>R$ {parseFloat(arrematarForm.valorArremate || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-300 mb-1">
+                    <span>Taxa ({arrematarForm.taxaPct}%)</span><span>R$ {(parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-300 mb-1">
+                    <span>Frete</span><span>R$ {arrematarForm.frete.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-amber-300 border-t border-amber-700/40 pt-2 mt-1">
+                    <span>CUSTO TOTAL</span>
+                    <span>R$ {(parseFloat(arrematarForm.valorArremate || 0) + parseFloat(arrematarForm.valorArremate || 0) * arrematarForm.taxaPct / 100 + arrematarForm.frete + arrematarForm.outros).toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button onClick={handleConfirmarArremate} disabled={isSavingArremate} className="bg-amber-600 hover:bg-amber-500 flex-1 font-bold">
+                  <Gavel className="w-4 h-4 mr-2" />
+                  {isSavingArremate ? 'Salvando...' : 'Confirmar Arremate'}
+                </Button>
+                <Button variant="outline" onClick={() => setArrematarLote(null)} className="border-gray-600 text-gray-300">Cancelar</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* MODAL ADICIONAR LOTE */}
       {showModal && (
