@@ -187,6 +187,7 @@ export default function CreateAuction() {
     const mlUrl = urlParams.get('ml_url');
     if (mlUrl) {
       const decodedUrl = decodeURIComponent(mlUrl);
+      console.log('🔗 [ML_URL] Detectada:', decodedUrl);
       setProductUrl(decodedUrl);
       setSelectedMarketplace({ id: 'mercadolivre', name: 'Mercado Livre', placeholder: 'https://produto.mercadolivre.com.br/...' });
       setImporterActiveTab("url"); // 🆕 força aba "Por URL"
@@ -195,8 +196,11 @@ export default function CreateAuction() {
         setIsProcessing(true);
         setManualStep(1);
         try {
+          console.log('🔍 [ML_URL] Tentando extractMLImages...');
           const mlResponse = await withRetry(() => base44.functions.invoke('extractMLImages', { productUrl: decodedUrl }));
+          
           if (mlResponse?.data?.found && mlResponse.data.images?.length > 0) {
+            // Sucesso direto via extractMLImages
             const data = { title: mlResponse.data.title || '', description: mlResponse.data.description || mlResponse.data.title || '', price: mlResponse.data.price || null, imageUrls: mlResponse.data.images };
             setExtractedData({ title: data.title, description: data.description });
             setFormData(prev => ({ ...prev, title: data.title.trim(), description: data.description, starting_price: data.price ? data.price.toString() : prev.starting_price, source_url: decodedUrl }));
@@ -205,11 +209,49 @@ export default function CreateAuction() {
             setManualStep(5);
             toast.success(`✅ ${data.imageUrls.length} imagens importadas do ML!`);
           } else {
-            toast.warning('⚠️ Não foi possível extrair imagens deste anúncio do ML.');
-            setManualStep(0);
+            // FALLBACK: ML bloqueou scraping direto
+            // Extrai o título da URL do ML para buscar pelo nome
+            console.log('⚠️ [ML_URL] Scraping direto bloqueado, extraindo título da URL...');
+            
+            // Extrai título legível da URL (ex: /notebook-lenovo-ideapad-slim-3-.../p/...)
+            let productNameFromUrl = '';
+            try {
+              const urlPath = new URL(decodedUrl).pathname;
+              // Pega a parte antes de /p/ ou /MLB
+              const match = urlPath.match(/^\/([^/]+)/);
+              if (match) {
+                productNameFromUrl = match[1].replace(/-/g, ' ').substring(0, 80);
+              }
+            } catch(e) {}
+            
+            if (productNameFromUrl) {
+              toast.info('🔄 Buscando pelo nome do produto...');
+              console.log('🔍 [ML_URL] Buscando por nome:', productNameFromUrl);
+              
+              const nameResponse = await withRetry(() => base44.functions.invoke('searchProductByName', {
+                productName: productNameFromUrl
+              }));
+              
+              if (nameResponse?.data?.found && nameResponse.data.imageUrls?.length > 0) {
+                const nd = nameResponse.data;
+                setExtractedData({ title: nd.title || productNameFromUrl, description: nd.description || productNameFromUrl });
+                setFormData(prev => ({ ...prev, title: (nd.title || productNameFromUrl).trim(), description: nd.description || productNameFromUrl, starting_price: nd.price ? nd.price.toString() : prev.starting_price, source_url: decodedUrl }));
+                setDownloadedImages(nd.imageUrls);
+                setCoverIndex(0);
+                setManualStep(5);
+                toast.success(`✅ ${nd.imageUrls.length} imagens importadas!`);
+              } else {
+                toast.warning('⚠️ Não foi possível extrair imagens automaticamente. Use o Upload Manual de Imagens.');
+                setManualStep(0);
+              }
+            } else {
+              toast.warning('⚠️ Não foi possível extrair imagens desta URL. Use o Upload Manual de Imagens.');
+              setManualStep(0);
+            }
           }
         } catch (err) {
-          toast.error('Erro ao extrair dados do ML: ' + err.message);
+          console.error('❌ [ML_URL] Erro:', err.message);
+          toast.error('Erro ao extrair dados: ' + err.message);
           setManualStep(0);
         } finally {
           setIsProcessing(false);
@@ -698,7 +740,8 @@ export default function CreateAuction() {
       title: (importedData?.title || extractedData?.title || prev.title || '').toString(),
       description: (importedData?.description || extractedData?.description || prev.description || ''),
       image_urls: finalImages,
-      source_url: productUrl
+      // Mantém source_url já salvo pelo fluxo ml_url (não sobrescreve com string vazia)
+      source_url: productUrl || prev.source_url || ''
     }));
 
     setManualStep(0);
