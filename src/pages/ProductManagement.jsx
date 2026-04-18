@@ -661,6 +661,21 @@ export default function ProductManagement() {
                 <Plus className="w-3.5 h-3.5 mr-1.5" />
                 Colocar em Leilão
               </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  const ids = Array.from(selectedIds);
+                  if (ids.length === 1) {
+                    navigate(createPageUrl("AddCatalogProduct"), { state: { sourceProduct: products.find(p => p.id === ids[0]) } });
+                  } else {
+                    alert('⚠️ Selecione apenas um produto para adicionar à loja virtual');
+                  }
+                }}
+                className="bg-violet-600 hover:bg-violet-500 text-white border-0 h-7 text-xs px-3"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Colocar na Loja Virtual
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
