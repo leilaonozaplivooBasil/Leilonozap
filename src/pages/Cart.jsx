@@ -41,11 +41,11 @@ export default function Cart() {
   const [cardName, setCardName] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
-  const [pollingInterval, setPollingInterval] = useState(null);
   const [pixConfirmed, setPixConfirmed] = useState(false);
   const [createdSales, setCreatedSales] = useState([]);
   const [checkoutItems, setCheckoutItems] = useState([]); // Snapshot dos itens ao gerar PIX
   const isSubmittingRef = useRef(false); // Guard atômico contra duplo clique
+  const pollingIntervalRef = useRef(null); // Ref para gerenciar o intervalo de polling
 
   // Form data
   const [formData, setFormData] = useState({
@@ -136,23 +136,26 @@ export default function Cart() {
 
   // 🔄 Polling para detectar confirmação de pagamento PIX
   useEffect(() => {
-    if (!pixData || pixData.billing_type !== 'PIX' || !createdSales || createdSales.length === 0 || pixConfirmed) return;
+    // ⚠️ NÃO disparar se já confirmou ou se não há PIX
+    if (!pixData || pixData.billing_type !== 'PIX' || !createdSales || createdSales.length === 0 || pixConfirmed) {
+      // Cleanup: parar polling se foi ativado
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
 
     const saleId = createdSales[0].id;
-    let hasConfirmed = false;
     const startTime = Date.now();
     const TIMEOUT_MS = 15 * 60 * 1000; // 15 minutos (expiração do PIX)
 
     // ✅ Polling: buscar status do pagamento a cada 3 segundos
     const interval = setInterval(async () => {
-      if (hasConfirmed) {
-        clearInterval(interval);
-        return;
-      }
-
       // Verificar timeout (15 min)
       if (Date.now() - startTime > TIMEOUT_MS) {
         clearInterval(interval);
+        pollingIntervalRef.current = null;
         toast.warning('⏰ PIX expirado. Gere um novo código.', { duration: 5000 });
         return;
       }
@@ -168,8 +171,8 @@ export default function Cart() {
         const sale = orders.find(o => o.id === saleId);
 
         if (sale?.status === 'paid') {
-          hasConfirmed = true;
           clearInterval(interval);
+          pollingIntervalRef.current = null;
           console.log('✅ PIX confirmado:', saleId);
           toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
           setPixConfirmed(true);
@@ -179,12 +182,16 @@ export default function Cart() {
       }
     }, 3000); // Polling a cada 3 segundos
 
-    setPollingInterval(interval);
+    pollingIntervalRef.current = interval;
 
+    // Cleanup: parar intervalo se efeito for destruído
     return () => {
-      if (interval) clearInterval(interval);
+      if (interval) {
+        clearInterval(interval);
+        pollingIntervalRef.current = null;
+      }
     };
-  }, [pixData, createdSales, pixConfirmed]);
+  }, [pixData, createdSales]); // ✅ REMOVIDO pixConfirmed das dependências
 
   const updateCart = (newCart) => {
     setCartItems(newCart);
@@ -452,6 +459,11 @@ export default function Cart() {
 
         // Limpa carrinho apenas se o pagamento foi criado E não foi rejeitado
         updateCart([]);
+        // ✅ Resetar payment form para próxima compra
+        setCardNumber('');
+        setCardName('');
+        setCardExpiry('');
+        setCardCvv('');
         isSubmittingRef.current = false;
       } else {
         const errorMsg = paymentResponse?.error || 'Erro na transação. Verifique seus dados.';
@@ -988,7 +1000,7 @@ export default function Cart() {
 
                 <Button
                   onClick={() => {
-                    if (pollingInterval) clearInterval(pollingInterval);
+                    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
                     setPixData(null);
                     setPixConfirmed(false);
                     setPaymentType('PIX');
