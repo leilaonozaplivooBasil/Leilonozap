@@ -110,6 +110,40 @@ Deno.serve(async (req) => {
                         console.log('💰 Preço encontrado:', price);
                     }
                     
+                    // Extrai descrição completa: bullets de características da página
+                    let description = '';
+                    const bullets = [];
+                    
+                    // Tenta extrair bullets de "O que você precisa saber"
+                    const highlightsSection = html.match(/class="[^"]*ui-pdp-highlights[^"]*"[^>]*>([\s\S]*?)<\/[^>]+>/i);
+                    if (highlightsSection) {
+                        const liMatches = highlightsSection[1].matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi);
+                        for (const m of liMatches) {
+                            const text = m[1].replace(/<[^>]+>/g, '').trim();
+                            if (text) bullets.push('• ' + text);
+                        }
+                    }
+                    
+                    // Tenta extrair atributos/specs do JSON embutido
+                    const attrsJsonMatch = html.match(/"attributes"\s*:\s*(\[[\s\S]{0,3000}?\])/);
+                    if (attrsJsonMatch) {
+                        try {
+                            const attrs = JSON.parse(attrsJsonMatch[1]);
+                            const specLines = attrs
+                                .filter(a => a.name && a.value_name && a.attribute_group_name !== 'Outros')
+                                .slice(0, 15)
+                                .map(a => `${a.name}: ${a.value_name}`);
+                            if (specLines.length > 0) {
+                                bullets.push(...specLines.map(s => '• ' + s));
+                            }
+                        } catch (_) {}
+                    }
+                    
+                    if (bullets.length > 0) {
+                        description = bullets.join('\n');
+                        console.log('📝 Descrição extraída com', bullets.length, 'itens');
+                    }
+                    
                     // MÉTODO A: Extrai do data-zoom nas figures
                     const dataZoomMatches = html.matchAll(/data-zoom="([^"]+)"/g);
                     for (const match of dataZoomMatches) {
@@ -164,7 +198,7 @@ Deno.serve(async (req) => {
                             images: uniqueImages,
                             title: title || searchTerm || '',
                             price: price,
-                            description: title || searchTerm || '',
+                            description: description || title || searchTerm || '',
                             source: 'Mercado Livre'
                         }, { status: 200 });
                     }
@@ -201,12 +235,21 @@ Deno.serve(async (req) => {
                 
                 if (images.length > 0) {
                     console.log('📸 Imagens do catálogo:', images.length);
+                    // Monta descrição a partir dos atributos do catálogo
+                    let catalogDesc = '';
+                    if (catalogData.attributes && catalogData.attributes.length > 0) {
+                        const specLines = catalogData.attributes
+                            .filter(a => a.name && a.value_name)
+                            .slice(0, 15)
+                            .map(a => `• ${a.name}: ${a.value_name}`);
+                        if (specLines.length > 0) catalogDesc = specLines.join('\n');
+                    }
                     return Response.json({
                         found: true,
                         images: [...new Set(images)],
                         title: catalogData.name || '',
                         price: null,
-                        description: catalogData.name || '',
+                        description: catalogDesc || catalogData.short_description || catalogData.name || '',
                         source: 'Mercado Livre'
                     }, { status: 200 });
                 }
@@ -237,12 +280,21 @@ Deno.serve(async (req) => {
                 
                 if (images.length > 0) {
                     console.log('📸 Imagens encontradas:', images.length);
+                    // Monta descrição a partir dos atributos do item
+                    let itemDesc = '';
+                    if (productData.attributes && productData.attributes.length > 0) {
+                        const specLines = productData.attributes
+                            .filter(a => a.name && a.value_name && a.attribute_group_id !== 'OTHERS')
+                            .slice(0, 15)
+                            .map(a => `• ${a.name}: ${a.value_name}`);
+                        if (specLines.length > 0) itemDesc = specLines.join('\n');
+                    }
                     return Response.json({
                         found: true,
                         images: [...new Set(images)],
                         title: productData.title || '',
                         price: productData.price || null,
-                        description: productData.title || '',
+                        description: itemDesc || productData.title || '',
                         source: 'Mercado Livre'
                     }, { status: 200 });
                 }
