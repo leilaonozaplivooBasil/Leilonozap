@@ -23,12 +23,12 @@ Deno.serve(async (req) => {
     const results = [];
 
     for (const payment of pendingPayments) {
-      if (!payment.asaas_id) continue;
+      if (!payment.payment_id) continue;
 
       try {
         // Consulta status atual no Asaas
         const asaasRes = await fetch(
-          `https://api.asaas.com/v3/payments/${payment.asaas_id}`,
+          `https://api.asaas.com/v3/payments/${payment.payment_id}`,
           {
             headers: {
               "access_token": ASAAS_API_KEY,
@@ -56,17 +56,17 @@ Deno.serve(async (req) => {
 
           await base44.asServiceRole.entities.AsaasPayment.update(payment.id, updateData);
           updated++;
-          results.push({ id: payment.id, asaas_id: payment.asaas_id, old: payment.status, new: newStatus });
+          results.push({ id: payment.id, payment_id: payment.payment_id, old: payment.status, new: newStatus });
 
           // Se pagamento confirmado, loga no SystemLog
           if (newStatus === "RECEIVED" || newStatus === "CONFIRMED") {
             await base44.asServiceRole.entities.SystemLog.create({
               step: "AsaasReconciliation_PaymentConfirmed",
               status: "success",
-              message: `Pagamento ${payment.asaas_id} confirmado via reconciliação diária`,
+              message: `Pagamento ${payment.payment_id} confirmado via reconciliação diária`,
               component_name: "asaasReconcilePayments",
               entity_id: payment.id,
-              payload: { asaas_id: payment.asaas_id, amount: asaasData.value }
+              payload: { payment_id: payment.payment_id, amount: asaasData.value }
             });
           }
         }

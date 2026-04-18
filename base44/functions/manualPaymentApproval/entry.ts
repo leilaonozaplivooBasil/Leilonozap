@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
             success: true,
             message: 'Pagamento aprovado e processado com sucesso',
             payment_id: mpPayment.id,
-            catalog_sale_id: sale.id,
+            catalog_sale_id: saleId,
             status: 'approved'
         });
 

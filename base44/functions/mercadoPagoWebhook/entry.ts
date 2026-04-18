@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
 
         console.log('🔎 Procurando MercadoPagoPayment com external_reference:', externalRef);
         // Buscar MercadoPagoPayment usando external_reference
-        const mpPayments = await base44.entities.MercadoPagoPayment.filter(
+        const mpPayments = await base44.asServiceRole.entities.MercadoPagoPayment.filter(
             { external_reference: externalRef },
             null,
             1
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
         });
 
         // ✅ PASSO 1: Atualizar status do MercadoPagoPayment
-        await base44.entities.MercadoPagoPayment.update(mpPayment.id, {
+        await base44.asServiceRole.entities.MercadoPagoPayment.update(mpPayment.id, {
             status: 'confirmed',
             payment_method: data.data?.payment_method_id || 'pending',
             transaction_id: paymentId.toString(),
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 
         // ✅ PASSO 2: Atualizar CatalogSale se for pedido de catálogo
         if (mpPayment.catalog_sale_id) {
-            const catalogSales = await base44.entities.CatalogSale.filter(
+            const catalogSales = await base44.asServiceRole.entities.CatalogSale.filter(
                 { id: mpPayment.catalog_sale_id },
                 null,
                 1
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
             if (catalogSales?.length > 0) {
                 const sale = catalogSales[0];
                 
-                await base44.entities.CatalogSale.update(sale.id, {
+                await base44.asServiceRole.entities.CatalogSale.update(sale.id, {
                     status: 'paid',
                     payment_confirmed_date: new Date().toISOString(),
                     mercadopago_transaction_id: paymentId.toString()
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
 
                 // 📢 Registrar notificação em tempo real
                 try {
-                    await base44.entities.SystemLog.create({
+                    await base44.asServiceRole.entities.SystemLog.create({
                         step: 'CATALOG_PAYMENT_CONFIRMED',
                         status: 'success',
                         message: `Pagamento confirmado para pedido ${sale.id}`,
@@ -185,7 +185,7 @@ Deno.serve(async (req) => {
 
         // ✅ PASSO 3: Atualizar leilão se for arremate
         if (mpPayment.auction_id) {
-            const auctions = await base44.entities.Auction.filter(
+            const auctions = await base44.asServiceRole.entities.Auction.filter(
                 { id: mpPayment.auction_id },
                 null,
                 1
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
             if (auctions?.length > 0) {
                 const auction = auctions[0];
                 
-                await base44.entities.Auction.update(auction.id, {
+                await base44.asServiceRole.entities.Auction.update(auction.id, {
                     order_status: 'paid',
                     payment_confirmed_date: new Date().toISOString()
                 });
