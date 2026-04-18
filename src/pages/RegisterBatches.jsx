@@ -1392,8 +1392,20 @@ export default function RegisterBatches() {
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
             <Card className="bg-gray-800 border-gray-700 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <CardHeader>
-                <CardTitle className="text-white">💰 Informar Valor do Frete</CardTitle>
-                <p className="text-gray-400 text-sm">Digite o valor do frete para calcular o custo unitário correto</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-white">💰 Informar Valor do Frete</CardTitle>
+                    <p className="text-gray-400 text-sm">Digite o valor do frete para calcular o custo unitário correto</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => { setShowFreteModal(false); setExtractedData(null); setFreteValue(0); }}
+                    className="border-gray-600 text-gray-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
