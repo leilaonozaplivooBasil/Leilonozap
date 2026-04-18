@@ -258,6 +258,32 @@ Deno.serve(async (req) => {
 
                             console.log(`✅ CatalogSale ${sale.id} atualizada para PAID`);
 
+                            // 🔻 BAIXA DE ESTOQUE — Decrementar quantity e incrementar quantity_sold no Product
+                            if (sale.product_id && sale.quantity) {
+                                try {
+                                    const products = await base44.asServiceRole.entities.Product.filter(
+                                        { id: sale.product_id },
+                                        null,
+                                        1
+                                    );
+
+                                    if (products && products.length > 0) {
+                                        const product = products[0];
+                                        const newQuantity = Math.max(0, (product.quantity || 0) - (sale.quantity || 1));
+                                        const newQuantitySold = (product.quantity_sold || 0) + (sale.quantity || 1);
+
+                                        await base44.asServiceRole.entities.Product.update(product.id, {
+                                            quantity: newQuantity,
+                                            quantity_sold: newQuantitySold
+                                        });
+
+                                        console.log(`✅ Product ${product.id} estoque baixado: ${product.quantity} → ${newQuantity} (vendido: ${newQuantitySold})`);
+                                    }
+                                } catch (stockErr) {
+                                    console.warn(`⚠️ Erro ao baixar estoque para product ${sale.product_id}:`, stockErr.message);
+                                }
+                            }
+
                             // Processar comissões para este item
                             try {
                                 await base44.asServiceRole.functions.invoke('processCatalogCommission', {
