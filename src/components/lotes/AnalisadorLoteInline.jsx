@@ -296,12 +296,40 @@ export default function AnalisadorLoteInline({ onEnviado }) {
         if (!loteAtual) return;
         setIsSaving(true);
         try {
+            // Agrupa itens repetidos por descrição + grade (padrão SKU de mercado)
+            const rawItens = loteAtual.rawItemsByGrade || [];
+            const mapaAgrupado = new Map();
+            for (const item of rawItens) {
+                const descNorm = String(item.desc || '').trim().toLowerCase();
+                const grade = String(item.grade || 'A').toUpperCase();
+                const chave = `${descNorm}|${grade}`;
+                if (mapaAgrupado.has(chave)) {
+                    const existente = mapaAgrupado.get(chave);
+                    existente.qtd += (item.qtd || 1);
+                    existente.valor_mercado += (item.valor || 0);
+                } else {
+                    mapaAgrupado.set(chave, {
+                        desc: String(item.desc || '').trim(),
+                        grade,
+                        qtd: item.qtd || 1,
+                        valor_mercado: item.valor || 0,
+                    });
+                }
+            }
+            const itensAgrupados = Array.from(mapaAgrupado.values());
+
             await base44.entities.LoteRecebido.create({
                 nome_lote: loteAtual.nomeLote,
                 marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
                 valor_lote: calculations?.custoTotal || 0,
                 observacoes: `Origem: ${loteAtual.origem} | Valor Mercado: R$ ${loteAtual.valorMercadoTotal?.toFixed(2)} | Qtd: ${loteAtual.quantidadeTotal} | Arremate: R$ ${calculations?.valorArrematado?.toFixed(2)} | Taxa: ${taxaPct}% | Frete: R$ ${frete} | Local: ${loteAtual.localColeta}`,
-                data_recebimento: new Date().toISOString(), status: 'recebido',
+                data_recebimento: new Date().toISOString(),
+                status: 'recebido',
+                itens_json: JSON.stringify(itensAgrupados),
+                quantidade_total: loteAtual.quantidadeTotal || 0,
+                valor_mercado_total: loteAtual.valorMercadoTotal || 0,
+                produtos_gerados: false,
+                deposito_destino: 'Bangu',
             });
             const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
             setLotesImportados(newLotes); setLoteAtual(newLotes[0] || null);

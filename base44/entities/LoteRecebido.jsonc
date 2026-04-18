@@ -49,7 +49,7 @@
     "valor_lote": {
       "type": "number",
       "default": 0,
-      "description": "Valor do lote"
+      "description": "Valor do lote (custo total)"
     },
     "observacoes": {
       "type": "string",
@@ -59,6 +59,45 @@
       "type": "string",
       "format": "datetime-local",
       "description": "Data de recebimento do lote"
+    },
+    "itens_json": {
+      "type": "string",
+      "description": "JSON serializado com itens agrupados do lote ([{desc, qtd, valor_mercado, grade}])"
+    },
+    "quantidade_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade total de itens do lote"
+    },
+    "valor_mercado_total": {
+      "type": "number",
+      "default": 0,
+      "description": "Valor de mercado total do lote"
+    },
+    "produtos_gerados": {
+      "type": "boolean",
+      "default": false,
+      "description": "Indica se os produtos j\u00e1 foram gerados no estoque (evita duplica\u00e7\u00e3o)"
+    },
+    "produtos_gerados_em": {
+      "type": "string",
+      "format": "datetime-local",
+      "description": "Data/hora em que os produtos foram gerados no estoque"
+    },
+    "produtos_gerados_count": {
+      "type": "number",
+      "default": 0,
+      "description": "Quantidade de registros Product criados a partir deste lote"
+    },
+    "deposito_destino": {
+      "type": "string",
+      "enum": [
+        "Bangu",
+        "Oficina",
+        "Recreio"
+      ],
+      "default": "Bangu",
+      "description": "Dep\u00f3sito onde os produtos ser\u00e3o alocados"
     }
   },
   "required": [

@@ -6,8 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   Package, X, ArrowLeft, Plus,
-  Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel, Loader2
+  Eye, Trash2, ShoppingCart, CheckCircle, Store, Gavel, Loader2, PackagePlus
 } from 'lucide-react';
+import { gerarProdutosDoLote } from '@/functions/gerarProdutosDoLote';
 import AnalisadorLoteInline from '@/components/lotes/AnalisadorLoteInline';
 import { useNavigate } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
@@ -131,6 +132,39 @@ export default function EstoqueLotes() {
       await loadLotes();
     } catch (e) {
       alert('❌ Erro: ' + e.message);
+    }
+  };
+
+  const handleGerarProdutos = async (lote) => {
+    if (lote.produtos_gerados) {
+      alert(`✅ Produtos já foram gerados para este lote em ${new Date(lote.produtos_gerados_em).toLocaleString('pt-BR')} (${lote.produtos_gerados_count} produtos criados).`);
+      return;
+    }
+    if (!lote.itens_json) {
+      alert('❌ Este lote não possui itens detalhados salvos. Só é possível gerar produtos em lotes importados via planilha.');
+      return;
+    }
+    const qtd = lote.quantidade_total || 0;
+    const confirmacao = confirm(
+      `Gerar produtos no estoque para o lote "${lote.nome_lote}"?\n\n` +
+      `• Quantidade total: ${qtd} unidades\n` +
+      `• Custo total do lote: R$ ${(lote.valor_lote || 0).toFixed(2)}\n` +
+      `• Custo unitário médio: R$ ${qtd > 0 ? ((lote.valor_lote || 0) / qtd).toFixed(2) : '0.00'}\n` +
+      `• Depósito destino: ${lote.deposito_destino || 'Bangu'}\n\n` +
+      `Esta ação cria os produtos na "Posição de Estoque" e não pode ser desfeita.`
+    );
+    if (!confirmacao) return;
+    try {
+      const res = await gerarProdutosDoLote({ lote_id: lote.id });
+      const data = res?.data || res;
+      if (data?.status === 'success') {
+        alert(`✅ ${data.produtos_criados} produtos gerados no estoque!\n\nCusto unitário médio: R$ ${data.custo_unitario_medio?.toFixed(2)}\nDepósito: ${data.deposito}`);
+        await loadLotes();
+      } else {
+        alert(`❌ Erro: ${data?.error || 'Resposta inesperada'}`);
+      }
+    } catch (e) {
+      alert(`❌ Erro ao gerar produtos: ${e.message}`);
     }
   };
 
@@ -289,6 +323,25 @@ export default function EstoqueLotes() {
                           >
                             {cfg.nextLabel}
                           </Button>
+                        )}
+
+                        {/* Gerar Produtos no Estoque — só para lotes 'enviado_ao_estoque' com itens salvos */}
+                        {lote.status === 'enviado_ao_estoque' && lote.itens_json && !lote.produtos_gerados && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleGerarProdutos(lote)}
+                            className="bg-emerald-600 hover:bg-emerald-500 font-bold"
+                            title="Gera os produtos individuais na Posição de Estoque"
+                          >
+                            <PackagePlus className="w-4 h-4 mr-1" /> Gerar Produtos no Estoque
+                          </Button>
+                        )}
+
+                        {/* Badge: já gerou produtos */}
+                        {lote.produtos_gerados && (
+                          <Badge className="bg-emerald-700 text-white">
+                            ✓ {lote.produtos_gerados_count} produtos no estoque
+                          </Badge>
                         )}
 
                         {/* Excluir */}
