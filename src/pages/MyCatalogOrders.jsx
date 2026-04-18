@@ -119,6 +119,24 @@ export default function MyCatalogOrders() {
     }
   }, []);
 
+  const fetchOrders = async (userId) => {
+    try {
+      const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: userId });
+      return result?.orders || result?.data?.orders || [];
+    } catch (err) {
+      console.error('invoke failed, trying direct fetch:', err.message);
+      // Fallback: busca direta via CatalogSale entity com asServiceRole não disponível no frontend,
+      // então tenta buscar via entidade diretamente (sujeita a RLS mas tenta mesmo assim)
+      try {
+        const directResult = await base44.entities.CatalogSale.filter({ buyer_id: userId }, '-created_date', 500);
+        return directResult || [];
+      } catch (e2) {
+        console.error('Direct fetch also failed:', e2.message);
+        return [];
+      }
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -130,9 +148,8 @@ export default function MyCatalogOrders() {
         const user = JSON.parse(savedUser);
         setCurrentUser(user);
 
-        // ✅ Buscar pedidos via backend function (sem RLS)
-        const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: user.id });
-        setOrders(result.orders || []);
+        const orders = await fetchOrders(user.id);
+        setOrders(orders);
       } catch (error) {
         console.error("Failed to load catalog orders:", error);
         setOrders([]);
@@ -150,8 +167,7 @@ export default function MyCatalogOrders() {
 
       const user = JSON.parse(savedUser);
       try {
-        const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: user.id });
-        const newOrders = result.orders || [];
+        const newOrders = await fetchOrders(user.id);
 
         // Verificar se algum pedido foi pago
         newOrders.forEach(order => {
