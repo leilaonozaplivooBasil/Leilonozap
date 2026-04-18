@@ -79,11 +79,13 @@ export default function AnalisadorLoteInline({ onEnviado }) {
         let wmsSheetData = null, localColeta = 'Será informado após Arremate';
         const resumoCategorias = [];
         let referenceMarketValue = null;
+
         if (rawWorkbookData.Sheets['Complemento']) {
             const compData = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets['Complemento'], { header: 1 });
             const localRow = compData.find(row => row && row[0] && typeof row[0] === 'string' && row[0].includes('Local de Carregamento'));
             if (localRow && localRow[1]) localColeta = String(localRow[1]).trim();
         }
+
         let resSheetName = rawWorkbookData.SheetNames.find(s => s.toUpperCase().includes('RESUMO'));
         if (resSheetName) {
             const resData = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets[resSheetName], { header: 1 });
@@ -92,21 +94,45 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                 for (let i = startRow; i < resData.length; i++) {
                     const r = resData[i];
                     if (!r || !r[0]) continue;
-                    if (r[0].includes('Total Geral')) { const rawVal = r[2]; if (typeof rawVal === 'number') referenceMarketValue = rawVal; else if (rawVal) referenceMarketValue = parseFloat(String(rawVal).replace(/[R$\s]/g, '').replace(',', '.')); break; }
+                    if (r[0].includes('Total Geral')) {
+                        const rawVal = r[2];
+                        if (typeof rawVal === 'number') referenceMarketValue = rawVal;
+                        else if (rawVal) referenceMarketValue = parseFloat(String(rawVal).replace(/[R$\s]/g, '').replace(',', '.'));
+                        break;
+                    }
                     resumoCategorias.push({ nome: r[0], qtd: r[1] || 0, valor: r[2] || 0 });
+                }
+            } else {
+                // Formato alternativo de resumo
+                for (let i = 0; i < Math.min(30, resData.length); i++) {
+                    const r = resData[i];
+                    if (r && typeof r[3] === 'string' && r[3] !== 'Categoria' && r[4]) {
+                        resumoCategorias.push({ nome: r[3], qtd: r[4], valor: r[5] || 0 });
+                    }
+                    if (r && typeof r[7] === 'string' && r[7].includes('Total Geral')) {
+                        if (r[9] != null) {
+                            if (typeof r[9] === 'number') referenceMarketValue = r[9];
+                            else referenceMarketValue = parseFloat(String(r[9]).replace(/[R$\s]/g, '').replace(',', '.'));
+                        }
+                    }
                 }
             }
         }
+
         let headerRowIndex = -1, headers = [];
         for (const sheetName of rawWorkbookData.SheetNames) {
             const data = XLSX.utils.sheet_to_json(rawWorkbookData.Sheets[sheetName], { header: 1 });
             for (let i = 0; i < Math.min(20, data.length); i++) {
                 const row = data[i];
-                if (row && row.some(cell => typeof cell === 'string' && (cell.toUpperCase().includes('CLASSE') || cell.toUpperCase().includes('GRADE') || cell.toUpperCase().includes('CONDIÇÃO') || cell.toUpperCase().includes('VALOR TOTAL') || cell.toUpperCase().includes('VALOR DE MERCADO')))) { headerRowIndex = i; headers = row; wmsSheetData = data; break; }
+                if (row && row.some(cell => typeof cell === 'string' && (cell.toUpperCase().includes('CLASSE') || cell.toUpperCase().includes('GRADE') || cell.toUpperCase().includes('CONDIÇÃO') || cell.toUpperCase().includes('VALOR TOTAL') || cell.toUpperCase().includes('VALOR DE MERCADO')))) {
+                    headerRowIndex = i; headers = row; wmsSheetData = data; break;
+                }
             }
             if (wmsSheetData) break;
         }
-        if (!wmsSheetData || headerRowIndex === -1) { setError("Não foi possível identificar os produtos. Verifique colunas 'Grade/Condição' ou 'Valor Total'."); return; }
+
+        if (!wmsSheetData || headerRowIndex === -1) { setError("Não foi possível identificar os produtos na planilha. Verifique se existe alguma tabela com colunas de 'Grade/Condição' ou 'Valor Total'."); return; }
+
         const classCount = { A: 0, B: 0, C: 0, D: 0, E: 0, U: 0 };
         let valorMercadoTotal = 0, totalItemsQtd = 0;
         const rawItemsByGrade = [];
@@ -118,6 +144,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
         const colQtd = getColIdx(['QUANTIDADE', 'QTD']);
         const colDesc = normalizedHeaders.findIndex(h => h.includes('DESCRI') || h === 'ITEM' || h === 'PRODUTO' || h.includes('NOME DO PRODUTO'));
         const extractGrade = (raw) => { const str = String(raw).toUpperCase().trim(); if (['A','B','C','D','E','U'].includes(str)) return str; const m = str.match(/\b([ABCDEU])\b/); return m ? m[1] : 'U'; };
+
         for (let i = headerRowIndex + 1; i < wmsSheetData.length; i++) {
             const row = wmsSheetData[i];
             if (!row || row.length === 0) continue;
@@ -130,9 +157,10 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             const valor = typeof rawVal === 'number' ? rawVal : parseFloat(String(rawVal).replace(/[R$\s]/g, '').replace(',', '.')) || 0;
             valorMercadoTotal += valor; totalItemsQtd += qtd;
             classCount[g] += qtd; gradesData[g].qtd += qtd; gradesData[g].valorMarket += valor;
-            rawItemsByGrade.push({ grade: g, desc: colDesc >= 0 && row[colDesc] ? String(row[colDesc]).trim() : `Item ${i+1}`, qtd, valor });
+            rawItemsByGrade.push({ grade: g, desc: colDesc >= 0 && row[colDesc] ? String(row[colDesc]).trim() : `Item linha ${i + 1}`, qtd, valor });
         }
-        // Extrai sub-itens por categoria (igual ao AnaliseDeLotes original)
+
+        // Extrai sub-itens por categoria — idêntico ao AnaliseDeLotes original
         const subItemsByCategory = {};
         if (wmsSheetData && headerRowIndex >= 0) {
             const catNamesSet = new Set(resumoCategorias.map(c => String(c.nome).trim().toLowerCase()));
@@ -183,7 +211,12 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             }
         }
 
-        const novoLote = { id: Date.now(), nomePlanilha: filename, nomeLote: filename.replace(/\.xlsx?$/, ''), localColeta, resumoCategorias, subItemsByCategory, quantidadeTotal: totalItemsQtd, valorMercadoTotal: referenceMarketValue > 0 ? referenceMarketValue : valorMercadoTotal, classCount, gradesData, rawItemsByGrade, origem: 'Mercado Livre' };
+        const novoLote = {
+            id: Date.now(), nomePlanilha: filename, nomeLote: filename.replace(/\.xlsx?$/, ''),
+            localColeta, resumoCategorias, subItemsByCategory, quantidadeTotal: totalItemsQtd,
+            valorMercadoTotal: referenceMarketValue !== null && referenceMarketValue > 0 ? referenceMarketValue : valorMercadoTotal,
+            classCount, gradesData, rawItemsByGrade, origem: 'Mercado Livre'
+        };
         setLotesImportados(prev => [...prev, novoLote]);
         setLoteAtual(novoLote);
     };
@@ -198,7 +231,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                 const workbook = XLSX.read(evt.target.result, { type: 'binary' });
                 if (modeloPlanilha === 'casaevideo') processSheetDataCasaEVideo(workbook, file.name);
                 else processSheetData(workbook, file.name);
-            } catch (err) { setError('Erro ao processar a planilha.'); }
+            } catch (err) { setError('Erro ao processar a planilha. Verifique se é um arquivo Excel válido.'); }
             finally { setIsProcessing(false); }
         };
         reader.readAsBinaryString(file);
@@ -239,34 +272,24 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             if (dataLeilao && horarioLeilao) endTime = new Date(`${dataLeilao}T${horarioLeilao}:00`);
             else if (dataLeilao) endTime = new Date(`${dataLeilao}T12:00:00`);
             else { endTime = new Date(); endTime.setDate(endTime.getDate() + 30); }
-
             await base44.entities.Auction.create({
                 title: loteAtual.nomeLote,
                 description: `Local de Retirada: ${loteAtual.localColeta}\nTotal de Itens: ${loteAtual.quantidadeTotal}\nValor de Mercado: R$ ${loteAtual.valorMercadoTotal.toFixed(2)}`,
-                starting_price: calculations.custoTotal,
-                current_price: calculations.custoTotal,
-                increment: 100,
-                end_time: endTime.toISOString(),
-                status: 'active',
-                is_investment_plan: true,
-                market_price: loteAtual.valorMercadoTotal,
-                manual_market_price: loteAtual.valorMercadoTotal,
+                starting_price: calculations.custoTotal, current_price: calculations.custoTotal, increment: 100,
+                end_time: endTime.toISOString(), status: 'active', is_investment_plan: true,
+                market_price: loteAtual.valorMercadoTotal, manual_market_price: loteAtual.valorMercadoTotal,
                 lot_categories_json: loteAtual.resumoCategorias?.length > 0 ? JSON.stringify(loteAtual.resumoCategorias) : null,
                 lot_items_json: loteAtual.subItemsByCategory && Object.keys(loteAtual.subItemsByCategory).length > 0 ? JSON.stringify(loteAtual.subItemsByCategory) : null,
                 lot_grades_json: loteAtual.gradesData ? JSON.stringify(loteAtual.gradesData) : null,
                 lot_raw_items_json: loteAtual.rawItemsByGrade?.length > 0 ? JSON.stringify(loteAtual.rawItemsByGrade) : null,
             });
             const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
-            setLotesImportados(newLotes);
-            setLoteAtual(newLotes[0] || null);
+            setLotesImportados(newLotes); setLoteAtual(newLotes[0] || null);
             setDataLeilao(''); setHorarioLeilao('');
             if (onEnviado) onEnviado();
             alert('✅ Lote publicado no Marketplace!');
-        } catch (e) {
-            alert('Erro ao publicar: ' + e.message);
-        } finally {
-            setIsSaving(false);
-        }
+        } catch (e) { alert('Erro ao publicar: ' + e.message); }
+        finally { setIsSaving(false); }
     };
 
     const handleEnviarParaEstoque = async () => {
@@ -278,19 +301,14 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                 marketplace: loteAtual.origem === 'Casa e Vídeo' ? 'Casas Bahia' : 'Mercado Livre',
                 valor_lote: calculations?.custoTotal || 0,
                 observacoes: `Origem: ${loteAtual.origem} | Valor Mercado: R$ ${loteAtual.valorMercadoTotal?.toFixed(2)} | Qtd: ${loteAtual.quantidadeTotal} | Arremate: R$ ${calculations?.valorArrematado?.toFixed(2)} | Taxa: ${taxaPct}% | Frete: R$ ${frete} | Local: ${loteAtual.localColeta}`,
-                data_recebimento: new Date().toISOString(),
-                status: 'recebido',
+                data_recebimento: new Date().toISOString(), status: 'recebido',
             });
             const newLotes = lotesImportados.filter(l => l.id !== loteAtual.id);
-            setLotesImportados(newLotes);
-            setLoteAtual(newLotes[0] || null);
+            setLotesImportados(newLotes); setLoteAtual(newLotes[0] || null);
             setArremateInputValue('');
             if (onEnviado) onEnviado();
-        } catch (e) {
-            alert('Erro ao enviar para estoque: ' + e.message);
-        } finally {
-            setIsSaving(false);
-        }
+        } catch (e) { alert('Erro ao enviar para estoque: ' + e.message); }
+        finally { setIsSaving(false); }
     };
 
     return (
@@ -303,19 +321,15 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                     </div>
                     <h3 className="text-xl font-bold mb-2 text-white">Analisar Planilha do Lote</h3>
                     <p className="text-gray-400 mb-5 text-sm">Selecione o modelo e carregue a planilha para análise completa</p>
-
-                    {/* Seletor de modelo */}
                     <div className="flex gap-2 mb-5 p-1 bg-gray-900 border border-gray-700 rounded-xl">
                         <button onClick={() => setModeloPlanilha('mercadolivre')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${modeloPlanilha === 'mercadolivre' ? 'bg-blue-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}>🛒 Mercado Livre</button>
                         <button onClick={() => setModeloPlanilha('casaevideo')} className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${modeloPlanilha === 'casaevideo' ? 'bg-orange-600 text-white shadow' : 'text-gray-400 hover:text-white'}`}>🏪 Casa & Vídeo</button>
                     </div>
-
                     <label className="cursor-pointer flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-all shadow-lg w-full">
                         <FileSpreadsheet size={20} />
                         <span>Selecionar Arquivo (Excel ou CSV)</span>
                         <input type="file" accept=".xlsx, .xls, .csv" className="hidden" onChange={handleFileUpload} disabled={isProcessing} />
                     </label>
-
                     {isProcessing && (
                         <div className="mt-6 flex items-center justify-center text-emerald-400 gap-3">
                             <div className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin"></div>
@@ -355,7 +369,8 @@ export default function AnalisadorLoteInline({ onEnviado }) {
             {/* DASHBOARD DE ANÁLISE */}
             {loteAtual && calculations && (
                 <div className="space-y-5">
-                    {/* Header + botão enviar */}
+
+                    {/* Header */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gray-800 border border-gray-700 rounded-2xl p-5">
                         <div>
                             <h2 className="text-xl font-bold text-white mb-1 flex items-center gap-2">
@@ -388,13 +403,11 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                             <div className="flex gap-2">
                                 <button disabled={isSaving} onClick={handleEnviarParaEstoque}
                                     className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
-                                    <Warehouse size={15} />
-                                    {isSaving ? 'Enviando...' : 'Enviar para Estoque'}
+                                    <Warehouse size={15} />{isSaving ? 'Enviando...' : 'Enviar para Estoque'}
                                 </button>
                                 <button disabled={isSaving} onClick={handlePublicarMarketplace}
                                     className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 text-white rounded-xl text-sm font-bold transition-all shadow">
-                                    <ShoppingBag size={15} />
-                                    {isSaving ? 'Publicando...' : 'Publicar no Marketplace'}
+                                    <ShoppingBag size={15} />{isSaving ? 'Publicando...' : 'Publicar no Marketplace'}
                                 </button>
                             </div>
                         </div>
@@ -425,7 +438,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                         ))}
                     </div>
 
-                    {/* Grid principal: 1 col Financeiro + 2 cols (Projeções + Ticket Médio) */}
+                    {/* Grid principal 3 colunas */}
                     <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
                         {/* COL 1: Financeiro */}
@@ -470,7 +483,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                             </div>
                         </div>
 
-                        {/* COL 2+3: Projeções + Ticket Médio lado a lado, depois gráfico embaixo */}
+                        {/* COL 2+3: Projeções + Ticket Médio + Gráfico */}
                         <div className="space-y-6 col-span-1 xl:col-span-2">
                             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
@@ -522,7 +535,7 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                                 </div>
                             </div>
 
-                            {/* Gráfico de qualidade grande — abaixo dos dois cards */}
+                            {/* Gráfico de qualidade */}
                             <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl p-6">
                                 <h3 className="font-bold text-white mb-5 uppercase tracking-wider text-sm">Distribuição de Qualidade (QTD Itens x Grade)</h3>
                                 <div className="flex flex-col md:flex-row gap-8 items-center justify-center">
@@ -551,60 +564,62 @@ export default function AnalisadorLoteInline({ onEnviado }) {
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </div>{/* fim xl:col-span-2 */}
 
-                    {/* Categorias */}
-                    {loteAtual.resumoCategorias?.length > 0 && (
-                        <div id="distribuicao-departamental">
-                            <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden">
-                                <div className="p-5 border-b border-gray-700 bg-gray-900/20">
-                                    <h3 className="font-bold text-white uppercase tracking-wider text-sm">Distribuição Departamental (Resumo Oficial)</h3>
-                                    <p className="text-xs text-gray-400 mt-1">Visão macrostática informada pela aba raiz do leilão.</p>
-                                </div>
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left border-collapse text-sm">
-                                        <thead>
-                                            <tr className="bg-gray-900 border-b border-gray-700 text-gray-400 uppercase tracking-wider">
-                                                <th className="px-6 py-4 font-semibold text-xs">Categoria / Departamento</th>
-                                                <th className="px-6 py-4 font-semibold text-xs border-l border-gray-700 w-32 text-center">Quantidade</th>
-                                                <th className="px-6 py-4 font-semibold text-xs border-l border-gray-700 w-48 text-right">Valor de Mercado</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {loteAtual.resumoCategorias.map((cat, i) => {
-                                                const subs = loteAtual.subItemsByCategory?.[cat.nome] || [];
-                                                const isOpen = expandedCategories.has(cat.nome);
-                                                return (
-                                                    <React.Fragment key={i}>
-                                                        <tr onClick={() => subs.length > 0 && toggleCategory(cat.nome)}
-                                                            className={`border-b border-gray-700/50 transition-colors ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}>
-                                                            <td className="px-6 py-4 font-medium text-gray-300 flex items-center gap-2">
-                                                                {subs.length > 0 && <span className={`text-gray-500 transition-transform inline-block ${isOpen ? 'rotate-90' : ''}`}>▶</span>}
-                                                                {cat.nome}
-                                                                {subs.length > 0 && <span className="text-xs text-gray-600 ml-1">({subs.length} itens)</span>}
-                                                            </td>
-                                                            <td className="px-6 py-4 border-l border-gray-700/50 text-center text-gray-400">{cat.qtd} un</td>
-                                                            <td className="px-6 py-4 border-l border-gray-700/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
-                                                        </tr>
-                                                        {isOpen && subs.map((sub, si) => (
-                                                            <tr key={`sub-${i}-${si}`} className="border-b border-gray-700/30 bg-gray-900/60">
-                                                                <td className="pl-12 pr-6 py-2.5 text-gray-400 text-sm">
-                                                                    <span className="text-gray-600 mr-2">└</span>{sub.desc}
+                        {/* Distribuição Departamental — xl:col-span-3, dentro do grid */}
+                        {loteAtual.resumoCategorias?.length > 0 && (
+                            <div className="xl:col-span-3" id="distribuicao-departamental">
+                                <div className="bg-gray-800 border border-gray-700 rounded-2xl shadow-xl overflow-hidden">
+                                    <div className="p-5 border-b border-gray-700 bg-gray-900/20">
+                                        <h3 className="font-bold text-white uppercase tracking-wider text-sm">Distribuição Departamental (Resumo Oficial)</h3>
+                                        <p className="text-xs text-gray-400 mt-1">Visão macrostática informada pela aba raiz do leilão.</p>
+                                    </div>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse text-sm">
+                                            <thead>
+                                                <tr className="bg-gray-900 border-b border-gray-700 text-gray-400 uppercase tracking-wider">
+                                                    <th className="px-6 py-4 font-semibold text-xs">Categoria / Departamento</th>
+                                                    <th className="px-6 py-4 font-semibold text-xs border-l border-gray-700 w-32 text-center">Quantidade</th>
+                                                    <th className="px-6 py-4 font-semibold text-xs border-l border-gray-700 w-48 text-right">Valor de Mercado</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {loteAtual.resumoCategorias.map((cat, i) => {
+                                                    const subs = loteAtual.subItemsByCategory?.[cat.nome] || [];
+                                                    const isOpen = expandedCategories.has(cat.nome);
+                                                    return (
+                                                        <React.Fragment key={i}>
+                                                            <tr onClick={() => subs.length > 0 && toggleCategory(cat.nome)}
+                                                                className={`border-b border-gray-700/50 transition-colors ${subs.length > 0 ? 'cursor-pointer hover:bg-white/[0.04]' : 'hover:bg-white/[0.02]'}`}>
+                                                                <td className="px-6 py-4 font-medium text-gray-300 flex items-center gap-2">
+                                                                    {subs.length > 0 && <span className={`text-gray-500 transition-transform inline-block ${isOpen ? 'rotate-90' : ''}`}>▶</span>}
+                                                                    {cat.nome}
+                                                                    {subs.length > 0 && <span className="text-xs text-gray-600 ml-1">({subs.length} itens)</span>}
                                                                 </td>
-                                                                <td className="px-6 py-2.5 border-l border-gray-700/30 text-center text-gray-500 text-sm">{sub.qtd} un</td>
-                                                                <td className="px-6 py-2.5 border-l border-gray-700/30 text-right text-emerald-600 text-sm font-medium">{formatCurrency(sub.valor)}</td>
+                                                                <td className="px-6 py-4 border-l border-gray-700/50 text-center text-gray-400">{cat.qtd} un</td>
+                                                                <td className="px-6 py-4 border-l border-gray-700/50 text-right font-bold text-emerald-400">{formatCurrency(cat.valor)}</td>
                                                             </tr>
-                                                        ))}
-                                                    </React.Fragment>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
+                                                            {isOpen && subs.map((sub, si) => (
+                                                                <tr key={`sub-${i}-${si}`} className="border-b border-gray-700/30 bg-gray-900/60">
+                                                                    <td className="pl-12 pr-6 py-2.5 text-gray-400 text-sm">
+                                                                        <span className="text-gray-600 mr-2">└</span>{sub.desc}
+                                                                    </td>
+                                                                    <td className="px-6 py-2.5 border-l border-gray-700/30 text-center text-gray-500 text-sm">{sub.qtd} un</td>
+                                                                    <td className="px-6 py-2.5 border-l border-gray-700/30 text-right text-emerald-600 text-sm font-medium">{formatCurrency(sub.valor)}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </React.Fragment>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                    </div>{/* fim grid xl:grid-cols-3 */}
+
                 </div>
             )}
 
