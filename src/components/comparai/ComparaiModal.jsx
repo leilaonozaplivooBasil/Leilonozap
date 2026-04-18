@@ -26,6 +26,16 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
 
   const screenshotRef = useRef(null);
 
+  const isFactoryProduct = localAuction?.product_source === 'factory_new';
+  const isSupplierWithoutUrl = localAuction?.comparai_mode === 'supplier' && (!localAuction?.source_url || !localAuction?.source_url.trim());
+
+  useEffect(() => {
+    if (!auction || !auction.id) return;
+    if (!isSupplierWithoutUrl) {
+      handleCompare();
+    }
+  }, []);
+
   // 🔥 VALIDAÇÃO CRÍTICA: Verifica se auction existe (após os hooks)
   if (!auction || !auction.id) {
     console.error('❌ ComparaiModal: auction inválido!', auction);
@@ -46,15 +56,7 @@ export default function ComparaiModal({ auction, isProduct = false, onClose }) {
     );
   }
 
-  const isFactoryProduct = localAuction.product_source === 'factory_new';
-  const isSupplierWithoutUrl = localAuction.comparai_mode === 'supplier' && (!localAuction.source_url || !localAuction.source_url.trim());
 
-  useEffect(() => {
-    // Se for supplier sem URL, não faz comparação automática - espera o usuário escolher
-    if (!isSupplierWithoutUrl) {
-      handleCompare();
-    }
-  }, []);
 
   const handleCompare = async (forceGoogleShopping = false) => {
     setIsLoading(true);

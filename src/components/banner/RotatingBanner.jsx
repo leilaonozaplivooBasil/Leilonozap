@@ -5,8 +5,6 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
 
-  if (!Array.isArray(banners) || banners.length === 0) return null;
-
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -18,7 +16,7 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const filteredBanners = banners.filter(banner => {
+  const filteredBanners = !Array.isArray(banners) ? [] : banners.filter(banner => {
     const deviceType = banner.device_type || 'desktop';
     return deviceType === (isMobile ? 'mobile' : 'desktop');
   });
@@ -36,6 +34,8 @@ export default function RotatingBanner({ banners, fit = 'cover', heightClass = '
   useEffect(() => {
     setCurrentIndex(0);
   }, [isMobile]);
+
+  if (!Array.isArray(banners) || banners.length === 0) return null;
 
   const goToPrevious = () => {
     setCurrentIndex((prev) => (prev - 1 + filteredBanners.length) % filteredBanners.length);
