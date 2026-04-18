@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, AlertCircle, Sparkles, CheckCircle, Copy, Package, RefreshCw } from "lucide-react";
+import { Upload, Image as ImageIcon, DollarSign, Link as LinkIcon, Loader2, Trash2, Zap, BeakerIcon, UploadCloud, Beaker, AlertCircle, Sparkles, CheckCircle, Copy, Package, RefreshCw, ArrowLeft } from "lucide-react";
 import { createPageUrl } from "@/utils";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -1012,12 +1012,24 @@ export default function CreateAuction() {
 
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-xl bg-gray-800/50 backdrop-blur-sm border border-gray-700">
-          <CardHeader className="text-center border-b border-gray-700">
+          <CardHeader className="border-b border-gray-700">
+            {urlParams.get('product_id') && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="mb-2 text-gray-400 hover:text-white w-fit"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar ao Estoque
+              </Button>
+            )}
             <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2 text-white">
               <Upload className="w-6 h-6" />
               Criar Novo Leilão
             </CardTitle>
-            <p className="text-gray-400">Importador de produtos com 1 clique!</p>
+            <p className="text-gray-400 text-center">Importador de produtos com 1 clique!</p>
           </CardHeader>
 
           <CardContent className="p-6 md:p-8">
