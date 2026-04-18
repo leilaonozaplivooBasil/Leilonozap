@@ -1,4 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.4';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
+import * as XLSX from 'npm:xlsx@0.18.5';
 
 Deno.serve(async (req) => {
   try {
@@ -15,13 +16,16 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'file_url obrigatório' }, { status: 400 });
     }
 
-    console.log('📄 Processando nota fiscal:', file_url);
+    console.log('📄 Processando arquivo:', file_url);
+
+    const fileNameLower = file_url.toLowerCase();
+    const isSpreadsheet = fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.csv');
 
     const prompt = `
-    Você é um especialista em análise de notas fiscais. Extraia TODOS os dados com MÁXIMA PRECISÃO.
+    Você é um especialista em análise de notas fiscais e planilhas de leilão. Extraia TODOS os dados com MÁXIMA PRECISÃO.
 
     ═══════════════════════════════════════════════════════════════
-    ESTRUTURA DA NOTA FISCAL:
+    ESTRUTURA DO DOCUMENTO:
     ═══════════════════════════════════════════════════════════════
 
     🎯 IDENTIFICAÇÃO DO FORMATO:
@@ -38,19 +42,6 @@ Deno.serve(async (req) => {
     |--------------|-------------------------------------------|--------------|---------------------|
     | 5132610      | CAIXA AMPLIFICADA 900W LENOXX LCA15      | 2            | 520,611             |
     | 5092664      | MULTIPROCESS BRITANIA ALL IN ONE BMP900  | 10           | 812,91              |
-    | 5128075      | MULTIPROCESS MONDIAL MPN01BP PT/INX 127V | 11           | 1243,06875          |
-    | 5132301      | FRITADEIRA ELET LENOXX PRF903P 127V      | 3            | 208,67175           |
-    | 5146009      | PAN PRESSAO ELET SL BRITANIA BPP02G PR/PT| 10           | 1333,5              |
-    | 5092664      | MULTIPROCESS BRITANIA ALL IN ONE BMP900  | 5            | 406,455             |
-    | 5114354      | PAN PRESSAO ELET 5L MONDIAL PE38 PT/INX  | 10           | 1278,3225           |
-    | 5103581      | MULTIPROCESSAD PHILIPS WALITA VIVA 127V  | 10           | 1358,175            |
-    | 5178208      | TORRE DE SOM PHILCO PCX35000 3500W       | 2            | 1650,915            |
-
-    TOTAL DA NOTA: R$ 8.812,63
-
-    CÁLCULO:
-    - Total produtos: 2+10+11+3+10+5+10+10+2 = 63
-    - Valor total: 520.61+812.91+1243.07+208.67+1333.5+406.46+1278.32+1358.18+1650.92 = 8812.63
 
     EXTRAIR COMO:
     {
@@ -58,14 +49,7 @@ Deno.serve(async (req) => {
       "valor_total": 8812.63,
       "lotes": [
         {"numero_lote": "5132610", "valor_lote": 520.61, "produtos": [{"descricao": "CAIXA AMPLIFICADA 900W LENOXX LCA15", "quantidade": 2}]},
-        {"numero_lote": "5092664", "valor_lote": 812.91, "produtos": [{"descricao": "MULTIPROCESS BRITANIA ALL IN ONE BMP900", "quantidade": 10}]},
-        {"numero_lote": "5128075", "valor_lote": 1243.07, "produtos": [{"descricao": "MULTIPROCESS MONDIAL MPN01BP PT/INX 127V", "quantidade": 11}]},
-        {"numero_lote": "5132301", "valor_lote": 208.67, "produtos": [{"descricao": "FRITADEIRA ELET LENOXX PRF903P 127V", "quantidade": 3}]},
-        {"numero_lote": "5146009", "valor_lote": 1333.5, "produtos": [{"descricao": "PAN PRESSAO ELET SL BRITANIA BPP02G PR/PT", "quantidade": 10}]},
-        {"numero_lote": "5092664-2", "valor_lote": 406.46, "produtos": [{"descricao": "MULTIPROCESS BRITANIA ALL IN ONE BMP900", "quantidade": 5}]},
-        {"numero_lote": "5114354", "valor_lote": 1278.32, "produtos": [{"descricao": "PAN PRESSAO ELET 5L MONDIAL PE38 PT/INX", "quantidade": 10}]},
-        {"numero_lote": "5103581", "valor_lote": 1358.18, "produtos": [{"descricao": "MULTIPROCESSAD PHILIPS WALITA VIVA 127V", "quantidade": 10}]},
-        {"numero_lote": "5178208", "valor_lote": 1650.92, "produtos": [{"descricao": "TORRE DE SOM PHILCO PCX35000 3500W", "quantidade": 2}]}
+        {"numero_lote": "5092664", "valor_lote": 812.91, "produtos": [{"descricao": "MULTIPROCESS BRITANIA ALL IN ONE BMP900", "quantidade": 10}]}
       ]
     }
 
@@ -97,8 +81,7 @@ Deno.serve(async (req) => {
     4. Cada linha com MATERIAL_SAP é um lote separado com 1 produto
     5. A quantidade do produto vem da coluna (NOVO ESTOQUE, PEDIDO, etc) - NÃO use 1 como padrão!
     6. valor_total = SOMA de TODOS os valores de TODOS os lotes
-    7. total_produtos = SOMA de TODAS as quantidades de TODOS os lotes (ex: se tem lote com 2, 10, 11, 3... total = 2+10+11+3+...)
-    8. custo_por_unidade = valor_total ÷ total_produtos
+    7. total_produtos = SOMA de TODAS as quantidades de TODOS os lotes
 
     FORMATO DE RETORNO OBRIGATÓRIO:
     {
@@ -118,40 +101,73 @@ Deno.serve(async (req) => {
     ⚠️ IMPORTANTE: Retorne APENAS o JSON, sem explicações ou texto adicional.
     `;
 
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt,
-      file_urls: [file_url],
-      response_json_schema: {
-        type: "object",
-        properties: {
-          numero_leilao: { type: "string" },
-          valor_total: { type: "number" },
-          lotes: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                numero_lote: { type: "string" },
-                valor_lote: { type: "number" },
-                produtos: {
-                  type: "array",
-                  items: {
-                    type: "object",
-                    properties: {
-                      descricao: { type: "string" },
-                      quantidade: { type: "number" }
-                    },
-                    required: ["descricao", "quantidade"]
-                  }
+    const responseSchema = {
+      type: "object",
+      properties: {
+        numero_leilao: { type: "string" },
+        valor_total: { type: "number" },
+        lotes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              numero_lote: { type: "string" },
+              valor_lote: { type: "number" },
+              produtos: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    descricao: { type: "string" },
+                    quantidade: { type: "number" }
+                  },
+                  required: ["descricao", "quantidade"]
                 }
-              },
-              required: ["numero_lote", "produtos", "valor_lote"]
-            }
+              }
+            },
+            required: ["numero_lote", "produtos", "valor_lote"]
           }
-        },
-        required: ["numero_leilao", "valor_total", "lotes"]
+        }
+      },
+      required: ["numero_leilao", "valor_total", "lotes"]
+    };
+
+    let result;
+
+    if (isSpreadsheet) {
+      // Para planilhas Excel/CSV: baixa o arquivo e converte para texto tabular
+      console.log('📊 Arquivo é planilha — fazendo parse local com xlsx...');
+      
+      const fileResp = await fetch(file_url);
+      if (!fileResp.ok) throw new Error(`Falha ao baixar arquivo: ${fileResp.status}`);
+      
+      const arrayBuffer = await fileResp.arrayBuffer();
+      const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+      
+      // Converte todas as abas para texto CSV para enviar ao LLM
+      let textContent = '';
+      for (const sheetName of workbook.SheetNames) {
+        const sheet = workbook.Sheets[sheetName];
+        const csv = XLSX.utils.sheet_to_csv(sheet);
+        if (csv.trim()) {
+          textContent += `\n\n=== ABA: ${sheetName} ===\n${csv}`;
+        }
       }
-    });
+      
+      console.log('📝 Conteúdo extraído da planilha (primeiros 500 chars):', textContent.substring(0, 500));
+      
+      result = await base44.integrations.Core.InvokeLLM({
+        prompt: prompt + `\n\nCONTEÚDO DA PLANILHA:\n${textContent}`,
+        response_json_schema: responseSchema
+      });
+    } else {
+      // Para PDF e imagens: envia direto via file_urls (suportado pelo LLM)
+      result = await base44.integrations.Core.InvokeLLM({
+        prompt,
+        file_urls: [file_url],
+        response_json_schema: responseSchema
+      });
+    }
 
     console.log('✅ Extração concluída:', JSON.stringify(result));
 

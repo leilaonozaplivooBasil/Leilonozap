@@ -146,7 +146,8 @@ export default function RegisterBatches() {
         throw new Error('Falha ao fazer upload');
       }
 
-      setProgress('🤖 Extraindo dados da nota fiscal...');
+      const isSpreadsheet = file.name.toLowerCase().match(/\.(xlsx|xls|csv)$/);
+      setProgress(isSpreadsheet ? '🤖 Extraindo dados da planilha...' : '🤖 Extraindo dados da nota fiscal...');
 
       const extractResponse = await base44.functions.invoke('extractBatchReceipt', {
         file_url: uploadResult.file_url
