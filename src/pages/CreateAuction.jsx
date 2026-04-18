@@ -26,6 +26,7 @@ import ProductImagePreview from "../components/admin/ProductImagePreview";
 import ConfirmProductDuplicationModal from "../components/admin/ConfirmProductDuplicationModal";
 import ManualImageUpload from "../components/admin/ManualImageUpload";
 import ValidationReportModal from "../components/admin/ValidationReportModal";
+import GoogleShoppingImporter from "../components/admin/GoogleShoppingImporter";
 
 const withRetry = async (fn, max = 3) => {
   let err;
@@ -1511,6 +1512,32 @@ export default function CreateAuction() {
 
 
 
+                  </CardContent>
+                </Card>
+
+                {/* IMPORTADOR GOOGLE SHOPPING */}
+                <Card className="bg-gray-800 border border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2 text-blue-400">
+                      🔎 Importar do Google Shopping
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <GoogleShoppingImporter
+                      onApply={(data) => {
+                        const finalImages = [...data.image_urls].slice(0, 5);
+                        while (finalImages.length < 5) finalImages.push("");
+                        setFormData(prev => ({
+                          ...prev,
+                          title: data.title || prev.title,
+                          description: data.description || prev.description,
+                          image_urls: finalImages,
+                          starting_price: data.starting_price || prev.starting_price,
+                          source_url: data.source_url || prev.source_url,
+                        }));
+                        toast.success("✅ Dados do Google Shopping aplicados!");
+                      }}
+                    />
                   </CardContent>
                 </Card>
 
