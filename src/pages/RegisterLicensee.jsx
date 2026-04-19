@@ -4,6 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Search, Plus } from "lucide-react";
 
 import LicenseeFormModal from "../components/licensees/LicenseeFormModal";
@@ -18,27 +19,45 @@ export default function RegisterLicensee() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all"); // "all" | "active" | "inactive"
 
   const { data: licensees = [], isLoading } = useQuery({
     queryKey: ["licensees"],
     queryFn: async () => {
-      // Busca todos os AppUsers e filtra os que têm licenciado_catalogo nos career_levels
-      // Não pode filtrar apenas por role=licensee pois admins também podem ser licenciados
+      // Busca todos os AppUsers que são ou já foram licenciados
       const res = await base44.entities.AppUser.list("-updated_date", 1000);
-      return (res || []).filter(u => (u.career_levels || []).includes("licenciado_catalogo"));
+      return (res || []).filter(u =>
+        (u.career_levels || []).includes("licenciado_catalogo") ||
+        u.role === "licensee" ||
+        u.referral_code ||
+        u.store_name
+      );
     },
   });
 
+  const activeCount = useMemo(() => (licensees || []).filter(l => (l.career_levels || []).includes("licenciado_catalogo")).length, [licensees]);
+  const inactiveCount = useMemo(() => (licensees || []).filter(l => !(l.career_levels || []).includes("licenciado_catalogo")).length, [licensees]);
+
   const filtered = useMemo(() => {
-    const onlyCatalog = (licensees || []).filter(l => (l.career_levels || []).includes("licenciado_catalogo"));
+    let list = licensees || [];
+
+    // Filtro por status
+    if (statusFilter === "active") {
+      list = list.filter(l => (l.career_levels || []).includes("licenciado_catalogo"));
+    } else if (statusFilter === "inactive") {
+      list = list.filter(l => !(l.career_levels || []).includes("licenciado_catalogo"));
+    }
+
+    // Filtro por busca
     const t = searchTerm.trim().toLowerCase();
-    if (!t) return onlyCatalog;
-    return onlyCatalog.filter((l) =>
+    if (!t) return list;
+    return list.filter((l) =>
       (l.full_name || "").toLowerCase().includes(t) ||
       (l.email || "").toLowerCase().includes(t) ||
-      (l.referral_code || "").toLowerCase().includes(t)
+      (l.referral_code || "").toLowerCase().includes(t) ||
+      (l.store_name || "").toLowerCase().includes(t)
     );
-  }, [licensees, searchTerm]);
+  }, [licensees, searchTerm, statusFilter]);
 
   React.useEffect(() => {
     if (!selected && filtered.length) setSelected(filtered[0]);
@@ -68,8 +87,27 @@ export default function RegisterLicensee() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 pt-3 text-sm text-gray-400 flex items-center justify-between">
-        <p>Gerencie as lojas virtuais dos vendedores</p>
-        <span>{(licensees || []).filter(l => (l.career_levels || []).includes("licenciado_catalogo")).length} vendedores</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setStatusFilter("all")}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === "all" ? "bg-gray-700 text-white" : "text-gray-400 hover:text-white"}`}
+          >
+            Todas ({licensees.length})
+          </button>
+          <button
+            onClick={() => setStatusFilter("active")}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === "active" ? "bg-green-600/30 text-green-400" : "text-gray-400 hover:text-green-400"}`}
+          >
+            Ativas ({activeCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter("inactive")}
+            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === "inactive" ? "bg-red-600/30 text-red-400" : "text-gray-400 hover:text-red-400"}`}
+          >
+            Inativas ({inactiveCount})
+          </button>
+        </div>
+        <span>{filtered.length} vendedores</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
