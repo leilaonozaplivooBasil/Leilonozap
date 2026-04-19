@@ -52,14 +52,53 @@ export default function AdminPanelMenu({ adminMenuItems }) {
 
       {isOpen && (
         <div
-          className="absolute right-0 top-full mt-2 flex z-[200]"
+          className="absolute left-0 top-full mt-2 flex z-[200]"
           onMouseEnter={handleMenuEnter}
           onMouseLeave={handleMenuLeave}
         >
-          {/* Submenu lateral — aparece à esquerda */}
+          {/* Menu principal de categorias */}
+          <div
+            className="rounded-xl overflow-hidden py-2 min-w-[210px]"
+            style={{
+              background: 'rgba(15,23,42,0.92)',
+              backdropFilter: 'blur(24px) saturate(1.5)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+            }}
+          >
+            <p className="px-4 py-1.5 text-[10px] font-bold text-purple-400 uppercase tracking-wider">
+              Administração
+            </p>
+            <div className="h-px bg-white/[0.06] mx-3 my-1" />
+            {adminMenuItems.map((item) => (
+              <button
+                key={item.title}
+                onMouseEnter={() => setHoveredCategory(item)}
+                onClick={() => {
+                  if (hoveredCategory?.title === item.title) {
+                    setHoveredCategory(null);
+                  } else {
+                    setHoveredCategory(item);
+                  }
+                }}
+                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-all flex items-center justify-between gap-2 ${
+                  hoveredCategory?.title === item.title
+                    ? 'text-white bg-white/[0.06]'
+                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                <span>{item.title}</span>
+                <svg className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ))}
+          </div>
+
+          {/* Submenu lateral — abre à direita */}
           {hoveredCategory && (
             <div
-              className="mr-1 rounded-xl overflow-hidden py-2 min-w-[220px] animate-in fade-in slide-in-from-right-2 duration-150"
+              className="ml-1 rounded-xl overflow-hidden py-2 min-w-[220px] animate-in fade-in slide-in-from-left-2 duration-150"
               style={{
                 background: 'rgba(15,23,42,0.92)',
                 backdropFilter: 'blur(24px) saturate(1.5)',
@@ -81,46 +120,6 @@ export default function AdminPanelMenu({ adminMenuItems }) {
               ))}
             </div>
           )}
-
-          {/* Menu principal de categorias */}
-          <div
-            className="rounded-xl overflow-hidden py-2 min-w-[210px]"
-            style={{
-              background: 'rgba(15,23,42,0.92)',
-              backdropFilter: 'blur(24px) saturate(1.5)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
-            }}
-          >
-            <p className="px-4 py-1.5 text-[10px] font-bold text-purple-400 uppercase tracking-wider">
-              Administração
-            </p>
-            <div className="h-px bg-white/[0.06] mx-3 my-1" />
-            {adminMenuItems.map((item) => (
-              <button
-                key={item.title}
-                onMouseEnter={() => setHoveredCategory(item)}
-                onClick={() => {
-                  if (hoveredCategory?.title === item.title) {
-                    // Se já está aberto e clicou, fecha
-                    setHoveredCategory(null);
-                  } else {
-                    setHoveredCategory(item);
-                  }
-                }}
-                className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-all flex items-center justify-between gap-2 ${
-                  hoveredCategory?.title === item.title
-                    ? 'text-white bg-white/[0.06]'
-                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
-              >
-                <span>{item.title}</span>
-                <svg className="w-3.5 h-3.5 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            ))}
-          </div>
         </div>
       )}
     </div>
