@@ -768,49 +768,44 @@ export default function Layout({ children, currentPageName }) {
                           Painel de Controle
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="text-white max-h-[500px] overflow-y-auto border-0" style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(24px) saturate(1.5)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
-                        <DropdownMenuLabel className="text-purple-400">Administração</DropdownMenuLabel>
-                        <DropdownMenuSeparator className="bg-gray-700" />
-                        {adminMenuItems.map((item) => (
-                          item.isCategory ? (
-                            <div key={item.title}>
+                      <DropdownMenuContent className="text-white max-h-[500px] overflow-y-auto border-0 min-w-[220px]" style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(24px) saturate(1.5)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 16px 48px rgba(0,0,0,0.4)' }}>
+                        {expandedCategory ? (
+                          <>
+                            <DropdownMenuItem
+                              className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 text-purple-300 font-semibold flex items-center gap-2"
+                              onSelect={(e) => { e.preventDefault(); setExpandedCategory(null); }}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                              Voltar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator className="bg-gray-700" />
+                            <DropdownMenuLabel className="text-gray-500 text-xs uppercase tracking-wider">{expandedCategory}</DropdownMenuLabel>
+                            {adminMenuItems.find(c => c.title === expandedCategory)?.items?.map((subItem) => (
                               <DropdownMenuItem
+                                key={subItem.pageName}
+                                onClick={() => navigate(createPageUrl(subItem.pageName))}
+                                className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 text-sm"
+                              >
+                                {subItem.title}
+                              </DropdownMenuItem>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            <DropdownMenuLabel className="text-purple-400">Administração</DropdownMenuLabel>
+                            <DropdownMenuSeparator className="bg-gray-700" />
+                            {adminMenuItems.map((item) => (
+                              <DropdownMenuItem
+                                key={item.title}
                                 className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 flex items-center justify-between"
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  setExpandedCategory(expandedCategory === item.title ? null : item.title);
-                                }}
+                                onSelect={(e) => { e.preventDefault(); setExpandedCategory(item.title); }}
                               >
                                 <span>{item.title}</span>
-                                <svg className={`w-4 h-4 transition-transform ${expandedCategory === item.title ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
+                                <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                               </DropdownMenuItem>
-                              {expandedCategory === item.title && (
-                                <div className="ml-3 border-l border-gray-600 pl-2">
-                                  {item.items.map((subItem) => (
-                                    <DropdownMenuItem
-                                      key={subItem.pageName}
-                                      onClick={() => navigate(createPageUrl(subItem.pageName))}
-                                      className="cursor-pointer hover:bg-gray-700 focus:bg-gray-700 text-sm"
-                                    >
-                                      {subItem.title}
-                                    </DropdownMenuItem>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <DropdownMenuItem
-                              key={item.pageName}
-                              onClick={() => navigate(createPageUrl(item.pageName))}
-                              className={`cursor-pointer hover:bg-gray-700 focus:bg-gray-700 ${item.highlight ? 'bg-gradient-to-r from-purple-600/20 to-blue-600/20 border-l-2 border-purple-500' : ''
-                                }`}
-                            >
-                              {item.title}
-                            </DropdownMenuItem>
-                          )
-                        ))}
+                            ))}
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -1023,57 +1018,42 @@ export default function Layout({ children, currentPageName }) {
                   {/* PAINEL MOBILE - SÓ ADMIN */}
                   {isAdmin && (
                     <div className="pt-3 mt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                      <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-purple-400/70">Painel de Controle</p>
-                      {adminMenuItems.map((item) => (
-                        item.isCategory ? (
-                          <div key={item.title}>
+                      {expandedCategory ? (
+                        <>
+                          <button
+                            onClick={() => setExpandedCategory(null)}
+                            className="w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold text-purple-300 hover:text-purple-200 transition-all"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                            Voltar
+                          </button>
+                          <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 mt-1 text-gray-500">{expandedCategory}</p>
+                          {adminMenuItems.find(c => c.title === expandedCategory)?.items?.map((subItem) => (
+                            <Link
+                              key={subItem.pageName}
+                              to={createPageUrl(subItem.pageName)}
+                              onClick={() => setMobileMenuOpen(false)}
+                              className="flex items-center gap-3 px-6 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
+                            >
+                              {subItem.title}
+                            </Link>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-bold text-xs uppercase tracking-wider px-4 mb-2 text-purple-400/70">Painel de Controle</p>
+                          {adminMenuItems.map((item) => (
                             <button
-                              onClick={() => setExpandedCategory(expandedCategory === item.title ? null : item.title)}
+                              key={item.title}
+                              onClick={() => setExpandedCategory(item.title)}
                               className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
                             >
                               <span>{item.title}</span>
-                              <svg
-                                className={`w-4 h-4 transition-transform ${expandedCategory === item.title ? 'rotate-180' : ''}`}
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
+                              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                             </button>
-                            {expandedCategory === item.title && (
-                              <div className="ml-2 mt-1">
-                                {item.items.map((subItem) => (
-                                  <Link
-                                    key={subItem.pageName}
-                                    to={createPageUrl(subItem.pageName)}
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className="flex items-center gap-3 px-6 py-2 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 text-gray-400 hover:text-white"
-                                  >
-                                    {subItem.title}
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <Link
-                            key={item.pageName}
-                            to={createPageUrl(item.pageName)}
-                            onClick={() => setMobileMenuOpen(false)}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-300 hover:translate-x-1 ${item.highlight
-                              ? "text-purple-300"
-                              : "text-gray-400 hover:text-white"
-                              }`}
-                            style={item.highlight ? {
-                              background: 'linear-gradient(135deg, rgba(147,51,234,0.12), rgba(59,130,246,0.12))',
-                              borderLeft: '3px solid rgba(147,51,234,0.4)',
-                            } : {}}
-                          >
-                            {item.title}
-                          </Link>
-                        )
-                      ))}
+                          ))}
+                        </>
+                      )}
                     </div>
                   )}
 
