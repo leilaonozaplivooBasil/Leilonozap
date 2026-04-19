@@ -18,24 +18,24 @@ function suggestIncrement(lanceInicio) {
 }
 
 export default function PriceSection({ formData, onInputChange }) {
-  // sp = lance inicial inserido diretamente pelo admin
   const sp = parseFloat(formData.starting_price) || 0;
 
-  // Deriva mercado e loja a partir do lance inicial
-  // Lance inicial = mercado × 0.60 → mercado = lance ÷ 0.60
-  // Loja Virtual = mercado × 0.80
-  const mercadoPrice = sp > 0 ? parseFloat((sp / 0.60).toFixed(2)) : 0;
-  const lojaPrice    = mercadoPrice > 0 ? parseFloat((mercadoPrice * 0.80).toFixed(2)) : 0;
-  const incrementSuggestion = suggestIncrement(sp);
-
-  // Auto-aplica incremento sugerido quando o lance inicial muda
+  // Auto-aplica incremento sugerido quando o valor de mercado muda
   useEffect(() => {
     if (sp <= 0) return;
-    const suggestion = suggestIncrement(sp);
+    const lanceInicio = sp * 0.60;
+    const suggestion = suggestIncrement(lanceInicio);
     if (suggestion) {
       onInputChange("increment", suggestion.value);
     }
   }, [sp]);
+  // sp = valor de mercado (base inserida pelo admin)
+  // Loja Virtual = mercado × 0.80 (20% abaixo do mercado)
+  // Lance inicial = mercado × 0.60 (40% abaixo do mercado)
+  // Arremate Agora = preço da Loja Virtual (teto direto)
+  const lojaPrice = sp > 0 ? parseFloat((sp * 0.80).toFixed(2)) : 0;
+  const leilaoInicio = sp > 0 ? parseFloat((sp * 0.60).toFixed(2)) : 0;
+  const incrementSuggestion = suggestIncrement(leilaoInicio);
 
   return (
     <Card className="bg-gray-800 border border-gray-700">
@@ -49,7 +49,7 @@ export default function PriceSection({ formData, onInputChange }) {
         {/* PREÇO INICIAL */}
         <div>
           <Label htmlFor="starting_price" className="text-sm font-medium text-gray-400">
-            Lance Inicial do Leilão (R$) *
+            Preço Inicial / Base (R$) *
           </Label>
           <Input
             id="starting_price"
@@ -67,16 +67,16 @@ export default function PriceSection({ formData, onInputChange }) {
               <p className="text-xs text-emerald-400 font-semibold mb-1.5">✅ Fórmula automática:</p>
               <div className="space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial</span>
-                  <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {sp.toFixed(2)}</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado</span>
+                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {sp.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual <span className="text-gray-500">(+33%)</span></span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🏪 Loja Virtual <span className="text-gray-500">(−20%)</span></span>
                   <span className="text-xs text-blue-400 font-bold whitespace-nowrap">R$ {lojaPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">📊 Mercado <span className="text-gray-500">(+67%)</span></span>
-                  <span className="text-xs text-white font-bold whitespace-nowrap">R$ {mercadoPrice.toFixed(2)}</span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial <span className="text-gray-500">(−40%)</span></span>
+                  <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {leilaoInicio.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -99,7 +99,7 @@ export default function PriceSection({ formData, onInputChange }) {
           />
           {incrementSuggestion && (
             <p className="text-xs text-gray-500 mt-1">
-              💡 Auto: {incrementSuggestion.label} para lance de R$ {sp.toFixed(2)} — editável
+              💡 Auto: {incrementSuggestion.label} para lance de R$ {leilaoInicio.toFixed(2)} — editável
             </p>
           )}
         </div>
