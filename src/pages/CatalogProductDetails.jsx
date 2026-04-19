@@ -286,7 +286,7 @@ export default function CatalogProductDetails() {
     const phone = licenseePhone ? normalizeToWaNumber(licenseePhone) : DEFAULT_STORE_PHONE;
     const ref = new URLSearchParams(window.location.search).get('ref') || sessionStorage.getItem('referralCode');
     const productUrl = getCanonicalProductUrl();
-    const message = `Olá! Tenho interesse neste produto da *Loja Virtual NoZap*:\n\n📦 *${product.description}*\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n🔗 ${productUrl}`;
+    const message = `Olá! Tenho interesse neste produto da *Loja Virtual NoZap*:\n\n📦 *${product.description}*\n\n💚 *R$ ${product.price_catalog?.toFixed(2)}*\n\n🛒 Compre agora:\n${productUrl}`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
