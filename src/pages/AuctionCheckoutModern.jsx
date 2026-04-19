@@ -203,6 +203,9 @@ export default function AuctionCheckoutModern() {
   };
 
   const handleCreatePayment = async () => {
+    // 🛡️ GUARD ANTI-DOUBLE-CLICK: Se já está processando, ignora cliques adicionais
+    if (isProcessing) return;
+
     console.log('🔘 handleCreatePayment chamado', { auction: !!auction, auctionId: auction?.id, isProcessing });
 
     if (!validateForm()) {
