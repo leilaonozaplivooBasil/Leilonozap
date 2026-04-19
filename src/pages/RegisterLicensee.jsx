@@ -59,9 +59,17 @@ export default function RegisterLicensee() {
     );
   }, [licensees, searchTerm, statusFilter]);
 
+  // Sincroniza selected com dados frescos da query
   React.useEffect(() => {
-    if (!selected && filtered.length) setSelected(filtered[0]);
-  }, [filtered, selected]);
+    if (selected) {
+      const fresh = (licensees || []).find(l => l.id === selected.id);
+      if (fresh && JSON.stringify(fresh) !== JSON.stringify(selected)) {
+        setSelected(fresh);
+      }
+    } else if (filtered.length) {
+      setSelected(filtered[0]);
+    }
+  }, [licensees, filtered]);
 
 
 
