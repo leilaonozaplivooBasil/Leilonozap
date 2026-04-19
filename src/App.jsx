@@ -70,18 +70,9 @@ const AuthenticatedApp = () => {
   return (
     <Routes>
     <Route path="/" element={
-      (() => {
-        const hasVisited = sessionStorage.getItem('hasVisitedBefore');
-        if (!hasVisited) {
-          sessionStorage.setItem('hasVisitedBefore', 'true');
-          return <Navigate to="/Landing" replace />;
-        }
-        return (
-          <LayoutWrapper currentPageName={mainPageKey}>
-            <MainPage />
-          </LayoutWrapper>
-        );
-      })()
+      <LayoutWrapper currentPageName={mainPageKey}>
+        <MainPage />
+      </LayoutWrapper>
     } />
       {Object.entries(Pages).map(([path, Page]) => (
         <Route
