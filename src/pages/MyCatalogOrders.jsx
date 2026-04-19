@@ -19,7 +19,7 @@ const statusConfig = {
   canceled: { text: "Cancelado", icon: Package, color: "bg-red-500/20 text-red-400 border-red-500/30" },
 };
 
-const CatalogOrderCard = ({ order, onTrackClick, onCancelClick }) => {
+const CatalogOrderCard = ({ order, onTrackClick, onDeleteClick }) => {
   const config = statusConfig[order.status] || statusConfig.pending_payment;
   const mainImage = order.product_image || "https://via.placeholder.com/150";
 
@@ -85,14 +85,14 @@ const CatalogOrderCard = ({ order, onTrackClick, onCancelClick }) => {
           Acompanhar Pedido
         </button>
 
-        {/* CANCELAR — só para pendentes */}
-        {order.status === 'pending_payment' && (
+        {/* EXCLUIR — pendentes e cancelados */}
+        {(order.status === 'pending_payment' || order.status === 'canceled') && (
           <button
-            onClick={(e) => { e.stopPropagation(); onCancelClick(order); }}
+            onClick={(e) => { e.stopPropagation(); onDeleteClick(order); }}
             className="mx-4 mb-4 py-2 px-3 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-400 font-medium text-xs transition-all duration-300 flex items-center justify-center gap-1.5"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            Cancelar Pedido
+            Excluir Pedido
           </button>
         )}
 
@@ -216,16 +216,16 @@ export default function MyCatalogOrders() {
 
   const [cancelingId, setCancelingId] = useState(null);
 
-  const handleCancelOrder = async (order) => {
-    if (!window.confirm(`Deseja cancelar o pedido "${order.product_title}"?\n\nEssa ação não pode ser desfeita.`)) return;
+  const handleDeleteOrder = async (order) => {
+    if (!window.confirm(`Deseja excluir o pedido "${order.product_title}"?\n\nO pedido será removido permanentemente.`)) return;
     setCancelingId(order.id);
     try {
-      await CatalogSale.update(order.id, { status: 'canceled' });
+      await CatalogSale.delete(order.id);
       setOrders(prev => prev.filter(o => o.id !== order.id));
-      toast.success('Pedido cancelado com sucesso');
+      toast.success('Pedido excluído');
     } catch (err) {
-      console.error('Erro ao cancelar:', err);
-      toast.error('Erro ao cancelar pedido');
+      console.error('Erro ao excluir:', err);
+      toast.error('Erro ao excluir pedido');
     } finally {
       setCancelingId(null);
     }
@@ -340,7 +340,7 @@ export default function MyCatalogOrders() {
                     key={order.id}
                     order={order}
                     onTrackClick={handleTrackClick}
-                    onCancelClick={handleCancelOrder}
+                    onDeleteClick={handleDeleteOrder}
                   />
                 ))}
               </div>
