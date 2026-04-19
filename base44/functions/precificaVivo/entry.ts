@@ -131,13 +131,28 @@ Deno.serve(async (req) => {
         const mlProduct = shoppingProducts.find(p => p.mercadolivre_url);
         const sourceUrl = mlProduct?.mercadolivre_url || null;
 
-        // Atualiza produto
-        await base44.asServiceRole.entities.Product.update(product.id, {
+        // Monta payload de atualização
+        const updateData = {
           market_value: newMarket,
           selling_price_retail: newPrice,
           last_dynamic_update: new Date().toISOString(),
           ...(sourceUrl && { source_url: sourceUrl })
-        });
+        };
+
+        // ─── PROPAGAÇÃO PARA LOJA VIRTUAL (Opção 3 com guard) ───
+        // Só atualiza price_catalog SE:
+        //   1) produto está ativo no catálogo
+        //   2) price_catalog atual é igual ao preço de varejo antigo
+        //      (ou seja: NÃO há desconto manual configurado)
+        // Isso preserva promoções/descontos intencionais do admin.
+        const currentCatalog = product.price_catalog || 0;
+        const isCatalogSyncedWithRetail = currentCatalog > 0 && Math.abs(currentCatalog - oldPrice) < 0.01;
+        if (product.catalog_active === true && isCatalogSyncedWithRetail) {
+          updateData.price_catalog = newPrice;
+        }
+
+        // Atualiza produto
+        await base44.asServiceRole.entities.Product.update(product.id, updateData);
 
         // Registra no histórico
         await base44.asServiceRole.entities.PriceHistory.create({
