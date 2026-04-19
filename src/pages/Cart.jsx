@@ -44,7 +44,6 @@ export default function Cart() {
   const [pixConfirmed, setPixConfirmed] = useState(false);
   const [createdSales, setCreatedSales] = useState([]);
   const [checkoutItems, setCheckoutItems] = useState([]); // Snapshot dos itens ao gerar PIX
-  const isSubmittingRef = useRef(false); // Guard atômico contra duplo clique
   const pollingIntervalRef = useRef(null); // Ref para gerenciar o intervalo de polling
 
   // Form data
@@ -271,51 +270,24 @@ export default function Cart() {
   };
 
   const handleCheckout = async () => {
-    // Guard atômico: bloqueia duplo clique mesmo durante async
-    if (isSubmittingRef.current) return;
-    isSubmittingRef.current = true;
+    // Guard: usa isProcessing (state) como único bloqueio — desabilita o botão via disabled
+    if (isProcessing) return;
 
     if (cartItems.length === 0) {
-      isSubmittingRef.current = false;
       toast.error('Seu carrinho está vazio');
       return;
     }
 
-    // Validações — resetar guard antes de cada return para não travar o botão
-    if (!formData.name.trim()) {
-      isSubmittingRef.current = false;
-      toast.error('Preencha seu nome');
-      return;
-    }
-    if (!formData.phone.trim()) {
-      isSubmittingRef.current = false;
-      toast.error('Preencha seu telefone');
-      return;
-    }
-    if (!formData.cpf.trim()) {
-      isSubmittingRef.current = false;
-      toast.error('Preencha seu CPF');
-      return;
-    }
-    if (!isValidCpf(formData.cpf)) {
-      isSubmittingRef.current = false;
-      toast.error('CPF inválido. Verifique os números digitados.');
-      return;
-    }
-    if (!formData.email.trim()) {
-      isSubmittingRef.current = false;
-      toast.error('Preencha seu email');
-      return;
-    }
-    if (!currentUser || !currentUser.id) {
-      isSubmittingRef.current = false;
-      toast.error('Você precisa estar logado para finalizar a compra');
-      return;
-    }
+    // Validações — retorna antes de marcar isProcessing para não travar
+    if (!formData.name.trim()) { toast.error('Preencha seu nome'); return; }
+    if (!formData.phone.trim()) { toast.error('Preencha seu telefone'); return; }
+    if (!formData.cpf.trim()) { toast.error('Preencha seu CPF'); return; }
+    if (!isValidCpf(formData.cpf)) { toast.error('CPF inválido. Verifique os números digitados.'); return; }
+    if (!formData.email.trim()) { toast.error('Preencha seu email'); return; }
+    if (!currentUser || !currentUser.id) { toast.error('Você precisa estar logado para finalizar a compra'); return; }
 
     if (deliveryMethod === 'delivery') {
       if (!formData.cep.trim() || !formData.street.trim() || !formData.number.trim() || !formData.city.trim()) {
-        isSubmittingRef.current = false;
         toast.error('Preencha o endereço completo para entrega');
         return;
       }
@@ -323,20 +295,15 @@ export default function Cart() {
 
     if (paymentType === 'CREDIT_CARD') {
       if (!cardNumber?.trim() || !cardName?.trim() || !cardExpiry?.trim() || !cardCvv?.trim()) {
-        isSubmittingRef.current = false;
         toast.error('Preencha todos os dados do cartão');
         return;
       }
     }
 
     const totalAmount = calculateSubtotal();
+    if (totalAmount < 5) { toast.error('Valor mínimo para pagamento: R$ 5,00'); return; }
 
-    if (totalAmount < 5) {
-      isSubmittingRef.current = false;
-      toast.error('Valor mínimo para pagamento: R$ 5,00');
-      return;
-    }
-
+    // ✅ Todas validações passaram — agora bloqueia o botão
     setIsProcessing(true);
     toast.loading('Processando compra...', { id: 'checkout-loading' });
 
@@ -396,10 +363,9 @@ export default function Cart() {
       setCreatedSales(salesBatch);
 
       // Criar pagamento ASAAS único para todo o carrinho
-      // 🔒 Envia TODOS os IDs separados por vírgula no campo existente (sem mudar schema)
       const paymentPayload = {
         catalog_sale_id: salesBatch.map(s => s.id).join(','),
-        buyer_id: currentUser.id, // ✅ CRÍTICO: necessário para vincular o pedido ao usuário
+        buyer_id: currentUser.id,
         buyer_name: formData.name.trim(),
         buyer_email: formData.email.trim(),
         buyer_cpf: formData.cpf.replace(/\D/g, ''),
@@ -421,53 +387,41 @@ export default function Cart() {
       }
 
       const paymentRaw = await base44.functions.invoke('createAsaasPayment', paymentPayload);
-      // ✅ Normaliza resposta igual ao AuctionCheckoutModern (garante que pix_qr_code está acessível)
       const paymentResponse = paymentRaw?.data || paymentRaw;
 
-      setIsProcessing(false);
       toast.dismiss('checkout-loading');
 
       if (paymentResponse?.success) {
-        // 🛡 BLOQUEIO ANTI-FRUSTRAÇÃO: Evitar esvaziar carrinho se o cartão foi recusado imediatamente
+        // Verificar se cartão foi recusado imediatamente
         const isRejected = paymentResponse.asaas_status === 'REJECTED' || paymentResponse.asaas_status === 'FAILED';
 
         if (isRejected) {
           toast.error('Pagamento recusado pela operadora do cartão. Tente novamente ou use outro meio de pagamento.');
-          setIsProcessing(false);
-
-          // Limpar as vendas de lote pré-geradas para não travar o estoque ou comissionamento
+          // Limpar as vendas pré-geradas
           for (const sale of salesBatch) {
-            try {
-              await base44.entities.CatalogSale.delete(sale.id);
-            } catch (e) {
-              console.warn('Erro ao limpar venda recusada:', e.message);
-            }
+            try { await base44.entities.CatalogSale.delete(sale.id); } catch (e) { /* ignora */ }
           }
           setCreatedSales([]);
-          return;
+          return; // finally vai resetar isProcessing
         }
 
-        // 🔒 Salvar snapshot dos itens ANTES de limpar o carrinho
+        // Salvar snapshot dos itens ANTES de limpar o carrinho
         setCheckoutItems([...cartItems]);
-
         setPixData({ ...paymentResponse, billing_type: paymentType });
         toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
 
-        // Limpa carrinho apenas se o pagamento foi criado E não foi rejeitado
+        // Limpa carrinho
         updateCart([]);
-        // ✅ Resetar payment form para próxima compra
         setCardNumber('');
         setCardName('');
         setCardExpiry('');
         setCardCvv('');
-        isSubmittingRef.current = false;
       } else {
         const errorMsg = paymentResponse?.error || 'Erro na transação. Verifique seus dados.';
         const errorDetails = paymentResponse?.details;
 
         if (errorDetails && Array.isArray(errorDetails)) {
           const asaasError = errorDetails.map(e => e.description).join(', ');
-          // Mensagem amigável para CPF inválido
           if (asaasError.toLowerCase().includes('cpf')) {
             toast.error('CPF inválido ou não encontrado. Verifique os dados.');
           } else {
@@ -479,31 +433,23 @@ export default function Cart() {
 
         // Limpar vendas criadas em caso de erro
         for (const sale of salesBatch) {
-          try {
-            await base44.entities.CatalogSale.delete(sale.id);
-          } catch (e) {
-            console.warn('Erro ao limpar venda:', e.message);
-          }
+          try { await base44.entities.CatalogSale.delete(sale.id); } catch (e) { /* ignora */ }
         }
-        setCreatedSales([]); // Limpar estado
-        isSubmittingRef.current = false;
+        setCreatedSales([]);
       }
     } catch (error) {
       console.error('Erro no checkout:', error);
-      setIsProcessing(false);
       toast.dismiss('checkout-loading');
       toast.error(`Erro: ${error.message || 'Erro desconhecido'}`);
 
       // Limpar vendas em caso de erro
       for (const sale of salesBatch) {
-        try {
-          await base44.entities.CatalogSale.delete(sale.id);
-        } catch (e) {
-          console.warn('Erro ao limpar:', e.message);
-        }
+        try { await base44.entities.CatalogSale.delete(sale.id); } catch (e) { /* ignora */ }
       }
-      setCreatedSales([]); // Limpar estado
-      isSubmittingRef.current = false;
+      setCreatedSales([]);
+    } finally {
+      // ✅ GARANTIA ABSOLUTA: isProcessing SEMPRE reseta, independente do caminho
+      setIsProcessing(false);
     }
   };
 
