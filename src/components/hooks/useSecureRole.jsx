@@ -56,6 +56,12 @@ export function useSecureRole(allowedRoles = [], redirectTo = 'Home') {
                     // Se o banco falhar, usa o cache local como fallback (sem bloquear)
                     console.warn('[useSecureRole] Erro ao verificar role no banco, usando cache:', dbError.message);
                     verifiedUser = cached;
+                    // PROTEÇÃO MASTER: Garante que o MASTER_ADMIN_EMAIL sempre tenha role 'admin'
+                    const MASTER_ADMIN_EMAIL = 'luizsantanna@tttcorporate.com';
+                    if (verifiedUser && verifiedUser.email === MASTER_ADMIN_EMAIL) {
+                        verifiedUser.role = 'admin';
+                        console.log(`👑 PROTEÇÃO MASTER (useSecureRole fallback): '${MASTER_ADMIN_EMAIL}' forçado para role 'admin'.`);
+                    }
                 }
 
                 if (!active) return;
