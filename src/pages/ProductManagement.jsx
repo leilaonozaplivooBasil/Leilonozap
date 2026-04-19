@@ -147,6 +147,7 @@ export default function ProductManagement() {
       for (const item of toUpdate) {
         const updateData = { selling_price_retail: item.selling_price_retail };
         if (item.source_url) updateData.source_url = item.source_url;
+        if (item.market_price) updateData.market_value = item.market_price;
         await base44.entities.Product.update(item.id, updateData);
       }
       alert(`✅ ${toUpdate.length} produto(s) precificado(s)!`);
