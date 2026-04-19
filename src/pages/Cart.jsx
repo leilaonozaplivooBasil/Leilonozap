@@ -504,12 +504,8 @@ export default function Cart() {
       setPixData({ ...paymentResponse, billing_type: paymentType });
       toast.success(paymentType === 'PIX' ? '✅ PIX gerado!' : '✅ Pagamento processado!');
 
-      // Limpa carrinho e campos de cartão
+      // Limpa carrinho
       updateCart([]);
-      setCardNumber('');
-      setCardName('');
-      setCardExpiry('');
-      setCardCvv('');
 
     } catch (error) {
       console.error('Erro no checkout:', error);
