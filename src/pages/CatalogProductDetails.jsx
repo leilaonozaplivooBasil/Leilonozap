@@ -122,8 +122,15 @@ export default function CatalogProductDetails() {
       ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`
       : `https://wa.me/?text=${encodeURIComponent(message)}`;
 
-    // Tenta Web Share API com imagem (mobile)
-    if (imageUrl && navigator.share && navigator.canShare) {
+    // Tenta Web Share API com imagem (mobile) — apenas para URLs internas/supabase
+    // URLs externas (Google Shopping, gstatic, etc.) bloqueiam CORS e causam erro
+    const isInternalImage = imageUrl && (
+      imageUrl.includes('supabase.co') || 
+      imageUrl.includes('base44') || 
+      imageUrl.startsWith('blob:')
+    );
+
+    if (isInternalImage && navigator.share && navigator.canShare) {
       try {
         const response = await fetch(imageUrl);
         if (response.ok) {
@@ -140,6 +147,8 @@ export default function CatalogProductDetails() {
         }
       } catch (e) {
         if (e.name === 'AbortError') return;
+        // Qualquer outro erro: cai silenciosamente no fallback
+        console.debug('Share com imagem falhou, usando fallback texto:', e.message);
       }
     }
 

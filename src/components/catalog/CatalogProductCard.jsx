@@ -163,69 +163,44 @@ ${productUrl}`;
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-    try {
-      // 🍎 iOS
-      if (isIOS && navigator.share && navigator.canShare) {
-        const imageUrl = product.image_urls?.[0];
-        
-        if (imageUrl) {
-          try {
-            const response = await fetch(imageUrl);
-            if (!response.ok) throw new Error('Erro ao baixar imagem');
-            
-            const blob = await response.blob();
-            const file = new File([blob], 'produto.jpg', { type: blob.type });
-            
-            if (navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                title: `🛍️ ${product.description}`,
-                text: shareMessage,
-                files: [file]
-              });
-              return;
-            }
-          } catch (imgError) {
-            // Fallback sem imagem
-          }
-        }
-        
-        await navigator.share({
-          title: `🛍️ ${product.description}`,
-          text: shareMessage,
-        });
-        return;
-      }
+    const imageUrl = product.image_urls?.[0];
+    // Só tenta fetch de imagem em URLs internas (supabase/base44) — URLs externas bloqueiam CORS
+    const isInternalImage = imageUrl && (
+      imageUrl.includes('supabase.co') || 
+      imageUrl.includes('base44') || 
+      imageUrl.startsWith('blob:')
+    );
 
-      // 🤖 ANDROID
-      if (isAndroid) {
-        const imageUrl = product.image_urls?.[0];
-        
-        if (imageUrl && navigator.share && navigator.canShare) {
+    try {
+      // 📱 Mobile (iOS + Android) — tenta Web Share API com imagem se URL interna
+      if ((isIOS || isAndroid) && navigator.share && navigator.canShare) {
+        if (isInternalImage) {
           try {
             const response = await fetch(imageUrl);
-            if (!response.ok) throw new Error('Erro ao baixar imagem');
-            
-            const blob = await response.blob();
-            const file = new File([blob], 'produto.jpg', { 
-              type: 'image/jpeg',
-              lastModified: new Date().getTime()
-            });
-            
-            if (navigator.canShare({ files: [file] })) {
-              await navigator.share({
-                title: `🛍️ ${product.description}`,
-                text: shareMessage,
-                files: [file]
-              });
-              return;
+            if (response.ok) {
+              const blob = await response.blob();
+              const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
+              if (navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                  title: `🛍️ ${product.description}`,
+                  text: shareMessage,
+                  files: [file]
+                });
+                return;
+              }
             }
           } catch (imgError) {
-            // Fallback
+            console.debug('Share com imagem falhou, usando fallback:', imgError.message);
           }
         }
-        
-        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`;
-        window.open(whatsappUrl, '_blank');
+
+        // Fallback: share sem imagem (mobile)
+        if (isIOS) {
+          await navigator.share({ title: `🛍️ ${product.description}`, text: shareMessage });
+          return;
+        }
+        // Android fallback: abre WhatsApp direto
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareMessage)}`, '_blank');
         return;
       }
 
