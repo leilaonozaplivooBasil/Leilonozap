@@ -42,6 +42,8 @@ export default function Cart() {
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvv, setCardCvv] = useState('');
   const [pixConfirmed, setPixConfirmed] = useState(false);
+  const [paymentDetected, setPaymentDetected] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const [createdSales, setCreatedSales] = useState([]);
   const [checkoutItems, setCheckoutItems] = useState([]); // Snapshot dos itens ao gerar PIX
   const pollingIntervalRef = useRef(null); // Ref para gerenciar o intervalo de polling
@@ -133,6 +135,21 @@ export default function Cart() {
     loadUserData();
   }, []);
 
+  // ⏱️ Contagem regressiva após detecção do pagamento
+  useEffect(() => {
+    if (!paymentDetected || countdown <= 0) return;
+    if (countdown === 1) {
+      const timer = setTimeout(() => {
+        setCountdown(0);
+        setPixConfirmed(true);
+        toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+    const timer = setTimeout(() => setCountdown(prev => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [paymentDetected, countdown]);
+
   // 🔄 Polling para detectar confirmação de pagamento PIX
   useEffect(() => {
     // ⚠️ NÃO disparar se já confirmou, se não há PIX ou se não tem payment_id
@@ -157,8 +174,8 @@ export default function Cart() {
         if (data?.found && data?.status === 'confirmed') {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
-          toast.success('✅ Pagamento PIX Confirmado!', { duration: 3000 });
-          setPixConfirmed(true);
+          setPaymentDetected(true);
+          setCountdown(5);
         }
       } catch (error) {
         console.debug('Polling error:', error.message);
@@ -934,67 +951,98 @@ export default function Cart() {
             {/* QR Code PIX ou Sucesso */}
             {pixData && pixData.billing_type === 'PIX' && !pixConfirmed && (
               <Card className="bg-gray-800 border-gray-700 p-5">
-                <h3 className="text-lg font-bold text-green-400 text-center mb-4">💚 Pague com PIX</h3>
-
-                {/* Indicador de monitoramento */}
-                <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
-                  <p className="text-blue-400 text-xs">Monitorando pagamento em tempo real...</p>
-                </div>
-
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  {pixData.pix_qr_code ? (
-                    <img
-                      src={pixData.pix_qr_code}
-                      alt="QR Code PIX"
-                      className="w-full max-w-[280px] mx-auto"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
-                      Carregando QR Code...
+                {/* ESTADO 1: Pagamento detectado — contagem regressiva */}
+                {paymentDetected && countdown > 0 ? (
+                  <div className="text-center py-6">
+                    <div className="relative w-24 h-24 mx-auto mb-6">
+                      <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(16,185,129,0.15)" strokeWidth="6" />
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="#10b981" strokeWidth="6" strokeLinecap="round"
+                          strokeDasharray={`${(countdown / 5) * 264} 264`}
+                          className="transition-all duration-1000 ease-linear"
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-3xl font-black text-green-400">{countdown}</span>
+                      </div>
                     </div>
-                  )}
-                </div>
+                    <div className="flex items-center justify-center gap-2 mb-3">
+                      <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse" />
+                      <h3 className="text-xl font-bold text-green-400">Pagamento Identificado!</h3>
+                    </div>
+                    <p className="text-gray-300 text-sm">Estamos atualizando seu pedido...</p>
+                    <div className="mt-4 bg-green-600/10 border border-green-500/30 rounded-lg p-3">
+                      <p className="text-green-300 text-xs">Tudo certo! Sua compra está sendo processada com segurança.</p>
+                    </div>
+                  </div>
+                ) : (
+                  /* ESTADO 2: Aguardando pagamento — QR Code normal */
+                  <>
+                    <h3 className="text-lg font-bold text-green-400 text-center mb-4">💚 Pague com PIX</h3>
 
-                {/* Aviso de expiração */}
-                <div className="bg-yellow-600/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
-                  <p className="text-yellow-400 text-xs text-center">
-                    ⏰ Este código expira em 15 minutos
-                  </p>
-                </div>
-                <Button
-                  onClick={() => {
-                    navigator.clipboard.writeText(pixData.pix_payload);
-                    toast.success('Código PIX copiado!');
-                  }}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold mb-3"
-                >
-                  <Copy className="w-5 h-5 mr-2" />
-                  Copiar Código PIX
-                </Button>
-                <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
-                  <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
-                  <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
-                </div>
+                    {/* Indicador de monitoramento */}
+                    <div className="bg-blue-600/10 border border-blue-500/30 rounded-lg p-3 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                      <p className="text-blue-400 text-xs">Monitorando pagamento em tempo real...</p>
+                    </div>
 
-                <Button
-                  onClick={() => {
-                    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
-                    setPixData(null);
-                    setPixConfirmed(false);
-                    setPaymentType('PIX');
-                  }}
-                  variant="outline"
-                  className="w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600 mb-2"
-                >
-                  Alterar Forma de Pagamento
-                </Button>
-                <Button
-                  onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
-                  className="w-full bg-gray-700 hover:bg-gray-600 text-white"
-                >
-                  Ver Meus Pedidos
-                </Button>
+                    <div className="bg-white rounded-lg p-4 mb-4">
+                      {pixData.pix_qr_code ? (
+                        <img
+                          src={pixData.pix_qr_code}
+                          alt="QR Code PIX"
+                          className="w-full max-w-[280px] mx-auto"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-40 text-gray-400 text-sm">
+                          Carregando QR Code...
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Aviso de expiração */}
+                    <div className="bg-yellow-600/10 border border-yellow-500/30 rounded-lg p-3 mb-4">
+                      <p className="text-yellow-400 text-xs text-center">
+                        ⏰ Este código expira em 15 minutos
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        navigator.clipboard.writeText(pixData.pix_payload);
+                        toast.success('Código PIX copiado!');
+                      }}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white font-bold mb-3"
+                    >
+                      <Copy className="w-5 h-5 mr-2" />
+                      Copiar Código PIX
+                    </Button>
+                    <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
+                      <p className="text-xs text-gray-400 mb-2">Código PIX (Copia e Cola):</p>
+                      <p className="text-xs text-white font-mono break-all">{pixData.pix_payload}</p>
+                    </div>
+
+                    <Button
+                      onClick={() => {
+                        if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+                        setPixData(null);
+                        setPixConfirmed(false);
+                        setPaymentDetected(false);
+                        setCountdown(0);
+                        setPaymentType('PIX');
+                      }}
+                      variant="outline"
+                      className="w-full bg-gray-700 border-gray-600 text-white hover:bg-gray-600 mb-2"
+                    >
+                      Alterar Forma de Pagamento
+                    </Button>
+                    <Button
+                      onClick={() => navigate(createPageUrl('MyCatalogOrders'))}
+                      className="w-full bg-gray-700 hover:bg-gray-600 text-white"
+                    >
+                      Ver Meus Pedidos
+                    </Button>
+                  </>
+                )}
               </Card>
             )}
 
