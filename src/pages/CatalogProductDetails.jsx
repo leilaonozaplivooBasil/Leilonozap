@@ -116,30 +116,22 @@ export default function CatalogProductDetails() {
     return url.toString();
   };
 
-  const buildShareMessage = (isLicensee, withEmojis = true) => {
+  const buildShareMessage = (isLicensee) => {
     const productUrl = getCanonicalProductUrl();
     const price = product.price_catalog?.toFixed(2) || '0.00';
 
     if (isLicensee) {
-      return withEmojis
-        ? `Olá! Tenho interesse neste produto da *sua Loja Virtual*:\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🔗 ${productUrl}`
-        : `Olá! Tenho interesse neste produto da *sua Loja Virtual*:\n\n*${product.description}*\n\n*R$ ${price}*\n\n${productUrl}`;
+      return `Olá! Tenho interesse neste produto da *sua Loja Virtual*:\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🔗 ${productUrl}`;
     }
-    return withEmojis
-      ? `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🛒 Compre agora:\n${productUrl}`
-      : `*LOJA VIRTUAL NOZAP*\n\n*${product.description}*\n\n*R$ ${price}*\n\nCompre agora:\n${productUrl}`;
+    return `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🛒 Compre agora:\n${productUrl}`;
   };
 
   const shareWithImage = async (isLicensee, targetNumber) => {
     const imageUrl = product?.image_urls?.[0];
-    // Mensagem SEM emojis para link wa.me (desktop) — emojis viram ◆/? no WhatsApp Web
-    const desktopMessage = buildShareMessage(isLicensee, false);
+    const message = buildShareMessage(isLicensee);
     const waUrl = targetNumber
-      ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(desktopMessage)}`
-      : `https://wa.me/?text=${encodeURIComponent(desktopMessage)}`;
-
-    // Mensagem COM emojis para Web Share API (mobile) — emojis funcionam perfeitamente
-    const mobileMessage = buildShareMessage(isLicensee, true);
+      ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
 
     // Tenta Web Share API com imagem (mobile) — apenas para URLs internas/supabase
     const isInternalImage = imageUrl && (
@@ -157,7 +149,7 @@ export default function CatalogProductDetails() {
           if (navigator.canShare({ files: [file] })) {
             await navigator.share({
               title: product.description,
-              text: mobileMessage,
+              text: message,
               files: [file]
             });
             return;
@@ -169,7 +161,7 @@ export default function CatalogProductDetails() {
       }
     }
 
-    // Fallback: abre WhatsApp com texto (sem emojis)
+    // Fallback: abre WhatsApp com texto
     window.open(waUrl, '_blank');
   };
 
