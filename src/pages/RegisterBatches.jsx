@@ -114,13 +114,13 @@ export default function RegisterBatches() {
           
           const productsInStock = await base44.entities.Product.filter({ lot: lote.numero_lote });
           const expectedCount = lote.produtos?.reduce((sum, p) => sum + (p.quantidade || 1), 0) || 0;
-          const foundCount = productsInStock.length;
+          const foundQty = productsInStock.reduce((sum, p) => sum + (p.quantity || 0) + (p.quantity_sold || 0), 0);
           
           statusMap[loteKey] = {
             expected: expectedCount,
-            found: foundCount,
-            missing: expectedCount - foundCount,
-            complete: foundCount >= expectedCount
+            found: foundQty,
+            missing: Math.max(0, expectedCount - foundQty),
+            complete: foundQty >= expectedCount
           };
           
           requestCount++;
