@@ -10,6 +10,7 @@ import {
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
 } from '@/components/ui/tooltip';
+import CatalogSyncCard from '@/components/precificavivo/CatalogSyncCard';
 
 export default function PrecificaVivoPainel() {
   const [stats, setStats] = useState(null);
@@ -145,6 +146,9 @@ export default function PrecificaVivoPainel() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Card inteligente: sincronização da Loja Virtual */}
+        <CatalogSyncCard />
 
         {/* Métricas */}
         <TooltipProvider delayDuration={150}>
