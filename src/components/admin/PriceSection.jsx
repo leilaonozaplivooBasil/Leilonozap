@@ -5,6 +5,18 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DollarSign } from "lucide-react";
 
+// Sugere incremento proporcional ao lance inicial do leilão
+function suggestIncrement(lanceInicio) {
+  if (lanceInicio <= 0) return null;
+  if (lanceInicio < 30)    return { value: "2.00",   label: "R$ 2" };
+  if (lanceInicio < 100)   return { value: "5.00",   label: "R$ 5" };
+  if (lanceInicio < 300)   return { value: "10.00",  label: "R$ 10" };
+  if (lanceInicio < 700)   return { value: "20.00",  label: "R$ 20" };
+  if (lanceInicio < 1500)  return { value: "50.00",  label: "R$ 50" };
+  if (lanceInicio < 5000)  return { value: "100.00", label: "R$ 100" };
+  return { value: "250.00", label: "R$ 250" };
+}
+
 export default function PriceSection({ formData, onInputChange }) {
   const sp = parseFloat(formData.starting_price) || 0;
   // sp = valor de mercado (base inserida pelo admin)
@@ -13,6 +25,7 @@ export default function PriceSection({ formData, onInputChange }) {
   // Arremate Agora = preço da Loja Virtual (teto direto)
   const lojaPrice = sp > 0 ? parseFloat((sp * 0.80).toFixed(2)) : 0;
   const leilaoInicio = sp > 0 ? parseFloat((sp * 0.60).toFixed(2)) : 0;
+  const incrementSuggestion = suggestIncrement(leilaoInicio);
 
   return (
     <Card className="bg-gray-800 border border-gray-700">
@@ -74,6 +87,20 @@ export default function PriceSection({ formData, onInputChange }) {
             required
             className="mt-1 bg-gray-900 border-gray-600 text-gray-100 placeholder-gray-500 focus:border-green-500"
           />
+          {incrementSuggestion && formData.increment !== incrementSuggestion.value && (
+            <div className="mt-1.5 p-2 bg-purple-900/20 border border-purple-600/30 rounded-lg">
+              <p className="text-xs text-purple-300">
+                💡 Sugerido: <strong>{incrementSuggestion.label}</strong> para lance de R$ {leilaoInicio.toFixed(2)}
+              </p>
+              <button
+                type="button"
+                onClick={() => onInputChange("increment", incrementSuggestion.value)}
+                className="mt-1 text-xs text-purple-400 underline hover:text-purple-300"
+              >
+                Usar este valor
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ARREMATE AGORA */}
