@@ -108,6 +108,17 @@ export default function CreateAuction() {
   // 🆕 ESTADOS PARA MODAL DE CONFIRMAÇÃO
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
+  // 🆕 AUTO-CONVERT starting_price: quando admin digita, aplica lance inicial automaticamente
+  useEffect(() => {
+    const inputVal = parseFloat(formData.starting_price) || 0;
+    if (inputVal > 0) {
+      const lanceInicio = parseFloat((inputVal * 0.80).toFixed(2));
+      if (lanceInicio !== inputVal) {
+        setFormData(prev => ({ ...prev, starting_price: lanceInicio.toString() }));
+      }
+    }
+  }, [formData.starting_price]);
+
   // 🆕 ESTADOS PARA IMPORTADOR INTELIGENTE
   const [imageUrlInput, setImageUrlInput] = useState('');
   const [isImporting, setIsImporting] = useState(false);
