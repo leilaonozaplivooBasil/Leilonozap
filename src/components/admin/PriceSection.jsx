@@ -20,20 +20,20 @@ function suggestIncrement(lanceInicio) {
 export default function PriceSection({ formData, onInputChange }) {
   const sp = parseFloat(formData.starting_price) || 0;
 
-  // sp = preço digitado pelo admin = preço da Loja Virtual (já com −20% do mercado real)
+  // sp = valor digitado pelo admin = lance inicial do leilão (exatamente o que aparece no leilão)
   // Mercado real = sp ÷ 0.80 (+20% sobre sp)
   // Loja Virtual = sp (o próprio valor digitado)
-  // Lance inicial = sp × 0.80 (−20% da loja)
+  // Lance inicial = sp (direto, sem transformação)
   // Arremate Agora = Loja Virtual (= sp)
   const mercadoReal = sp > 0 ? parseFloat((sp / 0.80).toFixed(2)) : 0;
-  const lojaPrice = sp; // o próprio valor digitado
-  const leilaoInicio = sp > 0 ? parseFloat((sp * 0.80).toFixed(2)) : 0;
+  const lojaPrice = sp;
+  const leilaoInicio = sp; // o lance inicial É o valor digitado
   const incrementSuggestion = suggestIncrement(leilaoInicio);
 
   // Auto-aplica incremento sugerido quando o valor digitado muda
   useEffect(() => {
     if (sp <= 0) return;
-    const suggestion = suggestIncrement(sp * 0.80);
+    const suggestion = suggestIncrement(sp);
     if (suggestion) {
       onInputChange("increment", suggestion.value);
     }
@@ -77,7 +77,7 @@ export default function PriceSection({ formData, onInputChange }) {
                   <span className="text-xs text-blue-400 font-bold whitespace-nowrap">R$ {lojaPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial <span className="text-gray-500">(−20%)</span></span>
+                  <span className="text-xs text-gray-400 whitespace-nowrap">🔨 Lance inicial</span>
                   <span className="text-xs text-yellow-400 font-bold whitespace-nowrap">R$ {leilaoInicio.toFixed(2)}</span>
                 </div>
               </div>

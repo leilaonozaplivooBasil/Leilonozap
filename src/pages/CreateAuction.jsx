@@ -897,14 +897,13 @@ export default function CreateAuction() {
         const endTimeISO = endTime.toISOString();
 
         // Regra de negócio:
-        // starting_price = preço da Loja Virtual (valor digitado pelo admin, já com −20% do mercado real)
+        // starting_price = lance inicial do leilão (valor exato digitado pelo admin)
         // Mercado real = starting_price ÷ 0.80
-        // Loja Virtual = starting_price (o próprio valor)
-        // Lance inicial = starting_price × 0.80 (−20% da loja)
-        // Arremate Agora = preço da Loja Virtual
+        // Lance inicial = starting_price (sem transformação)
+        // Arremate Agora = catalogPrice ou starting_price
         const lojaVirtual = parseFloat(formData.starting_price) || 0;
         const finalCatalogPriceForAuction = catalogPrice || lojaVirtual;
-        const auctionStartingPrice = parseFloat((lojaVirtual * 0.80).toFixed(2));
+        const auctionStartingPrice = lojaVirtual; // lance inicial = valor digitado diretamente
         const auctionBuyNowPrice = parseFloat(finalCatalogPriceForAuction.toFixed(2));
 
         const auctionData = {
