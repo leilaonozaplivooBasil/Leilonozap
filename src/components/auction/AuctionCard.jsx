@@ -22,6 +22,7 @@ import { useState as useReactState } from "react"; // Para o modal
 
 // import CountdownTimer from "../common/CountdownTimer"; // Removido
 import ComparaiModal from '../comparai/ComparaiModal';
+import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 
 // 🆕 IMPORT DO MODAL
 import FavoriteButton from '../recommendations/FavoriteButton';
@@ -546,9 +547,12 @@ function AuctionCard({ auction, isAdmin, showFavoriteButton = false, userId = nu
           {/* 🌎 COUNTDOWN COM FUSO HORÁRIO CORRETO */}
           <div className="flex items-center justify-between mb-3 gap-2">
             <div className="min-w-0 flex-1">
-              <p className={`text-xs sm:text-sm ${secondaryTextColor} mb-1`}>
-                {isActive ? 'Lance atual' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
-              </p>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <p className={`text-xs sm:text-sm ${secondaryTextColor}`}>
+                  {isActive ? 'Lance atual' : auction.winner_name ? 'Arrematado por' : 'Encerrado'}
+                </p>
+                <PrecificaVivoBadge lastUpdate={auction.last_dynamic_update} size="sm" />
+              </div>
               <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-600 break-words">
                 R$ {currentPrice.toFixed(2)}
               </p>

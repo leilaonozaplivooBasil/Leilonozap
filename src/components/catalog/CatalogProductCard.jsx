@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Play, Pause, Edit, Check } from "lucide-react";
 import ComparaiModal from '../comparai/ComparaiModal';
+import PrecificaVivoBadge from '../pricing/PrecificaVivoBadge';
 
 function CatalogProductCard({ product, currentUser }) {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -344,7 +345,10 @@ ${categoryEmoji} ${product.description}
         </h3>
 
         <div className="mb-2 sm:mb-4">
-          <p className="text-gray-400 text-[10px] sm:text-xs mb-0.5">Preço</p>
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-gray-400 text-[10px] sm:text-xs">Preço</p>
+            <PrecificaVivoBadge lastUpdate={product.last_dynamic_update} size="sm" />
+          </div>
           <p className="text-lg sm:text-2xl font-black text-green-400">
             R$ {product.price_catalog ? product.price_catalog.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00"}
           </p>
