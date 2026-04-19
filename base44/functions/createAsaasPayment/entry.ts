@@ -7,8 +7,12 @@ Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
 
-        // ⚠️ REMOVIDO: Validação de auth (frontend já valida)
-        // Backend functions podem ser chamadas sem auth quando invocadas via SDK
+        // 🔒 VALIDAÇÃO DE AUTENTICAÇÃO — Bloqueia chamadas não autenticadas
+        const authUser = await base44.auth.me();
+        if (!authUser) {
+            console.error('🚫 createAsaasPayment: Chamada sem autenticação rejeitada');
+            return Response.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
         const {
             catalog_sale_id,
