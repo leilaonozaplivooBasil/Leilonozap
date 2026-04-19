@@ -737,6 +737,7 @@ export default function ProductManagement() {
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Data</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'110px'}}>SKU</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider" style={{width:'220px'}}>Produto</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'100px'}}>Publicado</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap" style={{width:'90px'}}>Depósito</th>
                   <th className="text-center px-3 py-2.5 text-xs font-semibold text-emerald-500 uppercase tracking-wider whitespace-nowrap" style={{width:'72px'}}>✅ Perf.</th>
                   <th className="text-center px-3 py-2.5 text-xs font-semibold text-yellow-500 uppercase tracking-wider whitespace-nowrap" style={{width:'60px'}}>🟡 Bom</th>
@@ -783,6 +784,19 @@ export default function ProductManagement() {
                           </div>
                         );
                       })()}
+                    </td>
+                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col gap-0.5">
+                        {product.catalog_active && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 border border-violet-500/30 whitespace-nowrap">🛒 Loja</span>
+                        )}
+                        {(product.linked_auctions?.length > 0) && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30 whitespace-nowrap">🔨 Leilão ({product.linked_auctions.length})</span>
+                        )}
+                        {!product.catalog_active && !(product.linked_auctions?.length > 0) && (
+                          <span className="text-[10px] text-gray-700">—</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-2.5" onClick={() => handleEdit(product)}>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${depositBadge(product.deposit_name || 'Bangu')}`}>{product.deposit_name || 'Bangu'}</span>
