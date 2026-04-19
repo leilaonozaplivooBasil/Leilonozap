@@ -116,27 +116,50 @@ export default function CatalogProductDetails() {
     return url.toString();
   };
 
+  const shareWithImage = async (message, targetNumber) => {
+    const imageUrl = product?.image_urls?.[0];
+    const waUrl = targetNumber
+      ? `https://wa.me/${targetNumber}?text=${encodeURIComponent(message)}`
+      : `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+    // Tenta Web Share API com imagem (mobile)
+    if (imageUrl && navigator.share && navigator.canShare) {
+      try {
+        const response = await fetch(imageUrl);
+        if (response.ok) {
+          const blob = await response.blob();
+          const file = new File([blob], 'produto.jpg', { type: blob.type || 'image/jpeg' });
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: `🛍️ ${product.description}`,
+              text: message,
+              files: [file]
+            });
+            return;
+          }
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback: abre WhatsApp com texto
+    window.open(waUrl, '_blank');
+  };
+
+  const buildShareMessage = (isLicensee) => {
+    const productUrl = getCanonicalProductUrl();
+    const price = product.price_catalog?.toFixed(2) || '0.00';
+
+    if (isLicensee) {
+      return `Olá! Tenho interesse neste produto da *sua Loja Virtual*:\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🔗 ${productUrl}`;
+    }
+    return `🛍️ *LOJA VIRTUAL NOZAP*\n\n📦 *${product.description}*\n\n💚 *R$ ${price}*\n\n🛒 Compre agora:\n${productUrl}`;
+  };
+
   const handleShare = async () => {
     if (!product) return;
-
-    const productUrl = getCanonicalProductUrl();
-    const shareText = `🛍️ LOJA VIRTUAL NOZAP!\n\n📱 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n🛒 Compre agora: ${productUrl}`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `Produto: ${product.description}`,
-          text: shareText,
-          url: productUrl
-        });
-      } catch (e) {
-        if (e.name !== "AbortError") {
-          window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-        }
-      }
-    } else {
-      window.open(`https://wa.me/?text=${encodeURIComponent(shareText)}`, '_blank');
-    }
+    await shareWithImage(buildShareMessage(false));
   };
 
   if (isLoading) {
@@ -198,10 +221,8 @@ export default function CatalogProductDetails() {
     window.dispatchEvent(new Event('openCartPopup'));
   };
 
-  const handleWhatsApp = () => {
-    const productUrl = getCanonicalProductUrl();
-    const message = `Olá! Tenho interesse no produto:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n\n${productUrl}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
+  const handleWhatsApp = async () => {
+    await shareWithImage(buildShareMessage(false));
   };
 
   const normalizeToWaNumber = (phone) => {
@@ -211,16 +232,9 @@ export default function CatalogProductDetails() {
     return `55${digits}`; // assume Brasil
   };
 
-  const handleWhatsAppToLicensee = () => {
-    const productUrl = getCanonicalProductUrl();
-    const message = `Olá! Tenho interesse neste produto da Loja Virtual:\n\n📦 ${product.description}\n💰 R$ ${product.price_catalog?.toFixed(2)}\n🔗 ${productUrl}`;
+  const handleWhatsAppToLicensee = async () => {
     const number = normalizeToWaNumber(licenseePhone);
-    if (number) {
-      window.open(`https://wa.me/${number}?text=${encodeURIComponent(message)}`, '_blank');
-    } else {
-      // fallback genérico caso não exista telefone do licenciado
-      window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank');
-    }
+    await shareWithImage(buildShareMessage(true), number || undefined);
   };
 
   return (
