@@ -35,24 +35,11 @@ export default function CatalogOrdersAdmin() {
   const loadOrders = async () => {
     setIsLoading(true);
     try {
-      // Admin usa asServiceRole via backend para bypass de RLS
-      const result = await base44.functions.invoke('getMyCatalogOrders', { buyer_id: '__all__' });
-      const data = result?.data || result;
-      // Se o backend não suportar __all__, busca direto pela entidade (admin tem acesso)
-      let allOrders = data?.orders;
-      if (!allOrders) {
-        allOrders = await CatalogSale.list('-created_date', 500);
-      }
+      const allOrders = await CatalogSale.list('-created_date', 500);
       setOrders(Array.isArray(allOrders) ? allOrders : []);
     } catch (error) {
       console.error('Erro ao carregar pedidos:', error);
-      // Fallback direto
-      try {
-        const fallback = await CatalogSale.list('-created_date', 500);
-        setOrders(Array.isArray(fallback) ? fallback : []);
-      } catch (e) {
-        toast.error('Erro ao carregar pedidos');
-      }
+      toast.error('Erro ao carregar pedidos');
     } finally {
       setIsLoading(false);
     }
