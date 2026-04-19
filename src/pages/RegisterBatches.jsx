@@ -85,8 +85,11 @@ export default function RegisterBatches() {
 
   const checkLotesStatus = async (batchesList) => {
     // Cache de 10 minutos para evitar verificações repetidas
-    const cacheKey = 'lotes_status_cache';
-    const cacheTimeKey = 'lotes_status_cache_time';
+    const cacheKey = 'lotes_status_cache_v2';
+    const cacheTimeKey = 'lotes_status_cache_time_v2';
+    // Limpa cache antigo v1
+    sessionStorage.removeItem('lotes_status_cache');
+    sessionStorage.removeItem('lotes_status_cache_time');
     const cached = sessionStorage.getItem(cacheKey);
     const cacheTime = sessionStorage.getItem(cacheTimeKey);
     
