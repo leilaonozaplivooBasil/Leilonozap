@@ -25,11 +25,12 @@ export default function CatalogOrderTracking() {
       try {
         setIsLoading(true);
 
-        // Busca venda do catálogo
-        const saleData = await base44.entities.CatalogSale.filter({ id: saleId });
-        if (saleData && saleData.length > 0) {
-          setOrder(saleData[0]);
-          console.log('✅ Pedido carregado:', saleData[0].id);
+        // Busca venda via backend (bypass RLS)
+        const result = await base44.functions.invoke('getCatalogOrderById', { sale_id: saleId });
+        const data = result?.data || result;
+        if (data?.found && data?.order) {
+          setOrder(data.order);
+          console.log('✅ Pedido carregado:', data.order.id);
         } else {
           console.warn('⚠️ Nenhum pedido encontrado para ID:', saleId);
         }
