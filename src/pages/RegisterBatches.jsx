@@ -720,131 +720,157 @@ export default function RegisterBatches() {
           )}
         </div>
 
-        {/* LISTA DE LEILÕES */}
+        {/* LISTA UNIFICADA — BatchRegistrations + LotesRecebidos, ordenados por data decrescente */}
         <div className="space-y-3">
-          {filteredBatches.map((batch) => {
-            const isExpanded = expandedBatches[batch.id];
-            const origem = batch.recibo_url 
-              ? (batch.recibo_url.match(/\.(xlsx|xls|csv)/i) ? 'planilha' : 'nota_fiscal')
-              : 'manual';
-            return (
-              <BatchCard
-                key={batch.id}
-                title={batch.nome_origem || `Leilão #${batch.numero_leilao}`}
-                status={batch.status}
-                totalProdutos={batch.total_produtos}
-                valorTotal={batch.valor_total}
-                custoUnitario={batch.custo_por_unidade}
-                date={batch.data_lancamento}
-                dateLabel="Lançado em"
-                origem={origem}
-                lotesCount={batch.lotes?.length}
-                arquivoUrl={batch.recibo_url}
-                arquivoNome="Nota Fiscal / Planilha"
-                isExpanded={isExpanded}
-                onExpand={() => toggleBatchExpanded(batch.id)}
-                onEdit={() => handleEditBatch(batch)}
-                onDelete={() => handleDeleteBatch(batch.id)}
-                onConvert={batch.status === 'pendente' ? () => handleConvertToProducts(batch) : undefined}
-                onViewFile={batch.recibo_url ? () => window.open(batch.recibo_url, '_blank') : undefined}
-                onRename={async (newName) => {
-                  await base44.entities.BatchRegistration.update(batch.id, { nome_origem: newName });
-                  await loadBatches();
-                }}
-                expandedContent={
-                  <div className="space-y-3">
-                    {batch.lotes?.map((lote, loteIdx) => (
-                      <BatchLoteDetail
-                        key={loteIdx}
-                        lote={lote}
-                        loteIndex={loteIdx}
-                        batch={batch}
-                        lotesStatus={lotesStatus}
-                        onConvertSingleLot={handleConvertSingleLot}
-                      />
-                    ))}
-                  </div>
-                }
-              />
-            );
-          })}
+          {(() => {
+            // Monta lista unificada
+            const unified = [];
 
-          {/* LOTES RECEBIDOS (via Estoque de Lotes) — mesmo card padronizado */}
-          {(statusFilter === 'all' || statusFilter === 'convertido') && sortedLotesRecebidos.map((lote) => {
-            const isExpanded = expandedBatches[`lr-${lote.id}`];
-            const custoUnit = (lote.valor_lote > 0 && lote.quantidade_total > 0) 
-              ? lote.valor_lote / lote.quantidade_total 
-              : 0;
-            
-            // Parse itens_json para expandir
-            let itensLote = [];
-            if (lote.itens_json) {
-              try { itensLote = JSON.parse(lote.itens_json); } catch {}
+            // BatchRegistrations filtrados
+            filteredBatches.forEach((batch) => {
+              unified.push({
+                type: 'batch',
+                sortDate: batch.data_lancamento ? new Date(batch.data_lancamento) : new Date(batch.created_date || 0),
+                data: batch,
+              });
+            });
+
+            // LotesRecebidos (só se filtro permite)
+            if (statusFilter === 'all' || statusFilter === 'convertido') {
+              sortedLotesRecebidos.forEach((lote) => {
+                unified.push({
+                  type: 'lote',
+                  sortDate: lote.data_recebimento ? new Date(lote.data_recebimento) : new Date(lote.created_date || 0),
+                  data: lote,
+                });
+              });
             }
 
-            return (
-              <BatchCard
-                key={`lr-${lote.id}`}
-                title={lote.nome_lote}
-                status="estoque"
-                totalProdutos={lote.quantidade_total || 0}
-                valorTotal={lote.valor_lote || 0}
-                custoUnitario={custoUnit}
-                date={lote.data_recebimento}
-                dateLabel="Recebido em"
-                marketplace={lote.marketplace}
-                origem="estoque_lotes"
-                produtosNoEstoque={lote.produtos_gerados_count}
-                arquivoUrl={lote.arquivo_url}
-                arquivoNome={lote.arquivo_nome}
-                observacoes={lote.observacoes}
-                isExpanded={isExpanded}
-                onExpand={() => toggleBatchExpanded(`lr-${lote.id}`)}
-                onViewFile={lote.arquivo_url ? () => window.open(lote.arquivo_url, '_blank') : undefined}
-                expandedContent={
-                  itensLote.length > 0 ? (
-                    <div className="rounded-xl bg-gray-800/60 border border-gray-700/50 overflow-hidden">
-                      <div className="px-4 py-2.5 border-b border-gray-700/40">
-                        <h4 className="text-sm font-semibold text-white">Itens do Lote ({itensLote.length} tipos)</h4>
-                      </div>
-                      <div className="divide-y divide-gray-700/30">
-                        {itensLote.slice(0, 50).map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between px-4 py-2 hover:bg-gray-700/20 transition-colors">
-                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                              {item.grade && (
-                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
-                                  item.grade === 'A' ? 'bg-emerald-500/20 text-emerald-300' :
-                                  item.grade === 'B' ? 'bg-yellow-500/20 text-yellow-300' :
-                                  'bg-orange-500/20 text-orange-300'
-                                }`}>{item.grade}</span>
-                              )}
-                              <span className="text-sm text-gray-200 truncate">{item.desc || item.descricao || 'Item'}</span>
-                            </div>
-                            <div className="flex items-center gap-4 flex-shrink-0 ml-3">
-                              <span className="text-xs text-gray-400">Qtd: <span className="text-white font-semibold">{item.qtd || item.quantidade || 1}</span></span>
-                              {(item.valor || item.valor_mercado) > 0 && (
-                                <span className="text-xs text-purple-400">Mkt: R$ {(item.valor || item.valor_mercado || 0).toFixed(2)}</span>
-                              )}
-                            </div>
-                          </div>
+            // Ordena tudo por data decrescente (mais recente primeiro)
+            unified.sort((a, b) => b.sortDate - a.sortDate);
+
+            return unified.map((item) => {
+              if (item.type === 'batch') {
+                const batch = item.data;
+                const isExpanded = expandedBatches[batch.id];
+                const origem = batch.recibo_url 
+                  ? (batch.recibo_url.match(/\.(xlsx|xls|csv)/i) ? 'planilha' : 'nota_fiscal')
+                  : 'manual';
+                return (
+                  <BatchCard
+                    key={batch.id}
+                    title={batch.nome_origem || `Leilão #${batch.numero_leilao}`}
+                    status={batch.status}
+                    totalProdutos={batch.total_produtos}
+                    valorTotal={batch.valor_total}
+                    custoUnitario={batch.custo_por_unidade}
+                    date={batch.data_lancamento}
+                    dateLabel="Lançado em"
+                    origem={origem}
+                    lotesCount={batch.lotes?.length}
+                    arquivoUrl={batch.recibo_url}
+                    arquivoNome="Nota Fiscal / Planilha"
+                    isExpanded={isExpanded}
+                    onExpand={() => toggleBatchExpanded(batch.id)}
+                    onEdit={() => handleEditBatch(batch)}
+                    onDelete={() => handleDeleteBatch(batch.id)}
+                    onConvert={batch.status === 'pendente' ? () => handleConvertToProducts(batch) : undefined}
+                    onViewFile={batch.recibo_url ? () => window.open(batch.recibo_url, '_blank') : undefined}
+                    onRename={async (newName) => {
+                      await base44.entities.BatchRegistration.update(batch.id, { nome_origem: newName });
+                      await loadBatches();
+                    }}
+                    expandedContent={
+                      <div className="space-y-3">
+                        {batch.lotes?.map((lote, loteIdx) => (
+                          <BatchLoteDetail
+                            key={loteIdx}
+                            lote={lote}
+                            loteIndex={loteIdx}
+                            batch={batch}
+                            lotesStatus={lotesStatus}
+                            onConvertSingleLot={handleConvertSingleLot}
+                          />
                         ))}
-                        {itensLote.length > 50 && (
-                          <div className="px-4 py-2 text-center text-xs text-gray-500">
-                            ... e mais {itensLote.length - 50} itens
-                          </div>
-                        )}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-gray-500 text-sm">
-                      <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                      Nenhum detalhe de itens disponível para este lote.
-                    </div>
-                  )
+                    }
+                  />
+                );
+              } else {
+                const lote = item.data;
+                const isExpanded = expandedBatches[`lr-${lote.id}`];
+                const custoUnit = (lote.valor_lote > 0 && lote.quantidade_total > 0) 
+                  ? lote.valor_lote / lote.quantidade_total 
+                  : 0;
+                let itensLote = [];
+                if (lote.itens_json) {
+                  try { itensLote = JSON.parse(lote.itens_json); } catch {}
                 }
-              />
-            );
-          })}
+                return (
+                  <BatchCard
+                    key={`lr-${lote.id}`}
+                    title={lote.nome_lote}
+                    status="estoque"
+                    totalProdutos={lote.quantidade_total || 0}
+                    valorTotal={lote.valor_lote || 0}
+                    custoUnitario={custoUnit}
+                    date={lote.data_recebimento}
+                    dateLabel="Recebido em"
+                    marketplace={lote.marketplace}
+                    origem="estoque_lotes"
+                    produtosNoEstoque={lote.produtos_gerados_count}
+                    arquivoUrl={lote.arquivo_url}
+                    arquivoNome={lote.arquivo_nome}
+                    observacoes={lote.observacoes}
+                    isExpanded={isExpanded}
+                    onExpand={() => toggleBatchExpanded(`lr-${lote.id}`)}
+                    onViewFile={lote.arquivo_url ? () => window.open(lote.arquivo_url, '_blank') : undefined}
+                    expandedContent={
+                      itensLote.length > 0 ? (
+                        <div className="rounded-xl bg-gray-800/60 border border-gray-700/50 overflow-hidden">
+                          <div className="px-4 py-2.5 border-b border-gray-700/40">
+                            <h4 className="text-sm font-semibold text-white">Itens do Lote ({itensLote.length} tipos)</h4>
+                          </div>
+                          <div className="divide-y divide-gray-700/30">
+                            {itensLote.slice(0, 50).map((it, idx) => (
+                              <div key={idx} className="flex items-center justify-between px-4 py-2 hover:bg-gray-700/20 transition-colors">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  {it.grade && (
+                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
+                                      it.grade === 'A' ? 'bg-emerald-500/20 text-emerald-300' :
+                                      it.grade === 'B' ? 'bg-yellow-500/20 text-yellow-300' :
+                                      'bg-orange-500/20 text-orange-300'
+                                    }`}>{it.grade}</span>
+                                  )}
+                                  <span className="text-sm text-gray-200 truncate">{it.desc || it.descricao || 'Item'}</span>
+                                </div>
+                                <div className="flex items-center gap-4 flex-shrink-0 ml-3">
+                                  <span className="text-xs text-gray-400">Qtd: <span className="text-white font-semibold">{it.qtd || it.quantidade || 1}</span></span>
+                                  {(it.valor || it.valor_mercado) > 0 && (
+                                    <span className="text-xs text-purple-400">Mkt: R$ {(it.valor || it.valor_mercado || 0).toFixed(2)}</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                            {itensLote.length > 50 && (
+                              <div className="px-4 py-2 text-center text-xs text-gray-500">
+                                ... e mais {itensLote.length - 50} itens
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-6 text-gray-500 text-sm">
+                          <Package className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                          Nenhum detalhe de itens disponível para este lote.
+                        </div>
+                      )
+                    }
+                  />
+                );
+              }
+            });
+          })()}
 
           {filteredBatches.length === 0 && lotesRecebidos.length === 0 && !isLoading && (
             <div className="rounded-2xl border border-gray-700/40 bg-gray-800/50 p-12 text-center">
