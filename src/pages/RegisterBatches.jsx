@@ -602,66 +602,7 @@ export default function RegisterBatches() {
           </div>
         </div>
 
-        {/* UPLOAD AREA */}
-        <Card className="bg-gray-800 border-gray-700 mb-6">
-          <CardContent className="p-6">
-            <div 
-              className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
-                isDragging ? 'border-blue-500 bg-blue-500/10' : 'border-gray-600 hover:border-blue-500'
-              }`}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-            >
-              <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragging ? 'text-blue-500' : 'text-blue-400'}`} />
-              <h3 className="text-lg font-bold text-white mb-2">
-                {isDragging ? '📂 Solte o arquivo aqui' : 'Envie o Documento'}
-              </h3>
-              <p className="text-sm text-gray-400 mb-1">
-                Arraste e solte ou clique para selecionar
-              </p>
-              <p className="text-xs text-gray-500 mb-4">
-                Aceita: PDF, Excel (.xlsx, .xls), CSV, Word (.doc, .docx), XML, Imagens
-              </p>
-              <input
-                id="batch-file-input"
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.xlsx,.xls,.csv,.doc,.docx,.xml"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    handleFileSelect(file);
-                    e.target.value = '';
-                  }
-                }}
-                disabled={isProcessing}
-                className="hidden"
-              />
-              <Button 
-                disabled={isProcessing} 
-                className="bg-blue-600 hover:bg-blue-700"
-                type="button"
-                onClick={() => document.getElementById('batch-file-input')?.click()}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processando...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4 mr-2" />
-                    Selecionar Arquivo
-                  </>
-                )}
-              </Button>
-
-              {isProcessing && progress && (
-                <div className="mt-4 text-blue-300 text-sm">{progress}</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Upload removido — lotes são registrados manualmente ou via EstoqueLotes */}
 
         {/* ESTATÍSTICAS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
