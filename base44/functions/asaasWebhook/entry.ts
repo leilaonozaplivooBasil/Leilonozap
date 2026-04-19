@@ -232,9 +232,35 @@ Deno.serve(async (req) => {
 
             // ✅ PASSO 2: Atualizar CatalogSale(s) (suporte a lote via vírgulas)
             // 🔒 catalog_sale_id pode ser "id1" ou "id1,id2,id3"
-            const saleIdsToProcess = asaasPayment.catalog_sale_id
+            let saleIdsToProcess = asaasPayment.catalog_sale_id
                 ? String(asaasPayment.catalog_sale_id).split(',').map((id: string) => id.trim()).filter(Boolean)
                 : [];
+
+            // 🛡️ FALLBACK: Se catalog_sale_id está vazio, buscar CatalogSales que já têm este payment_id
+            // Isso cobre o cenário onde o Cart criou as CatalogSales com payment_id mas a vinculação ao AsaasPayment falhou
+            if (saleIdsToProcess.length === 0 && paymentId) {
+                try {
+                    const orphanSales = await base44.asServiceRole.entities.CatalogSale.filter(
+                        { asaas_payment_id: paymentId },
+                        null,
+                        20
+                    );
+                    if (orphanSales && orphanSales.length > 0) {
+                        saleIdsToProcess = orphanSales.map(s => s.id);
+                        console.log(`🔍 FALLBACK: Encontradas ${saleIdsToProcess.length} CatalogSales órfãs via payment_id`);
+
+                        // Vincular de volta ao AsaasPayment para futuras consultas
+                        const linkedIds = saleIdsToProcess.join(',');
+                        await base44.asServiceRole.entities.AsaasPayment.update(asaasPayment.id, {
+                            catalog_sale_id: linkedIds,
+                            external_reference: linkedIds
+                        });
+                        console.log('✅ AsaasPayment atualizado com catalog_sale_ids retroativos:', linkedIds);
+                    }
+                } catch (fallbackErr) {
+                    console.warn('⚠️ Erro no fallback de busca por payment_id:', fallbackErr.message);
+                }
+            }
 
             if (saleIdsToProcess.length > 0) {
                 console.log(`🔄 Processando ${saleIdsToProcess.length} item(s) do lote de catálogo...`);

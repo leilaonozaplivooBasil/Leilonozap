@@ -421,7 +421,7 @@ export default function Cart() {
           referred_by_code: referralCode || '',
           referral_code: referralCode || null,
           status: 'pending_payment',
-          payment_id: paymentResponse.payment_id || null,
+          asaas_payment_id: paymentResponse.payment_id || null,
           delivery_type: deliveryMethod,
           address_street: formData.street,
           address_number: formData.number,
@@ -433,22 +433,38 @@ export default function Cart() {
         };
       });
 
+      let allCreatedSales = [];
       try {
         const createdSalesResult = await base44.entities.CatalogSale.bulkCreate(salesToCreate);
-        setCreatedSales(createdSalesResult || []);
+        allCreatedSales = createdSalesResult || [];
       } catch (e) {
         console.warn('CatalogSale.bulkCreate falhou, tentando individualmente:', e.message);
-        // Fallback: criar individualmente se bulkCreate não existir
-        const salesBatch = [];
         for (const saleData of salesToCreate) {
           try {
             const sale = await base44.entities.CatalogSale.create(saleData);
-            salesBatch.push(sale);
+            allCreatedSales.push(sale);
           } catch (createErr) {
             console.warn('Erro ao criar CatalogSale individual:', createErr.message);
           }
         }
-        setCreatedSales(salesBatch);
+      }
+      setCreatedSales(allCreatedSales);
+
+      // 🔗 VINCULAÇÃO CRÍTICA: Atualizar AsaasPayment com os IDs das CatalogSales
+      // Sem isso, o webhook ASAAS não consegue encontrar quais vendas atualizar para 'paid'
+      if (allCreatedSales.length > 0 && paymentResponse.payment_id) {
+        const saleIds = allCreatedSales.map(s => s.id).filter(Boolean).join(',');
+        if (saleIds) {
+          try {
+            await base44.functions.invoke('linkPaymentToCatalogSale', {
+              payment_id: paymentResponse.payment_id,
+              catalog_sale_ids: saleIds
+            });
+            console.log('✅ AsaasPayment vinculado às CatalogSales:', saleIds);
+          } catch (linkErr) {
+            console.warn('⚠️ Erro ao vincular (não-bloqueante):', linkErr.message);
+          }
+        }
       }
 
       // ═══════════════════════════════════════════════════════════
